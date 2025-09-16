@@ -60,40 +60,41 @@ export function createSignalFactory(
       status: STATUS_CLEAN,
     };
 
-    const signal = function (value?: T): T | undefined {
+    // Direct function declaration for better optimization
+    function signal(value?: T): T | void {
+      // Write path
       if (arguments.length) {
+        // Skip if unchanged
         if (node.value === value) {
-          // Clear dirty status if value unchanged
           if (node.status === STATUS_DIRTY) node.status = STATUS_CLEAN;
           return;
         }
 
         node.value = value!;
 
-        const subscribers = node.subscribers;
+        const subs = node.subscribers;
+        // Early exit if no subscribers
+        if (!subs) return;
 
-        if (!subscribers) return;
-
-        // Mark as dirty - value has changed
+        // Mark dirty and propagate
         node.status = STATUS_DIRTY;
+        pushUpdates(subs);
 
-        // Invalidate and propagate
-        // The pushUpdates function will skip stale dependencies automatically
-        pushUpdates(subscribers);
-
-        // Batch check and flush
+        // Auto-flush if not batched
         if (!inBatch()) flush();
         return;
       }
 
       const consumer = ctx.currentConsumer;
+      // Read path - track dependency inline
       if (consumer) trackDependency(node, consumer);
       return node.value;
-    } as SignalFunction<T>;
+    }
 
+    // Direct property assignment
     signal.peek = () => node.value;
 
-    return signal;
+    return signal as SignalFunction<T>;
   }
 
   return {
