@@ -35,11 +35,7 @@ export function createNodeScheduler(): NodeScheduler {
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): boolean => {
     // If already scheduled, disposed, or not in a batch, don't enqueue
-    if (
-      node.status >= STATUS_SCHEDULED ||
-      !batchDepth
-    )
-      return false;
+    if (node.status >= STATUS_SCHEDULED || !batchDepth) return false;
 
     // Hot path - mark as scheduled
     node.status = STATUS_SCHEDULED;
