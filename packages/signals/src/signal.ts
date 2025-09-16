@@ -62,33 +62,32 @@ export function createSignalFactory(
 
     // Direct function declaration for better optimization
     function signal(value?: T): T | void {
-      // Write path
-      if (arguments.length) {
-        // Skip if unchanged
-        if (node.value === value) {
-          if (node.status === STATUS_DIRTY) node.status = STATUS_CLEAN;
-          return;
-        }
+      // Read path - track dependency inline
+      if (!arguments.length) {
+        const consumer = ctx.currentConsumer;
+        if (consumer) trackDependency(node, consumer);
+        return node.value;
+      }
 
-        node.value = value!;
-
-        const subs = node.subscribers;
-        // Early exit if no subscribers
-        if (!subs) return;
-
-        // Mark dirty and propagate
-        node.status = STATUS_DIRTY;
-        pushUpdates(subs);
-
-        // Auto-flush if not batched
-        if (!inBatch()) flush();
+      // Skip if unchanged
+      if (node.value === value) {
+        if (node.status === STATUS_DIRTY) node.status = STATUS_CLEAN;
         return;
       }
 
-      const consumer = ctx.currentConsumer;
-      // Read path - track dependency inline
-      if (consumer) trackDependency(node, consumer);
-      return node.value;
+      node.value = value!;
+
+      const subs = node.subscribers;
+      // Early exit if no subscribers
+      if (!subs) return;
+
+      // Mark dirty and propagate
+      node.status = STATUS_DIRTY;
+      pushUpdates(subs);
+
+      // Auto-flush if not batched
+      if (inBatch()) return;
+      flush();
     }
 
     // Direct property assignment
