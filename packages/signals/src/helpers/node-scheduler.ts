@@ -10,8 +10,6 @@ export interface NodeScheduler {
     cleanup: (node: T) => void
   ) => void;
   flush: () => void;
-  inBatch: () => boolean;
-  enterBatch: () => number;
   exitBatch: () => number;
   startBatch: () => boolean;
 }
@@ -21,17 +19,11 @@ export function createNodeScheduler(): NodeScheduler {
   let queueHead: ScheduledNode | undefined;
   let queueTail: ScheduledNode | undefined;
 
-  const enterBatch = () => {
-    batchDepth++;
-    return batchDepth;
-  };
-
   const startBatch = () => {
     if (batchDepth) return false;
     batchDepth++;
     return true;
   }
-  const inBatch = () => !!batchDepth;
   const exitBatch = () => {
     batchDepth--;
     return batchDepth;
@@ -96,9 +88,7 @@ export function createNodeScheduler(): NodeScheduler {
     enqueue,
     dispose,
     flush,
-    enterBatch,
-    inBatch,
-    exitBatch,
     startBatch,
+    exitBatch,
   };
 }

@@ -65,8 +65,6 @@ export function createTestInstance() {
     effect: api.effect,
     batch: api.batch,
 
-    // Batch control
-    enterBatch: nodeScheduler.enterBatch,
     exitBatch: nodeScheduler.exitBatch,
 
     // Context access for testing
@@ -98,8 +96,6 @@ export const effect = (fn: () => void | (() => void)): (() => void) =>
 export const batch = <T>(fn: () => T): T =>
   defaultInstance.batch(fn);
 
-// Batch control exports
-export const enterBatch = () => defaultInstance.enterBatch();
 export const exitBatch = () => defaultInstance.exitBatch();
 
 // Context control exports

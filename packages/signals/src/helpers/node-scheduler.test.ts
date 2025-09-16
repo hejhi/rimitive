@@ -160,22 +160,4 @@ describe('NodeScheduler', () => {
     expect(node.status === STATUS_SCHEDULED).toBe(false);
     expect(node.nextScheduled).toBeUndefined();
   });
-
-  it('should handle batch operations', () => {
-    const scheduler = createNodeScheduler();
-
-    expect(scheduler.inBatch()).toBe(false);
-
-    scheduler.startBatch();
-    expect(scheduler.inBatch()).toBe(true);
-
-    scheduler.enterBatch(); // Nested
-    expect(scheduler.inBatch()).toBe(true);
-
-    scheduler.exitBatch(); // Exit one level of batching
-    expect(scheduler.inBatch()).toBe(true); // Still in batch (nested)
-
-    scheduler.exitBatch(); // Exit final batch level
-    expect(scheduler.inBatch()).toBe(false);
-  });
 });
