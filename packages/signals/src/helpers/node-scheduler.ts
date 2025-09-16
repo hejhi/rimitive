@@ -27,7 +27,7 @@ export function createNodeScheduler(): NodeScheduler {
   };
 
   const startBatch = () => {
-    if (!!batchDepth) return false;
+    if (batchDepth) return false;
     batchDepth++;
     return true;
   }

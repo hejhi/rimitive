@@ -17,7 +17,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      notify: vi.fn(),
+      schedule: vi.fn(),
     };
 
     scheduler.startBatch();
@@ -36,7 +36,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      notify: vi.fn(),
+      schedule: vi.fn(),
     };
 
     // Enqueue once
@@ -60,7 +60,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      notify: vi.fn(),
+      schedule: vi.fn(),
     };
 
     // First disposal
@@ -78,20 +78,43 @@ describe('NodeScheduler', () => {
 
     const flushOrder: string[] = [];
 
-    const createNode = (id: string): ScheduledNode => ({
+    // Store mock functions separately to avoid unbound-method lint errors
+    const flush1 = vi.fn(() => flushOrder.push('1'));
+    const flush2 = vi.fn(() => flushOrder.push('2'));
+    const flush3 = vi.fn(() => flushOrder.push('3'));
+
+    const node1: ScheduledNode = {
       __type: 'test',
-      status: STATUS_PENDING, // STATUS_PENDING so it will flush
+      status: STATUS_PENDING,
       nextScheduled: undefined,
-      flush: vi.fn(() => flushOrder.push(id)),
+      flush: flush1,
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      notify: vi.fn(),
-    });
+      schedule: vi.fn(),
+    };
 
-    const node1 = createNode('1');
-    const node2 = createNode('2');
-    const node3 = createNode('3');
+    const node2: ScheduledNode = {
+      __type: 'test',
+      status: STATUS_PENDING,
+      nextScheduled: undefined,
+      flush: flush2,
+      dependencies: undefined,
+      dependencyTail: undefined,
+      deferredParent: undefined,
+      schedule: vi.fn(),
+    };
+
+    const node3: ScheduledNode = {
+      __type: 'test',
+      status: STATUS_PENDING,
+      nextScheduled: undefined,
+      flush: flush3,
+      dependencies: undefined,
+      dependencyTail: undefined,
+      deferredParent: undefined,
+      schedule: vi.fn(),
+    };
 
     scheduler.startBatch();
 
@@ -102,9 +125,9 @@ describe('NodeScheduler', () => {
     scheduler.flush();
 
     expect(flushOrder).toEqual(['1', '2', '3']);
-    expect(node1.flush).toHaveBeenCalledTimes(1);
-    expect(node2.flush).toHaveBeenCalledTimes(1);
-    expect(node3.flush).toHaveBeenCalledTimes(1);
+    expect(flush1).toHaveBeenCalledTimes(1);
+    expect(flush2).toHaveBeenCalledTimes(1);
+    expect(flush3).toHaveBeenCalledTimes(1);
   });
 
   it('should handle empty flush', () => {
@@ -125,7 +148,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      notify: vi.fn(),
+      schedule: vi.fn(),
     };
 
     scheduler.startBatch();

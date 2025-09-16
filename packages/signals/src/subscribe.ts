@@ -12,7 +12,7 @@
  * - Selective dependency tracking for performance
  */
 
-import type { ConsumerNode, ScheduledNode } from './types';
+import type { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
@@ -63,10 +63,10 @@ export function createSubscribeFactory(
       callback(value);
     }
 
-    const notify = ((node: SubscriptionNode<T>) => {
+    const schedule = (node: ScheduledNode) => {
       if (enqueue(node)) return;
-      flush(node);
-    }) as (node: ConsumerNode) => void;
+      flush(node as SubscriptionNode<T>);
+    };
 
     // Create subscription node
     const node: SubscriptionNode<T> = {
@@ -78,7 +78,7 @@ export function createSubscribeFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
-      notify,
+      schedule,
       flush,
     };
 

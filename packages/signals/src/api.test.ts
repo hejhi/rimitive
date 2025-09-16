@@ -108,7 +108,7 @@ describe('createSignalAPI', () => {
   });
 
   it('should allow extending context with custom work queue', () => {
-    let enqueueCount = 0;
+    const enqueueCount = 0;
     
     // Create custom context with instrumented work queue
     const baseCtx = createBaseContext();

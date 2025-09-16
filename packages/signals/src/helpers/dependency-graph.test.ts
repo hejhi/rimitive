@@ -49,7 +49,6 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
-        notify: vi.fn(),
       };
       
       // First call creates the dependency
@@ -81,7 +80,6 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
-        notify: vi.fn(),
       };
       
       // Create dependency manually
@@ -113,7 +111,6 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
-        notify: vi.fn(),
       };
       
       helpers.trackDependency(source, target);
@@ -136,7 +133,6 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
-        notify: vi.fn(),
       };
       
       // Add dependencies from multiple sources
@@ -171,7 +167,6 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
-        notify: vi.fn(),
       };
       
       // Create initial dependency
@@ -206,7 +201,6 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
-          notify: vi.fn(),
         };
         
         helpers.trackDependency(source, target);
@@ -234,7 +228,6 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
-          notify: vi.fn(),
         };
         
         const target2: ConsumerNode = {
@@ -243,7 +236,6 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
-          notify: vi.fn(),
         };
         
         helpers.trackDependency(source, target1);
@@ -278,7 +270,6 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
-          notify: vi.fn(),
         };
         
         helpers.trackDependency(source, target);
@@ -370,7 +361,6 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
-          notify: vi.fn(),
         };
         
         helpers.trackDependency(source1, target);
@@ -410,20 +400,19 @@ describe('Dependency Graph Helpers', () => {
         dependencyTail: undefined,
         deferredParent: undefined,
         status: flags,
-        notify: vi.fn(),
       };
   
       if (isScheduled) {
-        node.flush = () => {};
+        node.flush = vi.fn();
         node.nextScheduled = undefined;
         // Add notify method that tracks scheduled nodes for testing
-        const nodeWithNotify = node as ScheduledNode & { notify: () => void };
-        nodeWithNotify.notify = () => {
+        const nodeWithNotify = node as ScheduledNode & { schedule: () => void };
+        nodeWithNotify.schedule = vi.fn(() => {
           if (node.nextScheduled === undefined) {
             scheduledNodes.push(node as ScheduledNode);
             node.nextScheduled = node as ScheduledNode; // Use self as flag
           }
-        };
+        });
       }
   
       return node;

@@ -1,4 +1,4 @@
-import { ConsumerNode, Dependency, ScheduledNode } from './types';
+import { Dependency, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { NodeScheduler } from './helpers/node-scheduler';
@@ -57,10 +57,10 @@ export function createEffectFactory(
       }
     }
 
-    const notify = ((node: EffectNode) => {
+    const schedule = (node: ScheduledNode) => {
       if (enqueue(node)) return;
-      flush(node);
-    }) as (node: ConsumerNode) => void
+      flush(node as EffectNode);
+    }
 
     // State object captured in closure - no binding needed
     const node: EffectNode = {
@@ -71,7 +71,7 @@ export function createEffectFactory(
       dependencyTail: undefined as Dependency | undefined,
       deferredParent: undefined,
       nextScheduled: undefined as ScheduledNode | undefined,
-      notify,
+      schedule,
       flush,
     };
 

@@ -52,7 +52,6 @@ export interface ConsumerNode extends ReactiveNode {
   dependencies: Dependency | undefined; // Head of dependency list
   dependencyTail: Dependency | undefined; // Current tracking position
   deferredParent: DerivedNode | undefined; // Temporary: tracks parent during pull traversal
-  notify: (node: ConsumerNode) => void;
 }
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {
@@ -65,6 +64,7 @@ export interface DerivedNode extends ProducerNode, ConsumerNode {
 export interface ScheduledNode extends ConsumerNode {
   nextScheduled: ScheduledNode | undefined; // Next node in scheduling queue (intrusive list)
   flush(node: ScheduledNode): void; // Execute the deferred work
+  schedule: (node: ScheduledNode) => void;
 }
 
 // Node types for edges

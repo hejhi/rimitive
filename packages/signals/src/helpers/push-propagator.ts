@@ -36,9 +36,8 @@ export function createPushPropagator(): PushPropagator {
       // Set status to pending
       consumerNode.status = STATUS_PENDING;
 
-      // Fast path: if node has _notify, it's an effect - schedule it directly
       // This avoids method calls and property lookups
-      if ('notify' in consumerNode) consumerNode.notify(consumerNode);
+      if ('schedule' in consumerNode) consumerNode.schedule(consumerNode);
 
       if ('subscribers' in consumerNode) {
         const consumerSubscribers = consumerNode.subscribers;
