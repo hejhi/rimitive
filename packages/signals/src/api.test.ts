@@ -113,8 +113,8 @@ describe('createSignalAPI', () => {
     const pullPropagator = createPullPropagator(baseCtx, graphEdges);
     const scheduler = (() => {
       const originalScheduler = createScheduler();
-      const originalSchedule = originalScheduler.schedule;
-      originalScheduler.schedule = (node) => {
+      const originalSchedule = originalScheduler.enqueue;
+      originalScheduler.enqueue = (node) => {
         return originalSchedule(node);
       };
       return originalScheduler;

@@ -20,19 +20,16 @@ interface Stack<T> {
 export interface Scheduler {
   /** Propagate updates from a producer to all its dependents */
   propagate: (subscribers: Dependency) => void;
-  /** Schedule a node for execution (used by effect/subscribe) */
-  schedule: (node: ScheduledNode) => void;
+  enqueue: (node: ScheduledNode) => void;
   /** Dispose a scheduled node */
   dispose: <T extends ScheduledNode>(
     node: T,
     cleanup: (node: T) => void
   ) => void;
   /** Start a batch (increment batch depth) */
-  startBatch: () => void;
+  startBatch: () => number;
   /** End a batch and auto-flush if needed */
-  endBatch: () => void;
-  /** Check if currently in batch */
-  isInBatch: () => boolean;
+  endBatch: () => number;
   /** Manual flush - rarely needed */
   flush: () => void;
 }
@@ -81,7 +78,6 @@ export function createScheduler(): Scheduler {
     queueTail = node;
   };
 
-  // UNIFIED PROPAGATION + SCHEDULING
   // Single pass through dependency graph that both propagates status
   // and schedules nodes, eliminating redundant traversals
   const propagate = (subscribers: Dependency): void => {
@@ -142,28 +138,16 @@ export function createScheduler(): Scheduler {
     if (batchDepth === 0) flush();
   };
 
-  const schedule = (node: ScheduledNode): void => {
-    enqueue(node);
-    // Auto-flush if not in batch
-    if (batchDepth === 0) {
-      flush();
-    }
-  };
+  const startBatch = (): number => batchDepth++;
 
-  const startBatch = (): void => {
-    batchDepth++;
-  };
-
-  const endBatch = (): void => {
+  const endBatch = (): number => {
     if (batchDepth > 0) {
       batchDepth--;
-      if (batchDepth === 0) {
-        flush();
-      }
+      if (batchDepth === 0) flush();
     }
-  };
 
-  const isInBatch = (): boolean => batchDepth > 0;
+    return batchDepth;
+  };
 
   // Idempotent disposal helper
   const dispose = <T extends ScheduledNode>(
@@ -177,11 +161,10 @@ export function createScheduler(): Scheduler {
 
   return {
     propagate,
-    schedule,
     dispose,
     startBatch,
     endBatch,
-    isInBatch,
     flush,
+    enqueue
   };
 }

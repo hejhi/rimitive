@@ -20,7 +20,7 @@ describe('NodeScheduler', () => {
     };
 
     scheduler.startBatch();
-    scheduler.schedule(node);
+    scheduler.enqueue(node);
     expect(node.status).toBe(STATUS_SCHEDULED);
   });
 
@@ -38,11 +38,11 @@ describe('NodeScheduler', () => {
     };
 
     // Enqueue once
-    scheduler.schedule(node);
+    scheduler.enqueue(node);
     const scheduledAfterFirst = node.status;
 
     // Try to enqueue again - should be skipped
-    scheduler.schedule(node);
+    scheduler.enqueue(node);
     expect(node.status).toBe(scheduledAfterFirst); // Scheduled flag unchanged
   });
 
@@ -112,9 +112,9 @@ describe('NodeScheduler', () => {
 
     scheduler.startBatch();
 
-    scheduler.schedule(node1);
-    scheduler.schedule(node2);
-    scheduler.schedule(node3);
+    scheduler.enqueue(node1);
+    scheduler.enqueue(node2);
+    scheduler.enqueue(node3);
 
     scheduler.flush();
 
@@ -145,7 +145,7 @@ describe('NodeScheduler', () => {
     };
 
     scheduler.startBatch();
-    scheduler.schedule(node);
+    scheduler.enqueue(node);
     expect(node.status === STATUS_SCHEDULED).toBe(true);
 
     scheduler.flush();
