@@ -32,6 +32,7 @@ export type SignalOpts = {
   ctx: GlobalContext;
   graphEdges: GraphEdges;
   push: PushPropagator;
+  nodeScheduler?: { flush: () => void; isInBatch: () => boolean };
 };
 
 interface SignalNode<T> extends ProducerNode {
@@ -46,6 +47,7 @@ export function createSignalFactory(
     graphEdges: { trackDependency },
     push: { pushUpdates },
     ctx,
+    nodeScheduler,
   } = opts;
 
   function createSignal<T>(initialValue: T): SignalFunction<T> {
@@ -81,6 +83,11 @@ export function createSignalFactory(
       // Mark dirty and propagate
       node.status = STATUS_DIRTY;
       pushUpdates(subs);
+
+      // Flush queue if not in batch
+      if (nodeScheduler && !nodeScheduler.isInBatch()) {
+        nodeScheduler.flush();
+      }
     }
 
     // Direct property assignment

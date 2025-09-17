@@ -15,13 +15,14 @@ import { createPullPropagator } from './helpers/pull-propagator';
 export function createDefaultContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
+  const nodeScheduler = createNodeScheduler();
 
   return {
     ctx: baseCtx,
     graphEdges,
-    push: createPushPropagator(),
+    push: createPushPropagator({ schedule: nodeScheduler.enqueue }),
     pull: createPullPropagator(baseCtx, graphEdges),
-    nodeScheduler: createNodeScheduler(),
+    nodeScheduler,
   };
 }
 
@@ -63,10 +64,6 @@ describe('createSignalAPI', () => {
     // Create custom context with custom work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
-    const pushPropagator = createPushPropagator();
-
-    const pullPropagator = createPullPropagator(baseCtx, graphEdges);
-
     const nodeScheduler = (() => {
       const scheduler = createNodeScheduler();
       return {
@@ -74,9 +71,17 @@ describe('createSignalAPI', () => {
         enqueue: (node: ScheduledNode) => {
           enqueueCalled = true;
           return scheduler.enqueue(node);
-        }
+        },
       };
     })();
+
+    const pushPropagator = createPushPropagator({
+      schedule: nodeScheduler.enqueue,
+    });
+
+    const pullPropagator = createPullPropagator(baseCtx, graphEdges);
+
+
 
     const api = createSignalAPI(
       {
@@ -123,7 +128,9 @@ describe('createSignalAPI', () => {
       };
       return queue;
     })();
-    const pushPropagator = createPushPropagator();
+    const pushPropagator = createPushPropagator({
+      schedule: nodeScheduler.enqueue,
+    });
     
     const api = createSignalAPI({
       signal: createSignalFactory,

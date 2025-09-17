@@ -42,10 +42,8 @@ group('Batch vs Subscribe - Simple Updates', () => {
         const s2 = signal(0);
         const s3 = signal(0);
         const sum = computed(() => s1() + s2() + s3());
-
-        let result = 0;
         const dispose = effect(() => {
-          result = sum();
+          void sum();
         });
 
         yield () => {
@@ -83,9 +81,8 @@ group('Batch vs Subscribe - Simple Updates', () => {
         const s3 = signal(0);
         const sum = computed(() => s1() + s2() + s3());
 
-        let result = 0;
         const unsubscribe = subscribe(sum, (val) => {
-          result = val;
+          void val;
         });
 
         yield () => {
@@ -121,10 +118,7 @@ group('Batch vs Subscribe - Simple Updates', () => {
         const s3 = signal(0);
         const sum = computed(() => s1() + s2() + s3());
 
-        let result = 0;
-        const unsubscribe = subscribe(sum, (val) => {
-          result = val;
-        });
+        const unsubscribe = subscribe(sum, () => {});
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -167,9 +161,8 @@ group('Batch vs Subscribe - Complex Graph', () => {
         const right = computed(() => root() + 1);
         const bottom = computed(() => left() + right());
 
-        let result = 0;
         const dispose = effect(() => {
-          result = bottom();
+          void bottom();
         });
 
         yield () => {
@@ -206,9 +199,8 @@ group('Batch vs Subscribe - Complex Graph', () => {
         const right = computed(() => root() + 1);
         const bottom = computed(() => left() + right());
 
-        let result = 0;
         const unsubscribe = subscribe(bottom, (val) => {
-          result = val;
+          void val;
         });
 
         yield () => {
@@ -245,12 +237,10 @@ group('Batch vs Subscribe - Complex Graph', () => {
         const right = computed(() => root() + 1);
         const bottom = computed(() => left() + right());
 
-        let result1 = 0, result2 = 0, result3 = 0;
-
         // Multiple subscriptions to different nodes
-        const unsub1 = subscribe(left, (val) => { result1 = val; });
-        const unsub2 = subscribe(right, (val) => { result2 = val; });
-        const unsub3 = subscribe(bottom, (val) => { result3 = val; });
+        const unsub1 = subscribe(left, (val) => { void val; });
+        const unsub2 = subscribe(right, (val) => { void val; });
+        const unsub3 = subscribe(bottom, (val) => { void val; });
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {

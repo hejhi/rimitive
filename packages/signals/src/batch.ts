@@ -54,13 +54,13 @@ export function createBatchFactory(
   // Signal writes propagate immediately during batch.
   // We only defer effect execution to batch end.
   const batch = function batch<T>(fn: () => T): T {
-    const isNewBatch = startBatch();
+    startBatch();
 
     try {
       return fn();
     } finally {
       // End batch and auto-flush if it was the outermost batch
-      if (isNewBatch) endBatch();
+      endBatch();
     }
   };
 

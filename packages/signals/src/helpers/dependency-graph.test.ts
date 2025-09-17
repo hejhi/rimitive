@@ -5,8 +5,9 @@ import { createPullPropagator } from './pull-propagator';
 import { createBaseContext } from '../context';
 import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createNodeScheduler } from './node-scheduler';
 
-const { STATUS_DISPOSED, STATUS_PENDING, STATUS_DIRTY } = CONSTANTS;
+const { STATUS_DISPOSED, STATUS_PENDING, STATUS_DIRTY, STATUS_SCHEDULED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: {
@@ -18,8 +19,9 @@ describe('Dependency Graph Helpers', () => {
   };
 
   beforeEach(() => {
+    const nodeScheduler = createNodeScheduler();
     const graphEdges = createGraphEdges();
-    const pushPropagator = createPushPropagator();
+    const pushPropagator = createPushPropagator({ schedule: nodeScheduler.enqueue });
     const tempCtx = { ...createBaseContext(), graphEdges };
     const pullPropagator = createPullPropagator(tempCtx, graphEdges);
     
@@ -382,10 +384,24 @@ describe('Dependency Graph Helpers', () => {
   
     beforeEach(() => {
       scheduledNodes = [];
-  
+
+      const nodeScheduler = createNodeScheduler();
+
+      // Wrap enqueue to track scheduled nodes
+      const originalEnqueue = nodeScheduler.enqueue;
+      const trackingEnqueue = (node: ScheduledNode) => {
+        const result = originalEnqueue(node);
+        if (result) {
+          scheduledNodes.push(node);
+        }
+        return result;
+      };
+
       // Create a custom push propagator
-      const testPushPropagator = createPushPropagator();
-  
+      const testPushPropagator = createPushPropagator({
+        schedule: trackingEnqueue,
+      });
+
       walk = testPushPropagator.pushUpdates;
     });
   
@@ -405,14 +421,6 @@ describe('Dependency Graph Helpers', () => {
       if (isScheduled) {
         node.flush = vi.fn();
         node.nextScheduled = undefined;
-        // Add notify method that tracks scheduled nodes for testing
-        const nodeWithNotify = node as ScheduledNode & { schedule: () => void };
-        nodeWithNotify.schedule = vi.fn(() => {
-          if (node.nextScheduled === undefined) {
-            scheduledNodes.push(node as ScheduledNode);
-            node.nextScheduled = node as ScheduledNode; // Use self as flag
-          }
-        });
       }
   
       return node;
@@ -451,11 +459,11 @@ describe('Dependency Graph Helpers', () => {
       const source = createMockNode('signal') as ProducerNode;
       const effect = createMockNode('effect', 0, true); // isScheduled = true
       const edge = createEdge(source, effect);
-  
+
       walk(edge);
-  
-      // With push-pull system, effects get STATUS_PENDING during push phase
-      expect(effect.status).toBe(STATUS_PENDING);
+
+      // With push-pull system, scheduled nodes get STATUS_SCHEDULED after enqueueing
+      expect(effect.status).toBe(STATUS_SCHEDULED);
     });
   
     it('should skip already notified nodes', () => {
@@ -528,7 +536,7 @@ describe('Dependency Graph Helpers', () => {
   
       expect(computed1.status).toBe(STATUS_PENDING);
       expect(computed2.status).toBe(STATUS_PENDING);
-      expect(effect.status).toBe(STATUS_PENDING);
+      expect(effect.status).toBe(STATUS_SCHEDULED);
       expect(scheduledNodes).toContain(effect);
     });
   
@@ -600,9 +608,9 @@ describe('Dependency Graph Helpers', () => {
       expect(comp2.status).toBe(STATUS_PENDING);
       expect(comp3.status).toBe(STATUS_PENDING);
       expect(comp4.status).toBe(STATUS_PENDING);
-      expect(eff1.status).toBe(STATUS_PENDING);
-      expect(eff2.status).toBe(STATUS_PENDING);
-      expect(eff3.status).toBe(STATUS_PENDING);
+      expect(eff1.status).toBe(STATUS_SCHEDULED);
+      expect(eff2.status).toBe(STATUS_SCHEDULED);
+      expect(eff3.status).toBe(STATUS_SCHEDULED);
   
       // All effects should be scheduled
       expect(scheduledNodes).toContain(eff1);
@@ -617,12 +625,12 @@ describe('Dependency Graph Helpers', () => {
       const edge1 = createEdge(source, effect);
       const edge2 = createEdge(source, effect);
       linkEdges([edge1, edge2]);
-  
-      // Manually set nextScheduled to simulate already scheduled
-      effect.nextScheduled = {} as ScheduledNode;
-  
+
+      // Manually set status to simulate already scheduled
+      effect.status = STATUS_SCHEDULED;
+
       walk(edge1);
-  
+
       // Effect should only be scheduled once
       expect(scheduledNodes).toHaveLength(0); // Because it was already scheduled
     });

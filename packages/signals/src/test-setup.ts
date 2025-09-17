@@ -27,7 +27,7 @@ export function createDefaultContext(): {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
   const nodeScheduler = createNodeScheduler();
-  const push = createPushPropagator();
+  const push = createPushPropagator({ schedule: nodeScheduler.enqueue });
   const pull = createPullPropagator(ctx, graphEdges);
 
   return {
@@ -46,7 +46,7 @@ export function createTestInstance() {
 
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory(opts),
+    createSignalFactory({ ...opts, nodeScheduler }),
     createComputedFactory(opts),
     createEffectFactory(opts),
     createBatchFactory(opts)

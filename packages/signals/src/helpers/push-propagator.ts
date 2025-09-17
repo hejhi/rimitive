@@ -1,4 +1,4 @@
-import type { Dependency } from '../types';
+import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED } = CONSTANTS;
@@ -14,7 +14,11 @@ export interface PushPropagator {
 
 // Flag operations are now done directly with bitwise operators for performance
 
-export function createPushPropagator(): PushPropagator {
+export function createPushPropagator({
+  schedule
+}: {
+  schedule: (node: ScheduledNode) => void;
+}): PushPropagator {
   // Iterative DFS on push with an explicit stack, optimized with intrusive linked lists
   const pushUpdates = (subscribers: Dependency): void => {
     let dependencyStack: Stack<Dependency> | undefined;
@@ -38,7 +42,7 @@ export function createPushPropagator(): PushPropagator {
       consumerNode.status = STATUS_PENDING;
 
       // Schedule if it's a scheduled node (effect/subscription)
-      if ('schedule' in consumerNode) consumerNode.schedule();
+      if ('flush' in consumerNode) schedule(consumerNode);
 
       if ('subscribers' in consumerNode) {
         const consumerSubscribers = consumerNode.subscribers;

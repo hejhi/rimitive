@@ -10,8 +10,9 @@ export interface NodeScheduler {
     cleanup: (node: T) => void
   ) => void;
   flush: () => void;
-  startBatch: () => boolean;
+  startBatch: () => void;
   endBatch: () => void; // Exits batch and auto-flushes if needed
+  isInBatch: () => boolean;
 }
 
 export function createNodeScheduler(): NodeScheduler {
@@ -19,12 +20,7 @@ export function createNodeScheduler(): NodeScheduler {
   let queueHead: ScheduledNode | undefined;
   let queueTail: ScheduledNode | undefined;
 
-  const startBatch = () => {
-    if (batchDepth) return false;
-    batchDepth++;
-    return true;
-  }
-
+  const startBatch = () => batchDepth++;
   const endBatch = () => {
     // Defensive: endBatch called without matching startBatch
     if (!batchDepth) return;
@@ -34,8 +30,8 @@ export function createNodeScheduler(): NodeScheduler {
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): boolean => {
-    // If already scheduled, disposed, or not in a batch, don't enqueue
-    if (node.status >= STATUS_SCHEDULED || !batchDepth) return false;
+    // If already scheduled or disposed, don't enqueue
+    if (node.status >= STATUS_SCHEDULED) return false;
 
     // Hot path - mark as scheduled
     node.status = STATUS_SCHEDULED;
@@ -46,6 +42,9 @@ export function createNodeScheduler(): NodeScheduler {
     else queueHead = node;
 
     queueTail = node;
+
+    // Return true to indicate enqueued successfully
+    // The caller (signal) will handle flushing
     return true;
   };
 
@@ -83,11 +82,14 @@ export function createNodeScheduler(): NodeScheduler {
     }
   };
 
+  const isInBatch = () => batchDepth > 0;
+
   return {
     enqueue,
     dispose,
     flush,
     startBatch,
     endBatch,
+    isInBatch,
   };
 }

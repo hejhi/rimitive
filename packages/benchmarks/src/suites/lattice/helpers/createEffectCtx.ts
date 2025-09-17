@@ -5,11 +5,13 @@ import { createPushPropagator } from "@lattice/signals/helpers/push-propagator";
 
 export function createEffectContext(){
   const ctx = createBaseContext();
+  const graphEdges = createGraphEdges();
+  const nodeScheduler = createNodeScheduler();
 
   return {
     ctx,
-    graphEdges: createGraphEdges(),
-    push: createPushPropagator(),
-    nodeScheduler: createNodeScheduler(ctx),
+    graphEdges,
+    push: createPushPropagator({ schedule: nodeScheduler.enqueue }),
+    nodeScheduler,
   };
 }

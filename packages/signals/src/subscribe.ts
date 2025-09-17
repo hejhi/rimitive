@@ -46,7 +46,7 @@ export function createSubscribeFactory(
   const {
     ctx,
     graphEdges: { track, detachAll },
-    nodeScheduler: { enqueue, dispose: disposeNode },
+    nodeScheduler: { dispose: disposeNode },
   } = opts;
 
   function subscribe<T>(
@@ -63,12 +63,6 @@ export function createSubscribeFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
-      schedule: () => {
-        if (enqueue(node)) return;
-        // Flush inline if not batched
-        const value = track(ctx, node, source);
-        callback(value);
-      },
       flush: () => {
         const value = track(ctx, node, source);
         callback(value);

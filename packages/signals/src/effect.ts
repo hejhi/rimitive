@@ -26,7 +26,7 @@ export function createEffectFactory(
 > {
   const {
     ctx,
-    nodeScheduler: { dispose: disposeNode, enqueue },
+    nodeScheduler: { dispose: disposeNode },
     graphEdges: { track, detachAll },
   } = opts;
 
@@ -39,17 +39,6 @@ export function createEffectFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
-      // Use closures - safer and cleaner than passing self
-      schedule: () => {
-        if (enqueue(node)) return;
-        // Flush inline if not batched
-        if (node._cleanup) {
-          node._cleanup();
-          node._cleanup = undefined;
-        }
-        const newCleanup = track(ctx, node, fn);
-        if (newCleanup) node._cleanup = newCleanup;
-      },
       flush: () => {
         if (node._cleanup) {
           node._cleanup();

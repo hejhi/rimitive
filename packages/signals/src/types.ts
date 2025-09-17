@@ -64,7 +64,6 @@ export interface DerivedNode extends ProducerNode, ConsumerNode {
 export interface ScheduledNode extends ConsumerNode {
   nextScheduled: ScheduledNode | undefined; // Next node in scheduling queue (intrusive list)
   flush(): void; // Execute the deferred work
-  schedule(): void; // Request scheduling for deferred execution
 }
 
 // Node types for edges

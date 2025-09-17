@@ -128,9 +128,8 @@ describe('Effect', () => {
 
     sig(1);
     expect(outerFn).toHaveBeenCalledTimes(2);
-    // With immediate execution, nested effects run more frequently
-    // Inner effect runs: 1 initial + 1 from outer re-run + 1 from immediate execution + 1 more
-    expect(innerFn).toBeCalledTimes(4); // Updated for immediate execution behavior
+    // Inner effect runs: 1 initial + 1 from first outer + 1 from second outer = 3
+    expect(innerFn).toBeCalledTimes(3);
   });
 
   it('should not run if already running (avoid infinite loops)', () => {

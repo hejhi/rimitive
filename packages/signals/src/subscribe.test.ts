@@ -13,13 +13,14 @@ import { createPushPropagator } from './helpers/push-propagator';
 function createTestContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
+  const nodeScheduler = createNodeScheduler();
 
   return {
     ctx: baseCtx,
     graphEdges,
-    push: createPushPropagator(),
+    push: createPushPropagator({ schedule: nodeScheduler.enqueue }),
     pull: createPullPropagator(baseCtx, graphEdges),
-    nodeScheduler: createNodeScheduler(),
+    nodeScheduler,
   };
 }
 

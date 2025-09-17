@@ -17,7 +17,6 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      schedule: vi.fn(),
     };
 
     scheduler.startBatch();
@@ -36,7 +35,6 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      schedule: vi.fn(),
     };
 
     // Enqueue once
@@ -60,7 +58,6 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      schedule: vi.fn(),
     };
 
     // First disposal
@@ -91,7 +88,6 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      schedule: vi.fn(),
     };
 
     const node2: ScheduledNode = {
@@ -102,7 +98,6 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      schedule: vi.fn(),
     };
 
     const node3: ScheduledNode = {
@@ -113,7 +108,6 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      schedule: vi.fn(),
     };
 
     scheduler.startBatch();
@@ -148,7 +142,6 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      schedule: vi.fn(),
     };
 
     scheduler.startBatch();

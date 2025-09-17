@@ -7,12 +7,13 @@ import { createPushPropagator } from "@lattice/signals/helpers/push-propagator";
 export function createComputedContext() {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
+  const nodeScheduler = createNodeScheduler();
 
   return {
     ctx,
     graphEdges,
     pull: createPullPropagator(ctx, graphEdges),
-    push: createPushPropagator(),
-    nodeScheduler: createNodeScheduler(ctx),
+    push: createPushPropagator({ schedule: nodeScheduler.enqueue }),
+    nodeScheduler,
   };
 }
