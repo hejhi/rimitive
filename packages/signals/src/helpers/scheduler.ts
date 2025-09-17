@@ -1,9 +1,6 @@
 /**
  * Unified Scheduler - Combines propagation and scheduling for optimal performance
  *
- * This module merges the responsibilities of push-propagator and node-scheduler
- * into a single, optimized system that:
- *
  * 1. Propagates updates through dependency graph
  * 2. Schedules effects/subscriptions for execution
  * 3. Manages batching and flushing automatically

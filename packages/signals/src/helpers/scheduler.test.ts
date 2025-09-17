@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createNodeScheduler } from './node-scheduler';
+import { createScheduler } from './scheduler';
 import { CONSTANTS, STATUS_SCHEDULED } from '../constants';
 import type { ScheduledNode } from '../types';
 
@@ -7,7 +7,7 @@ const { STATUS_DISPOSED, STATUS_PENDING } = CONSTANTS;
 
 describe('NodeScheduler', () => {
   it('should enqueue nodes', () => {
-    const scheduler = createNodeScheduler();
+    const scheduler = createScheduler();
 
     const node: ScheduledNode = {
       __type: 'test',
@@ -20,12 +20,12 @@ describe('NodeScheduler', () => {
     };
 
     scheduler.startBatch();
-    scheduler.enqueue(node);
+    scheduler.schedule(node);
     expect(node.status).toBe(STATUS_SCHEDULED);
   });
 
-  it('should not enqueue already scheduled nodes', () => {
-    const scheduler = createNodeScheduler();
+  it('should not schedule already scheduled nodes', () => {
+    const scheduler = createScheduler();
 
     const node: ScheduledNode = {
       __type: 'test',
@@ -38,16 +38,16 @@ describe('NodeScheduler', () => {
     };
 
     // Enqueue once
-    scheduler.enqueue(node);
+    scheduler.schedule(node);
     const scheduledAfterFirst = node.status;
 
     // Try to enqueue again - should be skipped
-    scheduler.enqueue(node);
+    scheduler.schedule(node);
     expect(node.status).toBe(scheduledAfterFirst); // Scheduled flag unchanged
   });
 
   it('should dispose node only once', () => {
-    const scheduler = createNodeScheduler();
+    const scheduler = createScheduler();
 
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
@@ -71,7 +71,7 @@ describe('NodeScheduler', () => {
   });
 
   it('should flush all scheduled nodes in FIFO order', () => {
-    const scheduler = createNodeScheduler();
+    const scheduler = createScheduler();
 
     const flushOrder: string[] = [];
 
@@ -112,9 +112,9 @@ describe('NodeScheduler', () => {
 
     scheduler.startBatch();
 
-    scheduler.enqueue(node1);
-    scheduler.enqueue(node2);
-    scheduler.enqueue(node3);
+    scheduler.schedule(node1);
+    scheduler.schedule(node2);
+    scheduler.schedule(node3);
 
     scheduler.flush();
 
@@ -125,14 +125,14 @@ describe('NodeScheduler', () => {
   });
 
   it('should handle empty flush', () => {
-    const scheduler = createNodeScheduler();
+    const scheduler = createScheduler();
 
     // Should not throw
     expect(() => scheduler.flush()).not.toThrow();
   });
 
   it('should clear nextScheduled flag during flush', () => {
-    const scheduler = createNodeScheduler();
+    const scheduler = createScheduler();
 
     const node: ScheduledNode = {
       __type: 'test',
@@ -145,7 +145,7 @@ describe('NodeScheduler', () => {
     };
 
     scheduler.startBatch();
-    scheduler.enqueue(node);
+    scheduler.schedule(node);
     expect(node.status === STATUS_SCHEDULED).toBe(true);
 
     scheduler.flush();

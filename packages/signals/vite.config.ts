@@ -71,7 +71,6 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types.ts'),
         context: resolve(__dirname, 'src/context.ts'),
         constants: resolve(__dirname, 'src/constants.ts'),
-        'helpers/node-scheduler': resolve(__dirname, 'src/helpers/node-scheduler.ts'),
         'helpers/scheduler': resolve(__dirname, 'src/helpers/scheduler.ts'),
         'helpers/graph-edges': resolve(__dirname, 'src/helpers/graph-edges.ts'),
         'helpers/pull-propagator': resolve(__dirname, 'src/helpers/pull-propagator.ts'),

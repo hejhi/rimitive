@@ -42,10 +42,6 @@
       "import": "./dist/constants.js",
       "types": "./dist/constants.d.ts"
     },
-    "./helpers/node-scheduler": {
-      "import": "./dist/helpers/node-scheduler.js",
-      "types": "./dist/helpers/node-scheduler.d.ts"
-    },
     "./helpers/scheduler": {
       "import": "./dist/helpers/scheduler.js",
       "types": "./dist/helpers/scheduler.d.ts"
