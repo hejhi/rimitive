@@ -10,7 +10,7 @@
 import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED, STATUS_CLEAN } = CONSTANTS;
+const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED, STATUS_CLEAN, STATUS_DIRTY } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -88,15 +88,12 @@ export function createScheduler(): Scheduler {
       const consumerNode = currentDependency.consumer;
       const consumerNodeStatus = consumerNode.status;
 
-      // Skip disposed nodes
-      if (consumerNodeStatus === STATUS_DISPOSED) {
-        currentDependency = currentDependency.nextConsumer;
-        continue;
-      }
-
-      // Skip if already visited in this propagation pass
-      // We rely on enqueue() to handle STATUS_SCHEDULED internally
-      if (consumerNodeStatus === STATUS_PENDING) {
+      // Only process nodes in their natural state (CLEAN or DIRTY)
+      // All other states mean the node has already been handled:
+      // - STATUS_PENDING: already visited in this propagation
+      // - STATUS_SCHEDULED+: already in queue (set by enqueue)
+      // - STATUS_DISPOSED: dead node
+      if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== STATUS_DIRTY) {
         currentDependency = currentDependency.nextConsumer;
         continue;
       }
@@ -105,7 +102,7 @@ export function createScheduler(): Scheduler {
       consumerNode.status = STATUS_PENDING;
 
       // Schedule if this is a scheduled node (effect/subscription)
-      // enqueue() will upgrade status to STATUS_SCHEDULED and handle duplicates
+      // enqueue() will upgrade status to STATUS_SCHEDULED
       if ('flush' in consumerNode) {
         enqueue(consumerNode);
         // Don't traverse through scheduled nodes - they'll handle their own updates
