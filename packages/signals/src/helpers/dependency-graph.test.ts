@@ -571,7 +571,7 @@ describe('Dependency Graph Helpers', () => {
       const eff1 = createMockNode('effect', 0, true);
       const eff2 = createMockNode('effect', 0, true);
       const eff3 = createMockNode('effect', 0, true);
-  
+
       // Set up edges
       const sourceToComp1 = createEdge(source, comp1);
       const sourceToComp2 = createEdge(source, comp2);

@@ -88,12 +88,15 @@ export function createScheduler(): Scheduler {
       const consumerNode = currentDependency.consumer;
       const consumerNodeStatus = consumerNode.status;
 
-      // Skip if already processed or disposed
-      if (
-        consumerNodeStatus === STATUS_DISPOSED ||
-        consumerNodeStatus === STATUS_PENDING ||
-        consumerNodeStatus === STATUS_SCHEDULED
-      ) {
+      // Skip disposed nodes
+      if (consumerNodeStatus === STATUS_DISPOSED) {
+        currentDependency = currentDependency.nextConsumer;
+        continue;
+      }
+
+      // Skip if already visited in this propagation pass
+      // We rely on enqueue() to handle STATUS_SCHEDULED internally
+      if (consumerNodeStatus === STATUS_PENDING) {
         currentDependency = currentDependency.nextConsumer;
         continue;
       }
@@ -101,11 +104,22 @@ export function createScheduler(): Scheduler {
       // Mark as pending (invalidated)
       consumerNode.status = STATUS_PENDING;
 
-      // Direct scheduling without duck typing
-      // ScheduledNodes (effects/subscriptions) implement the ScheduledNode interface
-      if ('flush' in consumerNode) enqueue(consumerNode);
+      // Schedule if this is a scheduled node (effect/subscription)
+      // enqueue() will upgrade status to STATUS_SCHEDULED and handle duplicates
+      if ('flush' in consumerNode) {
+        enqueue(consumerNode);
+        // Don't traverse through scheduled nodes - they'll handle their own updates
+        currentDependency = currentDependency.nextConsumer;
 
-      // Continue propagation if consumer has subscribers
+        // If no sibling, try to pop from stack
+        if (!currentDependency && dependencyStack) {
+          currentDependency = dependencyStack.value;
+          dependencyStack = dependencyStack.prev;
+        }
+        continue;
+      }
+
+      // Continue propagation for intermediate nodes (computeds)
       if ('subscribers' in consumerNode) {
         const consumerSubscribers = consumerNode.subscribers;
 
@@ -125,10 +139,8 @@ export function createScheduler(): Scheduler {
       // Move to next sibling
       currentDependency = currentDependency.nextConsumer;
 
-      if (currentDependency || !dependencyStack) continue;
-
       // Pop from stack when no more siblings
-      while (!currentDependency && dependencyStack) {
+      if (!currentDependency && dependencyStack) {
         currentDependency = dependencyStack.value;
         dependencyStack = dependencyStack.prev;
       }
