@@ -49,7 +49,7 @@ export function createBatchFactory(
     nodeScheduler: NodeScheduler
   }
 ): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { startBatch, endBatch } = opts.nodeScheduler;
+  const { startBatch, endBatch, flush } = opts.nodeScheduler;
 
   // Signal writes propagate immediately during batch.
   // We only defer effect execution to batch end.
@@ -59,8 +59,7 @@ export function createBatchFactory(
     try {
       return fn();
     } finally {
-      // End batch and auto-flush if it was the outermost batch
-      endBatch();
+      if (endBatch()) flush();
     }
   };
 

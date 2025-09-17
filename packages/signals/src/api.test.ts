@@ -70,7 +70,7 @@ describe('createSignalAPI', () => {
         ...scheduler,
         enqueue: (node: ScheduledNode) => {
           enqueueCalled = true;
-          return scheduler.enqueue(node);
+          scheduler.enqueue(node);
         },
       };
     })();

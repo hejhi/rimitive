@@ -390,11 +390,11 @@ describe('Dependency Graph Helpers', () => {
       // Wrap enqueue to track scheduled nodes
       const originalEnqueue = nodeScheduler.enqueue;
       const trackingEnqueue = (node: ScheduledNode) => {
-        const result = originalEnqueue(node);
-        if (result) {
+        originalEnqueue(node);
+        // Check if the node was actually scheduled (status changed)
+        if (node.status === STATUS_SCHEDULED) {
           scheduledNodes.push(node);
         }
-        return result;
       };
 
       // Create a custom push propagator
