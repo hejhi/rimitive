@@ -134,8 +134,8 @@ Alien:   98.55ns  → 109.40ns → 109.51ns  (+11%, then stable)
 - `/packages/benchmarks/src/suites/lattice/memory-pressure.bench.ts` - Degradation testing
 
 ### Core Implementation Files
-- `/packages/signals/src/helpers/push-propagator.ts` - Push propagation logic
-- `/packages/signals/src/helpers/pull-propagator.ts` - Pull propagation logic  
+- `/packages/signals/src/helpers/scheduler.ts` - Unified scheduler with push propagation and scheduling
+- `/packages/signals/src/helpers/pull-propagator.ts` - Pull propagation logic
 - `/packages/signals/src/helpers/node-scheduler.ts` - Topological scheduling
 - `/packages/signals/src/helpers/graph-edges.ts` - Intrusive edge management
 

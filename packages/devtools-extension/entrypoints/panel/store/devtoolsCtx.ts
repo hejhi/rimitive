@@ -7,7 +7,7 @@ import type { Signal, SignalContext } from '@lattice/signals/signal';
 import type { ContextInfo, LogEntry } from './types';
 import { createBaseContext } from 'node_modules/@lattice/signals/src/context';
 import { createGraphEdges } from 'node_modules/@lattice/signals/src/helpers/graph-edges';
-import { createPushPropagator } from 'node_modules/@lattice/signals/src/helpers/push-propagator';
+import { createScheduler } from 'node_modules/@lattice/signals/src/helpers/scheduler';
 import { createPullPropagator } from 'node_modules/@lattice/signals/src/helpers/pull-propagator';
 import { createNodeScheduler, NodeScheduler } from 'node_modules/@lattice/signals/src/helpers/node-scheduler';
 
@@ -18,13 +18,13 @@ function createContext(): GlobalContext &
   ComputedContext {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const pushPropagator = createPushPropagator();
+  const scheduler = createScheduler();
 
   // Extend baseCtx in place to ensure nodeScheduler uses the same context object
   const ctx = {
     ...baseCtx,
     graphEdges,
-    pushPropagator,
+    pushPropagator: { pushUpdates: scheduler.propagate },
     pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>,
     nodeScheduler: null as unknown as NodeScheduler,
   };

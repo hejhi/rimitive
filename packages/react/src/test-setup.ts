@@ -6,34 +6,35 @@ import { render } from '@testing-library/react';
 import { createSignalAPI, type FactoriesToAPI } from '@lattice/signals/api';
 import { createSignalFactory, SignalFunction } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
-import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
+import { createEffectFactory } from '@lattice/signals/effect';
 import { createBatchFactory } from '@lattice/signals/batch';
 import type { LatticeExtension } from '@lattice/lattice';
 import { SignalProvider } from './signals/context';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createNodeScheduler, NodeScheduler } from '@lattice/signals/helpers/node-scheduler';
 
 export function createContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const pushPropagator = createPushPropagator();
+  const scheduler = createScheduler();
 
   // Build the context that matches what the factories expect
   const ctx = {
     ...baseCtx,
     ctx: baseCtx,
     graphEdges,
-    push: pushPropagator,
+    scheduler,
+    push: { pushUpdates: scheduler.propagate },
     pull: null as unknown as ReturnType<typeof createPullPropagator>,
     nodeScheduler: null as unknown as NodeScheduler,
   };
 
   const pullPropagator = createPullPropagator(baseCtx, graphEdges);
   ctx.pull = pullPropagator;
-  const nodeScheduler = createNodeScheduler(baseCtx);
+  const nodeScheduler = createNodeScheduler();
 
   ctx.nodeScheduler = nodeScheduler;
 
@@ -55,7 +56,7 @@ const testFactories = {
     ctx: unknown
   ) => LatticeExtension<
     'effect',
-    (fn: () => void | (() => void)) => EffectDisposer
+    (fn: () => void | (() => void)) => () => void
   >,
   batch: createBatchFactory as (
     ctx: unknown

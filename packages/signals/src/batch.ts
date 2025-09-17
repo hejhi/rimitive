@@ -35,21 +35,21 @@
  * - Inspired by database transactions and React's batching
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { NodeScheduler } from './helpers/node-scheduler';
+import { Scheduler } from './helpers/scheduler';
 import { GlobalContext } from './context';
 
 export type BatchContext = GlobalContext & {
-  nodeScheduler: NodeScheduler;
+  scheduler: Scheduler;
 }
 
 // BatchFactory uses SignalContext which includes all helpers
 export function createBatchFactory(
   opts: {
     ctx: GlobalContext,
-    nodeScheduler: NodeScheduler
+    scheduler: Scheduler
   }
 ): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { startBatch, endBatch, flush } = opts.nodeScheduler;
+  const { startBatch, endBatch } = opts.scheduler;
 
   // Signal writes propagate immediately during batch.
   // We only defer effect execution to batch end.
@@ -59,7 +59,7 @@ export function createBatchFactory(
     try {
       return fn();
     } finally {
-      if (endBatch()) flush();
+      endBatch(); // endBatch automatically flushes when depth reaches 0
     }
   };
 

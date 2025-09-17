@@ -1,11 +1,11 @@
 import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createSignalFactory, type SignalFunction } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
-import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
+import { createEffectFactory } from '@lattice/signals/effect';
 import { createBatchFactory } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createNodeScheduler, NodeScheduler } from '@lattice/signals/helpers/node-scheduler';
 type LatticeExtension<N extends string, M> = { name: N; method: M };
@@ -13,20 +13,20 @@ type LatticeExtension<N extends string, M> = { name: N; method: M };
 function createContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const pushPropagator = createPushPropagator();
+  const scheduler = createScheduler();
 
   // Extend baseCtx in place to ensure nodeScheduler uses the same context object
   const ctx = {
     ...baseCtx,
     graphEdges,
-    pushPropagator,
+    pushPropagator: { pushUpdates: scheduler.propagate },
     pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>,
     nodeScheduler: null as unknown as NodeScheduler,
   };
 
-  const pullPropagator = createPullPropagator(ctx);
+  const pullPropagator = createPullPropagator(ctx, graphEdges);
   ctx.pullPropagator = pullPropagator;
-  const nodeScheduler = createNodeScheduler(ctx);
+  const nodeScheduler = createNodeScheduler();
 
   ctx.nodeScheduler = nodeScheduler;
 
@@ -38,7 +38,7 @@ const signalAPI = createSignalAPI(
   {
     signal: createSignalFactory as (
       ctx: unknown
-    ) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+    ) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>,
     computed: createComputedFactory as (
       ctx: unknown
     ) => LatticeExtension<
@@ -49,7 +49,7 @@ const signalAPI = createSignalAPI(
       ctx: unknown
     ) => LatticeExtension<
       'effect',
-      (fn: () => void | (() => void)) => EffectDisposer
+      (fn: () => void | (() => void)) => () => void
     >,
     batch: createBatchFactory as (
       ctx: unknown
@@ -58,11 +58,11 @@ const signalAPI = createSignalAPI(
   createContext()
 );
 
-const signal = signalAPI.signal as <T>(value: T) => SignalInterface<T>;
+const signal = signalAPI.signal as <T>(value: T) => SignalFunction<T>;
 const computed = signalAPI.computed as <T>(
   compute: () => T
 ) => ComputedFunction<T>;
-const effect = signalAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
+const effect = signalAPI.effect as (fn: () => void | (() => void)) => () => void;
 const batch = signalAPI.batch as <T>(fn: () => T) => T;
 
 // Counter State

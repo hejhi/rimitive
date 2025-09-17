@@ -13,28 +13,24 @@ import { createContext as createLattice } from '@lattice/lattice';
 import { createBaseContext, GlobalContext } from './context';
 import { createGraphEdges, GraphEdges } from './helpers/graph-edges';
 import { createPullPropagator, PullPropagator } from './helpers/pull-propagator';
-import { createNodeScheduler, NodeScheduler } from './helpers/node-scheduler';
-import { createPushPropagator, PushPropagator } from './helpers/push-propagator';
+import { createScheduler, Scheduler } from './helpers/scheduler';
 
 // Create a complete context with all helpers
 export function createDefaultContext(): {
   ctx: GlobalContext,
   graphEdges: GraphEdges,
-  nodeScheduler: NodeScheduler,
-  push: PushPropagator,
+  scheduler: Scheduler,
   pull: PullPropagator
 } {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const nodeScheduler = createNodeScheduler();
-  const push = createPushPropagator({ schedule: nodeScheduler.enqueue });
+  const scheduler = createScheduler();
   const pull = createPullPropagator(ctx, graphEdges);
 
   return {
     ctx,
     graphEdges,
-    nodeScheduler,
-    push,
+    scheduler,
     pull
   };
 }
@@ -42,11 +38,11 @@ export function createDefaultContext(): {
 // Create a test instance with a stable context
 export function createTestInstance() {
   const opts = createDefaultContext();
-  const { ctx, nodeScheduler } = opts;
+  const { ctx, scheduler } = opts;
 
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory({ ...opts, nodeScheduler }),
+    createSignalFactory(opts),
     createComputedFactory(opts),
     createEffectFactory(opts),
     createBatchFactory(opts)
@@ -74,7 +70,7 @@ export function createTestInstance() {
 
     // Raw access for advanced testing
     activeContext: ctx,
-    nodeScheduler,
+    scheduler,
   };
 }
 

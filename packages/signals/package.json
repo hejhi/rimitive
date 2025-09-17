@@ -46,6 +46,10 @@
       "import": "./dist/helpers/node-scheduler.js",
       "types": "./dist/helpers/node-scheduler.d.ts"
     },
+    "./helpers/scheduler": {
+      "import": "./dist/helpers/scheduler.js",
+      "types": "./dist/helpers/scheduler.d.ts"
+    },
     "./helpers/graph-edges": {
       "import": "./dist/helpers/graph-edges.js",
       "types": "./dist/helpers/graph-edges.d.ts"
@@ -53,10 +57,6 @@
     "./helpers/node-state": {
       "import": "./dist/helpers/node-state.js",
       "types": "./dist/helpers/node-state.d.ts"
-    },
-    "./helpers/push-propagator": {
-      "import": "./dist/helpers/push-propagator.js",
-      "types": "./dist/helpers/push-propagator.d.ts"
     },
     "./helpers/pull-propagator": {
       "import": "./dist/helpers/pull-propagator.js",

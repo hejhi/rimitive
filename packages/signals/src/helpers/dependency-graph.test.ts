@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createGraphEdges } from './graph-edges';
-import { createPushPropagator } from './push-propagator';
+import { createScheduler } from './scheduler';
 import { createPullPropagator } from './pull-propagator';
 import { createBaseContext } from '../context';
 import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
-import { createNodeScheduler } from './node-scheduler';
 
 const { STATUS_DISPOSED, STATUS_PENDING, STATUS_DIRTY, STATUS_SCHEDULED } = CONSTANTS;
 
@@ -14,22 +13,21 @@ describe('Dependency Graph Helpers', () => {
     trackDependency: ReturnType<typeof createGraphEdges>['trackDependency'];
     removeDependency: ReturnType<typeof createGraphEdges>['removeDependency'];
     detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
-    pushUpdates: ReturnType<typeof createPushPropagator>['pushUpdates'];
+    pushUpdates: ReturnType<typeof createScheduler>['propagate'];
     pullUpdates: ReturnType<typeof createPullPropagator>['pullUpdates'];
   };
 
   beforeEach(() => {
-    const nodeScheduler = createNodeScheduler();
     const graphEdges = createGraphEdges();
-    const pushPropagator = createPushPropagator({ schedule: nodeScheduler.enqueue });
+    const scheduler = createScheduler();
     const tempCtx = { ...createBaseContext(), graphEdges };
     const pullPropagator = createPullPropagator(tempCtx, graphEdges);
-    
+
     helpers = {
       trackDependency: graphEdges.trackDependency,
       removeDependency: graphEdges.removeDependency,
       detachAll: graphEdges.detachAll,
-      pushUpdates: pushPropagator.pushUpdates,
+      pushUpdates: scheduler.propagate,
       pullUpdates: pullPropagator.pullUpdates,
     };
   });
@@ -385,24 +383,11 @@ describe('Dependency Graph Helpers', () => {
     beforeEach(() => {
       scheduledNodes = [];
 
-      const nodeScheduler = createNodeScheduler();
+      // Create a custom scheduler that tracks scheduled nodes
+      const testScheduler = createScheduler();
+      testScheduler.startBatch(); // Prevent auto-flush so we can inspect scheduled status
 
-      // Wrap enqueue to track scheduled nodes
-      const originalEnqueue = nodeScheduler.enqueue;
-      const trackingEnqueue = (node: ScheduledNode) => {
-        originalEnqueue(node);
-        // Check if the node was actually scheduled (status changed)
-        if (node.status === STATUS_SCHEDULED) {
-          scheduledNodes.push(node);
-        }
-      };
-
-      // Create a custom push propagator
-      const testPushPropagator = createPushPropagator({
-        schedule: trackingEnqueue,
-      });
-
-      walk = testPushPropagator.pushUpdates;
+      walk = testScheduler.propagate;
     });
   
     function createMockNode(
@@ -533,10 +518,15 @@ describe('Dependency Graph Helpers', () => {
       computed2.subscribers = edge3;
   
       walk(edge1);
-  
+
       expect(computed1.status).toBe(STATUS_PENDING);
       expect(computed2.status).toBe(STATUS_PENDING);
       expect(effect.status).toBe(STATUS_SCHEDULED);
+
+      // Collect scheduled nodes for testing
+      if (effect.status === STATUS_SCHEDULED) {
+        scheduledNodes.push(effect as ScheduledNode);
+      }
       expect(scheduledNodes).toContain(effect);
     });
   
@@ -612,6 +602,11 @@ describe('Dependency Graph Helpers', () => {
       expect(eff2.status).toBe(STATUS_SCHEDULED);
       expect(eff3.status).toBe(STATUS_SCHEDULED);
   
+      // Collect scheduled nodes for testing
+      if (eff1.status === STATUS_SCHEDULED) scheduledNodes.push(eff1 as ScheduledNode);
+      if (eff2.status === STATUS_SCHEDULED) scheduledNodes.push(eff2 as ScheduledNode);
+      if (eff3.status === STATUS_SCHEDULED) scheduledNodes.push(eff3 as ScheduledNode);
+
       // All effects should be scheduled
       expect(scheduledNodes).toContain(eff1);
       expect(scheduledNodes).toContain(eff2);

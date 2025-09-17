@@ -7,20 +7,18 @@ import { createBatchFactory } from './batch';
 import { createBaseContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPullPropagator } from './helpers/pull-propagator';
-import { createNodeScheduler } from './helpers/node-scheduler';
-import { createPushPropagator } from './helpers/push-propagator';
+import { createScheduler } from './helpers/scheduler';
 
 function createTestContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const nodeScheduler = createNodeScheduler();
+  const scheduler = createScheduler();
 
   return {
     ctx: baseCtx,
     graphEdges,
-    push: createPushPropagator({ schedule: nodeScheduler.enqueue }),
+    scheduler,
     pull: createPullPropagator(baseCtx, graphEdges),
-    nodeScheduler,
   };
 }
 

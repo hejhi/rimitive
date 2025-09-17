@@ -18,7 +18,7 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
-import { PushPropagator } from './helpers/push-propagator';
+import { Scheduler } from './helpers/scheduler';
 
 const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
@@ -31,8 +31,7 @@ export interface SignalFunction<T = unknown> {
 export type SignalOpts = {
   ctx: GlobalContext;
   graphEdges: GraphEdges;
-  push: PushPropagator;
-  nodeScheduler?: { flush: () => void; isInBatch: () => boolean };
+  scheduler: Scheduler;
 };
 
 interface SignalNode<T> extends ProducerNode {
@@ -45,9 +44,8 @@ export function createSignalFactory(
 ): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
     graphEdges: { trackDependency },
-    push: { pushUpdates },
+    scheduler: { propagate },
     ctx,
-    nodeScheduler,
   } = opts;
 
   function createSignal<T>(initialValue: T): SignalFunction<T> {
@@ -80,14 +78,9 @@ export function createSignalFactory(
       // Early exit if no subscribers
       if (!subs) return;
 
-      // Mark dirty and propagate
+      // Mark dirty and propagate (scheduler handles flushing automatically)
       node.status = STATUS_DIRTY;
-      pushUpdates(subs);
-
-      // Flush queue if not in batch
-      if (nodeScheduler && !nodeScheduler.isInBatch()) {
-        nodeScheduler.flush();
-      }
+      propagate(subs);
     }
 
     // Direct property assignment
