@@ -110,8 +110,6 @@ describe('NodeScheduler', () => {
       deferredParent: undefined,
     };
 
-    scheduler.startBatch();
-
     scheduler.enqueue(node1);
     scheduler.enqueue(node2);
     scheduler.enqueue(node3);
@@ -144,7 +142,6 @@ describe('NodeScheduler', () => {
       deferredParent: undefined,
     };
 
-    scheduler.startBatch();
     scheduler.enqueue(node);
     expect(node.status === STATUS_SCHEDULED).toBe(true);
 

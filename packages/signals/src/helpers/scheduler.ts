@@ -41,6 +41,9 @@ export function createScheduler(): Scheduler {
 
   // Execute all scheduled nodes in FIFO order
   const flush = (): void => {
+    // Don't flush during batch - batching will handle it
+    if (batchDepth > 0) return;
+
     let current = queueHead;
 
     if (!current) return;
@@ -143,8 +146,8 @@ export function createScheduler(): Scheduler {
       }
     } while (currentDependency);
 
-    // Auto-flush if not in batch
-    if (batchDepth === 0) flush();
+    // Attempt flush - it will decide if appropriate
+    flush();
   };
 
   const startBatch = (): number => batchDepth++;
