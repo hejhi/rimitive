@@ -1,7 +1,7 @@
 import type { Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { STATUS_PENDING, STATUS_DISPOSED } = CONSTANTS;
+const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -27,7 +27,8 @@ export function createPushPropagator(): PushPropagator {
       // Skip if already disposed or pending
       if (
         consumerNodeStatus === STATUS_DISPOSED ||
-        consumerNodeStatus === STATUS_PENDING
+        consumerNodeStatus === STATUS_PENDING ||
+        consumerNodeStatus === STATUS_SCHEDULED
       ) {
         currentDependency = currentDependency.nextConsumer;
         continue;
