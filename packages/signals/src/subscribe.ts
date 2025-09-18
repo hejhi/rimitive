@@ -51,25 +51,36 @@ export function createSubscribeFactory(
     dispose: disposeNode,
   } = opts;
 
+  // Create prototype with shared flush method
+  const subscriptionPrototype = {
+    flush(this: SubscriptionNode<any>): void {
+      const value = track(ctx, this, this.source);
+      this.callback(value);
+    }
+  };
+
+  function createSubscriptionNode<T>(
+    source: () => T,
+    callback: SubscribeCallback<T>
+  ): SubscriptionNode<T> {
+    const node = Object.create(subscriptionPrototype) as SubscriptionNode<T>;
+    node.__type = 'subscription';
+    node.status = STATUS_CLEAN;
+    node.dependencies = undefined;
+    node.dependencyTail = undefined;
+    node.deferredParent = undefined;
+    node.nextScheduled = undefined;
+    node.callback = callback;
+    node.source = source;
+    return node;
+  }
+
   function subscribe<T>(
     source: () => T,
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
-    // Create subscription node with closures for safety
-    const node: SubscriptionNode<T> = {
-      __type: 'subscription' as const,
-      callback,
-      source,
-      status: STATUS_CLEAN,
-      dependencies: undefined,
-      dependencyTail: undefined,
-      deferredParent: undefined,
-      nextScheduled: undefined,
-      flush: () => {
-        const value = track(ctx, node, source);
-        callback(value);
-      },
-    };
+    // Create subscription node with shared prototype
+    const node = createSubscriptionNode(source, callback);
 
     // Initial execution to establish dependencies and get initial value
     const value = track(ctx, node, source);

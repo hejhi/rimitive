@@ -19,11 +19,6 @@ export type { GlobalContext } from './context';
 export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 
-interface EffectNode extends ScheduledNode {
-  __type: 'effect';
-  _cleanup: (() => void) | undefined; // Cleanup from previous run
-}
-
 // Export the factory return type for better type inference
 export type EffectFactory = LatticeExtension<
   'effect',
@@ -40,31 +35,39 @@ export function createEffectFactory(
     detachAll,
   } = opts;
 
-  function createEffect(fn: () => void | (() => void)): () => void {
-    const node: EffectNode = {
-      __type: 'effect' as const,
-      _cleanup: undefined,
-      status: STATUS_CLEAN,
-      dependencies: undefined,
-      dependencyTail: undefined,
-      deferredParent: undefined,
-      nextScheduled: undefined,
-      flush: () => {
-        if (node._cleanup) {
-          node._cleanup();
-          node._cleanup = undefined;
-        }
-        const newCleanup = track(ctx, node, fn);
-        if (newCleanup) node._cleanup = newCleanup;
-      },
-    };
+  class EffectNode implements ScheduledNode {
+    readonly __type = 'effect' as const;
+    status = STATUS_CLEAN;
+    dependencies = undefined;
+    dependencyTail = undefined;
+    deferredParent = undefined;
+    nextScheduled = undefined;
+    _cleanup: (() => void) | undefined = undefined;
+    _run: () => void | (() => void);
+
+    constructor(fn: () => void | (() => void)) {
+      this._run = fn;
+    }
+
+    flush(): void {
+      if (this._cleanup) {
+        this._cleanup();
+        this._cleanup = undefined;
+      }
+      const newCleanup = track(ctx, this, this._run);
+      if (newCleanup) this._cleanup = newCleanup;
+    }
+  }
+
+  function createEffect(run: () => void | (() => void)): () => void {
+    const node = new EffectNode(run);
 
     // Initial run - inline to avoid extra call
-    const newCleanup = track(ctx, node, fn);
+    const newCleanup = track(ctx, node, run);
     if (newCleanup) node._cleanup = newCleanup;
 
     // Return dispose function
-    return () => disposeNode(node, (node) => {
+    return () => disposeNode(node, (node: EffectNode) => {
       if (node._cleanup) node._cleanup();
       detachAll(node);
     });
