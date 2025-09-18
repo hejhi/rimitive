@@ -8,17 +8,20 @@ import { createBaseContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPullPropagator } from './helpers/pull-propagator';
 import { createScheduler } from './helpers/scheduler';
+import { createGraphTraversal } from './helpers/graph-traversal';
 
 function createTestContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const scheduler = createScheduler();
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({ propagate: traverseGraph });
 
   return {
     ctx: baseCtx,
     graphEdges,
     scheduler,
     pull: createPullPropagator(baseCtx, graphEdges),
+    propagate: scheduler.propagate,
   };
 }
 

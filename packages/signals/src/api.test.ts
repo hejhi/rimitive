@@ -10,17 +10,20 @@ import { createBaseContext } from './context';
 import { createScheduler } from './helpers/scheduler';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPullPropagator } from './helpers/pull-propagator';
+import { createGraphTraversal } from './helpers/graph-traversal';
 
 export function createDefaultContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const scheduler = createScheduler();
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({ propagate: traverseGraph });
 
   return {
     ctx: baseCtx,
     graphEdges,
     scheduler,
     pull: createPullPropagator(baseCtx, graphEdges),
+    propagate: scheduler.propagate,
   };
 }
 
@@ -62,8 +65,9 @@ describe('createSignalAPI', () => {
     // Create custom context with custom work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
+    const { traverseGraph } = createGraphTraversal();
     const scheduler = (() => {
-      const originalScheduler = createScheduler();
+      const originalScheduler = createScheduler({ propagate: traverseGraph });
       return {
         ...originalScheduler,
         propagate: (subscribers: Dependency) => {
@@ -87,6 +91,7 @@ describe('createSignalAPI', () => {
         graphEdges: graphEdges,
         scheduler,
         pull: pullPropagator,
+        propagate: scheduler.propagate,
       }
     );
 
@@ -111,7 +116,8 @@ describe('createSignalAPI', () => {
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
     const pullPropagator = createPullPropagator(baseCtx, graphEdges);
-    const scheduler = createScheduler();
+    const { traverseGraph } = createGraphTraversal();
+    const scheduler = createScheduler({ propagate: traverseGraph });
 
     const api = createSignalAPI({
       signal: createSignalFactory,
@@ -121,6 +127,7 @@ describe('createSignalAPI', () => {
       graphEdges,
       pull: pullPropagator,
       scheduler,
+      propagate: scheduler.propagate,
     });
     
     const count = api.signal(0);

@@ -5,6 +5,7 @@ import { createPullPropagator } from './pull-propagator';
 import { createBaseContext } from '../context';
 import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createGraphTraversal } from './graph-traversal';
 
 const { STATUS_DISPOSED, STATUS_PENDING, STATUS_DIRTY, STATUS_SCHEDULED } = CONSTANTS;
 
@@ -19,7 +20,8 @@ describe('Dependency Graph Helpers', () => {
 
   beforeEach(() => {
     const graphEdges = createGraphEdges();
-    const scheduler = createScheduler();
+    const { traverseGraph } = createGraphTraversal();
+    const scheduler = createScheduler({ propagate: traverseGraph });
     const tempCtx = { ...createBaseContext(), graphEdges };
     const pullPropagator = createPullPropagator(tempCtx, graphEdges);
 
@@ -384,7 +386,8 @@ describe('Dependency Graph Helpers', () => {
       scheduledNodes = [];
 
       // Create a custom scheduler that tracks scheduled nodes
-      const testScheduler = createScheduler();
+      const { traverseGraph } = createGraphTraversal();
+      const testScheduler = createScheduler({ propagate: traverseGraph });
       testScheduler.startBatch(); // Prevent auto-flush so we can inspect scheduled status
 
       walk = testScheduler.propagate;

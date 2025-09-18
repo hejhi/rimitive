@@ -4,7 +4,7 @@
 import type { SignalFunction } from './signal';
 // Effect now returns () => void directly
 import type { ComputedFunction } from './computed';
-import type { ConsumerNode } from './types';
+import type { ConsumerNode, Dependency } from './types';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -14,24 +14,28 @@ import { createBaseContext, GlobalContext } from './context';
 import { createGraphEdges, GraphEdges } from './helpers/graph-edges';
 import { createPullPropagator, PullPropagator } from './helpers/pull-propagator';
 import { createScheduler, Scheduler } from './helpers/scheduler';
+import { createGraphTraversal } from './helpers/graph-traversal';
 
 // Create a complete context with all helpers
 export function createDefaultContext(): {
   ctx: GlobalContext,
   graphEdges: GraphEdges,
   scheduler: Scheduler,
-  pull: PullPropagator
+  pull: PullPropagator,
+  propagate: (subscribers: Dependency) => void
 } {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const scheduler = createScheduler();
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({ propagate: traverseGraph });
   const pull = createPullPropagator(ctx, graphEdges);
 
   return {
     ctx,
     graphEdges,
     scheduler,
-    pull
+    pull,
+    propagate: scheduler.propagate
   };
 }
 
@@ -42,7 +46,7 @@ export function createTestInstance() {
 
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory(opts),
+    createSignalFactory({ ...opts, propagate: scheduler.propagate }),
     createComputedFactory(opts),
     createEffectFactory(opts),
     createBatchFactory(opts)

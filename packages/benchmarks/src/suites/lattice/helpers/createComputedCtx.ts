@@ -1,17 +1,17 @@
 import { createBaseContext } from "@lattice/signals/context";
 import { createGraphEdges } from "@lattice/signals/helpers/graph-edges";
-import { createScheduler } from "@lattice/signals/helpers/scheduler";
+import { createGraphTraversal } from "@lattice/signals/helpers/graph-traversal";
 import { createPullPropagator } from "@lattice/signals/helpers/pull-propagator";
 
 export function createComputedContext() {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const scheduler = createScheduler();
+  const { propagate } = createGraphTraversal();
 
   return {
     ctx,
     graphEdges,
-    scheduler,
+    propagate,
     pull: createPullPropagator(ctx, graphEdges),
   };
 }

@@ -10,12 +10,7 @@
 import type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED, STATUS_CLEAN, STATUS_DIRTY } = CONSTANTS;
-
-interface Stack<T> {
-  value: T;
-  prev: Stack<T> | undefined;
-}
+const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED, STATUS_CLEAN } = CONSTANTS;
 
 export interface Scheduler {
   /** Propagate updates from a producer to all its dependents */
@@ -33,7 +28,14 @@ export interface Scheduler {
   flush: () => void;
 }
 
-export function createScheduler(): Scheduler {
+export function createScheduler({
+  propagate,
+}: {
+  propagate: (
+    subscribers: Dependency,
+    onLeaf: (node: ConsumerNode) => void
+  ) => void;
+}): Scheduler {
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;
   let queueTail: ScheduledNode | undefined;
@@ -64,55 +66,6 @@ export function createScheduler(): Scheduler {
     }
   };
 
-
-  // Pure graph traversal that marks nodes and notifies about leaves
-  const traverseGraph = (
-    subscribers: Dependency,
-    onLeaf: (node: ConsumerNode) => void
-  ): void => {
-    let dependencyStack: Stack<Dependency> | undefined;
-    let currentDependency: Dependency | undefined = subscribers;
-
-    do {
-      const consumerNode = currentDependency.consumer;
-      const consumerNodeStatus = consumerNode.status;
-
-      // Skip already processed nodes
-      if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== STATUS_DIRTY) {
-        currentDependency = currentDependency.nextConsumer;
-        continue;
-      }
-
-      // Mark as pending (invalidated)
-      consumerNode.status = STATUS_PENDING;
-
-      // Check if we can traverse deeper
-      const hasSubscribers = 'subscribers' in consumerNode && consumerNode.subscribers;
-
-      if (!hasSubscribers) {
-        // This is a leaf node - notify the callback
-        onLeaf(consumerNode);
-
-        currentDependency = currentDependency.nextConsumer;
-        if (!currentDependency && dependencyStack) {
-          currentDependency = dependencyStack.value;
-          dependencyStack = dependencyStack.prev;
-        }
-        continue;
-      }
-
-      // Continue traversal
-      const consumerSubscribers = consumerNode.subscribers!;
-      const siblingDep = currentDependency.nextConsumer;
-
-      if (siblingDep) {
-        dependencyStack = { value: siblingDep, prev: dependencyStack };
-      }
-
-      currentDependency = consumerSubscribers;
-    } while (currentDependency);
-  };
-
   // Leaf handler that queues scheduled nodes
   const queueIfScheduled = (node: ConsumerNode): void => {
     // Only queue nodes with flush methods that are pending
@@ -132,9 +85,9 @@ export function createScheduler(): Scheduler {
     }
   };
 
-  // Public propagate composes traversal with scheduling
-  const propagate = (subscribers: Dependency): void => {
-    traverseGraph(subscribers, queueIfScheduled);
+  // Propagate composes traversal with scheduling
+  const scheduledPropagate = (subscribers: Dependency): void => {
+    propagate(subscribers, queueIfScheduled);
     flush();
   };
 
@@ -160,10 +113,10 @@ export function createScheduler(): Scheduler {
   };
 
   return {
-    propagate,
+    propagate: scheduledPropagate,
     dispose,
     startBatch,
     endBatch,
-    flush
+    flush,
   };
 }

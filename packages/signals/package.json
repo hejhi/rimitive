@@ -50,6 +50,10 @@
       "import": "./dist/helpers/graph-edges.js",
       "types": "./dist/helpers/graph-edges.d.ts"
     },
+    "./helpers/graph-traversal": {
+      "import": "./dist/helpers/graph-traversal.js",
+      "types": "./dist/helpers/graph-traversal.d.ts"
+    },
     "./helpers/node-state": {
       "import": "./dist/helpers/node-state.js",
       "types": "./dist/helpers/node-state.d.ts"

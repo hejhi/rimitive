@@ -27,7 +27,7 @@ import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
 import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
 
-import { createComputedContext } from './helpers/createComputedCtx';
+import { createEffectContext } from './helpers/createEffectCtx';
 
 const latticeAPI = createSignalAPI(
   {
@@ -35,7 +35,7 @@ const latticeAPI = createSignalAPI(
     computed: createComputedFactory,
     effect: createEffectFactory
   },
-  createComputedContext()
+  createEffectContext()
 );
 
 const latticeSignal = latticeAPI.signal;

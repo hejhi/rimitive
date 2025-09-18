@@ -73,7 +73,14 @@ export default defineConfig({
         constants: resolve(__dirname, 'src/constants.ts'),
         'helpers/scheduler': resolve(__dirname, 'src/helpers/scheduler.ts'),
         'helpers/graph-edges': resolve(__dirname, 'src/helpers/graph-edges.ts'),
-        'helpers/pull-propagator': resolve(__dirname, 'src/helpers/pull-propagator.ts'),
+        'helpers/graph-traversal': resolve(
+          __dirname,
+          'src/helpers/graph-traversal.ts'
+        ),
+        'helpers/pull-propagator': resolve(
+          __dirname,
+          'src/helpers/pull-propagator.ts'
+        ),
       },
       formats: ['es'],
     },

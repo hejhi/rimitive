@@ -24,7 +24,7 @@ import {
   startBatch as alienStartBatch,
   endBatch as alienEndBatch,
 } from 'alien-signals';
-import { createComputedContext } from './helpers/createComputedCtx';
+import { createEffectContext } from './helpers/createEffectCtx';
 
 const latticeAPI = createSignalAPI(
   {
@@ -32,7 +32,7 @@ const latticeAPI = createSignalAPI(
     computed: createComputedFactory,
     batch: createBatchFactory
   },
-  createComputedContext()
+  createEffectContext()
 );
 
 const latticeSignal = latticeAPI.signal;

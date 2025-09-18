@@ -13,12 +13,11 @@
  * - The edge tracks version numbers for efficient cache invalidation
  * - This enables automatic dependency discovery during execution
  */
-import type { ProducerNode } from './types';
+import type { ProducerNode, Dependency } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
-import { Scheduler } from './helpers/scheduler';
 
 const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
@@ -31,7 +30,7 @@ export interface SignalFunction<T = unknown> {
 export type SignalOpts = {
   ctx: GlobalContext;
   graphEdges: GraphEdges;
-  scheduler: Scheduler;
+  propagate: (subscribers: Dependency) => void;
 };
 
 interface SignalNode<T> extends ProducerNode {
@@ -44,7 +43,7 @@ export function createSignalFactory(
 ): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
     graphEdges: { trackDependency },
-    scheduler: { propagate },
+    propagate,
     ctx,
   } = opts;
 

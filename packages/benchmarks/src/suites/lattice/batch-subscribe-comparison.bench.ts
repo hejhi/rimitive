@@ -14,7 +14,7 @@ import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
 import { createBatchFactory } from '@lattice/signals/batch';
 import { createSubscribeFactory } from '@lattice/signals/subscribe';
-import { createComputedContext } from './helpers/createComputedCtx';
+import { createEffectContext } from './helpers/createEffectCtx';
 
 const ITERATIONS = 10000;
 
@@ -22,7 +22,7 @@ group('Batch vs Subscribe - Simple Updates', () => {
   summary(() => {
     barplot(() => {
       bench('Lattice - Batched Effects', function* () {
-        const ctx = createComputedContext();
+        const ctx = createEffectContext();
         const latticeAPI = createSignalAPI(
           {
             signal: createSignalFactory,
@@ -60,7 +60,7 @@ group('Batch vs Subscribe - Simple Updates', () => {
       });
 
       bench('Lattice - Subscribe (Eager)', function* () {
-        const ctx = createComputedContext();
+        const ctx = createEffectContext();
         const latticeAPI = createSignalAPI(
           {
             signal: createSignalFactory,
@@ -99,7 +99,7 @@ group('Batch vs Subscribe - Simple Updates', () => {
       });
 
       bench('Lattice - Subscribe (No Batch)', function* () {
-        const ctx = createComputedContext();
+        const ctx = createEffectContext();
         const latticeAPI = createSignalAPI(
           {
             signal: createSignalFactory,
@@ -139,7 +139,7 @@ group('Batch vs Subscribe - Complex Graph', () => {
   summary(() => {
     barplot(() => {
       bench('Lattice - Batched Effects', function* () {
-        const ctx = createComputedContext();
+        const ctx = createEffectContext();
         const latticeAPI = createSignalAPI(
           {
             signal: createSignalFactory,
@@ -177,7 +177,7 @@ group('Batch vs Subscribe - Complex Graph', () => {
       });
 
       bench('Lattice - Subscribe (Eager)', function* () {
-        const ctx = createComputedContext();
+        const ctx = createEffectContext();
         const latticeAPI = createSignalAPI(
           {
             signal: createSignalFactory,
@@ -215,7 +215,7 @@ group('Batch vs Subscribe - Complex Graph', () => {
       });
 
       bench('Lattice - Multiple Subscriptions', function* () {
-        const ctx = createComputedContext();
+        const ctx = createEffectContext();
         const latticeAPI = createSignalAPI(
           {
             signal: createSignalFactory,

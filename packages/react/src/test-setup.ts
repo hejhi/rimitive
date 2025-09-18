@@ -14,12 +14,13 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphTraversal } from '../../signals/src/helpers/graph-traversal';
 
 export function createContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const scheduler = createScheduler();
-
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({ propagate: traverseGraph });
   // Build the context that matches what the factories expect
   const ctx = {
     ...baseCtx,

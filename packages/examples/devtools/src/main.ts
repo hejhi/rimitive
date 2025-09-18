@@ -7,13 +7,14 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 function createContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const scheduler = createScheduler();
-
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({ propagate: traverseGraph });
   // Extend baseCtx in place to ensure nodeScheduler uses the same context object
   const ctx = {
     ...baseCtx,
