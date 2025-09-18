@@ -40,10 +40,9 @@ interface BenchState {
 
 const { traverseGraph } = createGraphTraversal();
 const graphEdges = createGraphEdges();
+const { trackDependency } = graphEdges
 const ctx = createBaseContext();
-const { startBatch, endBatch, propagate } = createScheduler({
-  propagate: traverseGraph,
-});
+const { startBatch, endBatch, propagate } = createScheduler({ propagate: traverseGraph });
 
 const latticeAPI = createSignalAPI(
   {
@@ -53,9 +52,9 @@ const latticeAPI = createSignalAPI(
   },
   {
     ctx,
-    graphEdges,
+    trackDependency,
     propagate,
-    pull: createPullPropagator(ctx, graphEdges),
+    pullUpdates: createPullPropagator(ctx, graphEdges).pullUpdates,
     startBatch,
     endBatch,
   }

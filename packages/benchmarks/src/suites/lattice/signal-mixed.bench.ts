@@ -19,9 +19,11 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
+const { trackDependency } = createGraphEdges();
+
 const latticeAPI = createSignalAPI({ signal: createSignalFactory }, {
   ctx: createBaseContext(),
-  graphEdges: createGraphEdges(),
+  trackDependency,
   propagate: createGraphTraversal().propagate
 });
 const latticeSignal = latticeAPI.signal;

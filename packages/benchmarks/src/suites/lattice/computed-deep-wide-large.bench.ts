@@ -26,6 +26,7 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 
 const { propagate } = createGraphTraversal();
 const graphEdges = createGraphEdges();
+const { trackDependency } = graphEdges;
 const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
@@ -35,9 +36,9 @@ const latticeAPI = createSignalAPI(
   },
   {
     ctx,
-    graphEdges,
+    trackDependency,
+    pullUpdates: createPullPropagator(ctx, graphEdges).pullUpdates,
     propagate,
-    pull: createPullPropagator(ctx, graphEdges),
   }
 );
 

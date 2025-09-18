@@ -25,7 +25,9 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
+const { propagate } = createGraphTraversal();
 const graphEdges = createGraphEdges();
+const { trackDependency } = graphEdges;
 const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
@@ -35,9 +37,9 @@ const latticeAPI = createSignalAPI(
   },
   {
     ctx,
-    graphEdges,
-    pull: createPullPropagator(ctx, graphEdges),
-    propagate: createGraphTraversal().propagate
+    trackDependency,
+    pullUpdates: createPullPropagator(ctx, graphEdges).pullUpdates,
+    propagate,
   }
 );
 
@@ -164,19 +166,6 @@ group('Pure Signal Operations - No Propagation', () => {
     barplot(() => {
       // Test 3: Just signal write and read (no computed)
       bench('Lattice - signal only', function* () {
-        const graphEdges = createGraphEdges();
-        const ctx = createBaseContext();
-
-        const latticeAPI = createSignalAPI(
-          { signal: createSignalFactory },
-          {
-            ctx,
-            graphEdges,
-            propagate: createGraphTraversal().propagate,
-          }
-        );
-
-        const latticeSignal = latticeAPI.signal;
         const s = latticeSignal(0);
         
         yield () => {

@@ -19,11 +19,16 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
-const latticeAPI = createSignalAPI({ signal: createSignalFactory }, {
-  ctx: createBaseContext(),
-  graphEdges: createGraphEdges(),
-  propagate: createGraphTraversal().propagate
-});
+const { trackDependency } = createGraphEdges();
+
+const latticeAPI = createSignalAPI(
+  { signal: createSignalFactory },
+  {
+    ctx: createBaseContext(),
+    trackDependency,
+    propagate: createGraphTraversal().propagate,
+  }
+);
 const latticeSignal = latticeAPI.signal;
 
 const ITERATIONS = 100000;

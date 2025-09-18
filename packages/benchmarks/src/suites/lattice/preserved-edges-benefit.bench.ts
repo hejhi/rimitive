@@ -31,11 +31,11 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 const ITERATIONS = 1000;
 
 const { traverseGraph } = createGraphTraversal();
-const { dispose: _dispose, propagate } = createScheduler({
-  propagate: traverseGraph,
-});
+const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
 const graphEdges = createGraphEdges();
+const { trackDependency, track, detachAll } = graphEdges;
 const ctx = createBaseContext();
+const { pullUpdates } = createPullPropagator(ctx, graphEdges);
 
 const latticeAPI = createSignalAPI(
   {
@@ -45,10 +45,12 @@ const latticeAPI = createSignalAPI(
   },
   {
     ctx,
-    dispose: _dispose,
-    graphEdges,
+    dispose,
+    trackDependency,
+    track,
     propagate,
-    pull: createPullPropagator(ctx, graphEdges),
+    pullUpdates,
+    detachAll,
   }
 );
 

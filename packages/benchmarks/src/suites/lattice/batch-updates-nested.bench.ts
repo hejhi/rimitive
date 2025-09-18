@@ -29,6 +29,7 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 
 const { traverseGraph } = createGraphTraversal();
 const graphEdges = createGraphEdges();
+const { trackDependency } = graphEdges;
 const ctx = createBaseContext();
 const { startBatch, endBatch, propagate } = createScheduler({
   propagate: traverseGraph,
@@ -42,9 +43,9 @@ const latticeAPI = createSignalAPI(
   },
   {
     ctx,
-    graphEdges,
+    trackDependency,
     propagate,
-    pull: createPullPropagator(ctx, graphEdges),
+    pullUpdates: createPullPropagator(ctx, graphEdges).pullUpdates,
     startBatch,
     endBatch,
   }

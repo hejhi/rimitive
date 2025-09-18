@@ -36,20 +36,24 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 const { traverseGraph } = createGraphTraversal();
 const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
 const graphEdges = createGraphEdges();
+const { trackDependency, track, detachAll } = graphEdges;
 const ctx = createBaseContext();
+const { pullUpdates } = createPullPropagator(ctx, graphEdges);
 
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
-    effect: createEffectFactory
+    effect: createEffectFactory,
   },
   {
     ctx,
     dispose,
-    graphEdges,
+    trackDependency,
+    track,
     propagate,
-    pull: createPullPropagator(ctx, graphEdges)
+    pullUpdates,
+    detachAll,
   }
 );
 

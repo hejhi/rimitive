@@ -24,7 +24,7 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 const { traverseGraph } = createGraphTraversal();
 const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
-const graphEdges = createGraphEdges();
+const { trackDependency, track, detachAll } = createGraphEdges();
 const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
@@ -35,8 +35,10 @@ const latticeAPI = createSignalAPI(
   {
     ctx,
     dispose,
-    graphEdges,
     propagate,
+    trackDependency,
+    track,
+    detachAll
   }
 );
 
