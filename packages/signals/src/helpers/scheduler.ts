@@ -46,11 +46,9 @@ export function createScheduler({
   // Execute all scheduled nodes in FIFO order
   const flush = (): void => {
     // Don't flush during batch - batching will handle it
-    if (batchDepth > 0) return;
+    if (batchDepth > 0 || !queueHead) return;
 
-    let current = queueHead;
-
-    if (!current) return;
+    let current: ScheduledNode | undefined = queueHead;
 
     // Clear queue first to allow re-entrance scheduling
     queueHead = queueTail = undefined;
@@ -83,8 +81,7 @@ export function createScheduler({
       queueTail.nextScheduled = scheduledNode;
       queueTail = scheduledNode;
     } else {
-      queueHead = scheduledNode;
-      queueTail = scheduledNode;
+      queueHead = queueTail = scheduledNode;
     }
   };
 
@@ -101,9 +98,9 @@ export function createScheduler({
   const startBatch = (): number => batchDepth++;
 
   const endBatch = (): number => {
-    if (batchDepth > 0) {
+    if (batchDepth) {
       batchDepth--;
-      if (batchDepth === 0) flush();
+      if (!batchDepth && queueHead) flush();
     }
 
     return batchDepth;
