@@ -76,11 +76,7 @@ export function createSubscribeFactory(
     callback(value);
 
     // Return unsubscribe function
-    return () => {
-      disposeNode(node, (node) => {
-        detachAll(node);
-      });
-    };
+    return () => disposeNode(node, detachAll);
   }
 
   return {
