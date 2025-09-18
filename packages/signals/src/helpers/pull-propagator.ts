@@ -3,6 +3,11 @@ import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
 
+// Re-export types for proper type inference
+export type { DerivedNode } from '../types';
+export type { GlobalContext } from '../context';
+export type { GraphEdges } from './graph-edges';
+
 const { STATUS_PENDING, STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
 export interface PullPropagator {

@@ -7,35 +7,13 @@
 
 import { bench, group, summary, barplot } from 'mitata';
 import { runBenchmark } from '../../utils/benchmark-runner';
-import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
 import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createApi } from './helpers/signal-computed';
 
-const { propagate } = createGraphTraversal();
-const graphEdges = createGraphEdges();
-const { trackDependency } = graphEdges;
-const ctx = createBaseContext();
-
-const latticeAPI = createSignalAPI(
-  {
-    signal: createSignalFactory,
-    computed: createComputedFactory,
-  },
-  {
-    ctx,
-    trackDependency,
-    pullUpdates: createPullPropagator({ ctx, track: graphEdges.track }).pullUpdates,
-    propagate,
-  }
-);
+const latticeAPI = createApi();
 
 const latticeSignal = latticeAPI.signal;
 const latticeComputed = latticeAPI.computed;

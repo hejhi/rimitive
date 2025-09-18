@@ -11,45 +11,15 @@ import {
   computed as preactComputed,
   batch as preactBatch,
 } from '@preact/signals-core';
-import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createBatchFactory } from '@lattice/signals/batch';
 import {
   signal as alienSignal,
   computed as alienComputed,
   startBatch as alienStartBatch,
   endBatch as alienEndBatch,
 } from 'alien-signals';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createApi } from './helpers/signal-computed-batch';
 
-const { traverseGraph } = createGraphTraversal();
-const graphEdges = createGraphEdges();
-const { trackDependency } = graphEdges;
-const ctx = createBaseContext();
-const { startBatch, endBatch, propagate } = createScheduler({
-  propagate: traverseGraph,
-});
-
-const latticeAPI = createSignalAPI(
-  {
-    signal: createSignalFactory,
-    computed: createComputedFactory,
-    batch: createBatchFactory,
-  },
-  {
-    ctx,
-    trackDependency,
-    propagate,
-    pullUpdates: createPullPropagator({ ctx, track: graphEdges.track }).pullUpdates,
-    startBatch,
-    endBatch,
-  }
-);
+const latticeAPI = createApi();
 
 const latticeSignal = latticeAPI.signal;
 const latticeComputed = latticeAPI.computed;

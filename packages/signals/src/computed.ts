@@ -24,6 +24,11 @@ export type ComputedOpts = {
   pullUpdates: PullPropagator['pullUpdates'];
 };
 
+// Re-export types for proper type inference
+export type { GlobalContext } from './context';
+export type { GraphEdges } from './helpers/graph-edges';
+export type { PullPropagator } from './helpers/pull-propagator';
+
 // Internal computed state that gets bound to the function
 interface ComputedNode<T> extends DerivedNode {
   __type: 'computed';
@@ -32,9 +37,12 @@ interface ComputedNode<T> extends DerivedNode {
 
 const { STATUS_PENDING } = CONSTANTS;
 
+// Export the factory return type for better type inference
+export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
+
 export function createComputedFactory(
   opts: ComputedOpts
-): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
+): ComputedFactory {
   const { ctx, trackDependency, pullUpdates } = opts;
 
   function createComputed<T>(compute: () => T): ComputedFunction<T> {

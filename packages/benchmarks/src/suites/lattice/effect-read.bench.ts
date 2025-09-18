@@ -10,37 +10,13 @@ import {
   signal as preactSignal,
   effect as preactEffect,
 } from '@preact/signals-core';
-import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createEffectFactory } from '@lattice/signals/effect';
 import {
   signal as alienSignal,
   effect as alienEffect,
 } from 'alien-signals';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createApi } from './helpers/signal-effect';
 
-const { traverseGraph } = createGraphTraversal();
-const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
-const { trackDependency, track, detachAll } = createGraphEdges();
-const ctx = createBaseContext();
-
-const latticeAPI = createSignalAPI(
-  {
-    signal: createSignalFactory,
-    effect: createEffectFactory,
-  },
-  {
-    ctx,
-    dispose,
-    propagate,
-    trackDependency,
-    track,
-    detachAll,
-  }
-);
+const latticeAPI = createApi();
 
 const latticeSignal = latticeAPI.signal;
 const latticeEffect = latticeAPI.effect;

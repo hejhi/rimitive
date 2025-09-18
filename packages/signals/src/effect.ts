@@ -14,17 +14,25 @@ export type EffectOpts = {
   dispose: Scheduler['dispose'];
 };
 
+// Re-export types for proper type inference
+export type { GlobalContext } from './context';
+export type { GraphEdges } from './helpers/graph-edges';
+export type { Scheduler } from './helpers/scheduler';
+
 interface EffectNode extends ScheduledNode {
   __type: 'effect';
   _cleanup: (() => void) | undefined; // Cleanup from previous run
 }
 
-export function createEffectFactory(
-  opts: EffectOpts
-): LatticeExtension<
+// Export the factory return type for better type inference
+export type EffectFactory = LatticeExtension<
   'effect',
   (fn: () => void | (() => void)) => () => void
-> {
+>;
+
+export function createEffectFactory(
+  opts: EffectOpts
+): EffectFactory {
   const {
     ctx,
     dispose: disposeNode,

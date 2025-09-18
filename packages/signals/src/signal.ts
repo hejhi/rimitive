@@ -34,14 +34,22 @@ export type SignalOpts = {
   propagate: GraphTraversal['propagate'];
 };
 
+// Re-export types needed for type inference
+export type { GlobalContext } from './context';
+export type { GraphEdges } from './helpers/graph-edges';
+export type { GraphTraversal } from './helpers/graph-traversal';
+
 interface SignalNode<T> extends ProducerNode {
   __type: 'signal';
   value: T;
 }
 
+// Export the factory return type for better type inference
+export type SignalFactory = LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>;
+
 export function createSignalFactory(
   opts: SignalOpts
-): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
+): SignalFactory {
   const {
     trackDependency,
     propagate,

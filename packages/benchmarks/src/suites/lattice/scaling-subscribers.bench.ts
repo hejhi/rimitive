@@ -20,40 +20,10 @@ import {
   computed as preactComputed,
   effect as preactEffect,
 } from '@preact/signals-core';
-import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
 import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
-import { createBaseContext } from '@lattice/signals/context';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createApi } from './helpers/signal-computed-effect';
 
-const { traverseGraph } = createGraphTraversal();
-const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
-const graphEdges = createGraphEdges();
-const { trackDependency, track, detachAll } = graphEdges;
-const ctx = createBaseContext();
-const { pullUpdates } = createPullPropagator({ ctx, track: graphEdges.track });
-
-const latticeAPI = createSignalAPI(
-  {
-    signal: createSignalFactory,
-    computed: createComputedFactory,
-    effect: createEffectFactory,
-  },
-  {
-    ctx,
-    dispose,
-    trackDependency,
-    track,
-    propagate,
-    pullUpdates,
-    detachAll,
-  }
-);
+const latticeAPI = createApi();
 
 const latticeSignal = latticeAPI.signal;
 const latticeComputed = latticeAPI.computed;

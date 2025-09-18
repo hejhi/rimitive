@@ -9,6 +9,9 @@
 import type { Dependency, ConsumerNode } from '../types';
 import { CONSTANTS } from '../constants';
 
+// Re-export types for proper type inference
+export type { Dependency, ConsumerNode } from '../types';
+
 const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
 
 interface Stack<T> {

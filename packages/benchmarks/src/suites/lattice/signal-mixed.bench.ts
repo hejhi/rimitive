@@ -6,26 +6,12 @@
 
 import { bench, group, summary, barplot } from 'mitata';
 import { runBenchmark } from '../../utils/benchmark-runner';
-import {
-  signal as preactSignal,
-} from '@preact/signals-core';
-import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import {
-  signal as alienSignal,
-} from 'alien-signals';
+import { signal as preactSignal } from '@preact/signals-core';
+import { signal as alienSignal } from 'alien-signals';
 
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createApi } from './helpers/signal';
 
-const { trackDependency } = createGraphEdges();
-
-const latticeAPI = createSignalAPI({ signal: createSignalFactory }, {
-  ctx: createBaseContext(),
-  trackDependency,
-  propagate: createGraphTraversal().propagate
-});
+const latticeAPI = createApi();
 const latticeSignal = latticeAPI.signal;
 
 const ITERATIONS = 100000;

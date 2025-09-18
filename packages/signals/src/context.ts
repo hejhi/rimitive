@@ -1,5 +1,8 @@
 import { ConsumerNode } from "./types";
 
+// Re-export types for proper type inference
+export type { ConsumerNode } from "./types";
+
 /**
  * ALGORITHM: Context-Based State Isolation
  * 

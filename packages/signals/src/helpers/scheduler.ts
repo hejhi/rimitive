@@ -10,6 +10,9 @@
 import type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 import { CONSTANTS } from '../constants';
 
+// Re-export types for proper type inference
+export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
+
 const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED, STATUS_CLEAN } = CONSTANTS;
 
 export interface Scheduler {
