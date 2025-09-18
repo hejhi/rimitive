@@ -22,7 +22,7 @@ function createMinimalSignalsContext() {
   const context = {
     ctx,
     ...graphEdges,
-    ...createPullPropagator(ctx, graphEdges),
+    ...createPullPropagator({ ctx, track: graphEdges.track }),
     ...createGraphTraversal(),
   };
 

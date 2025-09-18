@@ -9,9 +9,7 @@ export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
-export function createPullPropagator(ctx: GlobalContext, graphEdges: GraphEdges): PullPropagator {
-  const { track } = graphEdges;
-
+export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
   // Inline recomputation logic here since we have access to context
   const recomputeNode = (node: DerivedNode): boolean => {
     const oldValue = node.value;

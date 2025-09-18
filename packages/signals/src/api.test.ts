@@ -13,15 +13,15 @@ import { createPullPropagator } from './helpers/pull-propagator';
 import { createGraphTraversal } from './helpers/graph-traversal';
 
 export function createDefaultContext() {
-  const baseCtx = createBaseContext();
+  const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
   const { traverseGraph } = createGraphTraversal();
 
   return {
-    ctx: baseCtx,
+    ctx,
     ...graphEdges,
-    ...createPullPropagator(baseCtx, graphEdges),
-    ...createScheduler({ propagate: traverseGraph })
+    ...createPullPropagator({ ctx, track: graphEdges.track }),
+    ...createScheduler({ propagate: traverseGraph }),
   };
 }
 
@@ -61,7 +61,7 @@ describe('createSignalAPI', () => {
     let enqueueCalled = false;
 
     // Create custom context with custom work queue
-    const baseCtx = createBaseContext();
+    const ctx = createBaseContext();
     const graphEdges = createGraphEdges();
     const { traverseGraph } = createGraphTraversal();
     const scheduler = (() => {
@@ -75,7 +75,7 @@ describe('createSignalAPI', () => {
       };
     })();
 
-    const pullPropagator = createPullPropagator(baseCtx, graphEdges);
+    const pullPropagator = createPullPropagator({ ctx, track: graphEdges.track });
 
     const api = createSignalAPI(
       {
@@ -85,7 +85,7 @@ describe('createSignalAPI', () => {
         batch: createBatchFactory,
       },
       {
-        ctx: baseCtx,
+        ctx,
         ...graphEdges,
         ...scheduler,
         ...pullPropagator

@@ -31,7 +31,7 @@ export function createContext() {
     pull: null as unknown as ReturnType<typeof createPullPropagator>,
   };
 
-  const pullPropagator = createPullPropagator(baseCtx, graphEdges);
+  const pullPropagator = createPullPropagator({ ctx: baseCtx, track: graphEdges.track });
   ctx.pull = pullPropagator;
 
   return ctx;

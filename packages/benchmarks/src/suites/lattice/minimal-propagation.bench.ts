@@ -38,7 +38,7 @@ const latticeAPI = createSignalAPI(
   {
     ctx,
     trackDependency,
-    pullUpdates: createPullPropagator(ctx, graphEdges).pullUpdates,
+    pullUpdates: createPullPropagator({ ctx, track: graphEdges.track }).pullUpdates,
     propagate,
   }
 );

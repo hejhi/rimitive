@@ -11,16 +11,16 @@ import { createScheduler } from './helpers/scheduler';
 import { createGraphTraversal } from './helpers/graph-traversal';
 
 function createTestContext() {
-  const baseCtx = createBaseContext();
+  const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
   const { traverseGraph } = createGraphTraversal();
   const scheduler = createScheduler({ propagate: traverseGraph });
 
   return {
-    ctx: baseCtx,
+    ctx,
     ...graphEdges,
     ...scheduler,
-    ...createPullPropagator(baseCtx, graphEdges),
+    ...createPullPropagator({ ctx, track: graphEdges.track }),
   };
 }
 

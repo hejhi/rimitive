@@ -22,8 +22,8 @@ describe('Dependency Graph Helpers', () => {
     const graphEdges = createGraphEdges();
     const { traverseGraph } = createGraphTraversal();
     const scheduler = createScheduler({ propagate: traverseGraph });
-    const tempCtx = { ...createBaseContext(), graphEdges };
-    const pullPropagator = createPullPropagator(tempCtx, graphEdges);
+    const ctx = { ...createBaseContext(), graphEdges };
+    const pullPropagator = createPullPropagator({ ctx, track: graphEdges.track });
 
     helpers = {
       trackDependency: graphEdges.trackDependency,

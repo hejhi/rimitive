@@ -36,7 +36,7 @@ const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
 const graphEdges = createGraphEdges();
 const { trackDependency, track, detachAll } = graphEdges;
 const ctx = createBaseContext();
-const { pullUpdates } = createPullPropagator(ctx, graphEdges);
+const { pullUpdates } = createPullPropagator({ ctx, track: graphEdges.track });
 
 const latticeAPI = createSignalAPI(
   {
