@@ -73,7 +73,7 @@ export function createGraphTraversal(): GraphTraversal {
       }
 
       // Continue traversal
-      const consumerSubscribers = consumerNode.subscribers!;
+      const consumerSubscribers = consumerNode.subscribers;
       const siblingDep = currentDependency.nextConsumer;
 
       if (siblingDep) {

@@ -71,26 +71,30 @@ export function createScheduler({
 
   // Leaf handler that queues scheduled nodes
   const queueIfScheduled = (node: ConsumerNode): void => {
-    // Only queue nodes with flush methods that are pending
-    if ('flush' in node && node.status === STATUS_PENDING) {
-      node.status = STATUS_SCHEDULED;
-      const scheduledNode = node as ScheduledNode;
-      scheduledNode.nextScheduled = undefined;
+    if (!('flush' in node) || node.status !== STATUS_PENDING) return;
 
-      // Add to execution queue
-      if (queueTail) {
-        queueTail.nextScheduled = scheduledNode;
-        queueTail = scheduledNode;
-      } else {
-        queueHead = scheduledNode;
-        queueTail = scheduledNode;
-      }
+    // Only queue nodes with flush methods that are pending
+    node.status = STATUS_SCHEDULED;
+    const scheduledNode = node as ScheduledNode;
+    scheduledNode.nextScheduled = undefined;
+
+    // Add to execution queue
+    if (queueTail) {
+      queueTail.nextScheduled = scheduledNode;
+      queueTail = scheduledNode;
+    } else {
+      queueHead = scheduledNode;
+      queueTail = scheduledNode;
     }
   };
 
   // Propagate composes traversal with scheduling
   const scheduledPropagate = (subscribers: Dependency): void => {
     propagate(subscribers, queueIfScheduled);
+
+    // Only flush if we must
+    if (!queueHead) return;
+
     flush();
   };
 
