@@ -14,7 +14,6 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createNodeScheduler, NodeScheduler } from '@lattice/signals/helpers/node-scheduler';
 
 export function createContext() {
   const baseCtx = createBaseContext();
@@ -29,14 +28,10 @@ export function createContext() {
     scheduler,
     push: { pushUpdates: scheduler.propagate },
     pull: null as unknown as ReturnType<typeof createPullPropagator>,
-    nodeScheduler: null as unknown as NodeScheduler,
   };
 
   const pullPropagator = createPullPropagator(baseCtx, graphEdges);
   ctx.pull = pullPropagator;
-  const nodeScheduler = createNodeScheduler();
-
-  ctx.nodeScheduler = nodeScheduler;
 
   return ctx;
 }

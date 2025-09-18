@@ -1,17 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
 import { CONSTANTS, STATUS_SCHEDULED } from '../constants';
-import type { ScheduledNode } from '../types';
+import type { ScheduledNode, FromNode } from '../types';
 
-const { STATUS_DISPOSED, STATUS_PENDING } = CONSTANTS;
+const { STATUS_DISPOSED } = CONSTANTS;
 
 describe('NodeScheduler', () => {
-  it('should enqueue nodes', () => {
+  it('should schedule nodes during propagation', () => {
     const scheduler = createScheduler();
 
     const node: ScheduledNode = {
       __type: 'test',
-      status: 0,
+      status: CONSTANTS.STATUS_CLEAN,
       nextScheduled: undefined,
       flush: vi.fn(),
       dependencies: undefined,
@@ -19,8 +19,18 @@ describe('NodeScheduler', () => {
       deferredParent: undefined,
     };
 
+    // Create a dependency to trigger propagation
+    const dependency = {
+      consumer: node,
+      nextConsumer: undefined,
+      producer: {} as FromNode,
+      prevConsumer: undefined,
+      prevDependency: undefined,
+      nextDependency: undefined,
+    };
+
     scheduler.startBatch();
-    scheduler.enqueue(node);
+    scheduler.propagate(dependency);
     expect(node.status).toBe(STATUS_SCHEDULED);
   });
 
@@ -29,7 +39,7 @@ describe('NodeScheduler', () => {
 
     const node: ScheduledNode = {
       __type: 'test',
-      status: 0,
+      status: CONSTANTS.STATUS_CLEAN,
       nextScheduled: undefined,
       flush: vi.fn(),
       dependencies: undefined,
@@ -37,13 +47,24 @@ describe('NodeScheduler', () => {
       deferredParent: undefined,
     };
 
-    // Enqueue once
-    scheduler.enqueue(node);
-    const scheduledAfterFirst = node.status;
+    const dependency = {
+      consumer: node,
+      nextConsumer: undefined,
+      producer: {} as FromNode,
+      prevConsumer: undefined,
+      prevDependency: undefined,
+      nextDependency: undefined,
+    };
 
-    // Try to enqueue again - should be skipped
-    scheduler.enqueue(node);
-    expect(node.status).toBe(scheduledAfterFirst); // Scheduled flag unchanged
+    // Schedule once through propagation
+    scheduler.startBatch();
+    scheduler.propagate(dependency);
+    const scheduledAfterFirst = node.status;
+    expect(scheduledAfterFirst).toBe(STATUS_SCHEDULED);
+
+    // Try to schedule again - should be skipped
+    scheduler.propagate(dependency);
+    expect(node.status).toBe(scheduledAfterFirst); // Status unchanged
   });
 
   it('should dispose node only once', () => {
@@ -82,7 +103,7 @@ describe('NodeScheduler', () => {
 
     const node1: ScheduledNode = {
       __type: 'test',
-      status: STATUS_PENDING,
+      status: CONSTANTS.STATUS_CLEAN,
       nextScheduled: undefined,
       flush: flush1,
       dependencies: undefined,
@@ -92,7 +113,7 @@ describe('NodeScheduler', () => {
 
     const node2: ScheduledNode = {
       __type: 'test',
-      status: STATUS_PENDING,
+      status: CONSTANTS.STATUS_CLEAN,
       nextScheduled: undefined,
       flush: flush2,
       dependencies: undefined,
@@ -102,7 +123,7 @@ describe('NodeScheduler', () => {
 
     const node3: ScheduledNode = {
       __type: 'test',
-      status: STATUS_PENDING,
+      status: CONSTANTS.STATUS_CLEAN,
       nextScheduled: undefined,
       flush: flush3,
       dependencies: undefined,
@@ -110,9 +131,38 @@ describe('NodeScheduler', () => {
       deferredParent: undefined,
     };
 
-    scheduler.enqueue(node1);
-    scheduler.enqueue(node2);
-    scheduler.enqueue(node3);
+    // Create dependencies to schedule nodes through propagation
+    const dep1 = {
+      consumer: node1,
+      nextConsumer: undefined,
+      producer: {} as FromNode,
+      prevConsumer: undefined,
+      prevDependency: undefined,
+      nextDependency: undefined,
+    };
+
+    const dep2 = {
+      consumer: node2,
+      nextConsumer: undefined,
+      producer: {} as FromNode,
+      prevConsumer: undefined,
+      prevDependency: undefined,
+      nextDependency: undefined,
+    };
+
+    const dep3 = {
+      consumer: node3,
+      nextConsumer: undefined,
+      producer: {} as FromNode,
+      prevConsumer: undefined,
+      prevDependency: undefined,
+      nextDependency: undefined,
+    };
+
+    // Schedule through propagation
+    scheduler.propagate(dep1);
+    scheduler.propagate(dep2);
+    scheduler.propagate(dep3);
 
     scheduler.flush();
 
@@ -134,7 +184,7 @@ describe('NodeScheduler', () => {
 
     const node: ScheduledNode = {
       __type: 'test',
-      status: STATUS_PENDING, // STATUS_PENDING so it will flush
+      status: CONSTANTS.STATUS_CLEAN, // Start clean so propagation processes it
       nextScheduled: undefined,
       flush: vi.fn(),
       dependencies: undefined,
@@ -142,11 +192,26 @@ describe('NodeScheduler', () => {
       deferredParent: undefined,
     };
 
-    scheduler.enqueue(node);
+    const dependency = {
+      consumer: node,
+      nextConsumer: undefined,
+      producer: {} as FromNode,
+      prevConsumer: undefined,
+      prevDependency: undefined,
+      nextDependency: undefined,
+    };
+
+    // Start batch to prevent auto-flush
+    scheduler.startBatch();
+
+    scheduler.propagate(dependency);
     expect(node.status === STATUS_SCHEDULED).toBe(true);
+    expect(node.nextScheduled).toBeUndefined();
 
-    scheduler.flush();
+    // End batch to trigger flush
+    scheduler.endBatch();
 
+    // After flush, status should be reset
     expect(node.status === STATUS_SCHEDULED).toBe(false);
     expect(node.nextScheduled).toBeUndefined();
   });

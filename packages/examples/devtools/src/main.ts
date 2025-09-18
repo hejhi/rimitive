@@ -7,7 +7,6 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createNodeScheduler, NodeScheduler } from '@lattice/signals/helpers/node-scheduler';
 type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 function createContext() {
@@ -21,14 +20,10 @@ function createContext() {
     graphEdges,
     pushPropagator: { pushUpdates: scheduler.propagate },
     pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>,
-    nodeScheduler: null as unknown as NodeScheduler,
   };
 
   const pullPropagator = createPullPropagator(ctx, graphEdges);
   ctx.pullPropagator = pullPropagator;
-  const nodeScheduler = createNodeScheduler();
-
-  ctx.nodeScheduler = nodeScheduler;
 
   return ctx;
 }
