@@ -20,22 +20,39 @@ import {
   computed as alienComputed,
   effect as alienEffect,
 } from 'alien-signals';
-import { createEffectContext } from './helpers/createEffectCtx';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+
+const ITERATIONS = 1000;
+
+const { traverseGraph } = createGraphTraversal();
+const { dispose: _dispose, propagate } = createScheduler({
+  propagate: traverseGraph,
+});
+const graphEdges = createGraphEdges();
+const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
-    effect: createEffectFactory
+    effect: createEffectFactory,
   },
-  createEffectContext()
+  {
+    ctx,
+    dispose: _dispose,
+    graphEdges,
+    propagate,
+    pull: createPullPropagator(ctx, graphEdges),
+  }
 );
 
 const latticeSignal = latticeAPI.signal;
 const latticeComputed = latticeAPI.computed;
 const latticeEffect = latticeAPI.effect;
-
-const ITERATIONS = 1000;
 
 group('Fan-out 10 Computeds', () => {
   summary(() => {

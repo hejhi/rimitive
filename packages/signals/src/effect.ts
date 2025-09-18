@@ -1,7 +1,6 @@
 import { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
-import { Scheduler } from './helpers/scheduler';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
 
@@ -9,8 +8,8 @@ const { STATUS_CLEAN } = CONSTANTS;
 
 export type EffectOpts = {
   ctx: GlobalContext;
-  scheduler: Scheduler;
   graphEdges: GraphEdges;
+  dispose: (node: EffectNode, cleanup: (node: EffectNode) => void) => void;
 };
 
 interface EffectNode extends ScheduledNode {
@@ -26,7 +25,7 @@ export function createEffectFactory(
 > {
   const {
     ctx,
-    scheduler: { dispose: disposeNode },
+    dispose: disposeNode,
     graphEdges: { track, detachAll },
   } = opts;
 

@@ -46,10 +46,11 @@ export type BatchContext = GlobalContext & {
 export function createBatchFactory(
   opts: {
     ctx: GlobalContext,
-    scheduler: Scheduler
+    startBatch: Scheduler['startBatch'],
+    endBatch: Scheduler['endBatch']
   }
 ): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { startBatch, endBatch } = opts.scheduler;
+  const { startBatch, endBatch } = opts;
 
   // Signal writes propagate immediately during batch.
   // We only defer effect execution to batch end.

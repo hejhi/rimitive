@@ -19,9 +19,11 @@ export function createDefaultContext() {
   return {
     ctx: baseCtx,
     graphEdges,
-    scheduler,
+    dispose: scheduler.dispose,
     pull: createPullPropagator(baseCtx, graphEdges),
     propagate: scheduler.propagate,
+    startBatch: scheduler.startBatch,
+    endBatch: scheduler.endBatch
   };
 }
 

@@ -14,9 +14,16 @@ import { createSignalFactory } from '@lattice/signals/signal';
 import {
   signal as alienSignal,
 } from 'alien-signals';
-import { createEffectContext } from './helpers/createEffectCtx';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
-const latticeAPI = createSignalAPI({ signal: createSignalFactory }, createEffectContext());
+const latticeAPI = createSignalAPI({ signal: createSignalFactory }, {
+  ctx: createBaseContext(),
+  graphEdges: createGraphEdges(),
+  propagate: createGraphTraversal().propagate
+});
+
 const latticeSignal = latticeAPI.signal;
 
 const ITERATIONS = 100000;

@@ -16,14 +16,16 @@ export function createDefaultContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
   const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({ propagate: traverseGraph });
+  const { dispose, propagate, startBatch, endBatch } = createScheduler({ propagate: traverseGraph });
 
   return {
     ctx: baseCtx,
     graphEdges,
-    scheduler,
+    dispose,
+    startBatch,
+    endBatch,
     pull: createPullPropagator(baseCtx, graphEdges),
-    propagate: scheduler.propagate,
+    propagate,
   };
 }
 
@@ -89,7 +91,9 @@ describe('createSignalAPI', () => {
       {
         ctx: baseCtx,
         graphEdges: graphEdges,
-        scheduler,
+        dispose: scheduler.dispose,
+        startBatch: scheduler.startBatch,
+        endBatch: scheduler.endBatch,
         pull: pullPropagator,
         propagate: scheduler.propagate,
       }
@@ -115,7 +119,6 @@ describe('createSignalAPI', () => {
     // Create custom context with instrumented work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
-    const pullPropagator = createPullPropagator(baseCtx, graphEdges);
     const { traverseGraph } = createGraphTraversal();
     const scheduler = createScheduler({ propagate: traverseGraph });
 
@@ -125,8 +128,7 @@ describe('createSignalAPI', () => {
     }, {
       ctx: baseCtx,
       graphEdges,
-      pull: pullPropagator,
-      scheduler,
+      dispose: scheduler.dispose,
       propagate: scheduler.propagate,
     });
     

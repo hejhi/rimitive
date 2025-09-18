@@ -16,15 +16,15 @@ import type { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
-import { Scheduler } from './helpers/scheduler';
 import { CONSTANTS } from './constants';
+import { Scheduler } from './helpers/scheduler';
 
 const { STATUS_CLEAN } = CONSTANTS;
 
 export type SubscribeOpts = {
   ctx: GlobalContext;
   graphEdges: GraphEdges;
-  scheduler: Scheduler;
+  dispose: Scheduler['dispose'];
 };
 
 export type SubscribeCallback<T> = (value: T) => void;
@@ -46,7 +46,7 @@ export function createSubscribeFactory(
   const {
     ctx,
     graphEdges: { track, detachAll },
-    scheduler: { dispose: disposeNode },
+    dispose: disposeNode,
   } = opts;
 
   function subscribe<T>(

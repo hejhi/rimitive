@@ -21,15 +21,33 @@ import {
   startBatch as alienStartBatch,
   endBatch as alienEndBatch,
 } from 'alien-signals';
-import { createEffectContext } from './helpers/createEffectCtx';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
+
+const { traverseGraph } = createGraphTraversal();
+const graphEdges = createGraphEdges();
+const ctx = createBaseContext();
+const { startBatch, endBatch, propagate } = createScheduler({
+  propagate: traverseGraph,
+});
 
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
-    batch: createBatchFactory
+    batch: createBatchFactory,
   },
-  createEffectContext()
+  {
+    ctx,
+    graphEdges,
+    propagate,
+    pull: createPullPropagator(ctx, graphEdges),
+    startBatch,
+    endBatch,
+  }
 );
 
 const latticeSignal = latticeAPI.signal;

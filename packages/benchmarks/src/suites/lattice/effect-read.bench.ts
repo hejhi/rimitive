@@ -17,14 +17,27 @@ import {
   signal as alienSignal,
   effect as alienEffect,
 } from 'alien-signals';
-import { createEffectContext } from './helpers/createEffectCtx';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+
+const { traverseGraph } = createGraphTraversal();
+const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
+const graphEdges = createGraphEdges();
+const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     effect: createEffectFactory,
   },
-  createEffectContext()
+  {
+    ctx,
+    dispose,
+    graphEdges,
+    propagate,
+  }
 );
 
 const latticeSignal = latticeAPI.signal;

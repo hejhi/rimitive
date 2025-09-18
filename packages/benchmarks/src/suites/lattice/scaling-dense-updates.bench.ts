@@ -27,7 +27,16 @@ import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
 import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
 
-import { createEffectContext } from './helpers/createEffectCtx';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createBaseContext } from '@lattice/signals/context';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+
+const { traverseGraph } = createGraphTraversal();
+const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
+const graphEdges = createGraphEdges();
+const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
   {
@@ -35,7 +44,13 @@ const latticeAPI = createSignalAPI(
     computed: createComputedFactory,
     effect: createEffectFactory
   },
-  createEffectContext()
+  {
+    ctx,
+    dispose,
+    graphEdges,
+    propagate,
+    pull: createPullPropagator(ctx, graphEdges)
+  }
 );
 
 const latticeSignal = latticeAPI.signal;

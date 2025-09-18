@@ -20,14 +20,25 @@ import {
   computed as alienComputed,
 } from 'alien-signals';
 
-import { createComputedContext } from './helpers/createComputedCtx';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+
+const graphEdges = createGraphEdges();
+const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
   },
-  createComputedContext()
+  {
+    ctx,
+    graphEdges,
+    pull: createPullPropagator(ctx, graphEdges),
+    propagate: createGraphTraversal().propagate
+  }
 );
 
 const latticeSignal = latticeAPI.signal;
@@ -153,6 +164,19 @@ group('Pure Signal Operations - No Propagation', () => {
     barplot(() => {
       // Test 3: Just signal write and read (no computed)
       bench('Lattice - signal only', function* () {
+        const graphEdges = createGraphEdges();
+        const ctx = createBaseContext();
+
+        const latticeAPI = createSignalAPI(
+          { signal: createSignalFactory },
+          {
+            ctx,
+            graphEdges,
+            propagate: createGraphTraversal().propagate,
+          }
+        );
+
+        const latticeSignal = latticeAPI.signal;
         const s = latticeSignal(0);
         
         yield () => {

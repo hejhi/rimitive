@@ -20,36 +20,40 @@ import { createGraphTraversal } from './helpers/graph-traversal';
 export function createDefaultContext(): {
   ctx: GlobalContext,
   graphEdges: GraphEdges,
-  scheduler: Scheduler,
+  dispose: Scheduler['dispose'],
+  startBatch: Scheduler['startBatch'],
+  endBatch: Scheduler['endBatch'],
   pull: PullPropagator,
   propagate: (subscribers: Dependency) => void
 } {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
   const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({ propagate: traverseGraph });
+  const { dispose, propagate, startBatch, endBatch } = createScheduler({ propagate: traverseGraph });
   const pull = createPullPropagator(ctx, graphEdges);
 
   return {
     ctx,
     graphEdges,
-    scheduler,
+    dispose,
     pull,
-    propagate: scheduler.propagate
+    propagate,
+    startBatch,
+    endBatch
   };
 }
 
 // Create a test instance with a stable context
 export function createTestInstance() {
   const opts = createDefaultContext();
-  const { ctx, scheduler } = opts;
+  const { ctx, propagate, startBatch, endBatch } = opts;
 
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory({ ...opts, propagate: scheduler.propagate }),
+    createSignalFactory({ ...opts, propagate }),
     createComputedFactory(opts),
     createEffectFactory(opts),
-    createBatchFactory(opts)
+    createBatchFactory({ ...opts, startBatch, endBatch })
   );
 
   // Reset function for test cleanup
@@ -74,7 +78,6 @@ export function createTestInstance() {
 
     // Raw access for advanced testing
     activeContext: ctx,
-    scheduler,
   };
 }
 

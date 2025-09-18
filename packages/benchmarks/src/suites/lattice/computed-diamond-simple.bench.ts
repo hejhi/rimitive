@@ -25,14 +25,26 @@ import {
   computed as alienComputed,
 } from 'alien-signals';
 
-import { createComputedContext } from './helpers/createComputedCtx';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+
+const { propagate } = createGraphTraversal();
+const graphEdges = createGraphEdges();
+const ctx = createBaseContext();
 
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
   },
-  createComputedContext()
+  {
+    ctx,
+    graphEdges,
+    propagate,
+    pull: createPullPropagator(ctx, graphEdges),
+  }
 );
 
 const latticeSignal = latticeAPI.signal;
