@@ -31,13 +31,6 @@ export type SubscribeOpts = {
 export type SubscribeCallback<T> = (value: T) => void;
 export type UnsubscribeFunction = () => void;
 
-// Subscription node that acts like an effect but only tracks source dependencies
-interface SubscriptionNode<T> extends ScheduledNode {
-  __type: 'subscription';
-  callback: SubscribeCallback<T>;
-  source: () => T;
-}
-
 export function createSubscribeFactory(
   opts: SubscribeOpts
 ): LatticeExtension<
@@ -51,28 +44,25 @@ export function createSubscribeFactory(
     dispose: disposeNode,
   } = opts;
 
-  // Create prototype with shared flush method
-  const subscriptionPrototype = {
-    flush(this: SubscriptionNode<any>): void {
+  class SubscriptionNode<T> implements ScheduledNode {
+    readonly __type = 'subscription' as const;
+    status = STATUS_CLEAN;
+    dependencies = undefined;
+    dependencyTail = undefined;
+    deferredParent = undefined;
+    nextScheduled = undefined;
+    callback: SubscribeCallback<T>;
+    source: () => T;
+
+    constructor(source: () => T, callback: SubscribeCallback<T>) {
+      this.source = source;
+      this.callback = callback;
+    }
+
+    flush(this: SubscriptionNode<T>): void {
       const value = track(ctx, this, this.source);
       this.callback(value);
     }
-  };
-
-  function createSubscriptionNode<T>(
-    source: () => T,
-    callback: SubscribeCallback<T>
-  ): SubscriptionNode<T> {
-    const node = Object.create(subscriptionPrototype) as SubscriptionNode<T>;
-    node.__type = 'subscription';
-    node.status = STATUS_CLEAN;
-    node.dependencies = undefined;
-    node.dependencyTail = undefined;
-    node.deferredParent = undefined;
-    node.nextScheduled = undefined;
-    node.callback = callback;
-    node.source = source;
-    return node;
   }
 
   function subscribe<T>(
@@ -80,7 +70,7 @@ export function createSubscribeFactory(
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
     // Create subscription node with shared prototype
-    const node = createSubscriptionNode(source, callback);
+    const node = new SubscriptionNode(source, callback);
 
     // Initial execution to establish dependencies and get initial value
     const value = track(ctx, node, source);
