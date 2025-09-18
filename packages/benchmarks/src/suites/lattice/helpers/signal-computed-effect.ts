@@ -8,26 +8,28 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 
-const { traverseGraph } = createGraphTraversal();
-const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
-const graphEdges = createGraphEdges();
-const { trackDependency, track, detachAll } = graphEdges;
-const ctx = createBaseContext();
-const { pullUpdates } = createPullPropagator({ ctx, track: graphEdges.track });
+export const createApi = () => {
+  const { traverseGraph } = createGraphTraversal();
+  const { dispose, propagate } = createScheduler({ propagate: traverseGraph });
+  const graphEdges = createGraphEdges();
+  const { trackDependency, track, detachAll } = graphEdges;
+  const ctx = createBaseContext();
+  const { pullUpdates } = createPullPropagator({ ctx, track: graphEdges.track });
 
-export const createApi = () => createSignalAPI(
-  {
-    signal: createSignalFactory,
-    computed: createComputedFactory,
-    effect: createEffectFactory,
-  },
-  {
-    ctx,
-    dispose,
-    trackDependency,
-    track,
-    propagate,
-    pullUpdates,
-    detachAll,
-  }
-);
+  return createSignalAPI(
+    {
+      signal: createSignalFactory,
+      computed: createComputedFactory,
+      effect: createEffectFactory,
+    },
+    {
+      ctx,
+      dispose,
+      trackDependency,
+      track,
+      propagate,
+      pullUpdates,
+      detachAll,
+    }
+  );
+}
