@@ -23,7 +23,8 @@ const { STATUS_CLEAN } = CONSTANTS;
 
 export type SubscribeOpts = {
   ctx: GlobalContext;
-  graphEdges: GraphEdges;
+  track: GraphEdges['track'];
+  detachAll: GraphEdges['detachAll'];
   dispose: Scheduler['dispose'];
 };
 
@@ -45,7 +46,8 @@ export function createSubscribeFactory(
 > {
   const {
     ctx,
-    graphEdges: { track, detachAll },
+    track,
+    detachAll,
     dispose: disposeNode,
   } = opts;
 

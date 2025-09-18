@@ -17,15 +17,13 @@ import { createContext as createLattice } from '@lattice/lattice';
 function createMinimalSignalsContext() {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
-  const graphTraversal = createGraphTraversal();
-  const pull = createPullPropagator(ctx, graphEdges);
 
   // Use lightweight propagate without scheduling/flushing
   const context = {
     ctx,
-    graphEdges,
-    pull,
-    propagate: graphTraversal.propagate,
+    ...graphEdges,
+    ...createPullPropagator(ctx, graphEdges),
+    ...createGraphTraversal(),
   };
 
   // Create just signals and computed - no effects or batching

@@ -18,12 +18,9 @@ function createTestContext() {
 
   return {
     ctx: baseCtx,
-    graphEdges,
-    dispose: scheduler.dispose,
-    startBatch: scheduler.startBatch,
-    endBatch: scheduler.endBatch,
-    pull: createPullPropagator(baseCtx, graphEdges),
-    propagate: scheduler.propagate,
+    ...graphEdges,
+    ...scheduler,
+    ...createPullPropagator(baseCtx, graphEdges),
   };
 }
 

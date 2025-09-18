@@ -16,16 +16,12 @@ export function createDefaultContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
   const { traverseGraph } = createGraphTraversal();
-  const { dispose, propagate, startBatch, endBatch } = createScheduler({ propagate: traverseGraph });
 
   return {
     ctx: baseCtx,
-    graphEdges,
-    dispose,
-    startBatch,
-    endBatch,
-    pull: createPullPropagator(baseCtx, graphEdges),
-    propagate,
+    ...graphEdges,
+    ...createPullPropagator(baseCtx, graphEdges),
+    ...createScheduler({ propagate: traverseGraph })
   };
 }
 
@@ -90,12 +86,9 @@ describe('createSignalAPI', () => {
       },
       {
         ctx: baseCtx,
-        graphEdges: graphEdges,
-        dispose: scheduler.dispose,
-        startBatch: scheduler.startBatch,
-        endBatch: scheduler.endBatch,
-        pull: pullPropagator,
-        propagate: scheduler.propagate,
+        ...graphEdges,
+        ...scheduler,
+        ...pullPropagator
       }
     );
 
@@ -127,9 +120,8 @@ describe('createSignalAPI', () => {
       effect: createEffectFactory,
     }, {
       ctx: baseCtx,
-      graphEdges,
-      dispose: scheduler.dispose,
-      propagate: scheduler.propagate,
+      ...graphEdges,
+      ...scheduler
     });
     
     const count = api.signal(0);

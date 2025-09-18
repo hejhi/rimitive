@@ -17,29 +17,21 @@ import { createScheduler, Scheduler } from './helpers/scheduler';
 import { createGraphTraversal } from './helpers/graph-traversal';
 
 // Create a complete context with all helpers
-export function createDefaultContext(): {
-  ctx: GlobalContext,
-  graphEdges: GraphEdges,
-  dispose: Scheduler['dispose'],
-  startBatch: Scheduler['startBatch'],
-  endBatch: Scheduler['endBatch'],
-  pull: PullPropagator,
-  propagate: (subscribers: Dependency) => void
-} {
+export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler & {
+    ctx: GlobalContext;
+    propagate: (subscribers: Dependency) => void;
+  } {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges();
   const { traverseGraph } = createGraphTraversal();
-  const { dispose, propagate, startBatch, endBatch } = createScheduler({ propagate: traverseGraph });
+  const scheduler = createScheduler({ propagate: traverseGraph });
   const pull = createPullPropagator(ctx, graphEdges);
 
   return {
     ctx,
-    graphEdges,
-    dispose,
-    pull,
-    propagate,
-    startBatch,
-    endBatch
+    ...graphEdges,
+    ...scheduler,
+    ...pull,
   };
 }
 

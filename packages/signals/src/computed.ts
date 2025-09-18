@@ -19,10 +19,10 @@ export interface ComputedFunction<T = unknown> {
 }
 
 export type ComputedOpts = {
-  ctx: GlobalContext,
-  graphEdges: GraphEdges;
-  pull: PullPropagator;
-}
+  ctx: GlobalContext;
+  trackDependency: GraphEdges['trackDependency'];
+  pullUpdates: PullPropagator['pullUpdates'];
+};
 
 // Internal computed state that gets bound to the function
 interface ComputedNode<T> extends DerivedNode {
@@ -35,11 +35,7 @@ const { STATUS_PENDING } = CONSTANTS;
 export function createComputedFactory(
   opts: ComputedOpts
 ): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
-  const {
-    ctx,
-    graphEdges: { trackDependency },
-    pull: { pullUpdates },
-  } = opts;
+  const { ctx, trackDependency, pullUpdates } = opts;
 
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
     const node: ComputedNode<T> = {

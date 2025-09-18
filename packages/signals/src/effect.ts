@@ -3,13 +3,15 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
+import { Scheduler } from './helpers/scheduler';
 
 const { STATUS_CLEAN } = CONSTANTS;
 
 export type EffectOpts = {
   ctx: GlobalContext;
-  graphEdges: GraphEdges;
-  dispose: (node: EffectNode, cleanup: (node: EffectNode) => void) => void;
+  track: GraphEdges['track'];
+  detachAll: GraphEdges['detachAll']
+  dispose: Scheduler['dispose'];
 };
 
 interface EffectNode extends ScheduledNode {
@@ -26,7 +28,8 @@ export function createEffectFactory(
   const {
     ctx,
     dispose: disposeNode,
-    graphEdges: { track, detachAll },
+    track,
+    detachAll,
   } = opts;
 
   function createEffect(fn: () => void | (() => void)): () => void {

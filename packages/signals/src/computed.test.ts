@@ -14,16 +14,12 @@ export function createDefaultContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
   const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({ propagate: traverseGraph });
 
   return {
     ctx: baseCtx,
-    graphEdges,
-    dispose: scheduler.dispose,
-    pull: createPullPropagator(baseCtx, graphEdges),
-    propagate: scheduler.propagate,
-    startBatch: scheduler.startBatch,
-    endBatch: scheduler.endBatch
+    ...graphEdges,
+    ...createScheduler({ propagate: traverseGraph }),
+    ...createPullPropagator(baseCtx, graphEdges),
   };
 }
 
