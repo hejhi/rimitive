@@ -44,47 +44,34 @@ export function createSubscribeFactory(
     dispose: disposeNode,
   } = opts;
 
-  class SubscriptionNode<T> implements ScheduledNode {
-    readonly __type = 'subscription' as const;
-    status = STATUS_CLEAN;
-    dependencies = undefined;
-    dependencyTail = undefined;
-    deferredParent = undefined;
-    nextScheduled = undefined;
-    callback: SubscribeCallback<T>;
-    source: () => T;
+  const detachDeps = (node: ScheduledNode) => {
+    const deps = node.dependencies;
 
-    constructor(source: () => T, callback: SubscribeCallback<T>) {
-      this.source = source;
-      this.callback = callback;
+    if (deps) {
+      detachAll(deps);
+      node.dependencies = undefined;
     }
 
-    flush(this: SubscriptionNode<T>): void {
-      const value = track(ctx, this, this.source);
-      this.callback(value);
-    }
-  }
+    node.dependencyTail = undefined;
+  };
 
   function subscribe<T>(
     source: () => T,
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
-    // Create subscription node with shared prototype
-    const node = new SubscriptionNode(source, callback);
-
-    const detachDeps = (node: SubscriptionNode<T>) => {
-      const deps = node.dependencies;
-
-      if (deps) {
-        detachAll(deps);
-        node.dependencies = undefined;
+    const node = {
+      __type: 'subscription' as const,
+      status: STATUS_CLEAN,
+      dependencies: undefined,
+      dependencyTail: undefined,
+      deferredParent: undefined,
+      nextScheduled: undefined,
+      flush(): void {
+        const value = track(ctx, node, source);
+        callback(value);
       }
-
-      node.dependencyTail = undefined;
     }
-
-    // Initial execution to establish dependencies and get initial value
-    const value = track(ctx, node, source);
+    const value = track(ctx, node, source); // Initial execution to establish dependencies and get initial value
     callback(value);
 
     // Return unsubscribe function

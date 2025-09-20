@@ -12,7 +12,6 @@ export interface GraphEdges {
     producer: ProducerNode,
     consumer: ConsumerNode,
   ) => void;
-  removeDependency: (dependency: Dependency) => Dependency | undefined;
   detachAll: (dependency: Dependency) => void;
   track: <T>(
     ctx: GlobalContext,
@@ -49,7 +48,6 @@ export function createGraphEdges(): GraphEdges {
     // Wire up consumer side
     consumer.dependencyTail = dependency;
     if (next) next.prevDependency = dependency;
-
     if (tail) tail.nextDependency = dependency;
     else consumer.dependencies = dependency;
 
@@ -57,34 +55,6 @@ export function createGraphEdges(): GraphEdges {
     producer.subscribersTail = dependency;
     if (producerTail) producerTail.nextConsumer = dependency;
     else producer.subscribers = dependency;
-  };
-
-  // Helper to remove a dependency edge (optimized for hot path)
-  const removeDependency = (dep: Dependency): Dependency | undefined => {
-    const {
-      producer,
-      consumer,
-      prevDependency,
-      nextDependency,
-      prevConsumer,
-      nextConsumer,
-    } = dep;
-
-    // Update consumer's dependency chain
-    if (nextDependency) nextDependency.prevDependency = prevDependency;
-    else consumer.dependencyTail = prevDependency;
-
-    if (prevDependency) prevDependency.nextDependency = nextDependency;
-    else consumer.dependencies = nextDependency;
-
-    // Update producer's dependent chain
-    if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
-    else producer.subscribersTail = prevConsumer;
-
-    if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
-    else producer.subscribers = nextConsumer;
-
-    return nextDependency; // Return next for efficient iteration
   };
 
   /**
@@ -97,7 +67,31 @@ export function createGraphEdges(): GraphEdges {
     let toRemove: Dependency | undefined = dep;
 
     while (toRemove) {
-      toRemove = removeDependency(toRemove);
+      const {
+        producer,
+        consumer,
+        prevDependency,
+        prevConsumer,
+        nextConsumer,
+      } = toRemove;
+
+      const nextDependency: Dependency | undefined = toRemove.nextDependency;
+
+      // Update consumer's dependency chain
+      if (nextDependency) nextDependency.prevDependency = prevDependency;
+      else consumer.dependencyTail = prevDependency;
+
+      if (prevDependency) prevDependency.nextDependency = nextDependency;
+      else consumer.dependencies = nextDependency;
+
+      // Update producer's dependent chain
+      if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
+      else producer.subscribersTail = prevConsumer;
+
+      if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
+      else producer.subscribers = nextConsumer;
+
+      toRemove = nextDependency;
     }
   };
 
@@ -147,7 +141,6 @@ export function createGraphEdges(): GraphEdges {
 
   return {
     trackDependency,
-    removeDependency,
     detachAll,
     track,
   };

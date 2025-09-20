@@ -12,7 +12,6 @@ const { STATUS_DISPOSED, STATUS_PENDING, STATUS_DIRTY, STATUS_SCHEDULED } = CONS
 describe('Dependency Graph Helpers', () => {
   let helpers: {
     trackDependency: ReturnType<typeof createGraphEdges>['trackDependency'];
-    removeDependency: ReturnType<typeof createGraphEdges>['removeDependency'];
     detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
     pushUpdates: ReturnType<typeof createScheduler>['propagate'];
     pullUpdates: ReturnType<typeof createPullPropagator>['pullUpdates'];
@@ -27,7 +26,6 @@ describe('Dependency Graph Helpers', () => {
 
     helpers = {
       trackDependency: graphEdges.trackDependency,
-      removeDependency: graphEdges.removeDependency,
       detachAll: graphEdges.detachAll,
       pushUpdates: scheduler.propagate,
       pullUpdates: pullPropagator.pullUpdates,
@@ -277,7 +275,7 @@ describe('Dependency Graph Helpers', () => {
         helpers.trackDependency(source, target);
         const node = target.dependencies!;
         
-        const next = helpers.removeDependency(node);
+        const next = helpers.detachAll(node);
         
         expect(source.subscribers).toBeUndefined();
         expect(target.dependencies).toBeUndefined();
@@ -322,7 +320,7 @@ describe('Dependency Graph Helpers', () => {
         }
         
         // Remove middle edge
-        const next = helpers.removeDependency(middleEdge!);
+        const next = helpers.detachAll(middleEdge!);
         
         // Check producer's output list integrity
         const firstEdge = source.subscribers!;
@@ -337,44 +335,6 @@ describe('Dependency Graph Helpers', () => {
         // The returned next should be undefined since we removed from middle of consumer's list
         // (middleEdge was in targets[1].in, which only had one edge)
         expect(next).toBeUndefined();
-      });
-      
-      it('should return next edge for efficient iteration', () => {
-        const source1: ProducerNode = {
-          __type: 'test',
-          subscribers: undefined,
-          status: 0,
-          subscribersTail: undefined,
-          value: 0,
-  
-        };
-        const source2: ProducerNode = {
-          __type: 'test',
-          subscribers: undefined,
-          status: 0,
-          subscribersTail: undefined,
-          value: 0,
-  
-        };
-        
-        const target: ConsumerNode = {
-          __type: 'test',
-          status: 0,
-          dependencies: undefined,
-          dependencyTail: undefined,
-          deferredParent: undefined,
-        };
-        
-        helpers.trackDependency(source1, target);
-        helpers.trackDependency(source2, target);
-        
-        const firstEdge = target.dependencies!;
-        const secondEdge = firstEdge.nextDependency!;
-        
-        const next = helpers.removeDependency(firstEdge);
-        
-        expect(next).toBe(secondEdge);
-        expect(target.dependencies).toBe(secondEdge);
       });
     });
   
