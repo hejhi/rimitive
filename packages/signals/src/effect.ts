@@ -23,7 +23,7 @@ export type { Scheduler } from './helpers/scheduler';
 export type EffectFactory = LatticeExtension<
   'effect',
   (fn: () => void | (() => void)) => () => void
->;
+  >;
 
 export function createEffectFactory(
   opts: EffectOpts
@@ -35,40 +35,33 @@ export function createEffectFactory(
     detachAll,
   } = opts;
 
-  class EffectNode implements ScheduledNode {
-    readonly __type = 'effect' as const;
-    status = STATUS_CLEAN;
-    dependencies = undefined;
-    dependencyTail = undefined;
-    deferredParent = undefined;
-    nextScheduled = undefined;
-    _cleanup: (() => void) | undefined = undefined;
-    _run: () => void | (() => void);
-
-    constructor(fn: () => void | (() => void)) {
-      this._run = fn;
-    }
-
-    flush(): void {
-      if (this._cleanup) {
-        this._cleanup();
-        this._cleanup = undefined;
-      }
-      const newCleanup = track(ctx, this, this._run);
-      if (newCleanup) this._cleanup = newCleanup;
-    }
-  }
-
   function createEffect(run: () => void | (() => void)): () => void {
-    const node = new EffectNode(run);
+    let cleanup: (() => void) | undefined = undefined;
 
-    // Initial run - inline to avoid extra call
-    const newCleanup = track(ctx, node, run);
-    if (newCleanup) node._cleanup = newCleanup;
+    const node = {
+      __type: 'effect' as const,
+      status:  STATUS_CLEAN,
+      dependencies:  undefined,
+      dependencyTail:  undefined,
+      deferredParent:  undefined,
+      nextScheduled: undefined,
+      flush(): void {
+        if (cleanup) {
+          cleanup();
+          cleanup = undefined;
+        }
+        const newCleanup = track(ctx, node, run);
+        if (newCleanup) cleanup = newCleanup;
+      }
+    };
+
+    // Run a single time on creation
+    const initialCleanup = track(ctx, node, run);
+    if (initialCleanup) cleanup = initialCleanup;
 
     // Return dispose function
-    return () => disposeNode(node, (node: EffectNode) => {
-      if (node._cleanup) node._cleanup();
+    return () => disposeNode(node, (node: ScheduledNode) => {
+      cleanup?.();
       detachAll(node);
     });
   }
