@@ -64,8 +64,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
         // Warmup
         source.value = 1;
         
+        const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
         yield () => {
-          const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
           for (let i = 0; i < iterations; i++) {
             source.value = i;
           }
@@ -78,15 +78,15 @@ group('Fan-out Scaling - Single Source to Many', () => {
     
       bench('Lattice - $sources subscribers', function* (state: BenchState) {
         const subscriberCount = state.get('sources');
-        
+
         // Single source driving many subscribers
         const source = latticeSignal(0);
-        
+
         // Create subscribers with varying computations
-        const computeds = Array.from({ length: subscriberCount }, (_, i) => 
+        const computeds = Array.from({ length: subscriberCount }, (_, i) =>
           latticeComputed(() => {
             const val = source();
-            // Different computation per subscriber
+            // Different computation per subscriber to prevent optimization
             let result = val;
             for (let j = 0; j < 3; j++) {
               result = (result * (i + 1) + j) % 1000007;
@@ -94,41 +94,42 @@ group('Fan-out Scaling - Single Source to Many', () => {
             return result;
           })
         );
-        
+
         // Effects that consume the computeds
-        const counters = Array.from({ length: subscriberCount }, () => ({ value: 0 }));
-        const disposers = computeds.map((c, i) => 
+        const counters = Array.from({ length: subscriberCount }, () => ({
+          value: 0,
+        }));
+        const disposers = computeds.map((c, i) =>
           latticeEffect(() => {
             counters[i]!.value += c();
           })
         );
-        
+
         // Warmup
         source(1);
-        
+
+        const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
         yield () => {
-          const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
           for (let i = 0; i < iterations; i++) {
             source(i);
           }
           return do_not_optimize(counters[0]!.value);
         };
-        
-        disposers.forEach(d => d());
-      })
-      .args('sources', [10, 25, 50, 100, 200]);
+
+        disposers.forEach((d) => d());
+      }).args('sources', [10, 25, 50, 100, 200]);
     
       bench('Alien - $sources subscribers', function* (state: BenchState) {
         const subscriberCount = state.get('sources');
-        
+
         // Single source driving many subscribers
         const source = alienSignal(0);
-        
+
         // Create subscribers with varying computations
-        const computeds = Array.from({ length: subscriberCount }, (_, i) => 
+        const computeds = Array.from({ length: subscriberCount }, (_, i) =>
           alienComputed(() => {
             const val = source();
-            // Different computation per subscriber
+            // Different computation per subscriber to prevent optimization
             let result = val;
             for (let j = 0; j < 3; j++) {
               result = (result * (i + 1) + j) % 1000007;
@@ -136,29 +137,31 @@ group('Fan-out Scaling - Single Source to Many', () => {
             return result;
           })
         );
-        
+
         // Effects that consume the computeds
-        const counters = Array.from({ length: subscriberCount }, () => ({ value: 0 }));
-        const disposers = computeds.map((c, i) => 
+        const counters = Array.from({ length: subscriberCount }, () => ({
+          value: 0,
+        }));
+        const disposers = computeds.map((c, i) =>
           alienEffect(() => {
             counters[i]!.value += c();
           })
         );
-        
+
         // Warmup
         source(1);
-        
+
+        const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
+
         yield () => {
-          const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
           for (let i = 0; i < iterations; i++) {
             source(i);
           }
           return do_not_optimize(counters[0]!.value);
         };
-        
-        disposers.forEach(d => d());
-      })
-      .args('sources', [10, 25, 50, 100, 200]);
+
+        disposers.forEach((d) => d());
+      }).args('sources', [10, 25, 50, 100, 200]);
     });
   });
 });
