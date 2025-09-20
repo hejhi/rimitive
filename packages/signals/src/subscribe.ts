@@ -72,12 +72,23 @@ export function createSubscribeFactory(
     // Create subscription node with shared prototype
     const node = new SubscriptionNode(source, callback);
 
+    const detachDeps = (node: SubscriptionNode<T>) => {
+      const deps = node.dependencies;
+
+      if (deps) {
+        detachAll(deps);
+        node.dependencies = undefined;
+      }
+
+      node.dependencyTail = undefined;
+    }
+
     // Initial execution to establish dependencies and get initial value
     const value = track(ctx, node, source);
     callback(value);
 
     // Return unsubscribe function
-    return () => disposeNode(node, detachAll);
+    return () => disposeNode(node, detachDeps);
   }
 
   return {

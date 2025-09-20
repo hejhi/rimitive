@@ -13,7 +13,7 @@ export interface GraphEdges {
     consumer: ConsumerNode,
   ) => void;
   removeDependency: (dependency: Dependency) => Dependency | undefined;
-  detachAll: (node: ConsumerNode) => void;
+  detachAll: (dependency: Dependency) => void;
   track: <T>(
     ctx: GlobalContext,
     node: ConsumerNode,
@@ -93,15 +93,12 @@ export function createGraphEdges(): GraphEdges {
    *
    * @param node - The consumer node to detach
    */
-  const detachAll = (node: ConsumerNode): void => {
-    let toRemove = node.dependencies;
+  const detachAll = (dep: Dependency): void => {
+    let toRemove: Dependency | undefined = dep;
 
     while (toRemove) {
       toRemove = removeDependency(toRemove);
     }
-
-    node.dependencies = undefined;
-    node.dependencyTail = undefined;
   };
 
   /**

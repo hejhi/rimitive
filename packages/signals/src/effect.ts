@@ -62,7 +62,14 @@ export function createEffectFactory(
     // Return dispose function
     return () => disposeNode(node, (node: ScheduledNode) => {
       cleanup?.();
-      detachAll(node);
+      const deps = node.dependencies;
+
+      if (deps) {
+        detachAll(deps);
+        node.dependencies = undefined;
+      }
+
+      node.dependencyTail = undefined;
     });
   }
 
