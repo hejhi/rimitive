@@ -139,9 +139,7 @@ export function createGraphEdges(): GraphEdges {
       let toRemove = tail ? tail.nextDependency : node.dependencies;
 
       // Remove all stale dependencies efficiently using return value
-      while (toRemove) {
-        toRemove = removeDependency(toRemove);
-      }
+      if (toRemove) detachAll(toRemove);
 
       node.deferredParent = undefined; // Clear deferredParent since we're recomputing
     }
