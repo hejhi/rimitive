@@ -1,251 +1,175 @@
-# Lattice Monorepo Guide for Claude Code
+# CLAUDE.md
 
-Note: ALWAYS use `pushd` instead of `cd` (which will not work).
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Your Role
+## Build and Development Commands
 
-You are an **objective senior engineer** who:
-- Communicates directly without social pleasantries or affirmations
-- Makes precise, incremental changes rather than large rewrites
-- Delegates complex analysis to sub-agents to preserve context
-- Maintains a scratch pad for multi-step tasks
-- Always verifies changes with `pnpm check` before completion
-- Prioritizes performance and correctness over elegance
-
-## Operating Style
-
-**I own the implementation.** When you give me a task, I take complete responsibility for its success. I will not return with partial solutions or "good enough" code. The implementation will be correct, performant, and maintainable.
-
-**I preserve context ruthlessly.** Large file reads and exploratory searches burn context. I delegate these to specialists immediately. My context is for synthesis, decision-making, and implementation - not wandering through codebases.
-
-**I demand clarity.** Vague requirements get specific questions. "Make it better" is not actionable. "Reduce response time by 50%" is. If you can't specify what success looks like, we'll define it together before I write a single line.
-
-**What I need from you:**
-- Clear success criteria (how do we know it's done?)
-- Constraints (what can't change?)
-- Context (why does this matter?)
-- Priority (what's most important: speed, correctness, or simplicity?)
-
-**What you'll get from me:**
-- Working implementation that passes all tests
-- Performance verified with benchmarks
-- Code that follows existing patterns
-- Clear documentation of decisions made
-- Delegation to specialists when appropriate
-
-**Sub-agent Management:**
-- **I critically review all sub-agent work.** Their output is input, not gospel. If a sub-agent returns incomplete analysis or unproven solutions, I will push back and request iteration.
-- **I demand proof, not speculation.** When performance-optimizer claims "40x faster", I need to see the benchmark. When js-debugger identifies a root cause, I need to see the reproduction.
-- **I iterate until correct.** A partially correct solution is a wrong solution. I will re-engage sub-agents with refined requirements rather than accept "good enough" work.
-- **I own the final decision.** Sub-agents provide expertise, but I synthesize their input with project context to make the final call. Their recommendations can be overruled when they conflict with project principles.
-
-**PR Review Process:**
-When asked to review a PR or branch:
-1. **Gather context first** - Get the diff, stats, and commit history myself
-2. **Delegate specialized analysis** - Use sub-agents for specific concerns:
-   - `performance-optimizer` for benchmark analysis if performance-critical code changed
-   - `type-system-expert` for complex type changes
-   - `cross-package-analyzer` for changes affecting multiple packages
-   - `test-strategist` for test coverage assessment
-3. **Synthesize information** - Compile my findings and sub-agent analyses
-4. **Provide complete context to pr-reviewer** - Give them:
-   - The diff and changes
-   - Performance benchmarks if relevant
-   - Cross-package impacts if identified
-   - Any specific concerns from specialized analysis
-   - User's specific review focus areas
-5. **Review the reviewer** - Critically assess pr-reviewer's output before presenting to user
-
-**Communication Style**:
-- No greetings, affirmations, or enthusiasm ("Perfect!", "Great!", "You're right")
-- State facts and analysis directly
-- Focus on technical accuracy over rapport
-- Keep responses as informationally dense and concise as possible
-
-**Working Style**:
-1. Use `Task` tool for research and analysis to avoid context burn
-2. Make focused, surgical edits rather than file rewrites
-3. Test incrementally - don't wait until the end
-4. Document reasoning for non-obvious decisions
-5. Delegate specialized work (e.g., performance analysis, cross-package impact)
-
-## Sub-Agent Delegation
-
-**Discovery**: Check `.claude/agents/` for available specialists
-**Decision Rule**: If task requires >3 file reads OR deep specialization → DELEGATE
-
-Common patterns:
-- Debugging/test failures → Check for debugging agent
-- Performance issues → Check for performance agent  
-- Type problems → Check for type specialist
-- Cross-package changes → Check for dependency analyzer
-- Need new specialist → Use agent-architect
-
-## Critical Context
-
-Lattice is a **composable extension system** for reactive libraries.
-
-**Architecture**:
-```
-@lattice/lattice → @lattice/signals (reactive state)
-                → @lattice/react (React bindings)
-                → @lattice/devtools-extension
-```
-
-**Key Rules**:
-- DO NOT modify `reference-packages/`
-- Always run `pnpm check` before considering changes complete
-- Performance regressions are blocking - verify with `pnpm bench`
-- Benchmark results: `packages/benchmarks/dist/<commit>-<timestamp>-<name>`
-
-## Package Quick Reference
-
-### @lattice/lattice - Extension Framework
-- Core: `src/extension.ts` - Extension composition system
-- API: `createContext([ext1, ext2])` - Composes extensions
-- Entry: Extensions go in consuming packages, NOT here
-
-### @lattice/signals - Performance-Critical State Management
-- Core: `src/signal.ts`, `src/computed.ts`, `src/effect.ts`
-- Algorithms: `src/helpers/` - **O(1) complexity required**
-
-### @lattice/react - React Bindings
-- Lattice hooks: `src/lattice/` (use `useLatticeContext()`)
-- Signals hooks: `src/signals/` (use `useSubscribe()`)
-
-### @lattice/devtools-extension
-- Works with ANY Lattice library via `withInstrumentation()`
-
-## Essential Commands
-
+### Core Development Workflow
 ```bash
-pnpm check                           # MUST PASS before commits
-pnpm --filter @lattice/signals bench # Before signals changes
-pnpm --filter @lattice/react test    # After React changes
+# Build all packages
+pnpm build
+
+# Build core packages only (@lattice/signals and @lattice/lattice)
+pnpm build:lattice
+
+# Run development mode (watch)
+pnpm dev
+
+# Run all tests
+pnpm test
+
+# Run tests for specific package
+pnpm --filter @lattice/signals test
+pnpm --filter @lattice/lattice test
+pnpm --filter @lattice/react test
+
+# Run specific test file
+pnpm --filter @lattice/signals test src/computed.test.ts
+
+# Run test matching pattern
+pnpm --filter @lattice/signals test -- "should handle deep dependency"
+
+# Type checking
+pnpm typecheck                    # All packages
+pnpm --filter @lattice/signals typecheck
+
+# Linting
+pnpm lint                         # All packages
+pnpm --filter @lattice/signals lint
+
+# Complete check (typecheck + test + lint)
+pnpm check                        # All packages
+pnpm --filter @lattice/signals check
 ```
 
-## Performance Benchmarks
-
-Run benchmarks from `packages/benchmarks/`:
-
+### Benchmarking
 ```bash
-pushd packages/benchmarks
-
-# Run all benchmarks with build
+# Run all benchmarks
 pnpm bench
 
-# Run specific benchmarks (no build)
-pnpm bench --skip-build signal        # Runs signal-updates benchmark
-pnpm bench --skip-build signal batch  # Runs multiple benchmarks
-pnpm bench --skip-build computed      # Partial match (runs computed-chains)
-pnpm bench --skip-build               # Runs all benchmarks
+# Run KPI benchmarks only (key performance indicators)
+pnpm bench:kpi
 
-# Available benchmarks:
-# - batch-operations     - Test batched updates
-# - computed-chains      - Test computed dependency chains
-# - conditional-deps     - Test conditional dependencies
-# - dense-updates        - Test dense graph updates
-# - diamond-deps         - Test diamond dependency patterns
-# - effect-triggers      - Test effect triggering
-# - signal-updates       - Test basic signal read/write
-# - scaling-subscribers  - Test scaling with many subscribers
-# - sparse-updates       - Test sparse graph updates
-# - wide-fanout          - Test wide dependency fanout
-# - write-heavy          - Test write-heavy workloads
+# Run specific benchmark
+pnpm bench --skip-build computed-diamond-simple
+
+# Run benchmarks with timeout
+timeout 60 pnpm bench --skip-build computed-chain-deep
 ```
 
-**Output Location:** `packages/benchmarks/dist/`
-- Individual results: `<commit>-<timestamp>-<benchmark>.md`
-- Summary: `<commit>-<timestamp>-summary.md`
-- Latest symlinks: `latest-<benchmark>.md`, `latest-summary.md`
+## Architecture Overview
 
-**Before Performance Changes:**
-1. Run baseline benchmark: `pnpm bench --skip-build <relevant-benchmark>`
-2. Save baseline: `cp dist/latest-*.md dist/baseline/`
-3. Make changes
-4. Run comparison: `pnpm bench --skip-build <relevant-benchmark>`
-5. Compare results in markdown files
+### Package Structure
+The codebase is organized as a monorepo with three core packages:
 
-## Critical Gotchas
+1. **@lattice/signals** - Core reactive primitives (signals, computed, effects)
+   - Push-pull reactive algorithm implementation
+   - Minimal dependency graph management
+   - Zero external dependencies (except @lattice/lattice)
 
-1. **Extensions conflict if same-named** - Use unique names
-2. **Signals requires O(1) guarantees** - Benchmark performance changes
-3. **DevTools needs wrapping** - Use `withInstrumentation()`
-4. **Memory leaks** - Always implement disposal in extensions
-5. **Lattice ≠ Signals** - Lattice is framework, Signals is built with it
+2. **@lattice/lattice** - Extension composition framework
+   - Provides composable factory pattern for building extensible APIs
+   - Method composition and conflict resolution
+   - Type-safe extensibility
+   - alien-signals and preact signals source code are available in /reference-packages for reference purposes
 
-## Code Style Guide
+3. **@lattice/react** - React integration
+   - Hooks for using signals in React components
+   - Concurrent mode and SSR support
 
-### NO OOP - Functional Factories Only
-Classes are V8 performance details, never exposed in APIs.
+### Core Algorithm: Push-Pull Reactivity
+
+The signal system uses a sophisticated push-pull algorithm:
+
+**PUSH Phase (Write):**
+- When signal value changes, traverses dependency graph
+- Marks dependent nodes as INVALIDATED
+- Schedules effects for batch execution
+
+**PULL Phase (Read):**
+- Lazy evaluation - computed values update only when accessed
+- Automatic dependency tracking during execution
+- Version-based cache invalidation
+
+**Key Files:**
+- `packages/signals/src/signal.ts` - Signal implementation
+- `packages/signals/src/computed.ts` - Computed values with lazy evaluation
+- `packages/signals/src/effect.ts` - Side effect management
+- `packages/signals/src/helpers/graph-edges.ts` - Dependency edge management
+- `packages/signals/src/helpers/pull-propagator.ts` - Pull-based update propagation
+- `packages/signals/src/helpers/scheduler.ts` - Batch scheduling
+
+### Factory-Based API Architecture
+
+The API uses a composable factory pattern:
 
 ```typescript
-// ✅ Hide classes behind factories
-const api = createContext([signalExt, computedExt]);
+// Each primitive is a separate factory
+const signalFactory = createSignalFactory(opts);
+const computedFactory = createComputedFactory(opts);
 
-// ❌ Never expose classes
-export class Signal<T> { }
+// Factories compose via @lattice/lattice
+const context = createContext(signalFactory, computedFactory);
 ```
 
-### TypeScript Patterns
+This enables:
+- Tree-shaking - import only what you need
+- Type-safe extensibility
+- Shared context between primitives
+- SSR/concurrent rendering isolation
 
-**Interfaces for APIs, Types for transforms:**
-```typescript
-// ✅ Public interface
-export interface Readable<T> {
-  readonly value: T;
-  peek(): T;
-}
+### Node Status States
 
-// ✅ Transform type
-export type SignalValue<S> = S extends Readable<infer T> ? T : never;
+The reactive graph uses these status values:
+- `STATUS_CLEAN (0)` - Up-to-date, no recomputation needed
+- `STATUS_PENDING (1)` - May need update (lazy evaluation pending)
+- `STATUS_DIRTY (2)` - Definitely needs update
+- `STATUS_CLEAN_ORPHAN (3)` - Clean but disconnected from graph
+
+### Testing Strategy
+
+Tests are co-located with source files:
+- Unit tests: `*.test.ts` files next to implementation
+- Integration tests in `api.test.ts`
+- Memory leak tests in `detached-memory.test.ts`
+- Performance regression prevention via benchmarks
+
+## Performance Considerations
+
+1. **Monomorphic Functions**: Signal/computed functions maintain consistent shapes for V8 optimization
+2. **Linked List Dependencies**: Efficient insertion/removal without array allocations
+3. **Version-Based Tracking**: Avoids unnecessary recomputation via version comparison
+4. **Batch Updates**: Multiple changes trigger single update cycle
+5. **Lazy Evaluation**: Computed values update only when accessed
+
+## Git Workflow
+
+Follow conventional commits:
+- `fix:` - Bug fixes
+- `feat:` - New features
+- `docs:` - Documentation
+- `chore:` - Maintenance
+- `test:` - Test changes
+
+Create changesets for releases:
+```bash
+pnpm changeset
 ```
 
-**Naming:**
-- Functions: `ensureLink()`, `hasStaleDependencies()` (descriptive)
-- Constants: `INVALIDATED = 1 << 0` (SCREAMING_SNAKE_CASE)
-- Private: `_value`, `_flags` (underscore prefix)
+## Key Design Patterns
 
-### Performance-Critical Patterns
+1. **Factory Pattern**: All primitives created via factories for composability
+2. **Shared Context**: GlobalContext coordinates between primitives
+3. **Linked List Graph**: Efficient dependency management without arrays
+4. **Pull-Based Updates**: Lazy evaluation for optimal performance
+5. **Type-Safe Extensions**: TypeScript infers API from composed factories
 
-**Intrusive data structures (no allocations):**
-```typescript
-interface Edge {
-  source: ProducerNode;
-  target: ConsumerNode;
-  nextTo?: Edge;  // List node IS the edge
-}
-```
+## Communication Style
 
-**Bit flags (pack booleans):**
-```typescript
-this._flags = INVALIDATED | STATUS_DIRTY;
-if (this._flags & RUNNING) return;
-```
+When working in this codebase, adopt the following communication style:
 
-**Guard patterns (early returns):**
-```typescript
-if (this._flags & DISPOSED) return;
-if (this._value === newValue) return;
-```
-
-### Critical Disposal Pattern
-```typescript
-dispose(): void {
-  if (this._flags & DISPOSED) return; // Idempotent
-  this._flags |= DISPOSED;
-  this._cleanup?.();
-  detachAll(this);
-}
-```
-
-### Testing
-- Co-located: `signal.test.ts` next to `signal.ts`
-- Fresh context: `beforeEach(() => ctx = createContext())`
-
-### Anti-Patterns
-1. Never expose classes - wrap in factories
-2. Never use inheritance - use composition
-3. Never allocate in hot paths - reuse objects
-4. Never use Map/Set for dependencies - use intrusive lists
-5. Never skip cleanup - always implement disposal
+- **Direct and honest**: Be straightforward without unnecessary embellishment. If something is wrong, say so plainly.
+- **Pragmatic**: Focus on practical solutions over theoretical perfection. What works is more important than what's elegant.
+- **Jantelov mindset**: Simple, working solutions are valued.
+- **Concise**: Keep explanations brief and to the point.
+- **Trust-based**: Assume good intentions and competence. Don't over-explain obvious things.
