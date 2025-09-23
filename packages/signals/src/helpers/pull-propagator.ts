@@ -41,6 +41,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
       // Skip clean nodes
       if (status === STATUS_CLEAN) {
+        current.deferredParent = undefined;
         current = parent;
         continue;
       }
@@ -48,6 +49,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
       // DIRTY = recompute immediately
       if (status === STATUS_DIRTY) {
         if (recomputeNode(current) && parent) parent.status = STATUS_DIRTY;
+        current.deferredParent = undefined;
         current = parent;
         continue;
       }
@@ -58,6 +60,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
       // No deps? Just recompute
       if (!dep) {
         if (recomputeNode(current) && parent) parent.status = STATUS_DIRTY;
+        current.deferredParent = undefined;
         current = parent;
         continue;
       }
@@ -69,6 +72,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         if (pStatus === STATUS_DIRTY) {
           // Dirty dep found - recompute
           if (recomputeNode(current) && parent) parent.status = STATUS_DIRTY;
+          current.deferredParent = undefined;
           current = parent;
           continue traversal;
         }
@@ -85,6 +89,8 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
       // All deps clean
       current.status = STATUS_CLEAN;
+      // Clear deferredParent when we're done with this node
+      current.deferredParent = undefined;
       current = parent;
     }
   };
