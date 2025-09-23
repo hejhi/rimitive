@@ -70,7 +70,10 @@ The `computed-diamond-simple` benchmark shows Lattice using ~3.82 MB while Preac
 
 ### 3. Memory Retention Issues
 
-#### Potential Leaks in Lattice:
+#### Ruled Out Issues:
+1. **`deferredParent` field**: Initially suspected but RULED OUT. Removing this field completely had no impact on memory usage (still 3.82mb), proving it's not the cause.
+
+#### Actual Issues in Lattice:
 
 1. **Context Capture**: Every signal/computed captures the entire opts object:
    ```typescript

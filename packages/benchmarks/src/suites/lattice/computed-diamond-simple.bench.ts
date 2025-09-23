@@ -24,15 +24,14 @@ import {
 import { createApi } from './helpers/signal-computed';
 
 const ITERATIONS = 100000; // Increased for better precision
+const latticeAPI = createApi();
+const latticeSignal = latticeAPI.signal;
+const latticeComputed = latticeAPI.computed;
 
 group('Simple Diamond', () => {
   summary(() => {
     barplot(() => {
       bench('Lattice', function* () {
-        const latticeAPI = createApi();
-        const latticeSignal = latticeAPI.signal;
-        const latticeComputed = latticeAPI.computed;
-
         // Create nodes outside yield - same as Preact/Alien
         const source = latticeSignal(0);
         const left = latticeComputed(() => {
