@@ -346,6 +346,56 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
+      "tests": [
+        {
+          "name": "should recompute to check values but not increment version when output remains same",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute to check values but not increment version when output remains same",
+          "state": "passed"
+        },
+        {
+          "name": "should propagate updates through deep computed chains",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should propagate updates through deep computed chains",
+          "state": "passed"
+        },
+        {
+          "name": "should handle very deep chains efficiently",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle very deep chains efficiently",
+          "state": "passed"
+        },
+        {
+          "name": "should handle diamond dependencies correctly with detailed tracking",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle diamond dependencies correctly with detailed tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should skip downstream recomputation when intermediate value does not change",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip downstream recomputation when intermediate value does not change",
+          "state": "passed"
+        },
+        {
+          "name": "should skip recomputation when multiple dependencies have unchanged values (diamond)",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip recomputation when multiple dependencies have unchanged values (diamond)",
+          "state": "passed"
+        },
+        {
+          "name": "should NOT run effects when dependent computed values do not change",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should NOT run effects when dependent computed values do not change",
+          "state": "passed"
+        },
+        {
+          "name": "should recompute once when batch updates result in same value",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute once when batch updates result in same value",
+          "state": "passed"
+        },
+        {
+          "name": "should clear invalidated check cache between flushes",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should clear invalidated check cache between flushes",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/effect.test.ts",
       "tests": [
         {
@@ -476,56 +526,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
-      "tests": [
-        {
-          "name": "should recompute to check values but not increment version when output remains same",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute to check values but not increment version when output remains same",
-          "state": "passed"
-        },
-        {
-          "name": "should propagate updates through deep computed chains",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should propagate updates through deep computed chains",
-          "state": "passed"
-        },
-        {
-          "name": "should handle very deep chains efficiently",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle very deep chains efficiently",
-          "state": "passed"
-        },
-        {
-          "name": "should handle diamond dependencies correctly with detailed tracking",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle diamond dependencies correctly with detailed tracking",
-          "state": "passed"
-        },
-        {
-          "name": "should skip downstream recomputation when intermediate value does not change",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip downstream recomputation when intermediate value does not change",
-          "state": "passed"
-        },
-        {
-          "name": "should skip recomputation when multiple dependencies have unchanged values (diamond)",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip recomputation when multiple dependencies have unchanged values (diamond)",
-          "state": "passed"
-        },
-        {
-          "name": "should NOT run effects when dependent computed values do not change",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should NOT run effects when dependent computed values do not change",
-          "state": "passed"
-        },
-        {
-          "name": "should recompute once when batch updates result in same value",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute once when batch updates result in same value",
-          "state": "passed"
-        },
-        {
-          "name": "should clear invalidated check cache between flushes",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should clear invalidated check cache between flushes",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
       "tests": [
         {
@@ -576,26 +576,21 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
       "tests": [
         {
-          "name": "should provide a propagate function that marks nodes",
-          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
+          "name": "should not recompute unused branches after condition changes",
+          "fullName": "Dynamic dependency unlinking > should not recompute unused branches after condition changes",
           "state": "passed"
         },
         {
-          "name": "should call visitor for leaf nodes",
-          "fullName": "GraphTraversal > should call visitor for leaf nodes",
+          "name": "should dynamically track only active dependencies",
+          "fullName": "Dynamic dependency unlinking > should dynamically track only active dependencies",
           "state": "passed"
         },
         {
-          "name": "should traverse through intermediate nodes",
-          "fullName": "GraphTraversal > should traverse through intermediate nodes",
-          "state": "passed"
-        },
-        {
-          "name": "can be used to create a minimal context without scheduling",
-          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "name": "proves the 2.7x performance gap is NOT from traversing inactive branches",
+          "fullName": "Dynamic dependency unlinking > proves the 2.7x performance gap is NOT from traversing inactive branches",
           "state": "passed"
         }
       ]
@@ -686,6 +681,31 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
+      "tests": [
+        {
+          "name": "should provide a propagate function that marks nodes",
+          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should call visitor for leaf nodes",
+          "fullName": "GraphTraversal > should call visitor for leaf nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should traverse through intermediate nodes",
+          "fullName": "GraphTraversal > should traverse through intermediate nodes",
+          "state": "passed"
+        },
+        {
+          "name": "can be used to create a minimal context without scheduling",
+          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
       "tests": [
         {
@@ -736,21 +756,21 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
       "tests": [
         {
-          "name": "should not recompute unused branches after condition changes",
-          "fullName": "Dynamic dependency unlinking > should not recompute unused branches after condition changes",
+          "name": "should read computed value without establishing dependencies",
+          "fullName": "Computed peek() > should read computed value without establishing dependencies",
           "state": "passed"
         },
         {
-          "name": "should dynamically track only active dependencies",
-          "fullName": "Dynamic dependency unlinking > should dynamically track only active dependencies",
+          "name": "should return the same value as .value",
+          "fullName": "Computed peek() > should return the same value as .value",
           "state": "passed"
         },
         {
-          "name": "proves the 2.7x performance gap is NOT from traversing inactive branches",
-          "fullName": "Dynamic dependency unlinking > proves the 2.7x performance gap is NOT from traversing inactive branches",
+          "name": "should work with nested computeds",
+          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]
@@ -771,26 +791,6 @@
         {
           "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
           "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
-      "tests": [
-        {
-          "name": "should read computed value without establishing dependencies",
-          "fullName": "Computed peek() > should read computed value without establishing dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should return the same value as .value",
-          "fullName": "Computed peek() > should return the same value as .value",
-          "state": "passed"
-        },
-        {
-          "name": "should work with nested computeds",
-          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]

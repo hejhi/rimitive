@@ -1,27 +1,87 @@
 # Benchmark Memory Issues
 
-Lattice appears to have memory performance issues in the following benchmarks:
+## Benchmarks, Set 1
 
-## `computed-diamond-simple`
+Lattice appears to have memory performance issues in the following benchmarks (the below excerpts memory usage only, and just between alien-signals and lattice for simplicity—preact scales similarly to alien, with no issues, but lattice is closer to alien in terms of implementation):
 
-Lattice  3.82 mb   ▆███▆█▆██▁█▆▆▆█▆▁▆█▁█
-Preact   972.60 b  ▆▆█████▁█▁▄▁▁▁▁▁▁▁▁▁▄
-Alien    895.42 b  ▃▁▁▁▇▅████▅▇▅▅▃▁▁▁▃▃▅
+### `computed-diamond-simple`
 
-## `scaling-subscribers`
+Lattice  3.82 mb  ▆███▆█▆██▁█▆▆▆█▆▁▆█▁█
+Alien    895.42 b ▃▁▁▁▇▅████▅▇▅▅▃▁▁▁▃▃▅
 
-Preact - 10 subscribers    5.52 kb  ▃▃▂██▅▄▄▃▂▂▄▂▃▂▁▁▁▁▁▁
-Preact - 25 subscribers    937.35 b ▃█████▇█▃▂▃▃▂▄▂▁▁▁▂▁▂
-Preact - 50 subscribers    671.62 b ▅███▅███▁█▅██▅▁▁▁▅▁█▅
-Preact - 100 subscribers   1.04 kb  ██▁██▁▁█▁█▁█▁▁▁▁▁█▁▁█
-Preact - 200 subscribers   1.38 kb  █████▁▁▁▁▁▁▁▁▁▁█▁▁▁▁█
+### `scaling-subscribers`
+
 Lattice - 10 subscribers   1.09 mb  ▁███▄▅▃▂▆██▂▂▁▁▁▁▁▁▁▁
 Lattice - 25 subscribers   4.58 mb  ▂▇██▇▇▄▇▃▁▂▂▃▄▃▄▇▂▂█▂
 Lattice - 50 subscribers   13.22 mb ████▆█▁█▆▁▁▆▁▆▁█▆▁▆▁▆
 Lattice - 100 subscribers  37.77 mb ███▁▁▁▁███▁▁▁▁▁▁█▁▁▁█
 Lattice - 200 subscribers  43.37 mb █▁▁█▁▁▁███▁█▁███▁▁▁▁█
+
 Alien - 10 subscribers     3.29 kb  ▁▁▃▃██▂▃▃▆██▆▆▃▃▃▂▂▂▁
 Alien - 25 subscribers     1.39 kb  ▃▂█████▅▄▃▂▂▅▂▆█▃▂▂▃▃
 Alien - 50 subscribers     408.00 b █████▁████▄▄▁█▄▁▁▁▄▁▄
 Alien - 100 subscribers    408.00 b █▁▁▁██▁▁█▁▁▁██▁▁▁▁█▁█
 Alien - 200 subscribers    408.00 b ██▁███▁▁▁▁█▁█▁▁▁█▁▁▁█
+
+### `scaling-computed-computed`
+
+Lattice - 10 subscribers  1.26 mb   ██▆▄▂▂▂▃▁▂▁▁▂▂▁▁▂▂▁▁▁
+Lattice - 25 subscribers  4.85 mb   ████▇██████████▃▇▃▅▁▃
+Lattice - 50 subscribers  13.60 mb  ████▇██▇▁▁█▁▇█▁▁█▁█▁▇
+Lattice - 100 subscribers 38.30 mb  █▁▁██▁▁▁▁█▁█▁▁█▁▁█▁▁█
+Lattice - 200 subscribers 44.12 mb  █▁▁█▁█▁▁██▁█▁▁▁▁█▁█▁█
+
+Alien - 10 subscribers    175.80 kb ██▆▄█▆▄▃▂▂▁▁▁▂▂▁▁▁▁▁▁
+Alien - 25 subscribers    273.85 kb ███▅▂▆▂▄▂▃▂▃▁▁▁▂▂▁▂▁▂
+Alien - 50 subscribers    387.19 kb ▇█▇█▇▁▇▇▇█▇▇▁▇▇██▇▇▇█
+Alien - 100 subscribers   547.34 kb ██▁█▁▁██▁▁▁▁▁▁█▁▁▁▁▁█
+Alien - 200 subscribers   773.95 kb █▁▁▁▁█▁▁█▁█▁▁█▁▁███▁█
+
+## Benchmarks, Set 2
+
+However, the following benchmarks show that lattice DOES NOT have inherent memory issues with signals, computeds, or effects, individually:
+
+### `scaling-computed`:
+
+Lattice - 10 subscribers  173.96 kb ████▇▄▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁
+Lattice - 25 subscribers  273.85 kb ███▆▅█▇███▇▆▂▂▅▃▂▃▂▁▂
+Lattice - 50 subscribers  387.19 kb ████▅▅▇████▁▅▃▃▁▃▅▃▁▃
+Lattice - 100 subscribers 547.34 kb █▁▇▁▇█▇█▇█▇▁▇▇▇▁▁▁▇▇▇
+Lattice - 200 subscribers 773.95 kb █▁████▁▁█▁▁▁█▁▁▁▁▁█▁█
+
+Alien - 10 subscribers    174.19 kb ▆█████▆▄▇▅▄▃▂▂▂▂▁▁▁▁▁
+Alien - 25 subscribers    273.85 kb ▁▁▁▁█▇█▇█▄▃▂▂▃▁▁▂▂▁▂▂
+Alien - 50 subscribers    387.19 kb █████▄█▄██▄▁██▆▆▄▆▄▁▄
+Alien - 100 subscribers   547.34 kb ████▁█▁▁▁█▁███▁███▁██
+Alien - 200 subscribers   773.95 kb ██▁████▁▁▁▁█▁█▁█▁▁▁▁█
+
+### `scaling-signal-effect`:
+
+Lattice - 10 subscribers  312.23 kb ▁▂▁▁▁▁█████▇▆▄▃▂▂▁▁▁▁
+Lattice - 25 subscribers  468.96 kb ▆██▆█████▄▄▃▂▄▂▂▂▃▂▁▂
+Lattice - 50 subscribers  663.24 kb ▄▄▄█▆▁██▄█▆███▆▆█▁▄▁▄
+Lattice - 100 subscribers 938.50 kb █▁▁▁▁█▁███▁█▁▁█▁▁██▁█
+Lattice - 200 subscribers 1.30 mb   █▁██▁▁▁▁██▁▁█▁▁▁▁▁█▁█
+
+Alien - 10 subscribers    297.58 kb ▆█▅▇█████▇██▇▃▃▂▂▂▁▂▁
+Alien - 25 subscribers    468.96 kb ██▅██████████▃▂▃▄▃▃▂▂
+Alien - 50 subscribers    663.25 kb ▅▃▅▃▅▃▇▅███▇▅█▅▁▃▃▅▅▃
+Alien - 100 subscribers   937.79 kb ██▁█▁██▁▁█▁█▁▁▁█▁▁███
+Alien - 200 subscribers   1.30 mb   █▁▁█▁▁▁███▁█▁█▁▁▁▁▁▁█
+
+## Notes
+
+What you'll notice is that the memory issues appear to have to do with consumers of computeds.
+
+For instance, effect consumers of signals (`scaling-signal-effect`) and computed consumers of signals (`scaling-computed`) do NOT have memory issues, at any scale. `scaling-computed` also shows that simply reading computeds does NOT have memory issues.
+
+What does appear to have memory issues is scenarios where computeds are consumed by other reactive primitives.
+
+## IMPORTANT: THEORIES RULED OUT
+
+These are paths we've gone down, and have RULED OUT. In other words, **DO NOT WASTE TIME GOING DOWN THE FOLLOWING RABBIT HOLES**:
+- using WeakMaps/WeakSets/Array tracking: HURTS performance and does not fix the memory issue
+- recursion in `pullUpdates`: HURTS performance and does not fix the memory issue
+- moving methods to the prototype-level for computeds: HURTS performance and does not fix the memory issue
+- lattice contexts accumulation: DISPROVED, and moving context creation inside the benchmark HURTS performance and does NOT fix the memory issue
+- lattice comupteds inherent closure cost: DISPROVED (see benchmarks for `scaling-computed` and `scaling-signal-effect`)
