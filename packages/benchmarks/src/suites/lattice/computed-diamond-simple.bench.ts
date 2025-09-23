@@ -23,46 +23,52 @@ import {
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed';
 
-const latticeAPI = createApi();
-
-const latticeSignal = latticeAPI.signal;
-const latticeComputed = latticeAPI.computed;
-
 const ITERATIONS = 100000; // Increased for better precision
 
 group('Simple Diamond', () => {
   summary(() => {
     barplot(() => {
       bench('Lattice', function* () {
-        const source = latticeSignal(0);
-        // More complex computations to stress the system
-        const left = latticeComputed(() => {
-          const val = source();
-          // Simulate non-trivial computation
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 31 + j) % 1000007;
-          }
-          return result;
-        });
-        const right = latticeComputed(() => {
-          const val = source();
-          // Different computation path
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 37 + j * 2) % 1000007;
-          }
-          return result;
-        });
-        const bottom = latticeComputed(() => {
-          // Should see consistent snapshot - both paths updated
-          const l = left();
-          const r = right();
-          // Additional computation at convergence
-          return (l * l + r * r) % 1000007;
-        });
-        
+        // Create a single API instance but track what we create
+        const latticeAPI = createApi();
+        const latticeSignal = latticeAPI.signal;
+        const latticeComputed = latticeAPI.computed;
+
+        // Setup phase - create nodes once
+        let source: any;
+        let left: any;
+        let right: any;
+        let bottom: any;
+
         yield () => {
+          // Create fresh nodes for each sample iteration
+          source = latticeSignal(0);
+          left = latticeComputed(() => {
+            const val = source();
+            // Simulate non-trivial computation
+            let result = val;
+            for (let j = 0; j < 5; j++) {
+              result = (result * 31 + j) % 1000007;
+            }
+            return result;
+          });
+          right = latticeComputed(() => {
+            const val = source();
+            // Different computation path
+            let result = val;
+            for (let j = 0; j < 5; j++) {
+              result = (result * 37 + j * 2) % 1000007;
+            }
+            return result;
+          });
+          bottom = latticeComputed(() => {
+            // Should see consistent snapshot - both paths updated
+            const l = left();
+            const r = right();
+            // Additional computation at convergence
+            return (l * l + r * r) % 1000007;
+          });
+
           for (let i = 0; i < ITERATIONS; i++) {
             source(i);
             void bottom();
