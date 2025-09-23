@@ -14,85 +14,132 @@ export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
+/**
+ * OPTIMIZATION NOTES:
+ *
+ * Current implementation uses the `deferredParent` field on each node for traversal state.
+ * This causes memory writes for every traversal, even in single-subscriber chains.
+ *
+ * Alien-signals optimizes this by:
+ * 1. Using a separate stack allocation ONLY when there are multiple paths
+ * 2. For single-subscriber chains, using implicit recursion depth
+ *
+ * Future optimization opportunities:
+ * 1. Replace deferredParent with an external stack pool
+ * 2. Only allocate stack frames when multiple subscribers exist
+ * 3. Use a pre-allocated stack array to avoid GC pressure
+ *
+ * Current workaround: We clear deferredParent as soon as possible to reduce
+ * the time references are held, but the field itself is still set during traversal.
+ */
 export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
-  // Inline recomputation logic here since we have access to context
-  const recomputeNode = (node: DerivedNode): boolean => {
-    const oldValue = node.value;
-    const newValue = track(ctx, node, node.compute);
-
-    // Update value and set status based on whether it changed
-    if (newValue !== oldValue) {
-      node.value = newValue;
-      node.status = STATUS_DIRTY;
-      return true;
-    }
-
-    // Value didn't change, clear status
-    node.status = STATUS_CLEAN;
-    return false;
-  };
-
   const pullUpdates = (rootNode: DerivedNode): void => {
-    let current: DerivedNode | undefined = rootNode;
+    let current: DerivedNode = rootNode;
+    let parent: DerivedNode | undefined;
+    let oldValue: unknown;
+    let newValue: unknown;
 
-    traversal: while (current) {
-      const parent: DerivedNode | undefined = current.deferredParent;
-      const status = current.status;
+    // Single-pass traversal with pre-declared variables
+    traversal: do {
+      parent = current.deferredParent;
 
-      // Skip clean nodes
-      if (status === STATUS_CLEAN) {
+      // Early exit for clean nodes
+      if (current.status === STATUS_CLEAN) {
+        // Clear parent ref immediately
+        if (parent) {
+          current.deferredParent = undefined;
+          current = parent;
+          continue;
+        }
+        break;
+      }
+
+      // Handle dirty nodes
+      if (current.status === STATUS_DIRTY) {
+        // Inline recomputation
+        oldValue = current.value;
+        newValue = track(ctx, current, current.compute);
+
+        // Only set status if value changed
+        if (newValue !== oldValue) {
+          current.value = newValue;
+          // Keep DIRTY status, propagate to parent
+          if (parent) parent.status = STATUS_DIRTY;
+        } else {
+          current.status = STATUS_CLEAN;
+        }
+
+        // Clear and continue
         current.deferredParent = undefined;
+        if (!parent) break;
         current = parent;
         continue;
       }
 
-      // DIRTY = recompute immediately
-      if (status === STATUS_DIRTY) {
-        if (recomputeNode(current) && parent) parent.status = STATUS_DIRTY;
-        current.deferredParent = undefined;
-        current = parent;
-        continue;
-      }
-
-      // PENDING = check dependencies
+      // PENDING status - need to check dependencies
       let dep = current.dependencies;
 
-      // No deps? Just recompute
+      // Handle nodes without dependencies
       if (!dep) {
-        if (recomputeNode(current) && parent) parent.status = STATUS_DIRTY;
+        // Recompute inline
+        oldValue = current.value;
+        newValue = track(ctx, current, current.compute);
+
+        if (newValue !== oldValue) {
+          current.value = newValue;
+          current.status = STATUS_DIRTY;
+          if (parent) parent.status = STATUS_DIRTY;
+        } else {
+          current.status = STATUS_CLEAN;
+        }
+
         current.deferredParent = undefined;
+        if (!parent) break;
         current = parent;
         continue;
       }
 
-      // Scan dependencies for work
-      while (dep) {
-        const pStatus = dep.producer.status;
+      // Traverse dependencies
+      for (;;) {
+        // Check dependency status inline
+        if (dep.producer.status === STATUS_DIRTY) {
+          // Dirty dependency found - recompute immediately
+          oldValue = current.value;
+          newValue = track(ctx, current, current.compute);
 
-        if (pStatus === STATUS_DIRTY) {
-          // Dirty dep found - recompute
-          if (recomputeNode(current) && parent) parent.status = STATUS_DIRTY;
+          if (newValue !== oldValue) {
+            current.value = newValue;
+            current.status = STATUS_DIRTY;
+            if (parent) parent.status = STATUS_DIRTY;
+          } else {
+            current.status = STATUS_CLEAN;
+          }
+
           current.deferredParent = undefined;
+          if (!parent) break traversal;
           current = parent;
           continue traversal;
         }
 
-        if (pStatus === STATUS_PENDING && 'compute' in dep.producer) {
-          // Pending computed - traverse it
+        // Pending computed found - descend into it
+        if (dep.producer.status === STATUS_PENDING && 'compute' in dep.producer) {
           dep.producer.deferredParent = current;
           current = dep.producer;
           continue traversal;
         }
 
+        // Check next dependency
         dep = dep.nextDependency;
+        if (!dep) break;
       }
 
-      // All deps clean
+      // All dependencies clean
       current.status = STATUS_CLEAN;
-      // Clear deferredParent when we're done with this node
       current.deferredParent = undefined;
+
+      if (!parent) break;
       current = parent;
-    }
+    } while (true);
   };
 
   return { pullUpdates };
