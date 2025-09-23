@@ -1,15 +1,13 @@
 import { defineConfig } from 'vitest/config';
 import { VitestReporter } from 'tdd-guard-vitest';
+import path from 'path';
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     includeSource: ['./src/**/*.{js,ts}'],
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-    ],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     // Prefer threads to avoid child-process kill in constrained sandbox
     pool: 'threads',
     poolOptions: {
@@ -17,9 +15,11 @@ export default defineConfig({
         singleThread: true,
       },
     },
-    reporters: [
-      'default',
-      new VitestReporter
-    ]
+    projects: [
+      './packages/benchmarks/vitest.config.ts',
+      './packages/lattice/vitest.config.ts',
+      './packages/signals/vitest.config.ts',
+    ],
+    reporters: ['default', new VitestReporter(path.resolve(__dirname))],
   },
 });
