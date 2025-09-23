@@ -1,9 +1,10 @@
 /**
- * Scaling Subscribers Benchmark
- * 
- * Tests fan-out scalability - single source driving many subscribers.
- * Key metric: O(1) per-edge overhead as subscriber count increases.
- * Tests memory efficiency of intrusive data structures vs allocations.
+ * Signal → Effect Direct Subscription Benchmark
+ *
+ * Tests scalability of multiple signals with direct effect subscriptions.
+ * Pattern: N signals → N effects (1:1 mapping, no computed layer)
+ * Key metric: Memory and performance overhead of direct signal→effect edges
+ * without intermediate computed values.
  */
 
 import { bench, group, summary, barplot, do_not_optimize } from 'mitata';
@@ -27,7 +28,7 @@ const latticeAPI = createApi();
 const latticeSignal = latticeAPI.signal;
 const latticeEffect = latticeAPI.effect;
 
-group('Fan-out Scaling - Single Source to Many', () => {
+group('Signal → Effect Direct Subscription', () => {
   summary(() => {
     const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
     

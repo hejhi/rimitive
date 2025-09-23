@@ -1,9 +1,10 @@
 /**
- * Scaling Subscribers Benchmark
- * 
- * Tests fan-out scalability - single source driving many subscribers.
- * Key metric: O(1) per-edge overhead as subscriber count increases.
- * Tests memory efficiency of intrusive data structures vs allocations.
+ * Signal → Computed Fan-out Benchmark
+ *
+ * Tests scalability of a single signal driving many computed values.
+ * Pattern: 1 signal → N computeds (no effects)
+ * Key metric: Memory and performance overhead of computed dependency tracking
+ * as the number of computed subscribers increases.
  */
 
 import { bench, group, summary, barplot } from 'mitata';
@@ -27,7 +28,7 @@ const latticeAPI = createApi();
 const latticeSignal = latticeAPI.signal;
 const latticeComputed = latticeAPI.computed;
 
-group('Fan-out Scaling - Single Source to Many', () => {
+group('Signal → Computed Fan-out (No Effects)', () => {
   summary(() => {
     const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
     
