@@ -26,8 +26,6 @@ export function createGraphEdges(): GraphEdges {
 
     // Check 1: Is tail already pointing to this producer?
     if (tail && tail.producer === producer) {
-      // Mark as accessed in current evaluation
-      (tail as any).__accessed = true;
       return; // Already tracking
     }
 
@@ -35,25 +33,21 @@ export function createGraphEdges(): GraphEdges {
     const next = tail ? tail.nextDependency : consumer.dependencies;
     if (next && next.producer === producer) {
       consumer.dependencyTail = next;
-      // Mark as accessed in current evaluation
-      (next as any).__accessed = true;
       return; // Found and reused
     }
 
-    // Check 3: CRITICAL NEW CODE - Search all existing dependencies
-    // Start from the beginning of the dependency list and search all dependencies
+    // Check 3: Search all existing dependencies to prevent duplicates
+    // This is the critical fix for the memory leak - prevents creating duplicate edges
     let dep = consumer.dependencies;
     while (dep) {
       if (dep.producer === producer) {
         consumer.dependencyTail = dep;
-        // Mark as accessed in current evaluation
-        (dep as any).__accessed = true;
         return; // Found existing edge, reuse it
       }
       dep = dep.nextDependency;
     }
 
-    // Only NOW create new dependency if not found
+    // Only create new dependency if not found
     const producerTail = producer.subscribersTail;
     const dependency: Dependency = {
       producer,
@@ -63,9 +57,6 @@ export function createGraphEdges(): GraphEdges {
       nextDependency: next,
       nextConsumer: undefined,
     };
-
-    // Mark new dependency as accessed
-    (dependency as any).__accessed = true;
 
     // Wire up consumer side
     consumer.dependencyTail = dependency;
@@ -135,13 +126,6 @@ export function createGraphEdges(): GraphEdges {
     // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
 
-    // Mark all existing dependencies as potentially stale (not accessed)
-    let dep = node.dependencies;
-    while (dep) {
-      delete (dep as any).__accessed;
-      dep = dep.nextDependency;
-    }
-
     node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
 
     // Clear status - node is being updated now
@@ -155,47 +139,14 @@ export function createGraphEdges(): GraphEdges {
       // Restore previous tracking context
       ctx.currentConsumer = prevConsumer;
 
-      // Now prune any dependencies that weren't accessed
-      let prev: Dependency | undefined = undefined;
-      let current = node.dependencies;
+      // Prune stale dependencies. Although we set node.dependencyTail to undefined above, fn()
+      // may have set it again, and we should use it if so.
+      // Everything after the tail is stale and needs to be removed
+      const tail = node.dependencyTail as Dependency | undefined;
+      let toRemove = tail ? tail.nextDependency : node.dependencies;
 
-      while (current) {
-        const next = current.nextDependency;
-
-        if (!(current as any).__accessed) {
-          // This dependency wasn't accessed, remove it
-          if (prev) {
-            prev.nextDependency = next;
-          } else {
-            node.dependencies = next;
-          }
-
-          if (next) {
-            next.prevDependency = prev;
-          } else {
-            node.dependencyTail = prev;
-          }
-
-          // Remove from producer's subscriber list
-          const { producer, prevConsumer, nextConsumer } = current;
-          if (nextConsumer) {
-            nextConsumer.prevConsumer = prevConsumer;
-          } else {
-            producer.subscribersTail = prevConsumer;
-          }
-          if (prevConsumer) {
-            prevConsumer.nextConsumer = nextConsumer;
-          } else {
-            producer.subscribers = nextConsumer;
-          }
-        } else {
-          // This dependency is still active, keep it and clear marker
-          delete (current as any).__accessed;
-          prev = current;
-        }
-
-        current = next;
-      }
+      // Remove all stale dependencies efficiently using return value
+      if (toRemove) detachAll(toRemove);
     }
   };
 
