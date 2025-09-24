@@ -2,7 +2,6 @@ import type { DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
-import { getNodeStackPool } from './stack-pool';
 
 // Re-export types for proper type inference
 export type { DerivedNode } from '../types';
@@ -11,35 +10,41 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
+// Lightweight inline stack like alien-signals
+interface Stack<T> {
+  value: T;
+  prev: Stack<T> | undefined;
+}
+
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
 /**
- * OPTIMIZATION: Uses pre-allocated stack pool instead of deferredParent field
+ * OPTIMIZATION: Uses lightweight inline stack like alien-signals
  *
  * Benefits:
  * - No memory writes to node.deferredParent during traversal
- * - Reduced GC pressure from stack allocations
- * - Better cache locality with contiguous memory
- * - Stack is only used when needed (multiple paths)
+ * - Minimal allocation - only when multiple paths exist
+ * - No method call overhead for push/pop
+ * - Simple control flow without isEmpty() checks
  */
 export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
   const pullUpdates = (rootNode: DerivedNode): void => {
-    const stack = getNodeStackPool<DerivedNode>();
+    let stack: Stack<DerivedNode> | undefined;
     let current: DerivedNode = rootNode;
     let oldValue: unknown;
     let newValue: unknown;
 
-    try {
-      // Single-pass traversal with stack pool
-      traversal: do {
+    // Single-pass traversal with inline stack
+    traversal: do {
 
         // Early exit for clean nodes
         if (current.status === STATUS_CLEAN) {
           // Pop from stack and continue
-          if (stack.isEmpty()) break;
-          current = stack.pop()!;
+          if (!stack) break;
+          current = stack.value;
+          stack = stack.prev;
           continue;
         }
 
@@ -54,18 +59,17 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             current.value = newValue;
             current.status = STATUS_DIRTY;
             // Mark parent (if on stack) as dirty
-            if (!stack.isEmpty()) {
-              const parent = stack.pop()!;
-              parent.status = STATUS_DIRTY;
-              stack.push(parent); // Put it back
+            if (stack) {
+              stack.value.status = STATUS_DIRTY;
             }
           } else {
             current.status = STATUS_CLEAN;
           }
 
           // Continue with parent from stack
-          if (stack.isEmpty()) break;
-          current = stack.pop()!;
+          if (!stack) break;
+          current = stack.value;
+          stack = stack.prev;
           continue;
         }
 
@@ -79,8 +83,9 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         // Common case optimization: if first dep is CLEAN and no next dep, we're done
         if (firstStatus === STATUS_CLEAN && !dep.nextDependency) {
           current.status = STATUS_CLEAN;
-          if (stack.isEmpty()) break;
-          current = stack.pop()!;
+          if (!stack) break;
+          current = stack.value;
+          stack = stack.prev;
           continue;
         }
 
@@ -93,17 +98,16 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             current.value = newValue;
             current.status = STATUS_DIRTY;
             // Mark parent (if on stack) as dirty
-            if (!stack.isEmpty()) {
-              const parent = stack.pop()!;
-              parent.status = STATUS_DIRTY;
-              stack.push(parent); // Put it back
+            if (stack) {
+              stack.value.status = STATUS_DIRTY;
             }
           } else {
             current.status = STATUS_CLEAN;
           }
 
-          if (stack.isEmpty()) break;
-          current = stack.pop()!;
+          if (!stack) break;
+          current = stack.value;
+          stack = stack.prev;
           continue;
         }
 
@@ -129,24 +133,24 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
               current.value = newValue;
               current.status = STATUS_DIRTY;
               // Mark parent (if on stack) as dirty
-              if (!stack.isEmpty()) {
-                const parent = stack.pop()!;
-                parent.status = STATUS_DIRTY;
-                stack.push(parent); // Put it back
+              if (stack) {
+                stack.value.status = STATUS_DIRTY;
               }
             } else {
               current.status = STATUS_CLEAN;
             }
 
-            if (stack.isEmpty()) break traversal;
-            current = stack.pop()!;
+            if (!stack) break traversal;
+            current = stack.value;
+            stack = stack.prev;
             continue traversal;
           }
 
           // PENDING computed - descend into it
           if ('compute' in producer) {
             const derivedProducer = producer as DerivedNode;
-            stack.push(current); // Push current onto stack before descending
+            // Push current onto stack before descending (inline allocation)
+            stack = { value: current, prev: stack };
             current = derivedProducer;
             continue traversal;
           }
@@ -162,13 +166,11 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           current.status = STATUS_CLEAN;
         }
 
-        if (stack.isEmpty()) break;
-        current = stack.pop()!;
+        if (!stack) break;
+        current = stack.value;
+        stack = stack.prev;
       } while (true);
-    } finally {
-      // Always clear the stack when done to release references
-      stack.clear();
-    }
+    // No need to clear - stack goes out of scope and GC handles it
   };
 
   return { pullUpdates };
