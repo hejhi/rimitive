@@ -56,25 +56,21 @@ export function createGraphEdges(): GraphEdges {
 
         if (depNext) {
           depNext.prevDependency = depPrev;
-        } else {
-          // If this was the tail, we don't update it yet
-          // as we're about to move this node
         }
+
+        // If this was the tail, we don't update it yet
+        // as we're about to move this node
 
         // Now re-insert it after the current tail
         dep.prevDependency = tail;
         dep.nextDependency = tail ? tail.nextDependency : consumer.dependencies;
 
         if (tail) {
-          if (tail.nextDependency) {
-            tail.nextDependency.prevDependency = dep;
-          }
+          if (tail.nextDependency) tail.nextDependency.prevDependency = dep;
           tail.nextDependency = dep;
         } else {
           // No tail means this becomes the first dependency
-          if (consumer.dependencies) {
-            consumer.dependencies.prevDependency = dep;
-          }
+          if (consumer.dependencies) consumer.dependencies.prevDependency = dep;
           consumer.dependencies = dep;
         }
 
