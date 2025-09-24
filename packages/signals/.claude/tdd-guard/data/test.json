@@ -526,56 +526,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
-      "tests": [
-        {
-          "name": "should create an API with all provided factories",
-          "fullName": "createSignalAPI > should create an API with all provided factories",
-          "state": "passed"
-        },
-        {
-          "name": "should create a minimal API without effects",
-          "fullName": "createSignalAPI > should create a minimal API without effects",
-          "state": "passed"
-        },
-        {
-          "name": "should work with custom context and work queue",
-          "fullName": "createSignalAPI > should work with custom context and work queue",
-          "state": "passed"
-        },
-        {
-          "name": "should allow extending context with custom work queue",
-          "fullName": "createSignalAPI > should allow extending context with custom work queue",
-          "state": "passed"
-        },
-        {
-          "name": "should allow custom factories to access extended context",
-          "fullName": "createSignalAPI > should allow custom factories to access extended context",
-          "state": "passed"
-        },
-        {
-          "name": "should handle dispose method correctly",
-          "fullName": "createSignalAPI > should handle dispose method correctly",
-          "state": "passed"
-        },
-        {
-          "name": "should support multiple independent APIs",
-          "fullName": "createSignalAPI > should support multiple independent APIs",
-          "state": "passed"
-        },
-        {
-          "name": "should work with custom extensions alongside signals",
-          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
-          "state": "passed"
-        },
-        {
-          "name": "should properly type the API based on factories",
-          "fullName": "createSignalAPI > should properly type the API based on factories",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
       "tests": [
         {
@@ -626,6 +576,56 @@
         {
           "name": "should return values from batch function",
           "fullName": "batch > should return values from batch function",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
+      "tests": [
+        {
+          "name": "should create an API with all provided factories",
+          "fullName": "createSignalAPI > should create an API with all provided factories",
+          "state": "passed"
+        },
+        {
+          "name": "should create a minimal API without effects",
+          "fullName": "createSignalAPI > should create a minimal API without effects",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom context and work queue",
+          "fullName": "createSignalAPI > should work with custom context and work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow extending context with custom work queue",
+          "fullName": "createSignalAPI > should allow extending context with custom work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow custom factories to access extended context",
+          "fullName": "createSignalAPI > should allow custom factories to access extended context",
+          "state": "passed"
+        },
+        {
+          "name": "should handle dispose method correctly",
+          "fullName": "createSignalAPI > should handle dispose method correctly",
+          "state": "passed"
+        },
+        {
+          "name": "should support multiple independent APIs",
+          "fullName": "createSignalAPI > should support multiple independent APIs",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom extensions alongside signals",
+          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
+          "state": "passed"
+        },
+        {
+          "name": "should properly type the API based on factories",
+          "fullName": "createSignalAPI > should properly type the API based on factories",
           "state": "passed"
         }
       ]
@@ -756,26 +756,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
-      "tests": [
-        {
-          "name": "signals never clear their dirty flag after being set",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > signals never clear their dirty flag after being set",
-          "state": "passed"
-        },
-        {
-          "name": "computeds clear dirty flag when value does not change",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > computeds clear dirty flag when value does not change",
-          "state": "passed"
-        },
-        {
-          "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
       "tests": [
         {
@@ -791,6 +771,26 @@
         {
           "name": "should work with nested computeds",
           "fullName": "Computed peek() > should work with nested computeds",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
+      "tests": [
+        {
+          "name": "signals never clear their dirty flag after being set",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > signals never clear their dirty flag after being set",
+          "state": "passed"
+        },
+        {
+          "name": "computeds clear dirty flag when value does not change",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > computeds clear dirty flag when value does not change",
+          "state": "passed"
+        },
+        {
+          "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
           "state": "passed"
         }
       ]

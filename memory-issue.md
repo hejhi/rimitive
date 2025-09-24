@@ -79,24 +79,34 @@ What does appear to have memory issues is scenarios where computeds are consumed
 
 ## IMPORTANT: THEORIES RULED OUT
 
-These are paths we've gone down, and have RULED OUT. In other words, **DO NOT WASTE TIME GOING DOWN THE FOLLOWING RABBIT HOLES**:
-- using WeakMaps/WeakSets/Array tracking: HURTS performance and does not fix the memory issue
-- recursion in `pullUpdates`: HURTS performance and does not fix the memory issue
-- moving methods to the prototype-level for computeds: HURTS performance and does not fix the memory issue
-- lattice contexts accumulation: DISPROVED, and moving context creation inside the benchmark HURTS performance and does NOT fix the memory issue
-- lattice comupteds inherent closure cost: DISPROVED (see benchmarks for `scaling-computed` and `scaling-signal-effect`)
-- `deferredParent` field: Initially suspected but RULED OUT. Removing this field completely had no impact on memory usage (still 3.82mb), proving it's not the cause.
-- `Factory pattern per-iteration overhead`: RULED OUT. Moving `createApi()` outside the benchmark iteration (creating it only once) had no impact on memory usage, proving the factory initialization isn't the issue.
+**DO NOT WASTE TIME ON THESE - ALL CONFIRMED FALSE:**
+- WeakMaps/WeakSets/Array tracking: Makes performance worse, doesn't fix memory
+- Recursion in `pullUpdates`: Makes performance worse, doesn't fix memory
+- Moving methods to prototype: Makes performance worse, doesn't fix memory
+- Context accumulation: Disproved - moving context creation has no effect
+- Closure cost: Disproved - `scaling-computed` shows identical memory to Alien
+- `deferredParent` field: Removed completely, no impact (still 3.82mb)
+- Factory pattern overhead: Creating api once vs per-iteration has no effect
+- **Dependency duplication**: FIXED via exhaustive search (graph-edges.ts:39-48), verified working, memory issue persists
+- **"Baseline memory footprint"**: WRONG - `scaling-computed` proves Lattice matches Alien (547KB) for signal→computed
+- **Mitata measurement**: Direct tests confirm real memory usage, not artifact
+- **Pruning bug**: Real but doesn't affect stable benchmarks, fix attempts made it worse
 
-## ROOT CAUSE IDENTIFIED
+## KEY FACTS
 
-**The memory issue occurs because dependencies are accumulated during the 100,000 benchmark iterations:**
+1. **Memory issue ONLY affects computed→computed patterns**:
+   - `scaling-computed` (signal→computed): Lattice = Alien = 547KB ✅
+   - `scaling-computed-computed` (computed→computed): Lattice = 38.3MB, Alien = 547KB ❌
+   - 70x more memory ONLY when computeds read from other computeds
 
-- 3.82mb ÷ 100,000 iterations = **38 bytes per iteration retained**
-- This matches roughly half a Dependency object size
+2. **Direct tests show minimal memory usage** (0.05-0.11 MB for 100k iterations)
+   - But benchmarks report 3.82MB (diamond) and 38.3MB (scaling)
+   - This is NOT a Mitata measurement issue - verified with multiple approaches
 
-**The issue is specific to computed→computed dependencies because:**
-1. Nested computed evaluations disrupt the dependency tracking sequence
-2. The `trackDependency` optimization expects dependencies to be accessed in order
-3. When the sequence is broken, NEW Dependency objects are created instead of reusing existing ones
-4. These accumulate over iterations, causing the memory bloat
+3. **The exhaustive dependency search fix IS working**
+   - Verified preventing duplicate dependencies
+   - But memory issue persists in benchmarks
+
+## CURRENT STATUS
+
+Something specific to computed→computed patterns in the benchmark environment causes massive memory retention that doesn't occur in isolated tests. The issue is NOT dependency duplication (fixed) or pruning (stable patterns unaffected).
