@@ -36,13 +36,51 @@ export function createGraphEdges(): GraphEdges {
       return; // Found and reused
     }
 
-    // Check 3: Search all existing dependencies to prevent duplicates
-    // This is the critical fix for the memory leak - prevents creating duplicate edges
+    // Check 3: Search all existing dependencies
+    // If we find one out of order, we need to move it to the correct position
     let dep = consumer.dependencies;
     while (dep) {
       if (dep.producer === producer) {
+        // Found existing dependency, but it's out of order
+        // We need to move it to the position after the current tail
+
+        // First, unlink it from its current position
+        const depPrev = dep.prevDependency;
+        const depNext = dep.nextDependency;
+
+        if (depPrev) {
+          depPrev.nextDependency = depNext;
+        } else {
+          consumer.dependencies = depNext;
+        }
+
+        if (depNext) {
+          depNext.prevDependency = depPrev;
+        } else {
+          // If this was the tail, we don't update it yet
+          // as we're about to move this node
+        }
+
+        // Now re-insert it after the current tail
+        dep.prevDependency = tail;
+        dep.nextDependency = tail ? tail.nextDependency : consumer.dependencies;
+
+        if (tail) {
+          if (tail.nextDependency) {
+            tail.nextDependency.prevDependency = dep;
+          }
+          tail.nextDependency = dep;
+        } else {
+          // No tail means this becomes the first dependency
+          if (consumer.dependencies) {
+            consumer.dependencies.prevDependency = dep;
+          }
+          consumer.dependencies = dep;
+        }
+
+        // Update the tail to point to this reordered dependency
         consumer.dependencyTail = dep;
-        return; // Found existing edge, reuse it
+        return;
       }
       dep = dep.nextDependency;
     }
