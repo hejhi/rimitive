@@ -25,9 +25,7 @@ export function createGraphEdges(): GraphEdges {
     const tail = consumer.dependencyTail;
 
     // Check 1: Is tail already pointing to this producer?
-    if (tail && tail.producer === producer) {
-      return; // Already tracking
-    }
+    if (tail && tail.producer === producer) return; // Already tracking
 
     // Check 2: Is next in sequence this producer?
     const next = tail ? tail.nextDependency : consumer.dependencies;
@@ -54,9 +52,7 @@ export function createGraphEdges(): GraphEdges {
           consumer.dependencies = depNext;
         }
 
-        if (depNext) {
-          depNext.prevDependency = depPrev;
-        }
+        if (depNext) depNext.prevDependency = depPrev;
 
         // If this was the tail, we don't update it yet
         // as we're about to move this node

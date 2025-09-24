@@ -1,6 +1,56 @@
 {
   "testModules": [
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
+      "tests": [
+        {
+          "name": "should create an API with all provided factories",
+          "fullName": "createSignalAPI > should create an API with all provided factories",
+          "state": "passed"
+        },
+        {
+          "name": "should create a minimal API without effects",
+          "fullName": "createSignalAPI > should create a minimal API without effects",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom context and work queue",
+          "fullName": "createSignalAPI > should work with custom context and work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow extending context with custom work queue",
+          "fullName": "createSignalAPI > should allow extending context with custom work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow custom factories to access extended context",
+          "fullName": "createSignalAPI > should allow custom factories to access extended context",
+          "state": "passed"
+        },
+        {
+          "name": "should handle dispose method correctly",
+          "fullName": "createSignalAPI > should handle dispose method correctly",
+          "state": "passed"
+        },
+        {
+          "name": "should support multiple independent APIs",
+          "fullName": "createSignalAPI > should support multiple independent APIs",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom extensions alongside signals",
+          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
+          "state": "passed"
+        },
+        {
+          "name": "should properly type the API based on factories",
+          "fullName": "createSignalAPI > should properly type the API based on factories",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/scale-reproduction.test.ts",
       "tests": [
         {
@@ -526,56 +576,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
-      "tests": [
-        {
-          "name": "should create an API with all provided factories",
-          "fullName": "createSignalAPI > should create an API with all provided factories",
-          "state": "passed"
-        },
-        {
-          "name": "should create a minimal API without effects",
-          "fullName": "createSignalAPI > should create a minimal API without effects",
-          "state": "passed"
-        },
-        {
-          "name": "should work with custom context and work queue",
-          "fullName": "createSignalAPI > should work with custom context and work queue",
-          "state": "passed"
-        },
-        {
-          "name": "should allow extending context with custom work queue",
-          "fullName": "createSignalAPI > should allow extending context with custom work queue",
-          "state": "passed"
-        },
-        {
-          "name": "should allow custom factories to access extended context",
-          "fullName": "createSignalAPI > should allow custom factories to access extended context",
-          "state": "passed"
-        },
-        {
-          "name": "should handle dispose method correctly",
-          "fullName": "createSignalAPI > should handle dispose method correctly",
-          "state": "passed"
-        },
-        {
-          "name": "should support multiple independent APIs",
-          "fullName": "createSignalAPI > should support multiple independent APIs",
-          "state": "passed"
-        },
-        {
-          "name": "should work with custom extensions alongside signals",
-          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
-          "state": "passed"
-        },
-        {
-          "name": "should properly type the API based on factories",
-          "fullName": "createSignalAPI > should properly type the API based on factories",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
       "tests": [
         {
@@ -656,41 +656,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
-      "tests": [
-        {
-          "name": "should schedule nodes during propagation",
-          "fullName": "NodeScheduler > should schedule nodes during propagation",
-          "state": "passed"
-        },
-        {
-          "name": "should not schedule already scheduled nodes",
-          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should dispose node only once",
-          "fullName": "NodeScheduler > should dispose node only once",
-          "state": "passed"
-        },
-        {
-          "name": "should flush all scheduled nodes in FIFO order",
-          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty flush",
-          "fullName": "NodeScheduler > should handle empty flush",
-          "state": "passed"
-        },
-        {
-          "name": "should clear nextScheduled flag during flush",
-          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/pull-update-efficiency.test.ts",
       "tests": [
         {
@@ -721,16 +686,36 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/conditional-dependency-weakmap.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
       "tests": [
         {
-          "name": "should correctly re-establish conditional dependencies after pruning",
-          "fullName": "Conditional Dependencies with WeakMap > should correctly re-establish conditional dependencies after pruning",
+          "name": "should schedule nodes during propagation",
+          "fullName": "NodeScheduler > should schedule nodes during propagation",
           "state": "passed"
         },
         {
-          "name": "should handle multiple cycles of conditional dependency changes",
-          "fullName": "Conditional Dependencies with WeakMap > should handle multiple cycles of conditional dependency changes",
+          "name": "should not schedule already scheduled nodes",
+          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should dispose node only once",
+          "fullName": "NodeScheduler > should dispose node only once",
+          "state": "passed"
+        },
+        {
+          "name": "should flush all scheduled nodes in FIFO order",
+          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty flush",
+          "fullName": "NodeScheduler > should handle empty flush",
+          "state": "passed"
+        },
+        {
+          "name": "should clear nextScheduled flag during flush",
+          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
           "state": "passed"
         }
       ]
@@ -771,6 +756,21 @@
         {
           "name": "proves the 2.7x performance gap is NOT from traversing inactive branches",
           "fullName": "Dynamic dependency unlinking > proves the 2.7x performance gap is NOT from traversing inactive branches",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/conditional-dependency-weakmap.test.ts",
+      "tests": [
+        {
+          "name": "should correctly re-establish conditional dependencies after pruning",
+          "fullName": "Conditional Dependencies with WeakMap > should correctly re-establish conditional dependencies after pruning",
+          "state": "passed"
+        },
+        {
+          "name": "should handle multiple cycles of conditional dependency changes",
+          "fullName": "Conditional Dependencies with WeakMap > should handle multiple cycles of conditional dependency changes",
           "state": "passed"
         }
       ]
