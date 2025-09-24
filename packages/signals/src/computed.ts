@@ -53,7 +53,6 @@ export function createComputedFactory(
       subscribersTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredParent: undefined,
       status: STATUS_PENDING,
       compute,
       trackingVersion: 0, // Initialize version tracking

@@ -48,7 +48,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredParent: undefined,
         trackingVersion: 0,
       };
       
@@ -80,7 +79,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredParent: undefined,
         trackingVersion: 0,
       };
       
@@ -112,7 +110,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredParent: undefined,
         trackingVersion: 0,
       };
       
@@ -135,7 +132,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredParent: undefined,
         trackingVersion: 0,
       };
       
@@ -170,7 +166,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredParent: undefined,
         trackingVersion: 0,
       };
       
@@ -205,7 +200,6 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredParent: undefined,
           trackingVersion: 0,
         };
         
@@ -233,7 +227,6 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredParent: undefined,
           trackingVersion: 0,
         };
         
@@ -242,7 +235,6 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredParent: undefined,
           trackingVersion: 0,
         };
         
@@ -277,7 +269,6 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredParent: undefined,
           trackingVersion: 0,
         };
         
@@ -307,9 +298,10 @@ describe('Dependency Graph Helpers', () => {
           (_, i) =>
             ({
               __type: 'test',
+              status: 0,
               dependencies: undefined,
               dependencyTail: undefined,
-              deferredParent: undefined,
+              trackingVersion: 0,
               id: i, // Add id for debugging
             }) as ConsumerNode & { id: number }
         );
@@ -371,7 +363,6 @@ describe('Dependency Graph Helpers', () => {
         __type: type,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredParent: undefined,
         status: flags,
         trackingVersion: 0,
       };

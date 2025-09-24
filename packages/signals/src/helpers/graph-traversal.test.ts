@@ -14,7 +14,6 @@ describe('GraphTraversal', () => {
       status: STATUS_CLEAN,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredParent: undefined,
       trackingVersion: 0,
     };
 
@@ -42,7 +41,6 @@ describe('GraphTraversal', () => {
       status: STATUS_CLEAN,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredParent: undefined,
       trackingVersion: 0,
     };
 
@@ -71,7 +69,6 @@ describe('GraphTraversal', () => {
       status: STATUS_CLEAN,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredParent: undefined,
       trackingVersion: 0,
     };
 
@@ -90,7 +87,6 @@ describe('GraphTraversal', () => {
       status: STATUS_CLEAN,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredParent: undefined,
       trackingVersion: 0,
       subscribers: leafDep,
       subscribersTail: leafDep,

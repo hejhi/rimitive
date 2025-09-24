@@ -43,7 +43,6 @@ export function createEffectFactory(
       status:  STATUS_CLEAN,
       dependencies:  undefined,
       dependencyTail:  undefined,
-      deferredParent:  undefined,
       nextScheduled: undefined,
       trackingVersion: 0, // Initialize version tracking
       flush(): void {

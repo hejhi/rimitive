@@ -8,16 +8,12 @@
 
 import type { Dependency, ConsumerNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { getDependencyStackPool } from './stack-pool';
 
 // Re-export types for proper type inference
 export type { Dependency, ConsumerNode } from '../types';
 
 const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
-
-interface Stack<T> {
-  value: T;
-  prev: Stack<T> | undefined;
-}
 
 export interface GraphTraversal {
   /** Propagate invalidation through the dependency graph */
@@ -36,52 +32,58 @@ export function createGraphTraversal(): GraphTraversal {
   /**
    * Traverse dependency graph depth-first, marking nodes as invalidated.
    * Calls visitor function for each leaf node (nodes without subscribers).
+   *
+   * OPTIMIZATION: Uses pre-allocated stack pool to avoid heap allocations.
    */
   const traverseGraph = (
     subscribers: Dependency,
     onLeaf: (node: ConsumerNode) => void
   ): void => {
-    let dependencyStack: Stack<Dependency> | undefined;
+    const stack = getDependencyStackPool<Dependency>();
     let currentDependency: Dependency | undefined = subscribers;
 
-    do {
-      const consumerNode = currentDependency.consumer;
-      const consumerNodeStatus = consumerNode.status;
+    try {
+      do {
+        const consumerNode = currentDependency.consumer;
+        const consumerNodeStatus = consumerNode.status;
 
-      // Skip already processed nodes
-      if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== STATUS_DIRTY) {
-        currentDependency = currentDependency.nextConsumer;
-        continue;
-      }
-
-      // Mark as pending (invalidated)
-      consumerNode.status = STATUS_PENDING;
-
-      // Check if we can traverse deeper
-      const hasSubscribers = 'subscribers' in consumerNode && consumerNode.subscribers;
-
-      if (!hasSubscribers) {
-        // This is a leaf node - notify the callback
-        onLeaf(consumerNode);
-
-        currentDependency = currentDependency.nextConsumer;
-        if (!currentDependency && dependencyStack) {
-          currentDependency = dependencyStack.value;
-          dependencyStack = dependencyStack.prev;
+        // Skip already processed nodes
+        if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== STATUS_DIRTY) {
+          currentDependency = currentDependency.nextConsumer;
+          continue;
         }
-        continue;
-      }
 
-      // Continue traversal
-      const consumerSubscribers = consumerNode.subscribers;
-      const siblingDep = currentDependency.nextConsumer;
+        // Mark as pending (invalidated)
+        consumerNode.status = STATUS_PENDING;
 
-      if (siblingDep) {
-        dependencyStack = { value: siblingDep, prev: dependencyStack };
-      }
+        // Check if we can traverse deeper
+        const hasSubscribers = 'subscribers' in consumerNode && consumerNode.subscribers;
 
-      currentDependency = consumerSubscribers;
-    } while (currentDependency);
+        if (!hasSubscribers) {
+          // This is a leaf node - notify the callback
+          onLeaf(consumerNode);
+
+          currentDependency = currentDependency.nextConsumer;
+          if (!currentDependency && !stack.isEmpty()) {
+            currentDependency = stack.pop();
+          }
+          continue;
+        }
+
+        // Continue traversal
+        const consumerSubscribers = consumerNode.subscribers;
+        const siblingDep = currentDependency.nextConsumer;
+
+        if (siblingDep) {
+          stack.push(siblingDep);
+        }
+
+        currentDependency = consumerSubscribers;
+      } while (currentDependency);
+    } finally {
+      // Always clear the stack when done to release references
+      stack.clear();
+    }
   };
 
   /**
