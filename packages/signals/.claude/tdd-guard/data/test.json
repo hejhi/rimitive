@@ -476,16 +476,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
-      "tests": [
-        {
-          "name": "should demonstrate O(n) performance with version-based tracking",
-          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
       "tests": [
         {
@@ -531,6 +521,16 @@
         {
           "name": "should clear invalidated check cache between flushes",
           "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should clear invalidated check cache between flushes",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
+      "tests": [
+        {
+          "name": "should demonstrate O(n) performance with version-based tracking",
+          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
           "state": "passed"
         }
       ]
@@ -586,6 +586,91 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
+      "tests": [
+        {
+          "name": "should schedule nodes during propagation",
+          "fullName": "NodeScheduler > should schedule nodes during propagation",
+          "state": "passed"
+        },
+        {
+          "name": "should not schedule already scheduled nodes",
+          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should dispose node only once",
+          "fullName": "NodeScheduler > should dispose node only once",
+          "state": "passed"
+        },
+        {
+          "name": "should flush all scheduled nodes in FIFO order",
+          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty flush",
+          "fullName": "NodeScheduler > should handle empty flush",
+          "state": "passed"
+        },
+        {
+          "name": "should clear nextScheduled flag during flush",
+          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
+      "tests": [
+        {
+          "name": "should provide a propagate function that marks nodes",
+          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should call visitor for leaf nodes",
+          "fullName": "GraphTraversal > should call visitor for leaf nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should traverse through intermediate nodes",
+          "fullName": "GraphTraversal > should traverse through intermediate nodes",
+          "state": "passed"
+        },
+        {
+          "name": "can be used to create a minimal context without scheduling",
+          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
+      "tests": [
+        {
+          "name": "should handle dependencies accessed in different orders without creating duplicates",
+          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
+          "state": "passed"
+        },
+        {
+          "name": "should properly prune old dependencies with version-based tracking",
+          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
+          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
+          "state": "passed"
+        },
+        {
+          "name": "should handle conditional dependencies that appear and disappear",
+          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
       "tests": [
         {
@@ -636,91 +721,6 @@
         {
           "name": "should return values from batch function",
           "fullName": "batch > should return values from batch function",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
-      "tests": [
-        {
-          "name": "should provide a propagate function that marks nodes",
-          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should call visitor for leaf nodes",
-          "fullName": "GraphTraversal > should call visitor for leaf nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should traverse through intermediate nodes",
-          "fullName": "GraphTraversal > should traverse through intermediate nodes",
-          "state": "passed"
-        },
-        {
-          "name": "can be used to create a minimal context without scheduling",
-          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
-      "tests": [
-        {
-          "name": "should schedule nodes during propagation",
-          "fullName": "NodeScheduler > should schedule nodes during propagation",
-          "state": "passed"
-        },
-        {
-          "name": "should not schedule already scheduled nodes",
-          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should dispose node only once",
-          "fullName": "NodeScheduler > should dispose node only once",
-          "state": "passed"
-        },
-        {
-          "name": "should flush all scheduled nodes in FIFO order",
-          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty flush",
-          "fullName": "NodeScheduler > should handle empty flush",
-          "state": "passed"
-        },
-        {
-          "name": "should clear nextScheduled flag during flush",
-          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
-      "tests": [
-        {
-          "name": "should handle dependencies accessed in different orders without creating duplicates",
-          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
-          "state": "passed"
-        },
-        {
-          "name": "should properly prune old dependencies with version-based tracking",
-          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
-          "state": "passed"
-        },
-        {
-          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
-          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
-          "state": "passed"
-        },
-        {
-          "name": "should handle conditional dependencies that appear and disappear",
-          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
           "state": "passed"
         }
       ]
@@ -831,26 +831,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
-      "tests": [
-        {
-          "name": "signals never clear their dirty flag after being set",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > signals never clear their dirty flag after being set",
-          "state": "passed"
-        },
-        {
-          "name": "computeds clear dirty flag when value does not change",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > computeds clear dirty flag when value does not change",
-          "state": "passed"
-        },
-        {
-          "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
       "tests": [
         {
@@ -866,6 +846,26 @@
         {
           "name": "should work with nested computeds",
           "fullName": "Computed peek() > should work with nested computeds",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
+      "tests": [
+        {
+          "name": "signals never clear their dirty flag after being set",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > signals never clear their dirty flag after being set",
+          "state": "passed"
+        },
+        {
+          "name": "computeds clear dirty flag when value does not change",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > computeds clear dirty flag when value does not change",
+          "state": "passed"
+        },
+        {
+          "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
           "state": "passed"
         }
       ]

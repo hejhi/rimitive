@@ -54,8 +54,8 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         break;
       }
 
-      // Handle dirty nodes
-      if (current.status === STATUS_DIRTY) {
+      // Handle dirty nodes or nodes without dependencies - both need immediate recomputation
+      if (current.status === STATUS_DIRTY || !current.dependencies) {
         // Inline recomputation
         oldValue = current.value;
         newValue = track(ctx, current, current.compute);
@@ -63,7 +63,8 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         // Only set status if value changed
         if (newValue !== oldValue) {
           current.value = newValue;
-          // Keep DIRTY status, propagate to parent
+          current.status = STATUS_DIRTY;
+          // Propagate to parent
           if (parent) parent.status = STATUS_DIRTY;
         } else {
           current.status = STATUS_CLEAN;
@@ -76,12 +77,24 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         continue;
       }
 
-      // PENDING status - need to check dependencies
-      let dep = current.dependencies;
+      // PENDING status with dependencies - need to check them
+      let dep = current.dependencies!; // We know it exists from the check above
 
-      // Handle nodes without dependencies
-      if (!dep) {
-        // Recompute inline
+      // Optimized: Check if all deps might be clean by sampling first
+      const firstProducer = dep.producer;
+      const firstStatus = firstProducer.status;
+
+      // Common case optimization: if first dep is CLEAN and no next dep, we're done
+      if (firstStatus === STATUS_CLEAN && !dep.nextDependency) {
+        current.status = STATUS_CLEAN;
+        current.deferredParent = undefined;
+        if (!parent) break;
+        current = parent;
+        continue;
+      }
+
+      // Additional optimization: if first dep is DIRTY, recompute immediately without loop
+      if (firstStatus === STATUS_DIRTY) {
         oldValue = current.value;
         newValue = track(ctx, current, current.compute);
 
@@ -99,19 +112,6 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         continue;
       }
 
-      // Optimized: Check if all deps might be clean by sampling first
-      const firstProducer = dep.producer;
-      const firstStatus = firstProducer.status;
-
-      // Common case optimization: if first dep is CLEAN and no next dep, we're done
-      if (firstStatus === STATUS_CLEAN && !dep.nextDependency) {
-        current.status = STATUS_CLEAN;
-        current.deferredParent = undefined;
-        if (!parent) break;
-        current = parent;
-        continue;
-      }
-
       // Traverse dependencies - optimized loop
       while (dep) {
         const producer = dep.producer;
@@ -119,7 +119,9 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
         // Fast path: CLEAN dependency, skip to next
         if (depStatus === STATUS_CLEAN) {
-          dep = dep.nextDependency;
+          const next = dep.nextDependency;
+          if (!next) break; // All remaining deps checked
+          dep = next;
           continue;
         }
 
@@ -150,8 +152,10 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           continue traversal;
         }
 
-        // Move to next dependency
-        dep = dep.nextDependency;
+        // Move to next dependency (signal dependencies should be CLEAN, skip)
+        const next = dep.nextDependency;
+        if (!next) break; // All remaining deps checked
+        dep = next;
       }
 
       // All dependencies clean - only update status if needed
