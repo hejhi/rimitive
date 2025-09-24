@@ -16,6 +16,81 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/subscribe.test.ts",
+      "tests": [
+        {
+          "name": "should call callback on signal change via scheduling",
+          "fullName": "Subscribe - Scheduled Updates > should call callback on signal change via scheduling",
+          "state": "passed"
+        },
+        {
+          "name": "should work with computed values",
+          "fullName": "Subscribe - Scheduled Updates > should work with computed values",
+          "state": "passed"
+        },
+        {
+          "name": "should batch updates during batch()",
+          "fullName": "Subscribe - Scheduled Updates > should batch updates during batch()",
+          "state": "passed"
+        },
+        {
+          "name": "should support multiple subscriptions to same source",
+          "fullName": "Subscribe - Scheduled Updates > should support multiple subscriptions to same source",
+          "state": "passed"
+        },
+        {
+          "name": "should unsubscribe cleanly",
+          "fullName": "Subscribe - Scheduled Updates > should unsubscribe cleanly",
+          "state": "passed"
+        },
+        {
+          "name": "should handle derived computations in callback",
+          "fullName": "Subscribe - Scheduled Updates > should handle derived computations in callback",
+          "state": "passed"
+        },
+        {
+          "name": "should handle nested subscriptions",
+          "fullName": "Subscribe - Scheduled Updates > should handle nested subscriptions",
+          "state": "passed"
+        },
+        {
+          "name": "should not cause infinite loops with circular updates",
+          "fullName": "Subscribe - Scheduled Updates > should not cause infinite loops with circular updates",
+          "state": "passed"
+        },
+        {
+          "name": "should allow disposal multiple times safely",
+          "fullName": "Subscribe - Scheduled Updates > should allow disposal multiple times safely",
+          "state": "passed"
+        },
+        {
+          "name": "should not fire callback when signal value does not change",
+          "fullName": "Subscribe - Scheduled Updates > should not fire callback when signal value does not change",
+          "state": "passed"
+        },
+        {
+          "name": "should track multiple dependencies in source function",
+          "fullName": "Subscribe - Scheduled Updates > should track multiple dependencies in source function",
+          "state": "passed"
+        },
+        {
+          "name": "should track mixed signals and computeds in source",
+          "fullName": "Subscribe - Scheduled Updates > should track mixed signals and computeds in source",
+          "state": "passed"
+        },
+        {
+          "name": "should allow conditional dependencies in source",
+          "fullName": "Subscribe - Scheduled Updates > should allow conditional dependencies in source",
+          "state": "passed"
+        },
+        {
+          "name": "should batch properly and only fire once with final value",
+          "fullName": "Subscribe - Scheduled Updates > should batch properly and only fire once with final value",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/dependency-graph.test.ts",
       "tests": [
         {
@@ -116,81 +191,6 @@
         {
           "name": "should handle very deep chains efficiently",
           "fullName": "Dependency Graph Helpers > GraphWalker > should handle very deep chains efficiently",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/subscribe.test.ts",
-      "tests": [
-        {
-          "name": "should call callback on signal change via scheduling",
-          "fullName": "Subscribe - Scheduled Updates > should call callback on signal change via scheduling",
-          "state": "passed"
-        },
-        {
-          "name": "should work with computed values",
-          "fullName": "Subscribe - Scheduled Updates > should work with computed values",
-          "state": "passed"
-        },
-        {
-          "name": "should batch updates during batch()",
-          "fullName": "Subscribe - Scheduled Updates > should batch updates during batch()",
-          "state": "passed"
-        },
-        {
-          "name": "should support multiple subscriptions to same source",
-          "fullName": "Subscribe - Scheduled Updates > should support multiple subscriptions to same source",
-          "state": "passed"
-        },
-        {
-          "name": "should unsubscribe cleanly",
-          "fullName": "Subscribe - Scheduled Updates > should unsubscribe cleanly",
-          "state": "passed"
-        },
-        {
-          "name": "should handle derived computations in callback",
-          "fullName": "Subscribe - Scheduled Updates > should handle derived computations in callback",
-          "state": "passed"
-        },
-        {
-          "name": "should handle nested subscriptions",
-          "fullName": "Subscribe - Scheduled Updates > should handle nested subscriptions",
-          "state": "passed"
-        },
-        {
-          "name": "should not cause infinite loops with circular updates",
-          "fullName": "Subscribe - Scheduled Updates > should not cause infinite loops with circular updates",
-          "state": "passed"
-        },
-        {
-          "name": "should allow disposal multiple times safely",
-          "fullName": "Subscribe - Scheduled Updates > should allow disposal multiple times safely",
-          "state": "passed"
-        },
-        {
-          "name": "should not fire callback when signal value does not change",
-          "fullName": "Subscribe - Scheduled Updates > should not fire callback when signal value does not change",
-          "state": "passed"
-        },
-        {
-          "name": "should track multiple dependencies in source function",
-          "fullName": "Subscribe - Scheduled Updates > should track multiple dependencies in source function",
-          "state": "passed"
-        },
-        {
-          "name": "should track mixed signals and computeds in source",
-          "fullName": "Subscribe - Scheduled Updates > should track mixed signals and computeds in source",
-          "state": "passed"
-        },
-        {
-          "name": "should allow conditional dependencies in source",
-          "fullName": "Subscribe - Scheduled Updates > should allow conditional dependencies in source",
-          "state": "passed"
-        },
-        {
-          "name": "should batch properly and only fire once with final value",
-          "fullName": "Subscribe - Scheduled Updates > should batch properly and only fire once with final value",
           "state": "passed"
         }
       ]
@@ -586,56 +586,26 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
       "tests": [
         {
-          "name": "should execute function and return its result",
-          "fullName": "batch > should execute function and return its result",
+          "name": "should provide a propagate function that marks nodes",
+          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
           "state": "passed"
         },
         {
-          "name": "should batch multiple signal updates",
-          "fullName": "batch > should batch multiple signal updates",
+          "name": "should call visitor for leaf nodes",
+          "fullName": "GraphTraversal > should call visitor for leaf nodes",
           "state": "passed"
         },
         {
-          "name": "should batch nested signal updates",
-          "fullName": "batch > should batch nested signal updates",
+          "name": "should traverse through intermediate nodes",
+          "fullName": "GraphTraversal > should traverse through intermediate nodes",
           "state": "passed"
         },
         {
-          "name": "should handle errors and still process batched effects",
-          "fullName": "batch > should handle errors and still process batched effects",
-          "state": "passed"
-        },
-        {
-          "name": "should work with computed values",
-          "fullName": "batch > should work with computed values",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty batch",
-          "fullName": "batch > should handle empty batch",
-          "state": "passed"
-        },
-        {
-          "name": "should allow reading signals inside batch",
-          "fullName": "batch > should allow reading signals inside batch",
-          "state": "passed"
-        },
-        {
-          "name": "should process effects in correct order",
-          "fullName": "batch > should process effects in correct order",
-          "state": "passed"
-        },
-        {
-          "name": "should handle recursive batch calls from effects",
-          "fullName": "batch > should handle recursive batch calls from effects",
-          "state": "passed"
-        },
-        {
-          "name": "should return values from batch function",
-          "fullName": "batch > should return values from batch function",
+          "name": "can be used to create a minimal context without scheduling",
+          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
           "state": "passed"
         }
       ]
@@ -696,26 +666,56 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
       "tests": [
         {
-          "name": "should provide a propagate function that marks nodes",
-          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
+          "name": "should execute function and return its result",
+          "fullName": "batch > should execute function and return its result",
           "state": "passed"
         },
         {
-          "name": "should call visitor for leaf nodes",
-          "fullName": "GraphTraversal > should call visitor for leaf nodes",
+          "name": "should batch multiple signal updates",
+          "fullName": "batch > should batch multiple signal updates",
           "state": "passed"
         },
         {
-          "name": "should traverse through intermediate nodes",
-          "fullName": "GraphTraversal > should traverse through intermediate nodes",
+          "name": "should batch nested signal updates",
+          "fullName": "batch > should batch nested signal updates",
           "state": "passed"
         },
         {
-          "name": "can be used to create a minimal context without scheduling",
-          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "name": "should handle errors and still process batched effects",
+          "fullName": "batch > should handle errors and still process batched effects",
+          "state": "passed"
+        },
+        {
+          "name": "should work with computed values",
+          "fullName": "batch > should work with computed values",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty batch",
+          "fullName": "batch > should handle empty batch",
+          "state": "passed"
+        },
+        {
+          "name": "should allow reading signals inside batch",
+          "fullName": "batch > should allow reading signals inside batch",
+          "state": "passed"
+        },
+        {
+          "name": "should process effects in correct order",
+          "fullName": "batch > should process effects in correct order",
+          "state": "passed"
+        },
+        {
+          "name": "should handle recursive batch calls from effects",
+          "fullName": "batch > should handle recursive batch calls from effects",
+          "state": "passed"
+        },
+        {
+          "name": "should return values from batch function",
+          "fullName": "batch > should return values from batch function",
           "state": "passed"
         }
       ]
@@ -756,26 +756,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
-      "tests": [
-        {
-          "name": "should correctly prune dependencies when access pattern changes",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should correctly prune dependencies when access pattern changes",
-          "state": "passed"
-        },
-        {
-          "name": "should handle reordering of dependencies",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should handle reordering of dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should not leak memory with frequently changing dependencies",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
       "tests": [
         {
@@ -806,6 +786,46 @@
         {
           "name": "should handle multiple cycles of conditional dependency changes",
           "fullName": "Conditional Dependencies with WeakMap > should handle multiple cycles of conditional dependency changes",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
+      "tests": [
+        {
+          "name": "should correctly prune dependencies when access pattern changes",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should correctly prune dependencies when access pattern changes",
+          "state": "passed"
+        },
+        {
+          "name": "should handle reordering of dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should handle reordering of dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should not leak memory with frequently changing dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
+      "tests": [
+        {
+          "name": "signals never clear their dirty flag after being set",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > signals never clear their dirty flag after being set",
+          "state": "passed"
+        },
+        {
+          "name": "computeds clear dirty flag when value does not change",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > computeds clear dirty flag when value does not change",
+          "state": "passed"
+        },
+        {
+          "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
+          "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
           "state": "passed"
         }
       ]
@@ -846,26 +866,6 @@
         {
           "name": "should work with nested computeds",
           "fullName": "Computed peek() > should work with nested computeds",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
-      "tests": [
-        {
-          "name": "signals never clear their dirty flag after being set",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > signals never clear their dirty flag after being set",
-          "state": "passed"
-        },
-        {
-          "name": "computeds clear dirty flag when value does not change",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > computeds clear dirty flag when value does not change",
-          "state": "passed"
-        },
-        {
-          "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
-          "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
           "state": "passed"
         }
       ]

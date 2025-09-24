@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { STATUS_PENDING, STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
+const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
@@ -99,11 +99,18 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         continue;
       }
 
-      // Traverse dependencies
-      for (;;) {
-        // Check dependency status inline
-        if (dep.producer.status === STATUS_DIRTY) {
-          // Dirty dependency found - recompute immediately
+      // Traverse dependencies - optimized loop
+      while (dep) {
+        const depStatus = dep.producer.status;
+
+        // Fast path: CLEAN dependency, skip to next
+        if (depStatus === STATUS_CLEAN) {
+          dep = dep.nextDependency;
+          continue;
+        }
+
+        // DIRTY dependency found - recompute immediately
+        if (depStatus === STATUS_DIRTY) {
           oldValue = current.value;
           newValue = track(ctx, current, current.compute);
 
@@ -121,16 +128,15 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           continue traversal;
         }
 
-        // Pending computed found - descend into it
-        if (dep.producer.status === STATUS_PENDING && 'compute' in dep.producer) {
+        // PENDING computed - descend into it
+        if ('compute' in dep.producer) {
           dep.producer.deferredParent = current;
-          current = dep.producer;
+          current = dep.producer as DerivedNode;
           continue traversal;
         }
 
-        // Check next dependency
+        // Move to next dependency
         dep = dep.nextDependency;
-        if (!dep) break;
       }
 
       // All dependencies clean
