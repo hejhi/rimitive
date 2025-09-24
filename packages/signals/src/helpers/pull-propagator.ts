@@ -99,9 +99,23 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         continue;
       }
 
+      // Optimized: Check if all deps might be clean by sampling first
+      const firstProducer = dep.producer;
+      const firstStatus = firstProducer.status;
+
+      // Common case optimization: if first dep is CLEAN and no next dep, we're done
+      if (firstStatus === STATUS_CLEAN && !dep.nextDependency) {
+        current.status = STATUS_CLEAN;
+        current.deferredParent = undefined;
+        if (!parent) break;
+        current = parent;
+        continue;
+      }
+
       // Traverse dependencies - optimized loop
       while (dep) {
-        const depStatus = dep.producer.status;
+        const producer = dep.producer;
+        const depStatus = producer.status;
 
         // Fast path: CLEAN dependency, skip to next
         if (depStatus === STATUS_CLEAN) {
@@ -129,9 +143,10 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         }
 
         // PENDING computed - descend into it
-        if ('compute' in dep.producer) {
-          dep.producer.deferredParent = current;
-          current = dep.producer as DerivedNode;
+        if ('compute' in producer) {
+          const derivedProducer = producer as DerivedNode;
+          derivedProducer.deferredParent = current;
+          current = derivedProducer;
           continue traversal;
         }
 
@@ -139,8 +154,10 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         dep = dep.nextDependency;
       }
 
-      // All dependencies clean
-      current.status = STATUS_CLEAN;
+      // All dependencies clean - only update status if needed
+      if (current.status !== STATUS_CLEAN) {
+        current.status = STATUS_CLEAN;
+      }
       current.deferredParent = undefined;
 
       if (!parent) break;
