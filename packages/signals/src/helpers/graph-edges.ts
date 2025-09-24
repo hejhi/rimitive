@@ -24,17 +24,30 @@ export function createGraphEdges(): GraphEdges {
   const trackDependency = (producer: FromNode, consumer: ToNode): void => {
     const tail = consumer.dependencyTail;
 
-    // Fast path: already at this producer
-    if (tail && tail.producer === producer) return;
+    // Check 1: Is tail already pointing to this producer?
+    if (tail && tail.producer === producer) {
+      return; // Already tracking
+    }
 
-    // Check next in sequence (common case during re-execution)
+    // Check 2: Is next in sequence this producer?
     const next = tail ? tail.nextDependency : consumer.dependencies;
     if (next && next.producer === producer) {
       consumer.dependencyTail = next;
-      return;
+      return; // Found and reused
     }
 
-    // Create new dependency edge
+    // Check 3: CRITICAL NEW CODE - Search all existing dependencies
+    // Start from the beginning of the dependency list and search all dependencies
+    let dep = consumer.dependencies;
+    while (dep) {
+      if (dep.producer === producer) {
+        consumer.dependencyTail = dep;
+        return; // Found existing edge, reuse it
+      }
+      dep = dep.nextDependency;
+    }
+
+    // Only NOW create new dependency if not found
     const producerTail = producer.subscribersTail;
     const dependency: Dependency = {
       producer,
@@ -113,6 +126,15 @@ export function createGraphEdges(): GraphEdges {
     // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
 
+    // Mark all existing dependencies as potentially stale
+    let dep = node.dependencies;
+    while (dep) {
+      // Use a marker to track which dependencies are still active
+      // We'll repurpose nextDependency temporarily as a marker
+      (dep as any).__stale = true;
+      dep = dep.nextDependency;
+    }
+
     node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
 
     // Clear status - node is being updated now
@@ -126,16 +148,47 @@ export function createGraphEdges(): GraphEdges {
       // Restore previous tracking context
       ctx.currentConsumer = prevConsumer;
 
-      // Prune stale dependencies. Although we set node.dependencyTail to undefined above, fn()
-      // may have set it again, and we should use it if so.
-      // Everything after the tail is stale and needs to be removed
-      const tail = node.dependencyTail as Dependency | undefined;
-      let toRemove = tail ? tail.nextDependency : node.dependencies;
+      // Now prune any dependencies that weren't re-accessed (still marked as stale)
+      let prev: Dependency | undefined = undefined;
+      let current = node.dependencies;
 
-      // Remove all stale dependencies efficiently using return value
-      if (toRemove) detachAll(toRemove);
+      while (current) {
+        const next = current.nextDependency;
 
-      node.deferredParent = undefined; // Clear deferredParent since we're recomputing
+        if ((current as any).__stale) {
+          // This dependency wasn't re-accessed, remove it
+          if (prev) {
+            prev.nextDependency = next;
+          } else {
+            node.dependencies = next;
+          }
+
+          if (next) {
+            next.prevDependency = prev;
+          } else {
+            node.dependencyTail = prev;
+          }
+
+          // Remove from producer's subscriber list
+          const { producer, prevConsumer, nextConsumer } = current;
+          if (nextConsumer) {
+            nextConsumer.prevConsumer = prevConsumer;
+          } else {
+            producer.subscribersTail = prevConsumer;
+          }
+          if (prevConsumer) {
+            prevConsumer.nextConsumer = nextConsumer;
+          } else {
+            producer.subscribers = nextConsumer;
+          }
+        } else {
+          // This dependency is still active, keep it
+          delete (current as any).__stale;
+          prev = current;
+        }
+
+        current = next;
+      }
     }
   };
 

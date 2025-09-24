@@ -85,3 +85,18 @@ These are paths we've gone down, and have RULED OUT. In other words, **DO NOT WA
 - moving methods to the prototype-level for computeds: HURTS performance and does not fix the memory issue
 - lattice contexts accumulation: DISPROVED, and moving context creation inside the benchmark HURTS performance and does NOT fix the memory issue
 - lattice comupteds inherent closure cost: DISPROVED (see benchmarks for `scaling-computed` and `scaling-signal-effect`)
+- `deferredParent` field: Initially suspected but RULED OUT. Removing this field completely had no impact on memory usage (still 3.82mb), proving it's not the cause.
+- `Factory pattern per-iteration overhead`: RULED OUT. Moving `createApi()` outside the benchmark iteration (creating it only once) had no impact on memory usage, proving the factory initialization isn't the issue.
+
+## ROOT CAUSE IDENTIFIED
+
+**The memory issue occurs because dependencies are accumulated during the 100,000 benchmark iterations:**
+
+- 3.82mb ÷ 100,000 iterations = **38 bytes per iteration retained**
+- This matches roughly half a Dependency object size
+
+**The issue is specific to computed→computed dependencies because:**
+1. Nested computed evaluations disrupt the dependency tracking sequence
+2. The `trackDependency` optimization expects dependencies to be accessed in order
+3. When the sequence is broken, NEW Dependency objects are created instead of reusing existing ones
+4. These accumulate over iterations, causing the memory bloat

@@ -576,61 +576,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
-      "tests": [
-        {
-          "name": "should provide a propagate function that marks nodes",
-          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should call visitor for leaf nodes",
-          "fullName": "GraphTraversal > should call visitor for leaf nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should traverse through intermediate nodes",
-          "fullName": "GraphTraversal > should traverse through intermediate nodes",
-          "state": "passed"
-        },
-        {
-          "name": "can be used to create a minimal context without scheduling",
-          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/pull-update-efficiency.test.ts",
-      "tests": [
-        {
-          "name": "should NOT recompute when all dependencies are clean",
-          "fullName": "Pull Update Efficiency > should NOT recompute when all dependencies are clean",
-          "state": "passed"
-        },
-        {
-          "name": "CORRECT: must recompute PENDING nodes to detect if value changed",
-          "fullName": "Pull Update Efficiency > CORRECT: must recompute PENDING nodes to detect if value changed",
-          "state": "passed"
-        },
-        {
-          "name": "should NOT recompute descendants when intermediate values dont change",
-          "fullName": "Pull Update Efficiency > should NOT recompute descendants when intermediate values dont change",
-          "state": "passed"
-        },
-        {
-          "name": "should NOT recompute when all ancestors are unchanged",
-          "fullName": "Pull Update Efficiency > should NOT recompute when all ancestors are unchanged",
-          "state": "passed"
-        },
-        {
-          "name": "should only update PENDING nodes in the pull path",
-          "fullName": "Pull Update Efficiency > should only update PENDING nodes in the pull path",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
       "tests": [
         {
@@ -681,6 +626,61 @@
         {
           "name": "should return values from batch function",
           "fullName": "batch > should return values from batch function",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
+      "tests": [
+        {
+          "name": "should provide a propagate function that marks nodes",
+          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should call visitor for leaf nodes",
+          "fullName": "GraphTraversal > should call visitor for leaf nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should traverse through intermediate nodes",
+          "fullName": "GraphTraversal > should traverse through intermediate nodes",
+          "state": "passed"
+        },
+        {
+          "name": "can be used to create a minimal context without scheduling",
+          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/pull-update-efficiency.test.ts",
+      "tests": [
+        {
+          "name": "should NOT recompute when all dependencies are clean",
+          "fullName": "Pull Update Efficiency > should NOT recompute when all dependencies are clean",
+          "state": "passed"
+        },
+        {
+          "name": "CORRECT: must recompute PENDING nodes to detect if value changed",
+          "fullName": "Pull Update Efficiency > CORRECT: must recompute PENDING nodes to detect if value changed",
+          "state": "passed"
+        },
+        {
+          "name": "should NOT recompute descendants when intermediate values dont change",
+          "fullName": "Pull Update Efficiency > should NOT recompute descendants when intermediate values dont change",
+          "state": "passed"
+        },
+        {
+          "name": "should NOT recompute when all ancestors are unchanged",
+          "fullName": "Pull Update Efficiency > should NOT recompute when all ancestors are unchanged",
+          "state": "passed"
+        },
+        {
+          "name": "should only update PENDING nodes in the pull path",
+          "fullName": "Pull Update Efficiency > should only update PENDING nodes in the pull path",
           "state": "passed"
         }
       ]
@@ -756,26 +756,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
-      "tests": [
-        {
-          "name": "should read computed value without establishing dependencies",
-          "fullName": "Computed peek() > should read computed value without establishing dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should return the same value as .value",
-          "fullName": "Computed peek() > should return the same value as .value",
-          "state": "passed"
-        },
-        {
-          "name": "should work with nested computeds",
-          "fullName": "Computed peek() > should work with nested computeds",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
       "tests": [
         {
@@ -791,6 +771,26 @@
         {
           "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
           "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
+      "tests": [
+        {
+          "name": "should read computed value without establishing dependencies",
+          "fullName": "Computed peek() > should read computed value without establishing dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should return the same value as .value",
+          "fullName": "Computed peek() > should return the same value as .value",
+          "state": "passed"
+        },
+        {
+          "name": "should work with nested computeds",
+          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]
