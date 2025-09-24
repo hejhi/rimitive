@@ -26,6 +26,8 @@ export function createGraphEdges(): GraphEdges {
 
     // Check 1: Is tail already pointing to this producer?
     if (tail && tail.producer === producer) {
+      // Mark as accessed in current evaluation
+      (tail as any).__accessed = true;
       return; // Already tracking
     }
 
@@ -33,6 +35,8 @@ export function createGraphEdges(): GraphEdges {
     const next = tail ? tail.nextDependency : consumer.dependencies;
     if (next && next.producer === producer) {
       consumer.dependencyTail = next;
+      // Mark as accessed in current evaluation
+      (next as any).__accessed = true;
       return; // Found and reused
     }
 
@@ -42,6 +46,8 @@ export function createGraphEdges(): GraphEdges {
     while (dep) {
       if (dep.producer === producer) {
         consumer.dependencyTail = dep;
+        // Mark as accessed in current evaluation
+        (dep as any).__accessed = true;
         return; // Found existing edge, reuse it
       }
       dep = dep.nextDependency;
@@ -57,6 +63,9 @@ export function createGraphEdges(): GraphEdges {
       nextDependency: next,
       nextConsumer: undefined,
     };
+
+    // Mark new dependency as accessed
+    (dependency as any).__accessed = true;
 
     // Wire up consumer side
     consumer.dependencyTail = dependency;
@@ -126,12 +135,10 @@ export function createGraphEdges(): GraphEdges {
     // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
 
-    // Mark all existing dependencies as potentially stale
+    // Mark all existing dependencies as potentially stale (not accessed)
     let dep = node.dependencies;
     while (dep) {
-      // Use a marker to track which dependencies are still active
-      // We'll repurpose nextDependency temporarily as a marker
-      (dep as any).__stale = true;
+      delete (dep as any).__accessed;
       dep = dep.nextDependency;
     }
 
@@ -148,15 +155,15 @@ export function createGraphEdges(): GraphEdges {
       // Restore previous tracking context
       ctx.currentConsumer = prevConsumer;
 
-      // Now prune any dependencies that weren't re-accessed (still marked as stale)
+      // Now prune any dependencies that weren't accessed
       let prev: Dependency | undefined = undefined;
       let current = node.dependencies;
 
       while (current) {
         const next = current.nextDependency;
 
-        if ((current as any).__stale) {
-          // This dependency wasn't re-accessed, remove it
+        if (!(current as any).__accessed) {
+          // This dependency wasn't accessed, remove it
           if (prev) {
             prev.nextDependency = next;
           } else {
@@ -182,8 +189,8 @@ export function createGraphEdges(): GraphEdges {
             producer.subscribers = nextConsumer;
           }
         } else {
-          // This dependency is still active, keep it
-          delete (current as any).__stale;
+          // This dependency is still active, keep it and clear marker
+          delete (current as any).__accessed;
           prev = current;
         }
 

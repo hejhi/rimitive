@@ -266,6 +266,26 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
+      "tests": [
+        {
+          "name": "should correctly prune dependencies when access pattern changes",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should correctly prune dependencies when access pattern changes",
+          "state": "passed"
+        },
+        {
+          "name": "should handle reordering of dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should handle reordering of dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should not leak memory with frequently changing dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/global.test.ts",
       "tests": [
         {
@@ -526,61 +546,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
-      "tests": [
-        {
-          "name": "should execute function and return its result",
-          "fullName": "batch > should execute function and return its result",
-          "state": "passed"
-        },
-        {
-          "name": "should batch multiple signal updates",
-          "fullName": "batch > should batch multiple signal updates",
-          "state": "passed"
-        },
-        {
-          "name": "should batch nested signal updates",
-          "fullName": "batch > should batch nested signal updates",
-          "state": "passed"
-        },
-        {
-          "name": "should handle errors and still process batched effects",
-          "fullName": "batch > should handle errors and still process batched effects",
-          "state": "passed"
-        },
-        {
-          "name": "should work with computed values",
-          "fullName": "batch > should work with computed values",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty batch",
-          "fullName": "batch > should handle empty batch",
-          "state": "passed"
-        },
-        {
-          "name": "should allow reading signals inside batch",
-          "fullName": "batch > should allow reading signals inside batch",
-          "state": "passed"
-        },
-        {
-          "name": "should process effects in correct order",
-          "fullName": "batch > should process effects in correct order",
-          "state": "passed"
-        },
-        {
-          "name": "should handle recursive batch calls from effects",
-          "fullName": "batch > should handle recursive batch calls from effects",
-          "state": "passed"
-        },
-        {
-          "name": "should return values from batch function",
-          "fullName": "batch > should return values from batch function",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
       "tests": [
         {
@@ -651,6 +616,61 @@
         {
           "name": "can be used to create a minimal context without scheduling",
           "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
+      "tests": [
+        {
+          "name": "should execute function and return its result",
+          "fullName": "batch > should execute function and return its result",
+          "state": "passed"
+        },
+        {
+          "name": "should batch multiple signal updates",
+          "fullName": "batch > should batch multiple signal updates",
+          "state": "passed"
+        },
+        {
+          "name": "should batch nested signal updates",
+          "fullName": "batch > should batch nested signal updates",
+          "state": "passed"
+        },
+        {
+          "name": "should handle errors and still process batched effects",
+          "fullName": "batch > should handle errors and still process batched effects",
+          "state": "passed"
+        },
+        {
+          "name": "should work with computed values",
+          "fullName": "batch > should work with computed values",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty batch",
+          "fullName": "batch > should handle empty batch",
+          "state": "passed"
+        },
+        {
+          "name": "should allow reading signals inside batch",
+          "fullName": "batch > should allow reading signals inside batch",
+          "state": "passed"
+        },
+        {
+          "name": "should process effects in correct order",
+          "fullName": "batch > should process effects in correct order",
+          "state": "passed"
+        },
+        {
+          "name": "should handle recursive batch calls from effects",
+          "fullName": "batch > should handle recursive batch calls from effects",
+          "state": "passed"
+        },
+        {
+          "name": "should return values from batch function",
+          "fullName": "batch > should return values from batch function",
           "state": "passed"
         }
       ]
@@ -756,26 +776,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
-      "tests": [
-        {
-          "name": "should read computed value without establishing dependencies",
-          "fullName": "Computed peek() > should read computed value without establishing dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should return the same value as .value",
-          "fullName": "Computed peek() > should return the same value as .value",
-          "state": "passed"
-        },
-        {
-          "name": "should work with nested computeds",
-          "fullName": "Computed peek() > should work with nested computeds",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
       "tests": [
         {
@@ -791,6 +791,26 @@
         {
           "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
           "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
+      "tests": [
+        {
+          "name": "should read computed value without establishing dependencies",
+          "fullName": "Computed peek() > should read computed value without establishing dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should return the same value as .value",
+          "fullName": "Computed peek() > should return the same value as .value",
+          "state": "passed"
+        },
+        {
+          "name": "should work with nested computeds",
+          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]
