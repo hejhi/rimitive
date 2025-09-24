@@ -52,6 +52,7 @@ export interface ConsumerNode extends ReactiveNode {
   dependencies: Dependency | undefined; // Head of dependency list
   dependencyTail: Dependency | undefined; // Current tracking position
   deferredParent: DerivedNode | undefined; // Temporary: tracks parent during pull traversal
+  trackingVersion: number; // Version incremented on each track() call for dependency pruning
 }
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {
@@ -96,6 +97,9 @@ export interface Dependency {
   // Consumer's dependency list navigation
   prevDependency: Dependency | undefined; // Previous in dependency list
   nextDependency: Dependency | undefined; // Next in dependency list
+
+  // Version tracking for efficient dependency pruning
+  version: number; // Consumer's trackingVersion when this dependency was created
 }
 
 

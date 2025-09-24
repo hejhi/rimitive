@@ -66,6 +66,7 @@ export function createSubscribeFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
+      trackingVersion: 0, // Initialize version tracking
       flush(): void {
         const value = track(ctx, node, source);
         callback(value);

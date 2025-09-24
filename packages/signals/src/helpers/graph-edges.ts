@@ -25,59 +25,25 @@ export function createGraphEdges(): GraphEdges {
     const tail = consumer.dependencyTail;
 
     // Check 1: Is tail already pointing to this producer?
-    if (tail && tail.producer === producer) return; // Already tracking
+    if (tail && tail.producer === producer) {
+      // Update version to mark as accessed in this tracking cycle
+      tail.version = consumer.trackingVersion;
+      return; // Already tracking
+    }
 
     // Check 2: Is next in sequence this producer?
     const next = tail ? tail.nextDependency : consumer.dependencies;
     if (next && next.producer === producer) {
+      // Update version to mark as accessed in this tracking cycle
+      next.version = consumer.trackingVersion;
       consumer.dependencyTail = next;
       return; // Found and reused
     }
 
-    // Check 3: Search all existing dependencies
-    // If we find one out of order, we need to move it to the correct position
-    let dep = consumer.dependencies;
-    while (dep) {
-      if (dep.producer === producer) {
-        // Found existing dependency, but it's out of order
-        // We need to move it to the position after the current tail
+    // Version-based tracking: Just create a new dependency
+    // No need to search through all dependencies (O(n) removed!)
+    // Stale dependencies will be pruned based on version mismatch in track()
 
-        // First, unlink it from its current position
-        const depPrev = dep.prevDependency;
-        const depNext = dep.nextDependency;
-
-        if (depPrev) {
-          depPrev.nextDependency = depNext;
-        } else {
-          consumer.dependencies = depNext;
-        }
-
-        if (depNext) depNext.prevDependency = depPrev;
-
-        // If this was the tail, we don't update it yet
-        // as we're about to move this node
-
-        // Now re-insert it after the current tail
-        dep.prevDependency = tail;
-        dep.nextDependency = tail ? tail.nextDependency : consumer.dependencies;
-
-        if (tail) {
-          if (tail.nextDependency) tail.nextDependency.prevDependency = dep;
-          tail.nextDependency = dep;
-        } else {
-          // No tail means this becomes the first dependency
-          if (consumer.dependencies) consumer.dependencies.prevDependency = dep;
-          consumer.dependencies = dep;
-        }
-
-        // Update the tail to point to this reordered dependency
-        consumer.dependencyTail = dep;
-        return;
-      }
-      dep = dep.nextDependency;
-    }
-
-    // Only create new dependency if not found
     const producerTail = producer.subscribersTail;
     const dependency: Dependency = {
       producer,
@@ -86,6 +52,7 @@ export function createGraphEdges(): GraphEdges {
       prevConsumer: producerTail,
       nextDependency: next,
       nextConsumer: undefined,
+      version: consumer.trackingVersion, // Mark with current tracking version
     };
 
     // Wire up consumer side
@@ -153,6 +120,10 @@ export function createGraphEdges(): GraphEdges {
     node: ConsumerNode,
     fn: () => T
   ): T => {
+    // Increment version for this tracking cycle
+    // This happens in the pull phase, not the write hot path
+    node.trackingVersion++;
+
     // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
 
@@ -169,14 +140,47 @@ export function createGraphEdges(): GraphEdges {
       // Restore previous tracking context
       ctx.currentConsumer = prevConsumer;
 
-      // Prune stale dependencies. Although we set node.dependencyTail to undefined above, fn()
-      // may have set it again, and we should use it if so.
-      // Everything after the tail is stale and needs to be removed
-      const tail = node.dependencyTail as Dependency | undefined;
-      let toRemove = tail ? tail.nextDependency : node.dependencies;
+      // Version-based pruning: Remove dependencies with outdated versions
+      // Dependencies accessed during fn() have version === node.trackingVersion
+      // Older dependencies have version < node.trackingVersion and should be pruned
+      const currentVersion = node.trackingVersion;
+      let dep = node.dependencies;
+      let prevValid: Dependency | undefined = undefined;
 
-      // Remove all stale dependencies efficiently using return value
-      if (toRemove) detachAll(toRemove);
+      while (dep) {
+        const nextDep = dep.nextDependency;
+
+        if (dep.version < currentVersion) {
+          // This dependency is stale and needs to be removed
+          const { producer, prevConsumer, nextConsumer } = dep;
+
+          // Remove from consumer's dependency list
+          if (prevValid) {
+            prevValid.nextDependency = nextDep;
+          } else {
+            node.dependencies = nextDep;
+          }
+          if (nextDep) nextDep.prevDependency = prevValid;
+
+          // Remove from producer's subscriber list
+          if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
+          else producer.subscribersTail = prevConsumer;
+
+          if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
+          else producer.subscribers = nextConsumer;
+        } else {
+          // This dependency is still valid
+          prevValid = dep;
+          node.dependencyTail = dep; // Update tail to last valid dependency
+        }
+
+        dep = nextDep;
+      }
+
+      // If no valid dependencies remain, clear the tail
+      if (!prevValid) {
+        node.dependencyTail = undefined;
+      }
     }
   };
 

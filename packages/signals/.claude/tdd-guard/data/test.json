@@ -16,6 +16,81 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/subscribe.test.ts",
+      "tests": [
+        {
+          "name": "should call callback on signal change via scheduling",
+          "fullName": "Subscribe - Scheduled Updates > should call callback on signal change via scheduling",
+          "state": "passed"
+        },
+        {
+          "name": "should work with computed values",
+          "fullName": "Subscribe - Scheduled Updates > should work with computed values",
+          "state": "passed"
+        },
+        {
+          "name": "should batch updates during batch()",
+          "fullName": "Subscribe - Scheduled Updates > should batch updates during batch()",
+          "state": "passed"
+        },
+        {
+          "name": "should support multiple subscriptions to same source",
+          "fullName": "Subscribe - Scheduled Updates > should support multiple subscriptions to same source",
+          "state": "passed"
+        },
+        {
+          "name": "should unsubscribe cleanly",
+          "fullName": "Subscribe - Scheduled Updates > should unsubscribe cleanly",
+          "state": "passed"
+        },
+        {
+          "name": "should handle derived computations in callback",
+          "fullName": "Subscribe - Scheduled Updates > should handle derived computations in callback",
+          "state": "passed"
+        },
+        {
+          "name": "should handle nested subscriptions",
+          "fullName": "Subscribe - Scheduled Updates > should handle nested subscriptions",
+          "state": "passed"
+        },
+        {
+          "name": "should not cause infinite loops with circular updates",
+          "fullName": "Subscribe - Scheduled Updates > should not cause infinite loops with circular updates",
+          "state": "passed"
+        },
+        {
+          "name": "should allow disposal multiple times safely",
+          "fullName": "Subscribe - Scheduled Updates > should allow disposal multiple times safely",
+          "state": "passed"
+        },
+        {
+          "name": "should not fire callback when signal value does not change",
+          "fullName": "Subscribe - Scheduled Updates > should not fire callback when signal value does not change",
+          "state": "passed"
+        },
+        {
+          "name": "should track multiple dependencies in source function",
+          "fullName": "Subscribe - Scheduled Updates > should track multiple dependencies in source function",
+          "state": "passed"
+        },
+        {
+          "name": "should track mixed signals and computeds in source",
+          "fullName": "Subscribe - Scheduled Updates > should track mixed signals and computeds in source",
+          "state": "passed"
+        },
+        {
+          "name": "should allow conditional dependencies in source",
+          "fullName": "Subscribe - Scheduled Updates > should allow conditional dependencies in source",
+          "state": "passed"
+        },
+        {
+          "name": "should batch properly and only fire once with final value",
+          "fullName": "Subscribe - Scheduled Updates > should batch properly and only fire once with final value",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/dependency-graph.test.ts",
       "tests": [
         {
@@ -191,81 +266,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/subscribe.test.ts",
-      "tests": [
-        {
-          "name": "should call callback on signal change via scheduling",
-          "fullName": "Subscribe - Scheduled Updates > should call callback on signal change via scheduling",
-          "state": "passed"
-        },
-        {
-          "name": "should work with computed values",
-          "fullName": "Subscribe - Scheduled Updates > should work with computed values",
-          "state": "passed"
-        },
-        {
-          "name": "should batch updates during batch()",
-          "fullName": "Subscribe - Scheduled Updates > should batch updates during batch()",
-          "state": "passed"
-        },
-        {
-          "name": "should support multiple subscriptions to same source",
-          "fullName": "Subscribe - Scheduled Updates > should support multiple subscriptions to same source",
-          "state": "passed"
-        },
-        {
-          "name": "should unsubscribe cleanly",
-          "fullName": "Subscribe - Scheduled Updates > should unsubscribe cleanly",
-          "state": "passed"
-        },
-        {
-          "name": "should handle derived computations in callback",
-          "fullName": "Subscribe - Scheduled Updates > should handle derived computations in callback",
-          "state": "passed"
-        },
-        {
-          "name": "should handle nested subscriptions",
-          "fullName": "Subscribe - Scheduled Updates > should handle nested subscriptions",
-          "state": "passed"
-        },
-        {
-          "name": "should not cause infinite loops with circular updates",
-          "fullName": "Subscribe - Scheduled Updates > should not cause infinite loops with circular updates",
-          "state": "passed"
-        },
-        {
-          "name": "should allow disposal multiple times safely",
-          "fullName": "Subscribe - Scheduled Updates > should allow disposal multiple times safely",
-          "state": "passed"
-        },
-        {
-          "name": "should not fire callback when signal value does not change",
-          "fullName": "Subscribe - Scheduled Updates > should not fire callback when signal value does not change",
-          "state": "passed"
-        },
-        {
-          "name": "should track multiple dependencies in source function",
-          "fullName": "Subscribe - Scheduled Updates > should track multiple dependencies in source function",
-          "state": "passed"
-        },
-        {
-          "name": "should track mixed signals and computeds in source",
-          "fullName": "Subscribe - Scheduled Updates > should track mixed signals and computeds in source",
-          "state": "passed"
-        },
-        {
-          "name": "should allow conditional dependencies in source",
-          "fullName": "Subscribe - Scheduled Updates > should allow conditional dependencies in source",
-          "state": "passed"
-        },
-        {
-          "name": "should batch properly and only fire once with final value",
-          "fullName": "Subscribe - Scheduled Updates > should batch properly and only fire once with final value",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/global.test.ts",
       "tests": [
         {
@@ -341,56 +341,6 @@
         {
           "name": "should maintain consistency across multiple computeds",
           "fullName": "Global State Management > integration scenarios > should maintain consistency across multiple computeds",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/propagator-integration.test.ts",
-      "tests": [
-        {
-          "name": "should call propagate at end of batch for accumulated roots",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should call propagate at end of batch for accumulated roots",
-          "state": "passed"
-        },
-        {
-          "name": "should not call propagate for small batches",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should not call propagate for small batches",
-          "state": "passed"
-        },
-        {
-          "name": "should handle effects flush after propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should handle effects flush after propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should call propagate at batch commit",
-          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should call propagate at batch commit",
-          "state": "passed"
-        },
-        {
-          "name": "should handle nested batches correctly with propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should handle nested batches correctly with propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should handle deep dependency chains efficiently",
-          "fullName": "Propagator Integration with Signal and Batch > Performance Characteristics > should handle deep dependency chains efficiently",
-          "state": "passed"
-        },
-        {
-          "name": "should handle simultaneous dispose and propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle simultaneous dispose and propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty propagation queue gracefully",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle empty propagation queue gracefully",
-          "state": "passed"
-        },
-        {
-          "name": "should handle very large batches efficiently",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle very large batches efficiently",
           "state": "passed"
         }
       ]
@@ -476,51 +426,61 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/propagator-integration.test.ts",
       "tests": [
         {
-          "name": "should create an API with all provided factories",
-          "fullName": "createSignalAPI > should create an API with all provided factories",
+          "name": "should call propagate at end of batch for accumulated roots",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should call propagate at end of batch for accumulated roots",
           "state": "passed"
         },
         {
-          "name": "should create a minimal API without effects",
-          "fullName": "createSignalAPI > should create a minimal API without effects",
+          "name": "should not call propagate for small batches",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should not call propagate for small batches",
           "state": "passed"
         },
         {
-          "name": "should work with custom context and work queue",
-          "fullName": "createSignalAPI > should work with custom context and work queue",
+          "name": "should handle effects flush after propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should handle effects flush after propagate",
           "state": "passed"
         },
         {
-          "name": "should allow extending context with custom work queue",
-          "fullName": "createSignalAPI > should allow extending context with custom work queue",
+          "name": "should call propagate at batch commit",
+          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should call propagate at batch commit",
           "state": "passed"
         },
         {
-          "name": "should allow custom factories to access extended context",
-          "fullName": "createSignalAPI > should allow custom factories to access extended context",
+          "name": "should handle nested batches correctly with propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should handle nested batches correctly with propagate",
           "state": "passed"
         },
         {
-          "name": "should handle dispose method correctly",
-          "fullName": "createSignalAPI > should handle dispose method correctly",
+          "name": "should handle deep dependency chains efficiently",
+          "fullName": "Propagator Integration with Signal and Batch > Performance Characteristics > should handle deep dependency chains efficiently",
           "state": "passed"
         },
         {
-          "name": "should support multiple independent APIs",
-          "fullName": "createSignalAPI > should support multiple independent APIs",
+          "name": "should handle simultaneous dispose and propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle simultaneous dispose and propagate",
           "state": "passed"
         },
         {
-          "name": "should work with custom extensions alongside signals",
-          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
+          "name": "should handle empty propagation queue gracefully",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle empty propagation queue gracefully",
           "state": "passed"
         },
         {
-          "name": "should properly type the API based on factories",
-          "fullName": "createSignalAPI > should properly type the API based on factories",
+          "name": "should handle very large batches efficiently",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle very large batches efficiently",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
+      "tests": [
+        {
+          "name": "should demonstrate O(n) performance with version-based tracking",
+          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
           "state": "passed"
         }
       ]
@@ -571,6 +531,81 @@
         {
           "name": "should clear invalidated check cache between flushes",
           "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should clear invalidated check cache between flushes",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
+      "tests": [
+        {
+          "name": "should create an API with all provided factories",
+          "fullName": "createSignalAPI > should create an API with all provided factories",
+          "state": "passed"
+        },
+        {
+          "name": "should create a minimal API without effects",
+          "fullName": "createSignalAPI > should create a minimal API without effects",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom context and work queue",
+          "fullName": "createSignalAPI > should work with custom context and work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow extending context with custom work queue",
+          "fullName": "createSignalAPI > should allow extending context with custom work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow custom factories to access extended context",
+          "fullName": "createSignalAPI > should allow custom factories to access extended context",
+          "state": "passed"
+        },
+        {
+          "name": "should handle dispose method correctly",
+          "fullName": "createSignalAPI > should handle dispose method correctly",
+          "state": "passed"
+        },
+        {
+          "name": "should support multiple independent APIs",
+          "fullName": "createSignalAPI > should support multiple independent APIs",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom extensions alongside signals",
+          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
+          "state": "passed"
+        },
+        {
+          "name": "should properly type the API based on factories",
+          "fullName": "createSignalAPI > should properly type the API based on factories",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
+      "tests": [
+        {
+          "name": "should handle dependencies accessed in different orders without creating duplicates",
+          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
+          "state": "passed"
+        },
+        {
+          "name": "should properly prune old dependencies with version-based tracking",
+          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
+          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
+          "state": "passed"
+        },
+        {
+          "name": "should handle conditional dependencies that appear and disappear",
+          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
           "state": "passed"
         }
       ]
@@ -721,26 +756,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
-      "tests": [
-        {
-          "name": "should not recompute unused branches after condition changes",
-          "fullName": "Dynamic dependency unlinking > should not recompute unused branches after condition changes",
-          "state": "passed"
-        },
-        {
-          "name": "should dynamically track only active dependencies",
-          "fullName": "Dynamic dependency unlinking > should dynamically track only active dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "proves the 2.7x performance gap is NOT from traversing inactive branches",
-          "fullName": "Dynamic dependency unlinking > proves the 2.7x performance gap is NOT from traversing inactive branches",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
       "tests": [
         {
@@ -756,6 +771,26 @@
         {
           "name": "should not leak memory with frequently changing dependencies",
           "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
+      "tests": [
+        {
+          "name": "should not recompute unused branches after condition changes",
+          "fullName": "Dynamic dependency unlinking > should not recompute unused branches after condition changes",
+          "state": "passed"
+        },
+        {
+          "name": "should dynamically track only active dependencies",
+          "fullName": "Dynamic dependency unlinking > should dynamically track only active dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "proves the 2.7x performance gap is NOT from traversing inactive branches",
+          "fullName": "Dynamic dependency unlinking > proves the 2.7x performance gap is NOT from traversing inactive branches",
           "state": "passed"
         }
       ]

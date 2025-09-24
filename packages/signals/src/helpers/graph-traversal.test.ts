@@ -15,6 +15,7 @@ describe('GraphTraversal', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     const dependency: Dependency = {
@@ -24,6 +25,7 @@ describe('GraphTraversal', () => {
       prevConsumer: undefined,
       nextDependency: undefined,
       prevDependency: undefined,
+      version: 0,
     };
 
     traversal.propagate(dependency);
@@ -41,6 +43,7 @@ describe('GraphTraversal', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     const dependency: Dependency = {
@@ -50,6 +53,7 @@ describe('GraphTraversal', () => {
       prevConsumer: undefined,
       nextDependency: undefined,
       prevDependency: undefined,
+      version: 0,
     };
 
     traversal.traverseGraph(dependency, visitor);
@@ -68,6 +72,7 @@ describe('GraphTraversal', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     const leafDep: Dependency = {
@@ -77,6 +82,7 @@ describe('GraphTraversal', () => {
       prevConsumer: undefined,
       nextDependency: undefined,
       prevDependency: undefined,
+      version: 0,
     };
 
     const intermediateNode: ConsumerNode & { subscribers: Dependency; subscribersTail: Dependency } = {
@@ -85,6 +91,7 @@ describe('GraphTraversal', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
       subscribers: leafDep,
       subscribersTail: leafDep,
     };
@@ -96,6 +103,7 @@ describe('GraphTraversal', () => {
       prevConsumer: undefined,
       nextDependency: undefined,
       prevDependency: undefined,
+      version: 0,
     };
 
     traversal.traverseGraph(rootDep, visitor);

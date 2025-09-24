@@ -56,6 +56,7 @@ export function createComputedFactory(
       deferredParent: undefined,
       status: STATUS_PENDING,
       compute,
+      trackingVersion: 0, // Initialize version tracking
     };
 
     // Direct function declaration is more efficient than IIFE

@@ -45,6 +45,7 @@ export function createEffectFactory(
       dependencyTail:  undefined,
       deferredParent:  undefined,
       nextScheduled: undefined,
+      trackingVersion: 0, // Initialize version tracking
       flush(): void {
         if (cleanup) {
           cleanup();

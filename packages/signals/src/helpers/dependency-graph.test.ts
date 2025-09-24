@@ -49,6 +49,7 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
+        trackingVersion: 0,
       };
       
       // First call creates the dependency
@@ -80,6 +81,7 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
+        trackingVersion: 0,
       };
       
       // Create dependency manually
@@ -111,6 +113,7 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
+        trackingVersion: 0,
       };
       
       helpers.trackDependency(source, target);
@@ -133,6 +136,7 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
+        trackingVersion: 0,
       };
       
       // Add dependencies from multiple sources
@@ -167,6 +171,7 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
+        trackingVersion: 0,
       };
       
       // Create initial dependency
@@ -201,6 +206,7 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
+          trackingVersion: 0,
         };
         
         helpers.trackDependency(source, target);
@@ -228,6 +234,7 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
+          trackingVersion: 0,
         };
         
         const target2: ConsumerNode = {
@@ -236,6 +243,7 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
+          trackingVersion: 0,
         };
         
         helpers.trackDependency(source, target1);
@@ -270,6 +278,7 @@ describe('Dependency Graph Helpers', () => {
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
+          trackingVersion: 0,
         };
         
         helpers.trackDependency(source, target);
@@ -364,6 +373,7 @@ describe('Dependency Graph Helpers', () => {
         dependencyTail: undefined,
         deferredParent: undefined,
         status: flags,
+        trackingVersion: 0,
       };
   
       if (isScheduled) {
@@ -381,7 +391,8 @@ describe('Dependency Graph Helpers', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         prevConsumer: undefined,
-        nextConsumer: undefined
+        nextConsumer: undefined,
+        version: 0,
       };
     }
   

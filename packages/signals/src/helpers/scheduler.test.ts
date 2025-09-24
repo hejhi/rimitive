@@ -19,6 +19,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     // Create a dependency to trigger propagation
@@ -29,6 +30,7 @@ describe('NodeScheduler', () => {
       prevConsumer: undefined,
       prevDependency: undefined,
       nextDependency: undefined,
+      version: 0,
     };
 
     scheduler.startBatch();
@@ -48,6 +50,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     const dependency = {
@@ -57,6 +60,7 @@ describe('NodeScheduler', () => {
       prevConsumer: undefined,
       prevDependency: undefined,
       nextDependency: undefined,
+      version: 0,
     };
 
     // Schedule once through propagation
@@ -82,6 +86,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     // First disposal
@@ -112,6 +117,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     const node2: ScheduledNode = {
@@ -122,6 +128,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     const node3: ScheduledNode = {
@@ -132,6 +139,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     // Create dependencies to schedule nodes through propagation
@@ -142,6 +150,7 @@ describe('NodeScheduler', () => {
       prevConsumer: undefined,
       prevDependency: undefined,
       nextDependency: undefined,
+      version: 0,
     };
 
     const dep2 = {
@@ -151,6 +160,7 @@ describe('NodeScheduler', () => {
       prevConsumer: undefined,
       prevDependency: undefined,
       nextDependency: undefined,
+      version: 0,
     };
 
     const dep3 = {
@@ -160,6 +170,7 @@ describe('NodeScheduler', () => {
       prevConsumer: undefined,
       prevDependency: undefined,
       nextDependency: undefined,
+      version: 0,
     };
 
     // Schedule through propagation
@@ -193,6 +204,7 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      trackingVersion: 0,
     };
 
     const dependency = {
@@ -202,6 +214,7 @@ describe('NodeScheduler', () => {
       prevConsumer: undefined,
       prevDependency: undefined,
       nextDependency: undefined,
+      version: 0,
     };
 
     // Start batch to prevent auto-flush
