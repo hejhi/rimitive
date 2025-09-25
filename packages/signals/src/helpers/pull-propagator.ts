@@ -10,10 +10,10 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
 
-// Pooled manual array stack for zero-allocation, zero-method-call performance
-interface StackPool {
-  nodes: DerivedNode[];
-  size: number;
+// Alien-signals style linked list stack node
+interface StackNode {
+  node: DerivedNode;
+  prev: StackNode | undefined;
 }
 
 
@@ -31,8 +31,6 @@ export interface PullPropagator {
 * - Debuggable (visible stack state)
 */
 export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
-  // Global pool of reusable stack structures
-  const stackPool: (StackPool | undefined)[] = [];
 
   // Alien-signals style shallow propagation: efficiently check sibling dependencies
   function shallowCheck(startDep: DerivedNode['dependencies']): boolean {
@@ -56,24 +54,22 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
   }
 
   const pullUpdates = (rootNode: DerivedNode): void => {
-    // Lazy allocation - only create stack when needed
-    let stackObj: StackPool | null = null;
-    let stack: DerivedNode[] | null = null;
-    let stackTop = -1; // Manual stack pointer
+    // Alien-signals style linked list stack - only allocate nodes when needed
+    let stackHead: StackNode | undefined;
     let depth = 0; // Track traversal depth like alien-signals
 
     let current: DerivedNode = rootNode;
     let oldValue: unknown;
     let newValue: unknown;
 
-    try {
-      // Single-pass traversal with manual array stack
-      traversal: do {
+    // Single-pass traversal with linked list stack
+    traversal: do {
         // Early exit for clean nodes
         if (current.status === STATUS_CLEAN) {
-          // Manual pop from stack and continue
-          if (stackTop < 0) break;
-          current = stack![stackTop--]!;
+          // Pop from linked list stack and continue
+          if (!stackHead) break;
+          current = stackHead.node;
+          stackHead = stackHead.prev;
           depth--;
           continue;
         }
@@ -89,16 +85,17 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             current.value = newValue;
             current.status = STATUS_DIRTY;
             // Mark parent (if on stack) as dirty
-            if (stackTop >= 0) {
-              stack![stackTop]!.status = STATUS_DIRTY;
+            if (stackHead) {
+              stackHead.node.status = STATUS_DIRTY;
             }
           } else {
             current.status = STATUS_CLEAN;
           }
 
           // Continue with parent from stack
-          if (stackTop < 0) break;
-          current = stack![stackTop--]!;
+          if (!stackHead) break;
+          current = stackHead.node;
+          stackHead = stackHead.prev;
           depth--;
           continue;
         }
@@ -117,12 +114,13 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             current.value = newValue;
             current.status = STATUS_DIRTY;
 
-            if (stackTop >= 0 && stack) stack[stackTop]!.status = STATUS_DIRTY;
+            if (stackHead) stackHead.node.status = STATUS_DIRTY;
           } else current.status = STATUS_CLEAN;
 
-          if (stackTop < 0) break;
+          if (!stackHead) break;
 
-          current = stack![stackTop--]!;
+          current = stackHead.node;
+          stackHead = stackHead.prev;
           depth--;
           continue;
         }
@@ -140,13 +138,8 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           // PENDING computed - descend into it
           if (producer.status === STATUS_PENDING && 'compute' in producer) {
             const derivedProducer = producer as DerivedNode;
-            // Lazy allocation - only create stack when we need to push
-            if (!stackObj) {
-              stackObj = stackPool.pop() || { nodes: new Array(32), size: 0 };
-              stack = stackObj.nodes;
-            }
-            // Manual push onto stack before descending
-            stack![++stackTop] = current;
+            // Alien-signals push: create new stack node
+            stackHead = { node: current, prev: stackHead };
             depth++;
             current = derivedProducer;
             continue traversal;
@@ -159,18 +152,12 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
         // All dependencies clean - only update status if needed
         if (current.status !== STATUS_CLEAN) current.status = STATUS_CLEAN;
-        if (stackTop < 0) break;
+        if (!stackHead) break;
 
-        current = stack![stackTop--]!;
+        current = stackHead.node;
+        stackHead = stackHead.prev;
         depth--;
       } while (true);
-    } finally {
-      // Clean and return stack to pool (only if allocated)
-      if (stackObj) {
-        stackObj.size = 0;
-        stackPool.push(stackObj);
-      }
-    }
   };
 
   return { pullUpdates };
