@@ -106,55 +106,18 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         // PENDING status with dependencies - need to check them
         let dep = current.dependencies!; // We know it exists from the check above
 
-        // ALIEN-SIGNALS SHALLOW CHECK: Try shallow propagation first for multiple deps
-        if (dep.nextDependency) {
-          const shallowResult = shallowCheck(dep);
-          if (shallowResult) {
-            // Found dirty in shallow check - can recompute immediately
-            oldValue = current.value;
-            newValue = track(ctx, current, current.compute);
-
-            if (newValue !== oldValue) {
-              current.value = newValue;
-              current.status = STATUS_DIRTY;
-              if (stackTop >= 0 && stack) {
-                stack[stackTop]!.status = STATUS_DIRTY;
-              }
-            } else {
-              current.status = STATUS_CLEAN;
-            }
-
-            if (stackTop < 0) break;
-            current = stack![stackTop--]!;
-            depth--;
-            continue;
-          }
-        }
-
-        // Optimized: Check if all deps might be clean by sampling first
-        const firstProducer = dep.producer;
-        const firstStatus = firstProducer.status;
-
-        // Common case optimization: if first dep is CLEAN and no next dep, we're done
-        if (firstStatus === STATUS_CLEAN && !dep.nextDependency) {
-          current.status = STATUS_CLEAN;
-          if (stackTop < 0) break;
-          current = stack![stackTop--]!;
-          depth--;
-          continue;
-        }
-
-        // Additional optimization: if first dep is DIRTY, recompute immediately without loop
-        if (firstStatus === STATUS_DIRTY) {
+        // ALIEN-SIGNALS SHALLOW CHECK: Try shallow propagation first
+        const shallowResult = shallowCheck(dep);
+        if (shallowResult) {
+          // Found dirty in shallow check - can recompute immediately
           oldValue = current.value;
           newValue = track(ctx, current, current.compute);
 
           if (newValue !== oldValue) {
             current.value = newValue;
             current.status = STATUS_DIRTY;
-            // Mark parent (if on stack) as dirty
-            if (stackTop >= 0) {
-              stack![stackTop]!.status = STATUS_DIRTY;
+            if (stackTop >= 0 && stack) {
+              stack[stackTop]!.status = STATUS_DIRTY;
             }
           } else {
             current.status = STATUS_CLEAN;

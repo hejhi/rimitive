@@ -346,6 +346,56 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/propagator-integration.test.ts",
+      "tests": [
+        {
+          "name": "should call propagate at end of batch for accumulated roots",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should call propagate at end of batch for accumulated roots",
+          "state": "passed"
+        },
+        {
+          "name": "should not call propagate for small batches",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should not call propagate for small batches",
+          "state": "passed"
+        },
+        {
+          "name": "should handle effects flush after propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should handle effects flush after propagate",
+          "state": "passed"
+        },
+        {
+          "name": "should call propagate at batch commit",
+          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should call propagate at batch commit",
+          "state": "passed"
+        },
+        {
+          "name": "should handle nested batches correctly with propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should handle nested batches correctly with propagate",
+          "state": "passed"
+        },
+        {
+          "name": "should handle deep dependency chains efficiently",
+          "fullName": "Propagator Integration with Signal and Batch > Performance Characteristics > should handle deep dependency chains efficiently",
+          "state": "passed"
+        },
+        {
+          "name": "should handle simultaneous dispose and propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle simultaneous dispose and propagate",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty propagation queue gracefully",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle empty propagation queue gracefully",
+          "state": "passed"
+        },
+        {
+          "name": "should handle very large batches efficiently",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle very large batches efficiently",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/effect.test.ts",
       "tests": [
         {
@@ -426,91 +476,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/propagator-integration.test.ts",
-      "tests": [
-        {
-          "name": "should call propagate at end of batch for accumulated roots",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should call propagate at end of batch for accumulated roots",
-          "state": "passed"
-        },
-        {
-          "name": "should not call propagate for small batches",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should not call propagate for small batches",
-          "state": "passed"
-        },
-        {
-          "name": "should handle effects flush after propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should handle effects flush after propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should call propagate at batch commit",
-          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should call propagate at batch commit",
-          "state": "passed"
-        },
-        {
-          "name": "should handle nested batches correctly with propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should handle nested batches correctly with propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should handle deep dependency chains efficiently",
-          "fullName": "Propagator Integration with Signal and Batch > Performance Characteristics > should handle deep dependency chains efficiently",
-          "state": "passed"
-        },
-        {
-          "name": "should handle simultaneous dispose and propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle simultaneous dispose and propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty propagation queue gracefully",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle empty propagation queue gracefully",
-          "state": "passed"
-        },
-        {
-          "name": "should handle very large batches efficiently",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle very large batches efficiently",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
-      "tests": [
-        {
-          "name": "should provide a propagate function that marks nodes",
-          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should call visitor for leaf nodes",
-          "fullName": "GraphTraversal > should call visitor for leaf nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should traverse through intermediate nodes",
-          "fullName": "GraphTraversal > should traverse through intermediate nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should handle diamond dependencies with already-processed nodes",
-          "fullName": "GraphTraversal > should handle diamond dependencies with already-processed nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should handle complex diamond with backtracking after skipped nodes",
-          "fullName": "GraphTraversal > should handle complex diamond with backtracking after skipped nodes",
-          "state": "passed"
-        },
-        {
-          "name": "can be used to create a minimal context without scheduling",
-          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
       "tests": [
         {
@@ -571,6 +536,41 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
+      "tests": [
+        {
+          "name": "should provide a propagate function that marks nodes",
+          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should call visitor for leaf nodes",
+          "fullName": "GraphTraversal > should call visitor for leaf nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should traverse through intermediate nodes",
+          "fullName": "GraphTraversal > should traverse through intermediate nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should handle diamond dependencies with already-processed nodes",
+          "fullName": "GraphTraversal > should handle diamond dependencies with already-processed nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should handle complex diamond with backtracking after skipped nodes",
+          "fullName": "GraphTraversal > should handle complex diamond with backtracking after skipped nodes",
+          "state": "passed"
+        },
+        {
+          "name": "can be used to create a minimal context without scheduling",
+          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
       "tests": [
         {
@@ -616,6 +616,71 @@
         {
           "name": "should properly type the API based on factories",
           "fullName": "createSignalAPI > should properly type the API based on factories",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/pull-update-efficiency.test.ts",
+      "tests": [
+        {
+          "name": "should NOT recompute when all dependencies are clean",
+          "fullName": "Pull Update Efficiency > should NOT recompute when all dependencies are clean",
+          "state": "passed"
+        },
+        {
+          "name": "CORRECT: must recompute PENDING nodes to detect if value changed",
+          "fullName": "Pull Update Efficiency > CORRECT: must recompute PENDING nodes to detect if value changed",
+          "state": "passed"
+        },
+        {
+          "name": "should NOT recompute descendants when intermediate values dont change",
+          "fullName": "Pull Update Efficiency > should NOT recompute descendants when intermediate values dont change",
+          "state": "passed"
+        },
+        {
+          "name": "should NOT recompute when all ancestors are unchanged",
+          "fullName": "Pull Update Efficiency > should NOT recompute when all ancestors are unchanged",
+          "state": "passed"
+        },
+        {
+          "name": "should only update PENDING nodes in the pull path",
+          "fullName": "Pull Update Efficiency > should only update PENDING nodes in the pull path",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
+      "tests": [
+        {
+          "name": "should schedule nodes during propagation",
+          "fullName": "NodeScheduler > should schedule nodes during propagation",
+          "state": "passed"
+        },
+        {
+          "name": "should not schedule already scheduled nodes",
+          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should dispose node only once",
+          "fullName": "NodeScheduler > should dispose node only once",
+          "state": "passed"
+        },
+        {
+          "name": "should flush all scheduled nodes in FIFO order",
+          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty flush",
+          "fullName": "NodeScheduler > should handle empty flush",
+          "state": "passed"
+        },
+        {
+          "name": "should clear nextScheduled flag during flush",
+          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
           "state": "passed"
         }
       ]
@@ -701,31 +766,36 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/pull-update-efficiency.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
       "tests": [
         {
-          "name": "should NOT recompute when all dependencies are clean",
-          "fullName": "Pull Update Efficiency > should NOT recompute when all dependencies are clean",
+          "name": "should correctly prune dependencies when access pattern changes",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should correctly prune dependencies when access pattern changes",
           "state": "passed"
         },
         {
-          "name": "CORRECT: must recompute PENDING nodes to detect if value changed",
-          "fullName": "Pull Update Efficiency > CORRECT: must recompute PENDING nodes to detect if value changed",
+          "name": "should handle reordering of dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should handle reordering of dependencies",
           "state": "passed"
         },
         {
-          "name": "should NOT recompute descendants when intermediate values dont change",
-          "fullName": "Pull Update Efficiency > should NOT recompute descendants when intermediate values dont change",
+          "name": "should not leak memory with frequently changing dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/conditional-dependency-weakmap.test.ts",
+      "tests": [
+        {
+          "name": "should correctly re-establish conditional dependencies after pruning",
+          "fullName": "Conditional Dependencies with WeakMap > should correctly re-establish conditional dependencies after pruning",
           "state": "passed"
         },
         {
-          "name": "should NOT recompute when all ancestors are unchanged",
-          "fullName": "Pull Update Efficiency > should NOT recompute when all ancestors are unchanged",
-          "state": "passed"
-        },
-        {
-          "name": "should only update PENDING nodes in the pull path",
-          "fullName": "Pull Update Efficiency > should only update PENDING nodes in the pull path",
+          "name": "should handle multiple cycles of conditional dependency changes",
+          "fullName": "Conditional Dependencies with WeakMap > should handle multiple cycles of conditional dependency changes",
           "state": "passed"
         }
       ]
@@ -751,56 +821,21 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
       "tests": [
         {
-          "name": "should schedule nodes during propagation",
-          "fullName": "NodeScheduler > should schedule nodes during propagation",
+          "name": "should read computed value without establishing dependencies",
+          "fullName": "Computed peek() > should read computed value without establishing dependencies",
           "state": "passed"
         },
         {
-          "name": "should not schedule already scheduled nodes",
-          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
+          "name": "should return the same value as .value",
+          "fullName": "Computed peek() > should return the same value as .value",
           "state": "passed"
         },
         {
-          "name": "should dispose node only once",
-          "fullName": "NodeScheduler > should dispose node only once",
-          "state": "passed"
-        },
-        {
-          "name": "should flush all scheduled nodes in FIFO order",
-          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty flush",
-          "fullName": "NodeScheduler > should handle empty flush",
-          "state": "passed"
-        },
-        {
-          "name": "should clear nextScheduled flag during flush",
-          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
-      "tests": [
-        {
-          "name": "should correctly prune dependencies when access pattern changes",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should correctly prune dependencies when access pattern changes",
-          "state": "passed"
-        },
-        {
-          "name": "should handle reordering of dependencies",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should handle reordering of dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should not leak memory with frequently changing dependencies",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
+          "name": "should work with nested computeds",
+          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]
@@ -821,41 +856,6 @@
         {
           "name": "FAILS: should prune middle dependencies correctly",
           "fullName": "Pruning Bug - Dynamic Dependencies > FAILS: should prune middle dependencies correctly",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/conditional-dependency-weakmap.test.ts",
-      "tests": [
-        {
-          "name": "should correctly re-establish conditional dependencies after pruning",
-          "fullName": "Conditional Dependencies with WeakMap > should correctly re-establish conditional dependencies after pruning",
-          "state": "passed"
-        },
-        {
-          "name": "should handle multiple cycles of conditional dependency changes",
-          "fullName": "Conditional Dependencies with WeakMap > should handle multiple cycles of conditional dependency changes",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
-      "tests": [
-        {
-          "name": "should read computed value without establishing dependencies",
-          "fullName": "Computed peek() > should read computed value without establishing dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should return the same value as .value",
-          "fullName": "Computed peek() > should return the same value as .value",
-          "state": "passed"
-        },
-        {
-          "name": "should work with nested computeds",
-          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]
