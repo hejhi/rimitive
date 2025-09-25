@@ -10,9 +10,6 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
-// Maximum traversal depth to prevent infinite recursion
-const MAX_DEPTH = 1000;
-
 // Pooled manual array stack for zero-allocation, zero-method-call performance
 interface StackPool {
   nodes: DerivedNode[];
@@ -42,9 +39,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
     let stackObj: StackPool | null = null;
     let stack: DerivedNode[] | null = null;
     let stackTop = -1; // Manual stack pointer
-    // Depth tracks traversal depth (= stackTop + 1). Maintained separately for
-    // clarity and to enable future depth-based optimizations
-    let depth = 0;
+    let depth = 0; // Track traversal depth like alien-signals
 
     let current: DerivedNode = rootNode;
     let oldValue: unknown;
@@ -172,12 +167,6 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
               // Manual push onto stack before descending
               stack![++stackTop] = current;
               depth++;
-
-              // Safeguard against infinite recursion
-              if (depth > MAX_DEPTH) {
-                throw new Error('Maximum update depth exceeded. This may indicate a circular dependency.');
-              }
-
               current = derivedProducer;
               continue traversal;
             }
