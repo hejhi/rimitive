@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
+const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
 
 // Pooled manual array stack for zero-allocation, zero-method-call performance
 interface StackPool {
@@ -33,6 +33,27 @@ export interface PullPropagator {
 export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
   // Global pool of reusable stack structures
   const stackPool: (StackPool | undefined)[] = [];
+
+  // Alien-signals style shallow propagation: efficiently check sibling dependencies
+  function shallowCheck(startDep: DerivedNode['dependencies']): boolean {
+    // Check multiple dependencies at shallow level without deep traversal
+    let dep = startDep;
+    let foundDirty = false;
+
+    while (dep) {
+      const producer = dep.producer;
+      if (producer.status === STATUS_DIRTY) {
+        foundDirty = true;
+        break;
+      } else if (producer.status === STATUS_PENDING && 'compute' in producer) {
+        // Found pending computed - need deep check, exit shallow mode
+        return false;
+      }
+      dep = dep.nextDependency;
+    }
+
+    return foundDirty;
+  }
 
   const pullUpdates = (rootNode: DerivedNode): void => {
     // Lazy allocation - only create stack when needed
@@ -85,6 +106,31 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
           // PENDING status with dependencies - need to check them
           let dep = current.dependencies!; // We know it exists from the check above
+
+          // ALIEN-SIGNALS SHALLOW CHECK: Try shallow propagation first for multiple deps
+          if (dep.nextDependency) {
+            const shallowResult = shallowCheck(dep);
+            if (shallowResult) {
+              // Found dirty in shallow check - can recompute immediately
+              oldValue = current.value;
+              newValue = track(ctx, current, current.compute);
+
+              if (newValue !== oldValue) {
+                current.value = newValue;
+                current.status = STATUS_DIRTY;
+                if (stackTop >= 0 && stack) {
+                  stack[stackTop]!.status = STATUS_DIRTY;
+                }
+              } else {
+                current.status = STATUS_CLEAN;
+              }
+
+              if (stackTop < 0) break;
+              current = stack![stackTop--]!;
+              depth--;
+              continue;
+            }
+          }
 
           // Optimized: Check if all deps might be clean by sampling first
           const firstProducer = dep.producer;
