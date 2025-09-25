@@ -196,6 +196,31 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
+      "tests": [
+        {
+          "name": "should handle dependencies accessed in different orders without creating duplicates",
+          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
+          "state": "passed"
+        },
+        {
+          "name": "should properly prune old dependencies with version-based tracking",
+          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
+          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
+          "state": "passed"
+        },
+        {
+          "name": "should handle conditional dependencies that appear and disappear",
+          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal.test.ts",
       "tests": [
         {
@@ -341,6 +366,16 @@
         {
           "name": "should maintain consistency across multiple computeds",
           "fullName": "Global State Management > integration scenarios > should maintain consistency across multiple computeds",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
+      "tests": [
+        {
+          "name": "should demonstrate O(n) performance with version-based tracking",
+          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
           "state": "passed"
         }
       ]
@@ -561,86 +596,36 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
       "tests": [
         {
-          "name": "should demonstrate O(n) performance with version-based tracking",
-          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
-      "tests": [
-        {
-          "name": "should create an API with all provided factories",
-          "fullName": "createSignalAPI > should create an API with all provided factories",
+          "name": "should schedule nodes during propagation",
+          "fullName": "NodeScheduler > should schedule nodes during propagation",
           "state": "passed"
         },
         {
-          "name": "should create a minimal API without effects",
-          "fullName": "createSignalAPI > should create a minimal API without effects",
+          "name": "should not schedule already scheduled nodes",
+          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
           "state": "passed"
         },
         {
-          "name": "should work with custom context and work queue",
-          "fullName": "createSignalAPI > should work with custom context and work queue",
+          "name": "should dispose node only once",
+          "fullName": "NodeScheduler > should dispose node only once",
           "state": "passed"
         },
         {
-          "name": "should allow extending context with custom work queue",
-          "fullName": "createSignalAPI > should allow extending context with custom work queue",
+          "name": "should flush all scheduled nodes in FIFO order",
+          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
           "state": "passed"
         },
         {
-          "name": "should allow custom factories to access extended context",
-          "fullName": "createSignalAPI > should allow custom factories to access extended context",
+          "name": "should handle empty flush",
+          "fullName": "NodeScheduler > should handle empty flush",
           "state": "passed"
         },
         {
-          "name": "should handle dispose method correctly",
-          "fullName": "createSignalAPI > should handle dispose method correctly",
-          "state": "passed"
-        },
-        {
-          "name": "should support multiple independent APIs",
-          "fullName": "createSignalAPI > should support multiple independent APIs",
-          "state": "passed"
-        },
-        {
-          "name": "should work with custom extensions alongside signals",
-          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
-          "state": "passed"
-        },
-        {
-          "name": "should properly type the API based on factories",
-          "fullName": "createSignalAPI > should properly type the API based on factories",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
-      "tests": [
-        {
-          "name": "should handle dependencies accessed in different orders without creating duplicates",
-          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
-          "state": "passed"
-        },
-        {
-          "name": "should properly prune old dependencies with version-based tracking",
-          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
-          "state": "passed"
-        },
-        {
-          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
-          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
-          "state": "passed"
-        },
-        {
-          "name": "should handle conditional dependencies that appear and disappear",
-          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
+          "name": "should clear nextScheduled flag during flush",
+          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
           "state": "passed"
         }
       ]
@@ -701,41 +686,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/scheduler.test.ts",
-      "tests": [
-        {
-          "name": "should schedule nodes during propagation",
-          "fullName": "NodeScheduler > should schedule nodes during propagation",
-          "state": "passed"
-        },
-        {
-          "name": "should not schedule already scheduled nodes",
-          "fullName": "NodeScheduler > should not schedule already scheduled nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should dispose node only once",
-          "fullName": "NodeScheduler > should dispose node only once",
-          "state": "passed"
-        },
-        {
-          "name": "should flush all scheduled nodes in FIFO order",
-          "fullName": "NodeScheduler > should flush all scheduled nodes in FIFO order",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty flush",
-          "fullName": "NodeScheduler > should handle empty flush",
-          "state": "passed"
-        },
-        {
-          "name": "should clear nextScheduled flag during flush",
-          "fullName": "NodeScheduler > should clear nextScheduled flag during flush",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/pull-update-efficiency.test.ts",
       "tests": [
         {
@@ -766,46 +716,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
-      "tests": [
-        {
-          "name": "should correctly prune dependencies when access pattern changes",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should correctly prune dependencies when access pattern changes",
-          "state": "passed"
-        },
-        {
-          "name": "should handle reordering of dependencies",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should handle reordering of dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should not leak memory with frequently changing dependencies",
-          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
-      "tests": [
-        {
-          "name": "should read computed value without establishing dependencies",
-          "fullName": "Computed peek() > should read computed value without establishing dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should return the same value as .value",
-          "fullName": "Computed peek() > should return the same value as .value",
-          "state": "passed"
-        },
-        {
-          "name": "should work with nested computeds",
-          "fullName": "Computed peek() > should work with nested computeds",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
       "tests": [
         {
@@ -826,16 +736,71 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/conditional-dependency-weakmap.test.ts",
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
       "tests": [
         {
-          "name": "should correctly re-establish conditional dependencies after pruning",
-          "fullName": "Conditional Dependencies with WeakMap > should correctly re-establish conditional dependencies after pruning",
+          "name": "should correctly prune dependencies when access pattern changes",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should correctly prune dependencies when access pattern changes",
           "state": "passed"
         },
         {
-          "name": "should handle multiple cycles of conditional dependency changes",
-          "fullName": "Conditional Dependencies with WeakMap > should handle multiple cycles of conditional dependency changes",
+          "name": "should handle reordering of dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should handle reordering of dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should not leak memory with frequently changing dependencies",
+          "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
+      "tests": [
+        {
+          "name": "should create an API with all provided factories",
+          "fullName": "createSignalAPI > should create an API with all provided factories",
+          "state": "passed"
+        },
+        {
+          "name": "should create a minimal API without effects",
+          "fullName": "createSignalAPI > should create a minimal API without effects",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom context and work queue",
+          "fullName": "createSignalAPI > should work with custom context and work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow extending context with custom work queue",
+          "fullName": "createSignalAPI > should allow extending context with custom work queue",
+          "state": "passed"
+        },
+        {
+          "name": "should allow custom factories to access extended context",
+          "fullName": "createSignalAPI > should allow custom factories to access extended context",
+          "state": "passed"
+        },
+        {
+          "name": "should handle dispose method correctly",
+          "fullName": "createSignalAPI > should handle dispose method correctly",
+          "state": "passed"
+        },
+        {
+          "name": "should support multiple independent APIs",
+          "fullName": "createSignalAPI > should support multiple independent APIs",
+          "state": "passed"
+        },
+        {
+          "name": "should work with custom extensions alongside signals",
+          "fullName": "createSignalAPI > should work with custom extensions alongside signals",
+          "state": "passed"
+        },
+        {
+          "name": "should properly type the API based on factories",
+          "fullName": "createSignalAPI > should properly type the API based on factories",
           "state": "passed"
         }
       ]
@@ -861,6 +826,21 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/conditional-dependency-weakmap.test.ts",
+      "tests": [
+        {
+          "name": "should correctly re-establish conditional dependencies after pruning",
+          "fullName": "Conditional Dependencies with WeakMap > should correctly re-establish conditional dependencies after pruning",
+          "state": "passed"
+        },
+        {
+          "name": "should handle multiple cycles of conditional dependency changes",
+          "fullName": "Conditional Dependencies with WeakMap > should handle multiple cycles of conditional dependency changes",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
       "tests": [
         {
@@ -876,6 +856,26 @@
         {
           "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
           "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
+      "tests": [
+        {
+          "name": "should read computed value without establishing dependencies",
+          "fullName": "Computed peek() > should read computed value without establishing dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should return the same value as .value",
+          "fullName": "Computed peek() > should return the same value as .value",
+          "state": "passed"
+        },
+        {
+          "name": "should work with nested computeds",
+          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]

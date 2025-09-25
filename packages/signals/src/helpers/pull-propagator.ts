@@ -35,9 +35,9 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
   const stackPool: (StackPool | undefined)[] = [];
 
   const pullUpdates = (rootNode: DerivedNode): void => {
-    // Borrow pooled stack or create new one
-    const stackObj = stackPool.pop() || { nodes: new Array(32), size: 0 };
-    const { nodes: stack } = stackObj;
+    // Lazy allocation - only create stack when needed
+    let stackObj: StackPool | null = null;
+    let stack: DerivedNode[] | null = null;
     let stackTop = -1; // Manual stack pointer
 
     let current: DerivedNode = rootNode;
@@ -52,7 +52,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           if (current.status === STATUS_CLEAN) {
             // Manual pop from stack and continue
             if (stackTop < 0) break;
-            current = stack[stackTop--];
+            current = stack![stackTop--]!;
             continue;
           }
 
@@ -68,7 +68,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
               current.status = STATUS_DIRTY;
               // Mark parent (if on stack) as dirty
               if (stackTop >= 0) {
-                stack[stackTop].status = STATUS_DIRTY;
+                stack![stackTop]!.status = STATUS_DIRTY;
               }
             } else {
               current.status = STATUS_CLEAN;
@@ -76,7 +76,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
             // Continue with parent from stack
             if (stackTop < 0) break;
-            current = stack[stackTop--];
+            current = stack![stackTop--]!;
             continue;
           }
 
@@ -91,7 +91,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           if (firstStatus === STATUS_CLEAN && !dep.nextDependency) {
             current.status = STATUS_CLEAN;
             if (stackTop < 0) break;
-            current = stack[stackTop--];
+            current = stack![stackTop--]!;
             continue;
           }
 
@@ -105,14 +105,14 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
               current.status = STATUS_DIRTY;
               // Mark parent (if on stack) as dirty
               if (stackTop >= 0) {
-                stack[stackTop].status = STATUS_DIRTY;
+                stack![stackTop]!.status = STATUS_DIRTY;
               }
             } else {
               current.status = STATUS_CLEAN;
             }
 
             if (stackTop < 0) break;
-            current = stack[stackTop--];
+            current = stack![stackTop--]!;
             continue;
           }
 
@@ -139,22 +139,27 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
                 current.status = STATUS_DIRTY;
                 // Mark parent (if on stack) as dirty
                 if (stackTop >= 0) {
-                  stack[stackTop].status = STATUS_DIRTY;
+                  stack![stackTop]!.status = STATUS_DIRTY;
                 }
               } else {
                 current.status = STATUS_CLEAN;
               }
 
               if (stackTop < 0) break traversal;
-              current = stack[stackTop--];
+              current = stack![stackTop--]!;
               continue traversal;
             }
 
             // PENDING computed - descend into it
             if ('compute' in producer) {
               const derivedProducer = producer as DerivedNode;
-              // Manual push onto stack before descending (no allocation, no method call)
-              stack[++stackTop] = current;
+              // Lazy allocation - only create stack when we need to push
+              if (!stackObj) {
+                stackObj = stackPool.pop() || { nodes: new Array(32), size: 0 };
+                stack = stackObj.nodes;
+              }
+              // Manual push onto stack before descending
+              stack![++stackTop] = current;
               current = derivedProducer;
               continue traversal;
             }
@@ -171,12 +176,14 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           }
 
           if (stackTop < 0) break;
-          current = stack[stackTop--];
+          current = stack![stackTop--]!;
         } while (true);
     } finally {
-      // Clean and return stack to pool
-      stackObj.size = 0;
-      stackPool.push(stackObj);
+      // Clean and return stack to pool (only if allocated)
+      if (stackObj) {
+        stackObj.size = 0;
+        stackPool.push(stackObj);
+      }
     }
   };
 
