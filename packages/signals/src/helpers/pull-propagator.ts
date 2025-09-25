@@ -10,6 +10,9 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
+// Maximum traversal depth to prevent infinite recursion
+const MAX_DEPTH = 1000;
+
 // Pooled manual array stack for zero-allocation, zero-method-call performance
 interface StackPool {
   nodes: DerivedNode[];
@@ -39,6 +42,9 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
     let stackObj: StackPool | null = null;
     let stack: DerivedNode[] | null = null;
     let stackTop = -1; // Manual stack pointer
+    // Depth tracks traversal depth (= stackTop + 1). Maintained separately for
+    // clarity and to enable future depth-based optimizations
+    let depth = 0;
 
     let current: DerivedNode = rootNode;
     let oldValue: unknown;
@@ -53,6 +59,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             // Manual pop from stack and continue
             if (stackTop < 0) break;
             current = stack![stackTop--]!;
+            depth--;
             continue;
           }
 
@@ -77,6 +84,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             // Continue with parent from stack
             if (stackTop < 0) break;
             current = stack![stackTop--]!;
+            depth--;
             continue;
           }
 
@@ -92,6 +100,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             current.status = STATUS_CLEAN;
             if (stackTop < 0) break;
             current = stack![stackTop--]!;
+            depth--;
             continue;
           }
 
@@ -113,6 +122,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
             if (stackTop < 0) break;
             current = stack![stackTop--]!;
+            depth--;
             continue;
           }
 
@@ -147,6 +157,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
               if (stackTop < 0) break traversal;
               current = stack![stackTop--]!;
+              depth--;
               continue traversal;
             }
 
@@ -160,6 +171,13 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
               }
               // Manual push onto stack before descending
               stack![++stackTop] = current;
+              depth++;
+
+              // Safeguard against infinite recursion
+              if (depth > MAX_DEPTH) {
+                throw new Error('Maximum update depth exceeded. This may indicate a circular dependency.');
+              }
+
               current = derivedProducer;
               continue traversal;
             }
@@ -177,6 +195,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
           if (stackTop < 0) break;
           current = stack![stackTop--]!;
+          depth--;
         } while (true);
     } finally {
       // Clean and return stack to pool (only if allocated)
