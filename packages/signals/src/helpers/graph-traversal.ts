@@ -49,7 +49,7 @@ export function createGraphTraversal(): GraphTraversal {
   ): void => {
     let currentDependency: Dependency | undefined = subscribers;
 
-    outer: for (;;) {
+    traversal: for (;;) {
       const consumerNode: ToNode = currentDependency.consumer;
       const consumerNodeStatus = consumerNode.status;
 
@@ -67,7 +67,7 @@ export function createGraphTraversal(): GraphTraversal {
           currentDependency = dependencyStack.value;
           dependencyStack = dependencyStack.prev;
 
-          if (currentDependency !== undefined) continue outer;
+          if (currentDependency !== undefined) continue traversal;
         }
         break;
       }
@@ -76,10 +76,12 @@ export function createGraphTraversal(): GraphTraversal {
       consumerNode.status = STATUS_PENDING;
 
       // This is a leaf node (no subscribers) - notify the callback
-      if (!('subscribers' in consumerNode && consumerNode.subscribers)) onLeaf(consumerNode);
+      if (!('subscribers' in consumerNode && consumerNode.subscribers))
+        onLeaf(consumerNode);
       else {
         // Branch point: save siblings for backtracking
-        const consumerSubscribers: Dependency | undefined = consumerNode.subscribers;
+        const consumerSubscribers: Dependency | undefined =
+          consumerNode.subscribers;
 
         if (currentDependency === undefined) {
           // Traverse deeper into subscribers
@@ -99,14 +101,15 @@ export function createGraphTraversal(): GraphTraversal {
       }
 
       // Continue with next sibling in current level
-      if ((currentDependency = currentDependency.nextConsumer) !== undefined) continue;
+      if ((currentDependency = currentDependency.nextConsumer) !== undefined)
+        continue;
 
       // Backtrack from stack when sibling chain exhausted
       while (dependencyStack) {
         currentDependency = dependencyStack.value;
         dependencyStack = dependencyStack.prev;
 
-        if (currentDependency !== undefined) continue outer;
+        if (currentDependency !== undefined) continue traversal;
       }
 
       break;
