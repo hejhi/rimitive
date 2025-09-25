@@ -67,7 +67,7 @@ export function createGraphTraversal(): GraphTraversal {
           currentDependency = dependencyStack.value;
           dependencyStack = dependencyStack.prev;
 
-          if (currentDependency) continue outer;
+          if (currentDependency !== undefined) continue outer;
         }
         break;
       }
