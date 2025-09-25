@@ -129,43 +129,18 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           continue;
         }
 
-        // Traverse dependencies - optimized loop
+        // Find first PENDING computed to descend into (DIRTY cases handled by shallowCheck)
         while (dep) {
           const producer = dep.producer;
-          const depStatus = producer.status;
 
-          // Fast path: CLEAN dependency, skip to next
-          if (depStatus === STATUS_CLEAN) {
-            const next = dep.nextDependency;
-            if (!next) break; // All remaining deps checked
-            dep = next;
+          // Skip CLEAN dependencies
+          if (producer.status === STATUS_CLEAN) {
+            dep = dep.nextDependency;
             continue;
           }
 
-          // DIRTY dependency found - recompute immediately
-          if (depStatus === STATUS_DIRTY) {
-            oldValue = current.value;
-            newValue = track(ctx, current, current.compute);
-
-            if (newValue !== oldValue) {
-              current.value = newValue;
-              current.status = STATUS_DIRTY;
-              // Mark parent (if on stack) as dirty
-              if (stackTop >= 0) {
-                stack![stackTop]!.status = STATUS_DIRTY;
-              }
-            } else {
-              current.status = STATUS_CLEAN;
-            }
-
-            if (stackTop < 0) break traversal;
-            current = stack![stackTop--]!;
-            depth--;
-            continue traversal;
-          }
-
           // PENDING computed - descend into it
-          if ('compute' in producer) {
+          if (producer.status === STATUS_PENDING && 'compute' in producer) {
             const derivedProducer = producer as DerivedNode;
             // Lazy allocation - only create stack when we need to push
             if (!stackObj) {
@@ -179,10 +154,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             continue traversal;
           }
 
-          // Move to next dependency (signal dependencies should be CLEAN, skip)
-          const next = dep.nextDependency;
-          if (!next) break; // All remaining deps checked
-          dep = next;
+          dep = dep.nextDependency;
         }
 
         // All dependencies clean - only update status if needed
