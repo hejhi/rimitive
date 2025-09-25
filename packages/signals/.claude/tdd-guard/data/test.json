@@ -121,76 +121,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal.test.ts",
-      "tests": [
-        {
-          "name": "should create a signal with initial value",
-          "fullName": "signal > should create a signal with initial value",
-          "state": "passed"
-        },
-        {
-          "name": "should update signal value",
-          "fullName": "signal > should update signal value",
-          "state": "passed"
-        },
-        {
-          "name": "should update signal value with direct assignment",
-          "fullName": "signal > should update signal value with direct assignment",
-          "state": "passed"
-        },
-        {
-          "name": "should not trigger updates when value is same",
-          "fullName": "signal > should not trigger updates when value is same",
-          "state": "passed"
-        },
-        {
-          "name": "should increment version on value change",
-          "fullName": "signal > should increment version on value change",
-          "state": "passed"
-        },
-        {
-          "name": "should handle null and undefined values",
-          "fullName": "signal > should handle null and undefined values",
-          "state": "passed"
-        },
-        {
-          "name": "should handle object values with reference equality",
-          "fullName": "signal > should handle object values with reference equality",
-          "state": "passed"
-        },
-        {
-          "name": "should track dependencies when read inside computed",
-          "fullName": "signal > should track dependencies when read inside computed",
-          "state": "passed"
-        },
-        {
-          "name": "should notify subscribers on change",
-          "fullName": "signal > should notify subscribers on change",
-          "state": "passed"
-        },
-        {
-          "name": "should read value without tracking",
-          "fullName": "signal > peek > should read value without tracking",
-          "state": "passed"
-        },
-        {
-          "name": "should defer notifications in batch",
-          "fullName": "signal > batching behavior > should defer notifications in batch",
-          "state": "passed"
-        },
-        {
-          "name": "should handle array mutations",
-          "fullName": "signal > array signals > should handle array mutations",
-          "state": "passed"
-        },
-        {
-          "name": "should handle many subscribers efficiently",
-          "fullName": "signal > stress tests > should handle many subscribers efficiently",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/subscribe.test.ts",
       "tests": [
         {
@@ -261,6 +191,76 @@
         {
           "name": "should batch properly and only fire once with final value",
           "fullName": "Subscribe - Scheduled Updates > should batch properly and only fire once with final value",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal.test.ts",
+      "tests": [
+        {
+          "name": "should create a signal with initial value",
+          "fullName": "signal > should create a signal with initial value",
+          "state": "passed"
+        },
+        {
+          "name": "should update signal value",
+          "fullName": "signal > should update signal value",
+          "state": "passed"
+        },
+        {
+          "name": "should update signal value with direct assignment",
+          "fullName": "signal > should update signal value with direct assignment",
+          "state": "passed"
+        },
+        {
+          "name": "should not trigger updates when value is same",
+          "fullName": "signal > should not trigger updates when value is same",
+          "state": "passed"
+        },
+        {
+          "name": "should increment version on value change",
+          "fullName": "signal > should increment version on value change",
+          "state": "passed"
+        },
+        {
+          "name": "should handle null and undefined values",
+          "fullName": "signal > should handle null and undefined values",
+          "state": "passed"
+        },
+        {
+          "name": "should handle object values with reference equality",
+          "fullName": "signal > should handle object values with reference equality",
+          "state": "passed"
+        },
+        {
+          "name": "should track dependencies when read inside computed",
+          "fullName": "signal > should track dependencies when read inside computed",
+          "state": "passed"
+        },
+        {
+          "name": "should notify subscribers on change",
+          "fullName": "signal > should notify subscribers on change",
+          "state": "passed"
+        },
+        {
+          "name": "should read value without tracking",
+          "fullName": "signal > peek > should read value without tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should defer notifications in batch",
+          "fullName": "signal > batching behavior > should defer notifications in batch",
+          "state": "passed"
+        },
+        {
+          "name": "should handle array mutations",
+          "fullName": "signal > array signals > should handle array mutations",
+          "state": "passed"
+        },
+        {
+          "name": "should handle many subscribers efficiently",
+          "fullName": "signal > stress tests > should handle many subscribers efficiently",
           "state": "passed"
         }
       ]
@@ -346,6 +346,56 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/propagator-integration.test.ts",
+      "tests": [
+        {
+          "name": "should call propagate at end of batch for accumulated roots",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should call propagate at end of batch for accumulated roots",
+          "state": "passed"
+        },
+        {
+          "name": "should not call propagate for small batches",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should not call propagate for small batches",
+          "state": "passed"
+        },
+        {
+          "name": "should handle effects flush after propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should handle effects flush after propagate",
+          "state": "passed"
+        },
+        {
+          "name": "should call propagate at batch commit",
+          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should call propagate at batch commit",
+          "state": "passed"
+        },
+        {
+          "name": "should handle nested batches correctly with propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should handle nested batches correctly with propagate",
+          "state": "passed"
+        },
+        {
+          "name": "should handle deep dependency chains efficiently",
+          "fullName": "Propagator Integration with Signal and Batch > Performance Characteristics > should handle deep dependency chains efficiently",
+          "state": "passed"
+        },
+        {
+          "name": "should handle simultaneous dispose and propagate",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle simultaneous dispose and propagate",
+          "state": "passed"
+        },
+        {
+          "name": "should handle empty propagation queue gracefully",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle empty propagation queue gracefully",
+          "state": "passed"
+        },
+        {
+          "name": "should handle very large batches efficiently",
+          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle very large batches efficiently",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/effect.test.ts",
       "tests": [
         {
@@ -426,101 +476,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
-      "tests": [
-        {
-          "name": "should provide a propagate function that marks nodes",
-          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should call visitor for leaf nodes",
-          "fullName": "GraphTraversal > should call visitor for leaf nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should traverse through intermediate nodes",
-          "fullName": "GraphTraversal > should traverse through intermediate nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should handle diamond dependencies with already-processed nodes",
-          "fullName": "GraphTraversal > should handle diamond dependencies with already-processed nodes",
-          "state": "passed"
-        },
-        {
-          "name": "should handle complex diamond with backtracking after skipped nodes",
-          "fullName": "GraphTraversal > should handle complex diamond with backtracking after skipped nodes",
-          "state": "passed"
-        },
-        {
-          "name": "can be used to create a minimal context without scheduling",
-          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/propagator-integration.test.ts",
-      "tests": [
-        {
-          "name": "should call propagate at end of batch for accumulated roots",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should call propagate at end of batch for accumulated roots",
-          "state": "passed"
-        },
-        {
-          "name": "should not call propagate for small batches",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should not call propagate for small batches",
-          "state": "passed"
-        },
-        {
-          "name": "should handle effects flush after propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Signal.ts Integration > should handle effects flush after propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should call propagate at batch commit",
-          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should call propagate at batch commit",
-          "state": "passed"
-        },
-        {
-          "name": "should handle nested batches correctly with propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Batch.ts Integration > should handle nested batches correctly with propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should handle deep dependency chains efficiently",
-          "fullName": "Propagator Integration with Signal and Batch > Performance Characteristics > should handle deep dependency chains efficiently",
-          "state": "passed"
-        },
-        {
-          "name": "should handle simultaneous dispose and propagate",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle simultaneous dispose and propagate",
-          "state": "passed"
-        },
-        {
-          "name": "should handle empty propagation queue gracefully",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle empty propagation queue gracefully",
-          "state": "passed"
-        },
-        {
-          "name": "should handle very large batches efficiently",
-          "fullName": "Propagator Integration with Signal and Batch > Edge Cases > should handle very large batches efficiently",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
-      "tests": [
-        {
-          "name": "should demonstrate O(n) performance with version-based tracking",
-          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
       "tests": [
         {
@@ -571,6 +526,51 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/helpers/graph-traversal.test.ts",
+      "tests": [
+        {
+          "name": "should provide a propagate function that marks nodes",
+          "fullName": "GraphTraversal > should provide a propagate function that marks nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should call visitor for leaf nodes",
+          "fullName": "GraphTraversal > should call visitor for leaf nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should traverse through intermediate nodes",
+          "fullName": "GraphTraversal > should traverse through intermediate nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should handle diamond dependencies with already-processed nodes",
+          "fullName": "GraphTraversal > should handle diamond dependencies with already-processed nodes",
+          "state": "passed"
+        },
+        {
+          "name": "should handle complex diamond with backtracking after skipped nodes",
+          "fullName": "GraphTraversal > should handle complex diamond with backtracking after skipped nodes",
+          "state": "passed"
+        },
+        {
+          "name": "can be used to create a minimal context without scheduling",
+          "fullName": "GraphTraversal > can be used to create a minimal context without scheduling",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
+      "tests": [
+        {
+          "name": "should demonstrate O(n) performance with version-based tracking",
+          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/api.test.ts",
       "tests": [
         {
@@ -616,6 +616,31 @@
         {
           "name": "should properly type the API based on factories",
           "fullName": "createSignalAPI > should properly type the API based on factories",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
+      "tests": [
+        {
+          "name": "should handle dependencies accessed in different orders without creating duplicates",
+          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
+          "state": "passed"
+        },
+        {
+          "name": "should properly prune old dependencies with version-based tracking",
+          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
+          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
+          "state": "passed"
+        },
+        {
+          "name": "should handle conditional dependencies that appear and disappear",
+          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
           "state": "passed"
         }
       ]
@@ -711,31 +736,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
-      "tests": [
-        {
-          "name": "should handle dependencies accessed in different orders without creating duplicates",
-          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
-          "state": "passed"
-        },
-        {
-          "name": "should properly prune old dependencies with version-based tracking",
-          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
-          "state": "passed"
-        },
-        {
-          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
-          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
-          "state": "passed"
-        },
-        {
-          "name": "should handle conditional dependencies that appear and disappear",
-          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/pull-update-efficiency.test.ts",
       "tests": [
         {
@@ -766,26 +766,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
-      "tests": [
-        {
-          "name": "should not recompute unused branches after condition changes",
-          "fullName": "Dynamic dependency unlinking > should not recompute unused branches after condition changes",
-          "state": "passed"
-        },
-        {
-          "name": "should dynamically track only active dependencies",
-          "fullName": "Dynamic dependency unlinking > should dynamically track only active dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "proves the 2.7x performance gap is NOT from traversing inactive branches",
-          "fullName": "Dynamic dependency unlinking > proves the 2.7x performance gap is NOT from traversing inactive branches",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dynamic-dependencies.test.ts",
       "tests": [
         {
@@ -801,6 +781,46 @@
         {
           "name": "should not leak memory with frequently changing dependencies",
           "fullName": "Dynamic Dependencies - Pruning Bug Fix > should not leak memory with frequently changing dependencies",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
+      "tests": [
+        {
+          "name": "should read computed value without establishing dependencies",
+          "fullName": "Computed peek() > should read computed value without establishing dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should return the same value as .value",
+          "fullName": "Computed peek() > should return the same value as .value",
+          "state": "passed"
+        },
+        {
+          "name": "should work with nested computeds",
+          "fullName": "Computed peek() > should work with nested computeds",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/dependency-unlinking.test.ts",
+      "tests": [
+        {
+          "name": "should not recompute unused branches after condition changes",
+          "fullName": "Dynamic dependency unlinking > should not recompute unused branches after condition changes",
+          "state": "passed"
+        },
+        {
+          "name": "should dynamically track only active dependencies",
+          "fullName": "Dynamic dependency unlinking > should dynamically track only active dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "proves the 2.7x performance gap is NOT from traversing inactive branches",
+          "fullName": "Dynamic dependency unlinking > proves the 2.7x performance gap is NOT from traversing inactive branches",
           "state": "passed"
         }
       ]
@@ -856,26 +876,6 @@
         {
           "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
           "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
-      "tests": [
-        {
-          "name": "should read computed value without establishing dependencies",
-          "fullName": "Computed peek() > should read computed value without establishing dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should return the same value as .value",
-          "fullName": "Computed peek() > should return the same value as .value",
-          "state": "passed"
-        },
-        {
-          "name": "should work with nested computeds",
-          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]
