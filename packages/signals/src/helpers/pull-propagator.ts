@@ -135,7 +135,9 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
           // Skip CLEAN dependencies
           if (producer.status === STATUS_CLEAN) {
-            dep = dep.nextDependency;
+            const next = dep.nextDependency;
+            if (!next) break;
+            dep = next;
             continue;
           }
 
@@ -154,7 +156,9 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             continue traversal;
           }
 
-          dep = dep.nextDependency;
+          const next = dep.nextDependency;
+          if (!next) break;
+          dep = next;
         }
 
         // All dependencies clean - only update status if needed
