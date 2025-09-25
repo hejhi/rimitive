@@ -1,4 +1,4 @@
-import type { DerivedNode } from '../types';
+import type { Dependency, DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -104,10 +104,10 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         }
 
         // PENDING status with dependencies - need to check them
-        let dep = current.dependencies!; // We know it exists from the check above
+        let dep: Dependency | undefined = current.dependencies; // We know it exists from the check above
 
-        // ALIEN-SIGNALS SHALLOW CHECK: Try shallow propagation first
         const shallowResult = shallowCheck(dep);
+
         if (shallowResult) {
           // Found dirty in shallow check - can recompute immediately
           oldValue = current.value;
@@ -116,14 +116,12 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           if (newValue !== oldValue) {
             current.value = newValue;
             current.status = STATUS_DIRTY;
-            if (stackTop >= 0 && stack) {
-              stack[stackTop]!.status = STATUS_DIRTY;
-            }
-          } else {
-            current.status = STATUS_CLEAN;
-          }
+
+            if (stackTop >= 0 && stack) stack[stackTop]!.status = STATUS_DIRTY;
+          } else current.status = STATUS_CLEAN;
 
           if (stackTop < 0) break;
+
           current = stack![stackTop--]!;
           depth--;
           continue;
@@ -135,9 +133,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
           // Skip CLEAN dependencies
           if (producer.status === STATUS_CLEAN) {
-            const next = dep.nextDependency;
-            if (!next) break;
-            dep = next;
+            dep = dep.nextDependency;
             continue;
           }
 
@@ -156,17 +152,15 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
             continue traversal;
           }
 
-          const next = dep.nextDependency;
-          if (!next) break;
-          dep = next;
+          dep = dep.nextDependency;
+          
+          if (!dep) break;
         }
 
         // All dependencies clean - only update status if needed
-        if (current.status !== STATUS_CLEAN) {
-          current.status = STATUS_CLEAN;
-        }
-
+        if (current.status !== STATUS_CLEAN) current.status = STATUS_CLEAN;
         if (stackTop < 0) break;
+
         current = stack![stackTop--]!;
         depth--;
       } while (true);
