@@ -164,16 +164,13 @@ export function createGraphEdges(): GraphEdges {
         } else {
           // This dependency is still valid
           prevValid = dep;
-          node.dependencyTail = dep; // Update tail to last valid dependency
         }
 
         dep = nextDep;
       }
 
-      // If no valid dependencies remain, clear the tail
-      if (!prevValid) {
-        node.dependencyTail = undefined;
-      }
+      // OPTIMIZATION: Set tail once at the end instead of on every valid dependency
+      node.dependencyTail = prevValid;
     }
   };
 
