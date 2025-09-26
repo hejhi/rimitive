@@ -33,11 +33,13 @@ export interface Scheduler {
 
 export function createScheduler({
   propagate,
+  detachAll,
 }: {
   propagate: (
     subscribers: Dependency,
     onLeaf: (node: ConsumerNode) => void
   ) => void;
+  detachAll: (dep: Dependency) => void;
 }): Scheduler {
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;
@@ -115,6 +117,15 @@ export function createScheduler({
 
     node.status = STATUS_DISPOSED;
     cleanup(node);
+
+    const deps = node.dependencies;
+
+    if (deps !== undefined) {
+      detachAll(deps);
+      node.dependencies = undefined;
+    }
+
+    node.dependencyTail = undefined;
   };
 
   return {

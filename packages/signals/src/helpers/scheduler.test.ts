@@ -3,13 +3,18 @@ import { createScheduler } from './scheduler';
 import { CONSTANTS, STATUS_SCHEDULED } from '../constants';
 import type { ScheduledNode, FromNode } from '../types';
 import { createGraphTraversal } from './graph-traversal';
+import { createGraphEdges } from './graph-edges';
 
 const { STATUS_DISPOSED } = CONSTANTS;
 
 describe('NodeScheduler', () => {
   it('should schedule nodes during propagation', () => {
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
+    const graphEdges = createGraphEdges();
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
 
     const node: ScheduledNode = {
       __type: 'test',
@@ -39,8 +44,11 @@ describe('NodeScheduler', () => {
 
   it('should not schedule already scheduled nodes', () => {
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
-
+    const graphEdges = createGraphEdges();
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
     const node: ScheduledNode = {
       __type: 'test',
       status: CONSTANTS.STATUS_CLEAN,
@@ -74,7 +82,11 @@ describe('NodeScheduler', () => {
 
   it('should dispose node only once', () => {
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
+    const graphEdges = createGraphEdges();
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
       __type: 'test',
@@ -98,7 +110,11 @@ describe('NodeScheduler', () => {
 
   it('should flush all scheduled nodes in FIFO order', () => {
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
+    const graphEdges = createGraphEdges();
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
     const flushOrder: string[] = [];
 
     // Store mock functions separately to avoid unbound-method lint errors
@@ -182,14 +198,22 @@ describe('NodeScheduler', () => {
 
   it('should handle empty flush', () => {
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
+    const graphEdges = createGraphEdges();
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
     // Should not throw
     expect(() => scheduler.flush()).not.toThrow();
   });
 
   it('should clear nextScheduled flag during flush', () => {
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
+    const graphEdges = createGraphEdges();
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
     const node: ScheduledNode = {
       __type: 'test',
       status: CONSTANTS.STATUS_CLEAN, // Start clean so propagation processes it

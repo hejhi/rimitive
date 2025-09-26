@@ -21,7 +21,10 @@ export function createDefaultContext() {
     ctx,
     ...graphEdges,
     ...createPullPropagator({ ctx, track: graphEdges.track }),
-    ...createScheduler({ propagate: traverseGraph }),
+    ...createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    }),
   };
 }
 
@@ -65,7 +68,10 @@ describe('createSignalAPI', () => {
     const graphEdges = createGraphEdges();
     const { traverseGraph } = createGraphTraversal();
     const scheduler = (() => {
-      const originalScheduler = createScheduler({ propagate: traverseGraph });
+      const originalScheduler = createScheduler({
+        propagate: traverseGraph,
+        detachAll: graphEdges.detachAll
+      });
       return {
         ...originalScheduler,
         propagate: (subscribers: Dependency) => {
@@ -113,7 +119,10 @@ describe('createSignalAPI', () => {
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
 
     const api = createSignalAPI({
       signal: createSignalFactory,

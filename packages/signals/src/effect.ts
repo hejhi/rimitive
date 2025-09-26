@@ -1,4 +1,3 @@
-import { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
@@ -10,7 +9,6 @@ const { STATUS_CLEAN } = CONSTANTS;
 export type EffectOpts = {
   ctx: GlobalContext;
   track: GraphEdges['track'];
-  detachAll: GraphEdges['detachAll']
   dispose: Scheduler['dispose'];
 };
 
@@ -32,7 +30,6 @@ export function createEffectFactory(
     ctx,
     dispose: disposeNode,
     track,
-    detachAll,
   } = opts;
 
   function createEffect(run: () => void | (() => void)): () => void {
@@ -46,7 +43,7 @@ export function createEffectFactory(
       nextScheduled: undefined,
       trackingVersion: 0, // Initialize version tracking
       flush(): void {
-        if (cleanup) {
+        if (cleanup !== undefined) {
           cleanup();
           cleanup = undefined;
         }
@@ -57,19 +54,15 @@ export function createEffectFactory(
 
     // Run a single time on creation
     const initialCleanup = track(ctx, node, run);
+
     if (initialCleanup) cleanup = initialCleanup;
 
     // Return dispose function
-    return () => disposeNode(node, (node: ScheduledNode) => {
-      cleanup?.();
-      const deps = node.dependencies;
-
-      if (deps) {
-        detachAll(deps);
-        node.dependencies = undefined;
+    return () => disposeNode(node, () => {
+      if (cleanup !== undefined) {
+        cleanup();
+        cleanup = undefined;
       }
-
-      node.dependencyTail = undefined;
     });
   }
 

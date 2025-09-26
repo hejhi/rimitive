@@ -20,7 +20,10 @@ describe('Dependency Graph Helpers', () => {
   beforeEach(() => {
     const graphEdges = createGraphEdges();
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({ propagate: traverseGraph });
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    });
     const ctx = { ...createBaseContext(), graphEdges };
     const pullPropagator = createPullPropagator({ ctx, track: graphEdges.track });
 
@@ -348,7 +351,12 @@ describe('Dependency Graph Helpers', () => {
 
       // Create a custom scheduler that tracks scheduled nodes
       const { traverseGraph } = createGraphTraversal();
-      const testScheduler = createScheduler({ propagate: traverseGraph });
+      const graphEdges = createGraphEdges();
+
+      const testScheduler = createScheduler({
+        propagate: traverseGraph,
+        detachAll: graphEdges.detachAll,
+      });
       testScheduler.startBatch(); // Prevent auto-flush so we can inspect scheduled status
 
       walk = testScheduler.propagate;

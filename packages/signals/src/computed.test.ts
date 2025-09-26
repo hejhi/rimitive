@@ -18,7 +18,10 @@ export function createDefaultContext() {
   return {
     ctx,
     ...graphEdges,
-    ...createScheduler({ propagate: traverseGraph }),
+    ...createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll,
+    }),
     ...createPullPropagator({ ctx, track: graphEdges.track }),
   };
 }

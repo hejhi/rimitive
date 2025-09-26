@@ -16,6 +16,7 @@ export const createApi = () => {
   const ctx = createBaseContext();
   const { startBatch, endBatch, propagate } = createScheduler({
     propagate: traverseGraph,
+    detachAll: graphEdges.detachAll
   });
   const { pullUpdates } = createPullPropagator({ ctx, track: graphEdges.track });
 
