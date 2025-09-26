@@ -33,9 +33,7 @@ export function createPullPropagator({
     if (newValue !== oldValue) {
       node.value = newValue;
       node.status = STATUS_DIRTY;
-    } else {
-      node.status = STATUS_CLEAN;
-    }
+    } else node.status = STATUS_CLEAN;
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {
@@ -63,7 +61,8 @@ export function createPullPropagator({
 
       // If dependency is pending and has compute, recursively pull it
       if (producer.status !== STATUS_CLEAN && 'compute' in producer) {
-        pullUpdates(producer as DerivedNode);
+        pullUpdates(producer);
+
         // After pulling, check if it became dirty
         if (producer.status === STATUS_DIRTY) {
           needsUpdate = true;
@@ -75,11 +74,8 @@ export function createPullPropagator({
     }
 
     // Only recompute if dependencies changed
-    if (needsUpdate || rootNode.status === STATUS_DIRTY) {
-      recomputeNode(rootNode);
-    } else {
-      rootNode.status = STATUS_CLEAN;
-    }
+    if (needsUpdate || rootNode.status === STATUS_DIRTY) recomputeNode(rootNode);
+    else rootNode.status = STATUS_CLEAN;
   };
 
   return { pullUpdates };
