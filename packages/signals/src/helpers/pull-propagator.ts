@@ -46,7 +46,7 @@ export function createPullPropagator({
     traversal: do {
       if (current.status === STATUS_CLEAN) {
         // Pop from linked list stack and continue
-        if (!stackHead) break;
+        if (stackHead === undefined) break;
 
         current = stackHead.node;
         stackHead = stackHead.prev;
@@ -55,7 +55,7 @@ export function createPullPropagator({
       // Check dependencies for dirty/pending nodes
       let dep: Dependency | undefined = current.dependencies;
 
-      if (!dep) {
+      if (dep === undefined) {
         recomputeNode(current);
 
         // Pop from linked list stack and continue
@@ -74,7 +74,7 @@ export function createPullPropagator({
           recomputeNode(current);
 
           // Pop from linked list stack and continue
-          if (!stackHead) break traversal;
+          if (stackHead === undefined) break traversal;
 
           current = stackHead.node;
           stackHead = stackHead.prev;
@@ -96,7 +96,7 @@ export function createPullPropagator({
       current.status = STATUS_CLEAN;
 
       // Pop from linked list stack and continue
-      if (!stackHead) break;
+      if (stackHead === undefined) break;
 
       current = stackHead.node;
       stackHead = stackHead.prev;
