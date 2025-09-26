@@ -85,7 +85,6 @@ What does appear to have memory issues is scenarios where computeds are consumed
 - Moving methods to prototype: Makes performance worse, doesn't fix memory
 - Context accumulation: Disproved - moving context creation has no effect
 - Closure cost: Disproved - `scaling-computed` shows identical memory to Alien
-- `deferredParent` field: Removed completely, no impact (still 3.82mb)
 - Factory pattern overhead: Creating api once vs per-iteration has no effect
 - **Dependency duplication**: FIXED via exhaustive search (graph-edges.ts:39-48), verified working, memory issue persists
 - **"Baseline memory footprint"**: WRONG - `scaling-computed` proves Lattice matches Alien (547KB) for signal→computed

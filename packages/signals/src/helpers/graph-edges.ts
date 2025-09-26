@@ -73,7 +73,7 @@ export function createGraphEdges(): GraphEdges {
   const detachAll = (dep: Dependency): void => {
     let toRemove: Dependency | undefined = dep;
 
-    while (toRemove) {
+    do {
       const {
         producer,
         consumer,
@@ -99,7 +99,7 @@ export function createGraphEdges(): GraphEdges {
       else producer.subscribers = nextConsumer;
 
       toRemove = nextDependency;
-    }
+    } while (toRemove);
   };
 
   /**
