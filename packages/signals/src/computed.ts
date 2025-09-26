@@ -54,8 +54,8 @@ export function createComputedFactory(
       dependencies: undefined,
       dependencyTail: undefined,
       status: STATUS_PENDING,
-      compute,
       trackingVersion: 0, // Initialize version tracking
+      compute,
     };
 
     // Direct function declaration is more efficient than IIFE
