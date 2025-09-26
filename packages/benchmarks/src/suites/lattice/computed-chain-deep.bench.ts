@@ -1,9 +1,15 @@
 /**
- * Computed Chain Deep Benchmarks
- * 
+ * Computed Chain Deep Scaling Benchmark
+ *
  * Tests deep linear chains to validate O(1) propagation complexity.
  * Key metric: Propagation time should be linear with chain depth, not exponential.
  * Tests topological ordering and push-pull optimization.
+ *
+ * Scaling: Tests chain patterns with increasing depth
+ * - 10 levels: Short chain efficiency test
+ * - 20 levels: Medium chain complexity
+ * - 50 levels: Long chain performance
+ * - 100 levels: Deep chain stress test
  */
 
 import { bench, group, summary, barplot } from 'mitata';
@@ -18,14 +24,10 @@ import {
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed';
 
-const latticeAPI = createApi();
-
-const latticeSignal = latticeAPI.signal;
-const latticeComputed = latticeAPI.computed;
-
 const ITERATIONS = 10000;
+const latticeAPI = createApi();
+const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-// Type for mitata benchmark state
 interface BenchState {
   get(name: 'depth'): number;
   get(name: string): unknown;

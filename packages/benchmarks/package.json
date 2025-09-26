@@ -9,7 +9,6 @@
   "scripts": {
     "build:all": "cd ../signals && pnpm test && pnpm build && cd ../benchmarks",
     "bench": "tsx --expose-gc src/runner.ts",
-    "bench:kpi": "tsx --expose-gc src/runner.ts computed-diamond-simple batch-updates-multiple computed-deep-wide computed-chain-deep scaling-subscribers computed-conditional-simple computed-fan-in",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"

@@ -30,12 +30,10 @@ import {
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed';
 
-const ITERATIONS = 25000; // Adjusted for fan-in complexity
+const ITERATIONS = 25000;
 const latticeAPI = createApi();
-const latticeSignal = latticeAPI.signal;
-const latticeComputed = latticeAPI.computed;
+const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-// Type for mitata benchmark state
 interface BenchState {
   get(name: 'sources'): number;
   get(name: string): unknown;

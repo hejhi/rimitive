@@ -1,14 +1,15 @@
 /**
- * Diamond Dependency Scaling Benchmarks
+ * Diamond Dependency Scaling Benchmark
  *
  * Tests diamond-shaped dependency graphs for glitch prevention with varying complexity.
- * The key metric: bottom computed should calculate ONCE per source update,
+ * Key metric: Bottom computed should calculate ONCE per source update,
  * seeing consistent values from both paths (no intermediate states).
  *
  * Scaling: Tests diamond patterns of increasing complexity
- * - 1 diamond: simple source->left,right->bottom
- * - 2 diamonds: source->l1,r1->l2,r2->bottom
- * - 3 diamonds: source->...->l3,r3->bottom
+ * - 1 diamond: Simple source→left,right→bottom
+ * - 2 diamonds: Source→l1,r1→l2,r2→bottom
+ * - 3 diamonds: Source→...→l3,r3→bottom
+ * - 4 diamonds: Source→...→l4,r4→bottom
  */
 
 import { bench, group, summary, barplot } from 'mitata';
@@ -23,12 +24,10 @@ import {
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed';
 
-const ITERATIONS = 50000; // Adjusted for scaling tests
+const ITERATIONS = 50000;
 const latticeAPI = createApi();
-const latticeSignal = latticeAPI.signal;
-const latticeComputed = latticeAPI.computed;
+const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-// Type for mitata benchmark state
 interface BenchState {
   get(name: 'diamonds'): number;
   get(name: string): unknown;

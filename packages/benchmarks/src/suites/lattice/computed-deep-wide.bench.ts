@@ -1,13 +1,14 @@
 /**
- * Deep and Wide Computed Scaling Benchmarks
+ * Deep and Wide Tree Scaling Benchmark
  *
  * Tests tree-like dependency graphs that are both deep and wide with scaling complexity.
  * Each level has multiple branches that continue to the next level.
+ * Key metric: Tree traversal should scale efficiently with node count.
  *
  * Scaling: Tests tree patterns of increasing size
- * - Small: 2×3 tree (8 nodes)
- * - Medium: 3×4 tree (40 nodes)
- * - Large: 4×4 tree (85 nodes)
+ * - Small: 2×3 tree (8 total nodes)
+ * - Medium: 3×4 tree (40 total nodes)
+ * - Large: 4×4 tree (85 total nodes)
  *
  * Example structure (3 wide, 3 deep):
  *          source
@@ -26,21 +27,17 @@ import {
   computed as preactComputed,
   ReadonlySignal,
 } from '@preact/signals-core';
-import { ComputedFunction } from '@lattice/signals/computed';
 import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed';
-
-const latticeAPI = createApi();
-
-const latticeSignal = latticeAPI.signal;
-const latticeComputed = latticeAPI.computed;
+import { ComputedFunction } from '@lattice/signals/computed';
 
 const ITERATIONS = 1000;
+const latticeAPI = createApi();
+const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-// Type for mitata benchmark state
 interface BenchState {
   get(name: 'size'): string;
   get(name: string): unknown;

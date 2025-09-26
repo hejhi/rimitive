@@ -21,17 +21,12 @@ import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
-
 import { createApi } from './helpers/signal-computed';
 
+const ITERATIONS = 50000;
 const latticeAPI = createApi();
+const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-const latticeSignal = latticeAPI.signal;
-const latticeComputed = latticeAPI.computed;
-
-const ITERATIONS = 50000; // Increased for precision
-
-// Type for mitata benchmark state
 interface BenchState {
   get(name: 'branches'): number;
   get(name: string): unknown;

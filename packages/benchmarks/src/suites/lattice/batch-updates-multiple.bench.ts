@@ -1,9 +1,14 @@
 /**
- * Batch Updates Multiple Benchmarks
- * 
- * Tests batching efficiency with many signals.
+ * Batch Updates Multiple Scaling Benchmark
+ *
+ * Tests batching efficiency with many signals and varying complexity.
  * Key metric: Batched updates should coalesce into single propagation.
  * Compares batched vs unbatched to show O(n) vs O(n²) difference.
+ *
+ * Scaling: Tests batch patterns with increasing signal counts
+ * - 10 signals: Small batch efficiency test
+ * - 20 signals: Medium batch complexity
+ * - 40 signals: Large batch stress test
  */
 
 import { bench, group, summary, barplot } from 'mitata';
@@ -13,8 +18,6 @@ import {
   computed as preactComputed,
   batch as preactBatch,
 } from '@preact/signals-core';
-import { type ComputedFunction } from '@lattice/signals/computed';
-
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -22,20 +25,16 @@ import {
   endBatch as alienEndBatch,
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed-batch';
-
-const latticeAPI = createApi();
+import { type ComputedFunction } from '@lattice/signals/computed';
 
 const ITERATIONS = 10000;
+const latticeAPI = createApi();
+const { signal: latticeSignal, computed: latticeComputed, batch: latticeBatch } = latticeAPI;
 
-// Type for mitata benchmark state
 interface BenchState {
   get(name: 'signals'): number;
   get(name: string): unknown;
 }
-
-const latticeSignal = latticeAPI.signal;
-const latticeComputed = latticeAPI.computed;
-const latticeBatch = latticeAPI.batch;
 
 group('Batch Multiple Updates - Scaling', () => {
   summary(() => {
