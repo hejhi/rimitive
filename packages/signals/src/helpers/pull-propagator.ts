@@ -10,9 +10,6 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
 
-// Alien-signals inspired depth limit for cycle detection
-const MAX_DEPTH = 1000;
-
 // Alien-signals style linked list stack node
 interface StackNode {
   node: DerivedNode;
@@ -24,30 +21,26 @@ export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
-// Shallow-check check sibling dependencies
-const shallowCheck = (startDep: Dependency): boolean => {
-  for (;;) {
-    const producer = startDep.producer;
-
-    if (producer.status === STATUS_DIRTY) return true;
-    // Found pending computed - need deep check, exit shallow mode
-    else if ('compute' in producer && producer.status === STATUS_PENDING) return false;
-
-    const next = startDep.nextDependency;
-
-    if (!next) return false;
-
-    startDep = next;
-  }
-}
 
 export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
+  // Extract single recomputation function to eliminate duplication
+  const recomputeNode = (node: DerivedNode, stackHead?: StackNode) => {
+    const oldValue = node.value;
+    const newValue = track(ctx, node, node.compute);
+
+    if (newValue !== oldValue) {
+      node.value = newValue;
+      node.status = STATUS_DIRTY;
+      // Mark parent (if on stack) as dirty
+      if (stackHead) stackHead.node.status = STATUS_DIRTY;
+    } else {
+      node.status = STATUS_CLEAN;
+    }
+  };
+
   const pullUpdates = (rootNode: DerivedNode): void => {
-    let depth = 0;
     let current: DerivedNode = rootNode;
     let stackHead: StackNode | undefined;
-    let oldValue: unknown;
-    let newValue: unknown;
 
     // Single-pass traversal with linked list stack
     traversal: for (;;) {
@@ -58,61 +51,26 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
         current = stackHead.node;
         stackHead = stackHead.prev;
-        depth--;
 
         continue;
       }
 
       // Handle dirty nodes or nodes without dependencies - both need immediate recomputation
       if (current.status === STATUS_DIRTY || !current.dependencies) {
-        // Inline recomputation
-        oldValue = current.value;
-        newValue = track(ctx, current, current.compute);
-
-        // Only set status if value changed
-        if (newValue !== oldValue) {
-          current.value = newValue;
-          current.status = STATUS_DIRTY;
-
-          // Mark parent (if on stack) as dirty
-          if (stackHead) stackHead.node.status = STATUS_DIRTY;
-        } else current.status = STATUS_CLEAN;
+        recomputeNode(current, stackHead);
 
         // Continue with parent from stack
         if (!stackHead) break;
 
         current = stackHead.node;
         stackHead = stackHead.prev;
-        depth--;
 
         continue;
       }
 
-      // PENDING status with dependencies - need to check them
+      // PENDING status with dependencies - check them for dirty/pending nodes
       let dep: Dependency | undefined = current.dependencies;
 
-      if (shallowCheck(dep)) {
-        // Found dirty in shallow check - can recompute immediately
-        oldValue = current.value;
-        newValue = track(ctx, current, current.compute);
-
-        if (newValue !== oldValue) {
-          current.value = newValue;
-          current.status = STATUS_DIRTY;
-
-          if (stackHead) stackHead.node.status = STATUS_DIRTY;
-        } else current.status = STATUS_CLEAN;
-
-        if (!stackHead) break;
-
-        current = stackHead.node;
-        stackHead = stackHead.prev;
-        depth--;
-
-        continue;
-      }
-
-      // Find first PENDING computed to descend into (DIRTY cases handled by shallowCheck)
       do {
         const producer = dep.producer;
 
@@ -122,15 +80,23 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
           continue;
         }
 
+        // DIRTY dependency found - recompute immediately
+        if (producer.status === STATUS_DIRTY) {
+          recomputeNode(current, stackHead);
+
+          if (!stackHead) break;
+
+          current = stackHead.node;
+          stackHead = stackHead.prev;
+  
+          continue traversal;
+        }
+
         // PENDING computed - descend into it
         if (producer.status === STATUS_PENDING && 'compute' in producer) {
-          if (depth >= MAX_DEPTH) {
-            throw new Error(`Signal dependency cycle detected - exceeded max depth of ${MAX_DEPTH}`);
-          }
 
           stackHead = { node: current, prev: stackHead };
           current = producer;
-          depth++;
 
           continue traversal;
         }
@@ -144,7 +110,6 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
       current = stackHead.node;
       stackHead = stackHead.prev;
-      depth--;
     };
   };
 

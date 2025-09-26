@@ -346,6 +346,56 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
+      "tests": [
+        {
+          "name": "should recompute to check values but not increment version when output remains same",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute to check values but not increment version when output remains same",
+          "state": "passed"
+        },
+        {
+          "name": "should propagate updates through deep computed chains",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should propagate updates through deep computed chains",
+          "state": "passed"
+        },
+        {
+          "name": "should handle very deep chains efficiently",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle very deep chains efficiently",
+          "state": "passed"
+        },
+        {
+          "name": "should handle diamond dependencies correctly with detailed tracking",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle diamond dependencies correctly with detailed tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should skip downstream recomputation when intermediate value does not change",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip downstream recomputation when intermediate value does not change",
+          "state": "passed"
+        },
+        {
+          "name": "should skip recomputation when multiple dependencies have unchanged values (diamond)",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip recomputation when multiple dependencies have unchanged values (diamond)",
+          "state": "passed"
+        },
+        {
+          "name": "should NOT run effects when dependent computed values do not change",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should NOT run effects when dependent computed values do not change",
+          "state": "passed"
+        },
+        {
+          "name": "should recompute once when batch updates result in same value",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute once when batch updates result in same value",
+          "state": "passed"
+        },
+        {
+          "name": "should clear invalidated check cache between flushes",
+          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should clear invalidated check cache between flushes",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/effect.test.ts",
       "tests": [
         {
@@ -421,56 +471,6 @@
         {
           "name": "should work with circular dependencies through computed",
           "fullName": "Effect > should work with circular dependencies through computed",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
-      "tests": [
-        {
-          "name": "should recompute to check values but not increment version when output remains same",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute to check values but not increment version when output remains same",
-          "state": "passed"
-        },
-        {
-          "name": "should propagate updates through deep computed chains",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should propagate updates through deep computed chains",
-          "state": "passed"
-        },
-        {
-          "name": "should handle very deep chains efficiently",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle very deep chains efficiently",
-          "state": "passed"
-        },
-        {
-          "name": "should handle diamond dependencies correctly with detailed tracking",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should handle diamond dependencies correctly with detailed tracking",
-          "state": "passed"
-        },
-        {
-          "name": "should skip downstream recomputation when intermediate value does not change",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip downstream recomputation when intermediate value does not change",
-          "state": "passed"
-        },
-        {
-          "name": "should skip recomputation when multiple dependencies have unchanged values (diamond)",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should skip recomputation when multiple dependencies have unchanged values (diamond)",
-          "state": "passed"
-        },
-        {
-          "name": "should NOT run effects when dependent computed values do not change",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should NOT run effects when dependent computed values do not change",
-          "state": "passed"
-        },
-        {
-          "name": "should recompute once when batch updates result in same value",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should recompute once when batch updates result in same value",
-          "state": "passed"
-        },
-        {
-          "name": "should clear invalidated check cache between flushes",
-          "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should clear invalidated check cache between flushes",
           "state": "passed"
         }
       ]
@@ -621,31 +621,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
-      "tests": [
-        {
-          "name": "should handle dependencies accessed in different orders without creating duplicates",
-          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
-          "state": "passed"
-        },
-        {
-          "name": "should properly prune old dependencies with version-based tracking",
-          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
-          "state": "passed"
-        },
-        {
-          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
-          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
-          "state": "passed"
-        },
-        {
-          "name": "should handle conditional dependencies that appear and disappear",
-          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/batch.test.ts",
       "tests": [
         {
@@ -726,6 +701,31 @@
         {
           "name": "should only update PENDING nodes in the pull path",
           "fullName": "Pull Update Efficiency > should only update PENDING nodes in the pull path",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-based-tracking.test.ts",
+      "tests": [
+        {
+          "name": "should handle dependencies accessed in different orders without creating duplicates",
+          "fullName": "Version-Based Dependency Tracking > should handle dependencies accessed in different orders without creating duplicates",
+          "state": "passed"
+        },
+        {
+          "name": "should properly prune old dependencies with version-based tracking",
+          "fullName": "Version-Based Dependency Tracking > should properly prune old dependencies with version-based tracking",
+          "state": "passed"
+        },
+        {
+          "name": "should efficiently handle many dependency changes (O(n) not O(n²))",
+          "fullName": "Version-Based Dependency Tracking > should efficiently handle many dependency changes (O(n) not O(n²))",
+          "state": "passed"
+        },
+        {
+          "name": "should handle conditional dependencies that appear and disappear",
+          "fullName": "Version-Based Dependency Tracking > should handle conditional dependencies that appear and disappear",
           "state": "passed"
         }
       ]
