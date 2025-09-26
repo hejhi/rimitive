@@ -60,10 +60,12 @@ export function createGraphTraversal(): GraphTraversal {
       // Skip already processed nodes
       if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== STATUS_DIRTY) {
         currentDependency = currentDependency.nextConsumer;
-        if (!currentDependency && stack) {
+
+        if (currentDependency === undefined && stack !== undefined) {
           currentDependency = stack.value;
           stack = stack.prev;
         }
+
         continue;
       }
 
@@ -78,23 +80,22 @@ export function createGraphTraversal(): GraphTraversal {
         onLeaf(consumerNode);
 
         currentDependency = currentDependency.nextConsumer;
-        if (!currentDependency && stack) {
+
+        if (currentDependency === undefined && stack !== undefined) {
           currentDependency = stack.value;
           stack = stack.prev;
         }
+
         continue;
       }
 
       // Continue traversal - branch node
-      const consumerSubscribers = consumerNode.subscribers;
       const siblingDep = currentDependency.nextConsumer;
+      
+      // Push sibling onto stack (inline allocation)
+      if (siblingDep) stack = { value: siblingDep, prev: stack };
 
-      if (siblingDep) {
-        // Push sibling onto stack (inline allocation)
-        stack = { value: siblingDep, prev: stack };
-      }
-
-      currentDependency = consumerSubscribers;
+      currentDependency = consumerNode.subscribers;
     } while (currentDependency);
   };
 
