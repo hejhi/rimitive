@@ -7,7 +7,7 @@
  * 4. Reduces indirection and complexity
  */
 
-import type { Dependency, ScheduledNode, ConsumerNode } from '../types';
+import type { Dependency, ScheduledNode, ConsumerNode, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
@@ -46,17 +46,17 @@ export function createScheduler({
   // Execute all scheduled nodes in FIFO order
   const flush = (): void => {
     // Don't flush during batch - batching will handle it
-    if (batchDepth > 0 || !queueHead) return;
+    if (batchDepth > 0 || queueHead === undefined) return;
 
     let current: ScheduledNode | undefined = queueHead;
 
     // Clear queue first to allow re-entrance scheduling
     queueHead = queueTail = undefined;
 
-    while (current) {
+    do {
       const next: ScheduledNode | undefined = current.nextScheduled;
 
-      if (next) current.nextScheduled = undefined;
+      if (next !== undefined) current.nextScheduled = undefined;
 
       if (current.status === STATUS_SCHEDULED) {
         current.status = STATUS_CLEAN;
@@ -64,24 +64,23 @@ export function createScheduler({
       }
 
       current = next;
-    }
+    } while (current);
   };
 
   // Leaf handler that queues scheduled nodes
-  const queueIfScheduled = (node: ConsumerNode): void => {
+  const queueIfScheduled = (node: ToNode): void => {
     if (!('flush' in node) || node.status !== STATUS_PENDING) return;
 
     // Only queue nodes with flush methods that are pending
     node.status = STATUS_SCHEDULED;
-    const scheduledNode = node as ScheduledNode;
-    scheduledNode.nextScheduled = undefined;
+    node.nextScheduled = undefined;
 
     // Add to execution queue
-    if (queueTail) {
-      queueTail.nextScheduled = scheduledNode;
-      queueTail = scheduledNode;
+    if (queueTail !== undefined) {
+      queueTail.nextScheduled = node;
+      queueTail = node;
     } else {
-      queueHead = queueTail = scheduledNode;
+      queueHead = queueTail = node;
     }
   };
 
@@ -90,7 +89,7 @@ export function createScheduler({
     propagate(subscribers, queueIfScheduled);
 
     // Only flush if we must
-    if (!queueHead) return;
+    if (queueHead === undefined) return;
 
     flush();
   };
@@ -100,7 +99,8 @@ export function createScheduler({
   const endBatch = (): number => {
     if (batchDepth) {
       batchDepth--;
-      if (!batchDepth && queueHead) flush();
+
+      if (!batchDepth && queueHead !== undefined) flush();
     }
 
     return batchDepth;
@@ -112,6 +112,7 @@ export function createScheduler({
     cleanup: (node: T) => void
   ): void => {
     if (node.status === STATUS_DISPOSED) return;
+
     node.status = STATUS_DISPOSED;
     cleanup(node);
   };
