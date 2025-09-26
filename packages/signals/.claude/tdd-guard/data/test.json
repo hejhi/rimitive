@@ -476,6 +476,16 @@
       ]
     },
     {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
+      "tests": [
+        {
+          "name": "should demonstrate O(n) performance with version-based tracking",
+          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
+          "state": "passed"
+        }
+      ]
+    },
+    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed.test.ts",
       "tests": [
         {
@@ -521,16 +531,6 @@
         {
           "name": "should clear invalidated check cache between flushes",
           "fullName": "Computed - Push-Pull Optimization > Lazy Dirty Checking > should clear invalidated check cache between flushes",
-          "state": "passed"
-        }
-      ]
-    },
-    {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/tests/version-tracking-benchmark.test.ts",
-      "tests": [
-        {
-          "name": "should demonstrate O(n) performance with version-based tracking",
-          "fullName": "Version-Based Tracking Performance Benchmark > should demonstrate O(n) performance with version-based tracking",
           "state": "passed"
         }
       ]
@@ -841,26 +841,6 @@
       ]
     },
     {
-      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
-      "tests": [
-        {
-          "name": "should read computed value without establishing dependencies",
-          "fullName": "Computed peek() > should read computed value without establishing dependencies",
-          "state": "passed"
-        },
-        {
-          "name": "should return the same value as .value",
-          "fullName": "Computed peek() > should return the same value as .value",
-          "state": "passed"
-        },
-        {
-          "name": "should work with nested computeds",
-          "fullName": "Computed peek() > should work with nested computeds",
-          "state": "passed"
-        }
-      ]
-    },
-    {
       "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/signal-vs-computed-dirty.test.ts",
       "tests": [
         {
@@ -876,6 +856,26 @@
         {
           "name": "the key difference: signal dirty flag persists, computed dirty flag clears",
           "fullName": "Signal vs Computed Dirty Flag Behavior > the key difference: signal dirty flag persists, computed dirty flag clears",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Users/henryivry/repos/lattice/packages/signals/src/computed-peek.test.ts",
+      "tests": [
+        {
+          "name": "should read computed value without establishing dependencies",
+          "fullName": "Computed peek() > should read computed value without establishing dependencies",
+          "state": "passed"
+        },
+        {
+          "name": "should return the same value as .value",
+          "fullName": "Computed peek() > should return the same value as .value",
+          "state": "passed"
+        },
+        {
+          "name": "should work with nested computeds",
+          "fullName": "Computed peek() > should work with nested computeds",
           "state": "passed"
         }
       ]

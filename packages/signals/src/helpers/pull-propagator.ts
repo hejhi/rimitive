@@ -129,8 +129,6 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         }
 
         dep = dep.nextDependency;
-
-        if (!dep) break;
       } while (dep);
 
       // All dependencies clean - only update status if needed
