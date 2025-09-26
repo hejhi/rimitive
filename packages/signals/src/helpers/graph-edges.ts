@@ -125,8 +125,6 @@ export function createGraphEdges(): GraphEdges {
     const prevConsumer = ctx.currentConsumer;
 
     node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
-
-
     ctx.currentConsumer = node;
 
     try {
