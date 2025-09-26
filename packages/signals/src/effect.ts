@@ -33,7 +33,7 @@ export function createEffectFactory(
   } = opts;
 
   function createEffect(run: () => void | (() => void)): () => void {
-    let cleanup: (() => void) | undefined = undefined;
+    let cleanup: void | (() => void);
 
     const node = {
       __type: 'effect' as const,
@@ -43,26 +43,18 @@ export function createEffectFactory(
       nextScheduled: undefined,
       trackingVersion: 0, // Initialize version tracking
       flush(): void {
-        if (cleanup !== undefined) {
-          cleanup();
-          cleanup = undefined;
-        }
-        const newCleanup = track(ctx, node, run);
-        if (newCleanup) cleanup = newCleanup;
+        if (cleanup !== undefined) cleanup = cleanup();
+        cleanup = track(ctx, node, run);
       }
     };
 
     // Run a single time on creation
-    const initialCleanup = track(ctx, node, run);
-
-    if (initialCleanup) cleanup = initialCleanup;
+    cleanup = track(ctx, node, run);
 
     // Return dispose function
     return () => disposeNode(node, () => {
-      if (cleanup !== undefined) {
-        cleanup();
-        cleanup = undefined;
-      }
+      if (cleanup === undefined) return;
+      cleanup = cleanup();
     });
   }
 
