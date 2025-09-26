@@ -10,6 +10,9 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
 
+// Alien-signals inspired depth limit for cycle detection
+const MAX_DEPTH = 1000;
+
 // Alien-signals style linked list stack node
 interface StackNode {
   node: DerivedNode;
@@ -121,6 +124,10 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
         // PENDING computed - descend into it
         if (producer.status === STATUS_PENDING && 'compute' in producer) {
+          if (depth >= MAX_DEPTH) {
+            throw new Error(`Signal dependency cycle detected - exceeded max depth of ${MAX_DEPTH}`);
+          }
+
           stackHead = { node: current, prev: stackHead };
           current = producer;
           depth++;
