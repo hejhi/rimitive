@@ -52,8 +52,10 @@ export function createPullPropagator({
         stackHead = stackHead.prev;
         continue;
       }
+      // Check dependencies for dirty/pending nodes
+      let dep: Dependency | undefined = current.dependencies;
 
-      if (!current.dependencies) {
+      if (!dep) {
         recomputeNode(current);
 
         // Pop from linked list stack and continue
@@ -63,9 +65,6 @@ export function createPullPropagator({
         stackHead = stackHead.prev;
         continue;
       }
-
-      // Check dependencies for dirty/pending nodes
-      let dep: Dependency | undefined = current.dependencies;
 
       do {
         const producer: FromNode = dep.producer;
@@ -95,10 +94,10 @@ export function createPullPropagator({
 
       // All dependencies clean - mark current as clean
       current.status = STATUS_CLEAN;
-      
+
       // Pop from linked list stack and continue
       if (!stackHead) break;
-      
+
       current = stackHead.node;
       stackHead = stackHead.prev;
     } while (current);
