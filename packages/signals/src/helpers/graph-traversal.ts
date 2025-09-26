@@ -6,11 +6,11 @@
  * effects and automatic flushing are not needed.
  */
 
-import type { Dependency, ConsumerNode, ToNode } from '../types';
+import type { Dependency, ConsumerNode, ToNode, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
-export type { Dependency, ConsumerNode } from '../types';
+export type { Dependency, ConsumerNode, DerivedNode } from '../types';
 
 const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
 
@@ -27,6 +27,8 @@ export interface GraphTraversal {
     subscribers: Dependency,
     onLeaf: (node: ConsumerNode) => void
   ) => void;
+  /** Build recomputation queue for pull propagation */
+  buildRecomputationQueue: (subscribers: Dependency) => DerivedNode[];
 }
 
 const NOOP = () => {};
@@ -37,6 +39,8 @@ const NOOP = () => {};
  */
 export function createGraphTraversal(): GraphTraversal {
   let dependencyStack: Stack<Dependency> | undefined;
+  // Global recomputation queue for pull-propagator
+  let recomputationQueue: DerivedNode[] = [];
 
   /**
    * Traverse dependency graph depth-first, marking nodes as invalidated.
@@ -113,7 +117,7 @@ export function createGraphTraversal(): GraphTraversal {
       }
 
       break;
-    };
+    }
   };
 
   /**
@@ -123,8 +127,24 @@ export function createGraphTraversal(): GraphTraversal {
   const propagate = (subscribers: Dependency): void =>
     traverseGraph(subscribers, NOOP);
 
+  /**
+   * Build recomputation queue by traversing dependency graph.
+   * Queue contains derived nodes in topological order for pull propagation.
+   */
+  const buildRecomputationQueue = (subscribers: Dependency): DerivedNode[] => {
+    recomputationQueue.length = 0; // Clear queue
+    traverseGraph(subscribers, (node: ConsumerNode) => {
+      // Only add derived nodes (computeds) to the queue
+      if ('compute' in node) {
+        recomputationQueue.push(node as DerivedNode);
+      }
+    });
+    return recomputationQueue.slice(); // Return copy to avoid mutation
+  };
+
   return {
     propagate,
     traverseGraph,
+    buildRecomputationQueue,
   };
 }
