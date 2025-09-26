@@ -45,9 +45,7 @@ export function createPullPropagator({
 
     traversal: do {
       if (current.status === STATUS_CLEAN) {
-        // Pop from linked list stack and continue
         if (stackHead === undefined) break;
-
         current = stackHead.node;
         stackHead = stackHead.prev;
         continue;
@@ -58,9 +56,7 @@ export function createPullPropagator({
       if (dep === undefined) {
         recomputeNode(current);
 
-        // Pop from linked list stack and continue
-        if (!stackHead) break;
-
+        if (stackHead === undefined) break;
         current = stackHead.node;
         stackHead = stackHead.prev;
         continue;
@@ -73,9 +69,7 @@ export function createPullPropagator({
         if (producer.status === STATUS_DIRTY) {
           recomputeNode(current);
 
-          // Pop from linked list stack and continue
           if (stackHead === undefined) break traversal;
-
           current = stackHead.node;
           stackHead = stackHead.prev;
           continue traversal;
@@ -95,9 +89,7 @@ export function createPullPropagator({
       // All dependencies clean - mark current as clean
       current.status = STATUS_CLEAN;
 
-      // Pop from linked list stack and continue
       if (stackHead === undefined) break;
-
       current = stackHead.node;
       stackHead = stackHead.prev;
     } while (current);
