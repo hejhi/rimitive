@@ -1,54 +1,25 @@
 ---
-description: Interactive wizard to configure TypeScript, Vite, and test setup
+description: Interactive wizard to configure a monorepo package
 tools: [Task, Write, Read]
-workflow: create-package
+argument-hint: [package-name] [in-workflow]
 ---
 
-Package name: $ARGUMENTS
+Package name: $1
+Currently in workflow: $2
 
-Use the general-purpose agent to create an interactive wizard that:
+Behave as an interactive wizard to help the user configure the $1 package (if no package name is provided, assume it's the package they have an open file in, or ask the user first):
 
-1. **Gathers build configuration preferences** by asking the user:
-   - Build output strategy:
-     * Single bundled output (simpler, like @lattice/lattice)
-     * Multiple entry points (more granular, like @lattice/signals)
-   - TypeScript strictness level:
-     * Standard (matches existing packages)
-     * Extra strict (for new development)
-   - Test setup requirements:
-     * Basic unit tests only
-     * Integration tests with other packages
-     * Browser testing (for UI components)
-   - Development mode preferences:
-     * Watch mode for development
-     * Source maps for debugging
+1. **Gather build configuration preferences** by asking the user for a description of the stack they'd like to use for the package (ie, vite? react with typescript? rust? shadcn?)
 
-2. **Creates TypeScript configuration**:
-   - Generate tsconfig.json extending ../../tsconfig.json
-   - Apply chosen strictness settings
-   - Configure proper outDir and composite settings
-   - Include appropriate file patterns
+2. **Analyze existing/other packages** to understand what's already present and how other similar packages are configured:
+   - Identify appropriate dependency patterns based on package type
+   - See if other packages extend configurations, like tsconfig etc
 
-3. **Sets up Vite configuration**:
-   - Create vite.config.ts based on output strategy choice
-   - Configure entry points based on src/ structure analysis
-   - Include dts plugin for TypeScript declarations
-   - Set up terser minification for internal properties
-   - Configure external dependencies properly
-
-4. **Creates test configuration**:
-   - Generate vitest.config.ts matching test requirements
-   - Set up appropriate test environment (node/jsdom)
-   - Configure test file patterns and globals
-   - Create basic test file structure
-
-5. **Completion instructions**:
-   - After successful configuration, tell the user:
-   - "Build configuration complete! Run `/workflow create-package setup-build-config next` to continue."
+3. **Completion instructions**:
+   - When completed, if running as part of a workflow ($2), tell the user: "Complete! Run `/workflow $2 forward` to continue."
 
 Requirements:
-- Interactive prompts for build preferences
 - Follow patterns from existing packages based on choices
 - Ensure configuration compatibility with monorepo tooling
-- Create appropriate starter files and examples
+- Ask the user before you run any npx/pnpx/etc setup/create commands
 - Provide clear workflow navigation instructions

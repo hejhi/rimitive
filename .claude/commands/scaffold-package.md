@@ -1,43 +1,36 @@
 ---
-description: Interactive wizard to create initial package structure and configuration
+description: Interactive wizard to create initial package structure
 tools: [Task, Bash, Write, MultiEdit]
-workflow: create-package
+argument-hint: [package-name] [in-workflow]
 ---
 
-Package name: $ARGUMENTS
+Package name: $1
+Currently in workflow: $2
 
-Use the general-purpose agent to create an interactive wizard that:
+Behave as an interactive wizard to help the user scaffold a barebones package:
 
-1. **Gathers package information** by asking the user:
-   - Package name (if not provided in $ARGUMENTS)
-   - Package type:
-     * Core library (like @lattice/signals)
-     * Framework integration (like @lattice/react)
-     * Development tooling (like @lattice/benchmarks)
+1. **Gather package information** by asking the user:
+   - Package name (if not provided)?
+   - Package type? For example:
+     * Core library
+     * Framework integration
+     * Development tooling
      * Example/demo package
-   - Brief description of the package purpose
-   - Which existing @lattice packages it will depend on
-   - Main export strategy (single entry point vs multiple modules)
+   - Brief description of the package purpose?
+   - Which existing packages to model it on?
+   - Any internal or external dependencies?
 
-2. **Analyzes existing packages** to understand patterns:
-   - Study packages/signals/package.json, packages/lattice/package.json, packages/react/package.json
+2. **Analyze existing packages** to understand existing patterns:
    - Identify appropriate dependency patterns based on package type
    - Determine export configuration strategy
+   - Understand if you need to link to it at the root or in root-level configuration files
 
-3. **Creates package structure**:
-   - packages/{package-name}/ directory
-   - packages/{package-name}/src/ with appropriate entry files
-   - packages/{package-name}/README.md with description
-   - packages/{package-name}/package.json following established patterns
+3. **Create package structure**: create the barebones package structure idiomatically to the rest of the codebase.
 
 4. **Completion instructions**:
-   - After successful creation, tell the user:
-   - "Package scaffolding complete! Run `/workflow create-package scaffold-package next` to continue."
+   - When completed, if running as part of a workflow ($2), tell the user: "Complete! Run `/workflow $2 forward` to continue."
 
 Requirements:
-- Interactive prompts for all configuration decisions
 - Validate package name doesn't conflict with existing packages
+- Ensure compatibility with monorepo tooling (workspace or package managers, root-level config files that need updating, etc)
 - Follow exact patterns from existing packages
-- Use workspace:* for internal @lattice dependencies
-- Set up proper export maps for tree-shaking
-- Provide clear next step instructions using workflow navigation
