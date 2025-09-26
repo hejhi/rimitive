@@ -10,8 +10,11 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
-// Note: No longer need StackNode interface - using queue-based approach
-
+// Linked list stack node for memory efficiency
+interface StackNode {
+  node: DerivedNode;
+  prev: StackNode | undefined;
+}
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
@@ -38,21 +41,23 @@ export function createPullPropagator({
 
   const pullUpdates = (rootNode: DerivedNode): void => {
     let current: DerivedNode | undefined = rootNode;
-    let nodeStack: DerivedNode[] | undefined;
+    let stackHead: StackNode | undefined;
 
     traversal: while (current) {
       if (current.status === STATUS_CLEAN) {
-        // Pop from stack and continue
-        if (!nodeStack?.length) break;
-        current = nodeStack.pop()!;
+        // Pop from linked list stack and continue
+        if (!stackHead) break;
+        current = stackHead.node;
+        stackHead = stackHead.prev;
         continue;
       }
 
       if (!current.dependencies) {
         recomputeNode(current);
-        // Pop from stack and continue
-        if (!nodeStack?.length) break;
-        current = nodeStack.pop()!;
+        // Pop from linked list stack and continue
+        if (!stackHead) break;
+        current = stackHead.node;
+        stackHead = stackHead.prev;
         continue;
       }
 
@@ -65,17 +70,17 @@ export function createPullPropagator({
         // If dependency is dirty, recompute immediately
         if (producer.status === STATUS_DIRTY) {
           recomputeNode(current);
-          // Pop from stack and continue
-          if (!nodeStack?.length) break traversal;
-          current = nodeStack.pop()!;
+          // Pop from linked list stack and continue
+          if (!stackHead) break traversal;
+          current = stackHead.node;
+          stackHead = stackHead.prev;
           continue traversal;
         }
 
         // If dependency is pending and computed, descend into it
         if (producer.status !== STATUS_CLEAN && 'compute' in producer) {
-          // Lazy stack allocation
-          if (!nodeStack) nodeStack = [];
-          nodeStack.push(current);
+          // Push current node onto linked list stack
+          stackHead = { node: current, prev: stackHead };
           current = producer as DerivedNode;
           continue traversal;
         }
@@ -85,9 +90,10 @@ export function createPullPropagator({
 
       // All dependencies clean - mark current as clean
       current.status = STATUS_CLEAN;
-      // Pop from stack and continue
-      if (!nodeStack?.length) break;
-      current = nodeStack.pop()!;
+      // Pop from linked list stack and continue
+      if (!stackHead) break;
+      current = stackHead.node;
+      stackHead = stackHead.prev;
     }
   };
 
