@@ -6,7 +6,7 @@
  * effects and automatic flushing are not needed.
  */
 
-import type { Dependency, ConsumerNode, ToNode, DerivedNode } from '../types';
+import type { Dependency, ConsumerNode, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
@@ -38,7 +38,6 @@ const NOOP = () => {};
  * Provides propagation without scheduling or automatic execution.
  */
 export function createGraphTraversal(): GraphTraversal {
-  let dependencyStack: Stack<Dependency> | undefined;
   // Global recomputation queue for pull-propagator
   let recomputationQueue: DerivedNode[] = [];
 
@@ -46,78 +45,57 @@ export function createGraphTraversal(): GraphTraversal {
    * Traverse dependency graph depth-first, marking nodes as invalidated.
    * Calls visitor function for each leaf node (nodes without subscribers).
    * Uses alien-signals pattern: follow chains naturally, stack only at branch points.
-   */
-  const traverseGraph = (
-    subscribers: Dependency,
-    onLeaf: (node: ConsumerNode) => void
+  */
+ const traverseGraph = (
+   subscribers: Dependency,
+   onLeaf: (node: ConsumerNode) => void
   ): void => {
+    let stack: Stack<Dependency> | undefined; // LOCAL variable (not shared)
     let currentDependency: Dependency | undefined = subscribers;
 
-    traversal: for (;;) {
-      const consumerNode: ToNode = currentDependency.consumer;
+    do {
+      const consumerNode = currentDependency.consumer;
       const consumerNodeStatus = consumerNode.status;
 
       // Skip already processed nodes
-      if (
-        consumerNodeStatus !== STATUS_CLEAN &&
-        consumerNodeStatus !== STATUS_DIRTY
-      ) {
-        // Continue with next sibling in current level
-        if ((currentDependency = currentDependency.nextConsumer) !== undefined)
-          continue;
-
-        // Backtrack from stack when sibling chain exhausted
-        while (dependencyStack) {
-          currentDependency = dependencyStack.value;
-          dependencyStack = dependencyStack.prev;
-
-          if (currentDependency !== undefined) continue traversal;
+      if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== STATUS_DIRTY) {
+        currentDependency = currentDependency.nextConsumer;
+        if (!currentDependency && stack) {
+          currentDependency = stack.value;
+          stack = stack.prev;
         }
-        break;
+        continue;
       }
 
       // Mark as pending (invalidated)
       consumerNode.status = STATUS_PENDING;
 
-      // This is a leaf node (no subscribers) - notify the callback
-      if (!('subscribers' in consumerNode && consumerNode.subscribers))
+      // Check if we can traverse deeper
+      const hasSubscribers = 'subscribers' in consumerNode && consumerNode.subscribers;
+
+      if (!hasSubscribers) {
+        // This is a leaf node - notify the callback
         onLeaf(consumerNode);
-      else {
-        // Branch point: save siblings for backtracking
-        const consumerSubscribers: Dependency | undefined =
-          consumerNode.subscribers;
 
-        if (currentDependency === undefined) {
-          // Traverse deeper into subscribers
-          currentDependency = consumerSubscribers;
-          continue;
+        currentDependency = currentDependency.nextConsumer;
+        if (!currentDependency && stack) {
+          currentDependency = stack.value;
+          stack = stack.prev;
         }
-
-        const nextSibling = currentDependency.nextConsumer;
-
-        if (nextSibling !== undefined) {
-          dependencyStack = { value: nextSibling, prev: dependencyStack };
-        }
-
-        // Traverse deeper into subscribers
-        currentDependency = consumerSubscribers;
         continue;
       }
 
-      // Continue with next sibling in current level
-      if ((currentDependency = currentDependency.nextConsumer) !== undefined)
-        continue;
+      // Continue traversal - branch node
+      const consumerSubscribers = consumerNode.subscribers;
+      const siblingDep = currentDependency.nextConsumer;
 
-      // Backtrack from stack when sibling chain exhausted
-      while (dependencyStack) {
-        currentDependency = dependencyStack.value;
-        dependencyStack = dependencyStack.prev;
-
-        if (currentDependency !== undefined) continue traversal;
+      if (siblingDep) {
+        // Push sibling onto stack (inline allocation)
+        stack = { value: siblingDep, prev: stack };
       }
 
-      break;
-    }
+      currentDependency = consumerSubscribers;
+    } while (currentDependency);
   };
 
   /**

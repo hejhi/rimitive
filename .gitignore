@@ -46,4 +46,5 @@ public/
 *.ts.map
 
 **/.claude/settings.local.json
-reference-packages/**/*packages/signals/.claude/tdd-guard/data/test.json
+reference-packages/**/*
+packages/signals/.claude/tdd-guard/data/test.json
