@@ -30,6 +30,7 @@ export function createGraphEdges(): GraphEdges {
 
     // Check 2: Is next in sequence this producer?
     const next = tail ? tail.nextDependency : consumer.dependencies;
+
     if (next && next.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       next.version = consumer.trackingVersion;
@@ -38,9 +39,7 @@ export function createGraphEdges(): GraphEdges {
     }
 
     // Version-based tracking: Just create a new dependency
-    // No need to search through all dependencies (O(n) removed!)
     // Stale dependencies will be pruned based on version mismatch in track()
-
     const producerTail = producer.subscribersTail;
     const dependency: Dependency = {
       producer,
@@ -49,17 +48,19 @@ export function createGraphEdges(): GraphEdges {
       prevConsumer: producerTail,
       nextDependency: next,
       nextConsumer: undefined,
-      version: consumer.trackingVersion, // Mark with current tracking version
+      version: consumer.trackingVersion,
     };
 
     // Wire up consumer side
     consumer.dependencyTail = dependency;
+
     if (next) next.prevDependency = dependency;
     if (tail) tail.nextDependency = dependency;
     else consumer.dependencies = dependency;
 
     // Wire up producer side
     producer.subscribersTail = dependency;
+
     if (producerTail) producerTail.nextConsumer = dependency;
     else producer.subscribers = dependency;
   };
@@ -169,7 +170,6 @@ export function createGraphEdges(): GraphEdges {
         dep = nextDep;
       }
 
-      // OPTIMIZATION: Set tail once at the end instead of on every valid dependency
       node.dependencyTail = prevValid;
     }
   };
