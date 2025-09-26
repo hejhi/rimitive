@@ -21,23 +21,24 @@ export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
-export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
-  // Shallow-check check sibling dependencies
-  function shallowCheck(startDep: Dependency): boolean {
-    for (;;) {
-      const producer = startDep.producer;
+// Shallow-check check sibling dependencies
+const shallowCheck = (startDep: Dependency): boolean => {
+  for (;;) {
+    const producer = startDep.producer;
 
-      if (producer.status === STATUS_DIRTY) return true;
-      // Found pending computed - need deep check, exit shallow mode
-      else if ('compute' in producer && producer.status === STATUS_PENDING) return false;
+    if (producer.status === STATUS_DIRTY) return true;
+    // Found pending computed - need deep check, exit shallow mode
+    else if ('compute' in producer && producer.status === STATUS_PENDING) return false;
 
-      const next = startDep.nextDependency;
+    const next = startDep.nextDependency;
 
-      if (!next) return false;
-      startDep = next;
-    }
+    if (!next) return false;
+
+    startDep = next;
   }
+}
 
+export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track: GraphEdges['track'] }): PullPropagator {
   const pullUpdates = (rootNode: DerivedNode): void => {
     let depth = 0;
     let current: DerivedNode = rootNode;
@@ -109,7 +110,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
       }
 
       // Find first PENDING computed to descend into (DIRTY cases handled by shallowCheck)
-      while (dep) {
+      do {
         const producer = dep.producer;
 
         // Skip CLEAN dependencies
@@ -120,11 +121,8 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
 
         // PENDING computed - descend into it
         if (producer.status === STATUS_PENDING && 'compute' in producer) {
-          const derivedProducer = producer as DerivedNode;
-
-          // Alien-signals push: create new stack node
           stackHead = { node: current, prev: stackHead };
-          current = derivedProducer;
+          current = producer;
           depth++;
 
           continue traversal;
@@ -133,7 +131,7 @@ export function createPullPropagator({ ctx, track }: { ctx: GlobalContext, track
         dep = dep.nextDependency;
 
         if (!dep) break;
-      }
+      } while (dep);
 
       // All dependencies clean - only update status if needed
       if (current.status !== STATUS_CLEAN) current.status = STATUS_CLEAN;
