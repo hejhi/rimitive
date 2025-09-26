@@ -37,45 +37,58 @@ export function createPullPropagator({
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {
-    // If root node is clean, nothing to do
-    if (rootNode.status === STATUS_CLEAN) return;
+    let current: DerivedNode | undefined = rootNode;
+    let nodeStack: DerivedNode[] | undefined;
 
-    // For nodes without dependencies, just recompute directly
-    if (!rootNode.dependencies) {
-      recomputeNode(rootNode);
-      return;
-    }
-
-    // Check if any dependencies need updates first
-    let needsUpdate = false;
-    let dep: Dependency | undefined = rootNode.dependencies;
-
-    while (dep) {
-      const producer = dep.producer;
-
-      // If dependency is dirty, we need to update
-      if (producer.status === STATUS_DIRTY) {
-        needsUpdate = true;
-        break;
+    traversal: while (current) {
+      if (current.status === STATUS_CLEAN) {
+        // Pop from stack and continue
+        if (!nodeStack?.length) break;
+        current = nodeStack.pop()!;
+        continue;
       }
 
-      // If dependency is pending and has compute, recursively pull it
-      if (producer.status !== STATUS_CLEAN && 'compute' in producer) {
-        pullUpdates(producer);
+      if (!current.dependencies) {
+        recomputeNode(current);
+        // Pop from stack and continue
+        if (!nodeStack?.length) break;
+        current = nodeStack.pop()!;
+        continue;
+      }
 
-        // After pulling, check if it became dirty
+      // Check dependencies for dirty/pending nodes
+      let dep: Dependency | undefined = current.dependencies;
+
+      while (dep) {
+        const producer = dep.producer;
+
+        // If dependency is dirty, recompute immediately
         if (producer.status === STATUS_DIRTY) {
-          needsUpdate = true;
-          break;
+          recomputeNode(current);
+          // Pop from stack and continue
+          if (!nodeStack?.length) break traversal;
+          current = nodeStack.pop()!;
+          continue traversal;
         }
+
+        // If dependency is pending and computed, descend into it
+        if (producer.status !== STATUS_CLEAN && 'compute' in producer) {
+          // Lazy stack allocation
+          if (!nodeStack) nodeStack = [];
+          nodeStack.push(current);
+          current = producer as DerivedNode;
+          continue traversal;
+        }
+
+        dep = dep.nextDependency;
       }
 
-      dep = dep.nextDependency;
+      // All dependencies clean - mark current as clean
+      current.status = STATUS_CLEAN;
+      // Pop from stack and continue
+      if (!nodeStack?.length) break;
+      current = nodeStack.pop()!;
     }
-
-    // Only recompute if dependencies changed
-    if (needsUpdate || rootNode.status === STATUS_DIRTY) recomputeNode(rootNode);
-    else rootNode.status = STATUS_CLEAN;
   };
 
   return { pullUpdates };
