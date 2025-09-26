@@ -1,9 +1,14 @@
 /**
- * Simple Conditional Dependencies Benchmark
- * 
- * Tests dynamic dependency tracking and branch pruning.
+ * Conditional Dependencies Scaling Benchmark
+ *
+ * Tests dynamic dependency tracking and branch pruning with varying complexity.
  * Key metric: Inactive branches should NOT trigger recomputation.
  * Validates push-pull hybrid optimization.
+ *
+ * Scaling: Tests conditional patterns with increasing branch counts
+ * - 2 branches: Simple conditional selection
+ * - 4 branches: Medium complexity branching
+ * - 8 branches: Complex multi-way branching
  */
 
 import { bench, group, summary, barplot } from 'mitata';

@@ -1,14 +1,14 @@
 /**
- * Simple Diamond Dependency Benchmarks
- * 
- * Tests diamond-shaped dependency graphs for glitch prevention.
+ * Diamond Dependency Scaling Benchmarks
+ *
+ * Tests diamond-shaped dependency graphs for glitch prevention with varying complexity.
  * The key metric: bottom computed should calculate ONCE per source update,
  * seeing consistent values from both paths (no intermediate states).
- *       source
- *       /    \
- *     left  right
- *       \    /
- *       bottom
+ *
+ * Scaling: Tests diamond patterns of increasing complexity
+ * - 1 diamond: simple source->left,right->bottom
+ * - 2 diamonds: source->l1,r1->l2,r2->bottom
+ * - 3 diamonds: source->...->l3,r3->bottom
  */
 
 import { bench, group, summary, barplot } from 'mitata';
@@ -23,40 +23,58 @@ import {
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed';
 
-const ITERATIONS = 100000; // Increased for better precision
+const ITERATIONS = 50000; // Adjusted for scaling tests
 const latticeAPI = createApi();
 const latticeSignal = latticeAPI.signal;
 const latticeComputed = latticeAPI.computed;
 
-group('Simple Diamond', () => {
+// Type for mitata benchmark state
+interface BenchState {
+  get(name: 'diamonds'): number;
+  get(name: string): unknown;
+}
+
+group('Diamond Scaling', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice', function* () {
-        // Create nodes outside yield - same as Preact/Alien
+      bench('Lattice - $diamonds diamonds', function* (state: BenchState) {
+        const diamondCount = state.get('diamonds');
+
+        // Build diamond chain of specified complexity
         const source = latticeSignal(0);
-        const left = latticeComputed(() => {
-          const val = source();
-          // Simulate non-trivial computation
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 31 + j) % 1000007;
-          }
-          return result;
-        });
-        const right = latticeComputed(() => {
-          const val = source();
-          // Different computation path
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 37 + j * 2) % 1000007;
-          }
-          return result;
-        });
+        let currentLeft = source;
+        let currentRight = source;
+
+        // Create diamondCount levels of diamond patterns
+        for (let level = 0; level < diamondCount; level++) {
+          const prevLeft = currentLeft;
+          const prevRight = currentRight;
+
+          currentLeft = latticeComputed(() => {
+            const val = prevLeft();
+            // Simulate computation with level-specific work
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * 31 + level + j) % 1000007;
+            }
+            return result;
+          });
+
+          currentRight = latticeComputed(() => {
+            const val = prevRight();
+            // Different computation path
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * 37 + level * 2 + j) % 1000007;
+            }
+            return result;
+          });
+        }
+
+        // Final convergence node
         const bottom = latticeComputed(() => {
-          // Should see consistent snapshot - both paths updated
-          const l = left();
-          const r = right();
-          // Additional computation at convergence
+          const l = currentLeft();
+          const r = currentRight();
           return (l * l + r * r) % 1000007;
         });
 
@@ -66,71 +84,108 @@ group('Simple Diamond', () => {
             void bottom();
           }
         };
-      });
+      })
+      .args('diamonds', [1, 2, 3, 4]);
     
-      bench('Preact', function* () {
+      bench('Preact - $diamonds diamonds', function* (state: BenchState) {
+        const diamondCount = state.get('diamonds');
+
+        // Build diamond chain of specified complexity
         const source = preactSignal(0);
-        const left = preactComputed(() => {
-          const val = source.value;
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 31 + j) % 1000007;
-          }
-          return result;
-        });
-        const right = preactComputed(() => {
-          const val = source.value;
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 37 + j * 2) % 1000007;
-          }
-          return result;
-        });
+        let currentLeft = source;
+        let currentRight = source;
+
+        // Create diamondCount levels of diamond patterns
+        for (let level = 0; level < diamondCount; level++) {
+          const prevLeft = currentLeft;
+          const prevRight = currentRight;
+
+          currentLeft = preactComputed(() => {
+            const val = prevLeft.value;
+            // Simulate computation with level-specific work
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * 31 + level + j) % 1000007;
+            }
+            return result;
+          });
+
+          currentRight = preactComputed(() => {
+            const val = prevRight.value;
+            // Different computation path
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * 37 + level * 2 + j) % 1000007;
+            }
+            return result;
+          });
+        }
+
+        // Final convergence node
         const bottom = preactComputed(() => {
-          const l = left.value;
-          const r = right.value;
+          const l = currentLeft.value;
+          const r = currentRight.value;
           return (l * l + r * r) % 1000007;
         });
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source.value = i;
             void bottom.value;
           }
         };
-      });
+      })
+      .args('diamonds', [1, 2, 3, 4]);
     
-      bench('Alien', function* () {
+      bench('Alien - $diamonds diamonds', function* (state: BenchState) {
+        const diamondCount = state.get('diamonds');
+
+        // Build diamond chain of specified complexity
         const source = alienSignal(0);
-        const left = alienComputed(() => {
-          const val = source();
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 31 + j) % 1000007;
-          }
-          return result;
-        });
-        const right = alienComputed(() => {
-          const val = source();
-          let result = val;
-          for (let j = 0; j < 5; j++) {
-            result = (result * 37 + j * 2) % 1000007;
-          }
-          return result;
-        });
+        let currentLeft = source;
+        let currentRight = source;
+
+        // Create diamondCount levels of diamond patterns
+        for (let level = 0; level < diamondCount; level++) {
+          const prevLeft = currentLeft;
+          const prevRight = currentRight;
+
+          currentLeft = alienComputed(() => {
+            const val = prevLeft();
+            // Simulate computation with level-specific work
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * 31 + level + j) % 1000007;
+            }
+            return result;
+          });
+
+          currentRight = alienComputed(() => {
+            const val = prevRight();
+            // Different computation path
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * 37 + level * 2 + j) % 1000007;
+            }
+            return result;
+          });
+        }
+
+        // Final convergence node
         const bottom = alienComputed(() => {
-          const l = left();
-          const r = right();
+          const l = currentLeft();
+          const r = currentRight();
           return (l * l + r * r) % 1000007;
         });
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source(i);
             void bottom();
           }
         };
-      });
+      })
+      .args('diamonds', [1, 2, 3, 4]);
     });
   });
 });
