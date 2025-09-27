@@ -1,6 +1,5 @@
 ---
 description: Interactive wizard to configure a monorepo package
-tools: [Task, Write, Read]
 argument-hint: [package-name] [in-workflow]
 ---
 

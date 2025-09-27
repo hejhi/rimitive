@@ -1,6 +1,5 @@
 ---
 description: Interactive wizard to create initial package structure
-tools: [Task, Bash, Write, MultiEdit]
 argument-hint: [package-name] [in-workflow]
 ---
 

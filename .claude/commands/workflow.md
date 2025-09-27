@@ -1,6 +1,6 @@
 ---
-argument-hint: [workflow-name] [workflow-step] [dir (forward/back)]
 description: Start and manage multi-step workflows with intelligent progress tracking
+argument-hint: [workflow-name] [workflow-step] [dir (forward/back)]
 ---
 
 Start and manage multi-step workflows by running sequences of slash commands with intelligent progress tracking and guidance.
@@ -31,7 +31,7 @@ If the current workflow step or next direction is not provided, use the workflow
 5. **Guide User**:
    - Explain what the workflow does
    - Determine and show current position, and explain what's next
-   - Offer to run the next command or pause for user input
+   - Provide instructions to the user on how to run the next applicable step
    - Provide context about each step
 
 6. **Interactive Orchestration**:
