@@ -81,7 +81,7 @@
     "@lattice/lattice": "workspace:*"
   },
   "devDependencies": {
-    "alien-signals": "^2.0.5",
+    "alien-signals": "^3.0.0",
     "esbuild": "^0.25.8",
     "rimraf": "^6.0.1",
     "tdd-guard-vitest": "^0.1.5",
