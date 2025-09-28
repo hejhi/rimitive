@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
+const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
 
 // Linked list stack node for memory efficiency
 interface StackNode {
@@ -28,14 +28,16 @@ export function createPullPropagator({
   ctx: GlobalContext,
   track: GraphEdges['track']
 }): PullPropagator {
-  // Simple recomputation function
+  // Recomputation function that sets status based on value change
   const recomputeNode = (node: DerivedNode) => {
     const oldValue = node.value;
     const newValue = track(ctx, node, node.compute);
 
     if (newValue !== oldValue) {
       node.value = newValue;
+      // Mark as DIRTY so downstream nodes know the value changed
       node.status = STATUS_DIRTY;
+      // Value unchanged, mark as CLEAN to prevent downstream recomputation
     } else node.status = STATUS_CLEAN;
   };
 
@@ -52,7 +54,8 @@ export function createPullPropagator({
       }
 
       let dep: Dependency | undefined = current.dependencies;
-      
+
+      // No dependencies - just recompute
       if (dep === undefined) {
         recomputeNode(current);
 
@@ -62,33 +65,31 @@ export function createPullPropagator({
         continue;
       }
 
+      // Single-pass optimized approach
+      let hasDirty = false;
+
       do {
         const producer: FromNode = dep.producer;
         const pStatus = producer.status;
 
-        // If dependency is dirty, recompute immediately
-        if (pStatus === STATUS_DIRTY) {
-          recomputeNode(current);
-
-          if (stackHead === undefined) break traversal;
-          current = stackHead.node;
-          stackHead = stackHead.prev;
-          continue traversal;
-        }
-
-        // If dependency is pending and computed, descend into it
-        if ('compute' in producer && pStatus !== STATUS_CLEAN) {
-          // Push current node onto linked list stack
+        // Handle pending computed dependencies first
+        if ('compute' in producer && pStatus === STATUS_PENDING) {
+          // Push current onto stack and descend
           stackHead = { node: current, prev: stackHead };
           current = producer;
           continue traversal;
         }
 
+        // Check if dependency is dirty (value changed)
+        // Don't break early - we still need to check for pending computeds
+        if (pStatus === STATUS_DIRTY) hasDirty = true;
+
         dep = dep.nextDependency;
       } while (dep);
 
-      // All dependencies clean - mark current as clean
-      current.status = STATUS_CLEAN;
+      // Recompute only if at least one dependency changed
+      if (hasDirty) recomputeNode(current);
+      else current.status = STATUS_CLEAN;
 
       if (stackHead === undefined) break;
       current = stackHead.node;

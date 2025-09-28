@@ -31,6 +31,7 @@ export function createGraphEdges(): GraphEdges {
     // Check 2: Is next in sequence this producer?
     const next = tail ? tail.nextDependency : consumer.dependencies;
 
+    // Check if we already have this dependency
     if (next && next.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       next.version = consumer.trackingVersion;
@@ -38,8 +39,19 @@ export function createGraphEdges(): GraphEdges {
       return; // Found and reused
     }
 
-    // Version-based tracking: Just create a new dependency
-    // Stale dependencies will be pruned based on version mismatch in track()
+    // Search rest of the list for existing connection (optimization for stable graphs)
+    let existingDep = next ? next.nextDependency : undefined;
+    while (existingDep) {
+      if (existingDep.producer === producer) {
+        // Found existing dependency - update version
+        existingDep.version = consumer.trackingVersion;
+        // Note: We don't move it to tail to preserve order for pruning
+        return; // Reused existing dependency
+      }
+      existingDep = existingDep.nextDependency;
+    }
+
+    // No existing dependency found - create new one
     const producerTail = producer.subscribersTail;
     const dependency: Dependency = {
       producer,
