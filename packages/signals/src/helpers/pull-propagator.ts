@@ -50,9 +50,9 @@ export function createPullPropagator({
         stackHead = stackHead.prev;
         continue;
       }
-      // Check dependencies for dirty/pending nodes
-      let dep: Dependency | undefined = current.dependencies;
 
+      let dep: Dependency | undefined = current.dependencies;
+      
       if (dep === undefined) {
         recomputeNode(current);
 
@@ -64,9 +64,10 @@ export function createPullPropagator({
 
       do {
         const producer: FromNode = dep.producer;
+        const pStatus = producer.status;
 
         // If dependency is dirty, recompute immediately
-        if (producer.status === STATUS_DIRTY) {
+        if (pStatus === STATUS_DIRTY) {
           recomputeNode(current);
 
           if (stackHead === undefined) break traversal;
@@ -76,7 +77,7 @@ export function createPullPropagator({
         }
 
         // If dependency is pending and computed, descend into it
-        if (producer.status !== STATUS_CLEAN && 'compute' in producer) {
+        if ('compute' in producer && pStatus !== STATUS_CLEAN) {
           // Push current node onto linked list stack
           stackHead = { node: current, prev: stackHead };
           current = producer;
