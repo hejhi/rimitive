@@ -46,9 +46,7 @@ export function createPullPropagator({
         current.value = track(ctx, current, current.compute);
 
         // Only increment version if the value actually changed
-        if (prevValue !== current.value) {
-          current.version++;
-        }
+        if (prevValue !== current.value) current.version++;
 
         // After computing, the node is up-to-date
         current.status = STATUS_CLEAN;
@@ -80,9 +78,7 @@ export function createPullPropagator({
         }
 
         // Check for version changes (always do this)
-        if (dep.producerVersion !== producer.version) {
-          hasValueChange = true;
-        }
+        if (dep.producerVersion !== producer.version) hasValueChange = true;
 
         dep = dep.nextDependency;
       } while (dep);
@@ -101,9 +97,7 @@ export function createPullPropagator({
         current.value = track(ctx, current, current.compute);
 
         // Only increment version if the value actually changed
-        if (prevValue !== current.value) {
-          current.version++;
-        }
+        if (prevValue !== current.value) current.version++;
       }
 
       // After computing or skipping, the node is up-to-date
