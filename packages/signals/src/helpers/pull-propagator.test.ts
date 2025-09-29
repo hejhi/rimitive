@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { DerivedNode, FromNode, Dependency, ProducerNode } from '../types';
+import type { DerivedNode, FromNode, Dependency, ProducerNode, ConsumerNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { createPullPropagator } from './pull-propagator';
@@ -50,10 +50,14 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
     const node = {
       compute,
       dependencies,
+      dependencyTail: dependencies, // ConsumerNode field
+      trackingVersion: 0, // ConsumerNode field - proper version tracking
       value: undefined,
       status,
+      // ProducerNode fields
+      subscribers: undefined,
+      subscribersTail: undefined,
     } as DerivedNode;
-    (node as any).version = 0; // Add version for testing
     return node;
   }
 
@@ -62,22 +66,25 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
     const node = {
       value,
       status,
+      // ProducerNode fields
+      subscribers: undefined,
+      subscribersTail: undefined,
     } as ProducerNode;
-    (node as any).version = 0; // Add version for testing
-    (node as any).dependents = undefined; // Add dependents for testing
     return node as FromNode;
   }
 
   // Test helper to create a dependency edge
   function createDependency(producer: FromNode, nextDep?: Dependency): Dependency {
-    const dep = {
+    const dep: Dependency = {
       producer,
-      consumer: null as any, // Not needed for pull tests
-      version: (producer as any).version || 0,
+      consumer: null as any, // Not needed for most pull tests
+      version: 0, // Will be set by track function based on consumer's trackingVersion
       nextDependency: nextDep,
-      nextTarget: undefined,
+      prevDependency: undefined,
+      nextConsumer: undefined,
+      prevConsumer: undefined,
     };
-    return dep as unknown as Dependency;
+    return dep;
   }
 
   // Mock context and track function
@@ -253,11 +260,9 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // Now update both sources
       nodeX.value = 100;
       nodeX.status = STATUS_DIRTY;
-      (nodeX as any).version = ((nodeX as any).version || 0) + 1;
 
       nodeY.value = 200;
       nodeY.status = STATUS_DIRTY;
-      (nodeY as any).version = ((nodeY as any).version || 0) + 1;
 
       // Mark nodeSum as PENDING since its dependencies changed
       nodeSum.status = STATUS_PENDING;
@@ -270,39 +275,167 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
     });
   });
 
-  describe('Invariant: Version monotonicity', () => {
-    it('should maintain monotonically increasing versions', () => {
+  describe('Invariant: Dependency version tracking for efficient pruning', () => {
+    it('should properly track dependency versions through consumer trackingVersion', () => {
       /**
-       * Version numbers must only increase, never decrease.
-       * This is crucial for cache invalidation and change detection.
+       * CORRECT VERSION TRACKING MECHANISM:
+       * 1. ConsumerNode has trackingVersion - incremented each time dependencies are tracked
+       * 2. Dependency has version - captures consumer's trackingVersion when created
+       * 3. This enables efficient dependency pruning - stale deps have version < trackingVersion
+       *
+       * This test validates the actual FRP mechanism, not implementation details.
        */
       const { ctx } = createTestContext();
 
-      // Mock track to update versions
-      const trackWithVersions = vi.fn((_context: any, node: any, compute: any) => {
-        const oldVersion = (node as any).version || 0;
-        const result = compute();
-        (node as any).version = oldVersion + 1; // Versions should increase
-        return result;
+      // Track function that properly increments trackingVersion
+      const trackWithVersions = vi.fn((_context: GlobalContext, node: ConsumerNode, compute: () => any) => {
+        // This simulates what the real track function does
+        node.trackingVersion = (node.trackingVersion || 0) + 1;
+
+        // Update dependency versions to current trackingVersion
+        let dep = node.dependencies;
+        while (dep) {
+          dep.version = node.trackingVersion;
+          dep = dep.nextDependency;
+        }
+
+        return compute();
       });
 
       const propagator = createPullPropagator({ ctx, track: trackWithVersions });
 
       const source = createSourceNode(1, STATUS_DIRTY);
-      (source as any).version = 10;
 
+      // Create derived node with proper ConsumerNode fields
       const derived = createDerivedNode(
         () => (source.value as number) * 2,
         createDependency(source),
         STATUS_PENDING
       );
-      (derived as any).version = 5;
 
-      const previousVersion = (derived as any).version;
+      // Initialize trackingVersion (ConsumerNodes have this field)
+      derived.trackingVersion = 0;
+
+      // Pull updates - should increment trackingVersion
       propagator.pullUpdates(derived);
 
-      // Version should have increased
-      expect((derived as any).version).toBeGreaterThan(previousVersion);
+      // Verify trackingVersion was incremented
+      expect(derived.trackingVersion).toBe(1);
+
+      // Verify the computation worked
+      expect(derived.value).toBe(2);
+
+      // Update source and pull again
+      source.value = 10;
+      source.status = STATUS_DIRTY;
+      derived.status = STATUS_PENDING;
+
+      propagator.pullUpdates(derived);
+
+      // trackingVersion should increment again
+      expect(derived.trackingVersion).toBe(2);
+      expect(derived.value).toBe(20);
+
+      // Verify dependencies have the correct version
+      if (derived.dependencies) {
+        expect(derived.dependencies.version).toBe(2);
+      }
+    });
+
+    it('should enable dependency pruning through version comparison', () => {
+      /**
+       * Version tracking enables efficient dependency pruning:
+       * - Dependencies with version < trackingVersion are stale
+       * - This allows removing unused dependencies after re-tracking
+       * - Critical for memory efficiency in dynamic reactive graphs
+       */
+      const { ctx } = createTestContext();
+
+      let trackedDependencies: Set<FromNode> = new Set();
+
+      // Track function that simulates dynamic dependency tracking
+      const trackWithPruning = vi.fn((_context: GlobalContext, node: ConsumerNode, compute: () => any) => {
+        node.trackingVersion = (node.trackingVersion || 0) + 1;
+
+        // Mark accessed dependencies
+        trackedDependencies.clear();
+
+        // Execute computation (would normally track deps automatically)
+        const result = compute();
+
+        // Update versions of accessed dependencies
+        let dep = node.dependencies;
+        while (dep) {
+          if (trackedDependencies.has(dep.producer)) {
+            dep.version = node.trackingVersion;
+          }
+          // Dependencies with version < trackingVersion would be pruned
+          dep = dep.nextDependency;
+        }
+
+        return result;
+      });
+
+      const propagator = createPullPropagator({ ctx, track: trackWithPruning });
+
+      const sourceA = createSourceNode(5, STATUS_CLEAN);
+      const sourceB = createSourceNode(10, STATUS_CLEAN);
+
+      let useSourceB = true;
+
+      // Derived node that conditionally depends on sources
+      const derived = createDerivedNode(
+        () => {
+          trackedDependencies.add(sourceA);
+          if (useSourceB) {
+            trackedDependencies.add(sourceB);
+            return (sourceA.value as number) + (sourceB.value as number);
+          }
+          return (sourceA.value as number) * 2;
+        },
+        createDependency(sourceA, createDependency(sourceB)),
+        STATUS_PENDING
+      );
+
+      derived.trackingVersion = 0;
+
+      // First pull - depends on both sources
+      propagator.pullUpdates(derived);
+      expect(derived.value).toBe(15);
+      expect(derived.trackingVersion).toBe(1);
+
+      // Both dependencies should be current
+      let depA = derived.dependencies;
+      let depB = depA?.nextDependency;
+      expect(depA?.version).toBe(1);
+      expect(depB?.version).toBe(1);
+
+      // Change condition - no longer needs sourceB
+      useSourceB = false;
+      sourceA.value = 7;
+      sourceA.status = STATUS_DIRTY;
+      derived.status = STATUS_PENDING;
+
+      propagator.pullUpdates(derived);
+      expect(derived.value).toBe(14);
+      expect(derived.trackingVersion).toBe(2);
+
+      // SourceA dependency should be updated, sourceB should be stale
+      expect(depA?.version).toBe(2); // Updated
+      expect(depB?.version).toBe(1); // Stale - would be pruned
+
+      // Stale dependencies (version < trackingVersion) can be identified for removal
+      const staleDeps: Dependency[] = [];
+      let dep = derived.dependencies;
+      while (dep) {
+        if (dep.version < derived.trackingVersion) {
+          staleDeps.push(dep);
+        }
+        dep = dep.nextDependency;
+      }
+
+      expect(staleDeps.length).toBe(1);
+      expect(staleDeps[0]?.producer).toBe(sourceB);
     });
   });
 
