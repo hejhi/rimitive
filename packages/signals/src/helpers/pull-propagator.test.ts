@@ -65,10 +65,10 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
   }
 
   // Test helper to create a dependency edge
-  function createDependency(producer: FromNode, nextDep?: Dependency): Dependency {
+  function createDependency(producer: FromNode, nextDep?: Dependency, consumer?: ConsumerNode): Dependency {
     const dep: Dependency = {
       producer,
-      consumer: null as any, // Not needed for most pull tests
+      consumer: consumer as any, // Will be set later when wiring to nodes
       version: 0, // Will be set by track function based on consumer's trackingVersion
       producerVersion: 0, // Producer's version when dependency was created
       nextDependency: nextDep,
@@ -127,13 +127,13 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // Create source node A (dirty)
       const nodeA = createSourceNode(10, STATUS_DIRTY);
 
-      // Create intermediate nodes B and C
+      // Create intermediate nodes B and C (dependencies wired after creation)
       const nodeB = createDerivedNode(
         () => {
           computeCountB++;
           return (nodeA.value as number) * 2; // Should be 20
         },
-        createDependency(nodeA),
+        undefined,
         STATUS_PENDING
       );
 
@@ -142,7 +142,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           computeCountC++;
           return (nodeA.value as number) * 3; // Should be 30
         },
-        createDependency(nodeA),
+        undefined,
         STATUS_PENDING
       );
 
@@ -152,9 +152,21 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           computeCountD++;
           return ((nodeB.value as number) || 0) + ((nodeC.value as number) || 0);
         },
-        createDependency(nodeB, createDependency(nodeC)),
+        undefined,
         STATUS_PENDING
       );
+
+      // Wire dependencies with proper consumer references
+      nodeB.dependencies = createDependency(nodeA, undefined, nodeB);
+      nodeB.dependencyTail = nodeB.dependencies;
+
+      nodeC.dependencies = createDependency(nodeA, undefined, nodeC);
+      nodeC.dependencyTail = nodeC.dependencies;
+
+      const depC = createDependency(nodeC, undefined, nodeD);
+      const depB = createDependency(nodeB, depC, nodeD);
+      nodeD.dependencies = depB;
+      nodeD.dependencyTail = depC;
 
       propagator.pullUpdates(nodeD);
 
@@ -183,18 +195,34 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       const nodeA = createSourceNode(5, STATUS_DIRTY);
 
       // Three parallel dependencies
-      const nodeB = createDerivedNode(() => (nodeA.value as number) * 2, createDependency(nodeA), STATUS_PENDING);
-      const nodeC = createDerivedNode(() => (nodeA.value as number) * 3, createDependency(nodeA), STATUS_PENDING);
-      const nodeE = createDerivedNode(() => (nodeA.value as number) * 4, createDependency(nodeA), STATUS_PENDING);
+      const nodeB = createDerivedNode(() => (nodeA.value as number) * 2, undefined, STATUS_PENDING);
+      const nodeC = createDerivedNode(() => (nodeA.value as number) * 3, undefined, STATUS_PENDING);
+      const nodeE = createDerivedNode(() => (nodeA.value as number) * 4, undefined, STATUS_PENDING);
 
       // Node that depends on all three
       const nodeF = createDerivedNode(
         () => {
           return ((nodeB.value as number) || 0) + ((nodeC.value as number) || 0) + ((nodeE.value as number) || 0);
         },
-        createDependency(nodeB, createDependency(nodeC, createDependency(nodeE))),
+        undefined,
         STATUS_PENDING
       );
+
+      // Wire dependencies with proper consumer references
+      nodeB.dependencies = createDependency(nodeA, undefined, nodeB);
+      nodeB.dependencyTail = nodeB.dependencies;
+
+      nodeC.dependencies = createDependency(nodeA, undefined, nodeC);
+      nodeC.dependencyTail = nodeC.dependencies;
+
+      nodeE.dependencies = createDependency(nodeA, undefined, nodeE);
+      nodeE.dependencyTail = nodeE.dependencies;
+
+      const depE = createDependency(nodeE, undefined, nodeF);
+      const depC = createDependency(nodeC, depE, nodeF);
+      const depB = createDependency(nodeB, depC, nodeF);
+      nodeF.dependencies = depB;
+      nodeF.dependencyTail = depE;
 
       propagator.pullUpdates(nodeF);
 
@@ -463,10 +491,13 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
         const currentPrev = prevNode; // Capture current prevNode for closure
         const node = createDerivedNode(
           () => (currentPrev.value as number) + 1,
-          createDependency(currentPrev),
+          undefined,
           STATUS_PENDING
         );
         nodes.push(node);
+        // Wire dependency with proper consumer reference
+        node.dependencies = createDependency(currentPrev, undefined, node);
+        node.dependencyTail = node.dependencies;
         prevNode = node;
       }
 
@@ -509,7 +540,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
         () => {
           return (source.value as number) / 2;
         },
-        createDependency(source),
+        undefined,
         STATUS_PENDING
       );
 
@@ -517,7 +548,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
         () => {
           return (source.value as number) / 4;
         },
-        createDependency(source),
+        undefined,
         STATUS_PENDING
       );
 
@@ -526,9 +557,21 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
         () => {
           return ((left.value as number) || 0) + ((right.value as number) || 0);
         },
-        createDependency(left, createDependency(right)),
+        undefined,
         STATUS_PENDING
       );
+
+      // Wire dependencies with proper consumer references
+      left.dependencies = createDependency(source, undefined, left);
+      left.dependencyTail = left.dependencies;
+
+      right.dependencies = createDependency(source, undefined, right);
+      right.dependencyTail = right.dependencies;
+
+      const depRight = createDependency(right, undefined, consumer);
+      const depLeft = createDependency(left, depRight, consumer);
+      consumer.dependencies = depLeft;
+      consumer.dependencyTail = depRight;
 
       propagator.pullUpdates(consumer);
 
@@ -569,7 +612,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           computeCountB++;
           return (nodeA.value as number) * 2;
         },
-        createDependency(nodeA),
+        undefined,
         STATUS_PENDING
       );
 
@@ -578,7 +621,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           computeCountC++;
           return (nodeA.value as number) * 3;
         },
-        createDependency(nodeA),
+        undefined,
         STATUS_PENDING
       );
 
@@ -588,9 +631,21 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           computeCountD++;
           return (nodeB.value as number) + (nodeC.value as number);
         },
-        createDependency(nodeB, createDependency(nodeC)),
+        undefined,
         STATUS_PENDING
       );
+
+      // Wire dependencies with proper consumer references
+      nodeB.dependencies = createDependency(nodeA, undefined, nodeB);
+      nodeB.dependencyTail = nodeB.dependencies;
+
+      nodeC.dependencies = createDependency(nodeA, undefined, nodeC);
+      nodeC.dependencyTail = nodeC.dependencies;
+
+      const depC = createDependency(nodeC, undefined, nodeD);
+      const depB = createDependency(nodeB, depC, nodeD);
+      nodeD.dependencies = depB;
+      nodeD.dependencyTail = depC;
 
       // Pull updates from D
       propagator.pullUpdates(nodeD);
@@ -636,10 +691,13 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
             computeCount++;
             return (currentPrev.value as number) + 1;
           },
-          createDependency(currentPrev),
+          undefined,
           STATUS_PENDING
         );
         nodes.push(node);
+        // Wire dependency with proper consumer reference
+        node.dependencies = createDependency(currentPrev, undefined, node);
+        node.dependencyTail = node.dependencies;
         prevNode = node;
       }
 

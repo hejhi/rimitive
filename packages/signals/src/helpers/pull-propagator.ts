@@ -169,9 +169,9 @@ export function createPullPropagator({
       dep = stackDep.nextDependency;
       stackHead = stackHead.prev;
 
-      // Restore accumulated state from node temporary storage
-      hasValueChange = (current as any)._tempHasChange || false;
-      delete (current as any)._tempHasChange;
+      // Restore accumulated state from status high bit
+      hasValueChange = (current.status & HAS_CHANGE_BIT) !== 0;
+      current.status &= ~HAS_CHANGE_BIT;  // Clear the temp bit
 
       // Check if pulled dep itself changed
       if (stackDep.producerVersion !== stackDep.producer.version) {
