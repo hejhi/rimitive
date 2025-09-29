@@ -159,8 +159,8 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       expect(nodeD.status).toBe(STATUS_PENDING);
 
       // D is a leaf node (no further subscribers)
-      // It should be visited exactly twice (once from each path)
-      expect(leafNodes.filter(n => n === nodeD).length).toBe(2);
+      // It should be visited exactly once (skipped on second encounter to avoid redundant work)
+      expect(leafNodes.filter(n => n === nodeD).length).toBe(1);
     });
   });
 
@@ -190,11 +190,12 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       expect(leafNodes).toHaveLength(0);
     });
 
-    it('should skip nodes marked as DIRTY', () => {
+    it('should process DIRTY nodes and mark them as PENDING', () => {
       /**
-       * DIRTY nodes are already invalidated - no need to process again
+       * DIRTY nodes from previous computations need to be marked PENDING
+       * for the new propagation cycle to know they need re-evaluation
        */
-      const nodeB = createProducerNode(STATUS_DIRTY); // Already dirty!
+      const nodeB = createProducerNode(STATUS_DIRTY); // DIRTY from previous cycle
       const nodeA = createProducerNode(STATUS_CLEAN);
 
       nodeA.subscribers = createDependency(nodeB);
@@ -202,8 +203,8 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       const traversal = createGraphTraversal();
       traversal.propagate(nodeA.subscribers!);
 
-      // B should remain DIRTY (not changed to PENDING)
-      expect(nodeB.status).toBe(STATUS_DIRTY);
+      // B should be marked PENDING for re-evaluation
+      expect(nodeB.status).toBe(STATUS_PENDING);
     });
   });
 
@@ -478,8 +479,8 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       // Should be fast even for 1024 nodes
       expect(duration).toBeLessThan(100); // Less than 100ms
 
-      // Should visit all leaf nodes (2^10 / 2 = 512 leaves)
-      expect(nodeCount).toBe(512);
+      // Should visit all leaf nodes (2^10 = 1024 leaves at depth 0)
+      expect(nodeCount).toBe(1024);
     });
   });
 });

@@ -28,19 +28,6 @@ export function createPullPropagator({
   ctx: GlobalContext,
   track: GraphEdges['track']
 }): PullPropagator {
-  // Recomputation function that sets status based on value change
-  const recomputeNode = (node: DerivedNode) => {
-    const oldValue = node.value;
-    const newValue = track(ctx, node, node.compute);
-
-    if (newValue !== oldValue) {
-      node.value = newValue;
-      // Mark as DIRTY so downstream nodes know the value changed
-      node.status = STATUS_DIRTY;
-      // Value unchanged, mark as CLEAN to prevent downstream recomputation
-    } else node.status = STATUS_CLEAN;
-  };
-
   const pullUpdates = (rootNode: DerivedNode): void => {
     let current: DerivedNode | undefined = rootNode;
     let stackHead: StackNode | undefined;
@@ -56,7 +43,9 @@ export function createPullPropagator({
       let dep: Dependency | undefined = current.dependencies;
 
       if (dep === undefined) {
-        recomputeNode(current);
+        current.value = track(ctx, current, current.compute);
+        // After computing, the node is up-to-date
+        current.status = STATUS_CLEAN;
 
         if (stackHead === undefined) break;
         current = stackHead.node;
@@ -65,7 +54,6 @@ export function createPullPropagator({
       }
 
       // Phase 1: Pull ALL pending dependencies first
-      let hasPending = false;
       do {
         const producer: FromNode = dep.producer;
 
@@ -79,24 +67,42 @@ export function createPullPropagator({
         dep = dep.nextDependency;
       } while (dep);
 
-      // Phase 2: After all pending are resolved, check for dirty
+      // Phase 2: After all pending are resolved, check for dirty derived nodes
+      dep = current.dependencies;
+
+      while (dep) {
+        const producer: FromNode = dep.producer;
+
+        // If a dependency is a dirty derived node, it needs to be pulled first
+        if ('compute' in producer && producer.status === STATUS_DIRTY) {
+          stackHead = { node: current, prev: stackHead };
+          current = producer;
+          continue traversal;
+        }
+
+        dep = dep.nextDependency;
+      }
+
+      // Phase 3: Check if any dependency values have changed (dirty source nodes)
       dep = current.dependencies;
       let hasDirty = false;
 
-      do {
+      while (dep) {
         const producer: FromNode = dep.producer;
 
         if (producer.status === STATUS_DIRTY) {
           hasDirty = true;
-          break; // Can break here - we're only checking for dirty
+          break;
         }
 
         dep = dep.nextDependency;
-      } while (dep);
+      }
 
-      // Phase 3: Recompute if any dependency was dirty
-      if (hasDirty) {
-        recomputeNode(current);
+      // Phase 4: Recompute if any dependency was dirty OR if node never computed
+      if (hasDirty || current.status === STATUS_PENDING) {
+        current.value = track(ctx, current, current.compute);
+        // After computing, the node is up-to-date
+        current.status = STATUS_CLEAN;
 
         if (stackHead === undefined) break traversal;
         current = stackHead.node;
@@ -104,7 +110,7 @@ export function createPullPropagator({
         continue traversal;
       }
 
-      // All dependencies are clean
+      // All dependencies are clean and node is already computed
       current.status = STATUS_CLEAN;
 
       if (stackHead === undefined) break;

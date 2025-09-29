@@ -45,6 +45,9 @@ export function createGraphTraversal(): GraphTraversal {
    subscribers: Dependency,
    onLeaf: (node: ConsumerNode) => void
   ): void => {
+    // Early exit for undefined/null subscribers
+    if (!subscribers) return;
+
     let stack: Stack<Dependency> | undefined; // LOCAL variable (not shared)
     let currentDependency: Dependency | undefined = subscribers;
 

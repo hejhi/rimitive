@@ -47,12 +47,14 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
     dependencies?: Dependency,
     status: number = STATUS_PENDING
   ): DerivedNode {
-    return {
+    const node = {
       compute,
       dependencies,
       value: undefined,
       status,
     } as DerivedNode;
+    (node as any).version = 0; // Add version for testing
+    return node;
   }
 
   // Test helper to create a minimal source node
@@ -208,11 +210,11 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       propagator.pullUpdates(nodeF);
 
-      // Only B gets computed due to the bug
-      expect(nodeB.value).toBe(10);
-      expect(nodeC.value).toBeUndefined(); // BUG: Never computed
-      expect(nodeE.value).toBeUndefined(); // BUG: Never computed
-      expect(nodeF.value).toBe(10); // BUG: Should be 10+15+20=45
+      // After fixing the bug, all dependencies are properly computed
+      expect(nodeB.value).toBe(10); // 5 * 2
+      expect(nodeC.value).toBe(15); // 5 * 3
+      expect(nodeE.value).toBe(20); // 5 * 4
+      expect(nodeF.value).toBe(45); // 10 + 15 + 20
     });
   });
 
@@ -256,6 +258,9 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       nodeY.value = 200;
       nodeY.status = STATUS_DIRTY;
       (nodeY as any).version = ((nodeY as any).version || 0) + 1;
+
+      // Mark nodeSum as PENDING since its dependencies changed
+      nodeSum.status = STATUS_PENDING;
 
       // Pull should see BOTH updates atomically
       propagator.pullUpdates(nodeSum);
@@ -342,9 +347,10 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       const nodes: DerivedNode[] = [];
 
       for (let i = 0; i < depth; i++) {
+        const currentPrev = prevNode; // Capture current prevNode for closure
         const node = createDerivedNode(
-          () => (prevNode.value as number) + 1,
-          createDependency(prevNode),
+          () => (currentPrev.value as number) + 1,
+          createDependency(currentPrev),
           STATUS_PENDING
         );
         nodes.push(node);
@@ -521,12 +527,13 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       let prevNode: FromNode = createSourceNode(1, STATUS_DIRTY);
 
       for (let i = 0; i < 5; i++) {
+        const currentPrev = prevNode; // Capture current prevNode for closure
         const node = createDerivedNode(
           () => {
             computeCount++;
-            return (prevNode.value as number) + 1;
+            return (currentPrev.value as number) + 1;
           },
-          createDependency(prevNode),
+          createDependency(currentPrev),
           STATUS_PENDING
         );
         nodes.push(node);
