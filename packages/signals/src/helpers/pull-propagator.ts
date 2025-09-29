@@ -55,7 +55,6 @@ export function createPullPropagator({
 
       let dep: Dependency | undefined = current.dependencies;
 
-      // No dependencies - just recompute
       if (dep === undefined) {
         recomputeNode(current);
 
@@ -65,31 +64,57 @@ export function createPullPropagator({
         continue;
       }
 
-      // Single-pass optimized approach
+      // Check all dependencies first
       let hasDirty = false;
+      let hasPending = false;
 
       do {
         const producer: FromNode = dep.producer;
         const pStatus = producer.status;
 
-        // Handle pending computed dependencies first
-        if ('compute' in producer && pStatus === STATUS_PENDING) {
-          // Push current onto stack and descend
-          stackHead = { node: current, prev: stackHead };
-          current = producer;
-          continue traversal;
+        if (pStatus === STATUS_DIRTY) {
+          hasDirty = true;
+          // Can break early since we know we need to recompute
+          break;
         }
 
-        // Check if dependency is dirty (value changed)
-        // Don't break early - we still need to check for pending computeds
-        if (pStatus === STATUS_DIRTY) hasDirty = true;
+        if ('compute' in producer && pStatus === STATUS_PENDING) {
+          hasPending = true;
+        }
 
         dep = dep.nextDependency;
       } while (dep);
 
-      // Recompute only if at least one dependency changed
-      if (hasDirty) recomputeNode(current);
-      else current.status = STATUS_CLEAN;
+      // If any dependency is dirty, recompute
+      if (hasDirty) {
+        recomputeNode(current);
+
+        if (stackHead === undefined) break traversal;
+        current = stackHead.node;
+        stackHead = stackHead.prev;
+        continue traversal;
+      }
+
+      // If any dependency is pending (and none are dirty), pull it first
+      if (hasPending) {
+        dep = current.dependencies;
+
+        if (dep) {
+          do {
+            const producer: FromNode = dep.producer;
+
+            if ('compute' in producer && producer.status === STATUS_PENDING) {
+              stackHead = { node: current, prev: stackHead };
+              current = producer;
+              continue traversal;
+            }
+            dep = dep.nextDependency;
+          } while (dep);
+        }
+      }
+
+      // All dependencies are clean
+      current.status = STATUS_CLEAN;
 
       if (stackHead === undefined) break;
       current = stackHead.node;
