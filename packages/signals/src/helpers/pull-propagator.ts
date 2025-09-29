@@ -11,11 +11,9 @@ export type { GraphEdges } from './graph-edges';
 const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
 
 // Minimal stack node - only store what cannot be reconstructed
-// Track version as primitive (4 bytes) rather than full dep reference (8 bytes)
 interface StackNode {
-  node: DerivedNode;
-  dep: Dependency | undefined;  // Resume iteration from this dependency
-  pulledDep: Dependency | undefined;  // The dependency we pulled (to check version after)
+  node: DerivedNode;  // Consumer node to return to after recursion
+  pulledDep: Dependency;  // The dependency we pulled (resume from nextDependency, check version)
   hasValueChange: boolean;  // Accumulated value change flag
   prev: StackNode | undefined;
 }
@@ -41,10 +39,10 @@ export function createPullPropagator({
       if (current.status === STATUS_CLEAN) {
         if (stackHead === undefined) break;
         current = stackHead.node;
-        dep = stackHead.dep;  // Resume from saved position
+        dep = stackHead.pulledDep.nextDependency;  // Resume from next after pulled dep
         hasValueChange = stackHead.hasValueChange;
         // Check if pulled dependency changed after recursion
-        if (stackHead.pulledDep && stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
+        if (stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
           hasValueChange = true;
         }
         stackHead = stackHead.prev;
@@ -69,10 +67,10 @@ export function createPullPropagator({
 
         if (stackHead === undefined) break;
         current = stackHead.node;
-        dep = stackHead.dep;  // Resume from saved position
+        dep = stackHead.pulledDep.nextDependency;  // Resume from next after pulled dep
         hasValueChange = stackHead.hasValueChange;
         // Check if pulled dependency changed after recursion
-        if (stackHead.pulledDep && stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
+        if (stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
           hasValueChange = true;
         }
         stackHead = stackHead.prev;
@@ -107,12 +105,11 @@ export function createPullPropagator({
       }
 
       // If we found a node to pull, do it recursively
-      if (needsPull && dep) {  // dep must exist if needsPull is set
+      if (needsPull && pulledDep) {  // pulledDep must exist if needsPull is set
         // Minimal stack allocation - only store what we can't reconstruct
         stackHead = {
           node: current,
-          dep: dep.nextDependency,  // Resume from here after recursion
-          pulledDep,  // Check version after pull
+          pulledDep,  // Resume from pulledDep.nextDependency, check version after
           hasValueChange,  // Accumulated state
           prev: stackHead
         };
@@ -137,10 +134,10 @@ export function createPullPropagator({
 
       if (stackHead === undefined) break;
       current = stackHead.node;
-      dep = stackHead.dep;  // Resume from saved position
+      dep = stackHead.pulledDep.nextDependency;  // Resume from next after pulled dep
       hasValueChange = stackHead.hasValueChange;
       // Check if pulled dependency changed after recursion
-      if (stackHead.pulledDep && stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
+      if (stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
         hasValueChange = true;
       }
       stackHead = stackHead.prev;
