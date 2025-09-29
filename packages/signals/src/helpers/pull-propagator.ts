@@ -10,13 +10,15 @@ export type { GraphEdges } from './graph-edges';
 
 const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
 
-// Minimal stack node - only store what cannot be reconstructed
+// Minimal 2-field stack - match alien-signals design
 interface StackNode {
-  node: DerivedNode;  // Consumer node to return to after recursion
-  pulledDep: Dependency;  // The dependency we pulled (resume from nextDependency, check version)
-  hasValueChange: boolean;  // Accumulated value change flag
+  dep: Dependency;  // The pulled dependency (consumer = node, check versions on pop)
   prev: StackNode | undefined;
 }
+
+// Use high bit of status to temporarily store hasValueChange during traversal
+// status uses bits 0-1 (values 0-3), bit 31 is free for temp state
+const HAS_CHANGE_BIT = 1 << 31;
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
@@ -38,14 +40,25 @@ export function createPullPropagator({
     traversal: do {
       if (current.status === STATUS_CLEAN) {
         if (stackHead === undefined) break;
-        current = stackHead.node;
-        dep = stackHead.pulledDep.nextDependency;  // Resume from next after pulled dep
-        hasValueChange = stackHead.hasValueChange;
-        // Check if pulled dependency changed after recursion
-        if (stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
+
+        // Reconstruct from minimal stack
+        const stackDep = stackHead.dep;
+        const consumer = stackDep.consumer;
+        if (!consumer || !('compute' in consumer)) {
+          throw new Error('[pull-propagator] Invalid dependency graph: consumer is not a DerivedNode');
+        }
+        current = consumer;
+        dep = stackDep.nextDependency;
+        stackHead = stackHead.prev;
+
+        // Restore accumulated state from status high bit
+        hasValueChange = (current.status & HAS_CHANGE_BIT) !== 0;
+        current.status &= ~HAS_CHANGE_BIT;  // Clear the temp bit
+
+        // Check if pulled dep itself changed
+        if (stackDep.producerVersion !== stackDep.producer.version) {
           hasValueChange = true;
         }
-        stackHead = stackHead.prev;
         continue;
       }
 
@@ -66,14 +79,25 @@ export function createPullPropagator({
         current.status = STATUS_CLEAN;
 
         if (stackHead === undefined) break;
-        current = stackHead.node;
-        dep = stackHead.pulledDep.nextDependency;  // Resume from next after pulled dep
-        hasValueChange = stackHead.hasValueChange;
-        // Check if pulled dependency changed after recursion
-        if (stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
+
+        // Reconstruct from minimal stack
+        const stackDep = stackHead.dep;
+        const consumer = stackDep.consumer;
+        if (!consumer || !('compute' in consumer)) {
+          throw new Error('[pull-propagator] Invalid dependency graph: consumer is not a DerivedNode');
+        }
+        current = consumer;
+        dep = stackDep.nextDependency;
+        stackHead = stackHead.prev;
+
+        // Restore accumulated state from status high bit
+        hasValueChange = (current.status & HAS_CHANGE_BIT) !== 0;
+        current.status &= ~HAS_CHANGE_BIT;  // Clear the temp bit
+
+        // Check if pulled dep itself changed
+        if (stackDep.producerVersion !== stackDep.producer.version) {
           hasValueChange = true;
         }
-        stackHead = stackHead.prev;
         continue;
       }
 
@@ -106,11 +130,12 @@ export function createPullPropagator({
 
       // If we found a node to pull, do it recursively
       if (needsPull && pulledDep) {  // pulledDep must exist if needsPull is set
-        // Minimal stack allocation - only store what we can't reconstruct
+        // Store accumulated state in node's status high bit (no allocation)
+        if (hasValueChange) current.status |= HAS_CHANGE_BIT;
+
+        // Minimal 2-field stack - match alien-signals design
         stackHead = {
-          node: current,
-          pulledDep,  // Resume from pulledDep.nextDependency, check version after
-          hasValueChange,  // Accumulated state
+          dep: pulledDep,  // Reconstruct everything else on pop
           prev: stackHead
         };
         current = needsPull;
@@ -133,14 +158,25 @@ export function createPullPropagator({
       current.status = STATUS_CLEAN;
 
       if (stackHead === undefined) break;
-      current = stackHead.node;
-      dep = stackHead.pulledDep.nextDependency;  // Resume from next after pulled dep
-      hasValueChange = stackHead.hasValueChange;
-      // Check if pulled dependency changed after recursion
-      if (stackHead.pulledDep.producerVersion !== stackHead.pulledDep.producer.version) {
+
+      // Reconstruct from minimal stack
+      const stackDep = stackHead.dep;
+      const consumer = stackDep.consumer;
+      if (!consumer || !('compute' in consumer)) {
+        throw new Error('[pull-propagator] Invalid dependency graph: consumer is not a DerivedNode');
+      }
+      current = consumer;
+      dep = stackDep.nextDependency;
+      stackHead = stackHead.prev;
+
+      // Restore accumulated state from node temporary storage
+      hasValueChange = (current as any)._tempHasChange || false;
+      delete (current as any)._tempHasChange;
+
+      // Check if pulled dep itself changed
+      if (stackDep.producerVersion !== stackDep.producer.version) {
         hasValueChange = true;
       }
-      stackHead = stackHead.prev;
     } while (current);
   };
 
