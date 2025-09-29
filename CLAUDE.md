@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build and Development Commands
 
-### Core Development Workflow
+### Core Development Scripts
 ```bash
 # Build all packages
 pnpm build
@@ -163,6 +163,24 @@ pnpm changeset
 3. **Linked List Graph**: Efficient dependency management without arrays
 4. **Pull-Based Updates**: Lazy evaluation for optimal performance
 5. **Type-Safe Extensions**: TypeScript infers API from composed factories
+
+## Workflows
+
+**What workflows are**: Multi-stage task automation sequences in `.claude/workflows/*.md` that orchestrate complex operations through slash commands. Each workflow defines stages with specific commands, providing progress tracking and guided execution.
+
+**Creating a workflow**: Place a markdown file in `.claude/workflows/` with YAML frontmatter defining stages. Each stage specifies a `name`, `command` (slash command to run), and `description`. The workflow runs via `/workflow [workflow-name]` and tracks completion by examining typical outputs from each command.
+
+Example structure:
+```yaml
+---
+name: "My Workflow"
+description: "What this workflow does"
+stages:
+  - name: "First Stage"
+    command: "/some-command"
+    description: "What this stage accomplishes"
+---
+```
 
 ## Communication Style
 
