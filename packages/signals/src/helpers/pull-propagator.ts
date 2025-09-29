@@ -64,28 +64,37 @@ export function createPullPropagator({
         continue;
       }
 
-      // Check all dependencies first
-      let hasDirty = false;
+      // Phase 1: Pull ALL pending dependencies first
       let hasPending = false;
-
       do {
         const producer: FromNode = dep.producer;
-        const pStatus = producer.status;
 
-        if (pStatus === STATUS_DIRTY) {
-          hasDirty = true;
-          // Break on first dirty
-          break;
-        }
-
-        if ('compute' in producer && pStatus === STATUS_PENDING) {
-          hasPending = true;
+        if ('compute' in producer && producer.status === STATUS_PENDING) {
+          // Found a pending dependency - must pull it first
+          stackHead = { node: current, prev: stackHead };
+          current = producer;
+          continue traversal;
         }
 
         dep = dep.nextDependency;
       } while (dep);
 
-      // If any dependency is dirty, recompute
+      // Phase 2: After all pending are resolved, check for dirty
+      dep = current.dependencies;
+      let hasDirty = false;
+
+      do {
+        const producer: FromNode = dep.producer;
+
+        if (producer.status === STATUS_DIRTY) {
+          hasDirty = true;
+          break; // Can break here - we're only checking for dirty
+        }
+
+        dep = dep.nextDependency;
+      } while (dep);
+
+      // Phase 3: Recompute if any dependency was dirty
       if (hasDirty) {
         recomputeNode(current);
 
@@ -93,24 +102,6 @@ export function createPullPropagator({
         current = stackHead.node;
         stackHead = stackHead.prev;
         continue traversal;
-      }
-
-      // If any dependency is pending (and none are dirty), pull it first
-      if (hasPending) {
-        dep = current.dependencies;
-
-        if (dep) {
-          do {
-            const producer: FromNode = dep.producer;
-
-            if ('compute' in producer && producer.status === STATUS_PENDING) {
-              stackHead = { node: current, prev: stackHead };
-              current = producer;
-              continue traversal;
-            }
-            dep = dep.nextDependency;
-          } while (dep);
-        }
       }
 
       // All dependencies are clean
