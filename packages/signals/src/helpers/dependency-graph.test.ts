@@ -43,7 +43,7 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-
+        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -74,7 +74,7 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-
+        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -105,7 +105,7 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-
+        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -161,7 +161,7 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-
+        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -195,7 +195,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-  
+          version: 0,
         };
         
         const target: ConsumerNode = {
@@ -222,7 +222,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-  
+          version: 0,
         };
         
         const target1: ConsumerNode = {
@@ -264,7 +264,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-  
+          version: 0,
         };
         
         const target: ConsumerNode = {
@@ -293,7 +293,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-  
+          version: 0,
         };
         
         const targets = Array.from(
@@ -392,6 +392,7 @@ describe('Dependency Graph Helpers', () => {
         prevConsumer: undefined,
         nextConsumer: undefined,
         version: 0,
+        producerVersion: 0,
       };
     }
   

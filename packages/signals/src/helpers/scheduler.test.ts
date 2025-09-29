@@ -35,6 +35,7 @@ describe('NodeScheduler', () => {
       prevDependency: undefined,
       nextDependency: undefined,
       version: 0,
+      producerVersion: 0,
     };
 
     scheduler.startBatch();
@@ -67,6 +68,7 @@ describe('NodeScheduler', () => {
       prevDependency: undefined,
       nextDependency: undefined,
       version: 0,
+      producerVersion: 0,
     };
 
     // Schedule once through propagation
@@ -161,6 +163,7 @@ describe('NodeScheduler', () => {
       prevDependency: undefined,
       nextDependency: undefined,
       version: 0,
+      producerVersion: 0,
     };
 
     const dep2 = {
@@ -171,6 +174,7 @@ describe('NodeScheduler', () => {
       prevDependency: undefined,
       nextDependency: undefined,
       version: 0,
+      producerVersion: 0,
     };
 
     const dep3 = {
@@ -181,6 +185,7 @@ describe('NodeScheduler', () => {
       prevDependency: undefined,
       nextDependency: undefined,
       version: 0,
+      producerVersion: 0,
     };
 
     // Schedule through propagation
@@ -232,6 +237,7 @@ describe('NodeScheduler', () => {
       prevDependency: undefined,
       nextDependency: undefined,
       version: 0,
+      producerVersion: 0,
     };
 
     // Start batch to prevent auto-flush

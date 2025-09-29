@@ -53,6 +53,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       dependencyTail: dependencies, // ConsumerNode field
       trackingVersion: 0, // ConsumerNode field - proper version tracking
       value: undefined,
+      version: 0, // ProducerNode field - value version
       status,
       // ProducerNode fields
       subscribers: undefined,
@@ -65,6 +66,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
   function createSourceNode(value: any, status: number = STATUS_CLEAN): FromNode {
     const node = {
       value,
+      version: 0,
       status,
       // ProducerNode fields
       subscribers: undefined,
@@ -79,6 +81,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       producer,
       consumer: null as any, // Not needed for most pull tests
       version: 0, // Will be set by track function based on consumer's trackingVersion
+      producerVersion: 0, // Producer's version when dependency was created
       nextDependency: nextDep,
       prevDependency: undefined,
       nextConsumer: undefined,

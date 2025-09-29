@@ -1,18 +1,18 @@
-import { ConsumerNode } from "./types";
+import { ConsumerNode, FromNode } from "./types";
 
 // Re-export types for proper type inference
-export type { ConsumerNode } from "./types";
+export type { ConsumerNode, FromNode } from "./types";
 
 /**
  * ALGORITHM: Context-Based State Isolation
- * 
+ *
  * GlobalContext encapsulates all mutable global state for the reactive system.
  * This design enables:
  * 1. Thread safety: Each thread/request can have its own context
  * 2. SSR support: Isolated contexts prevent state leakage between requests
  * 3. Testing: Easy to reset state between tests
  * 4. Concurrent rendering: React concurrent features get isolated contexts
- * 
+ *
  * The context pattern is inspired by React's Context API and Zone.js.
  */
 export interface GlobalContext {
@@ -21,6 +21,12 @@ export interface GlobalContext {
   // This field acts as an implicit parameter threaded through all reads.
   // Similar to React's Fiber tracking or Vue's targetStack.
   currentConsumer: ConsumerNode | null;
+
+  // ALGORITHM: Value-Based Change Detection
+  // During pull phase, we store the versions that triggered recomputation.
+  // When tracking new dependencies, we use these triggering versions
+  // instead of current versions to avoid missing changes.
+  triggeringVersions?: Map<FromNode, number>;
 }
 
 // PATTERN: Factory Function

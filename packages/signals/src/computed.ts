@@ -49,6 +49,7 @@ export function createComputedFactory(
     const node: ComputedNode<T> = {
       __type: 'computed' as const,
       value: undefined as T,
+      version: 0, // Value version for change detection
       subscribers: undefined,
       subscribersTail: undefined,
       dependencies: undefined,
@@ -60,12 +61,14 @@ export function createComputedFactory(
 
     // Direct function declaration is more efficient than IIFE
     function computed(): T {
-      // Track dependency if there's a consumer
+      // Update if needed FIRST (before tracking)
+      // This ensures we track the post-computation version, not pre-computation
+      if (node.status === STATUS_PENDING) pullUpdates(node);
+
+      // Track dependency AFTER pulling updates
+      // This way we record the actual version after any computation
       const consumer = ctx.currentConsumer;
       if (consumer) trackDependency(node, consumer);
-
-      // Update if needed
-      if (node.status === STATUS_PENDING) pullUpdates(node);
 
       return node.value;
     }

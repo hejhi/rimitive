@@ -20,6 +20,8 @@ export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
+// Map to store triggering versions during pull phase
+type TriggeringVersions = Map<FromNode, number>;
 
 export function createPullPropagator({
   ctx,
@@ -31,6 +33,7 @@ export function createPullPropagator({
   const pullUpdates = (rootNode: DerivedNode): void => {
     let current: DerivedNode | undefined = rootNode;
     let stackHead: StackNode | undefined;
+    const triggeringVersions: TriggeringVersions = new Map();
 
     traversal: do {
       if (current.status === STATUS_CLEAN) {
@@ -43,7 +46,15 @@ export function createPullPropagator({
       let dep: Dependency | undefined = current.dependencies;
 
       if (dep === undefined) {
+        const prevValue = current.value;
+        // No dependencies means no triggering versions needed
         current.value = track(ctx, current, current.compute);
+
+        // Only increment version if the value actually changed
+        if (prevValue !== current.value) {
+          current.version++;
+        }
+
         // After computing, the node is up-to-date
         current.status = STATUS_CLEAN;
 
@@ -83,24 +94,49 @@ export function createPullPropagator({
         dep = dep.nextDependency;
       }
 
-      // Phase 3: Check if any dependency values have changed (dirty source nodes)
+      // Phase 3: Check if any dependency values have changed
       dep = current.dependencies;
-      let hasDirty = false;
+      let hasValueChange = false;
+
+      // Clear triggering versions for this node
+      triggeringVersions.clear();
 
       while (dep) {
         const producer: FromNode = dep.producer;
 
+        // Handle DIRTY signals: increment version and mark clean
+        // This happens during pull phase, not write phase
         if (producer.status === STATUS_DIRTY) {
-          hasDirty = true;
-          break;
+          producer.version++;
+          producer.status = STATUS_CLEAN;
         }
+
+        // Check if this dependency's value has changed since last time we checked
+        // by comparing the version we recorded with the current version
+        const versionChanged = dep.producerVersion !== producer.version;
+        if (versionChanged) {
+          // console.log(`  Dependency changed: version: ${dep.producerVersion} -> ${producer.version}`);
+          hasValueChange = true;
+        }
+
+        // Store the version that triggered this computation
+        // This is the version we had when we decided to recompute
+        triggeringVersions.set(producer, dep.producerVersion);
 
         dep = dep.nextDependency;
       }
 
-      // Phase 4: Recompute if any dependency was dirty OR if node never computed
-      if (hasDirty || current.status === STATUS_PENDING) {
-        current.value = track(ctx, current, current.compute);
+      // Phase 4: Recompute only if any dependency value changed
+      // Special case: If version is 0, this is the first computation with dependencies
+      if (hasValueChange || current.version === 0) {
+        const prevValue = current.value;
+        current.value = track(ctx, current, current.compute, triggeringVersions);
+
+        // Only increment version if the value actually changed
+        if (prevValue !== current.value) {
+          current.version++;
+        }
+
         // After computing, the node is up-to-date
         current.status = STATUS_CLEAN;
 

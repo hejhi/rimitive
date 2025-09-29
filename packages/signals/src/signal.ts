@@ -60,6 +60,7 @@ export function createSignalFactory(
     const node: SignalNode<T> = {
       __type: 'signal',
       value: initialValue,
+      version: 0,
       subscribers: undefined,
       subscribersTail: undefined,
       status: STATUS_CLEAN,
@@ -70,7 +71,11 @@ export function createSignalFactory(
       // Read path - track dependency inline
       if (!arguments.length) {
         const consumer = ctx.currentConsumer;
-        if (consumer) trackDependency(node, consumer);
+        if (consumer) {
+          // Use triggering version if available (during pull phase)
+          const triggeringVersion = ctx.triggeringVersions?.get(node);
+          trackDependency(node, consumer, triggeringVersion);
+        }
         return node.value;
       }
 
@@ -81,6 +86,7 @@ export function createSignalFactory(
       }
 
       node.value = value!;
+      // NO version increment here - that happens during pull phase
 
       const subs = node.subscribers;
       // Early exit if no subscribers
