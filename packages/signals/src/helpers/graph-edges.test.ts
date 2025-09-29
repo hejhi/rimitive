@@ -18,7 +18,7 @@ import { GlobalContext } from '../context';
  */
 
 // Test utilities for creating mock nodes
-function createProducer(id: string): ProducerNode {
+function createProducer(_: string): ProducerNode {
   return {
     __type: 'producer',
     status: 0, // STATUS_CLEAN
@@ -28,7 +28,7 @@ function createProducer(id: string): ProducerNode {
   };
 }
 
-function createConsumer(id: string): ConsumerNode {
+function createConsumer(_: string): ConsumerNode {
   return {
     __type: 'consumer',
     status: 0, // STATUS_CLEAN
@@ -126,12 +126,12 @@ describe('graph-edges: Fundamental Invariants', () => {
 
     // Should still have only one dependency
     expect(consumer.dependencies).toBe(firstDep);
-    expect(consumer.dependencies!.nextDependency).toBeUndefined();
+    expect(consumer.dependencies?.nextDependency).toBeUndefined();
     expect(producer.subscribers).toBe(firstDep);
-    expect(producer.subscribers!.nextConsumer).toBeUndefined();
+    expect(producer.subscribers?.nextConsumer).toBeUndefined();
 
     // Version should be updated to latest tracking version
-    expect(consumer.dependencies!.version).toBe(consumer.trackingVersion);
+    expect(consumer.dependencies?.version).toBe(consumer.trackingVersion);
 
     // Verify list integrity is maintained
     assertListIntegrity(producer);
@@ -153,9 +153,9 @@ describe('graph-edges: Fundamental Invariants', () => {
     edges.trackDependency(producer, consumer3);
 
     // Verify all consumers have correct dependency
-    expect(consumer1.dependencies!.producer).toBe(producer);
-    expect(consumer2.dependencies!.producer).toBe(producer);
-    expect(consumer3.dependencies!.producer).toBe(producer);
+    expect(consumer1.dependencies?.producer).toBe(producer);
+    expect(consumer2.dependencies?.producer).toBe(producer);
+    expect(consumer3.dependencies?.producer).toBe(producer);
 
     // Verify producer has all subscribers in its list
     let count = 0;
@@ -210,12 +210,12 @@ describe('graph-edges: Fundamental Invariants', () => {
     expect(producers.has(producer3)).toBe(true);
 
     // Verify each producer has consumer as subscriber
-    expect(producer1.subscribers!.consumer).toBe(consumer);
-    expect(producer2.subscribers!.consumer).toBe(consumer);
-    expect(producer3.subscribers!.consumer).toBe(consumer);
+    expect(producer1.subscribers?.consumer).toBe(consumer);
+    expect(producer2.subscribers?.consumer).toBe(consumer);
+    expect(producer3.subscribers?.consumer).toBe(consumer);
 
     // Verify tail points to last added
-    expect(consumer.dependencyTail!.producer).toBe(producer3);
+    expect(consumer.dependencyTail?.producer).toBe(producer3);
 
     // Verify list integrity for all nodes
     assertListIntegrity(producer1);
