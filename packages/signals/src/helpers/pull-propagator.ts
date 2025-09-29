@@ -74,7 +74,7 @@ export function createPullPropagator({
 
         if (pStatus === STATUS_DIRTY) {
           hasDirty = true;
-          // Can break early since we know we need to recompute
+          // Break on first dirty
           break;
         }
 

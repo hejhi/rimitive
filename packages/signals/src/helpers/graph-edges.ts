@@ -19,46 +19,53 @@ export interface GraphEdges {
 
 export function createGraphEdges(): GraphEdges {
   const trackDependency = (producer: FromNode, consumer: ToNode): void => {
-    const tail = consumer.dependencyTail;
+    const prevDependency = consumer.dependencyTail;
 
     // Check 1: Is tail already pointing to this producer?
-    if (tail && tail.producer === producer) {
+    if (prevDependency !== undefined && prevDependency.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      tail.version = consumer.trackingVersion;
+      prevDependency.version = consumer.trackingVersion;
       return; // Already tracking
     }
 
     // Check 2: Is next in sequence this producer?
-    const next = tail ? tail.nextDependency : consumer.dependencies;
+    const nextDependency = prevDependency
+      ? prevDependency.nextDependency
+      : consumer.dependencies;
 
     // Check if we already have this dependency
-    if (next && next.producer === producer) {
+    if (nextDependency && nextDependency.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      next.version = consumer.trackingVersion;
-      consumer.dependencyTail = next;
+      nextDependency.version = consumer.trackingVersion;
+      consumer.dependencyTail = nextDependency;
       return; // Found and reused
     }
 
     // Search rest of the list for existing connection (optimization for stable graphs)
-    let existingDep = next ? next.nextDependency : undefined;
-    while (existingDep) {
-      if (existingDep.producer === producer) {
-        // Found existing dependency - update version
-        existingDep.version = consumer.trackingVersion;
-        // Note: We don't move it to tail to preserve order for pruning
-        return; // Reused existing dependency
-      }
-      existingDep = existingDep.nextDependency;
+    let existingDep = nextDependency
+      ? nextDependency.nextDependency
+      : undefined;
+
+    if (existingDep) {
+      do {
+        if (existingDep.producer === producer) {
+          // Found existing dependency - update version
+          existingDep.version = consumer.trackingVersion;
+          // Note: We don't move it to tail to preserve order for pruning
+          return; // Reused existing dependency
+        }
+        existingDep = existingDep.nextDependency;
+      } while (existingDep);
     }
 
     // No existing dependency found - create new one
-    const producerTail = producer.subscribersTail;
+    const prevConsumer = producer.subscribersTail;
     const dependency: Dependency = {
       producer,
       consumer,
-      prevDependency: tail,
-      prevConsumer: producerTail,
-      nextDependency: next,
+      prevDependency,
+      prevConsumer,
+      nextDependency,
       nextConsumer: undefined,
       version: consumer.trackingVersion,
     };
@@ -66,14 +73,15 @@ export function createGraphEdges(): GraphEdges {
     // Wire up consumer side
     consumer.dependencyTail = dependency;
 
-    if (next) next.prevDependency = dependency;
-    if (tail) tail.nextDependency = dependency;
+    if (nextDependency) nextDependency.prevDependency = dependency;
+
+    if (prevDependency) prevDependency.nextDependency = dependency;
     else consumer.dependencies = dependency;
 
     // Wire up producer side
     producer.subscribersTail = dependency;
 
-    if (producerTail) producerTail.nextConsumer = dependency;
+    if (prevConsumer) prevConsumer.nextConsumer = dependency;
     else producer.subscribers = dependency;
   };
 
@@ -145,41 +153,38 @@ export function createGraphEdges(): GraphEdges {
     } finally {
       // Restore previous tracking context
       ctx.currentConsumer = prevConsumer;
-
-      // Version-based pruning: Remove dependencies with outdated versions
-      // Dependencies accessed during fn() have version === node.trackingVersion
-      // Older dependencies have version < node.trackingVersion and should be pruned
-      const currentVersion = node.trackingVersion;
+      
       let dep = node.dependencies;
       let prevValid: Dependency | undefined = undefined;
+      
+      if (dep) {
+        // Version-based pruning: Remove dependencies with outdated versions
+        // Dependencies accessed during fn() have version === node.trackingVersion
+        // Older dependencies have version < node.trackingVersion and should be pruned
+        do {
+          const nextDep: Dependency | undefined = dep.nextDependency;
 
-      while (dep) {
-        const nextDep = dep.nextDependency;
+          if (dep.version < node.trackingVersion) {
+            // This dependency is stale and needs to be removed
+            const { producer, prevConsumer, nextConsumer } = dep;
 
-        if (dep.version < currentVersion) {
-          // This dependency is stale and needs to be removed
-          const { producer, prevConsumer, nextConsumer } = dep;
+            // Remove from consumer's dependency list
+            if (prevValid) prevValid.nextDependency = nextDep;
+            else node.dependencies = nextDep;
 
-          // Remove from consumer's dependency list
-          if (prevValid) {
-            prevValid.nextDependency = nextDep;
-          } else {
-            node.dependencies = nextDep;
-          }
-          if (nextDep) nextDep.prevDependency = prevValid;
+            if (nextDep) nextDep.prevDependency = prevValid;
 
-          // Remove from producer's subscriber list
-          if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
-          else producer.subscribersTail = prevConsumer;
+            // Remove from producer's subscriber list
+            if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
+            else producer.subscribersTail = prevConsumer;
 
-          if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
-          else producer.subscribers = nextConsumer;
-        } else {
-          // This dependency is still valid
-          prevValid = dep;
-        }
+            if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
+            else producer.subscribers = nextConsumer;
+            // This dependency is still valid
+          } else prevValid = dep;
 
-        dep = nextDep;
+          dep = nextDep;
+        } while (dep);
       }
 
       node.dependencyTail = prevValid;
