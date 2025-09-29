@@ -59,61 +59,42 @@ export function createPullPropagator({
         continue;
       }
 
-      // Phase 1: Pull ALL pending dependencies first
+      // OPTIMIZED: Single pass over dependencies
+      let hasValueChange = false;
+      let needsPull: DerivedNode | undefined;
+
       do {
         const producer: FromNode = dep.producer;
 
-        if ('compute' in producer && producer.status === STATUS_PENDING) {
-          // Found a pending dependency - must pull it first
-          stackHead = { node: current, prev: stackHead };
-          current = producer;
-          continue traversal;
+        // Check if this is a derived node that needs pulling
+        if ('compute' in producer) {
+          if (producer.status === STATUS_PENDING || producer.status === STATUS_DIRTY) {
+            // Found a dependency that needs pulling - exit early and pull it
+            needsPull = producer;
+            break;
+          }
+        } else if (producer.status === STATUS_DIRTY) {
+          // Handle dirty signal: increment version in pull phase
+          producer.version++;
+          producer.status = STATUS_CLEAN;
+        }
+
+        // Check for version changes (always do this)
+        if (dep.producerVersion !== producer.version) {
+          hasValueChange = true;
         }
 
         dep = dep.nextDependency;
       } while (dep);
 
-      // Phase 2: After all pending are resolved, check for dirty derived nodes
-      dep = current.dependencies;
-
-      while (dep) {
-        const producer: FromNode = dep.producer;
-
-        // If a dependency is a dirty derived node, it needs to be pulled first
-        if ('compute' in producer && producer.status === STATUS_DIRTY) {
-          stackHead = { node: current, prev: stackHead };
-          current = producer;
-          continue traversal;
-        }
-
-        dep = dep.nextDependency;
+      // If we found a node to pull, do it recursively
+      if (needsPull) {
+        stackHead = { node: current, prev: stackHead };
+        current = needsPull;
+        continue traversal;
       }
 
-      // Phase 3: Check if any dependency values have changed
-      dep = current.dependencies;
-      let hasValueChange = false;
-
-      while (dep) {
-        const producer: FromNode = dep.producer;
-
-        // Handle DIRTY signals: increment version and mark clean
-        // This happens during pull phase, not write phase
-        if (producer.status === STATUS_DIRTY) {
-          producer.version++;
-          producer.status = STATUS_CLEAN;
-        }
-
-        // Check if this dependency's value has changed since last time we checked
-        // by comparing the version we recorded with the current version
-        const versionChanged = dep.producerVersion !== producer.version;
-        if (versionChanged) {
-          hasValueChange = true;
-        }
-
-        dep = dep.nextDependency;
-      }
-
-      // Phase 4: Recompute only if any dependency value changed
+      // All dependencies pulled, now decide if recompute needed
       // Special case: If version is 0, this is the first computation with dependencies
       if (hasValueChange || current.version === 0) {
         const prevValue = current.value;
@@ -123,17 +104,9 @@ export function createPullPropagator({
         if (prevValue !== current.value) {
           current.version++;
         }
-
-        // After computing, the node is up-to-date
-        current.status = STATUS_CLEAN;
-
-        if (stackHead === undefined) break traversal;
-        current = stackHead.node;
-        stackHead = stackHead.prev;
-        continue traversal;
       }
 
-      // All dependencies are clean and node is already computed
+      // After computing or skipping, the node is up-to-date
       current.status = STATUS_CLEAN;
 
       if (stackHead === undefined) break;
