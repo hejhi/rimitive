@@ -15,6 +15,19 @@ export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
 const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED, STATUS_CLEAN } = CONSTANTS;
 
+// Global error handler for scheduler exceptions
+let errorHandler: ((error: unknown) => void) | undefined;
+
+/**
+ * Sets a custom error handler for all scheduler-related errors.
+ * If no handler is set, errors will be logged to the console.
+ *
+ * @param handler - A function that receives the error.
+ */
+export function setSchedulerErrorHandler(handler: (error: unknown) => void): void {
+  errorHandler = handler;
+}
+
 export interface Scheduler {
   /** Propagate updates from a producer to all its dependents */
   propagate: (subscribers: Dependency) => void;
@@ -44,34 +57,55 @@ export function createScheduler({
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;
   let queueTail: ScheduledNode | undefined;
+  let isFlushing = false;
 
   // Execute all scheduled nodes in FIFO order
   const flush = (): void => {
     // Don't flush during batch - batching will handle it
-    if (batchDepth > 0 || queueHead === undefined) return;
+    if (batchDepth > 0 || isFlushing) return;
 
-    let current: ScheduledNode | undefined = queueHead;
+    isFlushing = true;
 
-    // Clear queue first to allow re-entrance scheduling
-    queueHead = queueTail = undefined;
+    // Process queue until empty (handles re-entrance)
+    while (queueHead !== undefined) {
+      // Take current queue
+      let current: ScheduledNode | undefined = queueHead;
 
-    do {
-      const next: ScheduledNode | undefined = current.nextScheduled;
+      // Clear queue first to allow re-entrance scheduling
+      queueHead = queueTail = undefined;
 
-      if (next !== undefined) current.nextScheduled = undefined;
+      // Process all nodes in this batch
+      do {
+        const next: ScheduledNode | undefined = current.nextScheduled;
 
-      if (current.status === STATUS_SCHEDULED) {
-        current.status = STATUS_CLEAN;
-        current.flush();
-      }
+        if (next !== undefined) current.nextScheduled = undefined;
 
-      current = next;
-    } while (current);
+        // Only flush if scheduled (skip disposed nodes)
+        if (current.status === STATUS_SCHEDULED) {
+          current.status = STATUS_CLEAN;
+          try {
+            current.flush();
+          } catch (e) {
+            // Report error without breaking the queue
+            if (errorHandler) {
+              errorHandler(e);
+            } else {
+              console.error('[Scheduler] Unhandled error in scheduled effect:', e);
+            }
+          }
+        }
+
+        current = next;
+      } while (current);
+    }
+
+    isFlushing = false;
   };
 
   // Leaf handler that queues scheduled nodes
   const queueIfScheduled = (node: ToNode): void => {
-    if (!('flush' in node) || node.status !== STATUS_PENDING) return;
+    if (!('flush' in node)) return;
+    if (node.status !== STATUS_PENDING) return;
 
     // Only queue nodes with flush methods that are pending
     node.status = STATUS_SCHEDULED;
