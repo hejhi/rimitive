@@ -72,9 +72,7 @@ export function createSignalFactory(
       if (!arguments.length) {
         const consumer = ctx.currentConsumer;
         if (consumer) {
-          // Use triggering version if available (during pull phase)
-          const triggeringVersion = ctx.triggeringVersions?.get(node);
-          trackDependency(node, consumer, triggeringVersion);
+          trackDependency(node, consumer);
         }
         return node.value;
       }

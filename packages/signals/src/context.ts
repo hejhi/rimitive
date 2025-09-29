@@ -1,7 +1,7 @@
-import { ConsumerNode, FromNode } from "./types";
+import { ConsumerNode } from "./types";
 
 // Re-export types for proper type inference
-export type { ConsumerNode, FromNode } from "./types";
+export type { ConsumerNode } from "./types";
 
 /**
  * ALGORITHM: Context-Based State Isolation
@@ -21,12 +21,6 @@ export interface GlobalContext {
   // This field acts as an implicit parameter threaded through all reads.
   // Similar to React's Fiber tracking or Vue's targetStack.
   currentConsumer: ConsumerNode | null;
-
-  // ALGORITHM: Value-Based Change Detection
-  // During pull phase, we store the versions that triggered recomputation.
-  // When tracking new dependencies, we use these triggering versions
-  // instead of current versions to avoid missing changes.
-  triggeringVersions?: Map<FromNode, number>;
 }
 
 // PATTERN: Factory Function

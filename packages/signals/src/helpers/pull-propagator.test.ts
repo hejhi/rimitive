@@ -30,17 +30,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
    * - Performance (incomplete optimization)
    */
 
-  // Debug helper to trace execution
-  function traceExecution(name: string, fn: () => any) {
-    return () => {
-      console.log(`  Computing ${name}`);
-      const result = fn();
-      console.log(`    ${name} = ${result}`);
-      return result;
-    };
-  }
-
-
   // Test helper to create a minimal derived node
   function createDerivedNode(
     compute: () => any,
@@ -130,8 +119,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       const { ctx, track } = createTestContext();
       const propagator = createPullPropagator({ ctx, track });
 
-      console.log('\n=== Diamond Dependency Bug Test ===');
-
       // Track computation counts
       let computeCountB = 0;
       let computeCountC = 0;
@@ -139,45 +126,37 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       // Create source node A (dirty)
       const nodeA = createSourceNode(10, STATUS_DIRTY);
-      console.log('Source A: value=10, status=DIRTY');
 
       // Create intermediate nodes B and C
       const nodeB = createDerivedNode(
-        traceExecution('B', () => {
+        () => {
           computeCountB++;
           return (nodeA.value as number) * 2; // Should be 20
-        }),
+        },
         createDependency(nodeA),
         STATUS_PENDING
       );
 
       const nodeC = createDerivedNode(
-        traceExecution('C', () => {
+        () => {
           computeCountC++;
           return (nodeA.value as number) * 3; // Should be 30
-        }),
+        },
         createDependency(nodeA),
         STATUS_PENDING
       );
 
       // Create final node D depending on both B and C
       const nodeD = createDerivedNode(
-        traceExecution('D', () => {
+        () => {
           computeCountD++;
-          console.log(`    Reading B.value=${nodeB.value}, C.value=${nodeC.value}`);
           return ((nodeB.value as number) || 0) + ((nodeC.value as number) || 0);
-        }),
+        },
         createDependency(nodeB, createDependency(nodeC)),
         STATUS_PENDING
       );
 
-      console.log('\nPulling from D...');
       propagator.pullUpdates(nodeD);
-
-      console.log('\n=== Results ===');
-      console.log(`B computed ${computeCountB} times, value=${nodeB.value}, status=${nodeB.status}`);
-      console.log(`C computed ${computeCountC} times, value=${nodeC.value}, status=${nodeC.status}`);
-      console.log(`D computed ${computeCountD} times, value=${nodeD.value}, status=${nodeD.status}`);
 
       // THE BUG: C is never computed!
       expect(computeCountC).toBe(1); // FAILS - C is never computed
@@ -211,7 +190,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // Node that depends on all three
       const nodeF = createDerivedNode(
         () => {
-          console.log(`Computing F: B=${nodeB.value}, C=${nodeC.value}, E=${nodeE.value}`);
           return ((nodeB.value as number) || 0) + ((nodeC.value as number) || 0) + ((nodeE.value as number) || 0);
         },
         createDependency(nodeB, createDependency(nodeC, createDependency(nodeE))),
@@ -250,7 +228,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           // In a glitch-free system, if X=10,Y=20 initially,
           // and we update both to X=100,Y=200,
           // we should NEVER see X=100,Y=20 or X=10,Y=200
-          console.log(`Sum computation sees: X=${nodeX.value}, Y=${nodeY.value}, sum=${sum}`);
           return sum;
         },
         createDependency(nodeX, createDependency(nodeY)),
@@ -530,7 +507,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // Two siblings that both need computation
       const left = createDerivedNode(
         () => {
-          console.log('Computing LEFT');
           return (source.value as number) / 2;
         },
         createDependency(source),
@@ -539,7 +515,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       const right = createDerivedNode(
         () => {
-          console.log('Computing RIGHT');
           return (source.value as number) / 4;
         },
         createDependency(source),
@@ -549,17 +524,11 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // Consumer depends on both
       const consumer = createDerivedNode(
         () => {
-          console.log(`Computing CONSUMER with left=${left.value}, right=${right.value}`);
           return ((left.value as number) || 0) + ((right.value as number) || 0);
         },
         createDependency(left, createDependency(right)),
         STATUS_PENDING
       );
-
-      console.log('\n=== BUG DEMONSTRATION ===');
-      console.log('Expected: Compute LEFT, Compute RIGHT, then CONSUMER');
-      console.log('Actual: Computes LEFT, finds it dirty, immediately computes CONSUMER');
-      console.log('Result: RIGHT is never computed!\n');
 
       propagator.pullUpdates(consumer);
 
@@ -628,8 +597,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       // Check how many times track was called
       expect(track).toHaveBeenCalled();
-      console.log('Track called times:', track.mock.calls.length);
-      console.log('Compute counts - B:', computeCountB, 'C:', computeCountC, 'D:', computeCountD);
 
       // CRITICAL ASSERTIONS - these test FRP invariants, not implementation
       expect(computeCountB).toBe(1); // B should compute exactly once

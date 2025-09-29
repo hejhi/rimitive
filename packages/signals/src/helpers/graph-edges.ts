@@ -8,27 +8,25 @@ export interface GraphEdges {
   trackDependency: (
     producer: ProducerNode,
     consumer: ConsumerNode,
-    triggeringVersion?: number,
   ) => void;
   detachAll: (dependency: Dependency) => void;
   track: <T>(
     ctx: GlobalContext,
     node: ConsumerNode,
     fn: () => T,
-    triggeringVersions?: Map<FromNode, number>
   ) => T;
 }
 
 export function createGraphEdges(): GraphEdges {
-  const trackDependency = (producer: FromNode, consumer: ToNode, triggeringVersion?: number): void => {
+  const trackDependency = (producer: FromNode, consumer: ToNode): void => {
     const prevDependency = consumer.dependencyTail;
 
     // Check 1: Is tail already pointing to this producer?
     if (prevDependency !== undefined && prevDependency.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       prevDependency.version = consumer.trackingVersion;
-      // Use triggering version if provided, otherwise use current version
-      prevDependency.producerVersion = triggeringVersion ?? producer.version;
+      // Record the current producer version
+      prevDependency.producerVersion = producer.version;
       return; // Already tracking
     }
 
@@ -41,8 +39,8 @@ export function createGraphEdges(): GraphEdges {
     if (nextDependency && nextDependency.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       nextDependency.version = consumer.trackingVersion;
-      // Use triggering version if provided, otherwise use current version
-      nextDependency.producerVersion = triggeringVersion ?? producer.version;
+      // Record the current producer version
+      nextDependency.producerVersion = producer.version;
       consumer.dependencyTail = nextDependency;
       return; // Found and reused
     }
@@ -57,8 +55,8 @@ export function createGraphEdges(): GraphEdges {
         if (existingDep.producer === producer) {
           // Found existing dependency - update version
           existingDep.version = consumer.trackingVersion;
-          // Use triggering version if provided, otherwise use current version
-          existingDep.producerVersion = triggeringVersion ?? producer.version;
+          // Record the current producer version
+          existingDep.producerVersion = producer.version;
           // Note: We don't move it to tail to preserve order for pruning
           return; // Reused existing dependency
         }
@@ -76,8 +74,8 @@ export function createGraphEdges(): GraphEdges {
       nextDependency,
       nextConsumer: undefined,
       version: consumer.trackingVersion,
-      // Use triggering version if provided, otherwise use current version
-      producerVersion: triggeringVersion ?? producer.version,
+      // Record the current producer version
+      producerVersion: producer.version,
     };
 
     // Wire up consumer side
@@ -147,7 +145,6 @@ export function createGraphEdges(): GraphEdges {
     ctx: GlobalContext,
     node: ConsumerNode,
     fn: () => T,
-    triggeringVersions?: Map<FromNode, number>
   ): T => {
     // Increment version for this tracking cycle
     // This happens in the pull phase, not the write hot path
@@ -155,18 +152,15 @@ export function createGraphEdges(): GraphEdges {
 
     // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
-    const prevTriggeringVersions = ctx.triggeringVersions;
 
     node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
     ctx.currentConsumer = node;
-    ctx.triggeringVersions = triggeringVersions;
 
     try {
       return fn();
     } finally {
       // Restore previous tracking context
       ctx.currentConsumer = prevConsumer;
-      ctx.triggeringVersions = prevTriggeringVersions;
       
       let dep = node.dependencies;
       let prevValid: Dependency | undefined = undefined;
