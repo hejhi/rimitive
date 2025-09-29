@@ -1,4 +1,4 @@
-import type { Dependency, DerivedNode, FromNode } from '../types';
+import type { Dependency, DerivedNode, FromNode, ToNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -32,7 +32,7 @@ export function createPullPropagator({
   track: GraphEdges['track']
 }): PullPropagator {
   const pullUpdates = (rootNode: DerivedNode): void => {
-    let current: DerivedNode | undefined = rootNode;
+    let current: ToNode | undefined = rootNode;
     let stackHead: StackNode | undefined;
     let dep: Dependency | undefined;
     let hasValueChange = false;  // Track if any dependency version changed
@@ -41,13 +41,10 @@ export function createPullPropagator({
       if (current.status === STATUS_CLEAN) {
         if (stackHead === undefined) break;
 
-        // Reconstruct from minimal stack
+        // Reconstruct from minimal stack: consumer MUST be DerivedNode
+        // because we only push to stack when pulling a derived dependency
         const stackDep = stackHead.dep;
-        const consumer = stackDep.consumer;
-        if (!consumer || !('compute' in consumer)) {
-          throw new Error('[pull-propagator] Invalid dependency graph: consumer is not a DerivedNode');
-        }
-        current = consumer;
+        current = stackDep.consumer;
         dep = stackDep.nextDependency;
         stackHead = stackHead.prev;
 
@@ -68,7 +65,7 @@ export function createPullPropagator({
       }
 
       // Handle nodes with no dependencies (compute immediately)
-      if (dep === undefined) {
+      if (dep === undefined && 'value' in current) {
         const prevValue = current.value;
         current.value = track(ctx, current, current.compute);
 
@@ -80,13 +77,9 @@ export function createPullPropagator({
 
         if (stackHead === undefined) break;
 
-        // Reconstruct from minimal stack
+        // Reconstruct from minimal stack: consumer MUST be DerivedNode
         const stackDep = stackHead.dep;
-        const consumer = stackDep.consumer;
-        if (!consumer || !('compute' in consumer)) {
-          throw new Error('[pull-propagator] Invalid dependency graph: consumer is not a DerivedNode');
-        }
-        current = consumer;
+        current = stackDep.consumer;
         dep = stackDep.nextDependency;
         stackHead = stackHead.prev;
 
@@ -144,14 +137,16 @@ export function createPullPropagator({
         continue traversal;
       }
 
-      // All dependencies pulled, now decide if recompute needed
-      // Special case: If version is 0, this is the first computation with dependencies
-      if (hasValueChange || current.version === 0) {
-        const prevValue = current.value;
-        current.value = track(ctx, current, current.compute);
-
-        // Only increment version if the value actually changed
-        if (prevValue !== current.value) current.version++;
+      if ('value' in current) {
+        // All dependencies pulled, now decide if recompute needed
+        // Special case: If version is 0, this is the first computation with dependencies
+        if (hasValueChange || current.version === 0) {
+          const prevValue = current.value;
+          current.value = track(ctx, current, current.compute);
+  
+          // Only increment version if the value actually changed
+          if (prevValue !== current.value) current.version++;
+        }
       }
 
       // After computing or skipping, the node is up-to-date
@@ -159,13 +154,9 @@ export function createPullPropagator({
 
       if (stackHead === undefined) break;
 
-      // Reconstruct from minimal stack
+      // Reconstruct from minimal stack: consumer MUST be DerivedNode
       const stackDep = stackHead.dep;
-      const consumer = stackDep.consumer;
-      if (!consumer || !('compute' in consumer)) {
-        throw new Error('[pull-propagator] Invalid dependency graph: consumer is not a DerivedNode');
-      }
-      current = consumer;
+      current = stackDep.consumer;
       dep = stackDep.nextDependency;
       stackHead = stackHead.prev;
 

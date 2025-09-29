@@ -37,6 +37,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
     status: number = STATUS_PENDING
   ): DerivedNode {
     const node = {
+      __type: 'computed' as const,
       compute,
       dependencies,
       dependencyTail: dependencies, // ConsumerNode field
