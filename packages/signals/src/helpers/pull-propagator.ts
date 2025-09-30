@@ -65,9 +65,6 @@ export function createPullPropagator({
 
       // OPTIMIZED: Single pass over dependencies - only run if node has dependencies
       if (dep !== undefined) {
-        let needsPull: DerivedNode | undefined;
-        let pulledDep: Dependency | undefined;
-
         do {
           const producer: FromNode = dep.producer;
           const status = producer.status;
@@ -75,10 +72,15 @@ export function createPullPropagator({
           // Check if this is a derived node that needs pulling
           if (status === STATUS_PENDING || status === STATUS_DIRTY) {
             if ('compute' in producer) {
-              // Found a dependency that needs pulling - save it to check version after
-              needsPull = producer;
-              pulledDep = dep;
-              break;
+              // Store accumulated state in node's status high bit (no allocation)
+              if (hasValueChange) current.status |= HAS_CHANGE_BIT;
+
+              current = producer;
+              hasValueChange = false; // Reset for new node
+              stackHead = { dep, prev: stackHead };
+              dep = undefined; // Will be initialized to current.dependencies on next iteration
+
+              continue traversal;
             }
 
             if (status === STATUS_DIRTY) {
@@ -93,26 +95,11 @@ export function createPullPropagator({
 
           dep = dep.nextDependency;
         } while (dep);
-
-        // If we found a node to pull, do it recursively
-        // pulledDep must exist if needsPull is set
-        if (needsPull && pulledDep) {
-          // Store accumulated state in node's status high bit (no allocation)
-          if (hasValueChange) current.status |= HAS_CHANGE_BIT;
-
-          // Minimal 2-field stack - match alien-signals design
-          // Reconstruct everything else on pop
-          current = needsPull;
-          hasValueChange = false; // Reset for new node
-          stackHead = { dep: pulledDep, prev: stackHead };
-          dep = undefined; // Will be initialized to current.dependencies on next iteration
-          continue traversal;
-        }
       }
 
       // All dependencies pulled - handle computation for producer nodes
       // Compute if: no dependencies OR (has dependencies AND needs update)
-      if ('value' in current && (!current.dependencies || hasValueChange || current.version === 0)) {
+      if ('value' in current && (hasValueChange || current.version === 0)) {
         const prevValue = current.value;
         current.value = track(ctx, current, current.compute);
 
