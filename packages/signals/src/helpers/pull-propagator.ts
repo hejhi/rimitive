@@ -73,17 +73,19 @@ export function createPullPropagator({
           const status = producer.status;
 
           // Check if this is a derived node that needs pulling
-          if ('compute' in producer) {
-            if (status === STATUS_PENDING || status === STATUS_DIRTY) {
+          if (status === STATUS_PENDING || status === STATUS_DIRTY) {
+            if ('compute' in producer) {
               // Found a dependency that needs pulling - save it to check version after
               needsPull = producer;
               pulledDep = dep;
               break;
             }
-          } else if (status === STATUS_DIRTY) {
-            // Handle dirty signal: increment version in pull phase
-            producer.version++;
-            producer.status = STATUS_CLEAN;
+
+            if (status === STATUS_DIRTY) {
+              // Handle dirty signal: increment version in pull phase
+              producer.version++;
+              producer.status = STATUS_CLEAN;
+            }
           }
 
           // Check for version changes (only for clean deps - pulled deps checked after return)
@@ -117,6 +119,7 @@ export function createPullPropagator({
         // Only increment version if the value actually changed
         if (prevValue !== current.value) current.version++;
       }
+
       // else: pure consumer node (ScheduledNode) - no computation, just mark clean
       // After computing or skipping, the node is up-to-date
       current.status = STATUS_CLEAN;
