@@ -8,21 +8,36 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING } = CONSTANTS;
+const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING, STATUS_PRISTINE, NEEDS_PULL } = CONSTANTS;
 
-// Minimal 2-field stack - match alien-signals design
+// Minimal 3-field stack with temp state bits
 interface StackNode {
-  dep: Dependency;  // The pulled dependency (consumer = node, check versions on pop)
+  dep: Dependency;  // The pulled dependency (consumer = node, check if changed on pop)
   prev: StackNode | undefined;
+  bits: number;     // Temp state: parent's needsRecompute + child changed flag
 }
 
-// Use high bit of status to temporarily store hasValueChange during traversal
-// status uses bits 0-1 (values 0-3), bit 31 is free for temp state
-const HAS_CHANGE_BIT = 1 << 31;
+// Bit flags for StackNode.bits field
+const PARENT_RECOMPUTE_BIT = 1 << 0; // Parent's needsRecompute state
+const CHILD_CHANGED_BIT = 1 << 1;     // Child value changed during pull
+const FORCE_RECOMPUTE = STATUS_DIRTY | STATUS_PRISTINE;
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
+
+// Upgrade siblings to DIRTY
+const shallowPropagate = (current: FromNode) => {
+  let sub = current.subscribers;
+
+  if (sub) {
+    do {
+      const consumer = sub.consumer;
+      if (consumer.status === STATUS_PENDING) consumer.status = STATUS_DIRTY;
+      sub = sub.nextConsumer;
+    } while (sub);
+  }
+};
 
 export function createPullPropagator({
   ctx,
@@ -35,33 +50,40 @@ export function createPullPropagator({
     let current: ToNode | undefined = rootNode;
     let stackHead: StackNode | undefined;
     let dep: Dependency | undefined;
-    let hasValueChange = false;  // Track if any dependency version changed
+    let needsRecompute = false;  // Track if any dependency changed
 
     traversal: do {
-      if (current.status === STATUS_CLEAN) {
+      const status = current.status;
+
+      if (status === STATUS_CLEAN) {
         if (stackHead === undefined) break;
 
         // Reconstruct from minimal stack: consumer MUST be DerivedNode
         // because we only push to stack when pulling a derived dependency
-        const stackDep = stackHead.dep;
+        const stackNode = stackHead;
+        const stackDep = stackNode.dep;
+        const stackBits = stackNode.bits;
 
         current = stackDep.consumer;
         dep = stackDep.nextDependency;
-        stackHead = stackHead.prev;
+        stackHead = stackNode.prev;
 
-        const status = current.status;
+        // Restore state from stack bits
+        needsRecompute = (stackBits & PARENT_RECOMPUTE_BIT) !== 0;
+        const depChanged = (stackBits & CHILD_CHANGED_BIT) !== 0;
 
-        // Restore accumulated state from status high bit
-        hasValueChange = (status & HAS_CHANGE_BIT) !== 0;
-        current.status = status & ~HAS_CHANGE_BIT;  // Clear the temp bit
-
-        // Check if pulled dep itself changed
-        if (stackDep.producerVersion !== stackDep.producer.version) hasValueChange = true;
+        // Check if pulled dep changed (returned via stack bits)
+        if (depChanged) needsRecompute = true;
         continue;
       }
 
       // Initialize dependency iteration for this node (only if not resuming from stack pop)
       if (dep === undefined) dep = current.dependencies;
+
+      // If node is DIRTY or PRISTINE, it needs recompute
+      // DIRTY: sibling detected a change via upgradePendingToDirty
+      // PRISTINE: never computed before
+      if (status & FORCE_RECOMPUTE) needsRecompute = true;
 
       // OPTIMIZED: Single pass over dependencies - only run if node has dependencies
       if (dep !== undefined) {
@@ -70,64 +92,67 @@ export function createPullPropagator({
           const status = producer.status;
 
           // Check if this is a derived node that needs pulling
-          if (status === STATUS_PENDING || status === STATUS_DIRTY) {
+          if (status & NEEDS_PULL) {
             if ('compute' in producer) {
-              // Store accumulated state in node's status high bit (no allocation)
-              if (hasValueChange) current.status |= HAS_CHANGE_BIT;
+              // Push to stack with parent's recompute state saved in bits
+              const bits = needsRecompute ? PARENT_RECOMPUTE_BIT : 0;
+              stackHead = { dep, prev: stackHead, bits };
 
               current = producer;
-              hasValueChange = false; // Reset for new node
-              stackHead = { dep, prev: stackHead };
+              needsRecompute = false; // Reset for new node
               dep = undefined; // Will be initialized to current.dependencies on next iteration
 
               continue traversal;
             }
 
             if (status === STATUS_DIRTY) {
-              // Handle dirty signal: increment version in pull phase
-              producer.version++;
+              // Signal is dirty - it has changed
+              needsRecompute = true;
+              shallowPropagate(producer);
+
               producer.status = STATUS_CLEAN;
             }
           }
-
-          // Check for version changes (only for clean deps - pulled deps checked after return)
-          if (dep.producerVersion !== producer.version) hasValueChange = true;
 
           dep = dep.nextDependency;
         } while (dep);
       }
 
       // All dependencies pulled - handle computation for producer nodes
-      // Compute if: no dependencies OR (has dependencies AND needs update)
-      if ('value' in current && (hasValueChange || current.version === 0)) {
+      // Compute if hasValueChange is true (set by DIRTY, PRISTINE, or dependency changes)
+      if ('value' in current && needsRecompute) {
         const prevValue = current.value;
         current.value = track(ctx, current, current.compute);
 
-        // Only increment version if the value actually changed
-        if (prevValue !== current.value) current.version++;
+        // Only propagate if the value actually changed
+        if (prevValue !== current.value) {
+          shallowPropagate(current);
+          // Mark this node as changed in stack bits if we're in a recursive pull
+          if (stackHead) stackHead.bits |= CHILD_CHANGED_BIT;
+        }
       }
 
       // else: pure consumer node (ScheduledNode) - no computation, just mark clean
       // After computing or skipping, the node is up-to-date
       current.status = STATUS_CLEAN;
-      
+
       if (stackHead === undefined) break;
 
       // Reconstruct from minimal stack: consumer MUST be DerivedNode
-      const stackDep = stackHead.dep;
+      const stackNode = stackHead;
+      const stackDep = stackNode.dep;
+      const stackBits = stackNode.bits;
 
       current = stackDep.consumer;
       dep = stackDep.nextDependency;
-      stackHead = stackHead.prev;
+      stackHead = stackNode.prev;
 
-      const currStat = current.status;
+      // Restore state from stack bits
+      needsRecompute = (stackBits & PARENT_RECOMPUTE_BIT) !== 0;
+      const depChanged = (stackBits & CHILD_CHANGED_BIT) !== 0;
 
-      // Restore accumulated state from status high bit
-      hasValueChange = (currStat & HAS_CHANGE_BIT) !== 0;
-      current.status = currStat & ~HAS_CHANGE_BIT;  // Clear the temp bit
-
-      // Check if pulled dep itself changed
-      if (stackDep.producerVersion !== stackDep.producer.version) hasValueChange = true;
+      // Check if pulled dep changed (returned via stack bits)
+      if (depChanged) needsRecompute = true;
     } while (current);
   };
 

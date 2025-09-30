@@ -23,7 +23,6 @@ function createProducer(_: string): ProducerNode {
     __type: 'producer',
     status: 0, // STATUS_CLEAN
     value: undefined,
-    version: 0,
     subscribers: undefined,
     subscribersTail: undefined,
   };

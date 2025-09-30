@@ -43,7 +43,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -74,7 +73,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -105,7 +103,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -161,7 +158,6 @@ describe('Dependency Graph Helpers', () => {
         status: 0,
         subscribersTail: undefined,
         value: 0,
-        version: 0,
       };
       
       const target: ConsumerNode = {
@@ -195,8 +191,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-          version: 0,
-        };
+          };
         
         const target: ConsumerNode = {
           __type: 'test',
@@ -222,8 +217,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-          version: 0,
-        };
+          };
         
         const target1: ConsumerNode = {
           __type: 'test',
@@ -264,8 +258,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-          version: 0,
-        };
+          };
         
         const target: ConsumerNode = {
           __type: 'test',
@@ -293,8 +286,7 @@ describe('Dependency Graph Helpers', () => {
           status: 0,
           subscribersTail: undefined,
           value: 0,
-          version: 0,
-        };
+          };
         
         const targets = Array.from(
           { length: 3 },
@@ -387,12 +379,11 @@ describe('Dependency Graph Helpers', () => {
       return {
         producer: from,
         consumer: to,
+        version: 0,
         prevDependency: undefined,
         nextDependency: undefined,
         prevConsumer: undefined,
         nextConsumer: undefined,
-        version: 0,
-        producerVersion: 0,
       };
     }
   

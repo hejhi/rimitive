@@ -121,6 +121,5 @@ console.log('  4. nextConsumer: Dependency | undefined');
 console.log('  5. prevDependency: Dependency | undefined');
 console.log('  6. nextDependency: Dependency | undefined');
 console.log('  7. version: number');
-console.log('  8. producerVersion: number');
 console.log('\nThe 6 linked-list pointers create a web of references');
 console.log('throughout the entire dependency graph.');

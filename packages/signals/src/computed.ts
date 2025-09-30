@@ -35,7 +35,7 @@ interface ComputedNode<T> extends DerivedNode {
   value: T;
 }
 
-const { STATUS_PENDING } = CONSTANTS;
+const { STATUS_PRISTINE, NEEDS_PULL } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -49,12 +49,11 @@ export function createComputedFactory(
     const node: ComputedNode<T> = {
       __type: 'computed' as const,
       value: undefined as T,
-      version: 0, // Value version for change detection
       subscribers: undefined,
       subscribersTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
-      status: STATUS_PENDING,
+      status: STATUS_PRISTINE,
       trackingVersion: 0, // Initialize version tracking
       compute,
     };
@@ -63,7 +62,7 @@ export function createComputedFactory(
     function computed(): T {
       // Update if needed FIRST (before tracking)
       // This ensures we track the post-computation version, not pre-computation
-      if (node.status === STATUS_PENDING) pullUpdates(node);
+      if (node.status & NEEDS_PULL) pullUpdates(node);
 
       // Track dependency AFTER pulling updates
       // This way we record the actual version after any computation
@@ -79,7 +78,7 @@ export function createComputedFactory(
       ctx.currentConsumer = null;
 
       try {
-        if (node.status === STATUS_PENDING) pullUpdates(node);
+        if (node.status & NEEDS_PULL) pullUpdates(node);
         return node.value;
       } finally {
         ctx.currentConsumer = prevConsumer;

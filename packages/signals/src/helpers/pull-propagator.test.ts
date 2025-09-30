@@ -4,7 +4,7 @@ import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { createPullPropagator } from './pull-propagator';
 
-const { STATUS_CLEAN, STATUS_PENDING, STATUS_DIRTY } = CONSTANTS;
+const { STATUS_CLEAN, STATUS_PENDING, STATUS_DIRTY, STATUS_PRISTINE } = CONSTANTS;
 
 describe('pull-propagator: FRP lazy evaluation invariants', () => {
   /**
@@ -34,7 +34,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
   function createDerivedNode(
     compute: () => any,
     dependencies?: Dependency,
-    status: number = STATUS_PENDING
+    status: number = STATUS_PRISTINE
   ): DerivedNode {
     const node = {
       __type: 'computed' as const,
@@ -43,12 +43,35 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       dependencyTail: dependencies, // ConsumerNode field
       trackingVersion: 0, // ConsumerNode field - proper version tracking
       value: undefined,
-      version: 0, // ProducerNode field - value version
       status,
       // ProducerNode fields
       subscribers: undefined,
       subscribersTail: undefined,
     } as DerivedNode;
+
+    // Wire up bidirectional graph: set consumer on dependencies and add to producers' subscribers
+    let dep = dependencies;
+    while (dep) {
+      dep.consumer = node;
+      const producer = dep.producer;
+
+      // Add to producer's subscribers list if not already there
+      if (producer && !dep.prevConsumer && producer.subscribers !== dep) {
+        if (!producer.subscribers) {
+          producer.subscribers = dep;
+          producer.subscribersTail = dep;
+        } else {
+          dep.prevConsumer = producer.subscribersTail;
+          if (producer.subscribersTail) {
+            producer.subscribersTail.nextConsumer = dep;
+          }
+          producer.subscribersTail = dep;
+        }
+      }
+
+      dep = dep.nextDependency;
+    }
+
     return node;
   }
 
@@ -56,7 +79,6 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
   function createSourceNode(value: any, status: number = STATUS_CLEAN): FromNode {
     const node = {
       value,
-      version: 0,
       status,
       // ProducerNode fields
       subscribers: undefined,
@@ -71,12 +93,27 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       producer,
       consumer: consumer as any, // Will be set later when wiring to nodes
       version: 0, // Will be set by track function based on consumer's trackingVersion
-      producerVersion: 0, // Producer's version when dependency was created
       nextDependency: nextDep,
       prevDependency: undefined,
       nextConsumer: undefined,
       prevConsumer: undefined,
     };
+
+    // Wire up bidirectional graph: add to producer's subscribers list
+    if (producer && consumer) {
+      if (!producer.subscribers) {
+        producer.subscribers = dep;
+        producer.subscribersTail = dep;
+      } else {
+        // Add to tail of subscribers list
+        dep.prevConsumer = producer.subscribersTail;
+        if (producer.subscribersTail) {
+          producer.subscribersTail.nextConsumer = dep;
+        }
+        producer.subscribersTail = dep;
+      }
+    }
+
     return dep;
   }
 
@@ -403,7 +440,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (sourceA.value as number) * 2;
         },
         createDependency(sourceA, createDependency(sourceB)),
-        STATUS_PENDING
+        STATUS_PRISTINE  // Never computed before
       );
 
       derived.trackingVersion = 0;

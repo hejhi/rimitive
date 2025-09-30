@@ -66,7 +66,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       };
 
       const dep2: Dependency = {
@@ -77,7 +76,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       };
 
       const dep3: Dependency = {
@@ -88,7 +86,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       };
 
       // Schedule all nodes
@@ -149,8 +146,7 @@ describe('Scheduler - FRP Principles', () => {
           prevDependency: undefined,
           nextDependency: undefined,
           version: 0,
-          producerVersion: 0,
-        });
+          });
 
         scheduler.propagate({
           consumer: normal,
@@ -160,8 +156,7 @@ describe('Scheduler - FRP Principles', () => {
           prevDependency: undefined,
           nextDependency: undefined,
           version: 0,
-          producerVersion: 0,
-        });
+          });
 
         // THIS WILL FAIL: normal effect won't run after exception
         expect(results).toEqual(['throw', 'normal']);
@@ -197,7 +192,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       };
 
       // Schedule the node but don't flush yet
@@ -271,8 +265,7 @@ describe('Scheduler - FRP Principles', () => {
           prevDependency: undefined,
           nextDependency: undefined,
           version: 0,
-          producerVersion: 0,
-        });
+          });
       });
 
       // THIS WILL FAIL: node3 will still execute even though disposed
@@ -313,8 +306,7 @@ describe('Scheduler - FRP Principles', () => {
             prevDependency: undefined,
             nextDependency: undefined,
             version: 0,
-            producerVersion: 0,
-          });
+              });
         },
         dependencies: undefined,
         dependencyTail: undefined,
@@ -340,7 +332,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       // B should execute in the same flush cycle
@@ -376,8 +367,7 @@ describe('Scheduler - FRP Principles', () => {
               prevDependency: undefined,
               nextDependency: undefined,
               version: 0,
-              producerVersion: 0,
-            });
+                  });
           }
         },
         dependencies: undefined,
@@ -402,8 +392,7 @@ describe('Scheduler - FRP Principles', () => {
               prevDependency: undefined,
               nextDependency: undefined,
               version: 0,
-              producerVersion: 0,
-            });
+                  });
           }
         },
         dependencies: undefined,
@@ -420,7 +409,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       // Should execute: A -> B -> A (second time) -> stop
@@ -462,7 +450,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       // End inner batch - should not flush
@@ -531,7 +518,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       scheduler.startBatch(); // Inner batch
@@ -546,8 +532,7 @@ describe('Scheduler - FRP Principles', () => {
           prevDependency: undefined,
           nextDependency: undefined,
           version: 0,
-          producerVersion: 0,
-        });
+          });
       });
 
       scheduler.endBatch(); // End inner batch - no flush
@@ -561,7 +546,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       expect(executionOrder).toEqual([]); // Nothing executed yet
@@ -612,7 +596,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       scheduler.propagate({
@@ -623,7 +606,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       // After flush with error, nextScheduled should be cleaned
@@ -662,7 +644,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       });
 
       // Dispose without flushing
@@ -709,7 +690,6 @@ describe('Scheduler - FRP Principles', () => {
         prevDependency: undefined,
         nextDependency: undefined,
         version: 0,
-        producerVersion: 0,
       };
 
       scheduler.startBatch();

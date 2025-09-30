@@ -25,8 +25,6 @@ export function createGraphEdges(): GraphEdges {
     if (prevDependency !== undefined && prevDependency.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       prevDependency.version = consumer.trackingVersion;
-      // Record the current producer version
-      prevDependency.producerVersion = producer.version;
       return; // Already tracking
     }
 
@@ -39,8 +37,6 @@ export function createGraphEdges(): GraphEdges {
     if (nextDependency && nextDependency.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       nextDependency.version = consumer.trackingVersion;
-      // Record the current producer version
-      nextDependency.producerVersion = producer.version;
       consumer.dependencyTail = nextDependency;
       return; // Found and reused
     }
@@ -55,8 +51,6 @@ export function createGraphEdges(): GraphEdges {
         if (existingDep.producer === producer) {
           // Found existing dependency - update version
           existingDep.version = consumer.trackingVersion;
-          // Record the current producer version
-          existingDep.producerVersion = producer.version;
           // Note: We don't move it to tail to preserve order for pruning
           return; // Reused existing dependency
         }
@@ -74,8 +68,6 @@ export function createGraphEdges(): GraphEdges {
       nextDependency,
       nextConsumer: undefined,
       version: consumer.trackingVersion,
-      // Record the current producer version
-      producerVersion: producer.version,
     };
 
     // Wire up consumer side

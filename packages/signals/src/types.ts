@@ -42,7 +42,6 @@ export interface Writable<T = unknown> extends Readable<T> {
 // They maintain a list of consumers that depend on them
 export interface ProducerNode extends ReactiveNode {
   value: unknown;
-  version: number; // Incremented when value changes (for value-based change detection)
   subscribers: Dependency | undefined; // Head of dependent list
   subscribersTail: Dependency | undefined; // Tail of dependent list
 }
@@ -100,7 +99,6 @@ export interface Dependency {
 
   // Version tracking for efficient dependency pruning
   version: number; // Consumer's trackingVersion when this dependency was created
-  producerVersion: number; // Producer's version when this dependency was last validated
 }
 
 

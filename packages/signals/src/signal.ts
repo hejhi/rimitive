@@ -60,7 +60,6 @@ export function createSignalFactory(
     const node: SignalNode<T> = {
       __type: 'signal',
       value: initialValue,
-      version: 0,
       subscribers: undefined,
       subscribersTail: undefined,
       status: STATUS_CLEAN,
