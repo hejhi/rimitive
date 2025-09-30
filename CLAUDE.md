@@ -192,12 +192,19 @@ When working in this codebase, adopt the following communication style:
 - **Concise**: Keep explanations brief and to the point.
 - **Trust-based**: Assume good intentions and competence. Don't over-explain obvious things.
 
-**NEVER REVERT. ALWAYS ITERATE.**
-When you inevitably run into issues during implementation, and you're considering reverting, restoring, or changing strategies, either:
-- **THINK HARDER**: re-assess the task with the added knowledge of the fundamental problem you're encountering and how you could iterate through it or go a level deeper
-- **ANALYZE**: if you don't explicitly understand the fundamental problem, the top priority is to figure it out and synthesize it into knowledge
-- **STOP**: consult the user if you determine the approach is fundamentally flawed or you're spinning your wheels
+**NEVER REVERT OR RESTORE. ALWAYS ITERATE.**
+When you inevitably run into roadblocks during implementation, and you're considering reverting, restoring, or changing strategies, do one or more of the below:
+- **ANALYZE AND THINK DEEPLY**: if you don't explicitly know the fundamental problem underlying the roadblock, the top priority is to understand and synthesize it into detailed, actionable knowledge
+- **THINK HARDER**: re-assess the task with the added knowledge of the fundamental problem you're encountering and think about how you could iterate through it, or go a level deeper
 
-You should **NEVER** make the decision to go backwards, unless explicitly instructed to by the user.
+When all else fails, and you determine:
+- the approach is fundamentally flawed
+- the implementation is absolutely impossible
+- there's too much ambiguity to continue iterating
+- you find yourself at an impassable fork in the road
 
-**Remember**: "roadblocks" are sources of valuable knowledge during an iteration and should **NEVER** be discarded or dismissed.
+...then **STOP** and consult the user.
+
+**You should NEVER make the decision to go backwards or change directions unless explicitly instructed to by the user.**
+
+**Remember**: implementation "roadblocks" are sources of valuable knowledge during an iteration and should **NEVER** be discarded or dismissed.
