@@ -65,28 +65,30 @@ export function createPullPropagator({
       if (dep === undefined) dep = current.dependencies;
 
       // Pull stale dependencies
-      while (dep) {
-        const producer = dep.producer;
+      if (dep) {
+        do {
+          const producer = dep.producer;
 
-        if (producer.status & NEEDS_PULL) {
-          // Recurse into stale computed
-          if ('compute' in producer) {
-            stack = { dep, prev: stack, needsRecompute };
-            current = producer;
-            needsRecompute = false;
-            dep = undefined;
-            continue traversal;
+          if (producer.status & NEEDS_PULL) {
+            // Recurse into stale computed
+            if ('compute' in producer) {
+              stack = { dep, prev: stack, needsRecompute };
+              current = producer;
+              needsRecompute = false;
+              dep = undefined;
+              continue traversal;
+            }
+
+            // Handle dirty signal
+            if (producer.status === STATUS_DIRTY) {
+              needsRecompute = true;
+              shallowPropagate(producer);
+              producer.status = STATUS_CLEAN;
+            }
           }
 
-          // Handle dirty signal
-          if (producer.status === STATUS_DIRTY) {
-            needsRecompute = true;
-            shallowPropagate(producer);
-            producer.status = STATUS_CLEAN;
-          }
-        }
-
-        dep = dep.nextDependency;
+          dep = dep.nextDependency;
+        } while (dep);
       }
 
       // Recompute if needed
