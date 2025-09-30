@@ -15,6 +15,7 @@ export const STATUS_PRISTINE = 1 << 4;   // 16 - Never computed (initial state f
 
 // Composite masks for efficient multi-state checks
 export const NEEDS_PULL = STATUS_PENDING | STATUS_DIRTY | STATUS_PRISTINE;  // 19 - Needs pull update
+export const FORCE_RECOMPUTE = STATUS_DIRTY | STATUS_PRISTINE;              // 18 - Forces recomputation
 
 // Re-export as CONSTANTS for backward compatibility
 export const CONSTANTS = {
@@ -25,4 +26,5 @@ export const CONSTANTS = {
   STATUS_SCHEDULED,
   STATUS_PRISTINE,
   NEEDS_PULL,
+  FORCE_RECOMPUTE,
 };
