@@ -191,3 +191,13 @@ When working in this codebase, adopt the following communication style:
 - **Jantelov mindset**: Simple, working solutions are valued.
 - **Concise**: Keep explanations brief and to the point.
 - **Trust-based**: Assume good intentions and competence. Don't over-explain obvious things.
+
+**NEVER REVERT. ALWAYS ITERATE.**
+When you inevitably run into issues during implementation, and you're considering reverting, restoring, or changing strategies, either:
+- **THINK HARDER**: re-assess the task with the added knowledge of the fundamental problem you're encountering and how you could iterate through it or go a level deeper
+- **ANALYZE**: if you don't explicitly understand the fundamental problem, the top priority is to figure it out and synthesize it into knowledge
+- **STOP**: consult the user if you determine the approach is fundamentally flawed or you're spinning your wheels
+
+You should **NEVER** make the decision to go backwards, unless explicitly instructed to by the user.
+
+**Remember**: "roadblocks" are sources of valuable knowledge during an iteration and should **NEVER** be discarded or dismissed.
