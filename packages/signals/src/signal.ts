@@ -71,22 +71,17 @@ export function createSignalFactory(
       // Read path - track dependency inline
       if (!arguments.length) {
         const consumer = ctx.currentConsumer;
-        if (consumer) {
-          trackDependency(node, consumer);
-        }
+        if (consumer) trackDependency(node, consumer);
         return node.value;
       }
 
       // Skip if unchanged
-      if (node.value === value) {
-        if (node.status === STATUS_DIRTY) node.status = STATUS_CLEAN;
-        return;
-      }
+      if (node.value === value) return;
 
       node.value = value!;
-      // NO version increment here - that happens during pull phase
 
       const subs = node.subscribers;
+
       // Early exit if no subscribers
       if (!subs) return;
 
