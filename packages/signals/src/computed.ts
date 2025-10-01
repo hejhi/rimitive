@@ -35,7 +35,7 @@ interface ComputedNode<T> extends DerivedNode {
   value: T;
 }
 
-const { STATUS_PRISTINE, NEEDS_PULL } = CONSTANTS;
+const { DERIVED_PRISTINE, DERIVED_PULL } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -48,7 +48,7 @@ export function createComputedFactory(
   // Shared computed function - uses `this` binding
   function computedImpl<T>(this: ComputedNode<T>): T {
     // Update if needed FIRST (before tracking)
-    if (this.status & NEEDS_PULL) pullUpdates(this);
+    if (this.status & DERIVED_PULL) pullUpdates(this);
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;
@@ -64,7 +64,7 @@ export function createComputedFactory(
     ctx.consumerScope = null;
 
     try {
-      if (this.status & NEEDS_PULL) pullUpdates(this);
+      if (this.status & DERIVED_PULL) pullUpdates(this);
       return this.value;
     } finally {
       ctx.consumerScope = prevConsumer;
@@ -79,7 +79,7 @@ export function createComputedFactory(
       subscribersTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
-      status: STATUS_PRISTINE,
+      status: DERIVED_PRISTINE,
       trackingVersion: 0,
       compute,
     };

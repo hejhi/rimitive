@@ -13,7 +13,7 @@ import { CONSTANTS } from '../constants';
 // Re-export types for proper type inference
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
-const { STATUS_PENDING, STATUS_DISPOSED, STATUS_SCHEDULED, STATUS_CLEAN } = CONSTANTS;
+const { CONSUMER_PENDING, SCHEDULED_DISPOSED, SCHEDULED, STATUS_CLEAN } = CONSTANTS;
 
 // Global error handler for scheduler exceptions
 let errorHandler: ((error: unknown) => void) | undefined;
@@ -81,7 +81,7 @@ export function createScheduler({
         if (next !== undefined) current.nextScheduled = undefined;
 
         // Only flush if scheduled (skip disposed nodes)
-        if (current.status === STATUS_SCHEDULED) {
+        if (current.status === SCHEDULED) {
           current.status = STATUS_CLEAN;
           try {
             current.flush();
@@ -105,10 +105,10 @@ export function createScheduler({
   // Leaf handler that queues scheduled nodes
   const queueIfScheduled = (node: ToNode): void => {
     if (!('flush' in node)) return;
-    if (node.status !== STATUS_PENDING) return;
+    if (node.status !== CONSUMER_PENDING) return;
 
     // Only queue nodes with flush methods that are pending
-    node.status = STATUS_SCHEDULED;
+    node.status = SCHEDULED;
     node.nextScheduled = undefined;
 
     // Add to execution queue
@@ -147,9 +147,9 @@ export function createScheduler({
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    if (node.status === STATUS_DISPOSED) return;
+    if (node.status === SCHEDULED_DISPOSED) return;
 
-    node.status = STATUS_DISPOSED;
+    node.status = SCHEDULED_DISPOSED;
     cleanup(node);
 
     const deps = node.dependencies;

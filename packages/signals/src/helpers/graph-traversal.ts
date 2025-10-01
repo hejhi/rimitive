@@ -12,7 +12,7 @@ import { CONSTANTS } from '../constants';
 // Re-export types for proper type inference
 export type { Dependency, ConsumerNode, DerivedNode } from '../types';
 
-const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
+const { STATUS_CLEAN, DERIVED_DIRTY, CONSUMER_PENDING } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -56,7 +56,7 @@ export function createGraphTraversal(): GraphTraversal {
       const consumerNodeStatus = consumerNode.status;
 
       // Skip already processed nodes
-      if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== STATUS_DIRTY) {
+      if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== DERIVED_DIRTY) {
         currentDependency = currentDependency.nextConsumer;
 
         if (currentDependency === undefined && stack !== undefined) {
@@ -68,7 +68,7 @@ export function createGraphTraversal(): GraphTraversal {
       }
 
       // Mark as pending (invalidated)
-      consumerNode.status = STATUS_PENDING;
+      consumerNode.status = CONSUMER_PENDING;
 
       // Check if we can traverse deeper
       const hasSubscribers = 'subscribers' in consumerNode && consumerNode.subscribers;

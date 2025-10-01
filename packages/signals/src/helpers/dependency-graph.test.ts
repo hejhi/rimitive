@@ -7,7 +7,7 @@ import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../t
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
 
-const { STATUS_DISPOSED, STATUS_PENDING, STATUS_DIRTY, STATUS_SCHEDULED } = CONSTANTS;
+const { SCHEDULED_DISPOSED, CONSUMER_PENDING, DERIVED_DIRTY, SCHEDULED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: {
@@ -58,7 +58,7 @@ describe('Dependency Graph Helpers', () => {
       const firstEdge = target.dependencies;
       
       // Update version
-      source.status = STATUS_DIRTY;
+      source.status = DERIVED_DIRTY;
       
       // Second call should reuse the same edge
       helpers.trackDependency(source, target);
@@ -88,7 +88,7 @@ describe('Dependency Graph Helpers', () => {
       const existingNode = target.dependencies;
       
       // Update version
-      source.status = STATUS_DIRTY;
+      source.status = DERIVED_DIRTY;
       
       // Should find the existing dependency
       helpers.trackDependency(source, target);
@@ -172,7 +172,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.trackDependency(source, target);
       
       // Update version
-      source.status = STATUS_DIRTY;
+      source.status = DERIVED_DIRTY;
       
       // Update dependency
       helpers.trackDependency(source, target);
@@ -401,8 +401,8 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge);
   
-      // With push-pull system, computeds get STATUS_PENDING during push phase
-      expect(target.status).toBe(STATUS_PENDING);
+      // With push-pull system, computeds get CONSUMER_PENDING during push phase
+      expect(target.status).toBe(CONSUMER_PENDING);
     });
   
     it('should mark effects as DIRTY (simplified flag system)', () => {
@@ -412,13 +412,13 @@ describe('Dependency Graph Helpers', () => {
 
       walk(edge);
 
-      // With push-pull system, scheduled nodes get STATUS_SCHEDULED after enqueueing
-      expect(effect.status).toBe(STATUS_SCHEDULED);
+      // With push-pull system, scheduled nodes get SCHEDULED after enqueueing
+      expect(effect.status).toBe(SCHEDULED);
     });
   
     it('should skip already notified nodes', () => {
       const source = createMockNode('signal') as ProducerNode;
-      const target = createMockNode('computed', STATUS_PENDING);
+      const target = createMockNode('computed', CONSUMER_PENDING);
       const edge = createEdge(source, target);
   
       const initialStatus = target.status;
@@ -429,7 +429,7 @@ describe('Dependency Graph Helpers', () => {
   
     it('should skip disposed nodes', () => {
       const source = createMockNode('signal') as ProducerNode;
-      const target = createMockNode('computed', STATUS_DISPOSED);
+      const target = createMockNode('computed', SCHEDULED_DISPOSED);
       const edge = createEdge(source, target);
   
       const initialStatus = target.status;
@@ -440,7 +440,7 @@ describe('Dependency Graph Helpers', () => {
   
     it('should skip running nodes', () => {
       const source = createMockNode('signal') as ProducerNode;
-      const target = createMockNode('computed', STATUS_PENDING);
+      const target = createMockNode('computed', CONSUMER_PENDING);
       const edge = createEdge(source, target);
   
       const initialStatus = target.status;
@@ -463,9 +463,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1);
   
-      expect(target1.status).toBe(STATUS_PENDING);
-      expect(target2.status).toBe(STATUS_PENDING);
-      expect(target3.status).toBe(STATUS_PENDING);
+      expect(target1.status).toBe(CONSUMER_PENDING);
+      expect(target2.status).toBe(CONSUMER_PENDING);
+      expect(target3.status).toBe(CONSUMER_PENDING);
     });
   
     it('should traverse depth-first through dependency chains', () => {
@@ -484,12 +484,12 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1);
 
-      expect(computed1.status).toBe(STATUS_PENDING);
-      expect(computed2.status).toBe(STATUS_PENDING);
-      expect(effect.status).toBe(STATUS_SCHEDULED);
+      expect(computed1.status).toBe(CONSUMER_PENDING);
+      expect(computed2.status).toBe(CONSUMER_PENDING);
+      expect(effect.status).toBe(SCHEDULED);
 
       // Collect scheduled nodes for testing
-      if (effect.status === STATUS_SCHEDULED) {
+      if (effect.status === SCHEDULED) {
         scheduledNodes.push(effect as ScheduledNode);
       }
       expect(scheduledNodes).toContain(effect);
@@ -513,9 +513,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1);
   
-      expect(computed1.status).toBe(STATUS_PENDING);
-      expect(computed2.status).toBe(STATUS_PENDING);
-      expect(computed3.status).toBe(STATUS_PENDING);
+      expect(computed1.status).toBe(CONSUMER_PENDING);
+      expect(computed2.status).toBe(CONSUMER_PENDING);
+      expect(computed3.status).toBe(CONSUMER_PENDING);
     });
   
     it('should handle complex graphs with multiple branches', () => {
@@ -559,18 +559,18 @@ describe('Dependency Graph Helpers', () => {
       walk(sourceToComp1);
   
       // All nodes should be invalidated
-      expect(comp1.status).toBe(STATUS_PENDING);
-      expect(comp2.status).toBe(STATUS_PENDING);
-      expect(comp3.status).toBe(STATUS_PENDING);
-      expect(comp4.status).toBe(STATUS_PENDING);
-      expect(eff1.status).toBe(STATUS_SCHEDULED);
-      expect(eff2.status).toBe(STATUS_SCHEDULED);
-      expect(eff3.status).toBe(STATUS_SCHEDULED);
+      expect(comp1.status).toBe(CONSUMER_PENDING);
+      expect(comp2.status).toBe(CONSUMER_PENDING);
+      expect(comp3.status).toBe(CONSUMER_PENDING);
+      expect(comp4.status).toBe(CONSUMER_PENDING);
+      expect(eff1.status).toBe(SCHEDULED);
+      expect(eff2.status).toBe(SCHEDULED);
+      expect(eff3.status).toBe(SCHEDULED);
   
       // Collect scheduled nodes for testing
-      if (eff1.status === STATUS_SCHEDULED) scheduledNodes.push(eff1 as ScheduledNode);
-      if (eff2.status === STATUS_SCHEDULED) scheduledNodes.push(eff2 as ScheduledNode);
-      if (eff3.status === STATUS_SCHEDULED) scheduledNodes.push(eff3 as ScheduledNode);
+      if (eff1.status === SCHEDULED) scheduledNodes.push(eff1 as ScheduledNode);
+      if (eff2.status === SCHEDULED) scheduledNodes.push(eff2 as ScheduledNode);
+      if (eff3.status === SCHEDULED) scheduledNodes.push(eff3 as ScheduledNode);
 
       // All effects should be scheduled
       expect(scheduledNodes).toContain(eff1);
@@ -587,7 +587,7 @@ describe('Dependency Graph Helpers', () => {
       linkEdges([edge1, edge2]);
 
       // Manually set status to simulate already scheduled
-      effect.status = STATUS_SCHEDULED;
+      effect.status = SCHEDULED;
 
       walk(edge1);
 
@@ -614,7 +614,7 @@ describe('Dependency Graph Helpers', () => {
   
       // All nodes should be notified as DIRTY with simplified flag system
       for (let i = 1; i < 100; i++) {
-        expect(nodes[i]!.status).toBe(STATUS_PENDING);
+        expect(nodes[i]!.status).toBe(CONSUMER_PENDING);
       }
     });
   });

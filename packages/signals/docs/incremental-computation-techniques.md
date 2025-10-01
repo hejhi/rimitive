@@ -104,7 +104,7 @@ const recomputeNode = (node: DerivedNode) => {
 
   if (newValue !== oldValue) {
     node.value = newValue;
-    node.status = STATUS_DIRTY;
+    node.status = DERIVED_DIRTY;
   }
 };
 ```
@@ -132,7 +132,7 @@ const incrementalRecompute = (node: IncrementalComputedNode) => {
 
   if (newValue !== oldValue) {
     node.value = newValue;
-    node.status = STATUS_DIRTY;
+    node.status = DERIVED_DIRTY;
   }
 };
 ```

@@ -122,8 +122,8 @@ This enables:
 
 The reactive graph uses these status values:
 - `STATUS_CLEAN (0)` - Up-to-date, no recomputation needed
-- `STATUS_PENDING (1)` - May need update (lazy evaluation pending)
-- `STATUS_DIRTY (2)` - Definitely needs update
+- `CONSUMER_PENDING (1)` - May need update (lazy evaluation pending)
+- `DERIVED_DIRTY (2)` - Definitely needs update
 
 ### Testing Strategy
 

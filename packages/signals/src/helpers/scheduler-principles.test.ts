@@ -5,7 +5,7 @@ import type { ScheduledNode, FromNode, Dependency } from '../types';
 import { createGraphTraversal } from './graph-traversal';
 import { createGraphEdges } from './graph-edges';
 
-const { STATUS_DISPOSED, STATUS_PENDING, STATUS_CLEAN } = CONSTANTS;
+const { SCHEDULED_DISPOSED, CONSUMER_PENDING, STATUS_CLEAN } = CONSTANTS;
 
 describe('Scheduler - FRP Principles', () => {
   describe('Exception Safety', () => {
@@ -206,7 +206,7 @@ describe('Scheduler - FRP Principles', () => {
 
       // THIS WILL FAIL: Disposed nodes still execute in current implementation
       expect(flushSpy).not.toHaveBeenCalled();
-      expect(node.status).toBe(STATUS_DISPOSED);
+      expect(node.status).toBe(SCHEDULED_DISPOSED);
     });
 
     it('should handle disposal during flush', () => {
@@ -358,7 +358,7 @@ describe('Scheduler - FRP Principles', () => {
           executionCount.A++;
           if (executionCount.A === 1) {
             // First execution: schedule B
-            nodeB.status = STATUS_PENDING;
+            nodeB.status = CONSUMER_PENDING;
             scheduler.propagate({
               consumer: nodeB,
               nextConsumer: undefined,
@@ -383,7 +383,7 @@ describe('Scheduler - FRP Principles', () => {
           executionCount.B++;
           if (executionCount.B === 1) {
             // First execution: schedule A again
-            nodeA.status = STATUS_PENDING;
+            nodeA.status = CONSUMER_PENDING;
             scheduler.propagate({
               consumer: nodeA,
               nextConsumer: undefined,
@@ -412,7 +412,7 @@ describe('Scheduler - FRP Principles', () => {
       });
 
       // Should execute: A -> B -> A (second time) -> stop
-      // The STATUS_SCHEDULED flag should prevent infinite loops
+      // The SCHEDULED flag should prevent infinite loops
       expect(executionCount.A).toBeLessThanOrEqual(2);
       expect(executionCount.B).toBeLessThanOrEqual(1);
     });
@@ -654,7 +654,7 @@ describe('Scheduler - FRP Principles', () => {
 
       // The node should be properly cleaned
       expect(node.data).toBeUndefined();
-      expect(node.status).toBe(STATUS_DISPOSED);
+      expect(node.status).toBe(SCHEDULED_DISPOSED);
 
       // End batch - should not execute disposed node
       scheduler.endBatch();

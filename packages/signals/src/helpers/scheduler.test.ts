@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
-import { CONSTANTS, STATUS_SCHEDULED } from '../constants';
+import { CONSTANTS, SCHEDULED } from '../constants';
 import type { ScheduledNode, FromNode } from '../types';
 import { createGraphTraversal } from './graph-traversal';
 import { createGraphEdges } from './graph-edges';
 
-const { STATUS_DISPOSED } = CONSTANTS;
+const { SCHEDULED_DISPOSED } = CONSTANTS;
 
 describe('NodeScheduler', () => {
   it('should schedule nodes during propagation', () => {
@@ -39,7 +39,7 @@ describe('NodeScheduler', () => {
 
     scheduler.startBatch();
     scheduler.propagate(dependency);
-    expect(node.status).toBe(STATUS_SCHEDULED);
+    expect(node.status).toBe(SCHEDULED);
   });
 
   it('should not schedule already scheduled nodes', () => {
@@ -73,7 +73,7 @@ describe('NodeScheduler', () => {
     scheduler.startBatch();
     scheduler.propagate(dependency);
     const scheduledAfterFirst = node.status;
-    expect(scheduledAfterFirst).toBe(STATUS_SCHEDULED);
+    expect(scheduledAfterFirst).toBe(SCHEDULED);
 
     // Try to schedule again - should be skipped
     scheduler.propagate(dependency);
@@ -101,7 +101,7 @@ describe('NodeScheduler', () => {
     // First disposal
     scheduler.dispose(node, cleanupFn);
     expect(cleanupFn).toHaveBeenCalledTimes(1);
-    expect(node.status).toBe(STATUS_DISPOSED);
+    expect(node.status).toBe(SCHEDULED_DISPOSED);
 
     // Second disposal - should be skipped
     scheduler.dispose(node, cleanupFn);
@@ -238,14 +238,14 @@ describe('NodeScheduler', () => {
     scheduler.startBatch();
 
     scheduler.propagate(dependency);
-    expect(node.status === STATUS_SCHEDULED).toBe(true);
+    expect(node.status === SCHEDULED).toBe(true);
     expect(node.nextScheduled).toBeUndefined();
 
     // End batch to trigger flush
     scheduler.endBatch();
 
     // After flush, status should be reset
-    expect(node.status === STATUS_SCHEDULED).toBe(false);
+    expect(node.status === SCHEDULED).toBe(false);
     expect(node.nextScheduled).toBeUndefined();
   });
 });

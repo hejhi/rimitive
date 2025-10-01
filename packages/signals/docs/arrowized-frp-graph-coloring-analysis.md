@@ -432,7 +432,7 @@ class ColoredPropagator {
     return new Promise(resolve => {
       setTimeout(() => {
         for (const dep of deps) {
-          dep.consumer.status = STATUS_PENDING;
+          dep.consumer.status = CONSUMER_PENDING;
         }
         resolve();
       }, 0);

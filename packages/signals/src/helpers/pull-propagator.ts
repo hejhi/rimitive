@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { STATUS_DIRTY, STATUS_CLEAN, STATUS_PENDING, NEEDS_PULL, FORCE_RECOMPUTE } = CONSTANTS;
+const { DERIVED_DIRTY, STATUS_CLEAN, CONSUMER_PENDING, DERIVED_PULL, FORCE_RECOMPUTE, SIGNAL_UPDATED } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -22,14 +22,14 @@ export interface PullPropagator {
 }
 
 // Upgrade PENDING siblings to DIRTY
-const shallowPropagate = (node: FromNode) => {
-  let sub = node.subscribers;
-  while (sub) {
-    if (sub.consumer.status === STATUS_PENDING) {
-      sub.consumer.status = STATUS_DIRTY;
+const shallowPropagate = (sub: Dependency) => {
+  do {
+    if (sub.consumer.status === CONSUMER_PENDING) {
+      sub.consumer.status = DERIVED_DIRTY;
     }
-    sub = sub.nextConsumer;
-  }
+
+    sub = sub.nextConsumer!;
+  } while (sub);
 };
 
 export function createPullPropagator({
@@ -68,23 +68,22 @@ export function createPullPropagator({
       if (dep !== undefined) {
         do {
           const producer: FromNode = dep.producer;
+          const status = producer.status;
 
-          if (producer.status & NEEDS_PULL) {
-            // Recurse into stale computed
-            if ('compute' in producer) {
-              stack = { dep, prev: stack, needsRecompute };
-              current = producer;
-              needsRecompute = false;
-              dep = undefined;
-              continue traversal;
-            }
+          // Recurse into stale computed (only computeds can have DERIVED_PULL status)
+          if (status & DERIVED_PULL) {
+            stack = { dep, prev: stack, needsRecompute };
+            current = producer as DerivedNode;
+            needsRecompute = false;
+            dep = undefined;
+            continue traversal;
+          }
 
-            // Handle dirty signal
-            if (producer.status === STATUS_DIRTY) {
-              needsRecompute = true;
-              shallowPropagate(producer);
-              producer.status = STATUS_CLEAN;
-            }
+          if (status & SIGNAL_UPDATED) {
+            needsRecompute = true;
+            const sub = producer.subscribers;
+            if (sub) shallowPropagate(sub);
+            producer.status = STATUS_CLEAN;
           }
 
           dep = dep.nextDependency;
@@ -92,12 +91,15 @@ export function createPullPropagator({
       }
 
       // Recompute if needed
-      if ('value' in current && needsRecompute) {
-        const prev = current.value;
-        current.value = track(ctx, current, current.compute);
+      // Note: current is always a DerivedNode because we only recurse when
+      if (needsRecompute) {
+        const derivedCurrent = current as DerivedNode;
+        const prev = derivedCurrent.value;
+        derivedCurrent.value = track(ctx, derivedCurrent, derivedCurrent.compute);
 
-        if (prev !== current.value) {
-          shallowPropagate(current);
+        if (prev !== derivedCurrent.value) {
+          const sub = derivedCurrent.subscribers;
+          if (sub) shallowPropagate(sub);
           // Notify parent that this child changed
           if (stack) stack.needsRecompute = true;
         }

@@ -20,7 +20,7 @@ import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
 import { GraphTraversal } from './helpers/graph-traversal';
 
-const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
+const { SIGNAL_UPDATED, STATUS_CLEAN } = CONSTANTS;
 
 export interface SignalFunction<T = unknown> {
   (): T;                    // Read operation (monomorphic)
@@ -85,7 +85,7 @@ export function createSignalFactory(
       if (!subs) return;
 
       // Mark dirty and propagate (scheduler handles flushing automatically)
-      node.status = STATUS_DIRTY;
+      node.status = SIGNAL_UPDATED;
       propagate(subs);
     }
 

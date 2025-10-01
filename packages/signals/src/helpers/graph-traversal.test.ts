@@ -3,7 +3,7 @@ import type { ConsumerNode, Dependency, DerivedNode, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
 
-const { STATUS_CLEAN, STATUS_PENDING, STATUS_DIRTY } = CONSTANTS;
+const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_DIRTY } = CONSTANTS;
 
 describe('graph-traversal: FRP graph traversal invariants', () => {
   /**
@@ -74,10 +74,10 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       traversal.propagate(depA);
 
       // All nodes should be marked as PENDING
-      expect(nodeA.status).toBe(STATUS_PENDING);
-      expect(nodeB.status).toBe(STATUS_PENDING);
-      expect(nodeC.status).toBe(STATUS_PENDING);
-      expect(nodeD.status).toBe(STATUS_PENDING);
+      expect(nodeA.status).toBe(CONSUMER_PENDING);
+      expect(nodeB.status).toBe(CONSUMER_PENDING);
+      expect(nodeC.status).toBe(CONSUMER_PENDING);
+      expect(nodeD.status).toBe(CONSUMER_PENDING);
     });
 
     it('should handle branching propagation correctly', () => {
@@ -111,12 +111,12 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       traversal.propagate(depA);
 
       // All nodes should be marked
-      expect(nodeA.status).toBe(STATUS_PENDING);
-      expect(nodeB.status).toBe(STATUS_PENDING);
-      expect(nodeC.status).toBe(STATUS_PENDING);
-      expect(nodeD.status).toBe(STATUS_PENDING);
-      expect(nodeE.status).toBe(STATUS_PENDING);
-      expect(nodeF.status).toBe(STATUS_PENDING);
+      expect(nodeA.status).toBe(CONSUMER_PENDING);
+      expect(nodeB.status).toBe(CONSUMER_PENDING);
+      expect(nodeC.status).toBe(CONSUMER_PENDING);
+      expect(nodeD.status).toBe(CONSUMER_PENDING);
+      expect(nodeE.status).toBe(CONSUMER_PENDING);
+      expect(nodeF.status).toBe(CONSUMER_PENDING);
     });
 
     it('CRITICAL: should handle diamond dependencies correctly', () => {
@@ -154,9 +154,9 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       });
 
       // All nodes should be marked
-      expect(nodeB.status).toBe(STATUS_PENDING);
-      expect(nodeC.status).toBe(STATUS_PENDING);
-      expect(nodeD.status).toBe(STATUS_PENDING);
+      expect(nodeB.status).toBe(CONSUMER_PENDING);
+      expect(nodeC.status).toBe(CONSUMER_PENDING);
+      expect(nodeD.status).toBe(CONSUMER_PENDING);
 
       // D is a leaf node (no further subscribers)
       // It should be visited exactly once (skipped on second encounter to avoid redundant work)
@@ -170,7 +170,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
        * If a node is already PENDING, it should not be processed again
        * This prevents exponential explosion in diamond patterns
        */
-      const nodeB = createProducerNode(STATUS_PENDING); // Already pending!
+      const nodeB = createProducerNode(CONSUMER_PENDING); // Already pending!
       const nodeA = createProducerNode(STATUS_CLEAN);
 
       const depB = createDependency(nodeB);
@@ -184,7 +184,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       });
 
       // B should remain PENDING (not changed)
-      expect(nodeB.status).toBe(STATUS_PENDING);
+      expect(nodeB.status).toBe(CONSUMER_PENDING);
 
       // B should NOT be visited as a leaf since it was already PENDING
       expect(leafNodes).toHaveLength(0);
@@ -195,7 +195,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
        * DIRTY nodes from previous computations need to be marked PENDING
        * for the new propagation cycle to know they need re-evaluation
        */
-      const nodeB = createProducerNode(STATUS_DIRTY); // DIRTY from previous cycle
+      const nodeB = createProducerNode(DERIVED_DIRTY); // DIRTY from previous cycle
       const nodeA = createProducerNode(STATUS_CLEAN);
 
       nodeA.subscribers = createDependency(nodeB);
@@ -204,7 +204,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       traversal.propagate(nodeA.subscribers!);
 
       // B should be marked PENDING for re-evaluation
-      expect(nodeB.status).toBe(STATUS_PENDING);
+      expect(nodeB.status).toBe(CONSUMER_PENDING);
     });
   });
 
@@ -249,19 +249,19 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
 
       Object.defineProperty(nodeB, 'status', {
         get: () => bStatus,
-        set: (v) => { if (v === STATUS_PENDING) visitOrder.push(nodeB); bStatus = v; }
+        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeB); bStatus = v; }
       });
       Object.defineProperty(nodeC, 'status', {
         get: () => cStatus,
-        set: (v) => { if (v === STATUS_PENDING) visitOrder.push(nodeC); cStatus = v; }
+        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeC); cStatus = v; }
       });
       Object.defineProperty(nodeD, 'status', {
         get: () => dStatus,
-        set: (v) => { if (v === STATUS_PENDING) visitOrder.push(nodeD); dStatus = v; }
+        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeD); dStatus = v; }
       });
       Object.defineProperty(nodeE, 'status', {
         get: () => eStatus,
-        set: (v) => { if (v === STATUS_PENDING) visitOrder.push(nodeE); eStatus = v; }
+        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeE); eStatus = v; }
       });
 
       traversal.traverseGraph(nodeA.subscribers!, (node) => {
@@ -340,7 +340,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
 
       // All nodes should be marked
       for (const node of nodes) {
-        expect(node.status).toBe(STATUS_PENDING);
+        expect(node.status).toBe(CONSUMER_PENDING);
       }
     });
   });
@@ -387,7 +387,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
 
       // All subscribers should be marked
       for (const node of nodes) {
-        expect(node.status).toBe(STATUS_PENDING);
+        expect(node.status).toBe(CONSUMER_PENDING);
       }
     });
 
@@ -431,11 +431,11 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       });
 
       // All nodes should be marked as PENDING
-      expect(nodeB.status).toBe(STATUS_PENDING);
-      expect(nodeC.status).toBe(STATUS_PENDING);
-      expect(nodeD.status).toBe(STATUS_PENDING);
-      expect(nodeE.status).toBe(STATUS_PENDING);
-      expect(nodeF.status).toBe(STATUS_PENDING);
+      expect(nodeB.status).toBe(CONSUMER_PENDING);
+      expect(nodeC.status).toBe(CONSUMER_PENDING);
+      expect(nodeD.status).toBe(CONSUMER_PENDING);
+      expect(nodeE.status).toBe(CONSUMER_PENDING);
+      expect(nodeF.status).toBe(CONSUMER_PENDING);
 
       // F is the only true leaf (it has no subscribers)
       // E will be processed multiple times but only F is a leaf

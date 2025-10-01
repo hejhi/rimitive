@@ -4,7 +4,7 @@ import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { createPullPropagator } from './pull-propagator';
 
-const { STATUS_CLEAN, STATUS_PENDING, STATUS_DIRTY, STATUS_PRISTINE } = CONSTANTS;
+const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_PRISTINE, SIGNAL_UPDATED } = CONSTANTS;
 
 describe('pull-propagator: FRP lazy evaluation invariants', () => {
   /**
@@ -34,7 +34,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
   function createDerivedNode(
     compute: () => any,
     dependencies?: Dependency,
-    status: number = STATUS_PRISTINE
+    status: number = DERIVED_PRISTINE
   ): DerivedNode {
     const node = {
       __type: 'computed' as const,
@@ -162,8 +162,8 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       let computeCountC = 0;
       let computeCountD = 0;
 
-      // Create source node A (dirty)
-      const nodeA = createSourceNode(10, STATUS_DIRTY);
+      // Create source node A (updated signal)
+      const nodeA = createSourceNode(10, SIGNAL_UPDATED);
 
       // Create intermediate nodes B and C (dependencies wired after creation)
       const nodeB = createDerivedNode(
@@ -172,7 +172,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (nodeA.value as number) * 2; // Should be 20
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       const nodeC = createDerivedNode(
@@ -181,7 +181,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (nodeA.value as number) * 3; // Should be 30
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Create final node D depending on both B and C
@@ -191,7 +191,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return ((nodeB.value as number) || 0) + ((nodeC.value as number) || 0);
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Wire dependencies with proper consumer references
@@ -230,12 +230,12 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       const { ctx, track } = createTestContext();
       const propagator = createPullPropagator({ ctx, track });
 
-      const nodeA = createSourceNode(5, STATUS_DIRTY);
+      const nodeA = createSourceNode(5, SIGNAL_UPDATED);
 
       // Three parallel dependencies
-      const nodeB = createDerivedNode(() => (nodeA.value as number) * 2, undefined, STATUS_PENDING);
-      const nodeC = createDerivedNode(() => (nodeA.value as number) * 3, undefined, STATUS_PENDING);
-      const nodeE = createDerivedNode(() => (nodeA.value as number) * 4, undefined, STATUS_PENDING);
+      const nodeB = createDerivedNode(() => (nodeA.value as number) * 2, undefined, CONSUMER_PENDING);
+      const nodeC = createDerivedNode(() => (nodeA.value as number) * 3, undefined, CONSUMER_PENDING);
+      const nodeE = createDerivedNode(() => (nodeA.value as number) * 4, undefined, CONSUMER_PENDING);
 
       // Node that depends on all three
       const nodeF = createDerivedNode(
@@ -243,7 +243,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return ((nodeB.value as number) || 0) + ((nodeC.value as number) || 0) + ((nodeE.value as number) || 0);
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Wire dependencies with proper consumer references
@@ -305,13 +305,13 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       // Now update both sources
       nodeX.value = 100;
-      nodeX.status = STATUS_DIRTY;
+      nodeX.status = SIGNAL_UPDATED;
 
       nodeY.value = 200;
-      nodeY.status = STATUS_DIRTY;
+      nodeY.status = SIGNAL_UPDATED;
 
       // Mark nodeSum as PENDING since its dependencies changed
-      nodeSum.status = STATUS_PENDING;
+      nodeSum.status = CONSUMER_PENDING;
 
       // Pull should see BOTH updates atomically
       propagator.pullUpdates(nodeSum);
@@ -350,13 +350,13 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       const propagator = createPullPropagator({ ctx, track: trackWithVersions });
 
-      const source = createSourceNode(1, STATUS_DIRTY);
+      const source = createSourceNode(1, SIGNAL_UPDATED);
 
       // Create derived node with proper ConsumerNode fields
       const derived = createDerivedNode(
         () => (source.value as number) * 2,
         createDependency(source),
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Initialize trackingVersion (ConsumerNodes have this field)
@@ -373,8 +373,8 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       // Update source and pull again
       source.value = 10;
-      source.status = STATUS_DIRTY;
-      derived.status = STATUS_PENDING;
+      source.status = SIGNAL_UPDATED;
+      derived.status = CONSUMER_PENDING;
 
       propagator.pullUpdates(derived);
 
@@ -440,7 +440,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (sourceA.value as number) * 2;
         },
         createDependency(sourceA, createDependency(sourceB)),
-        STATUS_PRISTINE  // Never computed before
+        DERIVED_PRISTINE  // Never computed before
       );
 
       derived.trackingVersion = 0;
@@ -459,8 +459,8 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // Change condition - no longer needs sourceB
       useSourceB = false;
       sourceA.value = 7;
-      sourceA.status = STATUS_DIRTY;
-      derived.status = STATUS_PENDING;
+      sourceA.status = SIGNAL_UPDATED;
+      derived.status = CONSUMER_PENDING;
 
       propagator.pullUpdates(derived);
       expect(derived.value).toBe(14);
@@ -499,8 +499,8 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       createPullPropagator({ ctx, track }); // Would be used if not for infinite loop
 
       // Create a potential cycle (though this should be prevented by the system)
-      const nodeA = createDerivedNode(() => 1, undefined, STATUS_PENDING);
-      const nodeB = createDerivedNode(() => 2, createDependency(nodeA), STATUS_PENDING);
+      const nodeA = createDerivedNode(() => 1, undefined, CONSUMER_PENDING);
+      const nodeB = createDerivedNode(() => 2, createDependency(nodeA), CONSUMER_PENDING);
 
       // Artificially create a cycle for testing (normally prevented)
       nodeA.dependencies = createDependency(nodeB);
@@ -522,7 +522,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
 
       // Create a very deep chain
       const depth = 1000;
-      let prevNode: FromNode = createSourceNode(1, STATUS_DIRTY);
+      let prevNode: FromNode = createSourceNode(1, SIGNAL_UPDATED);
       const nodes: DerivedNode[] = [];
 
       for (let i = 0; i < depth; i++) {
@@ -530,7 +530,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
         const node = createDerivedNode(
           () => (currentPrev.value as number) + 1,
           undefined,
-          STATUS_PENDING
+          CONSUMER_PENDING
         );
         nodes.push(node);
         // Wire dependency with proper consumer reference
@@ -554,7 +554,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       /**
        * THE BUG is in pull-propagator.ts lines 75-78:
        *
-       * if (pStatus === STATUS_DIRTY) {
+       * if (pStatus === DERIVED_DIRTY) {
        *   hasDirty = true;
        *   break; // <-- THIS IS THE BUG!
        * }
@@ -571,7 +571,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       const { ctx, track } = createTestContext();
       const propagator = createPullPropagator({ ctx, track });
 
-      const source = createSourceNode(100, STATUS_DIRTY);
+      const source = createSourceNode(100, SIGNAL_UPDATED);
 
       // Two siblings that both need computation
       const left = createDerivedNode(
@@ -579,7 +579,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (source.value as number) / 2;
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       const right = createDerivedNode(
@@ -587,7 +587,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (source.value as number) / 4;
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Consumer depends on both
@@ -596,7 +596,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return ((left.value as number) || 0) + ((right.value as number) || 0);
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Wire dependencies with proper consumer references
@@ -642,7 +642,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       let computeCountD = 0;
 
       // Create source node A (dirty)
-      const nodeA = createSourceNode(1, STATUS_DIRTY);
+      const nodeA = createSourceNode(1, SIGNAL_UPDATED);
 
       // Create intermediate nodes B and C
       const nodeB = createDerivedNode(
@@ -651,7 +651,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (nodeA.value as number) * 2;
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       const nodeC = createDerivedNode(
@@ -660,7 +660,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (nodeA.value as number) * 3;
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Create final node D depending on both B and C
@@ -670,7 +670,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (nodeB.value as number) + (nodeC.value as number);
         },
         undefined,
-        STATUS_PENDING
+        CONSUMER_PENDING
       );
 
       // Wire dependencies with proper consumer references
@@ -720,7 +720,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       const nodes: DerivedNode[] = [];
 
       // Create a chain of 5 nodes
-      let prevNode: FromNode = createSourceNode(1, STATUS_DIRTY);
+      let prevNode: FromNode = createSourceNode(1, SIGNAL_UPDATED);
 
       for (let i = 0; i < 5; i++) {
         const currentPrev = prevNode; // Capture current prevNode for closure
@@ -730,7 +730,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
             return (currentPrev.value as number) + 1;
           },
           undefined,
-          STATUS_PENDING
+          CONSUMER_PENDING
         );
         nodes.push(node);
         // Wire dependency with proper consumer reference
