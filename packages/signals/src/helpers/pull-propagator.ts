@@ -98,6 +98,10 @@ export function createPullPropagator({
       if (needsRecompute) {
         const derivedCurrent = current as DerivedNode;
         const prev = derivedCurrent.value;
+
+        // Mark as clean BEFORE recomputing to prevent nested pullUpdates during compute
+        derivedCurrent.status = STATUS_CLEAN;
+
         derivedCurrent.value = track(ctx, derivedCurrent, derivedCurrent.compute);
 
         if (prev !== derivedCurrent.value) {
@@ -111,9 +115,9 @@ export function createPullPropagator({
           // Notify parent that this child changed
           if (stack !== undefined) stack.needsRecompute = true;
         }
+      } else {
+        current.status = STATUS_CLEAN;
       }
-
-      current.status = STATUS_CLEAN;
 
       // Pop to parent or exit
       if (!stack) return;
