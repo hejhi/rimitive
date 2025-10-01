@@ -19,175 +19,128 @@ export interface GraphEdges {
 
 export function createGraphEdges(): GraphEdges {
   const trackDependency = (producer: FromNode, consumer: ToNode): void => {
-    const prevDependency = consumer.dependencyTail;
+    const tail = consumer.dependencyTail;
 
-    // Check 1: Is tail already pointing to this producer?
-    if (prevDependency !== undefined && prevDependency.producer === producer) {
+    // Fast path: tail already points to this producer
+    if (tail !== undefined && tail.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      prevDependency.version = consumer.trackingVersion;
+      tail.version = consumer.trackingVersion;
       return; // Already tracking
     }
 
-    // Check 2: Is next in sequence this producer?
-    const nextDependency = prevDependency
-      ? prevDependency.nextDependency
-      : consumer.dependencies;
-
-    // Check if we already have this dependency
-    if (nextDependency && nextDependency.producer === producer) {
+    // Check next dependency in sequence
+    const next = tail ? tail.nextDependency : consumer.dependencies;
+    if (next !== undefined && next.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      nextDependency.version = consumer.trackingVersion;
-      consumer.dependencyTail = nextDependency;
+      next.version = consumer.trackingVersion;
+      consumer.dependencyTail = next;
       return; // Found and reused
     }
 
-    // Search rest of the list for existing connection (optimization for stable graphs)
-    let existingDep = nextDependency
-      ? nextDependency.nextDependency
-      : undefined;
-
-    if (existingDep) {
-      do {
-        if (existingDep.producer === producer) {
-          // Found existing dependency - update version
-          existingDep.version = consumer.trackingVersion;
-          // Note: We don't move it to tail to preserve order for pruning
-          return; // Reused existing dependency
-        }
-        existingDep = existingDep.nextDependency;
-      } while (existingDep);
-    }
-
-    // No existing dependency found - create new one
-    const prevConsumer = producer.subscribersTail;
-    const dependency: Dependency = {
+    // Create new dependency edge
+    const dep: Dependency = {
       producer,
       consumer,
-      prevDependency,
-      prevConsumer,
-      nextDependency,
+      prevDependency: tail,
+      prevConsumer: producer.subscribersTail,
+      nextDependency: next,
       nextConsumer: undefined,
       version: consumer.trackingVersion,
     };
 
-    // Wire up consumer side
-    consumer.dependencyTail = dependency;
+    // Wire consumer side
+    consumer.dependencyTail = dep;
+    if (next) next.prevDependency = dep;
+    if (tail) tail.nextDependency = dep;
+    else consumer.dependencies = dep;
 
-    if (nextDependency) nextDependency.prevDependency = dependency;
-
-    if (prevDependency) prevDependency.nextDependency = dependency;
-    else consumer.dependencies = dependency;
-
-    // Wire up producer side
-    producer.subscribersTail = dependency;
-
-    if (prevConsumer) prevConsumer.nextConsumer = dependency;
-    else producer.subscribers = dependency;
+    // Wire producer side
+    producer.subscribersTail = dep;
+    if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
+    else producer.subscribers = dep;
   };
 
   /**
    * Detach all dependencies from a consumer node.
    * Used during disposal to completely disconnect a node from the graph.
-   *
-   * @param node - The consumer node to detach
    */
   const detachAll = (dep: Dependency): void => {
-    let toRemove: Dependency | undefined = dep;
+    let current: Dependency | undefined = dep;
 
     do {
-      const {
-        producer,
-        consumer,
-        prevDependency,
-        prevConsumer,
-        nextConsumer,
-      } = toRemove;
+      const next: Dependency | undefined = current.nextDependency;
+      const { producer, consumer, prevDependency, prevConsumer, nextConsumer } =
+        current;
 
-      const nextDependency: Dependency | undefined = toRemove.nextDependency;
-
-      // Update consumer's dependency chain
-      if (nextDependency) nextDependency.prevDependency = prevDependency;
+      // Unlink from consumer chain
+      if (next) next.prevDependency = prevDependency;
       else consumer.dependencyTail = prevDependency;
 
-      if (prevDependency) prevDependency.nextDependency = nextDependency;
-      else consumer.dependencies = nextDependency;
+      if (prevDependency) prevDependency.nextDependency = next;
+      else consumer.dependencies = next;
 
-      // Update producer's dependent chain
+      // Unlink from producer chain
       if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
       else producer.subscribersTail = prevConsumer;
 
       if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
       else producer.subscribers = nextConsumer;
 
-      toRemove = nextDependency;
-    } while (toRemove);
+      current = next;
+    } while (current);
   };
 
   /**
    * Track dependencies while executing a function.
-   * This is the primary API for dependency tracking - it ensures proper
-   * setup and cleanup even if the function throws.
-   *
-   * @param ctx - The global context
-   * @param node - The consumer node that will track dependencies
-   * @param fn - The function to execute while tracking
-   * @returns The result of the function
+   * Prunes stale dependencies after execution using version-based tracking.
    */
   const track = <T>(
     ctx: GlobalContext,
     node: ConsumerNode,
     fn: () => T,
   ): T => {
-    // Increment version for this tracking cycle
-    // This happens in the pull phase, not the write hot path
     node.trackingVersion++;
 
-    // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
-
-    node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
+    node.dependencyTail = undefined;
     ctx.currentConsumer = node;
 
     try {
       return fn();
     } finally {
-      // Restore previous tracking context
       ctx.currentConsumer = prevConsumer;
-      
+
+      // Prune stale dependencies (version < trackingVersion)
       let dep = node.dependencies;
-      let prevValid: Dependency | undefined = undefined;
-      
+      let prev: Dependency | undefined;
+
       if (dep) {
-        // Version-based pruning: Remove dependencies with outdated versions
-        // Dependencies accessed during fn() have version === node.trackingVersion
-        // Older dependencies have version < node.trackingVersion and should be pruned
         do {
-          const nextDep: Dependency | undefined = dep.nextDependency;
+          const next: Dependency | undefined = dep.nextDependency;
 
           if (dep.version < node.trackingVersion) {
-            // This dependency is stale and needs to be removed
+            // Stale - unlink from both chains
             const { producer, prevConsumer, nextConsumer } = dep;
 
-            // Remove from consumer's dependency list
-            if (prevValid) prevValid.nextDependency = nextDep;
-            else node.dependencies = nextDep;
+            // Unlink from consumer
+            if (prev) prev.nextDependency = next;
+            else node.dependencies = next;
+            if (next) next.prevDependency = prev;
 
-            if (nextDep) nextDep.prevDependency = prevValid;
-
-            // Remove from producer's subscriber list
+            // Unlink from producer
             if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
             else producer.subscribersTail = prevConsumer;
-
             if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
             else producer.subscribers = nextConsumer;
-            // This dependency is still valid
-          } else prevValid = dep;
+          } else {
+            prev = dep;
+          }
 
-          dep = nextDep;
+          dep = next;
         } while (dep);
       }
 
-      node.dependencyTail = prevValid;
+      node.dependencyTail = prev;
     }
   };
 
