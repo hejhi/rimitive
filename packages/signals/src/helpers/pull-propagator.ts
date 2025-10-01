@@ -45,14 +45,14 @@ export function createPullPropagator({
     let dep: Dependency | undefined;
     let needsRecompute = false;
 
-    traversal: while (true) {
+    traversal: for (;;) {
       // Early exit if already clean
       if (current.status === STATUS_CLEAN) {
         if (!stack) return;
-
-        // Pop from stack
-        dep = stack.dep.nextDependency;
-        current = stack.dep.consumer;
+        
+        const stackDep = stack.dep;
+        dep = stackDep.nextDependency;
+        current = stackDep.consumer;
         needsRecompute = stack.needsRecompute;
         stack = stack.prev;
         continue;
@@ -65,9 +65,9 @@ export function createPullPropagator({
       if (dep === undefined) dep = current.dependencies;
 
       // Pull stale dependencies
-      if (dep) {
+      if (dep !== undefined) {
         do {
-          const producer = dep.producer;
+          const producer: FromNode = dep.producer;
 
           if (producer.status & NEEDS_PULL) {
             // Recurse into stale computed
@@ -108,8 +108,9 @@ export function createPullPropagator({
       // Pop to parent or exit
       if (!stack) return;
 
-      dep = stack.dep.nextDependency;
-      current = stack.dep.consumer;
+      const stackDep = stack.dep;
+      dep = stackDep.nextDependency;
+      current = stackDep.consumer;
       needsRecompute = stack.needsRecompute;
       stack = stack.prev;
     }
