@@ -118,41 +118,49 @@ export function createGraphEdges(): GraphEdges {
       if (tail) {
         // Prune everything after tail
         let toRemove = tail.nextDependency;
-        while (toRemove !== undefined) {
-          const next = toRemove.nextDependency;
-          const { producer, prevConsumer, nextConsumer } = toRemove;
+        if (toRemove !== undefined) {
+          do {
+            const next: Dependency | undefined = toRemove.nextDependency;
+            const { producer, prevConsumer, nextConsumer } = toRemove;
 
-          // Unlink from consumer chain
-          if (next !== undefined) next.prevDependency = tail;
-          // tail already points to the correct position, no update needed
-          tail.nextDependency = next;
+            // Unlink from consumer chain
+            if (next !== undefined) next.prevDependency = tail;
+            // tail already points to the correct position, no update needed
+            tail.nextDependency = next;
 
-          // Unlink from producer chain
-          if (nextConsumer !== undefined) nextConsumer.prevConsumer = prevConsumer;
-          else producer.subscribersTail = prevConsumer;
-          if (prevConsumer !== undefined) prevConsumer.nextConsumer = nextConsumer;
-          else producer.subscribers = nextConsumer;
+            // Unlink from producer chain
+            if (nextConsumer !== undefined)
+              nextConsumer.prevConsumer = prevConsumer;
+            else producer.subscribersTail = prevConsumer;
+            if (prevConsumer !== undefined)
+              prevConsumer.nextConsumer = nextConsumer;
+            else producer.subscribers = nextConsumer;
 
-          toRemove = next;
+            toRemove = next;
+          } while (toRemove);
         }
       } else {
         // Prune everything (no dependencies were accessed)
         let toRemove = node.dependencies;
-        while (toRemove !== undefined) {
-          const next = toRemove.nextDependency;
-          const { producer, prevConsumer, nextConsumer } = toRemove;
+        if (toRemove !== undefined) {
+          do {
+            const next: Dependency | undefined = toRemove.nextDependency;
+            const { producer, prevConsumer, nextConsumer } = toRemove;
 
-          // Unlink from consumer chain
-          if (next !== undefined) next.prevDependency = undefined;
-          node.dependencies = next;
+            // Unlink from consumer chain
+            if (next !== undefined) next.prevDependency = undefined;
+            node.dependencies = next;
 
-          // Unlink from producer chain
-          if (nextConsumer !== undefined) nextConsumer.prevConsumer = prevConsumer;
-          else producer.subscribersTail = prevConsumer;
-          if (prevConsumer !== undefined) prevConsumer.nextConsumer = nextConsumer;
-          else producer.subscribers = nextConsumer;
+            // Unlink from producer chain
+            if (nextConsumer !== undefined)
+              nextConsumer.prevConsumer = prevConsumer;
+            else producer.subscribersTail = prevConsumer;
+            if (prevConsumer !== undefined)
+              prevConsumer.nextConsumer = nextConsumer;
+            else producer.subscribers = nextConsumer;
 
-          toRemove = next;
+            toRemove = next;
+          } while (toRemove);
         }
       }
     }
