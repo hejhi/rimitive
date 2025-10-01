@@ -139,6 +139,7 @@ export function createGraphEdges(): GraphEdges {
       // Anything after it is stale and should be removed
 
       const tail = node.dependencyTail as Dependency | undefined;
+
       if (tail) {
         // Prune everything after tail
         let toRemove = tail.nextDependency;
@@ -170,6 +171,7 @@ export function createGraphEdges(): GraphEdges {
         // Prune everything (no dependencies were accessed)
         let toRemove = node.dependencies;
         if (toRemove !== undefined) {
+          pruneCount++;
           do {
             const next: Dependency | undefined = toRemove.nextDependency;
             const { producer, prevConsumer, nextConsumer } = toRemove;
