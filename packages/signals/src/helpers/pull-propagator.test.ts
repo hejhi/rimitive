@@ -47,6 +47,8 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // ProducerNode fields
       subscribers: undefined,
       subscribersTail: undefined,
+      scheduled: undefined,
+      scheduledTail: undefined,
     } as DerivedNode;
 
     // Wire up bidirectional graph: set consumer on dependencies and add to producers' subscribers
@@ -83,6 +85,8 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
       // ProducerNode fields
       subscribers: undefined,
       subscribersTail: undefined,
+      scheduled: undefined,
+      scheduledTail: undefined,
     } as ProducerNode;
     return node as FromNode;
   }

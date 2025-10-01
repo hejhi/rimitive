@@ -42,6 +42,8 @@ describe('Dependency Graph Helpers', () => {
         subscribers: undefined,
         status: 0,
         subscribersTail: undefined,
+        scheduled: undefined,
+        scheduledTail: undefined,
         value: 0,
       };
       
@@ -72,6 +74,8 @@ describe('Dependency Graph Helpers', () => {
         subscribers: undefined,
         status: 0,
         subscribersTail: undefined,
+        scheduled: undefined,
+        scheduledTail: undefined,
         value: 0,
       };
       
@@ -102,6 +106,8 @@ describe('Dependency Graph Helpers', () => {
         subscribers: undefined,
         status: 0,
         subscribersTail: undefined,
+        scheduled: undefined,
+        scheduledTail: undefined,
         value: 0,
       };
       
@@ -124,6 +130,8 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         subscribers: undefined,
         subscribersTail: undefined,
+        scheduled: undefined,
+        scheduledTail: undefined,
         status: 0,
       }));
       
@@ -157,6 +165,8 @@ describe('Dependency Graph Helpers', () => {
         subscribers: undefined,
         status: 0,
         subscribersTail: undefined,
+        scheduled: undefined,
+        scheduledTail: undefined,
         value: 0,
       };
       
@@ -190,6 +200,8 @@ describe('Dependency Graph Helpers', () => {
           subscribers: undefined,
           status: 0,
           subscribersTail: undefined,
+          scheduled: undefined,
+          scheduledTail: undefined,
           value: 0,
           };
         
@@ -216,6 +228,8 @@ describe('Dependency Graph Helpers', () => {
           subscribers: undefined,
           status: 0,
           subscribersTail: undefined,
+          scheduled: undefined,
+          scheduledTail: undefined,
           value: 0,
           };
         
@@ -257,6 +271,8 @@ describe('Dependency Graph Helpers', () => {
           subscribers: undefined,
           status: 0,
           subscribersTail: undefined,
+          scheduled: undefined,
+          scheduledTail: undefined,
           value: 0,
           };
         
@@ -285,6 +301,8 @@ describe('Dependency Graph Helpers', () => {
           subscribers: undefined,
           status: 0,
           subscribersTail: undefined,
+          scheduled: undefined,
+          scheduledTail: undefined,
           value: 0,
           };
         

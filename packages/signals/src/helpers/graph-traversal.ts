@@ -70,6 +70,19 @@ export function createGraphTraversal(): GraphTraversal {
       // Mark as pending (invalidated)
       consumerNode.status = CONSUMER_PENDING;
 
+      // Schedule any effects attached to this node
+      if ('scheduled' in consumerNode) {
+        let scheduledDep = (consumerNode as any).scheduled;
+        while (scheduledDep) {
+          const effect = scheduledDep.consumer;
+          if (effect.status === STATUS_CLEAN) {
+            effect.status = CONSUMER_PENDING;
+            onLeaf(effect);
+          }
+          scheduledDep = scheduledDep.nextConsumer;
+        }
+      }
+
       // Check if we can traverse deeper
       const hasSubscribers = 'subscribers' in consumerNode && consumerNode.subscribers;
 

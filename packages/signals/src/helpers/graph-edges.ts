@@ -37,12 +37,15 @@ export function createGraphEdges(): GraphEdges {
       return; // Found and reused
     }
 
+    // Check if consumer is an effect (has flush method) or computed (has subscribers)
+    const isEffect = 'flush' in consumer;
+
     // Create new dependency edge
     const dep: Dependency = {
       producer,
       consumer,
       prevDependency: tail,
-      prevConsumer: producer.subscribersTail,
+      prevConsumer: isEffect ? producer.scheduledTail : producer.subscribersTail,
       nextDependency: next,
       nextConsumer: undefined,
       version: consumer.trackingVersion,
@@ -54,10 +57,16 @@ export function createGraphEdges(): GraphEdges {
     if (tail) tail.nextDependency = dep;
     else consumer.dependencies = dep;
 
-    // Wire producer side
-    producer.subscribersTail = dep;
-    if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
-    else producer.subscribers = dep;
+    // Wire producer side - route effects to scheduled list, computeds to subscribers
+    if (isEffect) {
+      producer.scheduledTail = dep;
+      if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
+      else producer.scheduled = dep;
+    } else {
+      producer.subscribersTail = dep;
+      if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
+      else producer.subscribers = dep;
+    }
   };
 
   /**
@@ -79,11 +88,14 @@ export function createGraphEdges(): GraphEdges {
       if (prevDependency) prevDependency.nextDependency = next;
       else consumer.dependencies = next;
 
-      // Unlink from producer chain
+      // Unlink from producer chain - handle both scheduled and subscribers lists
+      const isEffect = 'flush' in consumer;
       if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
+      else if (isEffect) producer.scheduledTail = prevConsumer;
       else producer.subscribersTail = prevConsumer;
 
       if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
+      else if (isEffect) producer.scheduled = nextConsumer;
       else producer.subscribers = nextConsumer;
 
       current = next;
@@ -128,12 +140,15 @@ export function createGraphEdges(): GraphEdges {
             // tail already points to the correct position, no update needed
             tail.nextDependency = next;
 
-            // Unlink from producer chain
+            // Unlink from producer chain - handle both scheduled and subscribers lists
+            const isEffect = 'flush' in node;
             if (nextConsumer !== undefined)
               nextConsumer.prevConsumer = prevConsumer;
+            else if (isEffect) producer.scheduledTail = prevConsumer;
             else producer.subscribersTail = prevConsumer;
             if (prevConsumer !== undefined)
               prevConsumer.nextConsumer = nextConsumer;
+            else if (isEffect) producer.scheduled = nextConsumer;
             else producer.subscribers = nextConsumer;
 
             toRemove = next;
@@ -151,12 +166,15 @@ export function createGraphEdges(): GraphEdges {
             if (next !== undefined) next.prevDependency = undefined;
             node.dependencies = next;
 
-            // Unlink from producer chain
+            // Unlink from producer chain - handle both scheduled and subscribers lists
+            const isEffect = 'flush' in node;
             if (nextConsumer !== undefined)
               nextConsumer.prevConsumer = prevConsumer;
+            else if (isEffect) producer.scheduledTail = prevConsumer;
             else producer.subscribersTail = prevConsumer;
             if (prevConsumer !== undefined)
               prevConsumer.nextConsumer = nextConsumer;
+            else if (isEffect) producer.scheduled = nextConsumer;
             else producer.subscribers = nextConsumer;
 
             toRemove = next;

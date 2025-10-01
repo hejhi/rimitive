@@ -25,6 +25,8 @@ function createProducer(_: string): ProducerNode {
     value: undefined,
     subscribers: undefined,
     subscribersTail: undefined,
+    scheduled: undefined,
+    scheduledTail: undefined,
   };
 }
 

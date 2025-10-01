@@ -62,6 +62,8 @@ export function createSignalFactory(
       value: initialValue,
       subscribers: undefined,
       subscribersTail: undefined,
+      scheduled: undefined,
+      scheduledTail: undefined,
       status: STATUS_CLEAN,
     };
 
@@ -80,13 +82,15 @@ export function createSignalFactory(
       node.value = value!;
 
       const subs = node.subscribers;
+      const scheduled = node.scheduled;
 
-      // Early exit if no subscribers
-      if (!subs) return;
+      // Early exit if no subscribers or scheduled effects
+      if (!subs && !scheduled) return;
 
       // Mark dirty and propagate (scheduler handles flushing automatically)
       node.status = SIGNAL_UPDATED;
-      propagate(subs);
+      if (subs) propagate(subs);
+      if (scheduled) propagate(scheduled);
     }
 
     // Direct property assignment
