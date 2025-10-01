@@ -43,7 +43,16 @@ export function createPullPropagator({
     let current: ToNode = rootNode;
     let dep: Dependency | undefined = rootNode.dependencies;
 
-    if (!dep) return;
+    // No dependencies - just recompute if needed
+    if (!dep) {
+      if (rootNode.status & (DERIVED_DIRTY | DERIVED_PULL)) {
+        rootNode.status = STATUS_CLEAN;
+        rootNode.value = track(ctx, rootNode, rootNode.compute);
+      } else {
+        rootNode.status = STATUS_CLEAN;
+      }
+      return;
+    }
 
     let needsRecompute = false;
     let checkDepth = 0;
@@ -157,7 +166,14 @@ export function createPullPropagator({
         dirty = false;
       }
 
-      // Fully unwound - we're done
+      // Fully unwound - now update the root node itself if needed
+      if (dirty) {
+        rootNode.status = STATUS_CLEAN;
+        rootNode.value = track(ctx, rootNode, rootNode.compute);
+      } else {
+        rootNode.status = STATUS_CLEAN;
+      }
+
       return;
     }
   };
