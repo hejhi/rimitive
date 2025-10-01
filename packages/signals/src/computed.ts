@@ -45,6 +45,32 @@ export function createComputedFactory(
 ): ComputedFactory {
   const { ctx, trackDependency, pullUpdates } = opts;
 
+  // Shared computed function - uses `this` binding
+  function computedImpl<T>(this: ComputedNode<T>): T {
+    // Update if needed FIRST (before tracking)
+    if (this.status & NEEDS_PULL) pullUpdates(this);
+
+    // Track dependency AFTER pulling updates
+    const consumer = ctx.currentConsumer;
+    if (consumer) trackDependency(this, consumer);
+
+    return this.value;
+  }
+
+  // Shared peek function - uses `this` binding
+  function peekImpl<T>(this: ComputedNode<T>): T {
+    // Save and clear consumer to prevent tracking
+    const prevConsumer = ctx.currentConsumer;
+    ctx.currentConsumer = null;
+
+    try {
+      if (this.status & NEEDS_PULL) pullUpdates(this);
+      return this.value;
+    } finally {
+      ctx.currentConsumer = prevConsumer;
+    }
+  }
+
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
     const node: ComputedNode<T> = {
       __type: 'computed' as const,
@@ -54,36 +80,13 @@ export function createComputedFactory(
       dependencies: undefined,
       dependencyTail: undefined,
       status: STATUS_PRISTINE,
-      trackingVersion: 0, // Initialize version tracking
+      trackingVersion: 0,
       compute,
     };
 
-    // Direct function declaration is more efficient than IIFE
-    function computed(): T {
-      // Update if needed FIRST (before tracking)
-      // This ensures we track the post-computation version, not pre-computation
-      if (node.status & NEEDS_PULL) pullUpdates(node);
-
-      // Track dependency AFTER pulling updates
-      // This way we record the actual version after any computation
-      const consumer = ctx.currentConsumer;
-      if (consumer) trackDependency(node, consumer);
-
-      return node.value;
-    }
-
-    computed.peek = (): T => {
-      // Save and clear consumer to prevent tracking
-      const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = null;
-
-      try {
-        if (node.status & NEEDS_PULL) pullUpdates(node);
-        return node.value;
-      } finally {
-        ctx.currentConsumer = prevConsumer;
-      }
-    };
+    // Bind shared functions to this node
+    const computed = computedImpl.bind(node) as unknown as ComputedFunction<T>;
+    computed.peek = peekImpl.bind(node) as () => T;
 
     return computed;
   }
