@@ -53,7 +53,7 @@ export function createTestInstance() {
 
   // Reset function for test cleanup
   const resetGlobalState = () => {
-    ctx.currentConsumer = null;
+    ctx.consumerScope = null;
     // Can't reset batch from outside anymore - tests should use endBatch
   };
 
@@ -66,9 +66,9 @@ export function createTestInstance() {
 
     // Context access for testing
     setCurrentConsumer: (consumer: ConsumerNode | null) => {
-      ctx.currentConsumer = consumer;
+      ctx.consumerScope = consumer;
     },
-    getCurrentConsumer: () => ctx.currentConsumer,
+    getCurrentConsumer: () => ctx.consumerScope,
     resetGlobalState,
 
     // Raw access for advanced testing
@@ -105,11 +105,11 @@ export function resetGlobalState() {
 
 // Export the context with getters for backward compatibility
 export const activeContext = {
-  get currentConsumer() {
-    return defaultInstance.activeContext.currentConsumer;
+  get consumerScope() {
+    return defaultInstance.activeContext.consumerScope;
   },
-  set currentConsumer(v: ConsumerNode | null) {
-    defaultInstance.activeContext.currentConsumer = v;
+  set consumerScope(v: ConsumerNode | null) {
+    defaultInstance.activeContext.consumerScope = v;
   },
 };
 

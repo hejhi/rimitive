@@ -101,14 +101,14 @@ export function createGraphEdges(): GraphEdges {
   ): T => {
     node.trackingVersion++;
 
-    const prevConsumer = ctx.currentConsumer;
+    const prevConsumer = ctx.consumerScope;
     node.dependencyTail = undefined;
-    ctx.currentConsumer = node;
+    ctx.consumerScope = node;
 
     try {
       return fn();
     } finally {
-      ctx.currentConsumer = prevConsumer;
+      ctx.consumerScope = prevConsumer;
 
       // Prune stale dependencies (everything after dependencyTail)
       // dependencyTail marks the last dependency accessed in this tracking cycle

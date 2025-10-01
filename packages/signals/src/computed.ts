@@ -51,7 +51,7 @@ export function createComputedFactory(
     if (this.status & NEEDS_PULL) pullUpdates(this);
 
     // Track dependency AFTER pulling updates
-    const consumer = ctx.currentConsumer;
+    const consumer = ctx.consumerScope;
     if (consumer) trackDependency(this, consumer);
 
     return this.value;
@@ -60,14 +60,14 @@ export function createComputedFactory(
   // Shared peek function - uses `this` binding
   function peekImpl<T>(this: ComputedNode<T>): T {
     // Save and clear consumer to prevent tracking
-    const prevConsumer = ctx.currentConsumer;
-    ctx.currentConsumer = null;
+    const prevConsumer = ctx.consumerScope;
+    ctx.consumerScope = null;
 
     try {
       if (this.status & NEEDS_PULL) pullUpdates(this);
       return this.value;
     } finally {
-      ctx.currentConsumer = prevConsumer;
+      ctx.consumerScope = prevConsumer;
     }
   }
 

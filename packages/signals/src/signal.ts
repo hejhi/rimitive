@@ -69,7 +69,7 @@ export function createSignalFactory(
     function signal(value?: T): T | void {
       // Read path - track dependency inline
       if (!arguments.length) {
-        const consumer = ctx.currentConsumer;
+        const consumer = ctx.consumerScope;
         if (consumer) trackDependency(node, consumer);
         return node.value;
       }

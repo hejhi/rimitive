@@ -80,7 +80,7 @@ describe('Global State Management', () => {
     });
   });
 
-  describe('currentConsumer tracking', () => {
+  describe('consumerScope tracking', () => {
     it('should track currently executing computed', () => {
       const s = signal(1);
       let capturedCurrent: ReturnType<typeof getCurrentConsumer> = null;
@@ -124,7 +124,7 @@ describe('Global State Management', () => {
       void outer();
 
       expect(captures).toHaveLength(3);
-      // Check that currentConsumer is being tracked (now state objects, not functions)
+      // Check that consumerScope is being tracked (now state objects, not functions)
       expect(captures[0]!.type).toBe('outer-before');
       expect((captures[0]!.current as unknown as {__type: string})?.__type).toBe('computed');
       expect(captures[1]!.type).toBe('inner');

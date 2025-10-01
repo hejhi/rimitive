@@ -40,7 +40,7 @@ function createConsumer(_: string): ConsumerNode {
 
 function createContext(): GlobalContext {
   return {
-    currentConsumer: null,
+    consumerScope: null,
     batchDepth: 0,
     inNotificationPhase: false,
   } as GlobalContext;

@@ -20,7 +20,7 @@ export interface GlobalContext {
   // When a computed/effect reads a signal, we need to know WHO is reading.
   // This field acts as an implicit parameter threaded through all reads.
   // Similar to React's Fiber tracking or Vue's targetStack.
-  currentConsumer: ConsumerNode | null;
+  consumerScope: ConsumerNode | null;
 }
 
 // PATTERN: Factory Function
@@ -29,7 +29,7 @@ export interface GlobalContext {
 // This is the base context without helpers - use createDefaultContext for a complete context
 export function createBaseContext(): GlobalContext {
   return {
-    currentConsumer: null,
+    consumerScope: null,
     queueHead: undefined,
     queueTail: undefined,
   } as GlobalContext; // Cast since helpers will be added by createDefaultContext

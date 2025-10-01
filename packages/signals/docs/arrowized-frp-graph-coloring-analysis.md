@@ -471,7 +471,7 @@ export function arrowToComputed<A, B>(
 ): ComputedFunction<B> {
   return computed(() => {
     const input = source();
-    return arrow.runPull({ currentConsumer: null } as GlobalContext);
+    return arrow.runPull({ consumerScope: null } as GlobalContext);
   });
 }
 
