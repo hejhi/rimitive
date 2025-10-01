@@ -116,10 +116,14 @@ export function createPullPropagator({
           dep = nextDep;
           continue;
         }
+      } else {
+        // Even if dirty, we need to accumulate the state for unwinding
+        needsRecompute = dirty;
       }
 
       // Unwind: we've either finished checking all deps, or found dirty and need to go back up
-      while (checkDepth--) {
+      while (checkDepth > 0) {
+        --checkDepth;
         const firstSub: Dependency | undefined = (current as DerivedNode).subscribers;
         const hasMultipleSubs =
           firstSub !== undefined && firstSub.nextConsumer !== undefined;
@@ -166,8 +170,15 @@ export function createPullPropagator({
         dirty = false;
       }
 
+      // After unwinding, check if there are more dependencies at the root level
+      if (dep && dep.nextDependency !== undefined) {
+        dep = dep.nextDependency;
+        needsRecompute = needsRecompute || dirty;
+        continue traversal;
+      }
+
       // Fully unwound - now update the root node itself if needed
-      if (dirty) {
+      if (needsRecompute || dirty) {
         rootNode.status = STATUS_CLEAN;
         rootNode.value = track(ctx, rootNode, rootNode.compute);
       } else {
