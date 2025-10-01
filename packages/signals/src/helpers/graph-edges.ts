@@ -25,6 +25,7 @@ export function createGraphEdges(): GraphEdges {
     if (tail !== undefined && tail.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       tail.version = consumer.trackingVersion;
+      trackDepFastPath++;
       return; // Already tracking
     }
 
@@ -34,11 +35,14 @@ export function createGraphEdges(): GraphEdges {
       // Update version to mark as accessed in this tracking cycle
       next.version = consumer.trackingVersion;
       consumer.dependencyTail = next;
+      trackDepNextPath++;
       return; // Found and reused
     }
 
     // Check if consumer is an effect (has flush method) or computed (has subscribers)
     const isEffect = 'flush' in consumer;
+
+    trackDepNewDep++;
 
     // Create new dependency edge
     const dep: Dependency = {
@@ -106,11 +110,19 @@ export function createGraphEdges(): GraphEdges {
    * Track dependencies while executing a function.
    * Prunes stale dependencies after execution using version-based tracking.
    */
+  // Debug counters
+  let pruneCount = 0;
+  let trackCount = 0;
+  let trackDepFastPath = 0;
+  let trackDepNextPath = 0;
+  let trackDepNewDep = 0;
+
   const track = <T>(
     ctx: GlobalContext,
     node: ConsumerNode,
     fn: () => T,
   ): T => {
+    trackCount++;
     node.trackingVersion++;
 
     const prevConsumer = ctx.consumerScope;
@@ -131,6 +143,7 @@ export function createGraphEdges(): GraphEdges {
         // Prune everything after tail
         let toRemove = tail.nextDependency;
         if (toRemove !== undefined) {
+          pruneCount++;
           do {
             const next: Dependency | undefined = toRemove.nextDependency;
             const { producer, prevConsumer, nextConsumer } = toRemove;
@@ -142,12 +155,11 @@ export function createGraphEdges(): GraphEdges {
 
             // Unlink from producer chain - handle both scheduled and subscribers lists
             const isEffect = 'flush' in node;
-            if (nextConsumer !== undefined)
-              nextConsumer.prevConsumer = prevConsumer;
+            if (nextConsumer !== undefined) nextConsumer.prevConsumer = prevConsumer;
             else if (isEffect) producer.scheduledTail = prevConsumer;
             else producer.subscribersTail = prevConsumer;
-            if (prevConsumer !== undefined)
-              prevConsumer.nextConsumer = nextConsumer;
+
+            if (prevConsumer !== undefined) prevConsumer.nextConsumer = nextConsumer;
             else if (isEffect) producer.scheduled = nextConsumer;
             else producer.subscribers = nextConsumer;
 
@@ -183,6 +195,19 @@ export function createGraphEdges(): GraphEdges {
       }
     }
   };
+
+  // Debug: expose stats
+  if (typeof globalThis !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    (globalThis as any).__latticeGraphEdgesStats = () => ({
+      trackCount,
+      pruneCount,
+      pruneRate: trackCount > 0 ? (pruneCount / trackCount * 100).toFixed(2) + '%' : '0%',
+      trackDepFastPath,
+      trackDepNextPath,
+      trackDepNewDep,
+      totalTrackDep: trackDepFastPath + trackDepNextPath + trackDepNewDep,
+    });
+  }
 
   return {
     trackDependency,

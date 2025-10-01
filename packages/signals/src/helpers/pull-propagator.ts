@@ -24,10 +24,10 @@ export interface PullPropagator {
 // Upgrade PENDING siblings to DIRTY
 const shallowPropagate = (sub: Dependency) => {
   do {
-    if (sub.consumer.status === CONSUMER_PENDING) {
-      sub.consumer.status = DERIVED_DIRTY;
+    const consumer = sub.consumer;
+    if (consumer.status === CONSUMER_PENDING) {
+      consumer.status = DERIVED_DIRTY;
     }
-
     sub = sub.nextConsumer!;
   } while (sub);
 };
@@ -82,7 +82,10 @@ export function createPullPropagator({
           if (status & SIGNAL_UPDATED) {
             needsRecompute = true;
             const sub = producer.subscribers;
-            if (sub) shallowPropagate(sub);
+            if (
+              sub &&
+              (stack === undefined || sub.nextConsumer !== undefined)
+            ) shallowPropagate(sub);
             producer.status = STATUS_CLEAN;
           }
 
@@ -99,9 +102,14 @@ export function createPullPropagator({
 
         if (prev !== derivedCurrent.value) {
           const sub = derivedCurrent.subscribers;
-          if (sub) shallowPropagate(sub);
+          // Only propagate if there are multiple subscribers OR if we're not on the stack
+          // If single subscriber and on stack, parent handles it via stack.needsRecompute
+          if (sub && (stack === undefined || sub.nextConsumer !== undefined)) {
+            shallowPropagate(sub);
+          }
+
           // Notify parent that this child changed
-          if (stack) stack.needsRecompute = true;
+          if (stack !== undefined) stack.needsRecompute = true;
         }
       }
 
