@@ -40,80 +40,78 @@ export function createPullPropagator({
   ctx: GlobalContext,
   track: GraphEdges['track']
 }): PullPropagator {
-  const pullUpdates = (sub: DerivedNode): boolean => {
-    if (!sub.dependencies) return false;
+  const pullUpdates = (consumer: DerivedNode): boolean => {
+    if (!consumer.dependencies) return false;
 
     let checkDepth = 0;
     let stack: StackNode | undefined;
-    let link: Dependency = sub.dependencies;
+    let dep: Dependency = consumer.dependencies;
 
     traversal: for (; ;) {
-      const dep = link.producer;
-      const flags = dep.status;
+      const producer = dep.producer;
+      const pStatus = producer.status;
       let dirty = false;
 
-      // Check if consumer is already dirty
-      if (sub.status & DERIVED_DIRTY) {
+      if (consumer.status & DERIVED_DIRTY) {
+        // Consumer is already dirty
         dirty = true;
-      } else if (flags & DERIVED_DIRTY) {
-        // Producer (computed) is dirty and needs recomputation
-        const derivedDep = dep as DerivedNode;
-        const prev = derivedDep.value;
-        derivedDep.value = track(ctx, derivedDep, derivedDep.compute);
-
-        if (prev !== derivedDep.value) {
-          const subs = dep.subscribers;
-          if (subs && subs.nextConsumer !== undefined) {
-            shallowPropagate(subs);
+      } else if (pStatus & DERIVED_DIRTY) {
+        // Derived Producer is dirty and needs recomputation
+        producer.status = STATUS_CLEAN;
+        const derivedProducer = producer as DerivedNode;
+        const val = track(ctx, derivedProducer, derivedProducer.compute);
+        
+        if (val !== derivedProducer.value) {
+          derivedProducer.value = val;
+          const pSubs = producer.subscribers;
+          if (pSubs !== undefined && pSubs.nextConsumer !== undefined) {
+            shallowPropagate(pSubs);
           }
           dirty = true;
         }
-      } else if (flags & SIGNAL_UPDATED) {
+      } else if (pStatus & SIGNAL_UPDATED) {
         // Signal has been updated, clear flag and propagate to siblings
-        dep.status = STATUS_CLEAN;
-        const subs = dep.subscribers;
+        producer.status = STATUS_CLEAN;
+        const subs = producer.subscribers;
         if (subs && subs.nextConsumer !== undefined) {
           shallowPropagate(subs);
         }
         dirty = true;
-      } else if (flags & CONSUMER_PENDING) {
+      } else if (pStatus & CONSUMER_PENDING) {
         // Pending computed - recurse into it
         // Only allocate stack if there are sibling subscribers (saves allocations in linear chains)
-        if (
-          link.nextConsumer !== undefined ||
-          link.prevConsumer !== undefined
-        ) {
-          stack = { dep: link, prev: stack };
+        if (dep.nextConsumer !== undefined || dep.prevConsumer !== undefined) {
+          stack = { dep, prev: stack };
         }
-        link = (dep as DerivedNode).dependencies!;
-        sub = dep as DerivedNode;
+        dep = (producer as DerivedNode).dependencies!;
+        consumer = producer as DerivedNode;
         ++checkDepth;
         continue;
       }
 
       // If not dirty, check next dependency
       if (!dirty) {
-        const nextDep = link.nextDependency;
+        const nextDep = dep.nextDependency;
         if (nextDep !== undefined) {
-          link = nextDep;
+          dep = nextDep;
           continue;
         }
       }
 
       // Unwind: go back up the dependency tree
       while (checkDepth--) {
-        const firstSub = (sub as DerivedNode).subscribers!;
+        const firstSub = (consumer as DerivedNode).subscribers!;
         const hasMultipleSubs = firstSub.nextConsumer !== undefined;
 
         if (hasMultipleSubs) {
-          link = stack!.dep;
+          dep = stack!.dep;
           stack = stack!.prev;
         } else {
-          link = firstSub;
+          dep = firstSub;
         }
 
         if (dirty) {
-          const derivedSub = sub as DerivedNode;
+          const derivedSub = consumer as DerivedNode;
           const prev = derivedSub.value;
           derivedSub.value = track(ctx, derivedSub, derivedSub.compute);
 
@@ -121,16 +119,16 @@ export function createPullPropagator({
             if (hasMultipleSubs) {
               shallowPropagate(firstSub);
             }
-            sub = link.consumer as DerivedNode;
+            consumer = dep.consumer as DerivedNode;
             continue;
           }
         } else {
-          sub.status = STATUS_CLEAN;
+          consumer.status = STATUS_CLEAN;
         }
 
-        sub = link.consumer as DerivedNode;
-        if (link.nextDependency !== undefined) {
-          link = link.nextDependency;
+        consumer = dep.consumer as DerivedNode;
+        if (dep.nextDependency !== undefined) {
+          dep = dep.nextDependency;
           continue traversal;
         }
         dirty = false;
