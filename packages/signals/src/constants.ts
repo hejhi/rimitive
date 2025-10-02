@@ -13,9 +13,6 @@ export const SCHEDULED = 1 << 2;
 export const SCHEDULED_DISPOSED = 1 << 3;
 export const SIGNAL_UPDATED = 1 << 5;
 
-// Composite masks for efficient multi-state checks
-export const DERIVED_PULL = CONSUMER_PENDING | DERIVED_DIRTY;
-
 // Re-export as CONSTANTS for backward compatibility
 export const CONSTANTS = {
   STATUS_CLEAN,
@@ -24,5 +21,4 @@ export const CONSTANTS = {
   DERIVED_DIRTY,
   SCHEDULED,
   SIGNAL_UPDATED,
-  DERIVED_PULL,
 };
