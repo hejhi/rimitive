@@ -37,7 +37,7 @@ interface ComputedNode<T> extends DerivedNode {
   value: T;
 }
 
-const { DERIVED_PRISTINE, DERIVED_PULL, STATUS_CLEAN } = CONSTANTS;
+const { DERIVED_PRISTINE, DERIVED_PULL, DERIVED_DIRTY, FORCE_RECOMPUTE, STATUS_CLEAN } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -49,27 +49,25 @@ export function createComputedFactory(
 
   // Shared computed function - uses `this` binding
   function computedImpl<T>(this: ComputedNode<T>): T {
+    const status = this.status;
+
     // Check if we need to pull updates
-    if (this.status & DERIVED_PULL) {
-      const isPristine = this.status & DERIVED_PRISTINE;
-      const dirty = isPristine || pullUpdates(this);
+    if (
+      status & FORCE_RECOMPUTE ||
+      (status & DERIVED_PULL && pullUpdates(this))
+    ) {
+      // Recompute the value
+      const prev = this.value;
+      this.value = track(ctx, this, this.compute) as T;
 
-      if (dirty) {
-        // Recompute the value
-        const prev = this.value;
-        this.value = track(ctx, this, this.compute) as T;
-
-        // Propagate if value changed and there are multiple subscribers
-        if (prev !== this.value) {
-          const subs = this.subscribers;
-          if (subs !== undefined) {
-            shallowPropagate(subs);
-          }
+      // Propagate if value changed and there are multiple subscribers
+      if (prev !== this.value) {
+        const subs = this.subscribers;
+        if (subs !== undefined) {
+          shallowPropagate(subs);
         }
       }
-
-      this.status = STATUS_CLEAN;
-    }
+    } else if (DERIVED_PULL) this.status = STATUS_CLEAN;
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;
@@ -85,16 +83,17 @@ export function createComputedFactory(
     ctx.consumerScope = null;
 
     try {
-      if (this.status & DERIVED_PULL) {
-        const isPristine = this.status & DERIVED_PRISTINE;
-        const dirty = isPristine || pullUpdates(this);
+      const flags = this.status;
 
-        if (dirty) {
-          this.value = track(ctx, this, this.compute) as T;
-        }
-
+      if (
+        flags & DERIVED_DIRTY
+        || (flags & DERIVED_PULL && pullUpdates(this))
+      ) {
+        this.value = track(ctx, this, this.compute) as T;
+      } else if (flags & DERIVED_PULL) {
         this.status = STATUS_CLEAN;
       }
+
       return this.value;
     } finally {
       ctx.consumerScope = prevConsumer;
