@@ -1,5 +1,8 @@
 import { GlobalContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
+import { CONSTANTS } from '../constants';
+
+const { CONSUMER_PENDING, DERIVED_DIRTY } = CONSTANTS;
 
 // Re-export types for proper type inference
 export type { ProducerNode, ConsumerNode, Dependency } from '../types';
@@ -124,6 +127,9 @@ export function createGraphEdges(): GraphEdges {
   ): T => {
     trackCount++;
     node.trackingVersion++;
+
+    // Clear dirty and pending flags before tracking (matches Alien's startTracking)
+    node.status = node.status & ~(CONSUMER_PENDING | DERIVED_DIRTY);
 
     const prevConsumer = ctx.consumerScope;
     node.dependencyTail = undefined;

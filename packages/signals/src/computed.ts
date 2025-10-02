@@ -67,7 +67,7 @@ export function createComputedFactory(
           shallowPropagate(subs);
         }
       }
-    } else if (CONSUMER_PENDING) this.status = STATUS_CLEAN;
+    } else if (status & CONSUMER_PENDING) this.status = STATUS_CLEAN;
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;

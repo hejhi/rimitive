@@ -57,6 +57,7 @@ export function createPullPropagator({
         dirty = true;
       } else if (flags & SIGNAL_UPDATED) {
         // Signal has been updated, clear flag and propagate to siblings
+        dep.status = STATUS_CLEAN;
         const subs = dep.subscribers;
         if (subs && subs.nextConsumer !== undefined) {
           shallowPropagate(subs);
