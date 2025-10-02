@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DERIVED_DIRTY, CONSUMER_PENDING, DERIVED_PULL, SIGNAL_UPDATED } = CONSTANTS;
+const { DERIVED_DIRTY, CONSUMER_PENDING, DERIVED_PULL, SIGNAL_UPDATED, DERIVED_PRISTINE } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -18,7 +18,8 @@ interface StackNode {
 }
 
 export interface PullPropagator {
-  pullUpdates: (node: DerivedNode) => void;
+  pullUpdates: (node: DerivedNode) => boolean;
+  shallowPropagate: (sub: Dependency) => void;
 }
 
 // Upgrade PENDING siblings to DIRTY
@@ -40,19 +41,21 @@ export function createPullPropagator({
   ctx: GlobalContext,
   track: GraphEdges['track']
 }): PullPropagator {
-  const pullUpdates = (sub: DerivedNode): void => {
+  const pullUpdates = (sub: DerivedNode): boolean => {
+    if (!sub.dependencies) return false;
+
     let needsRecompute = false;
     let checkDepth = 0;
     let stack: StackNode | undefined;
-    let link: Dependency = sub.dependencies!;
+    let link: Dependency = sub.dependencies;
 
     traversal: for (; ;) {
       const dep = link.producer;
       const flags = dep.status;
       let dirty = false;
 
-      // Check if consumer is already dirty
-      if (sub.status & DERIVED_DIRTY) {
+      // Check if consumer is already dirty or pristine
+      if (sub.status & (DERIVED_DIRTY | DERIVED_PRISTINE)) {
         dirty = true;
       } else if (flags & SIGNAL_UPDATED) {
         // Signal has been updated, clear flag and propagate to siblings
@@ -117,9 +120,9 @@ export function createPullPropagator({
         dirty = false;
       }
 
-      return;
+      return dirty;
     }
   };
 
-  return { pullUpdates };
+  return { pullUpdates, shallowPropagate };
 }

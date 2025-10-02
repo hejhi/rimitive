@@ -22,6 +22,8 @@ export type ComputedOpts = {
   ctx: GlobalContext;
   trackDependency: GraphEdges['trackDependency'];
   pullUpdates: PullPropagator['pullUpdates'];
+  track: GraphEdges['track'];
+  shallowPropagate: (sub: import('./types').Dependency) => void;
 };
 
 // Re-export types for proper type inference
@@ -35,7 +37,7 @@ interface ComputedNode<T> extends DerivedNode {
   value: T;
 }
 
-const { DERIVED_PRISTINE, DERIVED_PULL } = CONSTANTS;
+const { DERIVED_PRISTINE, DERIVED_PULL, STATUS_CLEAN } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -43,12 +45,31 @@ export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T)
 export function createComputedFactory(
   opts: ComputedOpts
 ): ComputedFactory {
-  const { ctx, trackDependency, pullUpdates } = opts;
+  const { ctx, trackDependency, pullUpdates, track, shallowPropagate } = opts;
 
   // Shared computed function - uses `this` binding
   function computedImpl<T>(this: ComputedNode<T>): T {
-    // Update if needed FIRST (before tracking)
-    if (this.status & DERIVED_PULL) pullUpdates(this);
+    // Check if we need to pull updates
+    if (this.status & DERIVED_PULL) {
+      const isPristine = this.status & DERIVED_PRISTINE;
+      const dirty = isPristine || pullUpdates(this);
+
+      if (dirty) {
+        // Recompute the value
+        const prev = this.value;
+        this.value = track(ctx, this, this.compute) as T;
+
+        // Propagate if value changed and there are multiple subscribers
+        if (prev !== this.value) {
+          const subs = this.subscribers;
+          if (subs && subs.nextConsumer !== undefined) {
+            shallowPropagate(subs);
+          }
+        }
+      }
+
+      this.status = STATUS_CLEAN;
+    }
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;
@@ -64,7 +85,16 @@ export function createComputedFactory(
     ctx.consumerScope = null;
 
     try {
-      if (this.status & DERIVED_PULL) pullUpdates(this);
+      if (this.status & DERIVED_PULL) {
+        const isPristine = this.status & DERIVED_PRISTINE;
+        const dirty = isPristine || pullUpdates(this);
+
+        if (dirty) {
+          this.value = track(ctx, this, this.compute) as T;
+        }
+
+        this.status = STATUS_CLEAN;
+      }
       return this.value;
     } finally {
       ctx.consumerScope = prevConsumer;

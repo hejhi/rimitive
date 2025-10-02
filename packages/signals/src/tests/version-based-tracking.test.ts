@@ -11,9 +11,9 @@ describe('Version-Based Dependency Tracking', () => {
   const createApi = () => {
     const { propagate } = createGraphTraversal();
     const graphEdges = createGraphEdges();
-    const { trackDependency } = graphEdges;
+    const { trackDependency, track } = graphEdges;
     const ctx = createBaseContext();
-    const { pullUpdates } = createPullPropagator({ ctx, track: graphEdges.track });
+    const { pullUpdates, shallowPropagate } = createPullPropagator({ ctx, track: graphEdges.track });
 
     return createSignalAPI(
       {
@@ -25,6 +25,8 @@ describe('Version-Based Dependency Tracking', () => {
         trackDependency,
         propagate,
         pullUpdates,
+        track,
+        shallowPropagate,
       }
     );
   };
