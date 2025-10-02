@@ -37,7 +37,7 @@ interface ComputedNode<T> extends DerivedNode {
   value: T;
 }
 
-const { DERIVED_PULL, DERIVED_DIRTY, STATUS_CLEAN } = CONSTANTS;
+const { DERIVED_PULL, CONSUMER_PENDING, DERIVED_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -53,7 +53,8 @@ export function createComputedFactory(
 
     // Check if we need to pull updates
     if (
-      (status & DERIVED_PULL && pullUpdates(this))
+      status & DERIVED_DIRTY ||
+      (status & CONSUMER_PENDING && pullUpdates(this))
     ) {
       // Recompute the value
       const prev = this.value;
@@ -66,7 +67,7 @@ export function createComputedFactory(
           shallowPropagate(subs);
         }
       }
-    } else if (DERIVED_PULL) this.status = STATUS_CLEAN;
+    } else if (CONSUMER_PENDING) this.status = STATUS_CLEAN;
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;
