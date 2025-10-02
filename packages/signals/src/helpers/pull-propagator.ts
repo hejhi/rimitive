@@ -133,15 +133,12 @@ export function createPullPropagator({
         // Move back to parent consumer
         consumer = dep.consumer as DerivedNode;
 
-        // Check if parent has more sibling dependencies to check
+        // Reset dirty flag and check if parent has more sibling dependencies
+        dirty = false;
         if (dep.nextDependency !== undefined) {
           dep = dep.nextDependency;
-          dirty = false;
           continue descent;
         }
-
-        // No siblings - continue unwinding
-        dirty = false;
       }
 
       // Finished unwinding - we're done
