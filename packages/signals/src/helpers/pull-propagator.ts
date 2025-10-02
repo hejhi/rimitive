@@ -49,41 +49,50 @@ export function createPullPropagator({
     // DESCENT PHASE: Walk down the dependency tree checking each dependency
     descent: for (;;) {
       const producer = dep.producer;
-      const status = producer.status;
 
       // Check if this dependency makes the consumer dirty
       if (consumer.status === DERIVED_DIRTY) {
         dirty = true;
-      } else if (status === DERIVED_DIRTY) {
-        // Producer is a dirty derived - recompute it
-        producer.status = STATUS_CLEAN;
-        const derivedProducer = producer as DerivedNode;
-        const val = track(ctx, derivedProducer, derivedProducer.compute);
+      } else {
+        switch (producer.status) {
+          case DERIVED_DIRTY: {
+            // Producer is a dirty derived - recompute it
+            producer.status = STATUS_CLEAN;
+            const derivedProducer = producer as DerivedNode;
+            const val = track(ctx, derivedProducer, derivedProducer.compute);
 
-        if (val !== derivedProducer.value) {
-          derivedProducer.value = val;
-          const subs = producer.subscribers;
-          if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
-          dirty = true;
-        }
-      } else if (status === SIGNAL_UPDATED) {
-        // Signal updated - clear flag and mark dirty
-        producer.status = STATUS_CLEAN;
-        const subs = producer.subscribers;
-        if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
-        dirty = true;
-      } else if (status === CONSUMER_PENDING) {
-        const derivedProducer = producer as DerivedNode;
-        // Producer is pending - need to check its dependencies first
-        // Save position if there are siblings (optimization: no allocation in linear chains)
-        if (dep.nextConsumer !== undefined || dep.prevConsumer !== undefined) {
-          stack = { dep, prev: stack };
-        }
+            if (val !== derivedProducer.value) {
+              derivedProducer.value = val;
+              const subs = producer.subscribers;
+              if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
+              dirty = true;
+            }
+            break;
+          }
 
-        // Descend into producer's dependencies
-        dep = derivedProducer.dependencies!;
-        consumer = derivedProducer;
-        continue descent;
+          case SIGNAL_UPDATED: {
+            // Signal updated - clear flag and mark dirty
+            producer.status = STATUS_CLEAN;
+            const subs = producer.subscribers;
+            if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
+            dirty = true;
+            break;
+          }
+
+          case CONSUMER_PENDING: {
+            const derivedProducer = producer as DerivedNode;
+            // Producer is pending - need to check its dependencies first
+            // Save position if there are siblings (optimization: no allocation in linear chains)
+            if (dep.nextConsumer !== undefined || dep.prevConsumer !== undefined) {
+              stack = { dep, prev: stack };
+            }
+
+            // Descend into producer's dependencies
+            dep = derivedProducer.dependencies!;
+            consumer = derivedProducer;
+            continue descent;
+          }
+        }
       }
 
       // Try to move to next sibling dependency
