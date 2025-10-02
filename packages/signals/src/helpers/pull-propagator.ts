@@ -59,66 +59,60 @@ export function createPullPropagator({
     let stack: StackNode | undefined;
 
     traversal: for (;;) {
-      // Need a dependency to check
-      if (!dep) {
-        // TODO: handle unwinding when no more deps
-        return;
-      }
-
-      // Core check: examine dependency status
-      const producer: FromNode = dep.producer;
-      const status = producer.status;
       let dirty = false;
 
       // Check if current node is already dirty
       if (current.status & DERIVED_DIRTY) {
         dirty = true;
-      } else if (status & SIGNAL_UPDATED) {
-        // Signal has updated - mark clean and notify siblings
-        producer.status = STATUS_CLEAN;
-        const subs = producer.subscribers;
-        if (subs !== undefined && subs.nextConsumer !== undefined) {
-          shallowPropagate(subs);
-        }
-        dirty = true;
-      } else if (status & DERIVED_DIRTY) {
-        // Computed is dirty - recompute to check if value changed
-        const derivedProducer = producer as DerivedNode;
-        const prev = derivedProducer.value;
-        derivedProducer.status = STATUS_CLEAN;
-        derivedProducer.value = track(ctx, derivedProducer, derivedProducer.compute);
+      } else if (dep) {
+        // Core check: examine dependency status
+        const producer: FromNode = dep.producer;
+        const status = producer.status;
 
-        if (prev !== derivedProducer.value) {
-          const subs = derivedProducer.subscribers;
+        if (status & SIGNAL_UPDATED) {
+          // Signal has updated - mark clean and notify siblings
+          producer.status = STATUS_CLEAN;
+          const subs = producer.subscribers;
           if (subs !== undefined && subs.nextConsumer !== undefined) {
             shallowPropagate(subs);
           }
           dirty = true;
+        } else if (status & DERIVED_DIRTY) {
+          // Computed is dirty - recompute to check if value changed
+          const derivedProducer = producer as DerivedNode;
+          const prev = derivedProducer.value;
+          derivedProducer.status = STATUS_CLEAN;
+          derivedProducer.value = track(ctx, derivedProducer, derivedProducer.compute);
+
+          if (prev !== derivedProducer.value) {
+            const subs = derivedProducer.subscribers;
+            if (subs !== undefined && subs.nextConsumer !== undefined) {
+              shallowPropagate(subs);
+            }
+            dirty = true;
+          }
+        } else if (status & DERIVED_PULL) {
+          // Pending computed - need to recurse into its dependencies
+          // Only allocate stack if there are sibling dependencies (saves 1M allocations in linear chains!)
+          if (dep.nextDependency !== undefined || dep.prevDependency !== undefined) {
+            stack = { dep, prev: stack, needsRecompute };
+          }
+          const derivedProducer = producer as DerivedNode;
+          dep = derivedProducer.dependencies; // Start checking this producer's dependencies
+          current = derivedProducer;
+          needsRecompute = false;
+          ++checkDepth;
+          continue traversal;
         }
-      } else if (status & DERIVED_PULL) {
-        // Pending computed - need to recurse into its dependencies
-        // Only allocate stack if there are sibling dependencies (saves 1M allocations in linear chains!)
-        if (dep.nextDependency !== undefined || dep.prevDependency !== undefined) {
-          stack = { dep, prev: stack, needsRecompute };
-        }
-        const derivedProducer = producer as DerivedNode;
-        dep = derivedProducer.dependencies; // Start checking this producer's dependencies
-        current = derivedProducer;
-        needsRecompute = false;
-        ++checkDepth;
-        continue traversal;
       }
 
       // If not dirty, move to next dependency
-      if (!dirty) {
+      if (!dirty && dep) {
         const nextDep = dep.nextDependency;
         if (nextDep !== undefined) {
           dep = nextDep;
           continue;
         }
-      } else {
-        // Even if dirty, we need to accumulate the state for unwinding
-        needsRecompute = dirty;
       }
 
       // Unwind: we've either finished checking all deps, or found dirty and need to go back up
