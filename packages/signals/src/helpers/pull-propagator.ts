@@ -58,25 +58,26 @@ export function createPullPropagator({
       } else if (STATUS_CHECK) switch (producer.status) {
         case DERIVED_DIRTY: {
           // Producer is a dirty derived - recompute it
-          producer.status = STATUS_CLEAN;
           const derivedProducer = producer as DerivedNode;
           const val = track(ctx, derivedProducer, derivedProducer.compute);
 
+          // Value is unchanged - break out
           if (val === derivedProducer.value) break;
 
           derivedProducer.value = val;
           const subs = producer.subscribers;
           dirty = true;
 
-          if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
+          if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
           break;
         }
         case SIGNAL_UPDATED: {
           // Signal updated - clear flag and mark dirty
           producer.status = STATUS_CLEAN;
           const subs = producer.subscribers;
-          if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
           dirty = true;
+          
+          if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
           break;
         }
         case CONSUMER_PENDING: {
@@ -103,8 +104,7 @@ export function createPullPropagator({
         continue descent;
       }
 
-      // UNWINDING PHASE: Walk back up the tree, recomputing as needed
-      // Unwind until we're back at the root consumer
+      // UNWINDING PHASE: Walk back up the tree, recomputing as needed until we return
       unwind: for (;;) {
         if (consumer === rootDerived) return dirty;
 
