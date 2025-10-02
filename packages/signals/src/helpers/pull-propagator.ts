@@ -8,13 +8,12 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DERIVED_DIRTY, CONSUMER_PENDING, DERIVED_PULL, SIGNAL_UPDATED, DERIVED_PRISTINE } = CONSTANTS;
+const { DERIVED_DIRTY, CONSUMER_PENDING, DERIVED_PULL, SIGNAL_UPDATED } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
   dep: Dependency;
   prev: StackNode | undefined;
-  needsRecompute: boolean;  // Parent's recompute state
 }
 
 export interface PullPropagator {
@@ -44,7 +43,6 @@ export function createPullPropagator({
   const pullUpdates = (sub: DerivedNode): boolean => {
     if (!sub.dependencies) return false;
 
-    let needsRecompute = false;
     let checkDepth = 0;
     let stack: StackNode | undefined;
     let link: Dependency = sub.dependencies;
@@ -54,8 +52,8 @@ export function createPullPropagator({
       const flags = dep.status;
       let dirty = false;
 
-      // Check if consumer is already dirty or pristine
-      if (sub.status & (DERIVED_DIRTY | DERIVED_PRISTINE)) {
+      // Check if consumer is already dirty
+      if (sub.status & DERIVED_DIRTY) {
         dirty = true;
       } else if (flags & SIGNAL_UPDATED) {
         // Signal has been updated, clear flag and propagate to siblings
@@ -68,7 +66,7 @@ export function createPullPropagator({
         // Pending computed - recurse into it
         // Only allocate stack if there are sibling subscribers (saves allocations in linear chains)
         if (link.nextConsumer !== undefined || link.prevConsumer !== undefined) {
-          stack = { dep: link, prev: stack, needsRecompute };
+          stack = { dep: link, prev: stack };
         }
         link = (dep as DerivedNode).dependencies!;
         sub = dep as DerivedNode;
@@ -86,9 +84,11 @@ export function createPullPropagator({
       }
 
       // Unwind: go back up the dependency tree
-      while (checkDepth--) {
+      while (checkDepth > 0) {
+        checkDepth--;
         const firstSub = (sub as DerivedNode).subscribers!;
         const hasMultipleSubs = firstSub.nextConsumer !== undefined;
+
         if (hasMultipleSubs) {
           link = stack!.dep;
           stack = stack!.prev;

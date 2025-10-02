@@ -62,7 +62,7 @@ export function createComputedFactory(
         // Propagate if value changed and there are multiple subscribers
         if (prev !== this.value) {
           const subs = this.subscribers;
-          if (subs && subs.nextConsumer !== undefined) {
+          if (subs !== undefined) {
             shallowPropagate(subs);
           }
         }
