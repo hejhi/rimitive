@@ -7,7 +7,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build:all": "cd ../signals && pnpm test && pnpm build && cd ../benchmarks",
     "bench": "tsx --expose-gc src/runner.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",

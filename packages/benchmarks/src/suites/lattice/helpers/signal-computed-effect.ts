@@ -15,9 +15,9 @@ export const createApi = () => {
     propagate: traverseGraph,
     detachAll: graphEdges.detachAll,
   });
-  const { trackDependency, track, detachAll } = graphEdges;
+  const { trackDependency, track } = graphEdges;
   const ctx = createBaseContext();
-  const { pullUpdates } = createPullPropagator({ ctx, track: graphEdges.track });
+  const { pullUpdates, shallowPropagate } = createPullPropagator({ ctx, track: graphEdges.track });
 
   return createSignalAPI(
     {
@@ -32,7 +32,7 @@ export const createApi = () => {
       track,
       propagate,
       pullUpdates,
-      detachAll,
+      shallowPropagate,
     }
   );
 }
