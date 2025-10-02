@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DERIVED_DIRTY, CONSUMER_PENDING, DERIVED_PULL, SIGNAL_UPDATED } = CONSTANTS;
+const { DERIVED_DIRTY, CONSUMER_PENDING, SIGNAL_UPDATED, STATUS_CLEAN } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -62,10 +62,13 @@ export function createPullPropagator({
           shallowPropagate(subs);
         }
         dirty = true;
-      } else if (flags & DERIVED_PULL) {
+      } else if (flags & CONSUMER_PENDING) {
         // Pending computed - recurse into it
         // Only allocate stack if there are sibling subscribers (saves allocations in linear chains)
-        if (link.nextConsumer !== undefined || link.prevConsumer !== undefined) {
+        if (
+          link.nextConsumer !== undefined ||
+          link.prevConsumer !== undefined
+        ) {
           stack = { dep: link, prev: stack };
         }
         link = (dep as DerivedNode).dependencies!;
@@ -84,8 +87,7 @@ export function createPullPropagator({
       }
 
       // Unwind: go back up the dependency tree
-      while (checkDepth > 0) {
-        checkDepth--;
+      while (checkDepth--) {
         const firstSub = (sub as DerivedNode).subscribers!;
         const hasMultipleSubs = firstSub.nextConsumer !== undefined;
 
@@ -109,7 +111,7 @@ export function createPullPropagator({
             continue;
           }
         } else {
-          sub.status &= ~CONSUMER_PENDING;
+          sub.status = STATUS_CLEAN;
         }
 
         sub = link.consumer as DerivedNode;

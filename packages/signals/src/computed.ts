@@ -37,7 +37,7 @@ interface ComputedNode<T> extends DerivedNode {
   value: T;
 }
 
-const { DERIVED_PRISTINE, DERIVED_PULL, DERIVED_DIRTY, FORCE_RECOMPUTE, STATUS_CLEAN } = CONSTANTS;
+const { DERIVED_PULL, DERIVED_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -53,7 +53,6 @@ export function createComputedFactory(
 
     // Check if we need to pull updates
     if (
-      status & FORCE_RECOMPUTE ||
       (status & DERIVED_PULL && pullUpdates(this))
     ) {
       // Recompute the value
@@ -110,7 +109,7 @@ export function createComputedFactory(
       scheduledTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
-      status: DERIVED_PRISTINE,
+      status: DERIVED_DIRTY,
       trackingVersion: 0,
       compute,
     };

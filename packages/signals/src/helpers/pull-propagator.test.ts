@@ -4,7 +4,8 @@ import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { createPullPropagator } from './pull-propagator';
 
-const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_PRISTINE, SIGNAL_UPDATED } = CONSTANTS;
+const { STATUS_CLEAN, CONSUMER_PENDING, SIGNAL_UPDATED, DERIVED_DIRTY } =
+  CONSTANTS;
 
 describe('pull-propagator: FRP lazy evaluation invariants', () => {
   /**
@@ -34,7 +35,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
   function createDerivedNode(
     compute: () => any,
     dependencies?: Dependency,
-    status: number = DERIVED_PRISTINE
+    status: number = DERIVED_DIRTY
   ): DerivedNode {
     const node = {
       __type: 'computed' as const,
@@ -444,7 +445,7 @@ describe('pull-propagator: FRP lazy evaluation invariants', () => {
           return (sourceA.value as number) * 2;
         },
         createDependency(sourceA, createDependency(sourceB)),
-        DERIVED_PRISTINE  // Never computed before
+        DERIVED_DIRTY  // Never computed before
       );
 
       derived.trackingVersion = 0;
