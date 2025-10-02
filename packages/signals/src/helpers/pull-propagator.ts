@@ -43,97 +43,108 @@ export function createPullPropagator({
   const pullUpdates = (consumer: DerivedNode): boolean => {
     if (!consumer.dependencies) return false;
 
-    let checkDepth = 0;
+    let recursionDepth = 0;
     let stack: StackNode | undefined;
     let dep: Dependency = consumer.dependencies;
+    let dirty = false;
 
-    traversal: for (; ;) {
+    // DESCENT PHASE: Walk down the dependency tree checking each dependency
+    descent: for (;;) {
       const producer = dep.producer;
-      const pStatus = producer.status;
-      let dirty = false;
+      const flags = producer.status;
 
+      // Check if this dependency makes the consumer dirty
       if (consumer.status & DERIVED_DIRTY) {
-        // Consumer is already dirty
         dirty = true;
-      } else if (pStatus & DERIVED_DIRTY) {
-        // Derived Producer is dirty and needs recomputation
+      } else if (flags & DERIVED_DIRTY) {
+        // Producer is a dirty computed - recompute it
         producer.status = STATUS_CLEAN;
         const derivedProducer = producer as DerivedNode;
         const val = track(ctx, derivedProducer, derivedProducer.compute);
-        
+
         if (val !== derivedProducer.value) {
           derivedProducer.value = val;
-          const pSubs = producer.subscribers;
-          if (pSubs !== undefined && pSubs.nextConsumer !== undefined) {
-            shallowPropagate(pSubs);
+          const subs = producer.subscribers;
+          if (subs?.nextConsumer !== undefined) {
+            shallowPropagate(subs);
           }
           dirty = true;
         }
-      } else if (pStatus & SIGNAL_UPDATED) {
-        // Signal has been updated, clear flag and propagate to siblings
+      } else if (flags & SIGNAL_UPDATED) {
+        // Signal updated - clear flag and mark dirty
         producer.status = STATUS_CLEAN;
         const subs = producer.subscribers;
-        if (subs && subs.nextConsumer !== undefined) {
+        if (subs?.nextConsumer !== undefined) {
           shallowPropagate(subs);
         }
         dirty = true;
-      } else if (pStatus & CONSUMER_PENDING) {
-        // Pending computed - recurse into it
-        // Only allocate stack if there are sibling subscribers (saves allocations in linear chains)
+      } else if (flags & CONSUMER_PENDING) {
+        // Producer is pending - need to check its dependencies first
+        // Save position if there are siblings (optimization: no allocation in linear chains)
         if (dep.nextConsumer !== undefined || dep.prevConsumer !== undefined) {
           stack = { dep, prev: stack };
         }
+
+        // Descend into producer's dependencies
         dep = (producer as DerivedNode).dependencies!;
         consumer = producer as DerivedNode;
-        ++checkDepth;
-        continue;
+        recursionDepth++;
+        continue descent;
       }
 
-      // If not dirty, check next dependency
-      if (!dirty) {
-        const nextDep = dep.nextDependency;
-        if (nextDep !== undefined) {
-          dep = nextDep;
-          continue;
-        }
+      // Try to move to next sibling dependency
+      if (!dirty && dep.nextDependency !== undefined) {
+        dep = dep.nextDependency;
+        continue descent;
       }
 
-      // Unwind: go back up the dependency tree
-      while (checkDepth--) {
-        const firstSub = (consumer as DerivedNode).subscribers!;
-        const hasMultipleSubs = firstSub.nextConsumer !== undefined;
+      // UNWINDING PHASE: Walk back up the tree, recomputing as needed
+      unwind: while (recursionDepth--) {
+        const currentSubs = consumer.subscribers!;
+        const hasMultipleSubs = currentSubs.nextConsumer !== undefined;
 
+        // Restore our position (stack vs firstSub based on allocation decision during descent)
         if (hasMultipleSubs) {
           dep = stack!.dep;
           stack = stack!.prev;
         } else {
-          dep = firstSub;
+          dep = currentSubs;
         }
 
+        // Recompute the consumer we just finished checking
         if (dirty) {
-          const derivedSub = consumer as DerivedNode;
-          const prev = derivedSub.value;
-          derivedSub.value = track(ctx, derivedSub, derivedSub.compute);
+          const prevValue = consumer.value;
+          consumer.value = track(ctx, consumer, consumer.compute);
 
-          if (prev !== derivedSub.value) {
+          if (prevValue !== consumer.value) {
+            // Value changed - propagate to siblings and keep unwinding
             if (hasMultipleSubs) {
-              shallowPropagate(firstSub);
+              shallowPropagate(currentSubs);
             }
             consumer = dep.consumer as DerivedNode;
-            continue;
+            continue unwind;
           }
+          // Value unchanged - fall through to check for siblings
         } else {
+          // Not dirty - mark clean
           consumer.status = STATUS_CLEAN;
         }
 
+        // Move back to parent consumer
         consumer = dep.consumer as DerivedNode;
+
+        // Check if parent has more sibling dependencies to check
         if (dep.nextDependency !== undefined) {
           dep = dep.nextDependency;
-          continue traversal;
+          dirty = false;
+          continue descent;
         }
+
+        // No siblings - continue unwinding
         dirty = false;
       }
 
+      // Finished unwinding - we're done
       return dirty;
     }
   };
