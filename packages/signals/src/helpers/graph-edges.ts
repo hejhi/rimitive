@@ -41,14 +41,16 @@ export function createGraphEdges(): GraphEdges {
     }
 
     // Check if consumer is an effect (has flush method) or computed (has subscribers)
-    const isEffect = 'flush' in consumer;
+    const isScheduled = 'flush' in consumer;
 
     // Create new dependency edge
     const dep: Dependency = {
       producer,
       consumer,
       prevDependency: tail,
-      prevConsumer: isEffect ? producer.scheduledTail : producer.subscribersTail,
+      prevConsumer: isScheduled
+        ? producer.scheduledTail
+        : producer.subscribersTail,
       nextDependency: next,
       nextConsumer: undefined,
       version: consumer.trackingVersion,
@@ -61,7 +63,7 @@ export function createGraphEdges(): GraphEdges {
     else consumer.dependencies = dep;
 
     // Wire producer side - route effects to scheduled list, computeds to subscribers
-    if (isEffect) {
+    if (isScheduled) {
       producer.scheduledTail = dep;
       if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
       else producer.scheduled = dep;
@@ -84,6 +86,9 @@ export function createGraphEdges(): GraphEdges {
       const { producer, consumer, prevDependency, prevConsumer, nextConsumer } =
         current;
 
+      // Unlink from producer chain - handle both scheduled and subscribers lists
+      const isScheduled = 'flush' in consumer;
+
       // Unlink from consumer chain
       if (next) next.prevDependency = prevDependency;
       else consumer.dependencyTail = prevDependency;
@@ -91,14 +96,12 @@ export function createGraphEdges(): GraphEdges {
       if (prevDependency) prevDependency.nextDependency = next;
       else consumer.dependencies = next;
 
-      // Unlink from producer chain - handle both scheduled and subscribers lists
-      const isEffect = 'flush' in consumer;
       if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
-      else if (isEffect) producer.scheduledTail = prevConsumer;
+      else if (isScheduled) producer.scheduledTail = prevConsumer;
       else producer.subscribersTail = prevConsumer;
 
       if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
-      else if (isEffect) producer.scheduled = nextConsumer;
+      else if (isScheduled) producer.scheduled = nextConsumer;
       else producer.subscribers = nextConsumer;
 
       current = next;
@@ -131,7 +134,7 @@ export function createGraphEdges(): GraphEdges {
       const tail = node.dependencyTail as Dependency | undefined;
 
       // Unlink from producer chain - handle both scheduled and subscribers lists
-      const isEffect = 'flush' in node;
+      const isScheduled = 'flush' in node;
 
       if (tail) {
         // Prune everything after tail
@@ -148,12 +151,12 @@ export function createGraphEdges(): GraphEdges {
 
             if (nextConsumer !== undefined)
               nextConsumer.prevConsumer = prevConsumer;
-            else if (isEffect) producer.scheduledTail = prevConsumer;
+            else if (isScheduled) producer.scheduledTail = prevConsumer;
             else producer.subscribersTail = prevConsumer;
 
             if (prevConsumer !== undefined)
               prevConsumer.nextConsumer = nextConsumer;
-            else if (isEffect) producer.scheduled = nextConsumer;
+            else if (isScheduled) producer.scheduled = nextConsumer;
             else producer.subscribers = nextConsumer;
 
             toRemove = next;
@@ -173,11 +176,11 @@ export function createGraphEdges(): GraphEdges {
 
             if (nextConsumer !== undefined)
               nextConsumer.prevConsumer = prevConsumer;
-            else if (isEffect) producer.scheduledTail = prevConsumer;
+            else if (isScheduled) producer.scheduledTail = prevConsumer;
             else producer.subscribersTail = prevConsumer;
             if (prevConsumer !== undefined)
               prevConsumer.nextConsumer = nextConsumer;
-            else if (isEffect) producer.scheduled = nextConsumer;
+            else if (isScheduled) producer.scheduled = nextConsumer;
             else producer.subscribers = nextConsumer;
 
             toRemove = next;
