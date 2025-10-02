@@ -55,6 +55,19 @@ export function createPullPropagator({
       // Check if consumer is already dirty
       if (sub.status & DERIVED_DIRTY) {
         dirty = true;
+      } else if (flags & DERIVED_DIRTY) {
+        // Producer (computed) is dirty and needs recomputation
+        const derivedDep = dep as DerivedNode;
+        const prev = derivedDep.value;
+        derivedDep.value = track(ctx, derivedDep, derivedDep.compute);
+
+        if (prev !== derivedDep.value) {
+          const subs = dep.subscribers;
+          if (subs && subs.nextConsumer !== undefined) {
+            shallowPropagate(subs);
+          }
+          dirty = true;
+        }
       } else if (flags & SIGNAL_UPDATED) {
         // Signal has been updated, clear flag and propagate to siblings
         dep.status = STATUS_CLEAN;
