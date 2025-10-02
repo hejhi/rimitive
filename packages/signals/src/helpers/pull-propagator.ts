@@ -1,4 +1,4 @@
-import type { Dependency, DerivedNode, FromNode, ToNode } from '../types';
+import type { Dependency, DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DERIVED_DIRTY, STATUS_CLEAN, CONSUMER_PENDING, DERIVED_PULL, FORCE_RECOMPUTE, SIGNAL_UPDATED } = CONSTANTS;
+const { DERIVED_DIRTY, CONSUMER_PENDING, DERIVED_PULL, SIGNAL_UPDATED } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -25,8 +25,9 @@ export interface PullPropagator {
 const shallowPropagate = (sub: Dependency) => {
   do {
     const consumer = sub.consumer;
-    if (consumer.status === CONSUMER_PENDING) {
-      consumer.status = DERIVED_DIRTY;
+    // Check if PENDING flag is set AND DIRTY flag is NOT set (matching Alien's logic)
+    if ((consumer.status & (CONSUMER_PENDING | DERIVED_DIRTY)) === CONSUMER_PENDING) {
+      consumer.status = consumer.status | DERIVED_DIRTY;
     }
     sub = sub.nextConsumer!;
   } while (sub);
@@ -39,147 +40,81 @@ export function createPullPropagator({
   ctx: GlobalContext,
   track: GraphEdges['track']
 }): PullPropagator {
-  const pullUpdates = (rootNode: DerivedNode): void => {
-    let current: ToNode = rootNode;
-    let dep: Dependency | undefined = rootNode.dependencies;
-
-    // No dependencies - just recompute if needed
-    if (!dep) {
-      if (rootNode.status & (DERIVED_DIRTY | DERIVED_PULL)) {
-        rootNode.status = STATUS_CLEAN;
-        rootNode.value = track(ctx, rootNode, rootNode.compute);
-      } else {
-        rootNode.status = STATUS_CLEAN;
-      }
-      return;
-    }
-
+  const pullUpdates = (sub: DerivedNode): void => {
     let needsRecompute = false;
     let checkDepth = 0;
     let stack: StackNode | undefined;
+    let link: Dependency = sub.dependencies!;
 
-    traversal: for (;;) {
+    traversal: for (; ;) {
+      const dep = link.producer;
+      const flags = dep.status;
       let dirty = false;
 
-      // Check if current node needs recomputation (DIRTY or PRISTINE)
-      if (current.status & FORCE_RECOMPUTE) {
+      // Check if consumer is already dirty
+      if (sub.status & DERIVED_DIRTY) {
         dirty = true;
-      }
-
-      // Check dependencies even if current is dirty (need to pull stale deps first)
-      if (dep) {
-        // Core check: examine dependency status
-        const producer: FromNode = dep.producer;
-        const status = producer.status;
-
-        if (status & SIGNAL_UPDATED) {
-          // Signal has updated - mark clean and notify siblings
-          producer.status = STATUS_CLEAN;
-          const subs = producer.subscribers;
-          if (subs !== undefined && subs.nextConsumer !== undefined) {
-            shallowPropagate(subs);
-          }
-          dirty = true;
-        } else if (status & DERIVED_DIRTY) {
-          // Computed is dirty - recompute to check if value changed
-          const derivedProducer = producer as DerivedNode;
-          const prev = derivedProducer.value;
-          derivedProducer.status = STATUS_CLEAN;
-          derivedProducer.value = track(ctx, derivedProducer, derivedProducer.compute);
-
-          if (prev !== derivedProducer.value) {
-            const subs = derivedProducer.subscribers;
-            if (subs !== undefined && subs.nextConsumer !== undefined) {
-              shallowPropagate(subs);
-            }
-            dirty = true;
-          }
-        } else if (status & DERIVED_PULL) {
-          // Pending computed - need to recurse into its dependencies
-          // Only allocate stack if producer has multiple subscribers (matching Alien's pattern)
-          if (dep.nextConsumer !== undefined || dep.prevConsumer !== undefined) {
-            stack = { dep, prev: stack, needsRecompute };
-          }
-          const derivedProducer = producer as DerivedNode;
-          dep = derivedProducer.dependencies; // Start checking this producer's dependencies
-          current = derivedProducer;
-          needsRecompute = false;
-          ++checkDepth;
-          continue traversal;
+      } else if (flags & SIGNAL_UPDATED) {
+        // Signal has been updated, clear flag and propagate to siblings
+        const subs = dep.subscribers;
+        if (subs && subs.nextConsumer !== undefined) {
+          shallowPropagate(subs);
         }
+        dirty = true;
+      } else if (flags & DERIVED_PULL) {
+        // Pending computed - recurse into it
+        // Only allocate stack if there are sibling subscribers (saves allocations in linear chains)
+        if (link.nextConsumer !== undefined || link.prevConsumer !== undefined) {
+          stack = { dep: link, prev: stack, needsRecompute };
+        }
+        link = (dep as DerivedNode).dependencies!;
+        sub = dep as DerivedNode;
+        ++checkDepth;
+        continue;
       }
 
-      // If not dirty, move to next dependency
-      if (!dirty && dep) {
-        const nextDep = dep.nextDependency;
+      // If not dirty, check next dependency
+      if (!dirty) {
+        const nextDep = link.nextDependency;
         if (nextDep !== undefined) {
-          dep = nextDep;
+          link = nextDep;
           continue;
         }
       }
 
-      // Unwind: we've either finished checking all deps, or found dirty and need to go back up
-      while (checkDepth > 0) {
-        --checkDepth;
-        const firstSub: Dependency | undefined = (current as DerivedNode).subscribers;
-        const hasMultipleSubs =
-          firstSub !== undefined && firstSub.nextConsumer !== undefined;
-
+      // Unwind: go back up the dependency tree
+      while (checkDepth--) {
+        const firstSub = (sub as DerivedNode).subscribers!;
+        const hasMultipleSubs = firstSub.nextConsumer !== undefined;
         if (hasMultipleSubs) {
-          // Branch point - pop stack to get sibling dependency
-          dep = stack!.dep;
+          link = stack!.dep;
           stack = stack!.prev;
         } else {
-          // Linear chain - follow single subscriber back up
-          dep = firstSub;
+          link = firstSub;
         }
 
-        // If dirty, recompute current node
         if (dirty) {
-          const derivedCurrent = current as DerivedNode;
-          const prev = derivedCurrent.value;
-          derivedCurrent.status = STATUS_CLEAN;
-          derivedCurrent.value = track(ctx, derivedCurrent, derivedCurrent.compute);
+          const derivedSub = sub as DerivedNode;
+          const prev = derivedSub.value;
+          derivedSub.value = track(ctx, derivedSub, derivedSub.compute);
 
-          if (prev !== derivedCurrent.value) {
-            // Value changed - propagate to siblings if needed
+          if (prev !== derivedSub.value) {
             if (hasMultipleSubs) {
               shallowPropagate(firstSub);
             }
-            current = dep!.consumer;
-            continue; // Continue unwinding
+            sub = link.consumer as DerivedNode;
+            continue;
           }
         } else {
-          // Not dirty - just mark as clean (clear PENDING flag)
-          current.status = STATUS_CLEAN;
+          sub.status &= ~CONSUMER_PENDING;
         }
 
-        // Move to parent consumer
-        current = dep!.consumer;
-
-        // Check if there's a next dependency at this level
-        if (dep!.nextDependency !== undefined) {
-          dep = dep!.nextDependency;
+        sub = link.consumer as DerivedNode;
+        if (link.nextDependency !== undefined) {
+          link = link.nextDependency;
           continue traversal;
         }
-
-        // No more siblings - mark not dirty and continue unwinding
         dirty = false;
-      }
-
-      // After unwinding, check if there are more dependencies at the root level
-      if (dep && dep.nextDependency !== undefined) {
-        dep = dep.nextDependency;
-        needsRecompute = needsRecompute || dirty;
-        continue traversal;
-      }
-
-      // Fully unwound - now update the root node itself if needed
-      if (needsRecompute || dirty) {
-        rootNode.status = STATUS_CLEAN;
-        rootNode.value = track(ctx, rootNode, rootNode.compute);
-      } else {
-        rootNode.status = STATUS_CLEAN;
       }
 
       return;
