@@ -64,7 +64,10 @@ export function createPullPropagator({
       // Check if current node needs recomputation (DIRTY or PRISTINE)
       if (current.status & FORCE_RECOMPUTE) {
         dirty = true;
-      } else if (dep) {
+      }
+
+      // Check dependencies even if current is dirty (need to pull stale deps first)
+      if (dep) {
         // Core check: examine dependency status
         const producer: FromNode = dep.producer;
         const status = producer.status;
@@ -93,8 +96,8 @@ export function createPullPropagator({
           }
         } else if (status & DERIVED_PULL) {
           // Pending computed - need to recurse into its dependencies
-          // Only allocate stack if there are sibling dependencies (saves 1M allocations in linear chains!)
-          if (dep.nextDependency !== undefined || dep.prevDependency !== undefined) {
+          // Only allocate stack if producer has multiple subscribers (matching Alien's pattern)
+          if (dep.nextConsumer !== undefined || dep.prevConsumer !== undefined) {
             stack = { dep, prev: stack, needsRecompute };
           }
           const derivedProducer = producer as DerivedNode;
