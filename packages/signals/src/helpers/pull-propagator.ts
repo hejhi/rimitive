@@ -8,7 +8,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DERIVED_DIRTY, STATUS_CLEAN, CONSUMER_PENDING, DERIVED_PULL, SIGNAL_UPDATED } = CONSTANTS;
+const { DERIVED_DIRTY, STATUS_CLEAN, CONSUMER_PENDING, DERIVED_PULL, FORCE_RECOMPUTE, SIGNAL_UPDATED } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -61,8 +61,8 @@ export function createPullPropagator({
     traversal: for (;;) {
       let dirty = false;
 
-      // Check if current node is already dirty
-      if (current.status & DERIVED_DIRTY) {
+      // Check if current node needs recomputation (DIRTY or PRISTINE)
+      if (current.status & FORCE_RECOMPUTE) {
         dirty = true;
       } else if (dep) {
         // Core check: examine dependency status
