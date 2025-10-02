@@ -25,11 +25,8 @@ export interface PullPropagator {
 const shallowPropagate = (sub: Dependency) => {
   do {
     const consumer = sub.consumer;
-    const status = consumer.status;
-    // Check if PENDING flag is set AND DIRTY flag is NOT set
-    if ((status & (CONSUMER_PENDING | DERIVED_DIRTY)) === CONSUMER_PENDING) {
-      consumer.status = status | DERIVED_DIRTY;
-    }
+
+    if (consumer.status === CONSUMER_PENDING) consumer.status = DERIVED_DIRTY;
     sub = sub.nextConsumer!;
   } while (sub);
 };
@@ -55,9 +52,9 @@ export function createPullPropagator({
       const status = producer.status;
 
       // Check if this dependency makes the consumer dirty
-      if (consumer.status & DERIVED_DIRTY) {
+      if (consumer.status === DERIVED_DIRTY) {
         dirty = true;
-      } else if (status & DERIVED_DIRTY) {
+      } else if (status === DERIVED_DIRTY) {
         // Producer is a dirty derived - recompute it
         producer.status = STATUS_CLEAN;
         const derivedProducer = producer as DerivedNode;
@@ -69,13 +66,13 @@ export function createPullPropagator({
           if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
           dirty = true;
         }
-      } else if (status & SIGNAL_UPDATED) {
+      } else if (status === SIGNAL_UPDATED) {
         // Signal updated - clear flag and mark dirty
         producer.status = STATUS_CLEAN;
         const subs = producer.subscribers;
         if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
         dirty = true;
-      } else if (status & CONSUMER_PENDING) {
+      } else if (status === CONSUMER_PENDING) {
         const derivedProducer = producer as DerivedNode;
         // Producer is pending - need to check its dependencies first
         // Save position if there are siblings (optimization: no allocation in linear chains)
