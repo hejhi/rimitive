@@ -31,6 +31,8 @@ const shallowPropagate = (sub: Dependency) => {
   } while (sub);
 };
 
+const STATUS_CHECK = DERIVED_DIRTY | SIGNAL_UPDATED | CONSUMER_PENDING;
+
 export function createPullPropagator({
   ctx,
   track
@@ -53,45 +55,45 @@ export function createPullPropagator({
       // Check if this dependency makes the consumer dirty
       if (consumer.status === DERIVED_DIRTY) {
         dirty = true;
-      } else {
-        switch (producer.status) {
-          case DERIVED_DIRTY: {
-            // Producer is a dirty derived - recompute it
-            producer.status = STATUS_CLEAN;
-            const derivedProducer = producer as DerivedNode;
-            const val = track(ctx, derivedProducer, derivedProducer.compute);
+      } else if (STATUS_CHECK) switch (producer.status) {
+        case DERIVED_DIRTY: {
+          // Producer is a dirty derived - recompute it
+          producer.status = STATUS_CLEAN;
+          const derivedProducer = producer as DerivedNode;
+          const val = track(ctx, derivedProducer, derivedProducer.compute);
 
-            if (val !== derivedProducer.value) {
-              derivedProducer.value = val;
-              const subs = producer.subscribers;
-              if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
-              dirty = true;
-            }
-            break;
+          if (val === derivedProducer.value) break;
+
+          derivedProducer.value = val;
+          const subs = producer.subscribers;
+          dirty = true;
+
+          if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
+          break;
+        }
+        case SIGNAL_UPDATED: {
+          // Signal updated - clear flag and mark dirty
+          producer.status = STATUS_CLEAN;
+          const subs = producer.subscribers;
+          if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
+          dirty = true;
+          break;
+        }
+        case CONSUMER_PENDING: {
+          const derivedProducer = producer as DerivedNode;
+          // Producer is pending - need to check its dependencies first
+          // Save position if there are siblings (optimization: no allocation in linear chains)
+          if (
+            dep.nextConsumer !== undefined ||
+            dep.prevConsumer !== undefined
+          ) {
+            stack = { dep, prev: stack };
           }
 
-          case SIGNAL_UPDATED: {
-            // Signal updated - clear flag and mark dirty
-            producer.status = STATUS_CLEAN;
-            const subs = producer.subscribers;
-            if (subs?.nextConsumer !== undefined) shallowPropagate(subs);
-            dirty = true;
-            break;
-          }
-
-          case CONSUMER_PENDING: {
-            const derivedProducer = producer as DerivedNode;
-            // Producer is pending - need to check its dependencies first
-            // Save position if there are siblings (optimization: no allocation in linear chains)
-            if (dep.nextConsumer !== undefined || dep.prevConsumer !== undefined) {
-              stack = { dep, prev: stack };
-            }
-
-            // Descend into producer's dependencies
-            dep = derivedProducer.dependencies!;
-            consumer = derivedProducer;
-            continue descent;
-          }
+          // Descend into producer's dependencies
+          dep = derivedProducer.dependencies!;
+          consumer = derivedProducer;
+          continue descent;
         }
       }
 
@@ -116,16 +118,15 @@ export function createPullPropagator({
         } else dep = currentSubs;
 
         // Recompute the consumer we just finished checking
-        if (dirty) {
+        update: if (dirty) {
           const prevValue = consumer.value;
           consumer.value = track(ctx, consumer, consumer.compute);
 
-          if (prevValue !== consumer.value) {
-            // Value changed - propagate to siblings and keep unwinding
-            if (hasMultipleSubs) shallowPropagate(currentSubs);
-            consumer = dep.consumer as DerivedNode;
-            continue unwind;
-          }
+          if (prevValue === consumer.value) break update; // No value change
+          if (hasMultipleSubs) shallowPropagate(currentSubs);
+
+          consumer = dep.consumer as DerivedNode;
+          continue unwind;
         } else consumer.status = STATUS_CLEAN;
 
         // Move back to parent consumer
