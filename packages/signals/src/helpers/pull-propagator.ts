@@ -40,12 +40,12 @@ export function createPullPropagator({
   ctx: GlobalContext,
   track: GraphEdges['track']
 }): PullPropagator {
-  const pullUpdates = (consumer: DerivedNode): boolean => {
-    if (!consumer.dependencies) return false;
+  const pullUpdates = (rootConsumer: DerivedNode): boolean => {
+    if (!rootConsumer.dependencies) return false;
 
-    let recursionDepth = 0;
     let stack: StackNode | undefined;
-    let dep: Dependency = consumer.dependencies;
+    let consumer = rootConsumer;
+    let dep: Dependency = consumer.dependencies!;
     let dirty = false;
 
     // DESCENT PHASE: Walk down the dependency tree checking each dependency
@@ -88,7 +88,6 @@ export function createPullPropagator({
         // Descend into producer's dependencies
         dep = (producer as DerivedNode).dependencies!;
         consumer = producer as DerivedNode;
-        recursionDepth++;
         continue descent;
       }
 
@@ -99,7 +98,8 @@ export function createPullPropagator({
       }
 
       // UNWINDING PHASE: Walk back up the tree, recomputing as needed
-      unwind: while (recursionDepth--) {
+      // Unwind until we're back at the root consumer
+      unwind: while (consumer !== rootConsumer) {
         const currentSubs = consumer.subscribers!;
         const hasMultipleSubs = currentSubs.nextConsumer !== undefined;
 
