@@ -54,11 +54,10 @@ export function createGraphTraversal(): GraphTraversal {
 
     traverse: for (;;) {
       const consumerNode: ConsumerNode = dep.consumer;
-      const consumerNodeStatus = consumerNode.status;
-      const shouldProcess = consumerNodeStatus === STATUS_CLEAN || consumerNodeStatus === DERIVED_DIRTY
+      const status = consumerNode.status;
 
       // Skip already processed nodes
-      if (shouldProcess) {
+      if (status === STATUS_CLEAN || status === DERIVED_DIRTY) {
         // Mark as pending (invalidated)
         consumerNode.status = CONSUMER_PENDING;
 
