@@ -60,7 +60,7 @@ export function createGraphTraversal(): GraphTraversal {
         // Mark as pending (invalidated)
         consumerNode.status = CONSUMER_PENDING;
 
-        // Schedule any effects attached to this node
+        // Handle producers
         if ('subscribers' in consumerNode) {
           const subscribers = consumerNode.subscribers;
           let scheduledDep = consumerNode.scheduled;
