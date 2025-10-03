@@ -20,6 +20,24 @@ export interface GraphEdges {
 }
 
 export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
+  // Helper to unlink a dependency from producer's consumer list
+  const unlinkFromProducer = (
+    producer: ProducerNode,
+    prevConsumer: Dependency | undefined,
+    nextConsumer: Dependency | undefined,
+    isScheduled: boolean
+  ): void => {
+    if (nextConsumer !== undefined)
+      nextConsumer.prevConsumer = prevConsumer;
+    else if (isScheduled) producer.scheduledTail = prevConsumer;
+    else producer.subscribersTail = prevConsumer;
+
+    if (prevConsumer !== undefined)
+      prevConsumer.nextConsumer = nextConsumer;
+    else if (isScheduled) producer.scheduled = nextConsumer;
+    else producer.subscribers = nextConsumer;
+  };
+
   const trackDependency = (
     producer: FromNode,
     consumer: ToNode
@@ -98,13 +116,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       if (prevDependency) prevDependency.nextDependency = next;
       else consumer.dependencies = next;
 
-      if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
-      else if (isScheduled) producer.scheduledTail = prevConsumer;
-      else producer.subscribersTail = prevConsumer;
-
-      if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
-      else if (isScheduled) producer.scheduled = nextConsumer;
-      else producer.subscribers = nextConsumer;
+      unlinkFromProducer(producer, prevConsumer, nextConsumer, isScheduled);
 
       current = next;
     } while (current);
@@ -154,16 +166,8 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
             node.dependencies = next;
           }
 
-          // Unlink from producer chain (common for both branches)
-          if (nextConsumer !== undefined)
-            nextConsumer.prevConsumer = prevConsumer;
-          else if (isScheduled) producer.scheduledTail = prevConsumer;
-          else producer.subscribersTail = prevConsumer;
-
-          if (prevConsumer !== undefined)
-            prevConsumer.nextConsumer = nextConsumer;
-          else if (isScheduled) producer.scheduled = nextConsumer;
-          else producer.subscribers = nextConsumer;
+          // Unlink from producer chain
+          unlinkFromProducer(producer, prevConsumer, nextConsumer, isScheduled);
 
           toRemove = next;
         } while (toRemove);
