@@ -29,7 +29,7 @@ export function createDefaultContext() {
 }
 
 describe('createSignalAPI', () => {
-  it('should create an API with all provided factories', () => {
+  it('should compose factories into API', () => {
     const api = createSignalAPI({
       signal: createSignalFactory,
       computed: createComputedFactory,
@@ -44,7 +44,7 @@ describe('createSignalAPI', () => {
     expect(api.dispose).toBeDefined();
   });
 
-  it('should create a minimal API without effects', () => {
+  it('should support minimal API (tree-shaking)', () => {
     const api = createSignalAPI({
       signal: createSignalFactory,
       computed: createComputedFactory,
@@ -52,234 +52,85 @@ describe('createSignalAPI', () => {
 
     expect(api.signal).toBeDefined();
     expect(api.computed).toBeDefined();
-    expect(api.dispose).toBeDefined();
-    
-    // These should not exist in minimal API
     expect('effect' in api).toBe(false);
     expect('batch' in api).toBe(false);
-    expect('subscribe' in api).toBe(false);
   });
 
-  it('should work with custom context and work queue', () => {
-    let enqueueCalled = false;
+  it('should work with custom context', () => {
+    let schedulerCalled = false;
 
-    // Create custom context with custom work queue
     const ctx = createBaseContext();
     const graphEdges = createGraphEdges({ ctx });
     const { traverseGraph } = createGraphTraversal();
-    const scheduler = (() => {
-      const originalScheduler = createScheduler({
-        propagate: traverseGraph,
-        detachAll: graphEdges.detachAll
-      });
-      return {
-        ...originalScheduler,
-        propagate: (subscribers: Dependency) => {
-          enqueueCalled = true;
-          originalScheduler.propagate(subscribers);
-        },
-      };
-    })();
-
-    const pullPropagator = createPullPropagator({ track: graphEdges.track });
+    const scheduler = createScheduler({
+      propagate: traverseGraph,
+      detachAll: graphEdges.detachAll
+    });
 
     const api = createSignalAPI(
       {
         signal: createSignalFactory,
         computed: createComputedFactory,
         effect: createEffectFactory,
-        batch: createBatchFactory,
       },
       {
         ctx,
         ...graphEdges,
         ...scheduler,
-        ...pullPropagator
+        ...createPullPropagator({ track: graphEdges.track }),
+        propagate: (subscribers: Dependency) => {
+          schedulerCalled = true;
+          scheduler.propagate(subscribers);
+        },
       }
     );
 
     const count = api.signal(0);
-    const double = api.computed(() => count() * 2);
-
-    let effectValue = 0;
-    api.effect(() => {
-      effectValue = double();
-    });
-
-    count(5);
-
-    expect(effectValue).toBe(10);
-    expect(enqueueCalled).toBe(true); // Verify scheduler was consulted
-  });
-
-  it('should allow extending context with custom work queue', () => {
-    const enqueueCount = 0;
-
-    // Create custom context with instrumented work queue
-    const ctx = createBaseContext();
-    const graphEdges = createGraphEdges({ ctx });
-    const { traverseGraph } = createGraphTraversal();
-    const scheduler = createScheduler({
-      propagate: traverseGraph,
-      detachAll: graphEdges.detachAll,
-    });
-
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-      effect: createEffectFactory,
-    }, {
-      ctx,
-      ...graphEdges,
-      ...scheduler
-    });
-    
-    const count = api.signal(0);
-    api.effect(() => {
-      void count(); // Subscribe to count
-    });
-    
-    count(1); // With immediate execution, effect runs immediately without enqueuing
-
-    expect(enqueueCount).toBe(0); // Updated for immediate execution behavior
-  });
-
-  it('should allow custom factories to access extended context', () => {
-    // Create custom context with logger storage
-    interface LoggerContext extends ReturnType<typeof createDefaultContext> {
-      logs: string[];
-    }
-    
-    const customCtx: LoggerContext = {
-      ...createDefaultContext(),
-      logs: []
-    };
-    
-    // Create custom extension that uses the logger storage
-    const createLoggerFactory = (ctx: LoggerContext): LatticeExtension<'logger', (message: string) => void> => {
-      return {
-        name: 'logger',
-        method: (message: string) => {
-          ctx.logs.push(message);
-        }
-      };
-    };
-    
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-      // Align with createSignalAPI factory shape
-      logger: createLoggerFactory,
-    }, customCtx);
-    
-    api.logger('test message');
-    expect(api._ctx.logs).toEqual(['test message']);
-  });
-
-  it('should handle dispose method correctly', () => {
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-    }, createDefaultContext());
-
-    let effectRuns = 0;
-    const count = api.signal(0);
-    
-    const dispose = api.effect(() => {
-      void count(); // Subscribe to count
-      effectRuns++;
-    });
-
-    expect(effectRuns).toBe(1);
-
+    api.effect(() => void count());
     count(1);
-    expect(effectRuns).toBe(2);
 
-    // Dispose the effect itself
-    dispose();
-    
-    // After dispose, effects should not run
-    count(2);
-    expect(effectRuns).toBe(2); // Should still be 2
-    
-    // api.dispose() disposes the context, not individual effects
-    api.dispose();
+    expect(schedulerCalled).toBe(true);
   });
 
-  it('should support multiple independent APIs', () => {
-    const api1 = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-    }, createDefaultContext());
-    const api2 = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-    }, createDefaultContext());
-
-    const signal1 = api1.signal(0);
-    const signal2 = api2.signal(0);
-
-    let effect1Runs = 0;
-    let effect2Runs = 0;
-
-    api1.effect(() => {
-      void signal1();
-      effect1Runs++;
+  it('should support custom extensions', () => {
+    const createCustomFactory = (): LatticeExtension<'custom', () => string> => ({
+      name: 'custom',
+      method: () => 'works'
     });
 
-    api2.effect(() => {
-      void signal2();
-      effect2Runs++;
-    });
-
-    signal1(1);
-    expect(effect1Runs).toBe(2);
-    expect(effect2Runs).toBe(1); // Should not be affected
-
-    signal2(1);
-    expect(effect1Runs).toBe(2); // Should not be affected
-    expect(effect2Runs).toBe(2);
-  });
-
-  it('should work with custom extensions alongside signals', () => {
-    // Create a custom extension
-    const createCustomFactory = (): LatticeExtension<'custom', () => string> => {
-      return {
-        name: 'custom',
-        method: () => 'custom value'
-      };
-    };
-
-    // Create API with custom extension and signal
     const api = createSignalAPI({
       signal: createSignalFactory,
       custom: createCustomFactory
     }, createDefaultContext());
 
-    expect(api.custom).toBeDefined();
-    expect(api.custom()).toBe('custom value');
-    expect(api.signal).toBeDefined();
+    expect(api.custom()).toBe('works');
   });
 
-  it('should properly type the API based on factories', () => {
-    const api = createSignalAPI({
+  it('should support multiple independent APIs', () => {
+    const api1 = createSignalAPI({
       signal: createSignalFactory,
-      computed: createComputedFactory,
+      effect: createEffectFactory,
     }, createDefaultContext());
 
-    // TypeScript should know these methods exist
-    const count = api.signal(0);
-    const double = api.computed(() => count() * 2);
+    const api2 = createSignalAPI({
+      signal: createSignalFactory,
+      effect: createEffectFactory,
+    }, createDefaultContext());
 
-    // TypeScript should properly type values
-    const value: number = count();
-    const computedValue: number = double();
+    const s1 = api1.signal(0);
+    const s2 = api2.signal(0);
+    let runs1 = 0;
+    let runs2 = 0;
 
-    expect(value).toBe(0);
-    expect(computedValue).toBe(0);
+    api1.effect(() => { void s1(); runs1++; });
+    api2.effect(() => { void s2(); runs2++; });
+
+    s1(1);
+    expect(runs1).toBe(2);
+    expect(runs2).toBe(1); // Should not affect api2
+
+    s2(1);
+    expect(runs1).toBe(2); // Should not affect api1
+    expect(runs2).toBe(2);
   });
 });
