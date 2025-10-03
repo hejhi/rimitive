@@ -62,15 +62,16 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
 
     // Check if consumer is an effect (has flush method) or computed (has subscribers)
     const isScheduled = 'flush' in consumer;
+    const prevConsumer = isScheduled
+      ? producer.scheduledTail
+      : producer.subscribersTail;
 
     // Create new dependency edge
     const dep: Dependency = {
       producer,
       consumer,
       prevDependency: tail,
-      prevConsumer: isScheduled
-        ? producer.scheduledTail
-        : producer.subscribersTail,
+      prevConsumer,
       nextDependency: next,
       nextConsumer: undefined,
       version: ctx.trackingVersion,
@@ -83,15 +84,16 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     else consumer.dependencies = dep;
 
     // Wire producer side - route effects to scheduled list, computeds to subscribers
-    if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
+    if (prevConsumer) prevConsumer.nextConsumer = dep;
 
     if (isScheduled) {
       producer.scheduledTail = dep;
-      if (!dep.prevConsumer) producer.scheduled = dep;
-    } else {
-      producer.subscribersTail = dep;
-      if (!dep.prevConsumer) producer.subscribers = dep;
+      if (!prevConsumer) producer.scheduled = dep;
+      return;
     }
+
+    producer.subscribersTail = dep;
+    if (!prevConsumer) producer.subscribers = dep;
   };
 
   /**
@@ -158,14 +160,9 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
           const { producer, prevConsumer, nextConsumer } = toRemove;
 
           // Unlink from consumer chain
-          if (next !== undefined) {
-            next.prevDependency = tail;
-          }
-          if (tail) {
-            tail.nextDependency = next;
-          } else {
-            node.dependencies = next;
-          }
+          if (next !== undefined) next.prevDependency = tail;
+          if (tail) tail.nextDependency = next;
+          else node.dependencies = next;
 
           // Unlink from producer chain
           unlinkFromProducer(producer, prevConsumer, nextConsumer, isScheduled);
