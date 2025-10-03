@@ -48,66 +48,69 @@ export function createGraphTraversal(): GraphTraversal {
     // Early exit for undefined/null subscribers
     if (!subscribers) return;
 
-    let stack: Stack<Dependency> | undefined; // LOCAL variable (not shared)
-    let currentDependency: Dependency | undefined = subscribers;
+    let dep: Dependency = subscribers;
+    let next: Dependency | undefined = subscribers.nextConsumer;
+    let stack: Stack<Dependency | undefined> | undefined;
 
-    do {
-      const consumerNode = currentDependency.consumer;
+    traverse: for (;;) {
+      const consumerNode: ConsumerNode = dep.consumer;
       const consumerNodeStatus = consumerNode.status;
+      const shouldProcess = consumerNodeStatus === STATUS_CLEAN || consumerNodeStatus === DERIVED_DIRTY
 
       // Skip already processed nodes
-      if (consumerNodeStatus !== STATUS_CLEAN && consumerNodeStatus !== DERIVED_DIRTY) {
-        currentDependency = currentDependency.nextConsumer;
+      if (shouldProcess) {
+        // Mark as pending (invalidated)
+        consumerNode.status = CONSUMER_PENDING;
 
-        if (currentDependency === undefined && stack !== undefined) {
-          currentDependency = stack.value;
-          stack = stack.prev;
-        }
-
-        continue;
-      }
-
-      // Mark as pending (invalidated)
-      consumerNode.status = CONSUMER_PENDING;
-
-      // Schedule any effects attached to this node
-      if ('scheduled' in consumerNode) {
-        let scheduledDep = consumerNode.scheduled;
-        while (scheduledDep) {
-          const effect = scheduledDep.consumer;
-          if (effect.status === STATUS_CLEAN) {
-            effect.status = CONSUMER_PENDING;
-            onLeaf(effect);
+        // Schedule any effects attached to this node
+        if ('scheduled' in consumerNode) {
+          let scheduledDep = consumerNode.scheduled as Dependency | undefined;
+          while (scheduledDep) {
+            const effect = scheduledDep.consumer;
+            if (effect.status === STATUS_CLEAN) {
+              effect.status = CONSUMER_PENDING;
+              onLeaf(effect);
+            }
+            scheduledDep = scheduledDep.nextConsumer;
           }
-          scheduledDep = scheduledDep.nextConsumer;
         }
-      }
 
-      // Check if we can traverse deeper
-      const hasSubscribers = 'subscribers' in consumerNode && consumerNode.subscribers;
+        // Check if we can traverse deeper
+        if ('subscribers' in consumerNode && consumerNode.subscribers) {
+          // Continue traversal - branch node
+          dep = consumerNode.subscribers as Dependency;
+          const nextSub = dep.nextConsumer;
+          if (nextSub !== undefined) {
+            stack = { value: next, prev: stack };
+            next = nextSub;
+          }
+          continue;
+        }
 
-      if (!hasSubscribers) {
         // This is a leaf node - notify the callback
         onLeaf(consumerNode);
+      }
 
-        currentDependency = currentDependency.nextConsumer;
-
-        if (currentDependency === undefined && stack !== undefined) {
-          currentDependency = stack.value;
-          stack = stack.prev;
-        }
-
+      // Advance to next sibling (unified advancement point)
+      if (next !== undefined) {
+        dep = next;
+        next = dep.nextConsumer;
         continue;
       }
 
-      // Continue traversal - branch node
-      const siblingDep = currentDependency.nextConsumer;
-      
-      // Push sibling onto stack (inline allocation)
-      if (siblingDep) stack = { value: siblingDep, prev: stack };
+      // Unwind stack
+      while (stack !== undefined) {
+        const stackDep = stack.value;
+        stack = stack.prev;
+        if (stackDep !== undefined) {
+          dep = stackDep;
+          next = dep.nextConsumer;
+          continue traverse;
+        }
+      }
 
-      currentDependency = consumerNode.subscribers;
-    } while (currentDependency);
+      break;
+    };
   };
 
   /**
