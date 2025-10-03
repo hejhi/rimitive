@@ -99,14 +99,14 @@ export function createGraphTraversal(): GraphTraversal {
 
       // Unwind stack
       while (stack !== undefined) {
-        const stackDep = stack.value;
+        dep = stack.value!;
         stack = stack.prev;
-        if (stackDep !== undefined) {
-          dep = stackDep;
+        if (dep !== undefined) {
           next = dep.nextConsumer;
           continue traverse;
         }
       }
+
 
       break;
     };
