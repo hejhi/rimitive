@@ -55,7 +55,7 @@ export interface ProducerNode extends ReactiveNode {
 export interface ConsumerNode extends ReactiveNode {
   dependencies: Dependency | undefined; // Head of dependency list
   dependencyTail: Dependency | undefined; // Current tracking position
-  trackingVersion: number; // Version incremented on each track() call for dependency pruning
+  trackingVersion: number; // Global version when this node was last tracked
 }
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {

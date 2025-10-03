@@ -123,6 +123,9 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     try {
       return fn();
     } finally {
+      // Record when this node was last tracked (for staleness detection)
+      node.trackingVersion = ctx.trackingVersion;
+
       ctx.consumerScope = prevConsumer;
 
       // Prune stale dependencies (everything after dependencyTail)

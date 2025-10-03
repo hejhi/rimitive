@@ -81,6 +81,15 @@ export function createPullPropagator({
         case CONSUMER_PENDING: {
           const derivedProducer = producer as DerivedNode;
 
+          // Check if producer was recomputed AFTER our edge to it was created
+          // This handles the "intermediate read" problem where a node is recomputed
+          // between two reads by its consumer
+          if (derivedProducer.trackingVersion > dep.version) {
+            // Producer is stale relative to our view - mark as dirty
+            dirty = true;
+            break;
+          }
+
           // Producer is pending - need to check its dependencies first
           // Save position if there are siblings (optimization: no allocation in linear chains)
           if (
