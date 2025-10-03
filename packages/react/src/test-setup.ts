@@ -18,9 +18,9 @@ import { createGraphTraversal } from '../../signals/src/helpers/graph-traversal'
 
 export function createContext() {
   const baseCtx = createBaseContext();
-  const graphEdges = createGraphEdges();
+  const graphEdges = createGraphEdges({ ctx: baseCtx });
   const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({ propagate: traverseGraph });
+  const scheduler = createScheduler({ propagate: traverseGraph, detachAll: graphEdges.detachAll });
   // Build the context that matches what the factories expect
   const ctx = {
     ...baseCtx,
@@ -31,7 +31,7 @@ export function createContext() {
     pull: null as unknown as ReturnType<typeof createPullPropagator>,
   };
 
-  const pullPropagator = createPullPropagator({ ctx: baseCtx, track: graphEdges.track });
+  const pullPropagator = createPullPropagator({ track: graphEdges.track });
   ctx.pull = pullPropagator;
 
   return ctx;
@@ -60,7 +60,7 @@ const testFactories = {
 } as const;
 
 // Type alias for the API created with our standard factories
-type TestSignalAPI = FactoriesToAPI<typeof testFactories, ReturnType<typeof createContext>>;
+type TestSignalAPI = FactoriesToAPI<typeof testFactories>;
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
