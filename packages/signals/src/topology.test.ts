@@ -2,26 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { signal, effect, computed, batch, resetGlobalState, setCurrentConsumer, getCurrentConsumer } from './test-setup';
 
 /**
- * Tests adapted from alien-signals topology tests
+ * Comprehensive topology and reactive graph tests
+ *
+ * Core tests adapted from alien-signals topology suite:
  * https://github.com/alien-signals/alien-signals/blob/main/tests/topology.spec.ts
  *
- * These tests verify correct behavior of complex dependency graphs including:
- * - Diamond dependencies
- * - Jagged diamond graphs
- * - Bail-out optimization when computed values don't change
- * - Lazy branches with conditional dependencies
+ * Coverage:
+ * - Diamond dependencies and jagged diamond graphs
+ * - Bail-out/short-circuit optimization when computed values don't change
+ * - Lazy evaluation (push-pull algorithm)
+ * - Selective pull-path updates
+ * - Dynamic dependency pruning (conditional branches, reordering)
  * - Subscription activation/deactivation
+ * - Error handling in complex graphs
+ * - Multiple pushes before pull
  *
- * Test Results: 20/20 passing ✅
- * - All topology tests pass, confirming our implementation correctly handles complex dependency graphs
- * - 5 nested effect tests removed (we don't support nested effects)
- *
- * Key Features Validated:
- * - Diamond and jagged diamond dependencies
- * - Bail-out optimization when computed values don't change
- * - Lazy branches with conditional dependencies
- * - Subscription activation/deactivation
- * - Intermediate read staleness detection (via global version tracking)
+ * All alien-signals topology tests passing ✅
+ * (5 nested effect tests removed - we don't support nested effects)
  */
 
 describe('Topology - Graph Updates', () => {
@@ -502,6 +499,332 @@ describe('Topology - Effect Behaviors', () => {
       a(true);
       expect(triggers).toBe(2);
     });
+  });
+});
+
+describe('Topology - Lazy Evaluation', () => {
+  beforeEach(() => {
+    resetGlobalState();
+  });
+
+  it('should not compute until accessed (lazy evaluation)', () => {
+    let count1 = 0;
+    let count2 = 0;
+
+    const source = signal(1);
+    const level1 = computed(() => {
+      count1++;
+      return source() * 2;
+    });
+    const level2 = computed(() => {
+      count2++;
+      return level1() * 2;
+    });
+
+    // Read initial value
+    expect(level2()).toBe(4);
+    expect(count1).toBe(1);
+    expect(count2).toBe(1);
+
+    count1 = count2 = 0;
+
+    // Update source - nothing computes yet
+    source(10);
+    expect(count1).toBe(0);
+    expect(count2).toBe(0);
+
+    // Access triggers lazy computation
+    expect(level2()).toBe(40);
+    expect(count1).toBe(1);
+    expect(count2).toBe(1);
+  });
+
+  it('should skip unaccessed branches', () => {
+    let countA = 0;
+    let countB = 0;
+
+    const source = signal(1);
+    const branchA = computed(() => {
+      countA++;
+      return source() * 2;
+    });
+    const branchB = computed(() => {
+      countB++;
+      return source() * 3;
+    });
+
+    expect(branchA()).toBe(2);
+    expect(branchB()).toBe(3);
+
+    countA = countB = 0;
+    source(10);
+
+    // Only access B
+    expect(branchB()).toBe(30);
+
+    expect(countA).toBe(0); // Not accessed
+    expect(countB).toBe(1); // Accessed
+  });
+
+  it('should only update nodes in pull path', () => {
+    const s = signal(1);
+
+    let countA = 0;
+    const a = computed(() => {
+      countA++;
+      return s() * 2;
+    });
+
+    let countB = 0;
+    const b = computed(() => {
+      countB++;
+      return a() * 2;
+    });
+
+    let countC = 0;
+    const c = computed(() => {
+      countC++;
+      return a() * 3; // Also depends on A
+    });
+
+    // Initial
+    expect(b()).toBe(4);
+    expect(c()).toBe(6);
+    expect(countA).toBe(1);
+    expect(countB).toBe(1);
+    expect(countC).toBe(1);
+
+    // Change signal
+    s(2);
+
+    // Read only B - should update A and B, but NOT C
+    expect(b()).toBe(8);
+    expect(countA).toBe(2);
+    expect(countB).toBe(2);
+    expect(countC).toBe(1); // C not in pull path
+
+    // Now read C - A is already updated, so only C computes
+    expect(c()).toBe(12);
+    expect(countA).toBe(2); // A already updated
+    expect(countC).toBe(2); // C updates now
+  });
+
+  it('should handle multiple pushes before pull', () => {
+    const source = signal(1);
+    const derived = computed(() => source() * 2);
+
+    expect(derived()).toBe(2);
+
+    // Multiple updates
+    source(2);
+    source(3);
+    source(4);
+    source(5);
+
+    // Computes with latest value only
+    expect(derived()).toBe(10);
+  });
+});
+
+describe('Topology - Short-Circuit Optimization', () => {
+  beforeEach(() => {
+    resetGlobalState();
+  });
+
+  it('must recompute to detect value changes', () => {
+    const s = signal(2);
+
+    let countA = 0;
+    const a = computed(() => {
+      countA++;
+      return Math.abs(s()); // abs(2) = 2, abs(-2) = 2
+    });
+
+    let countB = 0;
+    const b = computed(() => {
+      countB++;
+      return a() * 3;
+    });
+
+    // Initial
+    expect(b()).toBe(6);
+    expect(countA).toBe(1);
+    expect(countB).toBe(1);
+
+    // Change signal - A's output stays same
+    s(-2);
+
+    // Read b - A MUST recompute to know its value didn't change
+    expect(b()).toBe(6);
+    expect(countA).toBe(2); // A recomputed
+    expect(countB).toBe(1); // B skipped (A's value didn't change)
+  });
+});
+
+describe('Topology - Dynamic Dependencies', () => {
+  beforeEach(() => {
+    resetGlobalState();
+  });
+
+  it('should prune dependencies when branches change', () => {
+    const condition = signal(true);
+    const a = signal(1);
+    const b = signal(1);
+
+    let bComputations = 0;
+    const expensiveB = computed(() => {
+      bComputations++;
+      return b() * 2;
+    });
+
+    let resultComputations = 0;
+    const result = computed(() => {
+      resultComputations++;
+      return condition() ? a() : expensiveB();
+    });
+
+    // Initial: uses a
+    expect(result()).toBe(1);
+    expect(bComputations).toBe(0);
+    expect(resultComputations).toBe(1);
+
+    // Switch to b
+    condition(false);
+    expect(result()).toBe(2);
+    expect(bComputations).toBe(1);
+
+    // Switch back to a
+    condition(true);
+    expect(result()).toBe(1);
+    expect(resultComputations).toBe(3);
+
+    // Update b multiple times - should NOT recompute
+    bComputations = 0;
+    resultComputations = 0;
+    for (let i = 0; i < 10; i++) {
+      b(i);
+      void result();
+    }
+    expect(bComputations).toBe(0); // Not accessed
+    expect(resultComputations).toBe(0); // Not recomputed
+  });
+
+  it('should handle conditional dependencies correctly', () => {
+    const show = signal(true);
+    const name = signal('Alice');
+    const details = signal('Engineer');
+
+    let computeCount = 0;
+    const display = computed(() => {
+      computeCount++;
+      return show() ? `${name()}: ${details()}` : name();
+    });
+
+    // Initial: depends on all three
+    expect(display()).toBe('Alice: Engineer');
+    expect(computeCount).toBe(1);
+
+    // Hide details - prunes details dependency
+    show(false);
+    expect(display()).toBe('Alice');
+    expect(computeCount).toBe(2);
+
+    // Update details - should NOT trigger
+    details('Senior Engineer');
+    expect(display()).toBe('Alice');
+    expect(computeCount).toBe(2);
+
+    // Show details again - re-establishes dependency
+    show(true);
+    expect(display()).toBe('Alice: Senior Engineer');
+    expect(computeCount).toBe(3);
+
+    // Now details should trigger
+    details('Principal');
+    expect(display()).toBe('Alice: Principal');
+    expect(computeCount).toBe(4);
+  });
+
+  it('should handle dependency reordering', () => {
+    const a = signal('A');
+    const b = signal('B');
+    const c = signal('C');
+
+    let order = 'ABC';
+    const dynamic = computed(() => {
+      if (order === 'ABC') return a() + b() + c();
+      if (order === 'CBA') return c() + b() + a();
+      return b() + a() + c();
+    });
+
+    expect(dynamic()).toBe('ABC');
+
+    order = 'CBA';
+    a('A2');
+    expect(dynamic()).toBe('CBA2');
+
+    order = 'BAC';
+    b('B2');
+    expect(dynamic()).toBe('B2A2C');
+
+    // All signals should still work
+    a('A3');
+    expect(dynamic()).toBe('B2A3C');
+    c('C2');
+    expect(dynamic()).toBe('B2A3C2');
+  });
+
+  it('should prune middle dependencies', () => {
+    const signals = [signal(0), signal(1), signal(2), signal(3), signal(4)];
+    let mask = 0b11111; // All enabled
+
+    const sum = computed(() => {
+      let total = 0;
+      for (let i = 0; i < signals.length; i++) {
+        if (mask & (1 << i)) total += signals[i]!();
+      }
+      return total;
+    });
+
+    expect(sum()).toBe(10); // 0+1+2+3+4
+
+    // Keep only first and last
+    mask = 0b10001;
+    signals[0]!(10);
+    expect(sum()).toBe(14); // 10+4
+
+    // Middle signals should not trigger
+    signals[1]!(100);
+    signals[2]!(100);
+    signals[3]!(100);
+    expect(sum()).toBe(14); // Unchanged
+  });
+
+  it('should handle many dependency changes efficiently', () => {
+    const signals = Array.from({ length: 10 }, (_, i) => signal(i));
+
+    let pattern = 'all';
+    const sum = computed(() => {
+      let total = 0;
+      if (pattern === 'all') {
+        for (let i = 0; i < 10; i++) total += signals[i]!();
+      } else {
+        for (let i = 0; i < 10; i += 2) total += signals[i]!(); // Even only
+      }
+      return total;
+    });
+
+    expect(sum()).toBe(45); // 0+1+2+3+4+5+6+7+8+9
+
+    // Switch to even-only
+    pattern = 'even';
+    signals[0]!(10);
+    expect(sum()).toBe(30); // 10+2+4+6+8
+
+    // Odd signals should not trigger in 'even' mode
+    signals[1]!(100);
+    signals[3]!(100);
+    expect(sum()).toBe(30); // Unchanged
   });
 });
 

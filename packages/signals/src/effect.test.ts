@@ -116,4 +116,104 @@ describe('Effect', () => {
 
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
+
+  describe('Dynamic Effect Lifecycle', () => {
+    it('should handle immediate disposal after creation', () => {
+      const source = signal(0);
+      let effectRan = false;
+
+      const dispose = effect(() => {
+        void source();
+        effectRan = true;
+      });
+
+      expect(effectRan).toBe(true);
+
+      // Dispose immediately
+      dispose();
+
+      // Should not run after disposal
+      effectRan = false;
+      source(1);
+      expect(effectRan).toBe(false);
+    });
+
+    it('should handle disposal during signal updates', () => {
+      const trigger = signal(0);
+      let disposeEffect: (() => void) | undefined;
+      let effectRuns = 0;
+
+      // Create effect that will be disposed by another update
+      disposeEffect = effect(() => {
+        if (trigger() > 0) {
+          effectRuns++;
+        }
+      });
+
+      trigger(1);
+      expect(effectRuns).toBe(1);
+
+      // Dispose the effect
+      disposeEffect();
+
+      // Should not run after disposal
+      trigger(2);
+      expect(effectRuns).toBe(1);
+    });
+
+    it('should maintain correct subscription counts with multiple effects', () => {
+      const source = signal(0);
+      const disposals: Array<() => void> = [];
+
+      // Create multiple effects
+      for (let i = 0; i < 3; i++) {
+        const dispose = effect(() => void source());
+        disposals.push(dispose);
+      }
+
+      // All should react to changes
+      source(1);
+      source(2);
+
+      // Dispose all
+      disposals.forEach(d => d());
+
+      // Signal should still be usable after all effects disposed
+      source(3);
+      expect(source()).toBe(3);
+    });
+
+    it('should handle multiple cycles of effect creation and disposal', () => {
+      const source = signal(0);
+      const effects: Array<() => void> = [];
+      let totalRuns = 0;
+
+      // Create and dispose effects in cycles
+      for (let cycle = 0; cycle < 3; cycle++) {
+        // Create effect
+        const dispose = effect(() => {
+          void source();
+          totalRuns++;
+        });
+        effects.push(dispose);
+
+        totalRuns = 0; // Reset counter
+
+        // Trigger it
+        source(cycle + 1);
+        expect(totalRuns).toBeGreaterThan(0);
+
+        // Dispose it
+        dispose();
+
+        // Verify disposal worked
+        totalRuns = 0;
+        source(cycle + 10);
+        expect(totalRuns).toBe(0); // Should not have run
+      }
+
+      // Cleanup remaining
+      effects.forEach(d => d());
+    });
+  });
 });
