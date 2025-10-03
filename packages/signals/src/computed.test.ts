@@ -319,4 +319,76 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(computeCount).toBe(3); // Should recompute, not use stale cache
     });
   });
+
+  describe('Basic Computed Behavior (from alien-signals)', () => {
+    // These tests are adapted from alien-signals to ensure compatibility with basic patterns
+
+    it('should propagate changes through chained computations', () => {
+      const src = signal(0);
+      const a = computed(() => src());
+      const b = computed(() => a() % 2);
+      const c = computed(() => src());
+      const d = computed(() => b() + c());
+
+      expect(d()).toBe(0);
+      src(2);
+      expect(d()).toBe(2);
+    });
+
+    it('should handle modulo computation chains', () => {
+      const src = signal(0);
+      const c1 = computed(() => src() % 2);
+      const c2 = computed(() => c1());
+      const c3 = computed(() => c2());
+
+      expect(c3()).toBe(0);
+      src(1);
+      expect(c3()).toBe(1);
+      src(2);
+      expect(c3()).toBe(0);
+      src(3);
+      expect(c3()).toBe(1);
+    });
+
+    it('should handle indirect flag updates during dirty checking', () => {
+      const a = signal(false);
+      const b = computed(() => a());
+      const c = computed(() => {
+        b();
+        return 0;
+      });
+      const d = computed(() => {
+        c();
+        return b();
+      });
+
+      expect(d()).toBe(false);
+      a(true);
+      expect(d()).toBe(true);
+    });
+
+    it('should work with boolean flag patterns', () => {
+      const flag = signal(false);
+      const derived1 = computed(() => flag());
+      const derived2 = computed(() => derived1());
+
+      expect(derived2()).toBe(false);
+      flag(true);
+      expect(derived2()).toBe(true);
+      flag(false);
+      expect(derived2()).toBe(false);
+    });
+
+    it('should handle multiple parallel computation paths', () => {
+      const src = signal(0);
+      const path1 = computed(() => src());
+      const path2 = computed(() => src() * 2);
+      const path3 = computed(() => src() + 1);
+      const combined = computed(() => path1() + path2() + path3());
+
+      expect(combined()).toBe(1); // 0 + 0 + 1
+      src(5);
+      expect(combined()).toBe(21); // 5 + 10 + 6
+    });
+  });
 });
