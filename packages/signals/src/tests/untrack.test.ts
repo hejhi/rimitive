@@ -332,7 +332,7 @@ describe('Untrack - Pausing Dependency Tracking', () => {
             if (src() > 5) throw new Error('too big');
             return src();
           });
-        } catch (e) {
+        } catch {
           return -1;
         }
       });

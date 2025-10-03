@@ -32,7 +32,7 @@ describe('Scheduler Algorithm', () => {
   describe('Queue Management', () => {
     it('should queue nodes in FIFO order', () => {
       const order: string[] = [];
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => order.push('A'));
         const node2 = createMockScheduledNode();
@@ -58,7 +58,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should not queue nodes without flush method', () => {
       let queued = 0;
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const consumer = { status: CONSUMER_PENDING } as ConsumerNode;
         onLeaf(consumer);
         queued++;
@@ -78,7 +78,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should only queue CONSUMER_PENDING nodes', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node1 = createMockScheduledNode();
         node1.status = CONSUMER_PENDING;
         node1.flush = vi.fn(() => executed.push('pending'));
@@ -135,7 +135,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should not flush during batch', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
         onLeaf(node);
@@ -160,7 +160,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should flush only when batch depth reaches 0', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
         onLeaf(node);
@@ -185,7 +185,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should handle manual flush', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
         onLeaf(node);
@@ -212,7 +212,7 @@ describe('Scheduler Algorithm', () => {
   describe('Status Transitions', () => {
     it('should transition CONSUMER_PENDING -> SCHEDULED -> STATUS_CLEAN', () => {
       const statuses: number[] = [];
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node = createMockScheduledNode();
         node.status = CONSUMER_PENDING;
         statuses.push(node.status);
@@ -240,7 +240,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should skip disposed nodes during flush', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => executed.push('A'));
 
@@ -276,7 +276,7 @@ describe('Scheduler Algorithm', () => {
       const executed: string[] = [];
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => executed.push('A'));
 
@@ -313,7 +313,7 @@ describe('Scheduler Algorithm', () => {
       const order: string[] = [];
       let secondPropagation = false;
 
-      const mockPropagate = vi.fn((_, onLeaf) => {
+      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
         if (!secondPropagation) {
           // First propagation
           const node1 = createMockScheduledNode();

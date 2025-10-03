@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createPullPropagator } from './pull-propagator';
-import type { DerivedNode, ProducerNode, Dependency } from '../types';
+import type { DerivedNode, ProducerNode, Dependency, ConsumerNode } from '../types';
+import type { GraphEdges } from './graph-edges';
 import { CONSTANTS } from '../constants';
 
 const { DERIVED_DIRTY, CONSUMER_PENDING, SIGNAL_UPDATED, STATUS_CLEAN } = CONSTANTS;
@@ -117,7 +118,7 @@ describe('Pull Propagator Algorithm', () => {
   describe('Derived Node Recomputation', () => {
     it('should recompute dirty derived dependencies', () => {
       const computeFn = vi.fn(() => 42);
-      const mockTrack = vi.fn((_node, fn) => fn());
+      const mockTrack = vi.fn(<T>(_node: ConsumerNode, fn: () => T): T => fn()) as GraphEdges['track'];
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
       const producer = createMockNode('derived', DERIVED_DIRTY) as DerivedNode;
@@ -137,7 +138,7 @@ describe('Pull Propagator Algorithm', () => {
 
     it('should short-circuit when derived value unchanged', () => {
       const computeFn = vi.fn(() => 42);
-      const mockTrack = vi.fn((_node, fn) => fn());
+      const mockTrack = vi.fn(<T>(_node: ConsumerNode, fn: () => T): T => fn()) as GraphEdges['track'];
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
       const producer = createMockNode('derived', DERIVED_DIRTY) as DerivedNode;
@@ -245,7 +246,7 @@ describe('Pull Propagator Algorithm', () => {
 
   describe('Deep Dependency Chains', () => {
     it('should traverse deep chains correctly', () => {
-      const mockTrack = vi.fn((_node, fn) => fn());
+      const mockTrack = vi.fn(<T>(_node: ConsumerNode, fn: () => T): T => fn()) as GraphEdges['track'];
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
       // Create chain: producer -> derived1 -> derived2
