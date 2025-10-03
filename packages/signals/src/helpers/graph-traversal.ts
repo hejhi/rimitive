@@ -29,7 +29,7 @@ export interface GraphTraversal {
   ) => void;
 }
 
-const NOOP = () => {};
+const NOOP = () => { };
 
 /**
  * Create a graph traversal helper.
@@ -53,10 +53,9 @@ export function createGraphTraversal(): GraphTraversal {
     let stack: Stack<Dependency | undefined> | undefined;
 
     traverse: for (;;) {
-      const consumerNode: ConsumerNode = dep.consumer;
+      const consumerNode = dep.consumer;
       const status = consumerNode.status;
 
-      // Skip already processed nodes
       if (status === STATUS_CLEAN || status === DERIVED_DIRTY) {
         // Mark as pending (invalidated)
         consumerNode.status = CONSUMER_PENDING;
@@ -65,10 +64,10 @@ export function createGraphTraversal(): GraphTraversal {
         if ('scheduled' in consumerNode) {
           let scheduledDep = consumerNode.scheduled as Dependency | undefined;
           while (scheduledDep) {
-            const effect = scheduledDep.consumer;
-            if (effect.status === STATUS_CLEAN) {
-              effect.status = CONSUMER_PENDING;
-              onLeaf(effect);
+            const scheduled = scheduledDep.consumer;
+            if (scheduled.status === STATUS_CLEAN) {
+              scheduled.status = CONSUMER_PENDING;
+              onLeaf(scheduled);
             }
             scheduledDep = scheduledDep.nextConsumer;
           }
