@@ -11,22 +11,17 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 function createContext() {
-  const baseCtx = createBaseContext();
-  const graphEdges = createGraphEdges();
+  const ctx = createBaseContext();
+  const graphEdges = createGraphEdges({ ctx });
   const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({ propagate: traverseGraph });
-  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
-  const ctx = {
-    ...baseCtx,
+  const scheduler = createScheduler({ propagate: traverseGraph, detachAll: graphEdges.detachAll });
+
+  return {
+    ctx,
     graphEdges,
     pushPropagator: { pushUpdates: scheduler.propagate },
-    pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>,
+    pullPropagator: createPullPropagator({ track: graphEdges.track }),
   };
-
-  const pullPropagator = createPullPropagator({ ctx, track: graphEdges.track });
-  ctx.pullPropagator = pullPropagator;
-
-  return ctx;
 }
 
 // Create signal API instance

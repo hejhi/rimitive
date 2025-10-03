@@ -41,6 +41,7 @@ describe('createSignalAPI', () => {
     expect(api.computed).toBeDefined();
     expect(api.effect).toBeDefined();
     expect(api.batch).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(api.dispose).toBeDefined();
   });
 
