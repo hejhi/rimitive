@@ -43,7 +43,7 @@ export function createGraphTraversal(): GraphTraversal {
   */
  const traverseGraph = (
    subscribers: Dependency,
-   onLeaf: (node: ConsumerNode) => void
+   schedule: (node: ConsumerNode) => void
   ): void => {
     // Early exit for undefined/null subscribers
     if (!subscribers) return;
@@ -61,32 +61,36 @@ export function createGraphTraversal(): GraphTraversal {
         consumerNode.status = CONSUMER_PENDING;
 
         // Schedule any effects attached to this node
-        if ('scheduled' in consumerNode) {
-          let scheduledDep = consumerNode.scheduled as Dependency | undefined;
-          while (scheduledDep) {
-            const scheduled = scheduledDep.consumer;
-            if (scheduled.status === STATUS_CLEAN) {
-              scheduled.status = CONSUMER_PENDING;
-              onLeaf(scheduled);
-            }
-            scheduledDep = scheduledDep.nextConsumer;
-          }
-        }
+        if ('subscribers' in consumerNode) {
+          const subscribers = consumerNode.subscribers;
+          let scheduledDep = consumerNode.scheduled;
 
-        // Check if we can traverse deeper
-        if ('subscribers' in consumerNode && consumerNode.subscribers) {
-          // Continue traversal - branch node
-          dep = consumerNode.subscribers as Dependency;
-          const nextSub = dep.nextConsumer;
-          if (nextSub !== undefined) {
-            stack = { value: next, prev: stack };
-            next = nextSub;
+          if (scheduledDep) {
+            while (scheduledDep) {
+              const scheduled = scheduledDep.consumer;
+              if (scheduled.status === STATUS_CLEAN) {
+                scheduled.status = CONSUMER_PENDING;
+                schedule(scheduled);
+              }
+              scheduledDep = scheduledDep.nextConsumer;
+            }
           }
-          continue;
+
+          // Check if we can traverse deeper
+          if (subscribers) {
+            // Continue traversal - branch node
+            dep = subscribers;
+            const nextSub = dep.nextConsumer;
+            if (nextSub !== undefined) {
+              stack = { value: next, prev: stack };
+              next = nextSub;
+            }
+            continue;
+          }
         }
 
         // This is a leaf node - notify the callback
-        onLeaf(consumerNode);
+        schedule(consumerNode);
       }
 
       // Advance to next sibling (unified advancement point)
