@@ -1,5 +1,4 @@
 import type { Dependency, DerivedNode } from '../types';
-import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
 
@@ -34,10 +33,8 @@ const shallowPropagate = (sub: Dependency) => {
 const STATUS_CHECK = DERIVED_DIRTY | SIGNAL_UPDATED | CONSUMER_PENDING;
 
 export function createPullPropagator({
-  ctx,
   track
 }: {
-  ctx: GlobalContext,
   track: GraphEdges['track']
 }): PullPropagator {
   const pullUpdates = (rootDerived: DerivedNode): boolean => {
@@ -60,7 +57,7 @@ export function createPullPropagator({
         case DERIVED_DIRTY: {
           // Producer is a dirty derived - recompute it
           const derivedProducer = producer as DerivedNode;
-          const val = track(ctx, derivedProducer, derivedProducer.compute);
+          const val = track(derivedProducer, derivedProducer.compute);
 
           // Value is unchanged - break out
           if (val === derivedProducer.value) break;
@@ -125,7 +122,7 @@ export function createPullPropagator({
         // Recompute the consumer we just finished checking
         update: if (dirty) {
           const prevValue = consumer.value;
-          consumer.value = track(ctx, consumer, consumer.compute);
+          consumer.value = track(consumer, consumer.compute);
 
           if (prevValue === consumer.value) {
             // Value unchanged - but keep dirty flag for sibling checks

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGraphEdges } from './graph-edges';
 import type { ProducerNode, ConsumerNode, Dependency } from '../types';
-import { GlobalContext } from '../context';
+import { createBaseContext, GlobalContext } from '../context';
 
 /**
  * PRINCIPLED TESTS FOR GRAPH-EDGES
@@ -43,6 +43,7 @@ function createConsumer(): ConsumerNode {
 function createContext(): GlobalContext {
   return {
     consumerScope: null,
+    trackingVersion: 0,
     batchDepth: 0,
     inNotificationPhase: false,
   } as GlobalContext;
@@ -91,7 +92,8 @@ describe('graph-edges: Fundamental Invariants', () => {
   it('should establish bidirectional dependency relationship', () => {
     // PRINCIPLE: In FRP, a dependency edge must be bidirectional
     // If A depends on B, then B must know A depends on it
-    const edges = createGraphEdges();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer = createProducer();
     const consumer = createConsumer();
 
@@ -115,7 +117,8 @@ describe('graph-edges: Fundamental Invariants', () => {
   it('should be idempotent - multiple calls create single edge', () => {
     // PRINCIPLE: FRP graphs must not have duplicate edges
     // Multiple dependency tracking of same pair should result in single edge
-    const edges = createGraphEdges();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer = createProducer();
     const consumer = createConsumer();
 
@@ -143,7 +146,8 @@ describe('graph-edges: Fundamental Invariants', () => {
   it('should support fan-out: one producer, multiple consumers', () => {
     // PRINCIPLE: In FRP, a signal can have multiple dependents
     // This tests the producer's subscriber list management
-    const edges = createGraphEdges();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer = createProducer();
     const consumer1 = createConsumer();
     const consumer2 = createConsumer();
@@ -186,7 +190,8 @@ describe('graph-edges: Fundamental Invariants', () => {
   it('should support fan-in: multiple producers, one consumer', () => {
     // PRINCIPLE: In FRP, computed values can depend on multiple signals
     // This tests the consumer's dependency list management
-    const edges = createGraphEdges();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer1 = createProducer();
     const producer2 = createProducer();
     const producer3 = createProducer();
@@ -230,14 +235,14 @@ describe('graph-edges: Fundamental Invariants', () => {
 describe('graph-edges: Dependency Tracking with track()', () => {
   it('should collect dependencies during track execution', () => {
     // PRINCIPLE: FRP dependency tracking must be automatic and transparent
-    const edges = createGraphEdges();
-    const ctx = createContext();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer1 = createProducer();
     const producer2 = createProducer();
     const consumer = createConsumer();
 
     // Track dependencies within a computation
-    const result = edges.track(ctx, consumer, () => {
+    const result = edges.track(consumer, () => {
       // Simulate reading from producers
       edges.trackDependency(producer1, consumer);
       edges.trackDependency(producer2, consumer);
@@ -271,15 +276,15 @@ describe('graph-edges: Dependency Tracking with track()', () => {
   it('should prune stale dependencies on re-tracking', () => {
     // PRINCIPLE: Dynamic dependency graphs must remove unused edges
     // This prevents memory leaks and ensures correct propagation
-    const edges = createGraphEdges();
     const ctx = createContext();
+    const edges = createGraphEdges({ ctx });
     const producer1 = createProducer();
     const producer2 = createProducer();
     const producer3 = createProducer();
     const consumer = createConsumer();
 
     // First tracking: depend on all three producers
-    edges.track(ctx, consumer, () => {
+    edges.track(consumer, () => {
       edges.trackDependency(producer1, consumer);
       edges.trackDependency(producer2, consumer);
       edges.trackDependency(producer3, consumer);
@@ -299,7 +304,7 @@ describe('graph-edges: Dependency Tracking with track()', () => {
 
     // Second tracking: only depend on producer1 and producer3
     // producer2 should be pruned
-    edges.track(ctx, consumer, () => {
+    edges.track(consumer, () => {
       edges.trackDependency(producer1, consumer);
       edges.trackDependency(producer3, consumer);
     });
@@ -332,8 +337,8 @@ describe('graph-edges: Dependency Tracking with track()', () => {
 
   it('should handle complete dependency replacement', () => {
     // PRINCIPLE: FRP systems must handle dynamic dependency graphs efficiently
-    const edges = createGraphEdges();
-    const ctx = createContext();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer1 = createProducer();
     const producer2 = createProducer();
     const producer3 = createProducer();
@@ -341,13 +346,13 @@ describe('graph-edges: Dependency Tracking with track()', () => {
     const consumer = createConsumer();
 
     // First tracking: depend on producer1 and producer2
-    edges.track(ctx, consumer, () => {
+    edges.track(consumer, () => {
       edges.trackDependency(producer1, consumer);
       edges.trackDependency(producer2, consumer);
     });
 
     // Second tracking: completely different set - producer3 and producer4
-    edges.track(ctx, consumer, () => {
+    edges.track(consumer, () => {
       edges.trackDependency(producer3, consumer);
       edges.trackDependency(producer4, consumer);
     });
@@ -374,7 +379,8 @@ describe('graph-edges: Dependency Tracking with track()', () => {
 describe('graph-edges: Cleanup and Memory Safety', () => {
   it('should detach all dependencies from a consumer', () => {
     // PRINCIPLE: FRP nodes must be cleanly disposable to prevent memory leaks
-    const edges = createGraphEdges();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer1 = createProducer();
     const producer2 = createProducer();
     const producer3 = createProducer();
@@ -413,7 +419,8 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
 
   it('should handle partial detachment in complex graphs', () => {
     // PRINCIPLE: Cleanup must be surgical - only remove specified edges
-    const edges = createGraphEdges();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer = createProducer();
     const consumer1 = createConsumer();
     const consumer2 = createConsumer();
@@ -454,8 +461,8 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
   it('should maintain graph integrity after complex operations', () => {
     // PRINCIPLE: Graph operations must never corrupt the data structure
     // This test performs a series of complex operations to verify integrity
-    const edges = createGraphEdges();
-    const ctx = createContext();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const p1 = createProducer();
     const p2 = createProducer();
     const p3 = createProducer();
@@ -463,12 +470,12 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
     const c2 = createConsumer();
 
     // Build initial graph: c1 depends on p1, p2; c2 depends on p2, p3
-    edges.track(ctx, c1, () => {
+    edges.track(c1, () => {
       edges.trackDependency(p1, c1);
       edges.trackDependency(p2, c1);
     });
 
-    edges.track(ctx, c2, () => {
+    edges.track(c2, () => {
       edges.trackDependency(p2, c2);
       edges.trackDependency(p3, c2);
     });
@@ -483,7 +490,7 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
     expect(count).toBe(2);
 
     // Re-track c1 to depend only on p3
-    edges.track(ctx, c1, () => {
+    edges.track(c1, () => {
       edges.trackDependency(p3, c1);
     });
 
@@ -521,14 +528,14 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
 
   it('should handle exception safety in track function', () => {
     // PRINCIPLE: FRP tracking must maintain consistency even when computations fail
-    const edges = createGraphEdges();
-    const ctx = createContext();
+    const ctx = createBaseContext();
+    const edges = createGraphEdges({ ctx });
     const producer = createProducer();
     const consumer = createConsumer();
 
     // Track with throwing function
     expect(() => {
-      edges.track(ctx, consumer, () => {
+      edges.track(consumer, () => {
         edges.trackDependency(producer, consumer);
         throw new Error('Computation failed');
       });

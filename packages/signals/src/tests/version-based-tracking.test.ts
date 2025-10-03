@@ -9,11 +9,11 @@ import { createPullPropagator } from '../helpers/pull-propagator';
 
 describe('Version-Based Dependency Tracking', () => {
   const createApi = () => {
-    const { propagate } = createGraphTraversal();
-    const graphEdges = createGraphEdges();
-    const { trackDependency, track } = graphEdges;
     const ctx = createBaseContext();
-    const { pullUpdates, shallowPropagate } = createPullPropagator({ ctx, track: graphEdges.track });
+    const { propagate } = createGraphTraversal();
+    const graphEdges = createGraphEdges({ ctx });
+    const { trackDependency, track } = graphEdges;
+    const { pullUpdates, shallowPropagate } = createPullPropagator({ track: graphEdges.track });
 
     return createSignalAPI(
       {

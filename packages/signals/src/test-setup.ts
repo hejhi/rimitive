@@ -22,13 +22,13 @@ export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler 
     propagate: (subscribers: Dependency) => void;
   } {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges();
+  const graphEdges = createGraphEdges({ ctx });
   const { traverseGraph } = createGraphTraversal();
   const scheduler = createScheduler({
     propagate: traverseGraph,
     detachAll: graphEdges.detachAll,
   });
-  const pull = createPullPropagator({ ctx, track: graphEdges.track });
+  const pull = createPullPropagator({ track: graphEdges.track });
 
   return {
     ctx,

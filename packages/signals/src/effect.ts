@@ -27,7 +27,6 @@ export function createEffectFactory(
   opts: EffectOpts
 ): EffectFactory {
   const {
-    ctx,
     dispose: disposeNode,
     track,
   } = opts;
@@ -44,12 +43,12 @@ export function createEffectFactory(
       trackingVersion: 0, // Initialize version tracking
       flush(): void {
         if (cleanup !== undefined) cleanup = cleanup();
-        cleanup = track(ctx, node, run);
+        cleanup = track(node, run);
       }
     };
 
     // Run a single time on creation
-    cleanup = track(ctx, node, run);
+    cleanup = track(node, run);
 
     // Return dispose function
     return () => disposeNode(node, () => {

@@ -12,7 +12,7 @@ import { createGraphTraversal } from './helpers/graph-traversal';
 
 export function createDefaultContext() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges();
+  const graphEdges = createGraphEdges({ ctx });
   const { traverseGraph } = createGraphTraversal();
 
   return {
@@ -22,7 +22,7 @@ export function createDefaultContext() {
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,
     }),
-    ...createPullPropagator({ ctx, track: graphEdges.track }),
+    ...createPullPropagator({ track: graphEdges.track }),
   };
 }
 

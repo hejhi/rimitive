@@ -21,6 +21,14 @@ export interface GlobalContext {
   // This field acts as an implicit parameter threaded through all reads.
   // Similar to React's Fiber tracking or Vue's targetStack.
   consumerScope: ConsumerNode | null;
+
+  // ALGORITHM: Global Version Tracking
+  // A monotonically increasing version counter used to detect staleness across
+  // different nodes. Incremented on every track() call. This enables detecting
+  // when an edge was created in a different "epoch" of computation, solving
+  // the intermediate read problem where a node is recomputed between two reads
+  // of its downstream consumer.
+  trackingVersion: number;
 }
 
 // PATTERN: Factory Function
@@ -30,6 +38,7 @@ export interface GlobalContext {
 export function createBaseContext(): GlobalContext {
   return {
     consumerScope: null,
+    trackingVersion: 0,
     queueHead: undefined,
     queueTail: undefined,
   } as GlobalContext; // Cast since helpers will be added by createDefaultContext

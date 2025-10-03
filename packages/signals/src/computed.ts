@@ -58,7 +58,7 @@ export function createComputedFactory(
     ) {
       // Recompute the value
       const prev = this.value;
-      this.value = track(ctx, this, this.compute) as T;
+      this.value = track(this, this.compute) as T;
 
       // Propagate if value changed and there are multiple subscribers
       if (prev !== this.value) {
@@ -89,7 +89,7 @@ export function createComputedFactory(
         status & DERIVED_DIRTY ||
         (status & CONSUMER_PENDING && pullUpdates(this))
       ) {
-        this.value = track(ctx, this, this.compute) as T;
+        this.value = track(this, this.compute) as T;
       } else if (status & CONSUMER_PENDING) this.status = STATUS_CLEAN;
 
       return this.value;

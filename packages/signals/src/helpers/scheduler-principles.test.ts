@@ -4,6 +4,7 @@ import { CONSTANTS } from '../constants';
 import type { ScheduledNode, FromNode, Dependency } from '../types';
 import { createGraphTraversal } from './graph-traversal';
 import { createGraphEdges } from './graph-edges';
+import { createBaseContext } from '../context';
 
 const { SCHEDULED_DISPOSED, CONSUMER_PENDING, STATUS_CLEAN } = CONSTANTS;
 
@@ -11,7 +12,8 @@ describe('Scheduler - FRP Principles', () => {
   describe('Exception Safety', () => {
     it('should continue executing remaining effects when one throws', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -113,7 +115,8 @@ describe('Scheduler - FRP Principles', () => {
 
     it('should handle exceptions at different queue positions', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -174,7 +177,8 @@ describe('Scheduler - FRP Principles', () => {
   describe('Disposed Node Safety', () => {
     it('should not execute disposed nodes even if scheduled', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -218,7 +222,8 @@ describe('Scheduler - FRP Principles', () => {
 
     it('should handle disposal during flush', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -289,7 +294,8 @@ describe('Scheduler - FRP Principles', () => {
   describe('Re-entrance Scheduling', () => {
     it('should handle effects scheduling new effects during flush', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -348,7 +354,8 @@ describe('Scheduler - FRP Principles', () => {
 
     it('should prevent infinite loops from circular scheduling', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -430,7 +437,8 @@ describe('Scheduler - FRP Principles', () => {
   describe('Batch Depth Management', () => {
     it('should not flush during nested batches', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -472,7 +480,8 @@ describe('Scheduler - FRP Principles', () => {
 
     it('should handle batch counter underflow protection', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -490,7 +499,8 @@ describe('Scheduler - FRP Principles', () => {
 
     it('should maintain FIFO order across nested batches', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -569,7 +579,8 @@ describe('Scheduler - FRP Principles', () => {
   describe('Memory Safety', () => {
     it('should clean up queue references on error', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -624,7 +635,8 @@ describe('Scheduler - FRP Principles', () => {
 
     it('should not leak memory from unexecuted scheduled nodes', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,
@@ -675,7 +687,8 @@ describe('Scheduler - FRP Principles', () => {
   describe('Idempotency', () => {
     it('should execute each effect exactly once per batch', () => {
       const { traverseGraph } = createGraphTraversal();
-      const graphEdges = createGraphEdges();
+      const ctx = createBaseContext();
+      const graphEdges = createGraphEdges({ ctx });
       const scheduler = createScheduler({
         propagate: traverseGraph,
         detachAll: graphEdges.detachAll,

@@ -14,20 +14,22 @@ export interface GraphEdges {
   ) => void;
   detachAll: (dependency: Dependency) => void;
   track: <T>(
-    ctx: GlobalContext,
     node: ConsumerNode,
     fn: () => T,
   ) => T;
 }
 
-export function createGraphEdges(): GraphEdges {
-  const trackDependency = (producer: FromNode, consumer: ToNode): void => {
+export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
+  const trackDependency = (
+    producer: FromNode,
+    consumer: ToNode
+  ): void => {
     const tail = consumer.dependencyTail;
 
     // Fast path: tail already points to this producer
     if (tail !== undefined && tail.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      tail.version = consumer.trackingVersion;
+      tail.version = ctx.trackingVersion;
       return; // Already tracking
     }
 
@@ -35,7 +37,7 @@ export function createGraphEdges(): GraphEdges {
     const next = tail ? tail.nextDependency : consumer.dependencies;
     if (next !== undefined && next.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      next.version = consumer.trackingVersion;
+      next.version = ctx.trackingVersion;
       consumer.dependencyTail = next;
       return; // Found and reused
     }
@@ -53,7 +55,7 @@ export function createGraphEdges(): GraphEdges {
         : producer.subscribersTail,
       nextDependency: next,
       nextConsumer: undefined,
-      version: consumer.trackingVersion,
+      version: ctx.trackingVersion,
     };
 
     // Wire consumer side
@@ -108,12 +110,8 @@ export function createGraphEdges(): GraphEdges {
     } while (current);
   };
 
-  const track = <T>(
-    ctx: GlobalContext,
-    node: ConsumerNode,
-    fn: () => T,
-  ): T => {
-    node.trackingVersion++;
+  const track = <T>(node: ConsumerNode, fn: () => T): T => {
+    ctx.trackingVersion++;
 
     // Clear dirty and pending flags before tracking
     node.status = STATUS_CLEAN;

@@ -14,13 +14,13 @@ import { createGraphTraversal } from './helpers/graph-traversal';
 
 export function createDefaultContext() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges();
+  const graphEdges = createGraphEdges({ ctx });
   const { traverseGraph } = createGraphTraversal();
 
   return {
     ctx,
     ...graphEdges,
-    ...createPullPropagator({ ctx, track: graphEdges.track }),
+    ...createPullPropagator({ track: graphEdges.track }),
     ...createScheduler({
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,
@@ -65,7 +65,7 @@ describe('createSignalAPI', () => {
 
     // Create custom context with custom work queue
     const ctx = createBaseContext();
-    const graphEdges = createGraphEdges();
+    const graphEdges = createGraphEdges({ ctx });
     const { traverseGraph } = createGraphTraversal();
     const scheduler = (() => {
       const originalScheduler = createScheduler({
@@ -81,7 +81,7 @@ describe('createSignalAPI', () => {
       };
     })();
 
-    const pullPropagator = createPullPropagator({ ctx, track: graphEdges.track });
+    const pullPropagator = createPullPropagator({ track: graphEdges.track });
 
     const api = createSignalAPI(
       {
@@ -116,8 +116,8 @@ describe('createSignalAPI', () => {
     const enqueueCount = 0;
 
     // Create custom context with instrumented work queue
-    const baseCtx = createBaseContext();
-    const graphEdges = createGraphEdges();
+    const ctx = createBaseContext();
+    const graphEdges = createGraphEdges({ ctx });
     const { traverseGraph } = createGraphTraversal();
     const scheduler = createScheduler({
       propagate: traverseGraph,
@@ -128,7 +128,7 @@ describe('createSignalAPI', () => {
       signal: createSignalFactory,
       effect: createEffectFactory,
     }, {
-      ctx: baseCtx,
+      ctx,
       ...graphEdges,
       ...scheduler
     });

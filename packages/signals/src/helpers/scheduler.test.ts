@@ -4,13 +4,15 @@ import { CONSTANTS, SCHEDULED } from '../constants';
 import type { ScheduledNode, FromNode } from '../types';
 import { createGraphTraversal } from './graph-traversal';
 import { createGraphEdges } from './graph-edges';
+import { createBaseContext } from '../context';
 
 const { SCHEDULED_DISPOSED } = CONSTANTS;
 
 describe('NodeScheduler', () => {
   it('should schedule nodes during propagation', () => {
     const { traverseGraph } = createGraphTraversal();
-    const graphEdges = createGraphEdges();
+    const ctx = createBaseContext();
+    const graphEdges = createGraphEdges({ ctx });
     const scheduler = createScheduler({
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,
@@ -44,7 +46,8 @@ describe('NodeScheduler', () => {
 
   it('should not schedule already scheduled nodes', () => {
     const { traverseGraph } = createGraphTraversal();
-    const graphEdges = createGraphEdges();
+    const ctx = createBaseContext();
+    const graphEdges = createGraphEdges({ ctx });
     const scheduler = createScheduler({
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,
@@ -81,8 +84,9 @@ describe('NodeScheduler', () => {
   });
 
   it('should dispose node only once', () => {
+    const ctx = createBaseContext();
     const { traverseGraph } = createGraphTraversal();
-    const graphEdges = createGraphEdges();
+    const graphEdges = createGraphEdges({ ctx });
     const scheduler = createScheduler({
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,
@@ -110,7 +114,8 @@ describe('NodeScheduler', () => {
 
   it('should flush all scheduled nodes in FIFO order', () => {
     const { traverseGraph } = createGraphTraversal();
-    const graphEdges = createGraphEdges();
+    const ctx = createBaseContext();
+    const graphEdges = createGraphEdges({ ctx });
     const scheduler = createScheduler({
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,
@@ -198,7 +203,8 @@ describe('NodeScheduler', () => {
 
   it('should handle empty flush', () => {
     const { traverseGraph } = createGraphTraversal();
-    const graphEdges = createGraphEdges();
+    const ctx = createBaseContext();
+    const graphEdges = createGraphEdges({ ctx });
     const scheduler = createScheduler({
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,
@@ -209,7 +215,8 @@ describe('NodeScheduler', () => {
 
   it('should clear nextScheduled flag during flush', () => {
     const { traverseGraph } = createGraphTraversal();
-    const graphEdges = createGraphEdges();
+    const ctx = createBaseContext();
+    const graphEdges = createGraphEdges({ ctx });
     const scheduler = createScheduler({
       propagate: traverseGraph,
       detachAll: graphEdges.detachAll,

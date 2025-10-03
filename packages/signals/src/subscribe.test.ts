@@ -12,7 +12,7 @@ import { createGraphTraversal } from './helpers/graph-traversal';
 
 function createTestContext() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges();
+  const graphEdges = createGraphEdges({ ctx });
   const { traverseGraph } = createGraphTraversal();
   const scheduler = createScheduler({
     propagate: traverseGraph,
@@ -23,7 +23,7 @@ function createTestContext() {
     ctx,
     ...graphEdges,
     ...scheduler,
-    ...createPullPropagator({ ctx, track: graphEdges.track }),
+    ...createPullPropagator({ track: graphEdges.track }),
   };
 }
 

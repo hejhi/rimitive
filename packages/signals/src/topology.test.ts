@@ -516,7 +516,7 @@ describe('Topology - Computed Propagation', () => {
   // After c2() reads and updates, c3's cached view of c2 is stale. When src changes again
   // and c1's value doesn't change, we don't recompute c2, so c3 never sees c2's updated value.
   // This would require per-edge version tracking to fix properly.
-  it.skip('should correctly propagate changes through computed signals', () => {
+  it('should correctly propagate changes through computed signals', () => {
     const src = signal(0);
     const c1 = computed(() => src() % 2);
     const c2 = computed(() => c1());

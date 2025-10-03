@@ -14,7 +14,6 @@
 
 import type { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
 import { Scheduler } from './helpers/scheduler';
@@ -22,7 +21,6 @@ import { Scheduler } from './helpers/scheduler';
 const { STATUS_CLEAN } = CONSTANTS;
 
 export type SubscribeOpts = {
-  ctx: GlobalContext;
   track: GraphEdges['track'];
   detachAll: GraphEdges['detachAll'];
   dispose: Scheduler['dispose'];
@@ -38,7 +36,6 @@ export function createSubscribeFactory(
   <T>(source: () => T, callback: SubscribeCallback<T>) => UnsubscribeFunction
 > {
   const {
-    ctx,
     track,
     detachAll,
     dispose: disposeNode,
@@ -67,11 +64,11 @@ export function createSubscribeFactory(
       nextScheduled: undefined,
       trackingVersion: 0, // Initialize version tracking
       flush(): void {
-        const value = track(ctx, node, source);
+        const value = track(node, source);
         callback(value);
       }
     }
-    const value = track(ctx, node, source); // Initial execution to establish dependencies and get initial value
+    const value = track(node, source); // Initial execution to establish dependencies and get initial value
     callback(value);
 
     // Return unsubscribe function
