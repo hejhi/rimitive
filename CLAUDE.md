@@ -9,37 +9,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build all packages
 pnpm build
 
-# Build core packages only (@lattice/signals and @lattice/lattice)
-pnpm build:lattice
-
-# Run development mode (watch)
-pnpm dev
-
 # Run all tests
 pnpm test
 
+# Type checking
+pnpm typecheck                    # All packages
+
+# Linting
+pnpm lint                         # All packages
+
+# Complete check (typecheck + test + lint)
+pnpm check                        # All packages
+
+# pnpm workspace matchers
 # Run tests for specific package
 pnpm --filter @lattice/signals test
 pnpm --filter @lattice/lattice test
-pnpm --filter @lattice/react test
 
 # Run specific test file
 pnpm --filter @lattice/signals test src/computed.test.ts
 
 # Run test matching pattern
 pnpm --filter @lattice/signals test -- "should handle deep dependency"
-
-# Type checking
-pnpm typecheck                    # All packages
-pnpm --filter @lattice/signals typecheck
-
-# Linting
-pnpm lint                         # All packages
-pnpm --filter @lattice/signals lint
-
-# Complete check (typecheck + test + lint)
-pnpm check                        # All packages
-pnpm --filter @lattice/signals check
 ```
 
 ### Benchmarking
@@ -47,83 +38,17 @@ pnpm --filter @lattice/signals check
 # Run all benchmarks
 pnpm bench
 
-# Run KPI benchmarks only (key performance indicators)
-pnpm bench:kpi
-
 # Run specific benchmark
-pnpm bench --skip-build computed-diamond-simple
+pnpm bench diamond-simple
 
 # Run benchmarks with timeout
-timeout 60 pnpm bench --skip-build computed-chain-deep
+timeout 60 pnpm bench chain-deep
 ```
 
 ## Architecture Overview
 
 ### Package Structure
-The codebase is organized as a monorepo with three core packages:
-
-1. **@lattice/signals** - Core reactive primitives (signals, computed, effects)
-   - Push-pull reactive algorithm implementation
-   - Minimal dependency graph management
-   - Zero external dependencies (except @lattice/lattice)
-
-2. **@lattice/lattice** - Extension composition framework
-   - Provides composable factory pattern for building extensible APIs
-   - Method composition and conflict resolution
-   - Type-safe extensibility
-   - alien-signals and preact signals source code are available in /reference-packages for reference purposes
-
-3. **@lattice/react** - React integration
-   - Hooks for using signals in React components
-   - Concurrent mode and SSR support
-
-### Core Algorithm: Push-Pull Reactivity
-
-The signal system uses a sophisticated push-pull algorithm:
-
-**PUSH Phase (Write):**
-- When signal value changes, traverses dependency graph
-- Marks dependent nodes as INVALIDATED
-- Schedules effects for batch execution
-
-**PULL Phase (Read):**
-- Lazy evaluation - computed values update only when accessed
-- Automatic dependency tracking during execution
-- Version-based cache invalidation
-
-**Key Files:**
-- `packages/signals/src/signal.ts` - Signal implementation
-- `packages/signals/src/computed.ts` - Computed values with lazy evaluation
-- `packages/signals/src/effect.ts` - Side effect management
-- `packages/signals/src/helpers/graph-edges.ts` - Dependency edge management
-- `packages/signals/src/helpers/pull-propagator.ts` - Pull-based update propagation
-- `packages/signals/src/helpers/scheduler.ts` - Batch scheduling
-
-### Factory-Based API Architecture
-
-The API uses a composable factory pattern:
-
-```typescript
-// Each primitive is a separate factory
-const signalFactory = createSignalFactory(opts);
-const computedFactory = createComputedFactory(opts);
-
-// Factories compose via @lattice/lattice
-const context = createContext(signalFactory, computedFactory);
-```
-
-This enables:
-- Tree-shaking - import only what you need
-- Type-safe extensibility
-- Shared context between primitives
-- SSR/concurrent rendering isolation
-
-### Node Status States
-
-The reactive graph uses these status values:
-- `STATUS_CLEAN (0)` - Up-to-date, no recomputation needed
-- `CONSUMER_PENDING (1)` - May need update (lazy evaluation pending)
-- `DERIVED_DIRTY (2)` - Definitely needs update
+The codebase is organized as a lerna monorepo using pnpm workspaces. The core packages are located in @packages/. Reference packages (such as the source code for `alien-signals` and `preact-signas`) are located in `/reference-packages`.
 
 ### Testing Strategy
 
@@ -132,14 +57,6 @@ Tests are co-located with source files:
 - Integration tests in `api.test.ts`
 - Memory leak tests in `detached-memory.test.ts`
 - Performance regression prevention via benchmarks
-
-## Performance Considerations
-
-1. **Monomorphic Functions**: Signal/computed functions maintain consistent shapes for V8 optimization
-2. **Linked List Dependencies**: Efficient insertion/removal without array allocations
-3. **Version-Based Tracking**: Avoids unnecessary recomputation via version comparison
-4. **Batch Updates**: Multiple changes trigger single update cycle
-5. **Lazy Evaluation**: Computed values update only when accessed
 
 ## Git Workflow
 
@@ -154,14 +71,6 @@ Create changesets for releases:
 ```bash
 pnpm changeset
 ```
-
-## Key Design Patterns
-
-1. **Factory Pattern**: All primitives created via factories for composability
-2. **Shared Context**: GlobalContext coordinates between primitives
-3. **Linked List Graph**: Efficient dependency management without arrays
-4. **Pull-Based Updates**: Lazy evaluation for optimal performance
-5. **Type-Safe Extensions**: TypeScript infers API from composed factories
 
 ## Workflows
 
@@ -181,9 +90,9 @@ stages:
 ---
 ```
 
-## Communication Style
+## Communication Style and Principles
 
-When working in this codebase, adopt the following communication style:
+When working in this codebase, adopt the following communication style and principles:
 
 - **Direct and honest**: Be straightforward without unnecessary embellishment. If something is wrong, say so plainly.
 - **Pragmatic**: Focus on practical solutions over theoretical perfection. What works is more important than what's elegant.
@@ -191,8 +100,9 @@ When working in this codebase, adopt the following communication style:
 - **Concise**: Keep explanations brief and to the point.
 - **Trust-based**: Assume good intentions and competence. Don't over-explain obvious things.
 
+An important note on the **direct and honest** principle:
 
-**NEVER REVERT, RESTORE, OR ABANDON DURING AN IMPLEMENTATION**
+**NEVER REVERT, RESTORE, OR ABANDON DURING AN IMPLEMENTATION**.
 
 When you inevitably run into roadblocks during implementation, and you're considering reverting, restoring, or changing strategies, do one or more of the below:
 - **ANALYZE AND THINK DEEPLY**: if you don't explicitly understand the fundamental problem underlying the roadblock, the top priority is to figure it out and synthesize it into detailed, actionable knowledge
@@ -205,6 +115,6 @@ When all else fails, and you determine that either:
 
 ...then **STOP** and consult the user.
 
-**You should NEVER make the decision to go backwards or change direction unless explicitly instructed to by the user**
+**You should NEVER make the decision to go backwards or change direction unless explicitly instructed to by the user. Doing so comprimises the users trust in your autonomy and ability to follow instructions**.
 
-Implementation "roadblocks" are opportunities to dig deeper and uncover valuable, actionable knowledge **AS PART OF** an iteration, but they are **NEVER** an excuse to abandon it.
+Remember: implementation "roadblocks" are opportunities to dig deeper and uncover valuable, actionable knowledge **AS PART OF** an iteration, but they are **NEVER** an excuse to abandon it.

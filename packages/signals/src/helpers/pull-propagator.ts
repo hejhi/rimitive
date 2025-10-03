@@ -127,7 +127,10 @@ export function createPullPropagator({
           const prevValue = consumer.value;
           consumer.value = track(ctx, consumer, consumer.compute);
 
-          if (prevValue === consumer.value) break update; // No value change
+          if (prevValue === consumer.value) {
+            // Value unchanged - but keep dirty flag for sibling checks
+            break update;
+          }
           if (hasMultipleSubs) shallowPropagate(currConsumer);
 
           consumer = dep.consumer as DerivedNode;
@@ -137,13 +140,16 @@ export function createPullPropagator({
         // Move back to parent consumer
         consumer = dep.consumer as DerivedNode;
 
-        // Reset dirty flag and check if parent has more sibling dependencies
-        dirty = false;
-
+        // Check if parent has more sibling dependencies
         if (dep.nextDependency !== undefined) {
           dep = dep.nextDependency;
+          // Reset dirty when moving to sibling - each sibling is checked independently
+          dirty = false;
           continue descent;
         }
+
+        // No more siblings - dirty stays as-is for parent level
+        dirty = false;
       }
     }
   };
