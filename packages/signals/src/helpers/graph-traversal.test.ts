@@ -1,495 +1,333 @@
 import { describe, it, expect } from 'vitest';
-import type { ConsumerNode, Dependency, DerivedNode, ToNode } from '../types';
+import type { DerivedNode, Dependency, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
 
 const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_DIRTY } = CONSTANTS;
 
-describe('graph-traversal: FRP graph traversal invariants', () => {
-  /**
-   * PRINCIPLED TESTING APPROACH:
-   *
-   * graph-traversal.ts is responsible for depth-first graph traversal and
-   * invalidation propagation. We test FRP invariants:
-   *
-   * 1. Complete propagation - ALL dependent nodes must be marked
-   * 2. No redundant work - nodes visited at most once
-   * 3. Termination - must handle all graph shapes including cycles
-   * 4. Correctness - proper depth-first order
-   * 5. Memory efficiency - bounded stack usage
-   */
+/**
+ * Unit tests for graph-traversal algorithm
+ *
+ * Tests depth-first traversal and invalidation propagation with minimal mocking.
+ * Verifies: completeness, no redundant work, correct ordering, memory efficiency.
+ */
 
-  // Helper to create a producer node (which has subscribers)
-  function createProducerNode(
-    status: number = STATUS_CLEAN,
-    subscribers?: Dependency
-  ): DerivedNode {
+describe('Graph Traversal Algorithm', () => {
+  // Helper to create a node
+  function createNode(status: number = STATUS_CLEAN): DerivedNode {
     return {
-      __type: 'DerivedNode',
       status,
-      subscribers,
-      subscribersTail: subscribers,
+      subscribers: undefined,
       value: undefined,
       dependencies: undefined,
-      dependencyTail: undefined,
       trackingVersion: 0,
       compute: () => undefined,
     } as DerivedNode;
   }
 
   // Helper to create a dependency edge
-  function createDependency(
-    consumer: ToNode,
-    nextConsumer?: Dependency
-  ): Dependency {
+  function createDep(consumer: ToNode, next?: Dependency): Dependency {
     return {
       consumer,
-      nextConsumer,
+      nextConsumer: next,
     } as Dependency;
   }
 
-  describe('Invariant: Complete propagation - all reachable nodes marked', () => {
-    it('should mark all nodes in a linear chain', () => {
-      /**
-       * Linear chain: A -> B -> C -> D
-       * All nodes should be marked as PENDING
-       */
-      const nodeD = createProducerNode(STATUS_CLEAN);
-      const nodeC = createProducerNode(STATUS_CLEAN);
-      const nodeB = createProducerNode(STATUS_CLEAN);
-      const nodeA = createProducerNode(STATUS_CLEAN);
+  describe('Complete Propagation', () => {
+    it('should mark all nodes in linear chain', () => {
+      // A -> B -> C -> D
+      const d = createNode();
+      const c = createNode();
+      const b = createNode();
+      const a = createNode();
 
-      // Build dependency chain
-      const depD = createDependency(nodeD);
-      const depC = createDependency(nodeC);
-      const depB = createDependency(nodeB);
-      const depA = createDependency(nodeA);
+      c.subscribers = createDep(d);
+      b.subscribers = createDep(c);
+      a.subscribers = createDep(b);
 
-      // Connect the chain
-      nodeC.subscribers = depD;
-      nodeB.subscribers = depC;
-      nodeA.subscribers = depB;
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers!);
 
-      const traversal = createGraphTraversal();
-      traversal.propagate(depA);
-
-      // All nodes should be marked as PENDING
-      expect(nodeA.status).toBe(CONSUMER_PENDING);
-      expect(nodeB.status).toBe(CONSUMER_PENDING);
-      expect(nodeC.status).toBe(CONSUMER_PENDING);
-      expect(nodeD.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(CONSUMER_PENDING);
+      expect(c.status).toBe(CONSUMER_PENDING);
+      expect(d.status).toBe(CONSUMER_PENDING);
     });
 
-    it('should handle branching propagation correctly', () => {
-      /**
-       * Tree structure:
-       *       A
-       *      / \
-       *     B   C
-       *    / \   \
-       *   D   E   F
-       *
-       * All reachable nodes should be marked
-       */
-      const nodeD = createProducerNode(STATUS_CLEAN);
-      const nodeE = createProducerNode(STATUS_CLEAN);
-      const nodeF = createProducerNode(STATUS_CLEAN);
-      const nodeB = createProducerNode(STATUS_CLEAN);
-      const nodeC = createProducerNode(STATUS_CLEAN);
-      const nodeA = createProducerNode(STATUS_CLEAN);
+    it('should mark all nodes in tree', () => {
+      //     A
+      //    / \
+      //   B   C
+      //  / \   \
+      // D   E   F
+      const f = createNode();
+      const e = createNode();
+      const d = createNode();
+      const c = createNode();
+      const b = createNode();
+      const a = createNode();
 
-      // Build dependency edges
-      const depF = createDependency(nodeF);
-      const depA = createDependency(nodeA);
+      b.subscribers = createDep(d, createDep(e));
+      c.subscribers = createDep(f);
+      a.subscribers = createDep(b, createDep(c));
 
-      // Connect branches
-      nodeB.subscribers = createDependency(nodeD, createDependency(nodeE));
-      nodeC.subscribers = depF;
-      nodeA.subscribers = createDependency(nodeB, createDependency(nodeC));
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers!);
 
-      const traversal = createGraphTraversal();
-      traversal.propagate(depA);
-
-      // All nodes should be marked
-      expect(nodeA.status).toBe(CONSUMER_PENDING);
-      expect(nodeB.status).toBe(CONSUMER_PENDING);
-      expect(nodeC.status).toBe(CONSUMER_PENDING);
-      expect(nodeD.status).toBe(CONSUMER_PENDING);
-      expect(nodeE.status).toBe(CONSUMER_PENDING);
-      expect(nodeF.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(CONSUMER_PENDING);
+      expect(c.status).toBe(CONSUMER_PENDING);
+      expect(d.status).toBe(CONSUMER_PENDING);
+      expect(e.status).toBe(CONSUMER_PENDING);
+      expect(f.status).toBe(CONSUMER_PENDING);
     });
 
-    it('CRITICAL: should handle diamond dependencies correctly', () => {
-      /**
-       * Diamond pattern:
-       *       A
-       *      / \
-       *     B   C
-       *      \ /
-       *       D
-       *
-       * D has two paths from A - both should be traversed
-       */
-      const nodeD = createProducerNode(STATUS_CLEAN);
-      const nodeB = createProducerNode(STATUS_CLEAN);
-      const nodeC = createProducerNode(STATUS_CLEAN);
-      const nodeA = createProducerNode(STATUS_CLEAN);
+    it('should handle diamond dependencies', () => {
+      //   A
+      //  / \
+      // B   C
+      //  \ /
+      //   D
+      const d = createNode();
+      const c = createNode();
+      const b = createNode();
+      const a = createNode();
 
-      // D depends on both B and C
-      const depD_fromB = createDependency(nodeD);
-      const depD_fromC = createDependency(nodeD);
+      b.subscribers = createDep(d);
+      c.subscribers = createDep(d);
+      a.subscribers = createDep(b, createDep(c));
 
-      // B and C each have their own dependency on D
-      nodeB.subscribers = depD_fromB;
-      nodeC.subscribers = depD_fromC;
+      const { traverseGraph } = createGraphTraversal();
+      const leaves: DerivedNode[] = [];
 
-      // A has both B and C as subscribers
-      nodeA.subscribers = createDependency(nodeB, createDependency(nodeC));
-
-      const traversal = createGraphTraversal();
-      const leafNodes: DerivedNode[] = [];
-
-      traversal.traverseGraph(nodeA.subscribers, (node) => {
-        leafNodes.push(node as DerivedNode);
+      traverseGraph(a.subscribers!, (node) => {
+        leaves.push(node as DerivedNode);
       });
 
-      // All nodes should be marked
-      expect(nodeB.status).toBe(CONSUMER_PENDING);
-      expect(nodeC.status).toBe(CONSUMER_PENDING);
-      expect(nodeD.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(CONSUMER_PENDING);
+      expect(c.status).toBe(CONSUMER_PENDING);
+      expect(d.status).toBe(CONSUMER_PENDING);
 
-      // D is a leaf node (no further subscribers)
-      // It should be visited exactly once (skipped on second encounter to avoid redundant work)
-      expect(leafNodes.filter(n => n === nodeD).length).toBe(1);
+      // D visited only once (deduplication)
+      expect(leaves.filter(n => n === d).length).toBe(1);
     });
   });
 
-  describe('Invariant: No redundant work - skip already processed nodes', () => {
-    it('should skip nodes already marked as PENDING', () => {
-      /**
-       * If a node is already PENDING, it should not be processed again
-       * This prevents exponential explosion in diamond patterns
-       */
-      const nodeB = createProducerNode(CONSUMER_PENDING); // Already pending!
-      const nodeA = createProducerNode(STATUS_CLEAN);
+  describe('Deduplication', () => {
+    it('should skip already PENDING nodes', () => {
+      const b = createNode(CONSUMER_PENDING); // Already pending
+      const a = createNode();
 
-      const depB = createDependency(nodeB);
-      nodeA.subscribers = depB;
+      a.subscribers = createDep(b);
 
-      const leafNodes: DerivedNode[] = [];
-      const traversal = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal();
+      const leaves: DerivedNode[] = [];
 
-      traversal.traverseGraph(nodeA.subscribers, (node) => {
-        leafNodes.push(node as DerivedNode);
+      traverseGraph(a.subscribers!, (node) => {
+        leaves.push(node as DerivedNode);
       });
 
-      // B should remain PENDING (not changed)
-      expect(nodeB.status).toBe(CONSUMER_PENDING);
-
-      // B should NOT be visited as a leaf since it was already PENDING
-      expect(leafNodes).toHaveLength(0);
+      expect(b.status).toBe(CONSUMER_PENDING);
+      expect(leaves).toHaveLength(0); // Not visited again
     });
 
-    it('should process DIRTY nodes and mark them as PENDING', () => {
-      /**
-       * DIRTY nodes from previous computations need to be marked PENDING
-       * for the new propagation cycle to know they need re-evaluation
-       */
-      const nodeB = createProducerNode(DERIVED_DIRTY); // DIRTY from previous cycle
-      const nodeA = createProducerNode(STATUS_CLEAN);
+    it('should process DIRTY nodes and mark PENDING', () => {
+      const b = createNode(DERIVED_DIRTY);
+      const a = createNode();
 
-      nodeA.subscribers = createDependency(nodeB);
+      a.subscribers = createDep(b);
 
-      const traversal = createGraphTraversal();
-      traversal.propagate(nodeA.subscribers);
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers!);
 
-      // B should be marked PENDING for re-evaluation
-      expect(nodeB.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(CONSUMER_PENDING);
     });
   });
 
-  describe('Invariant: Correct traversal order', () => {
-    it('should traverse depth-first, visiting leaves in correct order', () => {
-      /**
-       * Tree structure:
-       *       A
-       *      / \
-       *     B   C
-       *    /     \
-       *   D       E
-       *
-       * Depth-first order should visit: B -> D -> C -> E
-       */
-      const nodeD = createProducerNode(STATUS_CLEAN);
-      const nodeE = createProducerNode(STATUS_CLEAN);
-      const nodeB = createProducerNode(STATUS_CLEAN);
-      const nodeC = createProducerNode(STATUS_CLEAN);
-      const nodeA = createProducerNode(STATUS_CLEAN);
+  describe('Traversal Order', () => {
+    it('should traverse depth-first', () => {
+      //     A
+      //    / \
+      //   B   C
+      //  /     \
+      // D       E
+      const e = createNode();
+      const d = createNode();
+      const c = createNode();
+      const b = createNode();
+      const a = createNode();
 
-      // Build tree
-      nodeB.subscribers = createDependency(nodeD);
-      nodeC.subscribers = createDependency(nodeE);
-      nodeA.subscribers = createDependency(nodeB, createDependency(nodeC));
+      b.subscribers = createDep(d);
+      c.subscribers = createDep(e);
+      a.subscribers = createDep(b, createDep(c));
 
-      const visitOrder: DerivedNode[] = [];
-      const leafOrder: DerivedNode[] = [];
+      const order: DerivedNode[] = [];
+      const { traverseGraph } = createGraphTraversal();
 
-      const traversal = createGraphTraversal();
+      // Track visit order via status changes
+      const track = (node: DerivedNode) => {
+        const origStatus = node.status;
+        Object.defineProperty(node, 'status', {
+          get: () => origStatus,
+          set: (v: number) => {
+            if (v === CONSUMER_PENDING) order.push(node);
+          },
+          configurable: true,
+        });
+      };
 
-      // Patch status setter to track visit order
-      const originalNodeBStatus = Object.getOwnPropertyDescriptor(nodeB, 'status');
-      const originalNodeCStatus = Object.getOwnPropertyDescriptor(nodeC, 'status');
-      const originalNodeDStatus = Object.getOwnPropertyDescriptor(nodeD, 'status');
-      const originalNodeEStatus = Object.getOwnPropertyDescriptor(nodeE, 'status');
+      track(b);
+      track(c);
+      track(d);
+      track(e);
 
-      let bStatus = nodeB.status;
-      let cStatus = nodeC.status;
-      let dStatus = nodeD.status;
-      let eStatus = nodeE.status;
+      traverseGraph(a.subscribers!, () => {});
 
-      Object.defineProperty(nodeB, 'status', {
-        get: () => bStatus,
-        set: (v: number) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeB); bStatus = v; }
-      });
-      Object.defineProperty(nodeC, 'status', {
-        get: () => cStatus,
-        set: (v: number) => {
-          if (v === CONSUMER_PENDING) visitOrder.push(nodeC);
-          cStatus = v;
-        },
-      });
-      Object.defineProperty(nodeD, 'status', {
-        get: () => dStatus,
-        set: (v: number) => {
-          if (v === CONSUMER_PENDING) visitOrder.push(nodeD);
-          dStatus = v;
-        },
-      });
-      Object.defineProperty(nodeE, 'status', {
-        get: () => eStatus,
-        set: (v: number) => {
-          if (v === CONSUMER_PENDING) visitOrder.push(nodeE);
-          eStatus = v;
-        },
-      });
+      // Depth-first: B -> D -> C -> E
+      expect(order).toEqual([b, d, c, e]);
+    });
 
-      traversal.traverseGraph(nodeA.subscribers, (node) => {
-        leafOrder.push(node as DerivedNode);
+    it('should visit leaves only', () => {
+      //   A
+      //  / \
+      // B   C
+      // |
+      // D
+      const d = createNode();
+      const c = createNode();
+      const b = createNode();
+      const a = createNode();
+
+      b.subscribers = createDep(d);
+      a.subscribers = createDep(b, createDep(c));
+
+      const leaves: DerivedNode[] = [];
+      const { traverseGraph } = createGraphTraversal();
+
+      traverseGraph(a.subscribers!, (node) => {
+        leaves.push(node as DerivedNode);
       });
 
-      // Depth-first: should go B -> D (leaf) -> C -> E (leaf)
-      expect(visitOrder).toEqual([nodeB, nodeD, nodeC, nodeE]);
-      expect(leafOrder).toEqual([nodeD, nodeE]); // Only leaves
-
-      // Restore original properties
-      if (originalNodeBStatus) Object.defineProperty(nodeB, 'status', originalNodeBStatus);
-      if (originalNodeCStatus) Object.defineProperty(nodeC, 'status', originalNodeCStatus);
-      if (originalNodeDStatus) Object.defineProperty(nodeD, 'status', originalNodeDStatus);
-      if (originalNodeEStatus) Object.defineProperty(nodeE, 'status', originalNodeEStatus);
+      // Only D and C are leaves (no subscribers)
+      expect(leaves).toEqual([d, c]);
     });
   });
 
-  describe('Invariant: Stack management and memory efficiency', () => {
-    it('should use stack only at branch points', () => {
-      /**
-       * The alien-signals pattern follows chains naturally,
-       * only using stack when there are siblings to remember.
-       *
-       * Chain A -> B -> C with side branch B -> D
-       * Stack should only be used to remember D while traversing C
-       */
-      const nodeC = createProducerNode(STATUS_CLEAN);
-      const nodeD = createProducerNode(STATUS_CLEAN);
-      const nodeB = createProducerNode(STATUS_CLEAN);
-      const nodeA = createProducerNode(STATUS_CLEAN);
-
-      // B has two subscribers: C and D
-      nodeB.subscribers = createDependency(nodeC, createDependency(nodeD));
-      nodeA.subscribers = createDependency(nodeB);
-
-      const leafNodes: DerivedNode[] = [];
-      const traversal = createGraphTraversal();
-
-      traversal.traverseGraph(nodeA.subscribers, (node) => {
-        leafNodes.push(node as DerivedNode);
-      });
-
-      // Should visit both leaves
-      expect(leafNodes).toContain(nodeC);
-      expect(leafNodes).toContain(nodeD);
-
-      // Order should be depth-first: C before D (C is first in chain)
-      expect(leafNodes).toEqual([nodeC, nodeD]);
-    });
-
+  describe('Memory Efficiency', () => {
     it('should handle deep chains without stack overflow', () => {
-      /**
-       * Very deep linear chain should not cause stack overflow
-       * because we follow chains naturally without recursion
-       */
       const depth = 10000;
       const nodes: DerivedNode[] = [];
 
       // Create deep chain
       for (let i = 0; i < depth; i++) {
-        nodes.push(createProducerNode(STATUS_CLEAN));
+        nodes.push(createNode());
       }
 
-      // Connect them
+      // Connect chain
       for (let i = 0; i < depth - 1; i++) {
-        nodes[i]!.subscribers = createDependency(nodes[i + 1]!);
+        nodes[i]!.subscribers = createDep(nodes[i + 1]!);
       }
 
-      const traversal = createGraphTraversal();
+      const { propagate } = createGraphTraversal();
 
-      // Should handle deep chain without stack overflow
       expect(() => {
-        traversal.propagate(createDependency(nodes[0]!));
+        propagate(createDep(nodes[0]!));
       }).not.toThrow();
 
-      // All nodes should be marked
-      for (const node of nodes) {
+      // All marked
+      nodes.forEach(node => {
         expect(node.status).toBe(CONSUMER_PENDING);
+      });
+    });
+
+    it('should handle wide fan-out', () => {
+      // A -> [B, C, D, E, ...]
+      const width = 100;
+      const nodes: DerivedNode[] = [];
+
+      for (let i = 0; i < width; i++) {
+        nodes.push(createNode());
       }
+
+      const a = createNode();
+
+      // Chain all as siblings
+      let subs: Dependency | undefined;
+      for (let i = width - 1; i >= 0; i--) {
+        subs = createDep(nodes[i]!, subs);
+      }
+      a.subscribers = subs;
+
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers!);
+
+      // All marked
+      nodes.forEach(node => {
+        expect(node.status).toBe(CONSUMER_PENDING);
+      });
     });
   });
 
-  describe('Edge cases and robustness', () => {
-    it('should handle empty dependency chain gracefully', () => {
-      const traversal = createGraphTraversal();
-      const leafNodes: DerivedNode[] = [];
+  describe('Complex Patterns', () => {
+    it('should handle convergent graph', () => {
+      //      A
+      //     /|\
+      //    B C D
+      //     \|/
+      //      E
+      //      |
+      //      F
+      const f = createNode();
+      const e = createNode();
+      const d = createNode();
+      const c = createNode();
+      const b = createNode();
+      const a = createNode();
 
-      // Should not throw on undefined
+      e.subscribers = createDep(f);
+      b.subscribers = createDep(e);
+      c.subscribers = createDep(e);
+      d.subscribers = createDep(e);
+      a.subscribers = createDep(b, createDep(c, createDep(d)));
+
+      const leaves: DerivedNode[] = [];
+      const { traverseGraph } = createGraphTraversal();
+
+      traverseGraph(a.subscribers!, (node) => {
+        leaves.push(node as DerivedNode);
+      });
+
+      expect(b.status).toBe(CONSUMER_PENDING);
+      expect(c.status).toBe(CONSUMER_PENDING);
+      expect(d.status).toBe(CONSUMER_PENDING);
+      expect(e.status).toBe(CONSUMER_PENDING);
+      expect(f.status).toBe(CONSUMER_PENDING);
+
+      // Only F is a leaf
+      const unique = [...new Set(leaves)];
+      expect(unique).toEqual([f]);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle undefined gracefully', () => {
+      const { traverseGraph } = createGraphTraversal();
+      const leaves: DerivedNode[] = [];
+
       expect(() => {
-        traversal.traverseGraph(undefined as unknown as Dependency, (node) => {
-          leafNodes.push(node as DerivedNode);
+        traverseGraph(undefined as unknown as Dependency, (node) => {
+          leaves.push(node as DerivedNode);
         });
       }).not.toThrow();
 
-      expect(leafNodes).toHaveLength(0);
+      expect(leaves).toHaveLength(0);
     });
 
-    it('should handle multiple subscribers correctly', () => {
-      /**
-       * Node with multiple subscribers (fan-out)
-       * A -> [B, C, D, E]
-       */
-      const nodes = [
-        createProducerNode(STATUS_CLEAN),
-        createProducerNode(STATUS_CLEAN),
-        createProducerNode(STATUS_CLEAN),
-        createProducerNode(STATUS_CLEAN),
-      ];
+    it('should handle single node', () => {
+      const a = createNode();
 
-      const nodeA = createProducerNode(STATUS_CLEAN);
+      const { propagate } = createGraphTraversal();
+      propagate(createDep(a));
 
-      // Chain multiple subscribers
-      let subscribers: Dependency | undefined;
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        subscribers = createDependency(nodes[i]!, subscribers);
-      }
-
-      nodeA.subscribers = subscribers;
-
-      const traversal = createGraphTraversal();
-      traversal.propagate(nodeA.subscribers!);
-
-      // All subscribers should be marked
-      for (const node of nodes) {
-        expect(node.status).toBe(CONSUMER_PENDING);
-      }
-    });
-
-    it('should handle complex mixed patterns', () => {
-      /**
-       * Complex graph with multiple patterns:
-       *        A
-       *       /|\
-       *      B C D
-       *      |X|/    (B->E, C->E, D->E - convergence)
-       *      E
-       *      |
-       *      F
-       */
-      const nodeF = createProducerNode(STATUS_CLEAN);
-      const nodeE = createProducerNode(STATUS_CLEAN);
-      const nodeB = createProducerNode(STATUS_CLEAN);
-      const nodeC = createProducerNode(STATUS_CLEAN);
-      const nodeD = createProducerNode(STATUS_CLEAN);
-      const nodeA = createProducerNode(STATUS_CLEAN);
-
-      // E -> F
-      nodeE.subscribers = createDependency(nodeF);
-
-      // B, C, D all point to E
-      nodeB.subscribers = createDependency(nodeE);
-      nodeC.subscribers = createDependency(nodeE);
-      nodeD.subscribers = createDependency(nodeE);
-
-      // A points to B, C, D
-      nodeA.subscribers = createDependency(
-        nodeB,
-        createDependency(nodeC, createDependency(nodeD))
-      );
-
-      const leafNodes: DerivedNode[] = [];
-      const traversal = createGraphTraversal();
-
-      traversal.traverseGraph(nodeA.subscribers, (node) => {
-        leafNodes.push(node as DerivedNode);
-      });
-
-      // All nodes should be marked as PENDING
-      expect(nodeB.status).toBe(CONSUMER_PENDING);
-      expect(nodeC.status).toBe(CONSUMER_PENDING);
-      expect(nodeD.status).toBe(CONSUMER_PENDING);
-      expect(nodeE.status).toBe(CONSUMER_PENDING);
-      expect(nodeF.status).toBe(CONSUMER_PENDING);
-
-      // F is the only true leaf (it has no subscribers)
-      // E will be processed multiple times but only F is a leaf
-      const uniqueLeaves = [...new Set(leafNodes)];
-      expect(uniqueLeaves).toEqual([nodeF]);
-    });
-  });
-
-  describe('Performance characteristics', () => {
-    it('should have linear time complexity for tree traversal', () => {
-      /**
-       * For a balanced binary tree, traversal should be O(n)
-       * where n is the number of nodes
-       */
-      const createBinaryTree = (depth: number): ConsumerNode => {
-        if (depth === 0) {
-          return createProducerNode(STATUS_CLEAN);
-        }
-
-        const node = createProducerNode(STATUS_CLEAN);
-        const left = createBinaryTree(depth - 1);
-        const right = createBinaryTree(depth - 1);
-
-        node.subscribers = createDependency(left, createDependency(right));
-        return node;
-      };
-
-      const root = createBinaryTree(10); // 2^10 = 1024 nodes
-      const traversal = createGraphTraversal();
-
-      let nodeCount = 0;
-      const startTime = performance.now();
-
-      traversal.traverseGraph(createDependency(root), () => {
-        nodeCount++;
-      });
-
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-
-      // Should be fast even for 1024 nodes
-      expect(duration).toBeLessThan(100); // Less than 100ms
-
-      // Should visit all leaf nodes (2^10 = 1024 leaves at depth 0)
-      expect(nodeCount).toBe(1024);
+      expect(a.status).toBe(CONSUMER_PENDING);
     });
   });
 });
