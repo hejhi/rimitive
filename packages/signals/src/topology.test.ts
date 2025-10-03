@@ -519,7 +519,7 @@ describe('Topology - Computed Propagation', () => {
   // NOTE: This test exposes a subtle difference in how intermediate reads affect propagation.
   // After reading c2(), our implementation may not properly mark c3 as needing update.
   // This could be a bug or a difference in eager vs lazy propagation strategy.
-  it.skip('should correctly propagate changes through computed signals', () => {
+  it('should correctly propagate changes through computed signals', () => {
     const src = signal(0);
     const c1 = computed(() => src() % 2);
     const c2 = computed(() => c1());

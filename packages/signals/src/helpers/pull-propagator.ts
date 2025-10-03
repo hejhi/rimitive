@@ -51,11 +51,12 @@ export function createPullPropagator({
     // DESCENT PHASE: Walk down the dependency tree checking each dependency
     descent: for (;;) {
       const producer = dep.producer;
+			const status = producer.status;
 
       // Check if this dependency makes the consumer dirty
       if (consumer.status === DERIVED_DIRTY) {
         dirty = true;
-      } else if (STATUS_CHECK) switch (producer.status) {
+      } else if (STATUS_CHECK) switch (status) {
         case DERIVED_DIRTY: {
           // Producer is a dirty derived - recompute it
           const derivedProducer = producer as DerivedNode;
@@ -76,12 +77,13 @@ export function createPullPropagator({
           producer.status = STATUS_CLEAN;
           const subs = producer.subscribers;
           dirty = true;
-          
+
           if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
           break;
         }
         case CONSUMER_PENDING: {
           const derivedProducer = producer as DerivedNode;
+
           // Producer is pending - need to check its dependencies first
           // Save position if there are siblings (optimization: no allocation in linear chains)
           if (
@@ -99,23 +101,26 @@ export function createPullPropagator({
       }
 
       // Try to move to next sibling dependency
-      if (!dirty && dep.nextDependency !== undefined) {
-        dep = dep.nextDependency;
-        continue descent;
+      if (!dirty) {
+        const nextDep = dep.nextDependency;
+        if (nextDep !== undefined) {
+          dep = nextDep;
+          continue descent;
+        }
       }
 
       // UNWINDING PHASE: Walk back up the tree, recomputing as needed until we return
       unwind: for (;;) {
         if (consumer === rootDerived) return dirty;
 
-        const currentSubs = consumer.subscribers!;
-        const hasMultipleSubs = currentSubs.nextConsumer !== undefined;
+        const currConsumer = consumer.subscribers!;
+        const hasMultipleSubs = currConsumer.nextConsumer !== undefined;
 
         // Restore our position (stack vs firstSub based on allocation decision during descent)
         if (hasMultipleSubs) {
           dep = stack!.dep;
           stack = stack!.prev;
-        } else dep = currentSubs;
+        } else dep = currConsumer;
 
         // Recompute the consumer we just finished checking
         update: if (dirty) {
@@ -123,7 +128,7 @@ export function createPullPropagator({
           consumer.value = track(ctx, consumer, consumer.compute);
 
           if (prevValue === consumer.value) break update; // No value change
-          if (hasMultipleSubs) shallowPropagate(currentSubs);
+          if (hasMultipleSubs) shallowPropagate(currConsumer);
 
           consumer = dep.consumer as DerivedNode;
           continue unwind;
