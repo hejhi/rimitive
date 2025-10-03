@@ -139,16 +139,12 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     } finally {
       // Record when this node was last tracked (for staleness detection)
       node.trackingVersion = ctx.trackingVersion;
-
       ctx.consumerScope = prevConsumer;
 
       // Prune stale dependencies (everything after dependencyTail)
       // dependencyTail marks the last dependency accessed in this tracking cycle
       // Anything after it is stale and should be removed
-
       const tail = node.dependencyTail as Dependency | undefined;
-
-      // Unlink from producer chain - handle both scheduled and subscribers lists
       const isScheduled = 'flush' in node;
 
       // Start point for pruning
