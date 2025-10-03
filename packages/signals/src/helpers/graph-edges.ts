@@ -101,15 +101,14 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
    * Used during disposal to completely disconnect a node from the graph.
    */
   const detachAll = (dep: Dependency): void => {
+    // All dependencies in the chain share the same consumer
+    const consumer = dep.consumer;
+    const isScheduled = 'flush' in consumer;
     let current: Dependency | undefined = dep;
 
     do {
       const next: Dependency | undefined = current.nextDependency;
-      const { producer, consumer, prevDependency, prevConsumer, nextConsumer } =
-        current;
-
-      // Unlink from producer chain - handle both scheduled and subscribers lists
-      const isScheduled = 'flush' in consumer;
+      const { producer, prevDependency, prevConsumer, nextConsumer } = current;
 
       // Unlink from consumer chain
       if (next) next.prevDependency = prevDependency;
@@ -118,6 +117,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       if (prevDependency) prevDependency.nextDependency = next;
       else consumer.dependencies = next;
 
+      // Unlink from producer chain
       unlinkFromProducer(producer, prevConsumer, nextConsumer, isScheduled);
 
       current = next;
