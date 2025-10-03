@@ -6,6 +6,7 @@ import type { SignalFunction } from './signal';
 import type { ComputedFunction } from './computed';
 import type { ConsumerNode, Dependency } from './types';
 import { createSignalFactory } from './signal';
+import { createSubscribeFactory, SubscribeCallback } from './subscribe';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
@@ -48,7 +49,8 @@ export function createTestInstance() {
     createSignalFactory({ ...opts, propagate }),
     createComputedFactory(opts),
     createEffectFactory(opts),
-    createBatchFactory({ ...opts, startBatch, endBatch })
+    createBatchFactory({ ...opts, startBatch, endBatch }),
+    createSubscribeFactory(opts)
   );
 
   // Reset function for test cleanup
@@ -63,6 +65,7 @@ export function createTestInstance() {
     computed: api.computed,
     effect: api.effect,
     batch: api.batch,
+    subscribe: api.subscribe,
 
     // Context access for testing
     setCurrentConsumer: (consumer: ConsumerNode | null) => {
@@ -91,6 +94,9 @@ export const effect = (fn: () => void | (() => void)): (() => void) =>
 
 export const batch = <T>(fn: () => T): T =>
   defaultInstance.batch(fn);
+
+export const subscribe = <T>(fn: () => T, cb: SubscribeCallback<T>): (() => void) =>
+  defaultInstance.subscribe(fn, cb);
 
 // Context control exports
 export const setCurrentConsumer = (consumer: ConsumerNode | null) =>

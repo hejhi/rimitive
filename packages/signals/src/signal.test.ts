@@ -3,7 +3,6 @@ import { signal, computed, effect, batch, resetGlobalState } from './test-setup'
 
 describe('signal', () => {
   beforeEach(() => {
-    // Clean state between tests
     resetGlobalState();
   });
 

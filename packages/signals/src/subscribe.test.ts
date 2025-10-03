@@ -1,48 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createSignalAPI } from './api';
-import { createSignalFactory } from './signal';
-import { createComputedFactory } from './computed';
-import { createSubscribeFactory } from './subscribe';
-import { createBatchFactory } from './batch';
-import { createBaseContext } from './context';
-import { createGraphEdges } from './helpers/graph-edges';
-import { createPullPropagator } from './helpers/pull-propagator';
-import { createScheduler } from './helpers/scheduler';
-import { createGraphTraversal } from './helpers/graph-traversal';
-
-function createTestContext() {
-  const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({
-    propagate: traverseGraph,
-    detachAll: graphEdges.detachAll,
-  });
-
-  return {
-    ctx,
-    ...graphEdges,
-    ...scheduler,
-    ...createPullPropagator({ track: graphEdges.track }),
-  };
-}
+import {
+  signal,
+  subscribe,
+  computed,
+  resetGlobalState,
+} from './test-setup';
 
 describe('Subscribe', () => {
-  let signal: ReturnType<typeof createSignalFactory>['method'];
-  let computed: ReturnType<typeof createComputedFactory>['method'];
-  let subscribe: ReturnType<typeof createSubscribeFactory>['method'];
-
   beforeEach(() => {
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      subscribe: createSubscribeFactory,
-      batch: createBatchFactory,
-    }, createTestContext());
-
-    signal = api.signal;
-    computed = api.computed;
-    subscribe = api.subscribe;
+    resetGlobalState();
   });
 
   it('should call callback on signal change', () => {

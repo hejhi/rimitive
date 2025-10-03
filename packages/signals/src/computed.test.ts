@@ -1,48 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSignalAPI } from './api';
-import { createSignalFactory, type SignalFunction } from './signal';
-import { createComputedFactory, type ComputedFunction } from './computed';
-import { createEffectFactory } from './effect';
-import { createBatchFactory } from './batch';
-import { createBaseContext } from './context';
-import { createGraphEdges } from './helpers/graph-edges';
-import { createPullPropagator } from './helpers/pull-propagator';
-import { createScheduler } from './helpers/scheduler';
-import { createGraphTraversal } from './helpers/graph-traversal';
-
-export function createDefaultContext() {
-  const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const { traverseGraph } = createGraphTraversal();
-
-  return {
-    ctx,
-    ...graphEdges,
-    ...createScheduler({
-      propagate: traverseGraph,
-      detachAll: graphEdges.detachAll,
-    }),
-    ...createPullPropagator({ track: graphEdges.track }),
-  };
-}
+import { type SignalFunction } from './signal';
+import { signal, effect, batch, computed, resetGlobalState } from './test-setup';
 
 describe('Computed - Push-Pull Optimization', () => {
-  let signal: <T>(value: T) => SignalFunction<T>;
-  let computed: <T>(compute: () => T) => ComputedFunction<T>;
-  let effect: (fn: () => void | (() => void)) => () => void;
-  let batch: <T>(fn: () => T) => T;
-
   beforeEach(() => {
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-    }, createDefaultContext());
-    signal = api.signal;
-    computed = api.computed;
-    effect = api.effect;
-    batch = api.batch;
+    resetGlobalState();
   });
 
   describe('Lazy Dirty Checking', () => {
