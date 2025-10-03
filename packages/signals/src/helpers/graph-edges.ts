@@ -137,56 +137,36 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       // Unlink from producer chain - handle both scheduled and subscribers lists
       const isScheduled = 'flush' in node;
 
-      if (tail) {
-        // Prune everything after tail
-        let toRemove = tail.nextDependency;
-        if (toRemove !== undefined) {
-          do {
-            const next: Dependency | undefined = toRemove.nextDependency;
-            const { producer, prevConsumer, nextConsumer } = toRemove;
+      // Start point for pruning
+      let toRemove = tail ? tail.nextDependency : node.dependencies;
 
-            // Unlink from consumer chain
+      if (toRemove !== undefined) {
+        do {
+          const next: Dependency | undefined = toRemove.nextDependency;
+          const { producer, prevConsumer, nextConsumer } = toRemove;
+
+          // Unlink from consumer chain
+          if (tail) {
             if (next !== undefined) next.prevDependency = tail;
-            // tail already points to the correct position, no update needed
             tail.nextDependency = next;
-
-            if (nextConsumer !== undefined)
-              nextConsumer.prevConsumer = prevConsumer;
-            else if (isScheduled) producer.scheduledTail = prevConsumer;
-            else producer.subscribersTail = prevConsumer;
-
-            if (prevConsumer !== undefined)
-              prevConsumer.nextConsumer = nextConsumer;
-            else if (isScheduled) producer.scheduled = nextConsumer;
-            else producer.subscribers = nextConsumer;
-
-            toRemove = next;
-          } while (toRemove);
-        }
-      } else {
-        // Prune everything (no dependencies were accessed)
-        let toRemove = node.dependencies;
-        if (toRemove !== undefined) {
-          do {
-            const next: Dependency | undefined = toRemove.nextDependency;
-            const { producer, prevConsumer, nextConsumer } = toRemove;
-
-            // Unlink from consumer chain
+          } else {
             if (next !== undefined) next.prevDependency = undefined;
             node.dependencies = next;
+          }
 
-            if (nextConsumer !== undefined)
-              nextConsumer.prevConsumer = prevConsumer;
-            else if (isScheduled) producer.scheduledTail = prevConsumer;
-            else producer.subscribersTail = prevConsumer;
-            if (prevConsumer !== undefined)
-              prevConsumer.nextConsumer = nextConsumer;
-            else if (isScheduled) producer.scheduled = nextConsumer;
-            else producer.subscribers = nextConsumer;
+          // Unlink from producer chain (common for both branches)
+          if (nextConsumer !== undefined)
+            nextConsumer.prevConsumer = prevConsumer;
+          else if (isScheduled) producer.scheduledTail = prevConsumer;
+          else producer.subscribersTail = prevConsumer;
 
-            toRemove = next;
-          } while (toRemove);
-        }
+          if (prevConsumer !== undefined)
+            prevConsumer.nextConsumer = nextConsumer;
+          else if (isScheduled) producer.scheduled = nextConsumer;
+          else producer.subscribers = nextConsumer;
+
+          toRemove = next;
+        } while (toRemove);
       }
     }
   };
