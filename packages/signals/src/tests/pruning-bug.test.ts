@@ -126,7 +126,7 @@ describe('Pruning Bug - Dynamic Dependencies', () => {
       let sum = 0;
       for (let i = 0; i < signals.length; i++) {
         if (mask & (1 << i)) {
-          sum += (signals[i] as any)() as number;
+          sum += signals[i]!();
         }
       }
       return sum;
@@ -137,14 +137,14 @@ describe('Pruning Bug - Dynamic Dependencies', () => {
 
     // Remove middle ones: [0, 4] only (mask = 0b10001)
     mask = 0b10001;
-    (signals[0] as any)(10);
+    signals[0]!(10);
     expect(dynamic()).toBe(14); // 10 + 4
 
     // BUG: Signals 1, 2, 3 should be pruned but aren't
     // because they're in the middle of the list
 
     // This should NOT trigger recomputation
-    (signals[2] as any)(100);
+    signals[2]!(100);
     const before = dynamic();
 
     // But it does! The middle dependency wasn't pruned correctly

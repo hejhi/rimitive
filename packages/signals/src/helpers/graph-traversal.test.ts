@@ -149,7 +149,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       const traversal = createGraphTraversal();
       const leafNodes: DerivedNode[] = [];
 
-      traversal.traverseGraph(nodeA.subscribers!, (node) => {
+      traversal.traverseGraph(nodeA.subscribers, (node) => {
         leafNodes.push(node as DerivedNode);
       });
 
@@ -179,7 +179,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       const leafNodes: DerivedNode[] = [];
       const traversal = createGraphTraversal();
 
-      traversal.traverseGraph(nodeA.subscribers!, (node) => {
+      traversal.traverseGraph(nodeA.subscribers, (node) => {
         leafNodes.push(node as DerivedNode);
       });
 
@@ -201,7 +201,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       nodeA.subscribers = createDependency(nodeB);
 
       const traversal = createGraphTraversal();
-      traversal.propagate(nodeA.subscribers!);
+      traversal.propagate(nodeA.subscribers);
 
       // B should be marked PENDING for re-evaluation
       expect(nodeB.status).toBe(CONSUMER_PENDING);
@@ -249,22 +249,31 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
 
       Object.defineProperty(nodeB, 'status', {
         get: () => bStatus,
-        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeB); bStatus = v; }
+        set: (v: number) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeB); bStatus = v; }
       });
       Object.defineProperty(nodeC, 'status', {
         get: () => cStatus,
-        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeC); cStatus = v; }
+        set: (v: number) => {
+          if (v === CONSUMER_PENDING) visitOrder.push(nodeC);
+          cStatus = v;
+        },
       });
       Object.defineProperty(nodeD, 'status', {
         get: () => dStatus,
-        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeD); dStatus = v; }
+        set: (v: number) => {
+          if (v === CONSUMER_PENDING) visitOrder.push(nodeD);
+          dStatus = v;
+        },
       });
       Object.defineProperty(nodeE, 'status', {
         get: () => eStatus,
-        set: (v) => { if (v === CONSUMER_PENDING) visitOrder.push(nodeE); eStatus = v; }
+        set: (v: number) => {
+          if (v === CONSUMER_PENDING) visitOrder.push(nodeE);
+          eStatus = v;
+        },
       });
 
-      traversal.traverseGraph(nodeA.subscribers!, (node) => {
+      traversal.traverseGraph(nodeA.subscribers, (node) => {
         leafOrder.push(node as DerivedNode);
       });
 
@@ -301,7 +310,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       const leafNodes: DerivedNode[] = [];
       const traversal = createGraphTraversal();
 
-      traversal.traverseGraph(nodeA.subscribers!, (node) => {
+      traversal.traverseGraph(nodeA.subscribers, (node) => {
         leafNodes.push(node as DerivedNode);
       });
 
@@ -352,7 +361,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
 
       // Should not throw on undefined
       expect(() => {
-        traversal.traverseGraph(undefined as any, (node) => {
+        traversal.traverseGraph(undefined as unknown as Dependency, (node) => {
           leafNodes.push(node as DerivedNode);
         });
       }).not.toThrow();
@@ -426,7 +435,7 @@ describe('graph-traversal: FRP graph traversal invariants', () => {
       const leafNodes: DerivedNode[] = [];
       const traversal = createGraphTraversal();
 
-      traversal.traverseGraph(nodeA.subscribers!, (node) => {
+      traversal.traverseGraph(nodeA.subscribers, (node) => {
         leafNodes.push(node as DerivedNode);
       });
 

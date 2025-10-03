@@ -18,7 +18,7 @@ import { GlobalContext } from '../context';
  */
 
 // Test utilities for creating mock nodes
-function createProducer(_: string): ProducerNode {
+function createProducer(): ProducerNode {
   return {
     __type: 'producer',
     status: 0, // STATUS_CLEAN
@@ -30,7 +30,7 @@ function createProducer(_: string): ProducerNode {
   };
 }
 
-function createConsumer(_: string): ConsumerNode {
+function createConsumer(): ConsumerNode {
   return {
     __type: 'consumer',
     status: 0, // STATUS_CLEAN
@@ -92,8 +92,8 @@ describe('graph-edges: Fundamental Invariants', () => {
     // PRINCIPLE: In FRP, a dependency edge must be bidirectional
     // If A depends on B, then B must know A depends on it
     const edges = createGraphEdges();
-    const producer = createProducer('signal');
-    const consumer = createConsumer('computed');
+    const producer = createProducer();
+    const consumer = createConsumer();
 
     edges.trackDependency(producer, consumer);
 
@@ -116,8 +116,8 @@ describe('graph-edges: Fundamental Invariants', () => {
     // PRINCIPLE: FRP graphs must not have duplicate edges
     // Multiple dependency tracking of same pair should result in single edge
     const edges = createGraphEdges();
-    const producer = createProducer('signal');
-    const consumer = createConsumer('computed');
+    const producer = createProducer();
+    const consumer = createConsumer();
 
     // Track dependency multiple times
     edges.trackDependency(producer, consumer);
@@ -144,10 +144,10 @@ describe('graph-edges: Fundamental Invariants', () => {
     // PRINCIPLE: In FRP, a signal can have multiple dependents
     // This tests the producer's subscriber list management
     const edges = createGraphEdges();
-    const producer = createProducer('signal');
-    const consumer1 = createConsumer('computed1');
-    const consumer2 = createConsumer('computed2');
-    const consumer3 = createConsumer('computed3');
+    const producer = createProducer();
+    const consumer1 = createConsumer();
+    const consumer2 = createConsumer();
+    const consumer3 = createConsumer();
 
     // Create dependencies
     edges.trackDependency(producer, consumer1);
@@ -187,10 +187,10 @@ describe('graph-edges: Fundamental Invariants', () => {
     // PRINCIPLE: In FRP, computed values can depend on multiple signals
     // This tests the consumer's dependency list management
     const edges = createGraphEdges();
-    const producer1 = createProducer('signal1');
-    const producer2 = createProducer('signal2');
-    const producer3 = createProducer('signal3');
-    const consumer = createConsumer('computed');
+    const producer1 = createProducer();
+    const producer2 = createProducer();
+    const producer3 = createProducer();
+    const consumer = createConsumer();
 
     // Create dependencies
     edges.trackDependency(producer1, consumer);
@@ -232,9 +232,9 @@ describe('graph-edges: Dependency Tracking with track()', () => {
     // PRINCIPLE: FRP dependency tracking must be automatic and transparent
     const edges = createGraphEdges();
     const ctx = createContext();
-    const producer1 = createProducer('signal1');
-    const producer2 = createProducer('signal2');
-    const consumer = createConsumer('computed');
+    const producer1 = createProducer();
+    const producer2 = createProducer();
+    const consumer = createConsumer();
 
     // Track dependencies within a computation
     const result = edges.track(ctx, consumer, () => {
@@ -273,10 +273,10 @@ describe('graph-edges: Dependency Tracking with track()', () => {
     // This prevents memory leaks and ensures correct propagation
     const edges = createGraphEdges();
     const ctx = createContext();
-    const producer1 = createProducer('signal1');
-    const producer2 = createProducer('signal2');
-    const producer3 = createProducer('signal3');
-    const consumer = createConsumer('computed');
+    const producer1 = createProducer();
+    const producer2 = createProducer();
+    const producer3 = createProducer();
+    const consumer = createConsumer();
 
     // First tracking: depend on all three producers
     edges.track(ctx, consumer, () => {
@@ -334,11 +334,11 @@ describe('graph-edges: Dependency Tracking with track()', () => {
     // PRINCIPLE: FRP systems must handle dynamic dependency graphs efficiently
     const edges = createGraphEdges();
     const ctx = createContext();
-    const producer1 = createProducer('signal1');
-    const producer2 = createProducer('signal2');
-    const producer3 = createProducer('signal3');
-    const producer4 = createProducer('signal4');
-    const consumer = createConsumer('computed');
+    const producer1 = createProducer();
+    const producer2 = createProducer();
+    const producer3 = createProducer();
+    const producer4 = createProducer();
+    const consumer = createConsumer();
 
     // First tracking: depend on producer1 and producer2
     edges.track(ctx, consumer, () => {
@@ -357,7 +357,7 @@ describe('graph-edges: Dependency Tracking with track()', () => {
     expect(producer2.subscribers).toBeUndefined();
 
     // Verify new dependencies exist
-    let deps = new Set<ProducerNode>();
+    const deps = new Set<ProducerNode>();
     let dep = consumer.dependencies;
     while (dep) {
       deps.add(dep.producer as ProducerNode);
@@ -375,10 +375,10 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
   it('should detach all dependencies from a consumer', () => {
     // PRINCIPLE: FRP nodes must be cleanly disposable to prevent memory leaks
     const edges = createGraphEdges();
-    const producer1 = createProducer('signal1');
-    const producer2 = createProducer('signal2');
-    const producer3 = createProducer('signal3');
-    const consumer = createConsumer('computed');
+    const producer1 = createProducer();
+    const producer2 = createProducer();
+    const producer3 = createProducer();
+    const consumer = createConsumer();
 
     // Create multiple dependencies
     edges.trackDependency(producer1, consumer);
@@ -414,10 +414,10 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
   it('should handle partial detachment in complex graphs', () => {
     // PRINCIPLE: Cleanup must be surgical - only remove specified edges
     const edges = createGraphEdges();
-    const producer = createProducer('signal');
-    const consumer1 = createConsumer('computed1');
-    const consumer2 = createConsumer('computed2');
-    const consumer3 = createConsumer('computed3');
+    const producer = createProducer();
+    const consumer1 = createConsumer();
+    const consumer2 = createConsumer();
+    const consumer3 = createConsumer();
 
     // Create fan-out dependencies
     edges.trackDependency(producer, consumer1);
@@ -456,11 +456,11 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
     // This test performs a series of complex operations to verify integrity
     const edges = createGraphEdges();
     const ctx = createContext();
-    const p1 = createProducer('p1');
-    const p2 = createProducer('p2');
-    const p3 = createProducer('p3');
-    const c1 = createConsumer('c1');
-    const c2 = createConsumer('c2');
+    const p1 = createProducer();
+    const p2 = createProducer();
+    const p3 = createProducer();
+    const c1 = createConsumer();
+    const c2 = createConsumer();
 
     // Build initial graph: c1 depends on p1, p2; c2 depends on p2, p3
     edges.track(ctx, c1, () => {
@@ -523,8 +523,8 @@ describe('graph-edges: Cleanup and Memory Safety', () => {
     // PRINCIPLE: FRP tracking must maintain consistency even when computations fail
     const edges = createGraphEdges();
     const ctx = createContext();
-    const producer = createProducer('signal');
-    const consumer = createConsumer('computed');
+    const producer = createProducer();
+    const consumer = createConsumer();
 
     // Track with throwing function
     expect(() => {

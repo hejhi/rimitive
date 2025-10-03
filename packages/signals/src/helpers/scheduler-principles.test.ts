@@ -19,14 +19,26 @@ describe('Scheduler - FRP Principles', () => {
 
       const executionOrder: string[] = [];
 
+      // Create mock flush functions
+      const node1Flush = vi.fn(() => {
+        executionOrder.push('node1');
+      });
+
+      const node2Flush = vi.fn(() => {
+        executionOrder.push('node2-throw');
+        throw new Error('Effect 2 failed');
+      });
+
+      const node3Flush = vi.fn(() => {
+        executionOrder.push('node3');
+      });
+
       // Create nodes with different behaviors
       const node1: ScheduledNode = {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
-        flush: vi.fn(() => {
-          executionOrder.push('node1');
-        }),
+        flush: node1Flush,
         dependencies: undefined,
         dependencyTail: undefined,
         trackingVersion: 0,
@@ -36,10 +48,7 @@ describe('Scheduler - FRP Principles', () => {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
-        flush: vi.fn(() => {
-          executionOrder.push('node2-throw');
-          throw new Error('Effect 2 failed');
-        }),
+        flush: node2Flush,
         dependencies: undefined,
         dependencyTail: undefined,
         trackingVersion: 0,
@@ -49,9 +58,7 @@ describe('Scheduler - FRP Principles', () => {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
-        flush: vi.fn(() => {
-          executionOrder.push('node3');
-        }),
+        flush: node3Flush,
         dependencies: undefined,
         dependencyTail: undefined,
         trackingVersion: 0,
@@ -99,9 +106,9 @@ describe('Scheduler - FRP Principles', () => {
       // Expected: ['node1', 'node2-throw', 'node3']
       // Actual: ['node1', 'node2-throw'] - node3 never runs!
       expect(executionOrder).toEqual(['node1', 'node2-throw', 'node3']);
-      expect(node1.flush).toHaveBeenCalledTimes(1);
-      expect(node2.flush).toHaveBeenCalledTimes(1);
-      expect(node3.flush).toHaveBeenCalledTimes(1); // This will fail!
+      expect(node1Flush).toHaveBeenCalledTimes(1);
+      expect(node2Flush).toHaveBeenCalledTimes(1);
+      expect(node3Flush).toHaveBeenCalledTimes(1);
     });
 
     it('should handle exceptions at different queue positions', () => {
@@ -218,8 +225,7 @@ describe('Scheduler - FRP Principles', () => {
       });
 
       const executionOrder: string[] = [];
-      let node2: ScheduledNode;
-      let node3: ScheduledNode;
+      const nodes: { node3?: ScheduledNode } = {};
 
       const node1: ScheduledNode = {
         __type: 'effect',
@@ -228,14 +234,14 @@ describe('Scheduler - FRP Principles', () => {
         flush: () => {
           executionOrder.push('node1-disposes-node3');
           // Dispose node3 during execution
-          scheduler.dispose(node3, () => executionOrder.push('node3-cleanup'));
+          scheduler.dispose(nodes.node3!, () => executionOrder.push('node3-cleanup'));
         },
         dependencies: undefined,
         dependencyTail: undefined,
         trackingVersion: 0,
       };
 
-      node2 = {
+      const node2: ScheduledNode = {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
@@ -245,7 +251,7 @@ describe('Scheduler - FRP Principles', () => {
         trackingVersion: 0,
       };
 
-      node3 = {
+      nodes.node3 = {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
@@ -254,6 +260,8 @@ describe('Scheduler - FRP Principles', () => {
         dependencyTail: undefined,
         trackingVersion: 0,
       };
+
+      const node3 = nodes.node3;
 
       // Schedule all three
       [node1, node2, node3].forEach(node => {
@@ -288,7 +296,7 @@ describe('Scheduler - FRP Principles', () => {
       });
 
       const executionOrder: string[] = [];
-      let nodeB: ScheduledNode;
+      const nodes: { nodeB?: ScheduledNode } = {};
 
       const nodeA: ScheduledNode = {
         __type: 'effect',
@@ -297,9 +305,9 @@ describe('Scheduler - FRP Principles', () => {
         flush: () => {
           executionOrder.push('A');
           // Schedule B during A's execution
-          nodeB.status = STATUS_CLEAN; // Reset to CLEAN so traversal will process it
+          nodes.nodeB!.status = STATUS_CLEAN; // Reset to CLEAN so traversal will process it
           scheduler.propagate({
-            consumer: nodeB,
+            consumer: nodes.nodeB!,
             nextConsumer: undefined,
             producer: {} as FromNode,
             prevConsumer: undefined,
@@ -313,7 +321,7 @@ describe('Scheduler - FRP Principles', () => {
         trackingVersion: 0,
       };
 
-      nodeB = {
+      nodes.nodeB = {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
@@ -347,10 +355,9 @@ describe('Scheduler - FRP Principles', () => {
       });
 
       const executionCount = { A: 0, B: 0 };
-      let nodeA: ScheduledNode;
-      let nodeB: ScheduledNode;
+      const nodes: { nodeA?: ScheduledNode; nodeB?: ScheduledNode } = {};
 
-      nodeA = {
+      nodes.nodeA = {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
@@ -358,9 +365,9 @@ describe('Scheduler - FRP Principles', () => {
           executionCount.A++;
           if (executionCount.A === 1) {
             // First execution: schedule B
-            nodeB.status = CONSUMER_PENDING;
+            nodes.nodeB!.status = CONSUMER_PENDING;
             scheduler.propagate({
-              consumer: nodeB,
+              consumer: nodes.nodeB!,
               nextConsumer: undefined,
               producer: {} as FromNode,
               prevConsumer: undefined,
@@ -375,7 +382,7 @@ describe('Scheduler - FRP Principles', () => {
         trackingVersion: 0,
       };
 
-      nodeB = {
+      nodes.nodeB = {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
@@ -383,9 +390,9 @@ describe('Scheduler - FRP Principles', () => {
           executionCount.B++;
           if (executionCount.B === 1) {
             // First execution: schedule A again
-            nodeA.status = CONSUMER_PENDING;
+            nodes.nodeA!.status = CONSUMER_PENDING;
             scheduler.propagate({
-              consumer: nodeA,
+              consumer: nodes.nodeA!,
               nextConsumer: undefined,
               producer: {} as FromNode,
               prevConsumer: undefined,
@@ -399,6 +406,8 @@ describe('Scheduler - FRP Principles', () => {
         dependencyTail: undefined,
         trackingVersion: 0,
       };
+
+      const nodeA = nodes.nodeA;
 
       // Start the cycle
       scheduler.propagate({
@@ -623,11 +632,12 @@ describe('Scheduler - FRP Principles', () => {
 
       // Create a large object that would leak if held
       const largeData = new Array(1000).fill('memory leak test');
+      const nodeFlush = vi.fn();
       const node: ScheduledNode & { data: unknown } = {
         __type: 'effect',
         status: STATUS_CLEAN,
         nextScheduled: undefined,
-        flush: vi.fn(),
+        flush: nodeFlush,
         dependencies: undefined,
         dependencyTail: undefined,
         trackingVersion: 0,
@@ -658,7 +668,7 @@ describe('Scheduler - FRP Principles', () => {
 
       // End batch - should not execute disposed node
       scheduler.endBatch();
-      expect(node.flush).not.toHaveBeenCalled();
+      expect(nodeFlush).not.toHaveBeenCalled();
     });
   });
 

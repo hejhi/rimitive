@@ -72,7 +72,7 @@ export function createGraphTraversal(): GraphTraversal {
 
       // Schedule any effects attached to this node
       if ('scheduled' in consumerNode) {
-        let scheduledDep = (consumerNode as any).scheduled;
+        let scheduledDep = consumerNode.scheduled;
         while (scheduledDep) {
           const effect = scheduledDep.consumer;
           if (effect.status === STATUS_CLEAN) {

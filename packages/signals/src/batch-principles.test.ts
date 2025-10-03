@@ -192,12 +192,11 @@ describe('Batch - FRP Principles', () => {
 
       let effectCount = 0;
       effect(() => {
-        effectCount++;
+        void effectCount++;
         void isEven();
       });
 
       isEvenCount = 0;
-      effectCount = 0;
 
       batch(() => {
         s(12); // Still even
@@ -215,19 +214,19 @@ describe('Batch - FRP Principles', () => {
 
       const computeCounts = new Array(5).fill(0);
 
-      const chain = [source as any];
+      const chain = [source];
       for (let i = 0; i < 5; i++) {
         const prev = chain[chain.length - 1];
         chain.push(computed(() => {
           computeCounts[i]++;
-          return prev() * 2;
+          return prev!() * 2;
         }));
       }
 
       let effectCount = 0;
       effect(() => {
         effectCount++;
-        void chain[chain.length - 1]();
+        void chain[chain.length - 1]!();
       });
 
       computeCounts.fill(0);
@@ -315,7 +314,7 @@ describe('Batch - FRP Principles', () => {
 
       // Effect that throws
       effect(() => {
-        badEffectCount++;
+        void badEffectCount++;
         if (s1() > 5) {
           throw new Error('Bad effect');
         }
@@ -329,7 +328,6 @@ describe('Batch - FRP Principles', () => {
       });
 
       goodEffectCount = 0;
-      badEffectCount = 0;
 
       // Error should be caught and logged, not thrown
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -466,6 +464,7 @@ describe('Batch - FRP Principles', () => {
             throw new Error('Nested error');
           });
         } catch (e) {
+          void e;
           // Caught in outer batch
         }
 

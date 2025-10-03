@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { signal, effect, batch, computed, resetGlobalState } from './test-setup';
+import type { SignalFunction } from './signal';
+import type { ComputedFunction } from './computed';
 
 /**
  * INTEGRATION TESTING: Push-Pull Algorithm Coordination
@@ -472,31 +474,31 @@ describe('Push-Pull Algorithm Integration', () => {
   describe('Memory and Performance Characteristics', () => {
     it('should not retain computed values unnecessarily', () => {
       const source = signal(1);
-      const computeds: any[] = [];
+      const computeds: Array<ComputedFunction<number>> = [];
 
       // Create chain of computeds
       for (let i = 0; i < 10; i++) {
-        const prev = computeds[i - 1] || source;
+        const prev: SignalFunction<number> | ComputedFunction<number> = computeds[i - 1] || source;
         computeds.push(computed(() => prev() * 2));
       }
 
       // Access to establish dependencies
-      expect(computeds[9]()).toBe(1024); // 2^10
+      expect(computeds[9]!()).toBe(1024); // 2^10
 
       // Update source
       source(2);
 
       // Only access middle of chain
-      expect(computeds[4]()).toBe(64); // 2 * 2^5 = 64
+      expect(computeds[4]!()).toBe(64); // 2 * 2^5 = 64
 
       // Later nodes should recompute when accessed
-      expect(computeds[9]()).toBe(2048); // 2 * 2^10 = 2048
+      expect(computeds[9]!()).toBe(2048); // 2 * 2^10 = 2048
     });
 
     it('should handle large fanout efficiently', () => {
       const source = signal(1);
-      const consumers: any[] = [];
-      const computeCounts: number[] = new Array(100).fill(0);
+      const consumers: ComputedFunction<number>[] = [];
+      const computeCounts: number[] = new Array(100).fill(0) as number[];
 
       // Create many direct consumers
       for (let i = 0; i < 100; i++) {
@@ -526,7 +528,7 @@ describe('Push-Pull Algorithm Integration', () => {
       // Pull a subset
       const pulled = [0, 25, 50, 75, 99];
       pulled.forEach(i => {
-        expect(consumers[i]()).toBe(10 * (i + 1));
+        expect(consumers[i]!()).toBe(10 * (i + 1));
       });
 
       // Only pulled nodes should compute
@@ -542,16 +544,16 @@ describe('Push-Pull Algorithm Integration', () => {
     it('should maintain performance with deep chains', () => {
       const depth = 100;
       const source = signal(1);
-      const chain: any[] = [source];
+      const chain: Array<SignalFunction<number> | ComputedFunction<number>> = [source];
 
       // Build deep chain
       for (let i = 1; i <= depth; i++) {
-        const prev = chain[i - 1];
+        const prev = chain[i - 1]!;
         chain.push(computed(() => prev() + 1));
       }
 
       // Access end to establish dependencies
-      expect(chain[depth]()).toBe(101);
+      expect(chain[depth]!()).toBe(101);
 
       // Time the push phase
       const startPush = performance.now();
@@ -563,7 +565,7 @@ describe('Push-Pull Algorithm Integration', () => {
 
       // Time the pull phase
       const startPull = performance.now();
-      const result = chain[depth]();
+      const result = chain[depth]!();
       const endPull = performance.now();
 
       expect(result).toBe(1100);
@@ -622,6 +624,7 @@ describe('Push-Pull Algorithm Integration', () => {
           const result = buggy() * 3;
           return result;
         } catch (e) {
+          void e;
           return -1; // Error sentinel
         }
       };

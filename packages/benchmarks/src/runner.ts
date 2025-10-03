@@ -303,7 +303,7 @@ async function main() {
   // if (!values['skip-build']) {
     console.log('Building packages...');
     try {
-      execSync('pnpm build:all', { 
+      execSync('pnpm build', { 
         stdio: 'inherit',
         cwd: path.resolve('./'),
       });

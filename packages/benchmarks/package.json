@@ -7,6 +7,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "pnpm --filter @lattice/signals check && pnpm --filter @lattice/signals build",
     "bench": "tsx --expose-gc src/runner.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",

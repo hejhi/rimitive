@@ -136,17 +136,17 @@ describe('Dynamic Dependencies - Pruning Bug Fix', () => {
       if (pattern === 0) {
         // Access even indices
         for (let i = 0; i < signals.length; i += 2) {
-          sum += (signals[i] as any)() as number;
+          sum += signals[i]!();
         }
       } else if (pattern === 1) {
         // Access odd indices
         for (let i = 1; i < signals.length; i += 2) {
-          sum += (signals[i] as any)() as number;
+          sum += signals[i]!();
         }
       } else {
         // Access first half
         for (let i = 0; i < signals.length / 2; i++) {
-          sum += (signals[i] as any)() as number;
+          sum += signals[i]!();
         }
       }
       return sum;
@@ -155,7 +155,7 @@ describe('Dynamic Dependencies - Pruning Bug Fix', () => {
     // Run many iterations with changing patterns
     for (let i = 0; i < 100; i++) {
       pattern = i % 3;
-      (signals[0] as any)(i); // Trigger re-evaluation
+      signals[0]!(i); // Trigger re-evaluation
       dynamic(); // Evaluate
     }
 
@@ -164,15 +164,15 @@ describe('Dynamic Dependencies - Pruning Bug Fix', () => {
     pattern = 0;
 
     // Reset all signals to known values and evaluate
-    signals.forEach((s, i) => (s as any)(i * 10));
+    signals.forEach((s, i) => s(i * 10));
     const baseline = dynamic(); // Should be 0+20+40+60+80 = 200
 
     // Try changing an odd signal (should NOT be a dependency anymore)
-    (signals[1] as any)(9999);
+    signals[1]!(9999);
     expect(dynamic()).toBe(baseline); // Should not change
 
     // Try changing an even signal (should still be a dependency)
-    (signals[0] as any)(9999);
+    signals[0]!(9999);
     expect(dynamic()).not.toBe(baseline); // Should change
   });
 });
