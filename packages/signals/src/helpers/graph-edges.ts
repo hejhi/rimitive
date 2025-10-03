@@ -83,14 +83,14 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     else consumer.dependencies = dep;
 
     // Wire producer side - route effects to scheduled list, computeds to subscribers
+    if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
+
     if (isScheduled) {
       producer.scheduledTail = dep;
-      if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
-      else producer.scheduled = dep;
+      if (!dep.prevConsumer) producer.scheduled = dep;
     } else {
       producer.subscribersTail = dep;
-      if (dep.prevConsumer) dep.prevConsumer.nextConsumer = dep;
-      else producer.subscribers = dep;
+      if (!dep.prevConsumer) producer.subscribers = dep;
     }
   };
 
@@ -158,11 +158,12 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
           const { producer, prevConsumer, nextConsumer } = toRemove;
 
           // Unlink from consumer chain
+          if (next !== undefined) {
+            next.prevDependency = tail;
+          }
           if (tail) {
-            if (next !== undefined) next.prevDependency = tail;
             tail.nextDependency = next;
           } else {
-            if (next !== undefined) next.prevDependency = undefined;
             node.dependencies = next;
           }
 
