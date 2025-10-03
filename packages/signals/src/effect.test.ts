@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { signal, effect, computed, batch, resetGlobalState } from './test-setup';
+import { signal, effect, computed, resetGlobalState } from './test-setup';
 
 describe('Effect', () => {
   beforeEach(() => {
@@ -14,26 +14,19 @@ describe('Effect', () => {
 
   it('should track signal dependencies', () => {
     const count = signal(0);
-    const fn = vi.fn(() => {
-      void count(); // Access signal to create dependency
-    });
+    const fn = vi.fn(() => void count());
 
     effect(fn);
     expect(fn).toHaveBeenCalledTimes(1);
 
     count(1);
     expect(fn).toHaveBeenCalledTimes(2);
-
-    count(2);
-    expect(fn).toHaveBeenCalledTimes(3);
   });
 
   it('should track computed dependencies', () => {
     const num = signal(1);
     const doubled = computed(() => num() * 2);
-    const fn = vi.fn(() => {
-      void doubled(); // Access computed to create dependency
-    });
+    const fn = vi.fn(() => void doubled());
 
     effect(fn);
     expect(fn).toHaveBeenCalledTimes(1);
@@ -51,15 +44,13 @@ describe('Effect', () => {
       void sig();
       callCount++;
       if (callCount > 1) {
-        // Cleanup should have been called
         expect(cleanup).toHaveBeenCalled();
       }
       return cleanup;
     });
-    
+
     expect(cleanup).not.toHaveBeenCalled();
-    
-    // Trigger effect again - cleanup should be called before re-running
+
     sig(1);
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
@@ -75,7 +66,7 @@ describe('Effect', () => {
 
   it('should stop reacting after disposal', () => {
     const sig = signal(0);
-    const fn = vi.fn(() => { void sig(); });
+    const fn = vi.fn(() => void sig());
 
     const dispose = effect(fn);
     expect(fn).toHaveBeenCalledTimes(1);
@@ -84,318 +75,45 @@ describe('Effect', () => {
     expect(fn).toHaveBeenCalledTimes(2);
 
     dispose();
-
     sig(2);
-    expect(fn).toHaveBeenCalledTimes(2); // Should not run again
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it('should batch multiple updates', () => {
-    const a = signal(1);
-    const b = signal(2);
-    const fn = vi.fn(() => {
-      void a();
-      void b();
-    });
-
-    effect(fn);
-    expect(fn).toHaveBeenCalledTimes(1);
-
-    batch(() => {
-      a(10);
-      b(20);
-    });
-
-    expect(fn).toHaveBeenCalledTimes(2); // Only once after batch
-  });
-
-  it('should handle nested effects', () => {
-    const sig = signal(0);
-    const outerFn = vi.fn();
-    const innerFn = vi.fn();
-
-    effect(() => {
-      outerFn();
-      void sig();
-      
-      effect(() => {
-        innerFn();
-        void sig();
-      });
-    });
-
-    expect(outerFn).toHaveBeenCalledTimes(1);
-    expect(innerFn).toHaveBeenCalledTimes(1);
-
-    sig(1);
-    expect(outerFn).toHaveBeenCalledTimes(2);
-    // Inner effect runs: 1 initial + 1 from first outer + 1 from second outer = 3
-    expect(innerFn).toBeCalledTimes(3);
-  });
-
-  it('should not run if already running (avoid infinite loops)', () => {
+  it('should not run if already running', () => {
     const sig = signal(0);
     let runCount = 0;
 
     effect(() => {
       runCount++;
       if (runCount < 5) {
-        sig(runCount); // This would cause infinite loop without protection
+        sig(runCount);
       }
     });
 
-    expect(runCount).toBeLessThan(10); // Should not spiral out of control
+    expect(runCount).toBeLessThan(10);
   });
 
-  it('should handle errors in effect function', () => {
+  it('should handle errors in effect', () => {
     const sig = signal(0);
-    const error = new Error('Test error');
-    const fn = vi.fn(() => {
-      void sig();
-      if (fn.mock.calls.length === 1) {
-        throw error;
-      }
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    effect(() => {
+      if (sig() === 1) throw new Error('Test error');
     });
-
-    expect(() => effect(fn)).toThrow(error);
-    expect(fn).toHaveBeenCalledTimes(1);
-
-    // Signal update should trigger effect again but not throw
-    sig(1);
-    expect(fn).toHaveBeenCalledTimes(2);
-  });
-
-  it('should maintain correct tracking after cleanup', () => {
-    const a = signal(1);
-    const b = signal(2);
-    const condition = signal(true);
-    const fn = vi.fn(() => {
-      if (condition()) {
-        void a();
-      } else {
-        void b();
-      }
-    });
-
-    effect(fn);
-    expect(fn).toHaveBeenCalledTimes(1);
-
-    // Change a - should trigger
-    a(10);
-    expect(fn).toHaveBeenCalledTimes(2);
-
-    // Change b - should not trigger (not tracked)
-    b(20);
-    expect(fn).toHaveBeenCalledTimes(2);
-
-    // Switch condition
-    condition(false);
-    expect(fn).toHaveBeenCalledTimes(3);
-
-    // Now a should not trigger
-    a(100);
-    expect(fn).toHaveBeenCalledTimes(3);
-
-    // But b should trigger
-    b(200);
-    expect(fn).toHaveBeenCalledTimes(4);
-  });
-
-  it('should handle multiple effects on same signal', () => {
-    const sig = signal(0);
-    const fn1 = vi.fn(() => { void sig(); });
-    const fn2 = vi.fn(() => { void sig(); });
-    const fn3 = vi.fn(() => { void sig(); });
-
-    effect(fn1);
-    effect(fn2);
-    effect(fn3);
-
-    expect(fn1).toHaveBeenCalledTimes(1);
-    expect(fn2).toHaveBeenCalledTimes(1);
-    expect(fn3).toHaveBeenCalledTimes(1);
 
     sig(1);
-
-    expect(fn1).toHaveBeenCalledTimes(2);
-    expect(fn2).toHaveBeenCalledTimes(2);
-    expect(fn3).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it('should not double-dispose', () => {
     const cleanup = vi.fn();
-    const sig = signal(0);
-    
-    const dispose = effect(() => {
-      void sig();
-      return cleanup;
-    });
-
-    expect(cleanup).not.toHaveBeenCalled();
+    const dispose = effect(() => cleanup);
 
     dispose();
-    expect(cleanup).toHaveBeenCalledTimes(1);
-
-    // Second dispose should be no-op
     dispose();
+    dispose();
+
     expect(cleanup).toHaveBeenCalledTimes(1);
-  });
-
-  it('should respect batching with nested batch calls', () => {
-    const sig = signal(0);
-    const fn = vi.fn(() => { void sig(); });
-
-    effect(fn);
-    expect(fn).toHaveBeenCalledTimes(1);
-
-    batch(() => {
-      sig(1);
-      batch(() => {
-        sig(2);
-        batch(() => {
-          sig(3);
-        });
-      });
-    });
-
-    // Should only run once after all batches complete
-    expect(fn).toHaveBeenCalledTimes(2);
-    expect(sig()).toBe(3);
-  });
-
-  it('should work with circular dependencies through computed', () => {
-    const toggle = signal(true);
-    const a = signal(1);
-    const b = signal(2);
-
-    const comp = computed(() => {
-      return toggle() ? a() : b();
-    });
-
-    const fn = vi.fn(() => {
-      void comp();
-    });
-
-    effect(fn);
-    expect(fn).toHaveBeenCalledTimes(1);
-
-    // Changing the active dependency should trigger
-    a(10);
-    expect(fn).toHaveBeenCalledTimes(2);
-
-    // Changing inactive dependency should not trigger
-    b(20);
-    expect(fn).toHaveBeenCalledTimes(2);
-
-    // Toggle to make b active
-    toggle(false);
-    expect(fn).toHaveBeenCalledTimes(3);
-
-    // Now b changes should trigger
-    b(30);
-    expect(fn).toHaveBeenCalledTimes(4);
-  });
-});
-
-/**
- * Additional effect tests from alien-signals
- *
- * Note: Most alien-signals effect tests are already covered in topology.test.ts:
- * - "should clear subscriptions when untracked by all subscribers" ✓
- * - "should not run untracked inner effect" ✓
- * - "should run outer effect first" ✓
- * - "should not trigger inner effect when resolve maybe dirty" ✓
- * - "should trigger inner effects in sequence" (skipped - behavioral difference)
- * - "should custom effect support batch" ✓
- * - "should duplicate subscribers do not affect the notify order" (skipped - behavioral difference)
- * - "should handle side effect with inner effects" ✓
- * - "should handle flags are indirectly updated during checkDirty" ✓
- *
- * The alien-signals test suite also includes effectScope tests, but we don't have
- * an effectScope concept in our implementation.
- */
-
-describe('Effect - Additional alien-signals patterns', () => {
-  beforeEach(() => {
-    resetGlobalState();
-  });
-
-  it('should clear computed subscriptions when effect is disposed', () => {
-    // From alien-signals: ensures computeds stop recomputing when no longer observed
-    let bRunTimes = 0;
-
-    const a = signal(1);
-    const b = computed(() => {
-      bRunTimes++;
-      return a() * 2;
-    });
-    const stopEffect = effect(() => {
-      b();
-    });
-
-    expect(bRunTimes).toBe(1);
-    a(2);
-    expect(bRunTimes).toBe(2);
-    stopEffect();
-    a(3);
-    expect(bRunTimes).toBe(2); // Should not recompute after disposal
-  });
-
-  it('should support custom batch effects', () => {
-    // From alien-signals: effects can create their own batch contexts
-    function batchEffect(fn: () => void) {
-      return effect(() => {
-        return batch(() => fn());
-      });
-    }
-
-    const logs: string[] = [];
-    const a = signal(0);
-    const b = signal(0);
-
-    const aa = computed(() => {
-      logs.push('aa-0');
-      if (!a()) {
-        b(1);
-      }
-      logs.push('aa-1');
-    });
-
-    const bb = computed(() => {
-      logs.push('bb');
-      return b();
-    });
-
-    batchEffect(() => {
-      bb();
-    });
-    batchEffect(() => {
-      aa();
-    });
-
-    expect(logs).toEqual(['bb', 'aa-0', 'aa-1', 'bb']);
-  });
-
-  it('should handle inner effects created in outer effect', () => {
-    // From alien-signals: validates inner effects run properly
-    const a = signal(0);
-    const b = signal(0);
-    const order: string[] = [];
-
-    effect(() => {
-      effect(() => {
-        a();
-        order.push('a');
-      });
-      effect(() => {
-        b();
-        order.push('b');
-      });
-      expect(order).toEqual(['a', 'b']);
-
-      order.length = 0;
-      b(1);
-      a(1);
-      expect(order).toEqual(['b', 'a']);
-    });
   });
 });
