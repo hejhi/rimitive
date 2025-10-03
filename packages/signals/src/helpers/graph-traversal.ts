@@ -63,20 +63,21 @@ export function createGraphTraversal(): GraphTraversal {
         // Handle producers
         if ('subscribers' in consumerNode) {
           const subscribers = consumerNode.subscribers;
-          let scheduledDep = consumerNode.scheduled;
+          let scheduledConsumers = consumerNode.scheduled;
 
-          if (scheduledDep) {
-            while (scheduledDep) {
-              const scheduled = scheduledDep.consumer;
+          // Handle scheduling of consumers
+          if (scheduledConsumers) {
+            while (scheduledConsumers) {
+              const scheduled = scheduledConsumers.consumer;
               if (scheduled.status === STATUS_CLEAN) {
                 scheduled.status = CONSUMER_PENDING;
                 schedule(scheduled);
               }
-              scheduledDep = scheduledDep.nextConsumer;
+              scheduledConsumers = scheduledConsumers.nextConsumer;
             }
           }
-
-          // Check if we can traverse deeper
+          
+          // Handle subscribers
           if (subscribers) {
             // Continue traversal - branch node
             dep = subscribers;
@@ -109,7 +110,6 @@ export function createGraphTraversal(): GraphTraversal {
           continue traverse;
         }
       }
-
 
       break;
     };
