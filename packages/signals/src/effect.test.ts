@@ -140,11 +140,10 @@ describe('Effect', () => {
 
     it('should handle disposal during signal updates', () => {
       const trigger = signal(0);
-      let disposeEffect: (() => void) | undefined;
       let effectRuns = 0;
 
       // Create effect that will be disposed by another update
-      disposeEffect = effect(() => {
+      const disposeEffect = effect(() => {
         if (trigger() > 0) {
           effectRuns++;
         }

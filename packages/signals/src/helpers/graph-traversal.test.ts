@@ -46,7 +46,7 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b);
 
       const { propagate } = createGraphTraversal();
-      propagate(a.subscribers!);
+      propagate(a.subscribers);
 
       expect(b.status).toBe(CONSUMER_PENDING);
       expect(c.status).toBe(CONSUMER_PENDING);
@@ -71,7 +71,7 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b, createDep(c));
 
       const { propagate } = createGraphTraversal();
-      propagate(a.subscribers!);
+      propagate(a.subscribers);
 
       expect(b.status).toBe(CONSUMER_PENDING);
       expect(c.status).toBe(CONSUMER_PENDING);
@@ -98,7 +98,7 @@ describe('Graph Traversal Algorithm', () => {
       const { traverseGraph } = createGraphTraversal();
       const leaves: DerivedNode[] = [];
 
-      traverseGraph(a.subscribers!, (node) => {
+      traverseGraph(a.subscribers, (node) => {
         leaves.push(node as DerivedNode);
       });
 
@@ -121,7 +121,7 @@ describe('Graph Traversal Algorithm', () => {
       const { traverseGraph } = createGraphTraversal();
       const leaves: DerivedNode[] = [];
 
-      traverseGraph(a.subscribers!, (node) => {
+      traverseGraph(a.subscribers, (node) => {
         leaves.push(node as DerivedNode);
       });
 
@@ -136,7 +136,7 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b);
 
       const { propagate } = createGraphTraversal();
-      propagate(a.subscribers!);
+      propagate(a.subscribers);
 
       expect(b.status).toBe(CONSUMER_PENDING);
     });
@@ -179,7 +179,7 @@ describe('Graph Traversal Algorithm', () => {
       track(d);
       track(e);
 
-      traverseGraph(a.subscribers!, () => {});
+      traverseGraph(a.subscribers, () => {});
 
       // Depth-first: B -> D -> C -> E
       expect(order).toEqual([b, d, c, e]);
@@ -202,7 +202,7 @@ describe('Graph Traversal Algorithm', () => {
       const leaves: DerivedNode[] = [];
       const { traverseGraph } = createGraphTraversal();
 
-      traverseGraph(a.subscribers!, (node) => {
+      traverseGraph(a.subscribers, (node) => {
         leaves.push(node as DerivedNode);
       });
 
@@ -291,7 +291,7 @@ describe('Graph Traversal Algorithm', () => {
       const leaves: DerivedNode[] = [];
       const { traverseGraph } = createGraphTraversal();
 
-      traverseGraph(a.subscribers!, (node) => {
+      traverseGraph(a.subscribers, (node) => {
         leaves.push(node as DerivedNode);
       });
 
