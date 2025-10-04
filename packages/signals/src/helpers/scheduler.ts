@@ -138,7 +138,6 @@ export function createScheduler({
 
     // Reset collection list
     ctx.scheduledToFlush = undefined;
-    ctx.scheduledFlushTail = undefined;
 
     // Only flush if we must
     if (queueHead === undefined) return;

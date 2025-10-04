@@ -52,6 +52,7 @@ export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTrav
     let dep: Dependency = subscribers;
     let next: Dependency | undefined = subscribers.nextConsumer;
     let stack: Stack<Dependency | undefined> | undefined;
+    let scheduledFlushTail: Dependency | undefined;
 
     traverse: for (;;) {
       const consumerNode = dep.consumer;
@@ -72,16 +73,15 @@ export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTrav
               const scheduled = scheduledConsumers.consumer;
               if (scheduled.status === STATUS_CLEAN) {
                 scheduled.status = CONSUMER_PENDING;
-                const flushTail = ctx.scheduledFlushTail;
 
                 // Add to collection list (O(1) append)
-                if (flushTail === undefined) {
+                if (scheduledFlushTail === undefined) {
                   ctx.scheduledToFlush = scheduledConsumers;
                 } else {
-                  flushTail.nextScheduledToFlush = scheduledConsumers;
+                  scheduledFlushTail.nextScheduledToFlush = scheduledConsumers;
                 }
 
-                ctx.scheduledFlushTail = scheduledConsumers;
+                scheduledFlushTail = scheduledConsumers;
               }
               scheduledConsumers = scheduledConsumers.nextConsumer;
             } while (scheduledConsumers);

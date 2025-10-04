@@ -9,7 +9,6 @@ export interface GlobalContext {
 
   // Temporary collection list for scheduled effects during propagation
   scheduledToFlush: Dependency | undefined;
-  scheduledFlushTail: Dependency | undefined;
 }
 
 export function createBaseContext(): GlobalContext {
@@ -17,6 +16,5 @@ export function createBaseContext(): GlobalContext {
     consumerScope: null,
     trackingVersion: 0,
     scheduledToFlush: undefined,
-    scheduledFlushTail: undefined,
   };
 }
