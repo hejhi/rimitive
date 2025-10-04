@@ -13,7 +13,7 @@ export const createApi = () => {
     {
       ctx,
       trackDependency,
-      propagate: createGraphTraversal().propagate,
+      propagate: createGraphTraversal({ ctx }).propagate,
     }
   );
 };

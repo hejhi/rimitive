@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { DerivedNode, Dependency, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
+import { createBaseContext, GlobalContext } from '../context';
 
 const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_DIRTY } = CONSTANTS;
 
@@ -13,6 +14,12 @@ const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_DIRTY } = CONSTANTS;
  */
 
 describe('Graph Traversal Algorithm', () => {
+  let ctx: GlobalContext;
+
+  beforeEach(() => {
+    ctx = createBaseContext();
+  });
+
   // Helper to create a node
   function createNode(status: number = STATUS_CLEAN): DerivedNode {
     return {
@@ -45,7 +52,7 @@ describe('Graph Traversal Algorithm', () => {
       b.subscribers = createDep(c);
       a.subscribers = createDep(b);
 
-      const { propagate } = createGraphTraversal();
+      const { propagate } = createGraphTraversal({ ctx });
       propagate(a.subscribers);
 
       expect(b.status).toBe(CONSUMER_PENDING);
@@ -70,7 +77,7 @@ describe('Graph Traversal Algorithm', () => {
       c.subscribers = createDep(f);
       a.subscribers = createDep(b, createDep(c));
 
-      const { propagate } = createGraphTraversal();
+      const { propagate } = createGraphTraversal({ ctx });
       propagate(a.subscribers);
 
       expect(b.status).toBe(CONSUMER_PENDING);
@@ -95,7 +102,7 @@ describe('Graph Traversal Algorithm', () => {
       c.subscribers = createDep(d);
       a.subscribers = createDep(b, createDep(c));
 
-      const { traverseGraph } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal({ ctx });
       const leaves: DerivedNode[] = [];
 
       traverseGraph(a.subscribers, (node) => {
@@ -118,7 +125,7 @@ describe('Graph Traversal Algorithm', () => {
 
       a.subscribers = createDep(b);
 
-      const { traverseGraph } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal({ ctx });
       const leaves: DerivedNode[] = [];
 
       traverseGraph(a.subscribers, (node) => {
@@ -135,7 +142,7 @@ describe('Graph Traversal Algorithm', () => {
 
       a.subscribers = createDep(b);
 
-      const { propagate } = createGraphTraversal();
+      const { propagate } = createGraphTraversal({ ctx });
       propagate(a.subscribers);
 
       expect(b.status).toBe(CONSUMER_PENDING);
@@ -160,7 +167,7 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b, createDep(c));
 
       const order: DerivedNode[] = [];
-      const { traverseGraph } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal({ ctx });
 
       // Track visit order via status changes
       const track = (node: DerivedNode) => {
@@ -200,7 +207,7 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b, createDep(c));
 
       const leaves: DerivedNode[] = [];
-      const { traverseGraph } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal({ ctx });
 
       traverseGraph(a.subscribers, (node) => {
         leaves.push(node as DerivedNode);
@@ -226,7 +233,7 @@ describe('Graph Traversal Algorithm', () => {
         nodes[i]!.subscribers = createDep(nodes[i + 1]!);
       }
 
-      const { propagate } = createGraphTraversal();
+      const { propagate } = createGraphTraversal({ ctx });
 
       expect(() => {
         propagate(createDep(nodes[0]!));
@@ -256,7 +263,7 @@ describe('Graph Traversal Algorithm', () => {
       }
       a.subscribers = subs;
 
-      const { propagate } = createGraphTraversal();
+      const { propagate } = createGraphTraversal({ ctx });
       propagate(a.subscribers!);
 
       // All marked
@@ -289,7 +296,7 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b, createDep(c, createDep(d)));
 
       const leaves: DerivedNode[] = [];
-      const { traverseGraph } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal({ ctx });
 
       traverseGraph(a.subscribers, (node) => {
         leaves.push(node as DerivedNode);
@@ -309,7 +316,7 @@ describe('Graph Traversal Algorithm', () => {
 
   describe('Edge Cases', () => {
     it('should handle undefined gracefully', () => {
-      const { traverseGraph } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal({ ctx });
       const leaves: DerivedNode[] = [];
 
       expect(() => {
@@ -324,7 +331,7 @@ describe('Graph Traversal Algorithm', () => {
     it('should handle single node', () => {
       const a = createNode();
 
-      const { propagate } = createGraphTraversal();
+      const { propagate } = createGraphTraversal({ ctx });
       propagate(createDep(a));
 
       expect(a.status).toBe(CONSUMER_PENDING);

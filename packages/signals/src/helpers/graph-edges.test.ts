@@ -44,9 +44,9 @@ function createContext(): GlobalContext {
   return {
     consumerScope: null,
     trackingVersion: 0,
-    batchDepth: 0,
-    inNotificationPhase: false,
-  } as GlobalContext;
+    scheduledToFlush: undefined,
+    scheduledFlushTail: undefined,
+  };
 }
 
 // Helper to verify list integrity invariant

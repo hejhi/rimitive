@@ -7,8 +7,8 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 export const createApi = () => {
-  const { traverseGraph } = createGraphTraversal();
   const ctx = createBaseContext();
+  const { traverseGraph } = createGraphTraversal({ ctx });
   const graphEdges = createGraphEdges({ ctx });
   const { dispose, propagate } = createScheduler({
     propagate: traverseGraph,

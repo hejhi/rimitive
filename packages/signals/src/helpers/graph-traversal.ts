@@ -7,6 +7,7 @@
  */
 
 import type { Dependency, ConsumerNode } from '../types';
+import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
@@ -35,7 +36,7 @@ const NOOP = () => { };
  * Create a graph traversal helper.
  * Provides propagation without scheduling or automatic execution.
  */
-export function createGraphTraversal(): GraphTraversal {
+export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTraversal {
   /**
    * Traverse dependency graph depth-first, marking nodes as invalidated.
    * Calls visitor function for each leaf node (nodes without subscribers).
@@ -65,18 +66,25 @@ export function createGraphTraversal(): GraphTraversal {
           const subscribers = consumerNode.subscribers;
           let scheduledConsumers = consumerNode.scheduled;
 
-          // Handle scheduling of consumers
+          // Collect scheduled effects for deferred processing
           if (scheduledConsumers) {
             while (scheduledConsumers) {
               const scheduled = scheduledConsumers.consumer;
               if (scheduled.status === STATUS_CLEAN) {
                 scheduled.status = CONSUMER_PENDING;
-                schedule(scheduled);
+
+                // Add to collection list (O(1) append)
+                if (!ctx.scheduledToFlush) {
+                  ctx.scheduledToFlush = scheduledConsumers;
+                } else {
+                  ctx.scheduledFlushTail!.nextScheduledToFlush = scheduledConsumers;
+                }
+                ctx.scheduledFlushTail = scheduledConsumers;
               }
               scheduledConsumers = scheduledConsumers.nextConsumer;
             }
           }
-          
+
           // Handle subscribers
           if (subscribers) {
             // Continue traversal - branch node
@@ -112,7 +120,20 @@ export function createGraphTraversal(): GraphTraversal {
       }
 
       break;
-    };
+    }
+
+    // Process collected scheduled effects after traversal completes
+    let current = ctx.scheduledToFlush;
+    while (current) {
+      schedule(current.consumer);
+      const next = current.nextScheduledToFlush;
+      current.nextScheduledToFlush = undefined;  // Clean up temporary link
+      current = next;
+    }
+
+    // Reset collection list
+    ctx.scheduledToFlush = undefined;
+    ctx.scheduledFlushTail = undefined;
   };
 
   /**
