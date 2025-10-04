@@ -9,13 +9,12 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 export const createApi = () => {
   const ctx = createBaseContext();
   const { traverseGraph, schedule } = createGraphTraversal();
-  const graphEdges = createGraphEdges({ ctx });
+  const { detachAll, trackDependency, track } = createGraphEdges({ ctx });
   const { dispose, propagateSubscribers, propagateScheduled } = createScheduler({
     traverseGraph,
     schedule,
-    detachAll: graphEdges.detachAll,
+    detachAll,
   });
-  const { trackDependency, track, detachAll } = graphEdges;
 
   return createSignalAPI(
     {
