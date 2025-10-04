@@ -58,8 +58,8 @@ export interface ConsumerNode extends ReactiveNode {
   trackingVersion: number; // Global version when this node was last tracked
 }
 
-export interface DerivedNode extends ProducerNode, ConsumerNode {
-  compute: () => unknown; // The computation function
+export interface DerivedNode<T = unknown> extends ProducerNode, ConsumerNode {
+  compute: () => T; // The computation function
 }
 
 // PATTERN: Deferred Execution Queue

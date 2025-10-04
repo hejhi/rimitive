@@ -32,7 +32,7 @@ export type { GraphEdges } from './helpers/graph-edges';
 export type { PullPropagator } from './helpers/pull-propagator';
 
 // Internal computed state that gets bound to the function
-interface ComputedNode<T> extends DerivedNode {
+interface ComputedNode<T> extends DerivedNode<T> {
   __type: 'computed';
   value: T;
 }
@@ -59,7 +59,7 @@ export function createComputedFactory({
     update: if (status & DERIVED_DIRTY || (isPending && pullUpdates(this))) {
       // Recompute the value
       const prev = this.value;
-      this.value = track(this, this.compute) as T;
+      this.value = track(this, this.compute);
 
       // Propagate if value changed and there are multiple subscribers
       if (prev === this.value) break update;
@@ -83,13 +83,11 @@ export function createComputedFactory({
 
     try {
       const status = this.status;
+      const isPending = status & CONSUMER_PENDING;
 
-      if (
-        status & DERIVED_DIRTY ||
-        (status & CONSUMER_PENDING && pullUpdates(this))
-      ) {
-        this.value = track(this, this.compute) as T;
-      } else if (status & CONSUMER_PENDING) this.status = STATUS_CLEAN;
+      if (status & DERIVED_DIRTY || (isPending && pullUpdates(this))) {
+        this.value = track(this, this.compute);
+      } else if (isPending) this.status = STATUS_CLEAN;
 
       return this.value;
     } finally {
