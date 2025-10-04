@@ -7,13 +7,15 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 export const createApi = () => {
   const ctx = createBaseContext();
   const { trackDependency } = createGraphEdges({ ctx });
+  const { propagate } = createGraphTraversal();
 
   return createSignalAPI(
     { signal: createSignalFactory },
     {
       ctx,
       trackDependency,
-      propagate: createGraphTraversal().propagate,
+      propagateSubscribers: propagate,
+      propagateScheduled: propagate,
     }
   );
 };

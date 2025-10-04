@@ -29,8 +29,10 @@ export function setSchedulerErrorHandler(handler: (error: unknown) => void): voi
 }
 
 export interface Scheduler {
-  /** Propagate updates from a producer to all its dependents */
-  propagate: (subscribers: Dependency) => void;
+  /** Propagate updates through computed subscribers graph */
+  propagateSubscribers: (subscribers: Dependency) => void;
+  /** Propagate updates through scheduled effects chain */
+  propagateScheduled: (scheduled: Dependency) => void;
   /** Dispose a scheduled node */
   dispose: <T extends ScheduledNode>(
     node: T,
@@ -45,11 +47,16 @@ export interface Scheduler {
 }
 
 export function createScheduler({
-  propagate,
+  traverseGraph,
+  scheduleEffects,
   detachAll,
 }: {
-  propagate: (
+  traverseGraph: (
     subscribers: Dependency,
+    schedule: (scheduledDep: Dependency) => void
+  ) => void;
+  scheduleEffects: (
+    scheduled: Dependency,
     schedule: (scheduledDep: Dependency) => void
   ) => void;
   detachAll: (dep: Dependency) => void;
@@ -129,9 +136,19 @@ export function createScheduler({
     } while (scheduledDep);
   };
 
-  // Propagate composes traversal with scheduling
-  const scheduledPropagate = (subscribers: Dependency): void => {
-    propagate(subscribers, queueIfScheduled);
+  // Propagate through computed subscribers with scheduling
+  const propagateSubscribers = (subscribers: Dependency): void => {
+    traverseGraph(subscribers, queueIfScheduled);
+
+    // Only flush if we must
+    if (queueHead === undefined) return;
+
+    flush();
+  };
+
+  // Propagate through scheduled effects chain
+  const propagateScheduled = (scheduled: Dependency): void => {
+    scheduleEffects(scheduled, queueIfScheduled);
 
     // Only flush if we must
     if (queueHead === undefined) return;
@@ -172,7 +189,8 @@ export function createScheduler({
   };
 
   return {
-    propagate: scheduledPropagate,
+    propagateSubscribers,
+    propagateScheduled,
     dispose,
     startBatch,
     endBatch,

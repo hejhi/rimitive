@@ -20,16 +20,19 @@ interface Stack<T> {
 }
 
 export interface GraphTraversal {
-  /** Propagate invalidation through the dependency graph */
-  propagate: (subscribers: Dependency) => void;
-  /** Traverse graph with custom scheduler callback for scheduled effects */
+  /** Traverse computed subscribers graph with custom scheduler callback for scheduled effects */
   traverseGraph: (
     subscribers: Dependency,
     schedule: (scheduledDep: Dependency) => void
   ) => void;
+  /** Schedule effect chain directly without traversal */
+  scheduleEffects: (
+    scheduled: Dependency,
+    schedule: (scheduledDep: Dependency) => void
+  ) => void;
+  /** Simple propagation that only marks nodes as invalidated (for testing/simple use cases) */
+  propagate: (subscribers: Dependency) => void;
 }
-
-const NOOP = () => { };
 
 /**
  * Create a graph traversal helper.
@@ -47,13 +50,6 @@ export function createGraphTraversal(): GraphTraversal {
   ): void => {
     // Check if this is a scheduled effects chain (effects don't have 'subscribers')
     // If so, pass directly to scheduler and return - no need to traverse
-    const firstConsumer = subscribers.consumer;
-
-    // This is a chain of effects - pass to scheduler
-    if ('flush' in firstConsumer) {
-      schedule(subscribers);
-      return;
-    }
 
     let dep: Dependency = subscribers;
     let next: Dependency | undefined = subscribers.nextConsumer;
@@ -75,7 +71,7 @@ export function createGraphTraversal(): GraphTraversal {
 
           const subscribers = consumerNode.subscribers;
 
-          if (subscribers) {
+          if (subscribers !== undefined) {
             // Continue traversal - branch node
             dep = subscribers;
             const nextSub = dep.nextConsumer;
@@ -112,14 +108,27 @@ export function createGraphTraversal(): GraphTraversal {
   };
 
   /**
+   * Schedule effects chain directly without graph traversal.
+   * Used when we know the dependency chain contains only effects.
+   */
+  const scheduleEffects = (
+    scheduled: Dependency,
+    schedule: (scheduledDep: Dependency) => void
+  ): void => {
+    schedule(scheduled);
+  };
+
+  /**
    * Simple propagation that only marks nodes as invalidated.
    * Does not schedule or execute any nodes.
    */
+  const NOOP = () => {};
   const propagate = (subscribers: Dependency): void =>
     traverseGraph(subscribers, NOOP);
 
   return {
-    propagate,
     traverseGraph,
+    scheduleEffects,
+    propagate,
   };
 }

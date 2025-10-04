@@ -21,7 +21,8 @@ export const createApi = () => {
     {
       ctx,
       trackDependency,
-      propagate,
+      propagateSubscribers: propagate,
+      propagateScheduled: propagate,
       pullUpdates,
       track,
       shallowPropagate,

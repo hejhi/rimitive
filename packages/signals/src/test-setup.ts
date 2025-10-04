@@ -4,7 +4,7 @@
 import type { SignalFunction } from './signal';
 // Effect now returns () => void directly
 import type { ComputedFunction } from './computed';
-import type { ConsumerNode, Dependency } from './types';
+import type { ConsumerNode } from './types';
 import { createSignalFactory } from './signal';
 import { createSubscribeFactory, SubscribeCallback } from './subscribe';
 import { createComputedFactory } from './computed';
@@ -20,13 +20,13 @@ import { createGraphTraversal } from './helpers/graph-traversal';
 // Create a complete context with all helpers
 export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler & {
     ctx: GlobalContext;
-    propagate: (subscribers: Dependency) => void;
   } {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges({ ctx });
-  const { traverseGraph } = createGraphTraversal();
+  const { traverseGraph, scheduleEffects } = createGraphTraversal();
   const scheduler = createScheduler({
-    propagate: traverseGraph,
+    traverseGraph,
+    scheduleEffects,
     detachAll: graphEdges.detachAll,
   });
   const pull = createPullPropagator({ track: graphEdges.track });
@@ -42,11 +42,11 @@ export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler 
 // Create a test instance with a stable context
 export function createTestInstance() {
   const opts = createDefaultContext();
-  const { ctx, propagate, startBatch, endBatch } = opts;
+  const { ctx, propagateSubscribers, propagateScheduled, startBatch, endBatch } = opts;
 
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory({ ...opts, propagate }),
+    createSignalFactory({ ...opts, propagateSubscribers, propagateScheduled }),
     createComputedFactory(opts),
     createEffectFactory(opts),
     createBatchFactory({ ...opts, startBatch, endBatch }),

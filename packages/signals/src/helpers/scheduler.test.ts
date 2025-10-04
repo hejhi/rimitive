@@ -53,7 +53,7 @@ describe('Scheduler Algorithm', () => {
   describe('Queue Management', () => {
     it('should queue nodes in FIFO order', () => {
       const order: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => order.push('A'));
         const node2 = createMockScheduledNode();
@@ -66,29 +66,31 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
       const dep = createMockDependency();
-      scheduler.propagate(dep);
+      scheduler.propagateScheduled(dep);
 
       expect(order).toEqual(['A', 'B', 'C']);
     });
 
     it('should not queue nodes without flush method', () => {
       let queued = 0;
-      const mockPropagate = vi.fn(() => {
+      const mockScheduleEffects = vi.fn(() => {
         queued++;
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
       const dep = createMockDependency();
-      scheduler.propagate(dep);
+      scheduler.propagateScheduled(dep);
 
       // Consumer without flush should not be queued
       expect(queued).toBe(1);
@@ -96,7 +98,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should only queue STATUS_CLEAN nodes', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
         node1.status = STATUS_CLEAN;  // Clean nodes get queued
         node1.flush = vi.fn(() => executed.push('clean'));
@@ -114,11 +116,12 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
 
       // Only STATUS_CLEAN nodes should be queued and executed
       expect(executed).toEqual(['clean']);
@@ -128,7 +131,8 @@ describe('Scheduler Algorithm', () => {
   describe('Batch Management', () => {
     it('should increment batch depth on startBatch', () => {
       const scheduler = createScheduler({
-        propagate: vi.fn(),
+        traverseGraph: vi.fn(),
+        scheduleEffects: vi.fn(),
         detachAll: vi.fn(),
       });
 
@@ -140,7 +144,8 @@ describe('Scheduler Algorithm', () => {
 
     it('should decrement batch depth on endBatch', () => {
       const scheduler = createScheduler({
-        propagate: vi.fn(),
+        traverseGraph: vi.fn(),
+        scheduleEffects: vi.fn(),
         detachAll: vi.fn(),
       });
 
@@ -152,7 +157,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should not flush during batch', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
         const depChain = createDepChain(node)!;
@@ -160,12 +165,13 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
       scheduler.startBatch();
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
 
       // Should not flush yet
       expect(executed).toEqual([]);
@@ -178,7 +184,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should flush only when batch depth reaches 0', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
         const depChain = createDepChain(node)!;
@@ -186,13 +192,14 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
       scheduler.startBatch(); // depth = 1
       scheduler.startBatch(); // depth = 2
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
       expect(executed).toEqual([]);
 
       scheduler.endBatch(); // depth = 1
@@ -204,7 +211,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should handle manual flush', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
         const depChain = createDepChain(node)!;
@@ -212,12 +219,13 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
       scheduler.startBatch();
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
       expect(executed).toEqual([]);
 
       // Manual flush should not work during batch
@@ -232,7 +240,7 @@ describe('Scheduler Algorithm', () => {
   describe('Status Transitions', () => {
     it('should transition STATUS_CLEAN -> CONSUMER_PENDING -> SCHEDULED -> STATUS_CLEAN', () => {
       const statuses: number[] = [];
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
         statuses.push(node.status); // Should be STATUS_CLEAN initially
 
@@ -248,11 +256,12 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
 
       expect(statuses).toContain(STATUS_CLEAN);
       expect(statuses).toContain(SCHEDULED);
@@ -260,7 +269,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should skip disposed nodes during flush', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => executed.push('A'));
 
@@ -278,11 +287,12 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
 
       // B should be skipped
       expect(executed).toEqual(['A', 'C']);
@@ -294,7 +304,7 @@ describe('Scheduler Algorithm', () => {
       const executed: string[] = [];
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => executed.push('A'));
 
@@ -311,11 +321,12 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
 
       expect(executed).toContain('A');
       expect(executed).toContain('C');
@@ -330,7 +341,7 @@ describe('Scheduler Algorithm', () => {
       const order: string[] = [];
       let secondPropagation = false;
 
-      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
+      const mockScheduleEffects = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         if (!secondPropagation) {
           // First propagation
           const node1 = createMockScheduledNode();
@@ -338,7 +349,7 @@ describe('Scheduler Algorithm', () => {
             order.push('outer');
             // Trigger another propagation during flush
             secondPropagation = true;
-            scheduler.propagate(createMockDependency());
+            scheduler.propagateScheduled(createMockDependency());
           });
           const depChain = createDepChain(node1)!;
           schedule(depChain);
@@ -352,11 +363,12 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
-        propagate: mockPropagate,
+        traverseGraph: vi.fn(),
+        scheduleEffects: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
-      scheduler.propagate(createMockDependency());
+      scheduler.propagateScheduled(createMockDependency());
 
       expect(order).toEqual(['outer', 'inner']);
     });
@@ -369,7 +381,8 @@ describe('Scheduler Algorithm', () => {
       const detachAll = vi.fn();
 
       const scheduler = createScheduler({
-        propagate: vi.fn(),
+        traverseGraph: vi.fn(),
+        scheduleEffects: vi.fn(),
         detachAll,
       });
 
@@ -384,7 +397,8 @@ describe('Scheduler Algorithm', () => {
       const cleanup = vi.fn();
 
       const scheduler = createScheduler({
-        propagate: vi.fn(),
+        traverseGraph: vi.fn(),
+        scheduleEffects: vi.fn(),
         detachAll: vi.fn(),
       });
 
@@ -403,7 +417,8 @@ describe('Scheduler Algorithm', () => {
       const detachAll = vi.fn();
 
       const scheduler = createScheduler({
-        propagate: vi.fn(),
+        traverseGraph: vi.fn(),
+        scheduleEffects: vi.fn(),
         detachAll,
       });
 

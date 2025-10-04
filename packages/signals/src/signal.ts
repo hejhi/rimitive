@@ -13,12 +13,11 @@
  * - The edge tracks version numbers for efficient cache invalidation
  * - This enables automatic dependency discovery during execution
  */
-import type { ProducerNode } from './types';
+import type { ProducerNode, Dependency } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
-import { GraphTraversal } from './helpers/graph-traversal';
 
 const { SIGNAL_UPDATED, STATUS_CLEAN } = CONSTANTS;
 
@@ -31,13 +30,13 @@ export interface SignalFunction<T = unknown> {
 export type SignalOpts = {
   ctx: GlobalContext;
   trackDependency: GraphEdges['trackDependency'];
-  propagate: GraphTraversal['propagate'];
+  propagateSubscribers: (subscribers: Dependency) => void;
+  propagateScheduled: (scheduled: Dependency) => void;
 };
 
 // Re-export types needed for type inference
 export type { GlobalContext } from './context';
 export type { GraphEdges } from './helpers/graph-edges';
-export type { GraphTraversal } from './helpers/graph-traversal';
 
 interface SignalNode<T> extends ProducerNode {
   __type: 'signal';
@@ -52,7 +51,8 @@ export function createSignalFactory(
 ): SignalFactory {
   const {
     trackDependency,
-    propagate,
+    propagateSubscribers,
+    propagateScheduled,
     ctx,
   } = opts;
 
@@ -89,8 +89,8 @@ export function createSignalFactory(
 
       // Mark dirty and propagate (scheduler handles flushing automatically)
       node.status = SIGNAL_UPDATED;
-      if (subs) propagate(subs);
-      if (scheduled) propagate(scheduled);
+      if (subs) propagateSubscribers(subs);
+      if (scheduled) propagateScheduled(scheduled);
     }
 
     // Direct property assignment
