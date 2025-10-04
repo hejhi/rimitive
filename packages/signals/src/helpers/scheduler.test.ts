@@ -67,7 +67,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -85,7 +85,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -117,7 +117,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -132,7 +132,7 @@ describe('Scheduler Algorithm', () => {
     it('should increment batch depth on startBatch', () => {
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: vi.fn(),
+        schedule: vi.fn(),
         detachAll: vi.fn(),
       });
 
@@ -145,7 +145,7 @@ describe('Scheduler Algorithm', () => {
     it('should decrement batch depth on endBatch', () => {
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: vi.fn(),
+        schedule: vi.fn(),
         detachAll: vi.fn(),
       });
 
@@ -166,7 +166,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -193,7 +193,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -220,7 +220,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -257,7 +257,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -288,7 +288,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -322,7 +322,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -364,7 +364,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: mockScheduleEffects,
+        schedule: mockScheduleEffects,
         detachAll: vi.fn(),
       });
 
@@ -382,7 +382,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: vi.fn(),
+        schedule: vi.fn(),
         detachAll,
       });
 
@@ -398,7 +398,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: vi.fn(),
+        schedule: vi.fn(),
         detachAll: vi.fn(),
       });
 
@@ -418,7 +418,7 @@ describe('Scheduler Algorithm', () => {
 
       const scheduler = createScheduler({
         traverseGraph: vi.fn(),
-        scheduleEffects: vi.fn(),
+        schedule: vi.fn(),
         detachAll,
       });
 

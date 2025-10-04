@@ -11,12 +11,12 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 
 export const createApi = () => {
   const ctx = createBaseContext();
-  const { traverseGraph, scheduleEffects } = createGraphTraversal();
+  const { traverseGraph, schedule } = createGraphTraversal();
   const graphEdges = createGraphEdges({ ctx });
   const { trackDependency } = graphEdges;
   const { startBatch, endBatch, propagateSubscribers, propagateScheduled } = createScheduler({
     traverseGraph,
-    scheduleEffects,
+    schedule,
     detachAll: graphEdges.detachAll
   });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track: graphEdges.track });

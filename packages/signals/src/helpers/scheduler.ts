@@ -48,14 +48,14 @@ export interface Scheduler {
 
 export function createScheduler({
   traverseGraph,
-  scheduleEffects,
+  schedule,
   detachAll,
 }: {
   traverseGraph: (
     subscribers: Dependency,
     schedule: (scheduledDep: Dependency) => void
   ) => void;
-  scheduleEffects: (
+  schedule: (
     scheduled: Dependency,
     schedule: (scheduledDep: Dependency) => void
   ) => void;
@@ -148,7 +148,7 @@ export function createScheduler({
 
   // Propagate through scheduled effects chain
   const propagateScheduled = (scheduled: Dependency): void => {
-    scheduleEffects(scheduled, queueIfScheduled);
+    schedule(scheduled, queueIfScheduled);
 
     // Only flush if we must
     if (queueHead === undefined) return;
