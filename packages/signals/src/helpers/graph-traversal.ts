@@ -75,11 +75,8 @@ export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTrav
                 scheduled.status = CONSUMER_PENDING;
 
                 // Add to collection list (O(1) append)
-                if (scheduledFlushTail === undefined) {
-                  ctx.scheduledToFlush = scheduledConsumers;
-                } else {
-                  scheduledFlushTail.nextScheduledToFlush = scheduledConsumers;
-                }
+                if (scheduledFlushTail === undefined) ctx.scheduledToFlush = scheduledConsumers;
+                else scheduledFlushTail.nextScheduledToFlush = scheduledConsumers;
 
                 scheduledFlushTail = scheduledConsumers;
               }
