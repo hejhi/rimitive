@@ -8,7 +8,7 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 
 export const createApi = () => {
   const ctx = createBaseContext();
-  const { propagate } = createGraphTraversal({ ctx });
+  const { propagate } = createGraphTraversal();
   const graphEdges = createGraphEdges({ ctx });
   const { trackDependency, track } = graphEdges;
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track: graphEdges.track });

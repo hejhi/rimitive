@@ -44,7 +44,6 @@ function createContext(): GlobalContext {
   return {
     consumerScope: null,
     trackingVersion: 0,
-    scheduledToFlush: undefined,
   };
 }
 

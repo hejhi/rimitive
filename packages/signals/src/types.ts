@@ -82,10 +82,9 @@ export type ToNode = ConsumerNode | DerivedNode | ScheduledNode;
 // - Better cache locality
 // - O(1) insertion/removal
 //
-// The dependency is part of THREE linked lists:
+// The dependency is part of TWO doubly-linked lists simultaneously:
 // 1. Producer's dependent list: prevConsumer <-> dependency <-> nextConsumer (all dependencies FROM same producer)
 // 2. Consumer's dependency list: prevDependency <-> dependency <-> nextDependency (all dependencies TO same consumer)
-// 3. Temporary collection list: nextScheduledToFlush (only during propagation for scheduled effects)
 //
 // This allows efficient traversal in both directions:
 // - Forward: "What depends on this producer?"
@@ -101,9 +100,6 @@ export interface Dependency {
   // Consumer's dependency list navigation
   prevDependency: Dependency | undefined; // Previous in dependency list
   nextDependency: Dependency | undefined; // Next in dependency list
-
-  // Temporary collection list (only used during propagation)
-  nextScheduledToFlush?: Dependency; // Next scheduled effect to flush
 
   // Version tracking for efficient dependency pruning
   version: number; // Consumer's trackingVersion when this dependency was created

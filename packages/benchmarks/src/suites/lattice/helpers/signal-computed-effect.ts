@@ -10,10 +10,9 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 
 export const createApi = () => {
   const ctx = createBaseContext();
-  const { traverseGraph } = createGraphTraversal({ ctx });
+  const { traverseGraph } = createGraphTraversal();
   const graphEdges = createGraphEdges({ ctx });
   const { dispose, propagate } = createScheduler({
-    ctx,
     propagate: traverseGraph,
     detachAll: graphEdges.detachAll,
   });

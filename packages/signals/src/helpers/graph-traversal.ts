@@ -7,7 +7,6 @@
  */
 
 import type { Dependency, ConsumerNode } from '../types';
-import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
@@ -36,7 +35,7 @@ const NOOP = () => { };
  * Create a graph traversal helper.
  * Provides propagation without scheduling or automatic execution.
  */
-export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTraversal {
+export function createGraphTraversal(): GraphTraversal {
   /**
    * Traverse dependency graph depth-first, marking nodes as invalidated.
    * Calls visitor function for each leaf node (nodes without subscribers).
@@ -52,7 +51,6 @@ export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTrav
     let dep: Dependency = subscribers;
     let next: Dependency | undefined = subscribers.nextConsumer;
     let stack: Stack<Dependency | undefined> | undefined;
-    let scheduledFlushTail: Dependency | undefined;
 
     traverse: for (;;) {
       const consumerNode = dep.consumer;
@@ -67,18 +65,13 @@ export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTrav
           const subscribers = consumerNode.subscribers;
           let scheduledConsumers = consumerNode.scheduled;
 
-          // Collect scheduled effects for deferred processing
+          // Schedule effects directly
           if (scheduledConsumers) {
             do {
               const scheduled = scheduledConsumers.consumer;
               if (scheduled.status === STATUS_CLEAN) {
                 scheduled.status = CONSUMER_PENDING;
-
-                // Add to collection list (O(1) append)
-                if (scheduledFlushTail === undefined) ctx.scheduledToFlush = scheduledConsumers;
-                else scheduledFlushTail.nextScheduledToFlush = scheduledConsumers;
-
-                scheduledFlushTail = scheduledConsumers;
+                schedule(scheduled);  // Call scheduler callback directly
               }
               scheduledConsumers = scheduledConsumers.nextConsumer;
             } while (scheduledConsumers);
