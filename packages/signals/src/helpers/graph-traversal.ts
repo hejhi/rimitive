@@ -6,7 +6,7 @@
  * effects and automatic flushing are not needed.
  */
 
-import type { Dependency, ConsumerNode } from '../types';
+import type { Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
@@ -22,10 +22,10 @@ interface Stack<T> {
 export interface GraphTraversal {
   /** Propagate invalidation through the dependency graph */
   propagate: (subscribers: Dependency) => void;
-  /** Traverse graph with custom visitor for leaf nodes */
+  /** Traverse graph with custom scheduler callback for scheduled effects */
   traverseGraph: (
     subscribers: Dependency,
-    onLeaf: (node: ConsumerNode) => void
+    schedule: (scheduledDep: Dependency) => void
   ) => void;
 }
 
@@ -43,10 +43,20 @@ export function createGraphTraversal(): GraphTraversal {
   */
  const traverseGraph = (
    subscribers: Dependency,
-   schedule: (node: ConsumerNode) => void
+   schedule: (scheduledDep: Dependency) => void
   ): void => {
     // Early exit for undefined/null subscribers
     if (!subscribers) return;
+
+    // Check if this is a scheduled effects chain (effects don't have 'subscribers')
+    // If so, pass directly to scheduler and return - no need to traverse
+    const firstConsumer = subscribers.consumer;
+
+    // This is a chain of effects - pass to scheduler
+    if ('flush' in firstConsumer) {
+      schedule(subscribers);
+      return;
+    }
 
     let dep: Dependency = subscribers;
     let next: Dependency | undefined = subscribers.nextConsumer;
@@ -62,36 +72,25 @@ export function createGraphTraversal(): GraphTraversal {
 
         // Handle producers
         if ('subscribers' in consumerNode) {
+          // Schedule any effects attached to this producer
+          const scheduledDep = consumerNode.scheduled;
+          if (scheduledDep) schedule(scheduledDep);
+
           const subscribers = consumerNode.subscribers;
-          let scheduledConsumers = consumerNode.scheduled;
 
-          // Schedule effects directly
-          if (scheduledConsumers) {
-            do {
-              const scheduled = scheduledConsumers.consumer;
-              if (scheduled.status === STATUS_CLEAN) {
-                scheduled.status = CONSUMER_PENDING;
-                schedule(scheduled);  // Call scheduler callback directly
-              }
-              scheduledConsumers = scheduledConsumers.nextConsumer;
-            } while (scheduledConsumers);
-          }
-
-          // Handle subscribers
           if (subscribers) {
             // Continue traversal - branch node
             dep = subscribers;
             const nextSub = dep.nextConsumer;
+
             if (nextSub !== undefined) {
               stack = { value: next, prev: stack };
               next = nextSub;
             }
+
             continue;
           }
         }
-
-        // This is a leaf node - notify the callback
-        schedule(consumerNode);
       }
 
       // Advance to next sibling (unified advancement point)

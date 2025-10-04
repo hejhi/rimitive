@@ -7,13 +7,13 @@
  * 4. Reduces indirection and complexity
  */
 
-import type { Dependency, ScheduledNode, ConsumerNode, ToNode } from '../types';
+import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
-const { CONSUMER_PENDING, SCHEDULED_DISPOSED, SCHEDULED, STATUS_CLEAN } = CONSTANTS;
+const { SCHEDULED_DISPOSED, SCHEDULED, STATUS_CLEAN } = CONSTANTS;
 
 // Global error handler for scheduler exceptions
 let errorHandler: ((error: unknown) => void) | undefined;
@@ -50,7 +50,7 @@ export function createScheduler({
 }: {
   propagate: (
     subscribers: Dependency,
-    onLeaf: (node: ConsumerNode) => void
+    schedule: (scheduledDep: Dependency) => void
   ) => void;
   detachAll: (dep: Dependency) => void;
 }): Scheduler {
@@ -90,7 +90,10 @@ export function createScheduler({
             if (errorHandler) {
               errorHandler(e);
             } else {
-              console.error('[Scheduler] Unhandled error in scheduled effect:', e);
+              console.error(
+                '[Scheduler] Unhandled error in scheduled effect:',
+                e
+              );
             }
           }
         }
@@ -102,22 +105,28 @@ export function createScheduler({
     isFlushing = false;
   };
 
-  // Leaf handler that queues scheduled nodes
-  const queueIfScheduled = (node: ToNode): void => {
-    if (!('flush' in node)) return;
-    if (node.status !== CONSUMER_PENDING) return;
+  // Handler that queues scheduled effects from a dependency chain
+  const queueIfScheduled = (scheduledDep: Dependency): void => {
+    do {
+      // Only Dependencies with ScheduledNode consumers are in the scheduled chain
+      const scheduled = scheduledDep.consumer as ScheduledNode;
 
-    // Only queue nodes with flush methods that are pending
-    node.status = SCHEDULED;
-    node.nextScheduled = undefined;
+      if (scheduled.status !== STATUS_CLEAN) {
+        scheduledDep = scheduledDep.nextConsumer!;
+        continue
+      }
 
-    // Add to execution queue
-    if (queueTail !== undefined) {
-      queueTail.nextScheduled = node;
-      queueTail = node;
-    } else {
-      queueHead = queueTail = node;
-    }
+      scheduled.status = SCHEDULED;
+      scheduled.nextScheduled = undefined;
+
+      // Add to execution queue
+      if (queueTail === undefined) {
+        queueHead = queueTail = scheduled;
+      } else {
+        queueTail.nextScheduled = scheduled;
+        queueTail = scheduled;
+      }
+    } while (scheduledDep);
   };
 
   // Propagate composes traversal with scheduling

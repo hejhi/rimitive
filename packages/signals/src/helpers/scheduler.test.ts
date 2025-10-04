@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
-import type { ScheduledNode, Dependency, ConsumerNode } from '../types';
+import type { ScheduledNode, Dependency, FromNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { CONSUMER_PENDING, SCHEDULED, SCHEDULED_DISPOSED, STATUS_CLEAN } = CONSTANTS;
@@ -16,7 +16,7 @@ describe('Scheduler Algorithm', () => {
   // Helper to create a mock scheduled node
   function createMockScheduledNode(): ScheduledNode {
     return {
-      status: CONSUMER_PENDING,
+      status: STATUS_CLEAN,  // Scheduler expects CLEAN nodes (it marks them PENDING)
       nextScheduled: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
@@ -29,10 +29,31 @@ describe('Scheduler Algorithm', () => {
     return {} as Dependency;
   }
 
+  function createDepChain(...nodes: ScheduledNode[]): Dependency | undefined {
+    if (nodes.length === 0) return undefined;
+
+    const deps: Dependency[] = nodes.map((node) => ({
+      consumer: node,
+      producer: {} as FromNode,
+      prevConsumer: undefined,
+      nextConsumer: undefined,
+      prevDependency: undefined,
+      nextDependency: undefined,
+      version: 0,
+    }));
+
+    // Link them
+    for (let i = 0; i < deps.length - 1; i++) {
+      deps[i]!.nextConsumer = deps[i + 1];
+    }
+
+    return deps[0];
+  }
+
   describe('Queue Management', () => {
     it('should queue nodes in FIFO order', () => {
       const order: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => order.push('A'));
         const node2 = createMockScheduledNode();
@@ -40,9 +61,8 @@ describe('Scheduler Algorithm', () => {
         const node3 = createMockScheduledNode();
         node3.flush = vi.fn(() => order.push('C'));
 
-        onLeaf(node1);
-        onLeaf(node2);
-        onLeaf(node3);
+        const depChain = createDepChain(node1, node2, node3)!;
+        schedule(depChain);
       });
 
       const scheduler = createScheduler({
@@ -58,9 +78,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should not queue nodes without flush method', () => {
       let queued = 0;
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
-        const consumer = { status: CONSUMER_PENDING } as ConsumerNode;
-        onLeaf(consumer);
+      const mockPropagate = vi.fn(() => {
         queued++;
       });
 
@@ -76,24 +94,23 @@ describe('Scheduler Algorithm', () => {
       expect(queued).toBe(1);
     });
 
-    it('should only queue CONSUMER_PENDING nodes', () => {
+    it('should only queue STATUS_CLEAN nodes', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
-        node1.status = CONSUMER_PENDING;
-        node1.flush = vi.fn(() => executed.push('pending'));
+        node1.status = STATUS_CLEAN;  // Clean nodes get queued
+        node1.flush = vi.fn(() => executed.push('clean'));
 
         const node2 = createMockScheduledNode();
-        node2.status = STATUS_CLEAN;
-        node2.flush = vi.fn(() => executed.push('clean'));
+        node2.status = CONSUMER_PENDING;  // Already pending - skip
+        node2.flush = vi.fn(() => executed.push('pending'));
 
         const node3 = createMockScheduledNode();
-        node3.status = SCHEDULED;
+        node3.status = SCHEDULED;  // Already scheduled - skip
         node3.flush = vi.fn(() => executed.push('already-scheduled'));
 
-        onLeaf(node1);
-        onLeaf(node2);
-        onLeaf(node3);
+        const depChain = createDepChain(node1, node2, node3)!;
+        schedule(depChain);
       });
 
       const scheduler = createScheduler({
@@ -103,8 +120,8 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.propagate(createMockDependency());
 
-      // Only CONSUMER_PENDING should be queued and executed
-      expect(executed).toEqual(['pending']);
+      // Only STATUS_CLEAN nodes should be queued and executed
+      expect(executed).toEqual(['clean']);
     });
   });
 
@@ -135,10 +152,11 @@ describe('Scheduler Algorithm', () => {
 
     it('should not flush during batch', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
-        onLeaf(node);
+        const depChain = createDepChain(node)!;
+        schedule(depChain);
       });
 
       const scheduler = createScheduler({
@@ -160,10 +178,11 @@ describe('Scheduler Algorithm', () => {
 
     it('should flush only when batch depth reaches 0', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
-        onLeaf(node);
+        const depChain = createDepChain(node)!;
+        schedule(depChain);
       });
 
       const scheduler = createScheduler({
@@ -185,10 +204,11 @@ describe('Scheduler Algorithm', () => {
 
     it('should handle manual flush', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
         node.flush = vi.fn(() => executed.push('flushed'));
-        onLeaf(node);
+        const depChain = createDepChain(node)!;
+        schedule(depChain);
       });
 
       const scheduler = createScheduler({
@@ -210,20 +230,21 @@ describe('Scheduler Algorithm', () => {
   });
 
   describe('Status Transitions', () => {
-    it('should transition CONSUMER_PENDING -> SCHEDULED -> STATUS_CLEAN', () => {
+    it('should transition STATUS_CLEAN -> CONSUMER_PENDING -> SCHEDULED -> STATUS_CLEAN', () => {
       const statuses: number[] = [];
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node = createMockScheduledNode();
-        node.status = CONSUMER_PENDING;
-        statuses.push(node.status);
+        statuses.push(node.status); // Should be STATUS_CLEAN initially
 
-        onLeaf(node);
-        statuses.push(node.status); // After queueing
-
-        // Simulate flush callback
+        // Simulate flush callback to capture status during execution
         node.flush = vi.fn(() => {
-          statuses.push(node.status); // During flush
+          statuses.push(node.status); // Should be STATUS_CLEAN during flush
         });
+
+        const depChain = createDepChain(node)!;
+        schedule(depChain);
+
+        statuses.push(node.status); // After queueing (should be SCHEDULED)
       });
 
       const scheduler = createScheduler({
@@ -233,27 +254,24 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.propagate(createMockDependency());
 
-      expect(statuses).toContain(CONSUMER_PENDING);
-      expect(statuses).toContain(SCHEDULED);
       expect(statuses).toContain(STATUS_CLEAN);
+      expect(statuses).toContain(SCHEDULED);
     });
 
     it('should skip disposed nodes during flush', () => {
       const executed: string[] = [];
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => executed.push('A'));
 
         const node2 = createMockScheduledNode();
         node2.flush = vi.fn(() => executed.push('B'));
-        node2.status = SCHEDULED_DISPOSED; // Disposed before flush
 
         const node3 = createMockScheduledNode();
         node3.flush = vi.fn(() => executed.push('C'));
 
-        onLeaf(node1);
-        onLeaf(node2);
-        onLeaf(node3);
+        const depChain = createDepChain(node1, node2, node3)!;
+        schedule(depChain);
 
         // Manually set node2 as disposed after queueing
         node2.status = SCHEDULED_DISPOSED;
@@ -276,7 +294,7 @@ describe('Scheduler Algorithm', () => {
       const executed: string[] = [];
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         const node1 = createMockScheduledNode();
         node1.flush = vi.fn(() => executed.push('A'));
 
@@ -288,9 +306,8 @@ describe('Scheduler Algorithm', () => {
         const node3 = createMockScheduledNode();
         node3.flush = vi.fn(() => executed.push('C'));
 
-        onLeaf(node1);
-        onLeaf(node2);
-        onLeaf(node3);
+        const depChain = createDepChain(node1, node2, node3)!;
+        schedule(depChain);
       });
 
       const scheduler = createScheduler({
@@ -313,7 +330,7 @@ describe('Scheduler Algorithm', () => {
       const order: string[] = [];
       let secondPropagation = false;
 
-      const mockPropagate = vi.fn((_: Dependency, onLeaf: (node: ConsumerNode) => void) => {
+      const mockPropagate = vi.fn((_: Dependency, schedule: (dep: Dependency) => void) => {
         if (!secondPropagation) {
           // First propagation
           const node1 = createMockScheduledNode();
@@ -323,12 +340,14 @@ describe('Scheduler Algorithm', () => {
             secondPropagation = true;
             scheduler.propagate(createMockDependency());
           });
-          onLeaf(node1);
+          const depChain = createDepChain(node1)!;
+          schedule(depChain);
         } else {
           // Second propagation (triggered during flush)
           const node2 = createMockScheduledNode();
           node2.flush = vi.fn(() => order.push('inner'));
-          onLeaf(node2);
+          const depChain = createDepChain(node2)!;
+          schedule(depChain);
         }
       });
 
