@@ -15,6 +15,7 @@ export const createApi = () => {
   const graphEdges = createGraphEdges({ ctx });
   const { trackDependency } = graphEdges;
   const { startBatch, endBatch, propagate } = createScheduler({
+    ctx,
     propagate: traverseGraph,
     detachAll: graphEdges.detachAll
   });

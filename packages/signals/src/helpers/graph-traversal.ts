@@ -68,21 +68,23 @@ export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTrav
 
           // Collect scheduled effects for deferred processing
           if (scheduledConsumers) {
-            while (scheduledConsumers) {
+            do {
               const scheduled = scheduledConsumers.consumer;
               if (scheduled.status === STATUS_CLEAN) {
                 scheduled.status = CONSUMER_PENDING;
+                const flushTail = ctx.scheduledFlushTail;
 
                 // Add to collection list (O(1) append)
-                if (!ctx.scheduledToFlush) {
+                if (flushTail === undefined) {
                   ctx.scheduledToFlush = scheduledConsumers;
                 } else {
-                  ctx.scheduledFlushTail!.nextScheduledToFlush = scheduledConsumers;
+                  flushTail.nextScheduledToFlush = scheduledConsumers;
                 }
+
                 ctx.scheduledFlushTail = scheduledConsumers;
               }
               scheduledConsumers = scheduledConsumers.nextConsumer;
-            }
+            } while (scheduledConsumers);
           }
 
           // Handle subscribers
@@ -121,19 +123,6 @@ export function createGraphTraversal({ ctx }: { ctx: GlobalContext }): GraphTrav
 
       break;
     }
-
-    // Process collected scheduled effects after traversal completes
-    let current = ctx.scheduledToFlush;
-    while (current) {
-      schedule(current.consumer);
-      const next = current.nextScheduledToFlush;
-      current.nextScheduledToFlush = undefined;  // Clean up temporary link
-      current = next;
-    }
-
-    // Reset collection list
-    ctx.scheduledToFlush = undefined;
-    ctx.scheduledFlushTail = undefined;
   };
 
   /**

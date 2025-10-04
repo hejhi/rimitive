@@ -11,6 +11,7 @@ export const createApi = () => {
   const { traverseGraph } = createGraphTraversal({ ctx });
   const graphEdges = createGraphEdges({ ctx });
   const { dispose, propagate } = createScheduler({
+    ctx,
     propagate: traverseGraph,
     detachAll: graphEdges.detachAll,
   });

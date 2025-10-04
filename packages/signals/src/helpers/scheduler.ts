@@ -8,6 +8,7 @@
  */
 
 import type { Dependency, ScheduledNode, ConsumerNode, ToNode } from '../types';
+import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 
 // Re-export types for proper type inference
@@ -45,9 +46,11 @@ export interface Scheduler {
 }
 
 export function createScheduler({
+  ctx,
   propagate,
   detachAll,
 }: {
+  ctx: GlobalContext;
   propagate: (
     subscribers: Dependency,
     onLeaf: (node: ConsumerNode) => void
@@ -123,6 +126,19 @@ export function createScheduler({
   // Propagate composes traversal with scheduling
   const scheduledPropagate = (subscribers: Dependency): void => {
     propagate(subscribers, queueIfScheduled);
+
+    // Process collected scheduled effects from traversal
+    let current = ctx.scheduledToFlush;
+    while (current) {
+      queueIfScheduled(current.consumer);
+      const next = current.nextScheduledToFlush;
+      current.nextScheduledToFlush = undefined;  // Clean up temporary link
+      current = next;
+    }
+
+    // Reset collection list
+    ctx.scheduledToFlush = undefined;
+    ctx.scheduledFlushTail = undefined;
 
     // Only flush if we must
     if (queueHead === undefined) return;

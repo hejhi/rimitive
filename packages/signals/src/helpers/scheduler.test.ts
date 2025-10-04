@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
 import type { ScheduledNode, Dependency, ConsumerNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createBaseContext } from '../context';
 
 const { CONSUMER_PENDING, SCHEDULED, SCHEDULED_DISPOSED, STATUS_CLEAN } = CONSTANTS;
 
@@ -46,6 +47,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -65,6 +67,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -97,6 +100,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -111,6 +115,7 @@ describe('Scheduler Algorithm', () => {
   describe('Batch Management', () => {
     it('should increment batch depth on startBatch', () => {
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: vi.fn(),
         detachAll: vi.fn(),
       });
@@ -123,6 +128,7 @@ describe('Scheduler Algorithm', () => {
 
     it('should decrement batch depth on endBatch', () => {
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: vi.fn(),
         detachAll: vi.fn(),
       });
@@ -142,6 +148,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -167,6 +174,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -192,6 +200,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -227,6 +236,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -260,6 +270,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -294,6 +305,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -333,6 +345,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: mockPropagate,
         detachAll: vi.fn(),
       });
@@ -350,6 +363,7 @@ describe('Scheduler Algorithm', () => {
       const detachAll = vi.fn();
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: vi.fn(),
         detachAll,
       });
@@ -365,6 +379,7 @@ describe('Scheduler Algorithm', () => {
       const cleanup = vi.fn();
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: vi.fn(),
         detachAll: vi.fn(),
       });
@@ -384,6 +399,7 @@ describe('Scheduler Algorithm', () => {
       const detachAll = vi.fn();
 
       const scheduler = createScheduler({
+        ctx: createBaseContext(),
         propagate: vi.fn(),
         detachAll,
       });
