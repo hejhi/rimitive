@@ -42,32 +42,31 @@ const { CONSUMER_PENDING, DERIVED_DIRTY, STATUS_CLEAN } = CONSTANTS;
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
 
-export function createComputedFactory(
-  opts: ComputedOpts
-): ComputedFactory {
-  const { ctx, trackDependency, pullUpdates, track, shallowPropagate } = opts;
+export function createComputedFactory({
+  ctx,
+  trackDependency,
+  pullUpdates,
+  track,
+  shallowPropagate
+}: ComputedOpts): ComputedFactory {
 
   // Shared computed function - uses `this` binding
   function computedImpl<T>(this: ComputedNode<T>): T {
     const status = this.status;
+    const isPending = status & CONSUMER_PENDING;
 
     // Check if we need to pull updates
-    if (
-      status & DERIVED_DIRTY ||
-      (status & CONSUMER_PENDING && pullUpdates(this))
-    ) {
+    update: if (status & DERIVED_DIRTY || (isPending && pullUpdates(this))) {
       // Recompute the value
       const prev = this.value;
       this.value = track(this, this.compute) as T;
 
       // Propagate if value changed and there are multiple subscribers
-      if (prev !== this.value) {
-        const subs = this.subscribers;
-        if (subs !== undefined) {
-          shallowPropagate(subs);
-        }
-      }
-    } else if (status & CONSUMER_PENDING) this.status = STATUS_CLEAN;
+      if (prev === this.value) break update;
+
+      const subs = this.subscribers;
+      if (subs !== undefined) shallowPropagate(subs);
+    } else if (isPending) this.status = STATUS_CLEAN;
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;

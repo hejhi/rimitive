@@ -45,9 +45,6 @@ export function createGraphTraversal(): GraphTraversal {
    subscribers: Dependency,
    schedule: (scheduledDep: Dependency) => void
   ): void => {
-    // Early exit for undefined/null subscribers
-    if (!subscribers) return;
-
     // Check if this is a scheduled effects chain (effects don't have 'subscribers')
     // If so, pass directly to scheduler and return - no need to traverse
     const firstConsumer = subscribers.consumer;

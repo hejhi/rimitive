@@ -299,14 +299,6 @@ describe('Graph Traversal Algorithm', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle undefined gracefully', () => {
-      const { propagate } = createGraphTraversal();
-
-      expect(() => {
-        propagate(undefined as unknown as Dependency);
-      }).not.toThrow();
-    });
-
     it('should handle single node', () => {
       const a = createNode();
 
