@@ -139,20 +139,14 @@ export function createScheduler({
   // Propagate through computed subscribers with scheduling
   const propagateSubscribers = (subscribers: Dependency): void => {
     traverseGraph(subscribers, queueIfScheduled);
-
-    // Only flush if we must
     if (queueHead === undefined) return;
-
     flush();
   };
 
   // Propagate through scheduled effects chain
   const propagateScheduled = (scheduled: Dependency): void => {
     schedule(scheduled, queueIfScheduled);
-
-    // Only flush if we must
     if (queueHead === undefined) return;
-
     flush();
   };
 
