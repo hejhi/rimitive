@@ -46,8 +46,8 @@ describe('Graph Traversal Algorithm', () => {
       b.subscribers = createDep(c);
       a.subscribers = createDep(b);
 
-      const { propagate } = createGraphTraversal();
-      propagate(a.subscribers);
+      const { traverseGraph } = createGraphTraversal();
+      traverseGraph(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -71,8 +71,8 @@ describe('Graph Traversal Algorithm', () => {
       c.subscribers = createDep(f);
       a.subscribers = createDep(b, createDep(c));
 
-      const { propagate } = createGraphTraversal();
-      propagate(a.subscribers);
+      const { traverseGraph } = createGraphTraversal();
+      traverseGraph(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -96,9 +96,9 @@ describe('Graph Traversal Algorithm', () => {
       c.subscribers = createDep(d);
       a.subscribers = createDep(b, createDep(c));
 
-      const { propagate } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal();
 
-      propagate(a.subscribers);
+      traverseGraph(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -132,8 +132,8 @@ describe('Graph Traversal Algorithm', () => {
 
       a.subscribers = createDep(b);
 
-      const { propagate } = createGraphTraversal();
-      propagate(a.subscribers);
+      const { traverseGraph } = createGraphTraversal();
+      traverseGraph(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
     });
@@ -196,9 +196,9 @@ describe('Graph Traversal Algorithm', () => {
       b.subscribers = createDep(d);
       a.subscribers = createDep(b, createDep(c));
 
-      const { propagate } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal();
 
-      propagate(a.subscribers);
+      traverseGraph(a.subscribers);
 
       // All nodes marked as pending
       expect(b.status & STATE_MASK).toBe(PENDING);
@@ -222,10 +222,10 @@ describe('Graph Traversal Algorithm', () => {
         nodes[i]!.subscribers = createDep(nodes[i + 1]!);
       }
 
-      const { propagate } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal();
 
       expect(() => {
-        propagate(createDep(nodes[0]!));
+        traverseGraph(createDep(nodes[0]!));
       }).not.toThrow();
 
       // All marked
@@ -252,8 +252,8 @@ describe('Graph Traversal Algorithm', () => {
       }
       a.subscribers = subs;
 
-      const { propagate } = createGraphTraversal();
-      propagate(a.subscribers!);
+      const { traverseGraph } = createGraphTraversal();
+      traverseGraph(a.subscribers!);
 
       // All marked
       nodes.forEach(node => {
@@ -284,9 +284,9 @@ describe('Graph Traversal Algorithm', () => {
       d.subscribers = createDep(e);
       a.subscribers = createDep(b, createDep(c, createDep(d)));
 
-      const { propagate } = createGraphTraversal();
+      const { traverseGraph } = createGraphTraversal();
 
-      propagate(a.subscribers);
+      traverseGraph(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -302,8 +302,8 @@ describe('Graph Traversal Algorithm', () => {
     it('should handle single node', () => {
       const a = createNode();
 
-      const { propagate } = createGraphTraversal();
-      propagate(createDep(a));
+      const { traverseGraph } = createGraphTraversal();
+      traverseGraph(createDep(a));
 
       expect(a.status & STATE_MASK).toBe(PENDING);
     });

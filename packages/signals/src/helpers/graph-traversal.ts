@@ -20,13 +20,11 @@ interface Stack<T> {
 }
 
 export interface GraphTraversal {
-  /** Traverse computed subscribers graph with custom scheduler callback for scheduled effects */
+  /** Traverse computed subscribers graph with optional scheduler callback for scheduled effects */
   traverseGraph: (
     subscribers: Dependency,
-    schedule: (scheduledDep: Dependency) => void
+    schedule?: (scheduledDep: Dependency) => void
   ) => void;
-  /** Simple propagation that only marks nodes as invalidated (for testing/simple use cases) */
-  propagate: (subscribers: Dependency) => void;
 }
 
 /**
@@ -41,7 +39,7 @@ export function createGraphTraversal(): GraphTraversal {
   */
  const traverseGraph = (
    subscribers: Dependency,
-   schedule: (scheduledDep: Dependency) => void
+   schedule?: (scheduledDep: Dependency) => void
   ): void => {
     let dep: Dependency = subscribers;
     let next: Dependency | undefined = subscribers.nextConsumer;
@@ -54,7 +52,7 @@ export function createGraphTraversal(): GraphTraversal {
 
       processNode: if (stateStatus === CLEAN || stateStatus === DIRTY) {
         // Call schedule for this node (callback will filter by SCHEDULED flag)
-        schedule(dep);
+        if (schedule) schedule(dep);
 
         // Fall through if there's no subscribers (not a producer)
         if (!(status & PRODUCER)) {
@@ -111,15 +109,7 @@ export function createGraphTraversal(): GraphTraversal {
     }
   };
 
-  /**
-   * Simple propagation that only marks nodes as invalidated.
-   * Does not schedule or execute any nodes.
-   */
-  const NOOP = () => {};
-  const propagate = (subscribers: Dependency): void => traverseGraph(subscribers, NOOP);
-
   return {
     traverseGraph,
-    propagate,
   };
 }
