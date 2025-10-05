@@ -7,7 +7,13 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DIRTY, PENDING, STATE_MASK, TYPE_MASK, CONSUMER, CLEAN } = CONSTANTS;
+const { DIRTY, PENDING, STATE_MASK, TYPE_MASK, CONSUMER, CLEAN, PRODUCER } = CONSTANTS;
+
+// Predefined status combinations for prodcuer-consumer nodes
+const PC_CLEAN = PRODUCER | CONSUMER | CLEAN;
+
+// For signals (producers only)
+const PRODUCER_CLEAN = PRODUCER | CLEAN;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -24,8 +30,12 @@ export interface PullPropagator {
 const shallowPropagate = (sub: Dependency) => {
   do {
     const consumer = sub.consumer;
+    const state = consumer.status & STATE_MASK;
 
-    if ((consumer.status & STATE_MASK) === PENDING) consumer.status = (consumer.status & TYPE_MASK) | DIRTY;
+    // Only upgrade PENDING consumers to DIRTY (preserves type bits)
+    if (state === PENDING) {
+      consumer.status = (consumer.status & TYPE_MASK) | DIRTY;
+    }
     sub = sub.nextConsumer!;
   } while (sub);
 };
@@ -71,7 +81,7 @@ export function createPullPropagator({
             if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
           } else {
             // Signal updated - clear flag and mark dirty
-            producer.status = (producer.status & TYPE_MASK) | CLEAN;
+            producer.status = PRODUCER_CLEAN;
             const subs = producer.subscribers;
             dirty = true;
 
@@ -142,7 +152,7 @@ export function createPullPropagator({
 
           consumer = dep.consumer as DerivedNode;
           continue unwind;
-        } else consumer.status = (consumer.status & TYPE_MASK) | CLEAN;
+        } else consumer.status = PC_CLEAN;
 
         // Move back to parent consumer
         consumer = dep.consumer as DerivedNode;

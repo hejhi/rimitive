@@ -6,10 +6,10 @@
  * effects and automatic flushing are not needed.
  */
 
-import type { Dependency } from '../types';
+import type { Dependency, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { CLEAN, DIRTY, PENDING, STATE_MASK, TYPE_MASK } = CONSTANTS;
+const { CLEAN, DIRTY, PENDING, STATE_MASK, TYPE_MASK, PRODUCER } = CONSTANTS;
 
 // Re-export types for proper type inference
 export type { Dependency, ConsumerNode, DerivedNode } from '../types';
@@ -56,12 +56,15 @@ export function createGraphTraversal(): GraphTraversal {
         // Mark as pending (invalidated)
         consumerNode.status = (status & TYPE_MASK) | PENDING;
 
-        // Fall through if there's no subscribers
-        if (!('subscribers' in consumerNode)) break processNode;
+        // Fall through if there's no subscribers (not a producer)
+        if (!(status & PRODUCER)) break processNode;
+
+        // At this point, we know consumerNode is a ProducerNode
+        const producerNode = consumerNode as ProducerNode;
 
         // Schedule any effects attached to this producer
-        const scheduledDep = consumerNode.scheduled;
-        const subscribers = consumerNode.subscribers;
+        const scheduledDep = producerNode.scheduled;
+        const subscribers = producerNode.subscribers;
 
         if (scheduledDep) schedule(scheduledDep);
         if (subscribers === undefined) break processNode;

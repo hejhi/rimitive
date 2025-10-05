@@ -6,6 +6,9 @@ import { Scheduler } from './helpers/scheduler';
 
 const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
+// Predefined status combinations for effect nodes
+const EFFECT_CLEAN = CONSUMER | SCHEDULED | CLEAN;
+
 export type EffectOpts = {
   ctx: GlobalContext;
   track: GraphEdges['track'];
@@ -36,7 +39,7 @@ export function createEffectFactory(
 
     const node = {
       __type: 'effect' as const,
-      status: CONSUMER | SCHEDULED | CLEAN,
+      status: EFFECT_CLEAN,
       dependencies:  undefined,
       dependencyTail:  undefined,
       nextScheduled: undefined,

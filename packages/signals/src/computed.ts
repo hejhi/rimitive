@@ -37,7 +37,12 @@ interface ComputedNode<T> extends DerivedNode<T> {
   value: T;
 }
 
-const { PENDING, DIRTY, PRODUCER, CONSUMER, TYPE_MASK, CLEAN } = CONSTANTS;
+const { PENDING, DIRTY, PRODUCER, CONSUMER, CLEAN } = CONSTANTS;
+
+const COMPUTED = PRODUCER | CONSUMER;
+// Predefined status combinations for computed nodes
+const COMPUTED_CLEAN = COMPUTED | CLEAN;
+const COMPUTED_DIRTY = COMPUTED | DIRTY;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -66,7 +71,7 @@ export function createComputedFactory({
 
       const subs = this.subscribers;
       if (subs !== undefined) shallowPropagate(subs);
-    } else if (isPending) this.status = (status & TYPE_MASK) | CLEAN;
+    } else if (isPending) this.status = COMPUTED_CLEAN;
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;
@@ -87,7 +92,7 @@ export function createComputedFactory({
 
       if (status & DIRTY || (isPending && pullUpdates(this))) {
         this.value = track(this, this.compute);
-      } else if (isPending) this.status = (status & TYPE_MASK) | CLEAN;
+      } else if (isPending) this.status = COMPUTED_CLEAN;
 
       return this.value;
     } finally {
@@ -105,7 +110,7 @@ export function createComputedFactory({
       scheduledTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
-      status: PRODUCER | CONSUMER | DIRTY,
+      status: COMPUTED_DIRTY,
       trackingVersion: 0,
       compute,
     };

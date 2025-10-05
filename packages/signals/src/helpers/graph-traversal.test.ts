@@ -3,7 +3,7 @@ import type { DerivedNode, Dependency, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
 
-const { CLEAN, PENDING, DIRTY } = CONSTANTS;
+const { CLEAN, PENDING, DIRTY, PRODUCER, CONSUMER, STATE_MASK } = CONSTANTS;
 
 /**
  * Unit tests for graph-traversal algorithm
@@ -14,10 +14,10 @@ const { CLEAN, PENDING, DIRTY } = CONSTANTS;
 
 describe('Graph Traversal Algorithm', () => {
 
-  // Helper to create a node
-  function createNode(status: number = CLEAN): DerivedNode {
+  // Helper to create a node (derived/computed node with PRODUCER and CONSUMER flags)
+  function createNode(state: number = CLEAN): DerivedNode {
     return {
-      status,
+      status: PRODUCER | CONSUMER | state,
       subscribers: undefined,
       value: undefined,
       dependencies: undefined,
@@ -49,9 +49,9 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(a.subscribers);
 
-      expect(b.status).toBe(PENDING);
-      expect(c.status).toBe(PENDING);
-      expect(d.status).toBe(PENDING);
+      expect(b.status & STATE_MASK).toBe(PENDING);
+      expect(c.status & STATE_MASK).toBe(PENDING);
+      expect(d.status & STATE_MASK).toBe(PENDING);
     });
 
     it('should mark all nodes in tree', () => {
@@ -74,11 +74,11 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(a.subscribers);
 
-      expect(b.status).toBe(PENDING);
-      expect(c.status).toBe(PENDING);
-      expect(d.status).toBe(PENDING);
-      expect(e.status).toBe(PENDING);
-      expect(f.status).toBe(PENDING);
+      expect(b.status & STATE_MASK).toBe(PENDING);
+      expect(c.status & STATE_MASK).toBe(PENDING);
+      expect(d.status & STATE_MASK).toBe(PENDING);
+      expect(e.status & STATE_MASK).toBe(PENDING);
+      expect(f.status & STATE_MASK).toBe(PENDING);
     });
 
     it('should handle diamond dependencies', () => {
@@ -100,9 +100,9 @@ describe('Graph Traversal Algorithm', () => {
 
       propagate(a.subscribers);
 
-      expect(b.status).toBe(PENDING);
-      expect(c.status).toBe(PENDING);
-      expect(d.status).toBe(PENDING);
+      expect(b.status & STATE_MASK).toBe(PENDING);
+      expect(c.status & STATE_MASK).toBe(PENDING);
+      expect(d.status & STATE_MASK).toBe(PENDING);
 
       // D visited only once despite being reachable from both B and C (deduplication)
     });
@@ -122,7 +122,7 @@ describe('Graph Traversal Algorithm', () => {
         leaves.push(dep.consumer as DerivedNode);
       });
 
-      expect(b.status).toBe(PENDING);
+      expect(b.status & STATE_MASK).toBe(PENDING);
       expect(leaves).toHaveLength(0); // Not visited again
     });
 
@@ -135,7 +135,7 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(a.subscribers);
 
-      expect(b.status).toBe(PENDING);
+      expect(b.status & STATE_MASK).toBe(PENDING);
     });
   });
 
@@ -165,7 +165,7 @@ describe('Graph Traversal Algorithm', () => {
         Object.defineProperty(node, 'status', {
           get: () => origStatus,
           set: (v: number) => {
-            if (v === PENDING) order.push(node);
+            if ((v & STATE_MASK) === PENDING) order.push(node);
           },
           configurable: true,
         });
@@ -201,9 +201,9 @@ describe('Graph Traversal Algorithm', () => {
       propagate(a.subscribers);
 
       // All nodes marked as pending
-      expect(b.status).toBe(PENDING);
-      expect(d.status).toBe(PENDING);
-      expect(c.status).toBe(PENDING);
+      expect(b.status & STATE_MASK).toBe(PENDING);
+      expect(d.status & STATE_MASK).toBe(PENDING);
+      expect(c.status & STATE_MASK).toBe(PENDING);
     });
   });
 
@@ -230,7 +230,7 @@ describe('Graph Traversal Algorithm', () => {
 
       // All marked
       nodes.forEach(node => {
-        expect(node.status).toBe(PENDING);
+        expect(node.status & STATE_MASK).toBe(PENDING);
       });
     });
 
@@ -257,7 +257,7 @@ describe('Graph Traversal Algorithm', () => {
 
       // All marked
       nodes.forEach(node => {
-        expect(node.status).toBe(PENDING);
+        expect(node.status & STATE_MASK).toBe(PENDING);
       });
     });
   });
@@ -288,11 +288,11 @@ describe('Graph Traversal Algorithm', () => {
 
       propagate(a.subscribers);
 
-      expect(b.status).toBe(PENDING);
-      expect(c.status).toBe(PENDING);
-      expect(d.status).toBe(PENDING);
-      expect(e.status).toBe(PENDING);
-      expect(f.status).toBe(PENDING);
+      expect(b.status & STATE_MASK).toBe(PENDING);
+      expect(c.status & STATE_MASK).toBe(PENDING);
+      expect(d.status & STATE_MASK).toBe(PENDING);
+      expect(e.status & STATE_MASK).toBe(PENDING);
+      expect(f.status & STATE_MASK).toBe(PENDING);
 
       // E is visited only once despite being reachable from B, C, and D (deduplication)
     });
@@ -305,7 +305,7 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(createDep(a));
 
-      expect(a.status).toBe(PENDING);
+      expect(a.status & STATE_MASK).toBe(PENDING);
     });
   });
 });

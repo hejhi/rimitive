@@ -19,7 +19,11 @@ import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
 
-const { CLEAN, PRODUCER, TYPE_MASK, DIRTY } = CONSTANTS;
+const { CLEAN, PRODUCER, DIRTY } = CONSTANTS;
+
+// Predefined status combinations for signal nodes
+const SIGNAL_CLEAN = PRODUCER | CLEAN;
+const SIGNAL_DIRTY = PRODUCER | DIRTY;
 
 export interface SignalFunction<T = unknown> {
   (): T;                    // Read operation (monomorphic)
@@ -64,7 +68,7 @@ export function createSignalFactory(
       subscribersTail: undefined,
       scheduled: undefined,
       scheduledTail: undefined,
-      status: PRODUCER | CLEAN,
+      status: SIGNAL_CLEAN,
     };
 
     // Direct function declaration for better optimization
@@ -88,7 +92,7 @@ export function createSignalFactory(
       if (!subs && !scheduled) return;
 
       // Mark dirty and propagate (scheduler handles flushing automatically)
-      node.status = (node.status & TYPE_MASK) | DIRTY;
+      node.status = SIGNAL_DIRTY;
       if (subs) propagateSubscribers(subs);
       if (scheduled) propagateScheduled(scheduled);
     }
