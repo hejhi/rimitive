@@ -9,6 +9,7 @@
 
 import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createGraphTraversal } from './graph-traversal';
 
 const { PENDING, CLEAN, DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } = CONSTANTS;
 
@@ -37,14 +38,11 @@ export interface Scheduler {
 }
 
 export function createScheduler({
-  traverseGraph,
   detachAll,
+  traverseGraph: customTraverseGraph,
 }: {
-  traverseGraph: (
-    subscribers: Dependency,
-    schedule: (scheduledDep: Dependency) => void
-  ) => void;
   detachAll: (dep: Dependency) => void;
+  traverseGraph?: (subscribers: Dependency) => void;
 }): Scheduler {
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;
@@ -114,9 +112,12 @@ export function createScheduler({
     }
   };
 
+  // Use custom traverseGraph for testing, or create our own with queueing callback
+  const traverseGraph = customTraverseGraph ?? createGraphTraversal(queueIfScheduled).traverseGraph;
+
   // Propagate through subscribers (both computeds and effects)
   const propagate = (subscribers: Dependency): void => {
-    traverseGraph(subscribers, queueIfScheduled);
+    traverseGraph(subscribers);
     if (queueHead === undefined) return;
     flush();
   };

@@ -50,17 +50,6 @@ describe('Scheduler Algorithm', () => {
     return deps[0];
   }
 
-  // Helper to create a mock traverseGraph that calls schedule for each dependency
-  function mockTraverseGraph() {
-    return vi.fn((deps: Dependency, schedule: (dep: Dependency) => void) => {
-      let dep: Dependency | undefined = deps;
-      while (dep) {
-        schedule(dep);
-        dep = dep.nextConsumer;
-      }
-    });
-  }
-
   describe('Queue Management', () => {
     it('should queue nodes in FIFO order', () => {
       const order: string[] = [];
@@ -74,7 +63,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node1, node2, node3)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -93,7 +81,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -119,7 +106,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node1, node2, node3)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -133,7 +119,6 @@ describe('Scheduler Algorithm', () => {
   describe('Batch Management', () => {
     it('should increment batch depth on startBatch', () => {
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -145,7 +130,6 @@ describe('Scheduler Algorithm', () => {
 
     it('should decrement batch depth on endBatch', () => {
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -162,7 +146,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -185,7 +168,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -208,7 +190,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -239,7 +220,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -265,7 +245,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node1, node2, node3)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -295,7 +274,6 @@ describe('Scheduler Algorithm', () => {
       const depChain = createDepChain(node1, node2, node3)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -318,7 +296,6 @@ describe('Scheduler Algorithm', () => {
       const depChain2 = createDepChain(node2)!;
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -343,7 +320,6 @@ describe('Scheduler Algorithm', () => {
       const detachAll = vi.fn();
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll,
       });
 
@@ -358,7 +334,6 @@ describe('Scheduler Algorithm', () => {
       const cleanup = vi.fn();
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll: vi.fn(),
       });
 
@@ -377,7 +352,6 @@ describe('Scheduler Algorithm', () => {
       const detachAll = vi.fn();
 
       const scheduler = createScheduler({
-        traverseGraph: mockTraverseGraph(),
         detachAll,
       });
 

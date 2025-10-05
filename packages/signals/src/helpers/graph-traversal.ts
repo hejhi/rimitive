@@ -20,27 +20,25 @@ interface Stack<T> {
 }
 
 export interface GraphTraversal {
-  /** Traverse computed subscribers graph with optional scheduler callback for scheduled effects */
-  traverseGraph: (
-    subscribers: Dependency,
-    schedule?: (scheduledDep: Dependency) => void
-  ) => void;
+  /** Traverse computed subscribers graph, marking nodes as invalidated */
+  traverseGraph: (subscribers: Dependency) => void;
 }
 
 /**
  * Create a graph traversal helper.
  * Provides propagation without scheduling or automatic execution.
+ *
+ * @param schedule - Optional callback invoked for each node during traversal (typically for scheduling effects)
  */
-export function createGraphTraversal(): GraphTraversal {
+export function createGraphTraversal(
+  schedule?: (scheduledDep: Dependency) => void
+): GraphTraversal {
   /**
    * Traverse dependency graph depth-first, marking nodes as invalidated.
    * Calls visitor function for each leaf node (nodes without subscribers).
    * Uses alien-signals pattern: follow chains naturally, stack only at branch points.
   */
- const traverseGraph = (
-   subscribers: Dependency,
-   schedule?: (scheduledDep: Dependency) => void
-  ): void => {
+ const traverseGraph = (subscribers: Dependency): void => {
     let dep: Dependency = subscribers;
     let next: Dependency | undefined = subscribers.nextConsumer;
     let stack: Stack<Dependency | undefined> | undefined;

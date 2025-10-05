@@ -115,12 +115,12 @@ describe('Graph Traversal Algorithm', () => {
 
       a.subscribers = createDep(b);
 
-      const { traverseGraph } = createGraphTraversal();
       const leaves: DerivedNode[] = [];
-
-      traverseGraph(a.subscribers, (dep) => {
+      const { traverseGraph } = createGraphTraversal((dep) => {
         leaves.push(dep.consumer as DerivedNode);
       });
+
+      traverseGraph(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(leaves).toHaveLength(0); // Not visited again
@@ -176,7 +176,7 @@ describe('Graph Traversal Algorithm', () => {
       track(d);
       track(e);
 
-      traverseGraph(a.subscribers, () => {});
+      traverseGraph(a.subscribers);
 
       // Depth-first: B -> D -> C -> E
       expect(order).toEqual([b, d, c, e]);

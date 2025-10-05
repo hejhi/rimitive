@@ -10,7 +10,7 @@ export const createApi = () => {
   const ctx = createBaseContext();
   const { trackDependency, track } = createGraphEdges({ ctx });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
-  const { propagate } = createGraphTraversal();
+  const { traverseGraph } = createGraphTraversal();
 
   return createSignalAPI(
     {
@@ -20,7 +20,7 @@ export const createApi = () => {
     {
       ctx,
       trackDependency,
-      propagate,
+      propagate: traverseGraph,
       pullUpdates,
       track,
       shallowPropagate,
