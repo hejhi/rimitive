@@ -20,19 +20,6 @@ const SCHEDULED_DISPOSED = CONSUMER | SCHEDULED | DISPOSED;
 // Re-export types for proper type inference
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
-// Global error handler for scheduler exceptions
-let errorHandler: ((error: unknown) => void) | undefined;
-
-/**
- * Sets a custom error handler for all scheduler-related errors.
- * If no handler is set, errors will be logged to the console.
- *
- * @param handler - A function that receives the error.
- */
-export function setSchedulerErrorHandler(handler: (error: unknown) => void): void {
-  errorHandler = handler;
-}
-
 export interface Scheduler {
   /** Propagate updates through computed subscribers graph */
   propagateSubscribers: (subscribers: Dependency) => void;
@@ -93,15 +80,10 @@ export function createScheduler({
           try {
             current.flush();
           } catch (e) {
-            // Report error without breaking the queue
-            if (errorHandler) {
-              errorHandler(e);
-            } else {
-              console.error(
-                '[Scheduler] Unhandled error in scheduled effect:',
-                e
-              );
-            }
+            console.error(
+              '[Scheduler] Unhandled error in scheduled effect:',
+              e
+            );
           }
         }
 
