@@ -4,7 +4,7 @@
  * Computed values are the heart of the reactive system.
  */
 
-import { CONSTANTS, setClean } from './constants';
+import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
@@ -37,7 +37,7 @@ interface ComputedNode<T> extends DerivedNode<T> {
   value: T;
 }
 
-const { PENDING, DIRTY, PRODUCER, CONSUMER } = CONSTANTS;
+const { PENDING, DIRTY, PRODUCER, CONSUMER, TYPE_MASK, CLEAN } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -66,7 +66,7 @@ export function createComputedFactory({
 
       const subs = this.subscribers;
       if (subs !== undefined) shallowPropagate(subs);
-    } else if (isPending) setClean(this);
+    } else if (isPending) this.status = (status & TYPE_MASK) | CLEAN;
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;
@@ -87,7 +87,7 @@ export function createComputedFactory({
 
       if (status & DIRTY || (isPending && pullUpdates(this))) {
         this.value = track(this, this.compute);
-      } else if (isPending) setClean(this);
+      } else if (isPending) this.status = (status & TYPE_MASK) | CLEAN;
 
       return this.value;
     } finally {

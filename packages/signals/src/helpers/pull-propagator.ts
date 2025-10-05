@@ -1,5 +1,5 @@
 import type { Dependency, DerivedNode } from '../types';
-import { CONSTANTS, setClean, setDirty, isPending, isDirty, isConsumer } from '../constants';
+import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
 
 // Re-export types for proper type inference
@@ -7,7 +7,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DIRTY, PENDING, STATE_MASK } = CONSTANTS;
+const { DIRTY, PENDING, STATE_MASK, TYPE_MASK, CONSUMER, CLEAN } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -25,7 +25,7 @@ const shallowPropagate = (sub: Dependency) => {
   do {
     const consumer = sub.consumer;
 
-    if (isPending(consumer)) setDirty(consumer);
+    if ((consumer.status & STATE_MASK) === PENDING) consumer.status = (consumer.status & TYPE_MASK) | DIRTY;
     sub = sub.nextConsumer!;
   } while (sub);
 };
@@ -51,12 +51,12 @@ export function createPullPropagator({
 			const status = producer.status;
 
       // Check if this dependency makes the consumer dirty
-      if (isDirty(consumer)) {
+      if ((consumer.status & STATE_MASK) === DIRTY) {
         dirty = true;
       } else if (STATUS_CHECK) switch (status & STATE_MASK) {
         case DIRTY: {
           // Producer is dirty - either a signal or derived
-          if (isConsumer(producer)) {
+          if (producer.status & CONSUMER) {
             // Producer is a dirty derived - recompute it
             const derivedProducer = producer as DerivedNode;
             const val = track(derivedProducer, derivedProducer.compute);
@@ -71,7 +71,7 @@ export function createPullPropagator({
             if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
           } else {
             // Signal updated - clear flag and mark dirty
-            setClean(producer);
+            producer.status = (producer.status & TYPE_MASK) | CLEAN;
             const subs = producer.subscribers;
             dirty = true;
 
@@ -142,7 +142,7 @@ export function createPullPropagator({
 
           consumer = dep.consumer as DerivedNode;
           continue unwind;
-        } else setClean(consumer);
+        } else consumer.status = (consumer.status & TYPE_MASK) | CLEAN;
 
         // Move back to parent consumer
         consumer = dep.consumer as DerivedNode;

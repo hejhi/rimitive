@@ -7,7 +7,9 @@
  */
 
 import type { Dependency } from '../types';
-import { setPending, isClean, isDirty } from '../constants';
+import { CONSTANTS } from '../constants';
+
+const { CLEAN, DIRTY, PENDING, STATE_MASK, TYPE_MASK } = CONSTANTS;
 
 // Re-export types for proper type inference
 export type { Dependency, ConsumerNode, DerivedNode } from '../types';
@@ -47,10 +49,12 @@ export function createGraphTraversal(): GraphTraversal {
 
     traversal: for (;;) {
       const consumerNode = dep.consumer;
+      const status = consumerNode.status;
+      const stateStatus = status & STATE_MASK;
 
-      processNode: if (isClean(consumerNode) || isDirty(consumerNode)) {
+      processNode: if (stateStatus === CLEAN || stateStatus === DIRTY) {
         // Mark as pending (invalidated)
-        setPending(consumerNode);
+        consumerNode.status = (status & TYPE_MASK) | PENDING;
 
         // Fall through if there's no subscribers
         if (!('subscribers' in consumerNode)) break processNode;

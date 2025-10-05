@@ -8,7 +8,9 @@
  */
 
 import type { Dependency, ScheduledNode } from '../types';
-import { setClean, setPending, setDisposed, isPending, isDisposed, isClean } from '../constants';
+import { CONSTANTS } from '../constants';
+
+const { PENDING, CLEAN, DISPOSED, STATE_MASK, TYPE_MASK } = CONSTANTS;
 
 // Re-export types for proper type inference
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
@@ -81,8 +83,8 @@ export function createScheduler({
         if (next !== undefined) current.nextScheduled = undefined;
 
         // Only flush if scheduled (skip disposed nodes)
-        if (isPending(current)) {
-          setClean(current);
+        if ((current.status & STATE_MASK) === PENDING) {
+          current.status = (current.status & TYPE_MASK) | CLEAN;
           try {
             current.flush();
           } catch (e) {
@@ -111,12 +113,12 @@ export function createScheduler({
       // Only Dependencies with ScheduledNode consumers are in the scheduled chain
       const scheduled = scheduledDep.consumer as ScheduledNode;
 
-      if (!isClean(scheduled)) {
+      if ((scheduled.status & STATE_MASK) !== CLEAN) {
         scheduledDep = scheduledDep.nextConsumer!;
         continue
       }
 
-      setPending(scheduled);
+      scheduled.status = (scheduled.status & TYPE_MASK) | PENDING;
       scheduled.nextScheduled = undefined;
 
       // Add to execution queue
@@ -160,9 +162,9 @@ export function createScheduler({
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    if (isDisposed(node)) return;
+    if ((node.status & STATE_MASK) === DISPOSED) return;
 
-    setDisposed(node);
+    node.status = (node.status & TYPE_MASK) | DISPOSED;
     cleanup(node);
 
     const deps = node.dependencies;

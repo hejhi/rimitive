@@ -1,6 +1,8 @@
 import { GlobalContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
-import { isScheduled, setClean } from '../constants';
+import { CONSTANTS } from '../constants';
+
+const { SCHEDULED, TYPE_MASK, CLEAN } = CONSTANTS;
 
 // Re-export types for proper type inference
 export type { ProducerNode, ConsumerNode, Dependency } from '../types';
@@ -23,7 +25,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     producer: ProducerNode,
     prevConsumer: Dependency | undefined,
     nextConsumer: Dependency | undefined,
-    isScheduled: boolean
+    isScheduled: number
   ): void => {
     if (nextConsumer !== undefined)
       nextConsumer.prevConsumer = prevConsumer;
@@ -59,7 +61,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     }
 
     // Check if consumer is an effect (has flush method) or computed (has subscribers)
-    const scheduled = isScheduled(consumer);
+    const scheduled = consumer.status & SCHEDULED;
     const prevConsumer = scheduled
       ? producer.scheduledTail
       : producer.subscribersTail;
@@ -101,7 +103,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
   const detachAll = (dep: Dependency): void => {
     // All dependencies in the chain share the same consumer
     const consumer = dep.consumer;
-    const scheduled = isScheduled(consumer);
+    const scheduled = consumer.status & SCHEDULED;
     let current: Dependency | undefined = dep;
 
     do {
@@ -126,7 +128,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     ctx.trackingVersion++;
 
     // Clear dirty and pending flags before tracking
-    setClean(node);
+    const status = node.status = (node.status & TYPE_MASK) | CLEAN;
 
     const prevConsumer = ctx.consumerScope;
     node.dependencyTail = undefined;
@@ -143,7 +145,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       // dependencyTail marks the last dependency accessed in this tracking cycle
       // Anything after it is stale and should be removed
       const tail = node.dependencyTail as Dependency | undefined;
-      const scheduled = isScheduled(node);
+      const scheduled = status & SCHEDULED;
 
       // Start point for pruning
       let toRemove = tail ? tail.nextDependency : node.dependencies;
