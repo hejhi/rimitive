@@ -54,29 +54,29 @@ export function createGraphTraversal(): GraphTraversal {
       const consumerNode = dep.consumer;
       const status = consumerNode.status;
 
-      if (status === STATUS_CLEAN || status === DERIVED_DIRTY) {
+      deeper: if (status === STATUS_CLEAN || status === DERIVED_DIRTY) {
         // Mark as pending (invalidated)
         consumerNode.status = CONSUMER_PENDING;
 
         // Handle producers
-        deeper: if ('subscribers' in consumerNode) {
-          // Schedule any effects attached to this producer
-          const scheduledDep = consumerNode.scheduled;
-          if (scheduledDep) schedule(scheduledDep);
+        if (!('subscribers' in consumerNode)) break deeper; // Fallthrough
 
-          const subscribers = consumerNode.subscribers;
-          if (subscribers === undefined) break deeper; // Fallthrough
+        // Schedule any effects attached to this producer
+        const scheduledDep = consumerNode.scheduled;
+        if (scheduledDep) schedule(scheduledDep);
 
-          // Continue traversal - branch node
-          dep = subscribers;
-          const nextSub = dep.nextConsumer;
+        const subscribers = consumerNode.subscribers;
+        if (subscribers === undefined) break deeper;
 
-          if (nextSub === undefined) continue traverse;
+        // Continue traversal - branch node
+        dep = subscribers;
+        const nextSub = dep.nextConsumer;
 
-          stack = { value: next, prev: stack };
-          next = nextSub;
-          continue traverse;
-        }
+        if (nextSub === undefined) continue traverse;
+
+        stack = { value: next, prev: stack };
+        next = nextSub;
+        continue traverse;
       }
 
       // Advance to next sibling (unified advancement point)
