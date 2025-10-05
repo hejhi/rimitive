@@ -59,25 +59,23 @@ export function createGraphTraversal(): GraphTraversal {
         consumerNode.status = CONSUMER_PENDING;
 
         // Handle producers
-        if ('subscribers' in consumerNode) {
+        deeper: if ('subscribers' in consumerNode) {
           // Schedule any effects attached to this producer
           const scheduledDep = consumerNode.scheduled;
           if (scheduledDep) schedule(scheduledDep);
 
           const subscribers = consumerNode.subscribers;
+          if (subscribers === undefined) break deeper; // Fallthrough
 
-          if (subscribers !== undefined) {
-            // Continue traversal - branch node
-            dep = subscribers;
-            const nextSub = dep.nextConsumer;
+          // Continue traversal - branch node
+          dep = subscribers;
+          const nextSub = dep.nextConsumer;
 
-            if (nextSub !== undefined) {
-              stack = { value: next, prev: stack };
-              next = nextSub;
-            }
+          if (nextSub === undefined) continue traverse;
 
-            continue;
-          }
+          stack = { value: next, prev: stack };
+          next = nextSub;
+          continue traverse;
         }
       }
 
@@ -85,7 +83,7 @@ export function createGraphTraversal(): GraphTraversal {
       if (next !== undefined) {
         dep = next;
         next = dep.nextConsumer;
-        continue;
+        continue traverse;
       }
 
       // Unwind stack
@@ -98,7 +96,7 @@ export function createGraphTraversal(): GraphTraversal {
         }
       }
 
-      break;
+      break traverse;
     }
   };
 
