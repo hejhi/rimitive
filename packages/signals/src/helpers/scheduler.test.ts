@@ -78,7 +78,7 @@ describe('Scheduler Algorithm', () => {
         detachAll: vi.fn(),
       });
 
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
 
       expect(order).toEqual(['A', 'B', 'C']);
     });
@@ -97,7 +97,7 @@ describe('Scheduler Algorithm', () => {
         detachAll: vi.fn(),
       });
 
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
 
       expect(called).toBe(1);
     });
@@ -123,7 +123,7 @@ describe('Scheduler Algorithm', () => {
         detachAll: vi.fn(),
       });
 
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
 
       // Only CLEAN nodes should be queued and executed
       expect(executed).toEqual(['clean']);
@@ -167,7 +167,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       scheduler.startBatch();
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
 
       // Should not flush yet
       expect(executed).toEqual([]);
@@ -191,7 +191,7 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.startBatch(); // depth = 1
       scheduler.startBatch(); // depth = 2
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
       expect(executed).toEqual([]);
 
       scheduler.endBatch(); // depth = 1
@@ -213,7 +213,7 @@ describe('Scheduler Algorithm', () => {
       });
 
       scheduler.startBatch();
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
       expect(executed).toEqual([]);
 
       // Manual flush should not work during batch
@@ -243,7 +243,7 @@ describe('Scheduler Algorithm', () => {
         detachAll: vi.fn(),
       });
 
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
 
       statuses.push(node.status & STATE_MASK); // After execution (should be CLEAN)
 
@@ -269,7 +269,7 @@ describe('Scheduler Algorithm', () => {
         detachAll: vi.fn(),
       });
 
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
 
       // B should be skipped
       expect(executed).toEqual(['A', 'C']);
@@ -299,7 +299,7 @@ describe('Scheduler Algorithm', () => {
         detachAll: vi.fn(),
       });
 
-      scheduler.propagateSubscribers(depChain);
+      scheduler.propagate(depChain);
 
       expect(executed).toContain('A');
       expect(executed).toContain('C');
@@ -326,11 +326,11 @@ describe('Scheduler Algorithm', () => {
       node1.flush = vi.fn(() => {
         order.push('outer');
         // Trigger another propagation during flush
-        scheduler.propagateSubscribers(depChain2);
+        scheduler.propagate(depChain2);
       });
       const depChain1 = createDepChain(node1)!;
 
-      scheduler.propagateSubscribers(depChain1);
+      scheduler.propagate(depChain1);
 
       expect(order).toEqual(['outer', 'inner']);
     });

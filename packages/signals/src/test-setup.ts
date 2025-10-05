@@ -41,11 +41,11 @@ export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler 
 // Create a test instance with a stable context
 export function createTestInstance() {
   const opts = createDefaultContext();
-  const { ctx, propagateSubscribers, startBatch, endBatch } = opts;
+  const { ctx, propagate, startBatch, endBatch } = opts;
 
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory({ ...opts, propagateSubscribers }),
+    createSignalFactory({ ...opts, propagate }),
     createComputedFactory(opts),
     createEffectFactory(opts),
     createBatchFactory({ ...opts, startBatch, endBatch }),

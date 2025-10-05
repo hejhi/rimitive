@@ -34,7 +34,7 @@ export interface SignalFunction<T = unknown> {
 export type SignalOpts = {
   ctx: GlobalContext;
   trackDependency: GraphEdges['trackDependency'];
-  propagateSubscribers: (subscribers: Dependency) => void;
+  propagate: (subscribers: Dependency) => void;
 };
 
 // Re-export types needed for type inference
@@ -54,7 +54,7 @@ export function createSignalFactory(
 ): SignalFactory {
   const {
     trackDependency,
-    propagateSubscribers,
+    propagate,
     ctx,
   } = opts;
 
@@ -88,7 +88,7 @@ export function createSignalFactory(
 
       // Mark dirty and propagate (scheduler handles flushing automatically)
       node.status = SIGNAL_DIRTY;
-      propagateSubscribers(subs);
+      propagate(subs);
     }
 
     // Direct property assignment

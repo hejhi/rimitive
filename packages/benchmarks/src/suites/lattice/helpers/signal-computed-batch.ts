@@ -14,7 +14,7 @@ export const createApi = () => {
   const { trackDependency, track, detachAll } = createGraphEdges({ ctx });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
   const { traverseGraph } = createGraphTraversal();
-  const { startBatch, endBatch, propagateSubscribers } = createScheduler({
+  const { startBatch, endBatch, propagate } = createScheduler({
     traverseGraph,
     detachAll
   });
@@ -28,7 +28,7 @@ export const createApi = () => {
     {
       ctx,
       trackDependency,
-      propagateSubscribers,
+      propagate,
       pullUpdates,
       startBatch,
       endBatch,

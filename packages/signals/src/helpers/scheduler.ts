@@ -22,7 +22,7 @@ export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
 export interface Scheduler {
   /** Propagate updates through subscriber graph (includes both computeds and effects) */
-  propagateSubscribers: (subscribers: Dependency) => void;
+  propagate: (subscribers: Dependency) => void;
   /** Dispose a scheduled node */
   dispose: <T extends ScheduledNode>(
     node: T,
@@ -115,7 +115,7 @@ export function createScheduler({
   };
 
   // Propagate through subscribers (both computeds and effects)
-  const propagateSubscribers = (subscribers: Dependency): void => {
+  const propagate = (subscribers: Dependency): void => {
     traverseGraph(subscribers, queueIfScheduled);
     if (queueHead === undefined) return;
     flush();
@@ -154,7 +154,7 @@ export function createScheduler({
   };
 
   return {
-    propagateSubscribers,
+    propagate,
     dispose,
     startBatch,
     endBatch,
