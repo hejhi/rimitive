@@ -50,53 +50,55 @@ export function createGraphTraversal(): GraphTraversal {
     let next: Dependency | undefined = subscribers.nextConsumer;
     let stack: Stack<Dependency | undefined> | undefined;
 
-    traverse: for (;;) {
+    traversal: for (;;) {
       const consumerNode = dep.consumer;
       const status = consumerNode.status;
 
-      deeper: if (status === STATUS_CLEAN || status === DERIVED_DIRTY) {
+      processNode: if (status === STATUS_CLEAN || status === DERIVED_DIRTY) {
         // Mark as pending (invalidated)
         consumerNode.status = CONSUMER_PENDING;
 
-        // Handle producers
-        if (!('subscribers' in consumerNode)) break deeper; // Fallthrough
+        // Fall through if there's no subscribers
+        if (!('subscribers' in consumerNode)) break processNode;
 
         // Schedule any effects attached to this producer
         const scheduledDep = consumerNode.scheduled;
-        if (scheduledDep) schedule(scheduledDep);
-
         const subscribers = consumerNode.subscribers;
-        if (subscribers === undefined) break deeper;
+
+        if (scheduledDep) schedule(scheduledDep);
+        if (subscribers === undefined) break processNode;
 
         // Continue traversal - branch node
         dep = subscribers;
         const nextSub = dep.nextConsumer;
 
-        if (nextSub === undefined) continue traverse;
+        if (nextSub === undefined) continue traversal;
 
         stack = { value: next, prev: stack };
         next = nextSub;
-        continue traverse;
+        continue traversal;
       }
 
       // Advance to next sibling (unified advancement point)
       if (next !== undefined) {
         dep = next;
         next = dep.nextConsumer;
-        continue traverse;
+        continue traversal;
       }
 
+      if (stack === undefined) return;
+
       // Unwind stack
-      while (stack !== undefined) {
+      do {
         dep = stack.value!;
         stack = stack.prev;
         if (dep !== undefined) {
           next = dep.nextConsumer;
-          continue traverse;
+          continue traversal;
         }
-      }
+      } while (stack);
 
-      break traverse;
+      return;
     }
   };
 
