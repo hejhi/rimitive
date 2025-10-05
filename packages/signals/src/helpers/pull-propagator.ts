@@ -1,5 +1,5 @@
 import type { Dependency, DerivedNode } from '../types';
-import { CONSTANTS, setClean, setDirty, isPending, isDirty } from '../constants';
+import { CONSTANTS, setClean, setDirty, isPending, isDirty, isConsumer } from '../constants';
 import { GraphEdges } from './graph-edges';
 
 // Re-export types for proper type inference
@@ -7,7 +7,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DERIVED_DIRTY, CONSUMER_PENDING, SIGNAL_UPDATED, STATE_MASK } = CONSTANTS;
+const { DIRTY, PENDING, STATE_MASK } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -30,7 +30,7 @@ const shallowPropagate = (sub: Dependency) => {
   } while (sub);
 };
 
-const STATUS_CHECK = DERIVED_DIRTY | SIGNAL_UPDATED | CONSUMER_PENDING;
+const STATUS_CHECK = DIRTY | PENDING;
 
 export function createPullPropagator({
   track
@@ -54,31 +54,32 @@ export function createPullPropagator({
       if (isDirty(consumer)) {
         dirty = true;
       } else if (STATUS_CHECK) switch (status & STATE_MASK) {
-        case DERIVED_DIRTY: {
-          // Producer is a dirty derived - recompute it
-          const derivedProducer = producer as DerivedNode;
-          const val = track(derivedProducer, derivedProducer.compute);
+        case DIRTY: {
+          // Producer is dirty - either a signal or derived
+          if (isConsumer(producer)) {
+            // Producer is a dirty derived - recompute it
+            const derivedProducer = producer as DerivedNode;
+            const val = track(derivedProducer, derivedProducer.compute);
 
-          // Value is unchanged - break out
-          if (val === derivedProducer.value) break;
+            // Value is unchanged - break out
+            if (val === derivedProducer.value) break;
 
-          derivedProducer.value = val;
-          const subs = producer.subscribers;
-          dirty = true;
+            derivedProducer.value = val;
+            const subs = producer.subscribers;
+            dirty = true;
 
-          if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
+            if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
+          } else {
+            // Signal updated - clear flag and mark dirty
+            setClean(producer);
+            const subs = producer.subscribers;
+            dirty = true;
+
+            if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
+          }
           break;
         }
-        case SIGNAL_UPDATED: {
-          // Signal updated - clear flag and mark dirty
-          setClean(producer);
-          const subs = producer.subscribers;
-          dirty = true;
-
-          if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
-          break;
-        }
-        case CONSUMER_PENDING: {
+        case PENDING: {
           const derivedProducer = producer as DerivedNode;
 
           // Check if producer was recomputed AFTER our edge to it was created

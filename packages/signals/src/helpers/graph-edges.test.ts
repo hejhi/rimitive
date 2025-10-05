@@ -21,7 +21,7 @@ import { createBaseContext, GlobalContext } from '../context';
 function createProducer(): ProducerNode {
   return {
     __type: 'producer',
-    status: 0, // STATUS_CLEAN
+    status: 0, // CLEAN
     value: undefined,
     subscribers: undefined,
     subscribersTail: undefined,
@@ -33,7 +33,7 @@ function createProducer(): ProducerNode {
 function createConsumer(): ConsumerNode {
   return {
     __type: 'consumer',
-    status: 0, // STATUS_CLEAN
+    status: 0, // CLEAN
     dependencies: undefined,
     dependencyTail: undefined,
     trackingVersion: 0,

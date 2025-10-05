@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
 import type { ScheduledNode, Dependency, FromNode } from '../types';
-import { CONSTANTS, setPending, setScheduledPending, setClean, setScheduledDisposed } from '../constants';
+import { CONSTANTS, setPending, setClean, setDisposed } from '../constants';
 
-const { SCHEDULED, SCHEDULED_DISPOSED, STATUS_CLEAN, CONSUMER, STATE_MASK } = CONSTANTS;
+const { SCHEDULED, DISPOSED, CLEAN, CONSUMER, STATE_MASK } = CONSTANTS;
 
 /**
  * Pure unit tests for scheduler algorithm
@@ -16,7 +16,7 @@ describe('Scheduler Algorithm', () => {
   // Helper to create a mock scheduled node
   function createMockScheduledNode(): ScheduledNode {
     return {
-      status: CONSUMER | SCHEDULED | STATUS_CLEAN,  // Type bits + initial state
+      status: CONSUMER | SCHEDULED | CLEAN,  // Type bits + initial state
       nextScheduled: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
@@ -91,7 +91,7 @@ describe('Scheduler Algorithm', () => {
       expect(called).toBe(1);
     });
 
-    it('should only queue STATUS_CLEAN nodes', () => {
+    it('should only queue CLEAN nodes', () => {
       const executed: string[] = [];
       const node1 = createMockScheduledNode();
       setClean(node1);  // Clean nodes get queued
@@ -102,7 +102,7 @@ describe('Scheduler Algorithm', () => {
       node2.flush = vi.fn(() => executed.push('pending'));
 
       const node3 = createMockScheduledNode();
-      setScheduledPending(node3);  // Already scheduled - skip
+      setPending(node3);  // Already scheduled - skip
       node3.flush = vi.fn(() => executed.push('already-scheduled'));
 
       const depChain = createDepChain(node1, node2, node3)!;
@@ -114,7 +114,7 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.propagateScheduled(depChain);
 
-      // Only STATUS_CLEAN nodes should be queued and executed
+      // Only CLEAN nodes should be queued and executed
       expect(executed).toEqual(['clean']);
     });
   });
@@ -215,14 +215,14 @@ describe('Scheduler Algorithm', () => {
   });
 
   describe('Status Transitions', () => {
-    it('should transition STATUS_CLEAN -> CONSUMER_PENDING -> SCHEDULED -> STATUS_CLEAN', () => {
+    it('should transition CLEAN -> CONSUMER_PENDING -> SCHEDULED -> CLEAN', () => {
       const statuses: number[] = [];
       const node = createMockScheduledNode();
-      statuses.push(node.status & STATE_MASK); // Should be STATUS_CLEAN initially
+      statuses.push(node.status & STATE_MASK); // Should be CLEAN initially
 
       // Simulate flush callback to capture status during execution
       node.flush = vi.fn(() => {
-        statuses.push(node.status & STATE_MASK); // Should be STATUS_CLEAN during flush
+        statuses.push(node.status & STATE_MASK); // Should be CLEAN during flush
       });
 
       const depChain = createDepChain(node)!;
@@ -234,9 +234,9 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.propagateScheduled(depChain);
 
-      statuses.push(node.status & STATE_MASK); // After execution (should be STATUS_CLEAN)
+      statuses.push(node.status & STATE_MASK); // After execution (should be CLEAN)
 
-      expect(statuses).toEqual([STATUS_CLEAN, STATUS_CLEAN, STATUS_CLEAN]);
+      expect(statuses).toEqual([CLEAN, CLEAN, CLEAN]);
     });
 
     it('should skip disposed nodes during flush', () => {
@@ -246,7 +246,7 @@ describe('Scheduler Algorithm', () => {
 
       const node2 = createMockScheduledNode();
       node2.flush = vi.fn(() => executed.push('B'));
-      setScheduledDisposed(node2); // Set as disposed before queueing
+      setDisposed(node2); // Set as disposed before queueing
 
       const node3 = createMockScheduledNode();
       node3.flush = vi.fn(() => executed.push('C'));
@@ -338,7 +338,7 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.dispose(node, cleanup);
 
-      expect(node.status & STATE_MASK).toBe(SCHEDULED_DISPOSED);
+      expect(node.status & STATE_MASK).toBe(DISPOSED);
       expect(cleanup).toHaveBeenCalledWith(node);
     });
 

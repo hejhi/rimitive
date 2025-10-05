@@ -4,7 +4,7 @@ import type { DerivedNode, ProducerNode, Dependency, ConsumerNode } from '../typ
 import type { GraphEdges } from './graph-edges';
 import { CONSTANTS } from '../constants';
 
-const { DERIVED_DIRTY, CONSUMER_PENDING, SIGNAL_UPDATED, STATUS_CLEAN } = CONSTANTS;
+const { DIRTY, PENDING, CLEAN, PRODUCER, CONSUMER, STATE_MASK } = CONSTANTS;
 
 /**
  * Unit tests for pull-propagator algorithm
@@ -16,8 +16,13 @@ const { DERIVED_DIRTY, CONSUMER_PENDING, SIGNAL_UPDATED, STATUS_CLEAN } = CONSTA
 describe('Pull Propagator Algorithm', () => {
   // Helper to create a minimal mock node
   function createMockNode(type: 'producer' | 'derived', status: number): ProducerNode | DerivedNode {
+    // Add type flags to the status
+    const fullStatus = type === 'producer'
+      ? PRODUCER | status
+      : PRODUCER | CONSUMER | status;
+
     const base = {
-      status,
+      status: fullStatus,
       subscribers: undefined,
       dependencies: undefined,
     };
@@ -59,7 +64,7 @@ describe('Pull Propagator Algorithm', () => {
       const mockTrack = vi.fn();
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const node = createMockNode('derived', STATUS_CLEAN) as DerivedNode;
+      const node = createMockNode('derived', CLEAN) as DerivedNode;
       node.dependencies = undefined;
 
       const result = pullUpdates(node);
@@ -72,23 +77,23 @@ describe('Pull Propagator Algorithm', () => {
       const mockTrack = vi.fn();
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const producer = createMockNode('producer', STATUS_CLEAN);
-      const consumer = createMockNode('derived', STATUS_CLEAN) as DerivedNode;
+      const producer = createMockNode('producer', CLEAN);
+      const consumer = createMockNode('derived', CLEAN) as DerivedNode;
       const dep = createDependency(producer, consumer);
       consumer.dependencies = dep;
 
       const result = pullUpdates(consumer);
 
       expect(result).toBe(false);
-      expect(consumer.status).toBe(STATUS_CLEAN);
+      expect(consumer.status & STATE_MASK).toBe(CLEAN);
     });
 
     it('should return true when consumer is already dirty', () => {
       const mockTrack = vi.fn();
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const producer = createMockNode('producer', STATUS_CLEAN);
-      const consumer = createMockNode('derived', DERIVED_DIRTY) as DerivedNode;
+      const producer = createMockNode('producer', CLEAN);
+      const consumer = createMockNode('derived', DIRTY) as DerivedNode;
       const dep = createDependency(producer, consumer);
       consumer.dependencies = dep;
 
@@ -103,15 +108,15 @@ describe('Pull Propagator Algorithm', () => {
       const mockTrack = vi.fn();
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const producer = createMockNode('producer', SIGNAL_UPDATED);
-      const consumer = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const producer = createMockNode('producer', DIRTY);
+      const consumer = createMockNode('derived', PENDING) as DerivedNode;
       const dep = createDependency(producer, consumer);
       consumer.dependencies = dep;
 
       const result = pullUpdates(consumer);
 
       expect(result).toBe(true);
-      expect(producer.status).toBe(STATUS_CLEAN); // Flag cleared
+      expect(producer.status & STATE_MASK).toBe(CLEAN); // Flag cleared
     });
   });
 
@@ -121,11 +126,11 @@ describe('Pull Propagator Algorithm', () => {
       const mockTrack = vi.fn(<T>(_node: ConsumerNode, fn: () => T): T => fn()) as GraphEdges['track'];
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const producer = createMockNode('derived', DERIVED_DIRTY) as DerivedNode;
+      const producer = createMockNode('derived', DIRTY) as DerivedNode;
       producer.compute = computeFn;
       producer.value = 10; // Old value
 
-      const consumer = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const consumer = createMockNode('derived', PENDING) as DerivedNode;
       const dep = createDependency(producer, consumer);
       consumer.dependencies = dep;
 
@@ -141,11 +146,11 @@ describe('Pull Propagator Algorithm', () => {
       const mockTrack = vi.fn(<T>(_node: ConsumerNode, fn: () => T): T => fn()) as GraphEdges['track'];
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const producer = createMockNode('derived', DERIVED_DIRTY) as DerivedNode;
+      const producer = createMockNode('derived', DIRTY) as DerivedNode;
       producer.compute = computeFn;
       producer.value = 42; // Same value
 
-      const consumer = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const consumer = createMockNode('derived', PENDING) as DerivedNode;
       const dep = createDependency(producer, consumer);
       consumer.dependencies = dep;
 
@@ -163,10 +168,10 @@ describe('Pull Propagator Algorithm', () => {
       const mockTrack = vi.fn();
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const producer = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const producer = createMockNode('derived', PENDING) as DerivedNode;
       producer.trackingVersion = 5; // Producer recomputed at version 5
 
-      const consumer = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const consumer = createMockNode('derived', PENDING) as DerivedNode;
       const dep = createDependency(producer, consumer, 3); // Edge created at version 3
       consumer.dependencies = dep;
       producer.dependencies = undefined; // No further dependencies
@@ -180,14 +185,14 @@ describe('Pull Propagator Algorithm', () => {
       const mockTrack = vi.fn();
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
-      const upstream = createMockNode('producer', STATUS_CLEAN);
+      const upstream = createMockNode('producer', CLEAN);
 
-      const producer = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const producer = createMockNode('derived', PENDING) as DerivedNode;
       producer.trackingVersion = 3;
       const producerDep = createDependency(upstream, producer);
       producer.dependencies = producerDep;
 
-      const consumer = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const consumer = createMockNode('derived', PENDING) as DerivedNode;
       const dep = createDependency(producer, consumer, 5); // Edge created AFTER producer recomputed
       consumer.dependencies = dep;
 
@@ -203,9 +208,9 @@ describe('Pull Propagator Algorithm', () => {
     it('should upgrade PENDING siblings to DIRTY', () => {
       const { shallowPropagate } = createPullPropagator({ track: vi.fn() });
 
-      const producer = createMockNode('producer', STATUS_CLEAN);
-      const consumer1 = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
-      const consumer2 = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const producer = createMockNode('producer', CLEAN);
+      const consumer1 = createMockNode('derived', PENDING) as DerivedNode;
+      const consumer2 = createMockNode('derived', PENDING) as DerivedNode;
 
       const dep1 = createDependency(producer, consumer1);
       const dep2 = createDependency(producer, consumer2);
@@ -218,16 +223,16 @@ describe('Pull Propagator Algorithm', () => {
 
       shallowPropagate(dep1);
 
-      expect(consumer1.status).toBe(DERIVED_DIRTY);
-      expect(consumer2.status).toBe(DERIVED_DIRTY);
+      expect(consumer1.status & STATE_MASK).toBe(DIRTY);
+      expect(consumer2.status & STATE_MASK).toBe(DIRTY);
     });
 
     it('should not affect non-PENDING siblings', () => {
       const { shallowPropagate } = createPullPropagator({ track: vi.fn() });
 
-      const producer = createMockNode('producer', STATUS_CLEAN);
-      const consumer1 = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
-      const consumer2 = createMockNode('derived', STATUS_CLEAN) as DerivedNode;
+      const producer = createMockNode('producer', CLEAN);
+      const consumer1 = createMockNode('derived', PENDING) as DerivedNode;
+      const consumer2 = createMockNode('derived', CLEAN) as DerivedNode;
 
       const dep1 = createDependency(producer, consumer1);
       const dep2 = createDependency(producer, consumer2);
@@ -239,8 +244,8 @@ describe('Pull Propagator Algorithm', () => {
 
       shallowPropagate(dep1);
 
-      expect(consumer1.status).toBe(DERIVED_DIRTY);
-      expect(consumer2.status).toBe(STATUS_CLEAN); // Not upgraded
+      expect(consumer1.status & STATE_MASK).toBe(DIRTY);
+      expect(consumer2.status & STATE_MASK).toBe(CLEAN); // Not upgraded
     });
   });
 
@@ -250,15 +255,15 @@ describe('Pull Propagator Algorithm', () => {
       const { pullUpdates } = createPullPropagator({ track: mockTrack });
 
       // Create chain: producer -> derived1 -> derived2
-      const producer = createMockNode('producer', SIGNAL_UPDATED);
+      const producer = createMockNode('producer', DIRTY);
 
-      const derived1 = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const derived1 = createMockNode('derived', PENDING) as DerivedNode;
       derived1.compute = vi.fn(() => 1);
       derived1.value = 0;
       const dep1 = createDependency(producer, derived1);
       derived1.dependencies = dep1;
 
-      const derived2 = createMockNode('derived', CONSUMER_PENDING) as DerivedNode;
+      const derived2 = createMockNode('derived', PENDING) as DerivedNode;
       derived2.compute = vi.fn(() => 2);
       derived2.value = 0;
       const dep2 = createDependency(derived1, derived2);
@@ -267,7 +272,7 @@ describe('Pull Propagator Algorithm', () => {
       const result = pullUpdates(derived2);
 
       expect(result).toBe(true);
-      expect(producer.status).toBe(STATUS_CLEAN); // Signal flag cleared
+      expect(producer.status & STATE_MASK).toBe(CLEAN); // Signal flag cleared
       expect(mockTrack).toHaveBeenCalledWith(derived1, derived1.compute);
     });
   });

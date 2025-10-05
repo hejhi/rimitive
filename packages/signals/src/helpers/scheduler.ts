@@ -8,7 +8,7 @@
  */
 
 import type { Dependency, ScheduledNode } from '../types';
-import { setClean, setScheduledPending, setScheduledDisposed, isScheduledPending, isScheduledDisposed, isClean } from '../constants';
+import { setClean, setPending, setDisposed, isPending, isDisposed, isClean } from '../constants';
 
 // Re-export types for proper type inference
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
@@ -81,7 +81,7 @@ export function createScheduler({
         if (next !== undefined) current.nextScheduled = undefined;
 
         // Only flush if scheduled (skip disposed nodes)
-        if (isScheduledPending(current)) {
+        if (isPending(current)) {
           setClean(current);
           try {
             current.flush();
@@ -116,7 +116,7 @@ export function createScheduler({
         continue
       }
 
-      setScheduledPending(scheduled);
+      setPending(scheduled);
       scheduled.nextScheduled = undefined;
 
       // Add to execution queue
@@ -160,9 +160,9 @@ export function createScheduler({
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    if (isScheduledDisposed(node)) return;
+    if (isDisposed(node)) return;
 
-    setScheduledDisposed(node);
+    setDisposed(node);
     cleanup(node);
 
     const deps = node.dependencies;

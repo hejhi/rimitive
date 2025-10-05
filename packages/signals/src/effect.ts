@@ -4,7 +4,7 @@ import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
 import { Scheduler } from './helpers/scheduler';
 
-const { STATUS_CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
+const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
 export type EffectOpts = {
   ctx: GlobalContext;
@@ -36,7 +36,7 @@ export function createEffectFactory(
 
     const node = {
       __type: 'effect' as const,
-      status: CONSUMER | SCHEDULED | STATUS_CLEAN,
+      status: CONSUMER | SCHEDULED | CLEAN,
       dependencies:  undefined,
       dependencyTail:  undefined,
       nextScheduled: undefined,

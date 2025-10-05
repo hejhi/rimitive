@@ -16,10 +16,10 @@
 import type { ProducerNode, Dependency } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
-import { CONSTANTS, setSignalUpdated } from './constants';
+import { CONSTANTS, setDirty } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
 
-const { STATUS_CLEAN, PRODUCER } = CONSTANTS;
+const { CLEAN, PRODUCER } = CONSTANTS;
 
 export interface SignalFunction<T = unknown> {
   (): T;                    // Read operation (monomorphic)
@@ -64,7 +64,7 @@ export function createSignalFactory(
       subscribersTail: undefined,
       scheduled: undefined,
       scheduledTail: undefined,
-      status: PRODUCER | STATUS_CLEAN,
+      status: PRODUCER | CLEAN,
     };
 
     // Direct function declaration for better optimization
@@ -88,7 +88,7 @@ export function createSignalFactory(
       if (!subs && !scheduled) return;
 
       // Mark dirty and propagate (scheduler handles flushing automatically)
-      setSignalUpdated(node);
+      setDirty(node);
       if (subs) propagateSubscribers(subs);
       if (scheduled) propagateScheduled(scheduled);
     }

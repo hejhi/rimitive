@@ -2,19 +2,22 @@
  * Bit Flag Status Constants
  *
  * The status field combines two types of flags:
- * - State flags (bits 0-5): Mutable, represent current lifecycle state
+ * - State flags (bits 0-2): Mutable, represent current lifecycle state
  * - Type flags (bits 6-8): Immutable, set at creation to identify node type
  *
  * This allows single-field access for both type checking and state management.
+ * Node type + state combination provides full semantic meaning:
+ * - DIRTY + PRODUCER (signal) = signal updated
+ * - DIRTY + PRODUCER + CONSUMER (computed) = computed dirty
+ * - PENDING + CONSUMER + SCHEDULED (effect) = effect pending
+ * - DISPOSED + SCHEDULED (effect) = effect disposed
  */
 
-// === State Flags (bits 0-5, mutable) ===
-export const STATUS_CLEAN = 0;
-export const CONSUMER_PENDING = 1 << 0;
-export const DERIVED_DIRTY = 1 << 1;
-export const SCHEDULED_PENDING = 1 << 2;  // Scheduled node is queued for flush
-export const SCHEDULED_DISPOSED = 1 << 3;
-export const SIGNAL_UPDATED = 1 << 5;
+// === State Flags (bits 0-2, mutable) ===
+export const CLEAN = 0;
+export const PENDING = 1 << 0;
+export const DIRTY = 1 << 1;
+export const DISPOSED = 1 << 2;
 
 // === Type Flags (bits 6-8, immutable) ===
 export const PRODUCER = 1 << 6;  // Can be depended on (signals, computeds)
@@ -22,34 +25,26 @@ export const CONSUMER = 1 << 7;  // Depends on others (computeds, effects)
 export const SCHEDULED = 1 << 8;  // Scheduled node (effects)
 
 // === Masks ===
-export const STATE_MASK = 0b00111111;    // Bits 0-5
+export const STATE_MASK = 0b00000111;    // Bits 0-2
 export const TYPE_MASK = 0b111000000;    // Bits 6-8
 
 // === Status Helpers (preserve type bits when updating state) ===
 import type { ReactiveNode } from './types';
 
 export function setClean(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | STATUS_CLEAN;
+  node.status = (node.status & TYPE_MASK) | CLEAN;
 }
 
 export function setPending(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | CONSUMER_PENDING;
+  node.status = (node.status & TYPE_MASK) | PENDING;
 }
 
 export function setDirty(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | DERIVED_DIRTY;
+  node.status = (node.status & TYPE_MASK) | DIRTY;
 }
 
-export function setScheduledPending(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | SCHEDULED_PENDING;
-}
-
-export function setScheduledDisposed(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | SCHEDULED_DISPOSED;
-}
-
-export function setSignalUpdated(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | SIGNAL_UPDATED;
+export function setDisposed(node: ReactiveNode): void {
+  node.status = (node.status & TYPE_MASK) | DISPOSED;
 }
 
 export function isScheduled(node: ReactiveNode): boolean {
@@ -66,40 +61,33 @@ export function isConsumer(node: ReactiveNode): boolean {
 
 // State checking helpers
 export function isClean(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === STATUS_CLEAN;
+  return (node.status & STATE_MASK) === CLEAN;
 }
 
 export function isPending(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === CONSUMER_PENDING;
+  return (node.status & STATE_MASK) === PENDING;
 }
 
 export function isDirty(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === DERIVED_DIRTY;
+  return (node.status & STATE_MASK) === DIRTY;
 }
 
-export function isScheduledPending(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === SCHEDULED_PENDING;
+export function isDisposed(node: ReactiveNode): boolean {
+  return (node.status & STATE_MASK) === DISPOSED;
 }
 
-export function isScheduledDisposed(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === SCHEDULED_DISPOSED;
-}
-
-export function isSignalUpdated(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === SIGNAL_UPDATED;
-}
-
-// Re-export as CONSTANTS for backward compatibility
+// Re-export as CONSTANTS
 export const CONSTANTS = {
-  STATUS_CLEAN,
-  CONSUMER_PENDING,
-  SCHEDULED_PENDING,
-  SCHEDULED_DISPOSED,
-  DERIVED_DIRTY,
-  SCHEDULED,
-  SIGNAL_UPDATED,
+  // State flags
+  CLEAN,
+  PENDING,
+  DIRTY,
+  DISPOSED,
+  // Type flags
   PRODUCER,
   CONSUMER,
+  SCHEDULED,
+  // Masks
   STATE_MASK,
   TYPE_MASK,
 };

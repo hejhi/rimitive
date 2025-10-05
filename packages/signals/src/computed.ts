@@ -37,7 +37,7 @@ interface ComputedNode<T> extends DerivedNode<T> {
   value: T;
 }
 
-const { CONSUMER_PENDING, DERIVED_DIRTY, PRODUCER, CONSUMER } = CONSTANTS;
+const { PENDING, DIRTY, PRODUCER, CONSUMER } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -53,10 +53,10 @@ export function createComputedFactory({
   // Shared computed function - uses `this` binding
   function computedImpl<T>(this: ComputedNode<T>): T {
     const status = this.status;
-    const isPending = status & CONSUMER_PENDING;
+    const isPending = status & PENDING;
 
     // Check if we need to pull updates
-    update: if (status & DERIVED_DIRTY || (isPending && pullUpdates(this))) {
+    update: if (status & DIRTY || (isPending && pullUpdates(this))) {
       // Recompute the value
       const prev = this.value;
       this.value = track(this, this.compute);
@@ -83,9 +83,9 @@ export function createComputedFactory({
 
     try {
       const status = this.status;
-      const isPending = status & CONSUMER_PENDING;
+      const isPending = status & PENDING;
 
-      if (status & DERIVED_DIRTY || (isPending && pullUpdates(this))) {
+      if (status & DIRTY || (isPending && pullUpdates(this))) {
         this.value = track(this, this.compute);
       } else if (isPending) setClean(this);
 
@@ -105,7 +105,7 @@ export function createComputedFactory({
       scheduledTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
-      status: PRODUCER | CONSUMER | DERIVED_DIRTY,
+      status: PRODUCER | CONSUMER | DIRTY,
       trackingVersion: 0,
       compute,
     };

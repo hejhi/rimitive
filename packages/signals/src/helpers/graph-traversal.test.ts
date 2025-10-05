@@ -3,7 +3,7 @@ import type { DerivedNode, Dependency, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
 
-const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_DIRTY } = CONSTANTS;
+const { CLEAN, PENDING, DIRTY } = CONSTANTS;
 
 /**
  * Unit tests for graph-traversal algorithm
@@ -15,7 +15,7 @@ const { STATUS_CLEAN, CONSUMER_PENDING, DERIVED_DIRTY } = CONSTANTS;
 describe('Graph Traversal Algorithm', () => {
 
   // Helper to create a node
-  function createNode(status: number = STATUS_CLEAN): DerivedNode {
+  function createNode(status: number = CLEAN): DerivedNode {
     return {
       status,
       subscribers: undefined,
@@ -49,9 +49,9 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(a.subscribers);
 
-      expect(b.status).toBe(CONSUMER_PENDING);
-      expect(c.status).toBe(CONSUMER_PENDING);
-      expect(d.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(PENDING);
+      expect(c.status).toBe(PENDING);
+      expect(d.status).toBe(PENDING);
     });
 
     it('should mark all nodes in tree', () => {
@@ -74,11 +74,11 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(a.subscribers);
 
-      expect(b.status).toBe(CONSUMER_PENDING);
-      expect(c.status).toBe(CONSUMER_PENDING);
-      expect(d.status).toBe(CONSUMER_PENDING);
-      expect(e.status).toBe(CONSUMER_PENDING);
-      expect(f.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(PENDING);
+      expect(c.status).toBe(PENDING);
+      expect(d.status).toBe(PENDING);
+      expect(e.status).toBe(PENDING);
+      expect(f.status).toBe(PENDING);
     });
 
     it('should handle diamond dependencies', () => {
@@ -100,9 +100,9 @@ describe('Graph Traversal Algorithm', () => {
 
       propagate(a.subscribers);
 
-      expect(b.status).toBe(CONSUMER_PENDING);
-      expect(c.status).toBe(CONSUMER_PENDING);
-      expect(d.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(PENDING);
+      expect(c.status).toBe(PENDING);
+      expect(d.status).toBe(PENDING);
 
       // D visited only once despite being reachable from both B and C (deduplication)
     });
@@ -110,7 +110,7 @@ describe('Graph Traversal Algorithm', () => {
 
   describe('Deduplication', () => {
     it('should skip already PENDING nodes', () => {
-      const b = createNode(CONSUMER_PENDING); // Already pending
+      const b = createNode(PENDING); // Already pending
       const a = createNode();
 
       a.subscribers = createDep(b);
@@ -122,12 +122,12 @@ describe('Graph Traversal Algorithm', () => {
         leaves.push(dep.consumer as DerivedNode);
       });
 
-      expect(b.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(PENDING);
       expect(leaves).toHaveLength(0); // Not visited again
     });
 
     it('should process DIRTY nodes and mark PENDING', () => {
-      const b = createNode(DERIVED_DIRTY);
+      const b = createNode(DIRTY);
       const a = createNode();
 
       a.subscribers = createDep(b);
@@ -135,7 +135,7 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(a.subscribers);
 
-      expect(b.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(PENDING);
     });
   });
 
@@ -165,7 +165,7 @@ describe('Graph Traversal Algorithm', () => {
         Object.defineProperty(node, 'status', {
           get: () => origStatus,
           set: (v: number) => {
-            if (v === CONSUMER_PENDING) order.push(node);
+            if (v === PENDING) order.push(node);
           },
           configurable: true,
         });
@@ -201,9 +201,9 @@ describe('Graph Traversal Algorithm', () => {
       propagate(a.subscribers);
 
       // All nodes marked as pending
-      expect(b.status).toBe(CONSUMER_PENDING);
-      expect(d.status).toBe(CONSUMER_PENDING);
-      expect(c.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(PENDING);
+      expect(d.status).toBe(PENDING);
+      expect(c.status).toBe(PENDING);
     });
   });
 
@@ -230,7 +230,7 @@ describe('Graph Traversal Algorithm', () => {
 
       // All marked
       nodes.forEach(node => {
-        expect(node.status).toBe(CONSUMER_PENDING);
+        expect(node.status).toBe(PENDING);
       });
     });
 
@@ -257,7 +257,7 @@ describe('Graph Traversal Algorithm', () => {
 
       // All marked
       nodes.forEach(node => {
-        expect(node.status).toBe(CONSUMER_PENDING);
+        expect(node.status).toBe(PENDING);
       });
     });
   });
@@ -288,11 +288,11 @@ describe('Graph Traversal Algorithm', () => {
 
       propagate(a.subscribers);
 
-      expect(b.status).toBe(CONSUMER_PENDING);
-      expect(c.status).toBe(CONSUMER_PENDING);
-      expect(d.status).toBe(CONSUMER_PENDING);
-      expect(e.status).toBe(CONSUMER_PENDING);
-      expect(f.status).toBe(CONSUMER_PENDING);
+      expect(b.status).toBe(PENDING);
+      expect(c.status).toBe(PENDING);
+      expect(d.status).toBe(PENDING);
+      expect(e.status).toBe(PENDING);
+      expect(f.status).toBe(PENDING);
 
       // E is visited only once despite being reachable from B, C, and D (deduplication)
     });
@@ -305,7 +305,7 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(createDep(a));
 
-      expect(a.status).toBe(CONSUMER_PENDING);
+      expect(a.status).toBe(PENDING);
     });
   });
 });

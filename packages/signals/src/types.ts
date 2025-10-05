@@ -19,7 +19,7 @@
 // creating nominal types in a structural type system.
 export interface ReactiveNode {
   readonly __type: string;
-  status: number; // Current node status (STATUS_CLEAN, CONSUMER_PENDING, SCHEDULED_DISPOSED, DERIVED_DIRTY)
+  status: number; // Current node status (CLEAN, PENDING, DIRTY, DISPOSED) + node type flags (PRODUCER, CONSUMER, SCHEDULED)
 }
 
 // DESIGN: User-facing API contracts
