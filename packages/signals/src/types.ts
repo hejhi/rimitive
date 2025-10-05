@@ -39,15 +39,12 @@ export interface Writable<T = unknown> extends Readable<T> {
 // The core of the reactivity system uses a bipartite graph with two node types:
 
 // PRODUCERS: Nodes that other nodes depend on (signals, computed values)
-// They maintain TWO lists of consumers:
-// - subscribers: Computed nodes (for pull propagation)
-// - scheduled: Effect nodes (for push scheduling)
+// They maintain a single list of all consumers (computeds and effects)
+// Effects are identified by the SCHEDULED flag and filtered during traversal
 export interface ProducerNode extends ReactiveNode {
   value: unknown;
-  subscribers: Dependency | undefined; // Head of computed subscribers (for propagation)
-  subscribersTail: Dependency | undefined; // Tail of computed subscribers
-  scheduled: Dependency | undefined; // Head of scheduled effects (terminal nodes)
-  scheduledTail: Dependency | undefined; // Tail of scheduled effects
+  subscribers: Dependency | undefined; // Head of all subscribers (computeds + effects)
+  subscribersTail: Dependency | undefined; // Tail of all subscribers
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)

@@ -53,21 +53,29 @@ export function createGraphTraversal(): GraphTraversal {
       const stateStatus = status & STATE_MASK;
 
       processNode: if (stateStatus === CLEAN || stateStatus === DIRTY) {
-        // Mark as pending (invalidated)
-        consumerNode.status = (status & TYPE_MASK) | PENDING;
+        // Call schedule for this node (callback will filter by SCHEDULED flag)
+        schedule(dep);
 
         // Fall through if there's no subscribers (not a producer)
-        if (!(status & PRODUCER)) break processNode;
+        if (!(status & PRODUCER)) {
+          // Mark as pending (invalidated) - no subscribers to process
+          consumerNode.status = (status & TYPE_MASK) | PENDING;
+          break processNode;
+        }
 
         // At this point, we know consumerNode is a ProducerNode
         const producerNode = consumerNode as ProducerNode;
 
-        // Schedule any effects attached to this producer
-        const scheduledDep = producerNode.scheduled;
+        // Get subscribers (both computeds and effects in single list)
         const subscribers = producerNode.subscribers;
+        if (subscribers === undefined) {
+          // Mark as pending (invalidated) - no subscribers to process
+          consumerNode.status = (status & TYPE_MASK) | PENDING;
+          break processNode;
+        }
 
-        if (scheduledDep) schedule(scheduledDep);
-        if (subscribers === undefined) break processNode;
+        // Now mark as pending (invalidated)
+        consumerNode.status = (status & TYPE_MASK) | PENDING;
 
         // Continue traversal - branch node
         dep = subscribers;

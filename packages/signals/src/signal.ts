@@ -35,7 +35,6 @@ export type SignalOpts = {
   ctx: GlobalContext;
   trackDependency: GraphEdges['trackDependency'];
   propagateSubscribers: (subscribers: Dependency) => void;
-  propagateScheduled: (scheduled: Dependency) => void;
 };
 
 // Re-export types needed for type inference
@@ -56,7 +55,6 @@ export function createSignalFactory(
   const {
     trackDependency,
     propagateSubscribers,
-    propagateScheduled,
     ctx,
   } = opts;
 
@@ -66,8 +64,6 @@ export function createSignalFactory(
       value: initialValue,
       subscribers: undefined,
       subscribersTail: undefined,
-      scheduled: undefined,
-      scheduledTail: undefined,
       status: SIGNAL_CLEAN,
     };
 
@@ -86,15 +82,13 @@ export function createSignalFactory(
       node.value = value!;
 
       const subs = node.subscribers;
-      const scheduled = node.scheduled;
 
-      // Early exit if no subscribers or scheduled effects
-      if (!subs && !scheduled) return;
+      // Early exit if no subscribers
+      if (!subs) return;
 
       // Mark dirty and propagate (scheduler handles flushing automatically)
       node.status = SIGNAL_DIRTY;
-      if (subs) propagateSubscribers(subs);
-      if (scheduled) propagateScheduled(scheduled);
+      propagateSubscribers(subs);
     }
 
     // Direct property assignment

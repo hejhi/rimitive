@@ -21,10 +21,8 @@ const SCHEDULED_DISPOSED = CONSUMER | SCHEDULED | DISPOSED;
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
 export interface Scheduler {
-  /** Propagate updates through computed subscribers graph */
+  /** Propagate updates through subscriber graph (includes both computeds and effects) */
   propagateSubscribers: (subscribers: Dependency) => void;
-  /** Propagate updates through scheduled effects chain */
-  propagateScheduled: (scheduled: Dependency) => void;
   /** Dispose a scheduled node */
   dispose: <T extends ScheduledNode>(
     node: T,
@@ -94,40 +92,31 @@ export function createScheduler({
     isFlushing = false;
   };
 
-  // Handler that queues scheduled effects from a dependency chain
-  const queueIfScheduled = (scheduledDep: Dependency): void => {
-    do {
-      // Only Dependencies with ScheduledNode consumers are in the scheduled chain
-      const scheduled = scheduledDep.consumer as ScheduledNode;
+  // Handler that queues scheduled effects from a dependency (filters by SCHEDULED flag)
+  const queueIfScheduled = (dep: Dependency): void => {
+    // Skip if not a scheduled node (effect)
+    if (!(dep.consumer.status & SCHEDULED)) return;
 
-      if ((scheduled.status & STATE_MASK) !== CLEAN) {
-        scheduledDep = scheduledDep.nextConsumer!;
-        continue
-      }
+    const scheduled = dep.consumer as ScheduledNode;
 
-      scheduled.status = SCHEDULED_PENDING;
-      scheduled.nextScheduled = undefined;
+    // Skip if not clean (already pending/dirty/disposed)
+    if ((scheduled.status & STATE_MASK) !== CLEAN) return;
 
-      // Add to execution queue
-      if (queueTail === undefined) {
-        queueHead = queueTail = scheduled;
-      } else {
-        queueTail.nextScheduled = scheduled;
-        queueTail = scheduled;
-      }
-    } while (scheduledDep);
+    scheduled.status = SCHEDULED_PENDING;
+    scheduled.nextScheduled = undefined;
+
+    // Add to execution queue
+    if (queueTail === undefined) {
+      queueHead = queueTail = scheduled;
+    } else {
+      queueTail.nextScheduled = scheduled;
+      queueTail = scheduled;
+    }
   };
 
-  // Propagate through computed subscribers with scheduling
+  // Propagate through subscribers (both computeds and effects)
   const propagateSubscribers = (subscribers: Dependency): void => {
     traverseGraph(subscribers, queueIfScheduled);
-    if (queueHead === undefined) return;
-    flush();
-  };
-
-  // Propagate through scheduled effects chain
-  const propagateScheduled = (scheduled: Dependency): void => {
-    queueIfScheduled(scheduled);
     if (queueHead === undefined) return;
     flush();
   };
@@ -166,7 +155,6 @@ export function createScheduler({
 
   return {
     propagateSubscribers,
-    propagateScheduled,
     dispose,
     startBatch,
     endBatch,

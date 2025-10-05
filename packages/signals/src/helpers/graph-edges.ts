@@ -2,7 +2,7 @@ import { GlobalContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { SCHEDULED, TYPE_MASK, CLEAN } = CONSTANTS;
+const { TYPE_MASK, CLEAN } = CONSTANTS;
 
 // Re-export types for proper type inference
 export type { ProducerNode, ConsumerNode, Dependency } from '../types';
@@ -24,17 +24,14 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
   const unlinkFromProducer = (
     producer: ProducerNode,
     prevConsumer: Dependency | undefined,
-    nextConsumer: Dependency | undefined,
-    isScheduled: number
+    nextConsumer: Dependency | undefined
   ): void => {
     if (nextConsumer !== undefined)
       nextConsumer.prevConsumer = prevConsumer;
-    else if (isScheduled) producer.scheduledTail = prevConsumer;
     else producer.subscribersTail = prevConsumer;
 
     if (prevConsumer !== undefined)
       prevConsumer.nextConsumer = nextConsumer;
-    else if (isScheduled) producer.scheduled = nextConsumer;
     else producer.subscribers = nextConsumer;
   };
 
@@ -60,11 +57,8 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       return; // Found and reused
     }
 
-    // Check if consumer is an effect (has flush method) or computed (has subscribers)
-    const scheduled = consumer.status & SCHEDULED;
-    const prevConsumer = scheduled
-      ? producer.scheduledTail
-      : producer.subscribersTail;
+    // Get tail of producer's subscriber list for O(1) append
+    const prevConsumer = producer.subscribersTail;
 
     // Create new dependency edge
     const dep: Dependency = {
@@ -83,15 +77,8 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     if (tail) tail.nextDependency = dep;
     else consumer.dependencies = dep;
 
-    // Wire producer side - route effects to scheduled list, computeds to subscribers
+    // Wire producer side - single subscriber list for all consumers
     if (prevConsumer) prevConsumer.nextConsumer = dep;
-
-    if (scheduled) {
-      producer.scheduledTail = dep;
-      if (!prevConsumer) producer.scheduled = dep;
-      return;
-    }
-
     producer.subscribersTail = dep;
     if (!prevConsumer) producer.subscribers = dep;
   };
@@ -103,7 +90,6 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
   const detachAll = (dep: Dependency): void => {
     // All dependencies in the chain share the same consumer
     const consumer = dep.consumer;
-    const scheduled = consumer.status & SCHEDULED;
     let current: Dependency | undefined = dep;
 
     do {
@@ -118,7 +104,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       else consumer.dependencies = next;
 
       // Unlink from producer chain
-      unlinkFromProducer(producer, prevConsumer, nextConsumer, scheduled);
+      unlinkFromProducer(producer, prevConsumer, nextConsumer);
 
       current = next;
     } while (current);
@@ -128,7 +114,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     ctx.trackingVersion++;
 
     // Clear dirty and pending flags before tracking
-    const status = node.status = (node.status & TYPE_MASK) | CLEAN;
+    node.status = (node.status & TYPE_MASK) | CLEAN;
 
     const prevConsumer = ctx.consumerScope;
     node.dependencyTail = undefined;
@@ -145,7 +131,6 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       // dependencyTail marks the last dependency accessed in this tracking cycle
       // Anything after it is stale and should be removed
       const tail = node.dependencyTail as Dependency | undefined;
-      const scheduled = status & SCHEDULED;
 
       // Start point for pruning
       let toRemove = tail ? tail.nextDependency : node.dependencies;
@@ -161,7 +146,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
           else node.dependencies = next;
 
           // Unlink from producer chain
-          unlinkFromProducer(producer, prevConsumer, nextConsumer, scheduled);
+          unlinkFromProducer(producer, prevConsumer, nextConsumer);
 
           toRemove = next;
         } while (toRemove);

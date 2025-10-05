@@ -106,8 +106,6 @@ export function createComputedFactory({
       value: undefined as T,
       subscribers: undefined,
       subscribersTail: undefined,
-      scheduled: undefined,
-      scheduledTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
       status: COMPUTED_DIRTY,
