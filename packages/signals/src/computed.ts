@@ -4,7 +4,7 @@
  * Computed values are the heart of the reactive system.
  */
 
-import { CONSTANTS } from './constants';
+import { CONSTANTS, setClean } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
@@ -37,7 +37,7 @@ interface ComputedNode<T> extends DerivedNode<T> {
   value: T;
 }
 
-const { CONSUMER_PENDING, DERIVED_DIRTY, STATUS_CLEAN } = CONSTANTS;
+const { CONSUMER_PENDING, DERIVED_DIRTY, PRODUCER, CONSUMER } = CONSTANTS;
 
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
@@ -66,7 +66,7 @@ export function createComputedFactory({
 
       const subs = this.subscribers;
       if (subs !== undefined) shallowPropagate(subs);
-    } else if (isPending) this.status = STATUS_CLEAN;
+    } else if (isPending) setClean(this);
 
     // Track dependency AFTER pulling updates
     const consumer = ctx.consumerScope;
@@ -87,7 +87,7 @@ export function createComputedFactory({
 
       if (status & DERIVED_DIRTY || (isPending && pullUpdates(this))) {
         this.value = track(this, this.compute);
-      } else if (isPending) this.status = STATUS_CLEAN;
+      } else if (isPending) setClean(this);
 
       return this.value;
     } finally {
@@ -105,7 +105,7 @@ export function createComputedFactory({
       scheduledTail: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
-      status: DERIVED_DIRTY,
+      status: PRODUCER | CONSUMER | DERIVED_DIRTY,
       trackingVersion: 0,
       compute,
     };

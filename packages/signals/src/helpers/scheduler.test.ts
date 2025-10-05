@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
 import type { ScheduledNode, Dependency, FromNode } from '../types';
-import { CONSTANTS } from '../constants';
+import { CONSTANTS, setPending, setScheduledPending, setClean, setScheduledDisposed } from '../constants';
 
-const { CONSUMER_PENDING, SCHEDULED, SCHEDULED_DISPOSED, STATUS_CLEAN } = CONSTANTS;
+const { SCHEDULED, SCHEDULED_DISPOSED, STATUS_CLEAN, CONSUMER, STATE_MASK } = CONSTANTS;
 
 /**
  * Pure unit tests for scheduler algorithm
@@ -16,7 +16,7 @@ describe('Scheduler Algorithm', () => {
   // Helper to create a mock scheduled node
   function createMockScheduledNode(): ScheduledNode {
     return {
-      status: STATUS_CLEAN,  // Scheduler expects CLEAN nodes (it marks them PENDING)
+      status: CONSUMER | SCHEDULED | STATUS_CLEAN,  // Type bits + initial state
       nextScheduled: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
@@ -94,15 +94,15 @@ describe('Scheduler Algorithm', () => {
     it('should only queue STATUS_CLEAN nodes', () => {
       const executed: string[] = [];
       const node1 = createMockScheduledNode();
-      node1.status = STATUS_CLEAN;  // Clean nodes get queued
+      setClean(node1);  // Clean nodes get queued
       node1.flush = vi.fn(() => executed.push('clean'));
 
       const node2 = createMockScheduledNode();
-      node2.status = CONSUMER_PENDING;  // Already pending - skip
+      setPending(node2);  // Already pending - skip
       node2.flush = vi.fn(() => executed.push('pending'));
 
       const node3 = createMockScheduledNode();
-      node3.status = SCHEDULED;  // Already scheduled - skip
+      setScheduledPending(node3);  // Already scheduled - skip
       node3.flush = vi.fn(() => executed.push('already-scheduled'));
 
       const depChain = createDepChain(node1, node2, node3)!;
@@ -218,11 +218,11 @@ describe('Scheduler Algorithm', () => {
     it('should transition STATUS_CLEAN -> CONSUMER_PENDING -> SCHEDULED -> STATUS_CLEAN', () => {
       const statuses: number[] = [];
       const node = createMockScheduledNode();
-      statuses.push(node.status); // Should be STATUS_CLEAN initially
+      statuses.push(node.status & STATE_MASK); // Should be STATUS_CLEAN initially
 
       // Simulate flush callback to capture status during execution
       node.flush = vi.fn(() => {
-        statuses.push(node.status); // Should be STATUS_CLEAN during flush
+        statuses.push(node.status & STATE_MASK); // Should be STATUS_CLEAN during flush
       });
 
       const depChain = createDepChain(node)!;
@@ -234,7 +234,7 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.propagateScheduled(depChain);
 
-      statuses.push(node.status); // After execution (should be STATUS_CLEAN)
+      statuses.push(node.status & STATE_MASK); // After execution (should be STATUS_CLEAN)
 
       expect(statuses).toEqual([STATUS_CLEAN, STATUS_CLEAN, STATUS_CLEAN]);
     });
@@ -246,7 +246,7 @@ describe('Scheduler Algorithm', () => {
 
       const node2 = createMockScheduledNode();
       node2.flush = vi.fn(() => executed.push('B'));
-      node2.status = SCHEDULED_DISPOSED; // Set as disposed before queueing
+      setScheduledDisposed(node2); // Set as disposed before queueing
 
       const node3 = createMockScheduledNode();
       node3.flush = vi.fn(() => executed.push('C'));
@@ -338,7 +338,7 @@ describe('Scheduler Algorithm', () => {
 
       scheduler.dispose(node, cleanup);
 
-      expect(node.status).toBe(SCHEDULED_DISPOSED);
+      expect(node.status & STATE_MASK).toBe(SCHEDULED_DISPOSED);
       expect(cleanup).toHaveBeenCalledWith(node);
     });
 

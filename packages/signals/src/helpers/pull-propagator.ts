@@ -1,5 +1,5 @@
 import type { Dependency, DerivedNode } from '../types';
-import { CONSTANTS } from '../constants';
+import { CONSTANTS, setClean, setDirty, isPending, isDirty } from '../constants';
 import { GraphEdges } from './graph-edges';
 
 // Re-export types for proper type inference
@@ -7,7 +7,7 @@ export type { DerivedNode } from '../types';
 export type { GlobalContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
-const { DERIVED_DIRTY, CONSUMER_PENDING, SIGNAL_UPDATED, STATUS_CLEAN } = CONSTANTS;
+const { DERIVED_DIRTY, CONSUMER_PENDING, SIGNAL_UPDATED, STATE_MASK } = CONSTANTS;
 
 // Minimal stack node for pull traversal
 interface StackNode {
@@ -25,7 +25,7 @@ const shallowPropagate = (sub: Dependency) => {
   do {
     const consumer = sub.consumer;
 
-    if (consumer.status === CONSUMER_PENDING) consumer.status = DERIVED_DIRTY;
+    if (isPending(consumer)) setDirty(consumer);
     sub = sub.nextConsumer!;
   } while (sub);
 };
@@ -51,9 +51,9 @@ export function createPullPropagator({
 			const status = producer.status;
 
       // Check if this dependency makes the consumer dirty
-      if (consumer.status === DERIVED_DIRTY) {
+      if (isDirty(consumer)) {
         dirty = true;
-      } else if (STATUS_CHECK) switch (status) {
+      } else if (STATUS_CHECK) switch (status & STATE_MASK) {
         case DERIVED_DIRTY: {
           // Producer is a dirty derived - recompute it
           const derivedProducer = producer as DerivedNode;
@@ -71,7 +71,7 @@ export function createPullPropagator({
         }
         case SIGNAL_UPDATED: {
           // Signal updated - clear flag and mark dirty
-          producer.status = STATUS_CLEAN;
+          setClean(producer);
           const subs = producer.subscribers;
           dirty = true;
 
@@ -141,7 +141,7 @@ export function createPullPropagator({
 
           consumer = dep.consumer as DerivedNode;
           continue unwind;
-        } else consumer.status = STATUS_CLEAN;
+        } else setClean(consumer);
 
         // Move back to parent consumer
         consumer = dep.consumer as DerivedNode;

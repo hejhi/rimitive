@@ -7,12 +7,10 @@
  */
 
 import type { Dependency } from '../types';
-import { CONSTANTS } from '../constants';
+import { setPending, isClean, isDirty } from '../constants';
 
 // Re-export types for proper type inference
 export type { Dependency, ConsumerNode, DerivedNode } from '../types';
-
-const { STATUS_CLEAN, DERIVED_DIRTY, CONSUMER_PENDING } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -43,20 +41,16 @@ export function createGraphTraversal(): GraphTraversal {
    subscribers: Dependency,
    schedule: (scheduledDep: Dependency) => void
   ): void => {
-    // Check if this is a scheduled effects chain (effects don't have 'subscribers')
-    // If so, pass directly to scheduler and return - no need to traverse
-
     let dep: Dependency = subscribers;
     let next: Dependency | undefined = subscribers.nextConsumer;
     let stack: Stack<Dependency | undefined> | undefined;
 
     traversal: for (;;) {
       const consumerNode = dep.consumer;
-      const status = consumerNode.status;
 
-      processNode: if (status === STATUS_CLEAN || status === DERIVED_DIRTY) {
+      processNode: if (isClean(consumerNode) || isDirty(consumerNode)) {
         // Mark as pending (invalidated)
-        consumerNode.status = CONSUMER_PENDING;
+        setPending(consumerNode);
 
         // Fall through if there's no subscribers
         if (!('subscribers' in consumerNode)) break processNode;

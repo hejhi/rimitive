@@ -18,7 +18,7 @@ import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
 import { Scheduler } from './helpers/scheduler';
 
-const { STATUS_CLEAN } = CONSTANTS;
+const { STATUS_CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
 export type SubscribeOpts = {
   track: GraphEdges['track'];
@@ -58,7 +58,7 @@ export function createSubscribeFactory(
   ): UnsubscribeFunction {
     const node = {
       __type: 'subscription' as const,
-      status: STATUS_CLEAN,
+      status: CONSUMER | SCHEDULED | STATUS_CLEAN,
       dependencies: undefined,
       dependencyTail: undefined,
       nextScheduled: undefined,

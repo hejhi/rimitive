@@ -1,8 +1,6 @@
 import { GlobalContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
-import { CONSTANTS } from '../constants';
-
-const { STATUS_CLEAN } = CONSTANTS;
+import { isScheduled, setClean } from '../constants';
 
 // Re-export types for proper type inference
 export type { ProducerNode, ConsumerNode, Dependency } from '../types';
@@ -61,8 +59,8 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     }
 
     // Check if consumer is an effect (has flush method) or computed (has subscribers)
-    const isScheduled = 'flush' in consumer;
-    const prevConsumer = isScheduled
+    const scheduled = isScheduled(consumer);
+    const prevConsumer = scheduled
       ? producer.scheduledTail
       : producer.subscribersTail;
 
@@ -86,7 +84,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     // Wire producer side - route effects to scheduled list, computeds to subscribers
     if (prevConsumer) prevConsumer.nextConsumer = dep;
 
-    if (isScheduled) {
+    if (scheduled) {
       producer.scheduledTail = dep;
       if (!prevConsumer) producer.scheduled = dep;
       return;
@@ -103,7 +101,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
   const detachAll = (dep: Dependency): void => {
     // All dependencies in the chain share the same consumer
     const consumer = dep.consumer;
-    const isScheduled = 'flush' in consumer;
+    const scheduled = isScheduled(consumer);
     let current: Dependency | undefined = dep;
 
     do {
@@ -118,7 +116,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       else consumer.dependencies = next;
 
       // Unlink from producer chain
-      unlinkFromProducer(producer, prevConsumer, nextConsumer, isScheduled);
+      unlinkFromProducer(producer, prevConsumer, nextConsumer, scheduled);
 
       current = next;
     } while (current);
@@ -128,7 +126,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     ctx.trackingVersion++;
 
     // Clear dirty and pending flags before tracking
-    node.status = STATUS_CLEAN;
+    setClean(node);
 
     const prevConsumer = ctx.consumerScope;
     node.dependencyTail = undefined;
@@ -145,7 +143,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
       // dependencyTail marks the last dependency accessed in this tracking cycle
       // Anything after it is stale and should be removed
       const tail = node.dependencyTail as Dependency | undefined;
-      const isScheduled = 'flush' in node;
+      const scheduled = isScheduled(node);
 
       // Start point for pruning
       let toRemove = tail ? tail.nextDependency : node.dependencies;
@@ -161,7 +159,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
           else node.dependencies = next;
 
           // Unlink from producer chain
-          unlinkFromProducer(producer, prevConsumer, nextConsumer, isScheduled);
+          unlinkFromProducer(producer, prevConsumer, nextConsumer, scheduled);
 
           toRemove = next;
         } while (toRemove);
