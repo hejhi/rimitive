@@ -25,11 +25,6 @@ export interface GraphTraversal {
     subscribers: Dependency,
     schedule: (scheduledDep: Dependency) => void
   ) => void;
-  /** Schedule effect chain directly without traversal */
-  schedule: (
-    scheduled: Dependency,
-    schedule: (scheduledDep: Dependency) => void
-  ) => void;
   /** Simple propagation that only marks nodes as invalidated (for testing/simple use cases) */
   propagate: (subscribers: Dependency) => void;
 }
@@ -108,17 +103,6 @@ export function createGraphTraversal(): GraphTraversal {
   };
 
   /**
-   * Schedule effects chain directly without graph traversal.
-   * Used when we know the dependency chain contains only effects.
-   */
-  const schedule = (
-    scheduled: Dependency,
-    schedule: (scheduledDep: Dependency) => void
-  ): void => {
-    schedule(scheduled);
-  };
-
-  /**
    * Simple propagation that only marks nodes as invalidated.
    * Does not schedule or execute any nodes.
    */
@@ -127,7 +111,6 @@ export function createGraphTraversal(): GraphTraversal {
 
   return {
     traverseGraph,
-    schedule,
     propagate,
   };
 }
