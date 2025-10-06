@@ -1,6 +1,17 @@
+/**
+ * Lattice DevTools Example
+ *
+ * Demonstrates the component pattern with Lattice:
+ * - Counter: Simple reactive state with derived values
+ * - TodoList: Managing collections of items
+ * - Filter: Composing behaviors together
+ *
+ * Each component is framework-agnostic and can be tested in isolation.
+ */
+
 import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory, type SignalFunction } from '@lattice/signals/signal';
-import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
 import { createBatchFactory } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
@@ -9,6 +20,11 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { instrumentSignal, instrumentComputed, instrumentEffect } from '@lattice/signals/instrumentation';
 import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
+
+// Import our portable components
+import { createCounter } from './components/counter';
+import { createTodoList, type Todo } from './components/todo-list';
+import { createFilter, type FilterType } from './components/filter';
 
 function createContext() {
   const ctx = createBaseContext();
@@ -50,139 +66,109 @@ const signalAPI = createSignalAPI(
   createContext()
 );
 
-const signal = signalAPI.signal as <T>(value: T) => SignalFunction<T>;
-const computed = signalAPI.computed as <T>(
-  compute: () => T
-) => ComputedFunction<T>;
+// Extract primitives for convenience
 const effect = signalAPI.effect as (fn: () => void | (() => void)) => () => void;
 const batch = signalAPI.batch as <T>(fn: () => T) => T;
 
-// Counter State
-const count = signal(0);
+// ============================================================================
+// Create Components
+// ============================================================================
+// These components are framework-agnostic and can be tested independently
 
-const doubled = computed(() => count() * 2);
+const counter = createCounter(signalAPI);
 
-const isEven = computed(() => count() % 2 === 0);
-
-// Todo State
-interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
-}
-
-const todos = signal<Todo[]>([
+const todoList = createTodoList(signalAPI, [
   { id: 1, text: 'Learn Lattice', completed: false },
-  { id: 2, text: 'Build an app', completed: false }
+  { id: 2, text: 'Build an app', completed: false },
 ]);
 
-const allCompleted = computed(() => {
-  return todos().length > 0 && todos().every((todo: Todo) => todo.completed);
-});
+const filter = createFilter(signalAPI);
 
-// Filter State
-type FilterType = 'all' | 'active' | 'completed';
-const currentFilter = signal<FilterType>('all');
+// Compose filter with todoList for filtered view
+const filteredTodos = signalAPI.computed(() =>
+  filter.filterTodos(todoList.todos())
+);
 
-const filteredTodos = computed(() => {
-  const filter = currentFilter();
-  const todosList = todos();
-
-  if (filter === 'active') return todosList.filter(t => !t.completed);
-  if (filter === 'completed') return todosList.filter(t => t.completed);
-  return todosList;
-});
-
-// Update functions
-function increment() {
-  count(count() + 1);
-}
-
-function decrement() {
-  count(count() - 1);
-}
-
-function addTodo(text: string) {
-  const newTodo: Todo = {
-    id: Date.now(),
-    text,
-    completed: false
-  };
-  todos([...todos(), newTodo]);
-}
-
-function toggleTodo(id: number) {
-  todos(todos().map((todo: Todo) =>
-    todo.id === id ? { ...todo, completed: !todo.completed } : todo
-  ));
-}
-
-function toggleAll() {
-  const shouldComplete = !allCompleted();
-  todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
-}
+// ============================================================================
+// UI Adapter Functions
+// ============================================================================
+// These functions adapt component APIs to the DOM event handlers
 
 function batchedUpdates() {
   batch(() => {
-    count(10);
-    addTodo('Batched todo 1');
-    addTodo('Batched todo 2');
-    toggleTodo(1);
+    counter.set(10);
+    todoList.addTodo('Batched todo 1');
+    todoList.addTodo('Batched todo 2');
+    todoList.toggleTodo(1);
   });
-}
-
-// UI Update Logic
-function updateUI() {
-  const countEl = document.getElementById('count');
-  const doubledEl = document.getElementById('doubled');
-  const isEvenEl = document.getElementById('isEven');
-  const todoListEl = document.getElementById('todoList');
-  const activeTodoCountEl = document.getElementById('activeTodoCount');
-
-  if (countEl) countEl.textContent = count().toString();
-  if (doubledEl) doubledEl.textContent = doubled().toString();
-  if (isEvenEl) isEvenEl.textContent = isEven() ? 'Yes' : 'No';
-
-  const activeTodoCount = todos().filter(t => !t.completed).length;
-  if (activeTodoCountEl) activeTodoCountEl.textContent = activeTodoCount.toString();
-
-  if (todoListEl) {
-    todoListEl.innerHTML = filteredTodos()
-      .map((todo: Todo) => `
-        <li class="todo-item ${todo.completed ? 'completed' : ''}">
-          <input type="checkbox" ${todo.completed ? 'checked' : ''}
-                 onchange="window.toggleTodo(${todo.id})">
-          <span>${todo.text}</span>
-        </li>
-      `)
-      .join('');
-  }
-}
-
-function setFilter(filter: FilterType) {
-  document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
-  document.querySelector(`[data-filter="${filter}"]`)?.classList.add('active');
-  currentFilter(filter);
 }
 
 function addTodoFromInput() {
   const input = document.getElementById('todoInput') as HTMLInputElement;
   if (input && input.value.trim()) {
-    addTodo(input.value.trim());
+    todoList.addTodo(input.value.trim());
     input.value = '';
+  }
+}
+
+function setFilter(filterType: FilterType) {
+  document.querySelectorAll('.filter').forEach((b) => b.classList.remove('active'));
+  document.querySelector(`[data-filter="${filterType}"]`)?.classList.add('active');
+  filter.setFilter(filterType);
+}
+
+// ============================================================================
+// UI Rendering
+// ============================================================================
+// This effect runs whenever any reactive dependency changes
+
+function updateUI() {
+  // Update counter display
+  const countEl = document.getElementById('count');
+  const doubledEl = document.getElementById('doubled');
+  const isEvenEl = document.getElementById('isEven');
+
+  if (countEl) countEl.textContent = counter.count().toString();
+  if (doubledEl) doubledEl.textContent = counter.doubled().toString();
+  if (isEvenEl) isEvenEl.textContent = counter.isEven() ? 'Yes' : 'No';
+
+  // Update todo list display
+  const activeTodoCountEl = document.getElementById('activeTodoCount');
+  if (activeTodoCountEl) {
+    activeTodoCountEl.textContent = todoList.activeCount().toString();
+  }
+
+  const todoListEl = document.getElementById('todoList');
+  if (todoListEl) {
+    todoListEl.innerHTML = filteredTodos()
+      .map(
+        (todo: Todo) => `
+        <li class="todo-item ${todo.completed ? 'completed' : ''}">
+          <input type="checkbox" ${todo.completed ? 'checked' : ''}
+                 onchange="window.todoList.toggleTodo(${todo.id})">
+          <span>${todo.text}</span>
+        </li>
+      `
+      )
+      .join('');
   }
 }
 
 // Set up reactive UI updates
 effect(updateUI);
 
-// Export for inline handlers
+// ============================================================================
+// Export to Window for DOM Event Handlers
+// ============================================================================
+// In a real app, you'd use a framework's event binding instead
+
 Object.assign(window, {
-  increment,
-  decrement,
-  count,
-  toggleTodo,
-  toggleAll,
+  // Expose components directly - demonstrates clear API boundaries
+  counter,
+  todoList,
+  filter,
+
+  // Expose adapter functions
   setFilter,
   addTodoFromInput,
   batchedUpdates,
