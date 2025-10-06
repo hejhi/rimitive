@@ -25,6 +25,7 @@ import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
 import { createCounter } from './components/counter';
 import { createTodoList, type Todo } from './components/todo-list';
 import { createFilter, type FilterType } from './components/filter';
+import { createTodoStats } from './components/todo-stats';
 
 function createContext() {
   const ctx = createBaseContext();
@@ -84,10 +85,18 @@ const todoList = createTodoList(signalAPI, [
 
 const filter = createFilter(signalAPI);
 
-// Compose filter with todoList for filtered view
+// ============================================================================
+// Component Composition
+// ============================================================================
+// Demonstrates two composition patterns:
+
+// 1. Functional composition - combine outputs
 const filteredTodos = signalAPI.computed(() =>
   filter.filterTodos(todoList.todos())
 );
+
+// 2. Dependency injection - stats depends on todoList
+const todoStats = createTodoStats(signalAPI, todoList);
 
 // ============================================================================
 // UI Adapter Functions
@@ -151,6 +160,18 @@ function updateUI() {
       `
       )
       .join('');
+  }
+
+  // Update stats display (demonstrates composed component)
+  const statsEl = document.getElementById('todoStats');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <strong>Stats (from composed component):</strong><br>
+      Total: ${todoStats.total()} |
+      Active: ${todoStats.active()} |
+      Completed: ${todoStats.completed()} |
+      Completion: ${todoStats.completionRate().toFixed(1)}%
+    `;
   }
 }
 

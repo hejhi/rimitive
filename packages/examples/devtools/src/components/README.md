@@ -104,9 +104,15 @@ Managing collections of items. Demonstrates:
 
 ### `filter.ts`
 Filtering functionality that composes with any todo list. Demonstrates:
-- Component composition
-- Utility functions
+- **Functional composition** - pure utility functions
+- Utility functions that work with any data
 - Stateful filtering
+
+### `todo-stats.ts`
+Statistics computed from a TodoList. Demonstrates:
+- **Dependency injection** - depends on TodoListAPI
+- Deriving data from other components
+- Composition through dependencies (not inheritance)
 
 ## Usage Pattern
 
@@ -119,15 +125,21 @@ const counter = createCounter(api);
 const todoList = createTodoList(api);
 const filter = createFilter(api);
 
-// 3. Compose them together
+// 3. Compose them together in different ways:
+
+// Functional composition - combine outputs
 const filteredTodos = api.computed(() =>
   filter.filterTodos(todoList.todos())
 );
+
+// Dependency injection - stats depends on todoList
+const todoStats = createTodoStats(api, todoList);
 
 // 4. Use in your UI
 counter.increment();
 todoList.addTodo('Learn Lattice');
 filter.setFilter('active');
+console.log(todoStats.completionRate()); // 0%
 ```
 
 ## From Components to Extensions
