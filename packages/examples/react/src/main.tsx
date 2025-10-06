@@ -27,6 +27,7 @@ import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
 import { createCounter } from './components/counter';
 import { createTodoList } from './components/todo-list';
 import { createFilter } from './components/filter';
+import { createAppState } from './components/app-state';
 import { Modal } from './design-system/Modal';
 
 // ============================================================================
@@ -256,7 +257,113 @@ function TodoApp() {
 }
 
 /**
- * Example 4: Design System Pattern - Encapsulated State
+ * Example 4: Fine-Grained Reactivity Demo
+ * Shows that we don't have React Context re-render problems
+ */
+function FineGrainedReactivityDemo() {
+  const appState = useComponent(createAppState);
+
+  // Track render counts
+  const renderCounts = React.useRef({
+    userName: 0,
+    userEmail: 0,
+    theme: 0,
+    clicks: 0,
+  });
+
+  const UserNameDisplay = () => {
+    renderCounts.current.userName++;
+    const name = useSubscribe(appState.userName);
+    return (
+      <div style={{ padding: '0.5rem', background: '#e7f3ff', borderRadius: '4px' }}>
+        <strong>User Name:</strong> {name}
+        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+          Renders: {renderCounts.current.userName}
+        </div>
+      </div>
+    );
+  };
+
+  const UserEmailDisplay = () => {
+    renderCounts.current.userEmail++;
+    const email = useSubscribe(appState.userEmail);
+    return (
+      <div style={{ padding: '0.5rem', background: '#fff3cd', borderRadius: '4px' }}>
+        <strong>User Email:</strong> {email}
+        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+          Renders: {renderCounts.current.userEmail}
+        </div>
+      </div>
+    );
+  };
+
+  const ThemeDisplay = () => {
+    renderCounts.current.theme++;
+    const theme = useSubscribe(appState.theme);
+    return (
+      <div style={{ padding: '0.5rem', background: '#d4edda', borderRadius: '4px' }}>
+        <strong>Theme:</strong> {theme}
+        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+          Renders: {renderCounts.current.theme}
+        </div>
+      </div>
+    );
+  };
+
+  const ClicksDisplay = () => {
+    renderCounts.current.clicks++;
+    const clicks = useSubscribe(appState.clickCount);
+    return (
+      <div style={{ padding: '0.5rem', background: '#f8d7da', borderRadius: '4px' }}>
+        <strong>Click Count:</strong> {clicks}
+        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+          Renders: {renderCounts.current.clicks}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="example-section">
+      <h2>Fine-Grained Reactivity Demo</h2>
+      <p>
+        Watch the render counts below. Unlike React Context, <strong>only the component
+        subscribed to a changed signal will re-render!</strong>
+      </p>
+
+      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr', marginBottom: '1rem' }}>
+        <UserNameDisplay />
+        <UserEmailDisplay />
+        <ThemeDisplay />
+        <ClicksDisplay />
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => appState.setUserName(`User${Math.floor(Math.random() * 100)}`)}>
+          Change User Name
+        </button>
+        <button onClick={() => appState.setUserEmail(`user${Math.floor(Math.random() * 100)}@example.com`)}>
+          Change Email
+        </button>
+        <button onClick={appState.toggleTheme}>
+          Toggle Theme
+        </button>
+        <button onClick={appState.incrementClicks}>
+          Increment Clicks
+        </button>
+      </div>
+
+      <div style={{ marginTop: '1rem', padding: '1rem', background: '#e7f3ff', borderRadius: '4px' }}>
+        <strong>🎯 Key Point:</strong> With traditional React Context, changing any value would
+        cause ALL four components to re-render. With Lattice signals, only the specific component
+        subscribed to the changed signal re-renders. This is <strong>fine-grained reactivity</strong>!
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Example 5: Design System Pattern - Encapsulated State
  * Each Modal has its own SignalProvider, completely isolated
  */
 function DesignSystemDemo() {
@@ -344,6 +451,7 @@ function App() {
       <StepCounter />
       <SlideCarousel />
       <TodoApp />
+      <FineGrainedReactivityDemo />
       <DesignSystemDemo />
     </div>
   );
