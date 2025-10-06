@@ -30,7 +30,7 @@ export function FilterBar({
   onSearchChange,
 }: FilterBarProps) {
   const eventTypes = useSubscribe(availableEventTypes);
-  
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       {contexts.length > 1 && (

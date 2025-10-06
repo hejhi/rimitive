@@ -1,4 +1,6 @@
 import { useSubscribe } from '@lattice/react';
+import { Trash2 } from 'lucide-react';
+import { Button } from '../../src/components/ui/button';
 import {
   Tabs,
   TabsContent,
@@ -55,7 +57,7 @@ export function App() {
           devtoolsState.selectedTab(value as 'logs' | 'timeline')
         }
       >
-        <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b">
+        <div className="flex items-center justify-between px-4 py-3 border-b">
           <TabsList className="h-8">
             <TabsTrigger value="logs" className="text-xs">
               Logs
@@ -65,6 +67,21 @@ export function App() {
             </TabsTrigger>
           </TabsList>
 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => {
+              devtoolsState.logEntries([]);
+              devtoolsState.selectedTransaction(null);
+            }}
+            title="Clear all events"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
           <FilterBar
             contexts={contexts}
             selectedContext={devtoolsState.selectedContext()}
