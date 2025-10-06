@@ -61,6 +61,10 @@
     "./helpers/pull-propagator": {
       "import": "./dist/helpers/pull-propagator.js",
       "types": "./dist/helpers/pull-propagator.d.ts"
+    },
+    "./instrumentation": {
+      "import": "./dist/instrumentation.js",
+      "types": "./dist/instrumentation.d.ts"
     }
   },
   "files": [

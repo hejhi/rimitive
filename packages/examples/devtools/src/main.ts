@@ -7,6 +7,7 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { instrumentSignal, instrumentComputed, instrumentEffect } from '@lattice/signals/instrumentation';
 import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
 
 function createContext() {
@@ -39,21 +40,9 @@ type LatticeExtension<N extends string, M> = { name: N; method: M };
 // Create signal API instance
 const signalAPI = createSignalAPI(
   {
-    signal: createSignalFactory as (
-      ctx: unknown
-    ) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>,
-    computed: createComputedFactory as (
-      ctx: unknown
-    ) => LatticeExtension<
-      'computed',
-      <T>(compute: () => T) => ComputedFunction<T>
-    >,
-    effect: createEffectFactory as (
-      ctx: unknown
-    ) => LatticeExtension<
-      'effect',
-      (fn: () => void | (() => void)) => () => void
-    >,
+    signal: (ctx: any) => createSignalFactory({ ...ctx, instrument: instrumentSignal }),
+    computed: (ctx: any) => createComputedFactory({ ...ctx, instrument: instrumentComputed }),
+    effect: (ctx: any) => createEffectFactory({ ...ctx, instrument: instrumentEffect }),
     batch: createBatchFactory as (
       ctx: unknown
     ) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
@@ -86,10 +75,6 @@ const todos = signal<Todo[]>([
   { id: 1, text: 'Learn Lattice', completed: false },
   { id: 2, text: 'Build an app', completed: false }
 ]);
-
-const completedCount = computed(() => {
-  return todos().filter((todo: Todo) => todo.completed).length;
-});
 
 const allCompleted = computed(() => {
   return todos().length > 0 && todos().every((todo: Todo) => todo.completed);

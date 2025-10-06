@@ -71,6 +71,7 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types.ts'),
         context: resolve(__dirname, 'src/context.ts'),
         constants: resolve(__dirname, 'src/constants.ts'),
+        instrumentation: resolve(__dirname, 'src/instrumentation.ts'),
         'helpers/scheduler': resolve(__dirname, 'src/helpers/scheduler.ts'),
         'helpers/graph-edges': resolve(__dirname, 'src/helpers/graph-edges.ts'),
         'helpers/graph-traversal': resolve(
@@ -85,7 +86,7 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['vitest', /^vitest/, 'node:test'],
+      external: ['vitest', /^vitest/, 'node:test', '@lattice/lattice'],
       output: {
         entryFileNames: '[name].js',
       },

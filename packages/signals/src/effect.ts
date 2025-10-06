@@ -1,4 +1,4 @@
-import type { LatticeExtension, InstrumentationContext } from '@lattice/lattice';
+import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
@@ -13,7 +13,11 @@ export type EffectOpts = {
   ctx: GlobalContext;
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
-  instrumentation?: InstrumentationContext;
+  instrument?: (
+    method: (fn: () => void | (() => void)) => () => void,
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ) => (fn: () => void | (() => void)) => () => void;
 };
 
 // Re-export types for proper type inference
@@ -33,12 +37,10 @@ export function createEffectFactory(
   const {
     dispose: disposeNode,
     track,
-    instrumentation,
   } = opts;
 
   function createEffect(run: () => void | (() => void)): () => void {
     let cleanup: void | (() => void);
-    let effectId: string | undefined;
 
     const node = {
       __type: 'effect' as const,
@@ -48,33 +50,10 @@ export function createEffectFactory(
       nextScheduled: undefined,
       trackingVersion: 0, // Initialize version tracking
       flush(): void {
-        if (instrumentation && effectId) {
-          instrumentation.emit({
-            type: 'EFFECT_RUN',
-            timestamp: Date.now(),
-            data: {
-              effectId,
-            },
-          });
-        }
-
         if (cleanup !== undefined) cleanup = cleanup();
         cleanup = track(node, run);
       }
     };
-
-    // Register with instrumentation if available
-    if (instrumentation) {
-      const result = instrumentation.register(node, 'effect');
-      effectId = result.id;
-      instrumentation.emit({
-        type: 'EFFECT_CREATED',
-        timestamp: Date.now(),
-        data: {
-          effectId,
-        },
-      });
-    }
 
     // Run a single time on creation
     cleanup = track(node, run);
@@ -86,8 +65,11 @@ export function createEffectFactory(
     });
   }
 
-  return {
+  const extension: EffectFactory = {
     name: 'effect',
     method: createEffect,
+    ...(opts.instrument && { instrument: opts.instrument }),
   };
+
+  return extension;
 }

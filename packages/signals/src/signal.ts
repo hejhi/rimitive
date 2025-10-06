@@ -14,7 +14,7 @@
  * - This enables automatic dependency discovery during execution
  */
 import type { ProducerNode, Dependency } from './types';
-import type { LatticeExtension, InstrumentationContext } from '@lattice/lattice';
+import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
@@ -35,7 +35,11 @@ export type SignalOpts = {
   ctx: GlobalContext;
   trackDependency: GraphEdges['trackDependency'];
   propagate: (subscribers: Dependency) => void;
-  instrumentation?: InstrumentationContext;
+  instrument?: (
+    method: <T>(value: T) => SignalFunction<T>,
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ) => <T>(value: T) => SignalFunction<T>;
 };
 
 // Re-export types needed for type inference
@@ -57,7 +61,6 @@ export function createSignalFactory(
     trackDependency,
     propagate,
     ctx,
-    instrumentation,
   } = opts;
 
   function createSignal<T>(initialValue: T): SignalFunction<T> {
@@ -68,22 +71,6 @@ export function createSignalFactory(
       subscribersTail: undefined,
       status: SIGNAL_CLEAN,
     };
-
-    // Register with instrumentation if available
-    let signalId: string | undefined;
-    if (instrumentation) {
-      const result = instrumentation.register(node, 'signal');
-      signalId = result.id;
-
-      instrumentation.emit({
-        type: 'SIGNAL_CREATED',
-        timestamp: Date.now(),
-        data: {
-          signalId,
-          initialValue,
-        },
-      });
-    }
 
     // Direct function declaration for better optimization
     function signal(value?: T): T | void {
@@ -97,21 +84,7 @@ export function createSignalFactory(
       // Skip if unchanged
       if (node.value === value) return;
 
-      const oldValue = node.value;
       node.value = value!;
-
-      // Emit update event if instrumentation available
-      if (instrumentation && signalId) {
-        instrumentation.emit({
-          type: 'SIGNAL_UPDATE',
-          timestamp: Date.now(),
-          data: {
-            signalId,
-            oldValue,
-            newValue: value,
-          },
-        });
-      }
 
       const subs = node.subscribers;
 
@@ -129,8 +102,11 @@ export function createSignalFactory(
     return signal as SignalFunction<T>;
   }
 
-  return {
+  const extension: SignalFactory = {
     name: 'signal',
     method: createSignal,
+    ...(opts.instrument && { instrument: opts.instrument }),
   };
+
+  return extension;
 }

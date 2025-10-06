@@ -6,7 +6,7 @@
 
 import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
-import type { LatticeExtension, InstrumentationContext } from '@lattice/lattice';
+import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
@@ -24,7 +24,11 @@ export type ComputedOpts = {
   pullUpdates: PullPropagator['pullUpdates'];
   track: GraphEdges['track'];
   shallowPropagate: (sub: import('./types').Dependency) => void;
-  instrumentation?: InstrumentationContext;
+  instrument?: (
+    method: <T>(compute: () => T) => ComputedFunction<T>,
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ) => <T>(compute: () => T) => ComputedFunction<T>;
 };
 
 // Re-export types for proper type inference
@@ -54,7 +58,7 @@ export function createComputedFactory({
   pullUpdates,
   track,
   shallowPropagate,
-  instrumentation
+  instrument
 }: ComputedOpts): ComputedFactory {
 
   // Shared computed function - uses `this` binding
@@ -115,18 +119,6 @@ export function createComputedFactory({
       compute,
     };
 
-    // Register with instrumentation if available
-    if (instrumentation) {
-      const { id } = instrumentation.register(node, 'computed');
-      instrumentation.emit({
-        type: 'COMPUTED_CREATED',
-        timestamp: Date.now(),
-        data: {
-          computedId: id,
-        },
-      });
-    }
-
     // Bind shared functions to this node
     const computed = computedImpl.bind(node) as unknown as ComputedFunction<T>;
     computed.peek = peekImpl.bind(node) as () => T;
@@ -134,8 +126,11 @@ export function createComputedFactory({
     return computed;
   }
 
-  return {
+  const extension: ComputedFactory = {
     name: 'computed',
     method: createComputed,
+    ...(instrument && { instrument }),
   };
+
+  return extension;
 }
