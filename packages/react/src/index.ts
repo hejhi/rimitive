@@ -3,6 +3,7 @@ export {
   useSubscribe,
   useSignal,
   useSelector,
+  useComponent,
   SignalProvider,
   useSignalAPI,
 } from './signals';

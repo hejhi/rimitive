@@ -2,6 +2,7 @@ export {
   useSubscribe,
   useSignal,
   useSelector,
+  useComponent,
 } from './hooks';
 
 export {

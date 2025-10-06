@@ -63,6 +63,84 @@ function UserName() {
 }
 ```
 
+### `useComponent`
+Create framework-agnostic component instances. Build behaviors once, use in any framework.
+
+```tsx
+// Define a component once (framework-agnostic)
+function createCounter(api) {
+  const count = api.signal(0);
+  const doubled = api.computed(() => count() * 2);
+
+  return {
+    count: () => count(),
+    doubled: () => doubled(),
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+  };
+}
+
+// Use in React
+function StepCounter() {
+  const counter = useComponent(createCounter);
+  const count = useSubscribe(counter.count);
+
+  return (
+    <div>
+      <button onClick={counter.decrement}>-</button>
+      <span>Step {count}</span>
+      <button onClick={counter.increment}>+</button>
+    </div>
+  );
+}
+
+// Same component works in a slide carousel
+function SlideCarousel({ slides }) {
+  const counter = useComponent(createCounter);
+  const current = useSubscribe(counter.count);
+
+  return <div>Slide {current + 1} of {slides.length}</div>;
+}
+
+// With initialization arguments
+function createTodoList(api, initialTodos = []) {
+  const todos = api.signal(initialTodos);
+
+  return {
+    todos: () => todos(),
+    addTodo: (text) => todos([...todos(), { text, done: false }]),
+    toggleTodo: (index) => {
+      const list = todos();
+      list[index].done = !list[index].done;
+      todos([...list]);
+    },
+  };
+}
+
+function TodoApp() {
+  const todoList = useComponent(createTodoList, [
+    { text: 'Learn Lattice', done: false }
+  ]);
+  const todos = useSubscribe(todoList.todos);
+
+  return (
+    <div>
+      {todos.map((todo, i) => (
+        <div key={i} onClick={() => todoList.toggleTodo(i)}>
+          {todo.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Benefits:**
+- ✅ Write once, use in React, Vue, Svelte, vanilla JS
+- ✅ Test components without any framework
+- ✅ Build design system behaviors that work everywhere
+- ✅ Clear API boundaries and composability
+
 ### `useStore`
 Create a store with automatic disposal on unmount.
 
