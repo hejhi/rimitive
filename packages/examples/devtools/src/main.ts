@@ -7,22 +7,34 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-type LatticeExtension<N extends string, M> = { name: N; method: M };
+import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
 
 function createContext() {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges({ ctx });
-  const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({ propagate: traverseGraph, detachAll: graphEdges.detachAll });
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const pullPropagator = createPullPropagator({ track: graphEdges.track });
+
+  const instrumentation = createInstrumentation({
+    enabled: true,
+    providers: [devtoolsProvider({ debug: true })],
+  });
 
   return {
     ctx,
-    graphEdges,
-    pushPropagator: { pushUpdates: scheduler.propagate },
-    pullPropagator: createPullPropagator({ track: graphEdges.track }),
+    trackDependency: graphEdges.trackDependency,
+    propagate: scheduler.propagate,
+    track: graphEdges.track,
+    dispose: scheduler.dispose,
+    pullUpdates: pullPropagator.pullUpdates,
+    shallowPropagate: pullPropagator.shallowPropagate,
+    startBatch: scheduler.startBatch,
+    endBatch: scheduler.endBatch,
+    instrumentation,
   };
 }
+
+type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 // Create signal API instance
 const signalAPI = createSignalAPI(
@@ -59,13 +71,9 @@ const batch = signalAPI.batch as <T>(fn: () => T) => T;
 // Counter State
 const count = signal(0);
 
-const doubled = computed(() => {
-  return count() * 2;
-});
+const doubled = computed(() => count() * 2);
 
-const isEven = computed(() => {
-  return count() % 2 === 0;
-});
+const isEven = computed(() => count() % 2 === 0);
 
 // Todo State
 interface Todo {
@@ -87,9 +95,17 @@ const allCompleted = computed(() => {
   return todos().length > 0 && todos().every((todo: Todo) => todo.completed);
 });
 
-// Effects
-effect(() => {
-  console.log(`You have ${completedCount()} completed todos out of ${todos().length}`);
+// Filter State
+type FilterType = 'all' | 'active' | 'completed';
+const currentFilter = signal<FilterType>('all');
+
+const filteredTodos = computed(() => {
+  const filter = currentFilter();
+  const todosList = todos();
+
+  if (filter === 'active') return todosList.filter(t => !t.completed);
+  if (filter === 'completed') return todosList.filter(t => t.completed);
+  return todosList;
 });
 
 // Update functions
@@ -121,7 +137,6 @@ function toggleAll() {
   todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
 }
 
-// Test batching
 function batchedUpdates() {
   batch(() => {
     count(10);
@@ -131,52 +146,59 @@ function batchedUpdates() {
   });
 }
 
-// Update UI
+// UI Update Logic
 function updateUI() {
   const countEl = document.getElementById('count');
   const doubledEl = document.getElementById('doubled');
   const isEvenEl = document.getElementById('isEven');
-  const todoListEl = document.getElementById('todo-list');
-  const completedCountEl = document.getElementById('completed-count');
+  const todoListEl = document.getElementById('todoList');
+  const activeTodoCountEl = document.getElementById('activeTodoCount');
 
   if (countEl) countEl.textContent = count().toString();
   if (doubledEl) doubledEl.textContent = doubled().toString();
   if (isEvenEl) isEvenEl.textContent = isEven() ? 'Yes' : 'No';
-  if (completedCountEl) completedCountEl.textContent = `${completedCount()} / ${todos().length}`;
+
+  const activeTodoCount = todos().filter(t => !t.completed).length;
+  if (activeTodoCountEl) activeTodoCountEl.textContent = activeTodoCount.toString();
 
   if (todoListEl) {
-    todoListEl.innerHTML = todos()
+    todoListEl.innerHTML = filteredTodos()
       .map((todo: Todo) => `
-        <li class="${todo.completed ? 'completed' : ''}">
-          <input type="checkbox" ${todo.completed ? 'checked' : ''} 
+        <li class="todo-item ${todo.completed ? 'completed' : ''}">
+          <input type="checkbox" ${todo.completed ? 'checked' : ''}
                  onchange="window.toggleTodo(${todo.id})">
-          ${todo.text}
+          <span>${todo.text}</span>
         </li>
       `)
       .join('');
   }
 }
 
-// Set up reactive updates
-effect(() => {
-  updateUI();
-});
+function setFilter(filter: FilterType) {
+  document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-filter="${filter}"]`)?.classList.add('active');
+  currentFilter(filter);
+}
 
-// Export functions to window for onclick handlers
+function addTodoFromInput() {
+  const input = document.getElementById('todoInput') as HTMLInputElement;
+  if (input && input.value.trim()) {
+    addTodo(input.value.trim());
+    input.value = '';
+  }
+}
+
+// Set up reactive UI updates
+effect(updateUI);
+
+// Export for inline handlers
 Object.assign(window, {
   increment,
   decrement,
-  addTodo: () => {
-    const input = document.getElementById('new-todo') as HTMLInputElement;
-    if (input && input.value.trim()) {
-      addTodo(input.value.trim());
-      input.value = '';
-    }
-  },
+  count,
   toggleTodo,
   toggleAll,
-  batchedUpdates
+  setFilter,
+  addTodoFromInput,
+  batchedUpdates,
 });
-
-// Initial UI update
-updateUI();

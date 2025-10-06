@@ -6,7 +6,7 @@
 
 import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
-import type { LatticeExtension } from '@lattice/lattice';
+import type { LatticeExtension, InstrumentationContext } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
@@ -24,6 +24,7 @@ export type ComputedOpts = {
   pullUpdates: PullPropagator['pullUpdates'];
   track: GraphEdges['track'];
   shallowPropagate: (sub: import('./types').Dependency) => void;
+  instrumentation?: InstrumentationContext;
 };
 
 // Re-export types for proper type inference
@@ -52,7 +53,8 @@ export function createComputedFactory({
   trackDependency,
   pullUpdates,
   track,
-  shallowPropagate
+  shallowPropagate,
+  instrumentation
 }: ComputedOpts): ComputedFactory {
 
   // Shared computed function - uses `this` binding
@@ -112,6 +114,18 @@ export function createComputedFactory({
       trackingVersion: 0,
       compute,
     };
+
+    // Register with instrumentation if available
+    if (instrumentation) {
+      const { id } = instrumentation.register(node, 'computed');
+      instrumentation.emit({
+        type: 'COMPUTED_CREATED',
+        timestamp: Date.now(),
+        data: {
+          computedId: id,
+        },
+      });
+    }
 
     // Bind shared functions to this node
     const computed = computedImpl.bind(node) as unknown as ComputedFunction<T>;

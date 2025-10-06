@@ -150,10 +150,10 @@
       <div class="section">
         <h2>Counter Store</h2>
         <div class="counter">
-          <button id="decrement">-</button>
+          <button onclick="window.decrement()">-</button>
           <div class="value" id="count">0</div>
-          <button id="increment">+</button>
-          <button id="reset">Reset</button>
+          <button onclick="window.increment()">+</button>
+          <button onclick="window.count(0)">Reset</button>
         </div>
         <p>Doubled value (computed): <span class="computed-value" id="doubled">0</span></p>
         <p>Is even (computed): <span class="computed-value" id="isEven">true</span></p>
@@ -163,13 +163,13 @@
         <h2>Todo Store</h2>
         <div class="todo-input">
           <input type="text" id="todoInput" placeholder="Add a new todo..." />
-          <button id="addTodo">Add</button>
+          <button onclick="window.addTodoFromInput()">Add</button>
         </div>
-        
+
         <div class="filter-buttons">
-          <button class="filter active" data-filter="all">All</button>
-          <button class="filter" data-filter="active">Active</button>
-          <button class="filter" data-filter="completed">Completed</button>
+          <button class="filter active" data-filter="all" onclick="window.setFilter('all')">All</button>
+          <button class="filter" data-filter="active" onclick="window.setFilter('active')">Active</button>
+          <button class="filter" data-filter="completed" onclick="window.setFilter('completed')">Completed</button>
         </div>
         
         <ul class="todo-list" id="todoList"></ul>

@@ -55,5 +55,10 @@ export function createApi<
     factory(ctx as never)
   ) as ReturnType<T[keyof T]>[];
 
+  // Check if ctx has instrumentation and pass it to createContext
+  if (ctx && typeof ctx === 'object' && 'instrumentation' in ctx && ctx.instrumentation) {
+    return createContext({ instrumentation: ctx.instrumentation as any }, ...extensions);
+  }
+
   return createContext(...extensions);
 }
