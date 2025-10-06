@@ -1,41 +1,31 @@
-import { createSignalAPI, GlobalContext } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { ComputedContext, createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory, EffectContext } from '@lattice/signals/effect';
-import { BatchContext, createBatchFactory } from '@lattice/signals/batch';
-import type { Signal, SignalContext } from '@lattice/signals/signal';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createSignalFactory, type SignalFunction } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
+import { createBatchFactory } from '@lattice/signals/batch';
 import type { ContextInfo, LogEntry } from './types';
-import { createBaseContext } from 'node_modules/@lattice/signals/src/context';
-import { createGraphEdges } from 'node_modules/@lattice/signals/src/helpers/graph-edges';
-import { createScheduler } from 'node_modules/@lattice/signals/src/helpers/scheduler';
-import { createPullPropagator } from 'node_modules/@lattice/signals/src/helpers/pull-propagator';
-import { createNodeScheduler, NodeScheduler } from 'node_modules/@lattice/signals/src/helpers/node-scheduler';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 
-function createContext(): GlobalContext &
-  SignalContext &
-  BatchContext &
-  EffectContext &
-  ComputedContext {
-  const baseCtx = createBaseContext();
-  const graphEdges = createGraphEdges();
-  const scheduler = createScheduler();
+function createContext() {
+  const ctx = createBaseContext();
+  const graphEdges = createGraphEdges({ ctx });
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const pullPropagator = createPullPropagator({ track: graphEdges.track });
 
-  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
-  const ctx = {
-    ...baseCtx,
-    graphEdges,
-    pushPropagator: { pushUpdates: scheduler.propagate },
-    pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>,
-    nodeScheduler: null as unknown as NodeScheduler,
+  return {
+    ctx,
+    trackDependency: graphEdges.trackDependency,
+    propagate: scheduler.propagate,
+    track: graphEdges.track,
+    dispose: scheduler.dispose,
+    pullUpdates: pullPropagator.pullUpdates,
+    shallowPropagate: pullPropagator.shallowPropagate,
+    startBatch: scheduler.startBatch,
+    endBatch: scheduler.endBatch,
   };
-
-  const pullPropagator = createPullPropagator(ctx);
-  ctx.pullPropagator = pullPropagator;
-  const nodeScheduler = createNodeScheduler(ctx);
-
-  ctx.nodeScheduler = nodeScheduler;
-
-  return ctx;
 }
 
 // Create a Lattice context for the devtools panel itself
@@ -50,19 +40,18 @@ export const devtoolsContext = createSignalAPI(
 );
 
 // Create signals for each piece of state
-// Create individual signals for each piece of state
 interface DevtoolsStateSignals {
-  connected: Signal<boolean>;
-  contexts: Signal<ContextInfo[]>;
-  selectedContext: Signal<string | null>;
-  selectedTransaction: Signal<string | null>;
-  selectedTab: Signal<'logs' | 'timeline'>;
-  filter: Signal<{
+  connected: SignalFunction<boolean>;
+  contexts: SignalFunction<ContextInfo[]>;
+  selectedContext: SignalFunction<string | null>;
+  selectedTransaction: SignalFunction<string | null>;
+  selectedTab: SignalFunction<'logs' | 'timeline'>;
+  filter: SignalFunction<{
     type: string;
     search: string;
     hideInternal: boolean;
   }>;
-  logEntries: Signal<LogEntry[]>;
+  logEntries: SignalFunction<LogEntry[]>;
 }
 
 export const devtoolsState: DevtoolsStateSignals = {

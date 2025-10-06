@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import { afterEach } from 'vitest';
 import React, { ReactElement } from 'react';
 import { render } from '@testing-library/react';
-import { createSignalAPI, type FactoriesToAPI } from '@lattice/signals/api';
+import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory, SignalFunction } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
@@ -14,27 +14,24 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphTraversal } from '../../signals/src/helpers/graph-traversal';
 
 export function createContext() {
-  const baseCtx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx: baseCtx });
-  const { traverseGraph } = createGraphTraversal();
-  const scheduler = createScheduler({ propagate: traverseGraph, detachAll: graphEdges.detachAll });
-  // Build the context that matches what the factories expect
-  const ctx = {
-    ...baseCtx,
-    ctx: baseCtx,
-    graphEdges,
-    scheduler,
-    push: { pushUpdates: scheduler.propagate },
-    pull: null as unknown as ReturnType<typeof createPullPropagator>,
-  };
-
+  const ctx = createBaseContext();
+  const graphEdges = createGraphEdges({ ctx });
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
   const pullPropagator = createPullPropagator({ track: graphEdges.track });
-  ctx.pull = pullPropagator;
 
-  return ctx;
+  return {
+    ctx,
+    trackDependency: graphEdges.trackDependency,
+    propagate: scheduler.propagate,
+    track: graphEdges.track,
+    dispose: scheduler.dispose,
+    pullUpdates: pullPropagator.pullUpdates,
+    shallowPropagate: pullPropagator.shallowPropagate,
+    startBatch: scheduler.startBatch,
+    endBatch: scheduler.endBatch,
+  };
 }
 
 // Define the factories type for consistent usage
@@ -60,7 +57,7 @@ const testFactories = {
 } as const;
 
 // Type alias for the API created with our standard factories
-type TestSignalAPI = FactoriesToAPI<typeof testFactories>;
+type TestSignalAPI = ReturnType<typeof createSignalAPI<typeof testFactories, ReturnType<typeof createContext>>>;
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
