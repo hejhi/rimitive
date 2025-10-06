@@ -11,7 +11,7 @@ import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
 
-const { PENDING, CLEAN, DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } = CONSTANTS;
+const { PENDING, DIRTY, CLEAN, DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } = CONSTANTS;
 
 // Predefined status combinations for scheduled nodes (effects)
 const SCHEDULED_CLEAN = CONSUMER | SCHEDULED | CLEAN;
@@ -70,8 +70,12 @@ export function createScheduler({
 
         if (next !== undefined) current.nextScheduled = undefined;
 
+        const stateStatus = current.status & STATE_MASK;
+
         // Only flush if scheduled (skip disposed nodes)
-        if ((current.status & STATE_MASK) === PENDING) {
+        // IMPORTANT: Check for BOTH PENDING and DIRTY
+        // During flush, effects can be upgraded from PENDING to DIRTY by shallowPropagate
+        if (stateStatus & (PENDING | DIRTY)) {
           current.status = SCHEDULED_CLEAN;
           try {
             current.flush();
