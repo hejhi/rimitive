@@ -5,9 +5,13 @@
   "description": "Example applications demonstrating Lattice features",
   "type": "module",
   "scripts": {
+    "dev": "pnpm dev:react",
     "dev:devtools": "cd ./devtools && pnpm dev",
+    "dev:react": "cd ./react && pnpm dev",
     "build:devtools": "pnpm --filter ./devtools build",
+    "build:react": "pnpm --filter ./react build",
     "preview:devtools": "pnpm --filter ./devtools preview",
+    "preview:react": "pnpm --filter ./react preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"
