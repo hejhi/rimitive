@@ -145,10 +145,10 @@ function generateSummary(event: LatticeEvent): string {
  */
 function addLogEntry(entry: LogEntry) {
   // Keep last 1000 log entries
-  devtoolsState.logEntries.value = [
-    ...devtoolsState.logEntries.value.slice(-999),
+  devtoolsState.logEntries([
+    ...devtoolsState.logEntries().slice(-999),
     entry,
-  ];
+  ]);
 }
 
 /**
@@ -156,7 +156,7 @@ function addLogEntry(entry: LogEntry) {
  */
 export function findRelatedEvents(entry: LogEntry): LogEntry[] {
   const related: LogEntry[] = [];
-  const logs = devtoolsState.logEntries.value;
+  const logs = devtoolsState.logEntries();
   
   // Find events that might have triggered this one
   if (entry.nodeId) {

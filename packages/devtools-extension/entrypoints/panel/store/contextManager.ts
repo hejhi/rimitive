@@ -2,7 +2,7 @@ import { devtoolsState } from './devtoolsCtx';
 import { LatticeEvent } from './messageHandler';
 
 export function updateContextFromEvent(event: LatticeEvent) {
-  const contexts = [...devtoolsState.contexts.value];
+  const contexts = [...devtoolsState.contexts()];
   let contextIndex = contexts.findIndex((c) => c.id === event.contextId);
 
   // Create context if it doesn't exist yet
@@ -16,5 +16,5 @@ export function updateContextFromEvent(event: LatticeEvent) {
     contextIndex = contexts.length - 1;
   }
 
-  devtoolsState.contexts.value = contexts;
+  devtoolsState.contexts(contexts);
 }

@@ -1,9 +1,10 @@
 import { devtoolsContext, devtoolsState } from './devtoolsCtx';
+import type { LogEntry } from './types';
 
 // Common log filtering logic
 function filterLogs(
-  logs: typeof devtoolsState.logEntries.value,
-  filter: typeof devtoolsState.filter.value,
+  logs: LogEntry[],
+  filter: { type: string; search: string; hideInternal: boolean },
   selectedContext: string | null,
   searchIn: string[]
 ) {
@@ -44,9 +45,9 @@ function filterLogs(
 
 // Actual computed values that transform or aggregate data
 export const filteredTransactions = devtoolsContext.computed(() => {
-  const logEntries = devtoolsState.logEntries.value;
-  const filter = devtoolsState.filter.value;
-  const selectedContext = devtoolsState.selectedContext.value;
+  const logEntries = devtoolsState.logEntries();
+  const filter = devtoolsState.filter();
+  const selectedContext = devtoolsState.selectedContext();
 
   const filtered = filterLogs(logEntries, filter, selectedContext, [
     'eventType',
@@ -63,26 +64,26 @@ export const filteredTransactions = devtoolsContext.computed(() => {
 });
 
 export const selectedContextData = devtoolsContext.computed(() => {
-  const selectedId = devtoolsState.selectedContext.value;
+  const selectedId = devtoolsState.selectedContext();
   if (!selectedId) return null;
 
-  return devtoolsState.contexts.value.find((c) => c.id === selectedId);
+  return devtoolsState.contexts().find((c) => c.id === selectedId);
 });
 
 // Selected item data
 export const selectedTransactionData = devtoolsContext.computed(() => {
-  const selectedId = devtoolsState.selectedTransaction.value;
+  const selectedId = devtoolsState.selectedTransaction();
   if (!selectedId) return null;
 
   return (
-    filteredTransactions.value.find((log) => log.id === selectedId) || null
+    filteredTransactions().find((log) => log.id === selectedId) || null
   );
 });
 
 export const filteredLogEntries = devtoolsContext.computed(() => {
-  const logs = devtoolsState.logEntries.value;
-  const filter = devtoolsState.filter.value;
-  const selectedContext = devtoolsState.selectedContext.value;
+  const logs = devtoolsState.logEntries();
+  const filter = devtoolsState.filter();
+  const selectedContext = devtoolsState.selectedContext();
 
   const filtered = filterLogs(logs, filter, selectedContext, [
     'nodeName',

@@ -8,7 +8,7 @@ export type { LatticeExtension, ExtensionContext, InstrumentationContext, Create
 export { createApi } from './api';
 
 // Export instrumentation system
-export { withInstrumentation } from './instrumentation';
+export { withInstrumentation, createInstrumentation, composeProviders } from './instrumentation';
 export type { InstrumentationEvent, InstrumentationProvider, InstrumentationConfig } from './instrumentation';
 
 // Export built-in providers

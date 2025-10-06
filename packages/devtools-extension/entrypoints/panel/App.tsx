@@ -52,7 +52,7 @@ export function App() {
         className="h-[calc(100vh-6rem)] flex flex-col grow"
         value={selectedTab}
         onValueChange={(value) =>
-          (devtoolsState.selectedTab.value = value as 'logs' | 'timeline')
+          devtoolsState.selectedTab(value as 'logs' | 'timeline')
         }
       >
         <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b">
@@ -67,21 +67,21 @@ export function App() {
 
           <FilterBar
             contexts={contexts}
-            selectedContext={devtoolsState.selectedContext.value}
+            selectedContext={devtoolsState.selectedContext()}
             filterType={filter.type}
             searchValue={filter.search}
             onContextChange={(value) =>
-              (devtoolsState.selectedContext.value = value)
+              devtoolsState.selectedContext(value)
             }
             onFilterTypeChange={(value) =>
-              (devtoolsState.filter.value = {
-                ...devtoolsState.filter.value,
+              devtoolsState.filter({
+                ...devtoolsState.filter(),
                 type: value,
               })
             }
             onSearchChange={(value) =>
-              (devtoolsState.filter.value = {
-                ...devtoolsState.filter.value,
+              devtoolsState.filter({
+                ...devtoolsState.filter(),
                 search: value,
               })
             }
@@ -97,7 +97,7 @@ export function App() {
             transactions={transactions}
             selectedTransaction={selectedTransaction}
             onTransactionSelect={(id) =>
-              (devtoolsState.selectedTransaction.value = id)
+              devtoolsState.selectedTransaction(id)
             }
           />
         </TabsContent>

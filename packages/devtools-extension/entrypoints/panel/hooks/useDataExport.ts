@@ -28,12 +28,12 @@ export function useDataExport() {
       version: '1.0.0',
       exportDate: new Date().toISOString(),
       state: {
-        contexts: devtoolsState.contexts.value,
-        logEntries: devtoolsState.logEntries.value,
-        filter: devtoolsState.filter.value,
-        selectedContext: devtoolsState.selectedContext.value,
-        selectedTransaction: devtoolsState.selectedTransaction.value,
-        selectedTab: devtoolsState.selectedTab.value,
+        contexts: devtoolsState.contexts(),
+        logEntries: devtoolsState.logEntries(),
+        filter: devtoolsState.filter(),
+        selectedContext: devtoolsState.selectedContext(),
+        selectedTransaction: devtoolsState.selectedTransaction(),
+        selectedTab: devtoolsState.selectedTab(),
       },
     };
 
@@ -67,29 +67,28 @@ export function useDataExport() {
         const state = importData.state;
 
         if (state.contexts) {
-          devtoolsState.contexts.value = state.contexts;
+          devtoolsState.contexts(state.contexts);
         }
 
         if (state.logEntries) {
-          devtoolsState.logEntries.value = state.logEntries;
+          devtoolsState.logEntries(state.logEntries);
         }
 
         if (state.filter) {
-          devtoolsState.filter.value = state.filter;
+          devtoolsState.filter(state.filter);
         }
 
         if (state.selectedContext !== undefined) {
-          devtoolsState.selectedContext.value = state.selectedContext;
+          devtoolsState.selectedContext(state.selectedContext);
         }
         if (state.selectedTransaction !== undefined) {
-          devtoolsState.selectedTransaction.value =
-            state.selectedTransaction;
+          devtoolsState.selectedTransaction(state.selectedTransaction);
         }
         if (state.selectedTab) {
-          devtoolsState.selectedTab.value = state.selectedTab as 'logs' | 'timeline';
+          devtoolsState.selectedTab(state.selectedTab as 'logs' | 'timeline');
         }
 
-        devtoolsState.connected.value = true;
+        devtoolsState.connected(true);
       } catch (error) {
         console.error('Failed to import data:', error);
         alert('Failed to import data. Please check the file format.');

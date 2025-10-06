@@ -31,12 +31,12 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
 }
 
 function handleLatticeDetected() {
-  devtoolsState.connected.value = true;
-  
+  devtoolsState.connected(true);
+
   // Reset state for a fresh start
-  devtoolsState.contexts.value = [];
-  devtoolsState.selectedContext.value = null;
-  devtoolsState.logEntries.value = [];
+  devtoolsState.contexts([]);
+  devtoolsState.selectedContext(null);
+  devtoolsState.logEntries([]);
 }
 
 function handleTransaction(data: unknown) {
@@ -53,8 +53,8 @@ function handleTransaction(data: unknown) {
 
 function handleNavigation() {
   // Clear all state on navigation
-  devtoolsState.connected.value = false;
-  devtoolsState.contexts.value = [];
-  devtoolsState.selectedContext.value = null;
-  devtoolsState.logEntries.value = [];
+  devtoolsState.connected(false);
+  devtoolsState.contexts([]);
+  devtoolsState.selectedContext(null);
+  devtoolsState.logEntries([]);
 }

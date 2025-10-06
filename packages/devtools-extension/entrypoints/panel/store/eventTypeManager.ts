@@ -68,14 +68,14 @@ export function getCategoryColors(category: string): { main: string; secondary: 
  * Update the list of available event types for filtering
  */
 function updateAvailableEventTypes(category: string) {
-  const currentTypes = availableEventTypes.value;
+  const currentTypes = availableEventTypes();
   const exists = currentTypes.some(type => type.value === category);
-  
+
   if (!exists) {
-    availableEventTypes.value = [
+    availableEventTypes([
       ...currentTypes,
       { value: category, label: formatCategoryLabel(category) },
-    ];
+    ]);
   }
 }
 
@@ -93,7 +93,7 @@ function formatCategoryLabel(category: string): string {
 export function resetEventTypes() {
   eventTypeMap.clear();
   nextColorIndex = 0;
-  availableEventTypes.value = [
+  availableEventTypes([
     { value: 'all', label: 'All Types' },
-  ];
+  ]);
 }

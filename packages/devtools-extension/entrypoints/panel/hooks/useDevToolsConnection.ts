@@ -20,10 +20,10 @@ export function useDevToolsConnection() {
 
       port.onDisconnect.addListener(() => {
         // Reset all state on disconnect
-        devtoolsState.connected.value = false;
-        devtoolsState.contexts.value = [];
-        devtoolsState.selectedContext.value = null;
-        devtoolsState.logEntries.value = [];
+        devtoolsState.connected(false);
+        devtoolsState.contexts([]);
+        devtoolsState.selectedContext(null);
+        devtoolsState.logEntries([]);
       });
     } catch (error) {
       console.error('[DevTools Panel] Error connecting to background:', error);
