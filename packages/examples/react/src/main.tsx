@@ -20,7 +20,7 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { instrumentSignal, instrumentComputed, instrumentEffect } from '@lattice/signals/instrumentation';
+import { instrumentSignal, instrumentComputed, instrumentEffect, instrumentBatch } from '@lattice/signals/instrumentation';
 import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
 
 // Import our React-compatible components
@@ -59,17 +59,13 @@ function createContext() {
   };
 }
 
-type LatticeExtension<N extends string, M> = { name: N; method: M };
-
 // Create signal API instance with instrumentation
 const signalAPI = createSignalAPI(
   {
     signal: (ctx: any) => createSignalFactory({ ...ctx, instrument: instrumentSignal }),
     computed: (ctx: any) => createComputedFactory({ ...ctx, instrument: instrumentComputed }),
     effect: (ctx: any) => createEffectFactory({ ...ctx, instrument: instrumentEffect }),
-    batch: createBatchFactory as (
-      ctx: unknown
-    ) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+    batch: (ctx: any) => createBatchFactory({ ...ctx, instrument: instrumentBatch }),
   },
   createContext()
 );

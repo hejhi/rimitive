@@ -57,27 +57,31 @@ export interface LatticeExtension<TName extends string, TMethod> {
    * Unique name for this extension (becomes the method name on context)
    */
   name: TName;
-  
+
   /**
    * The actual implementation
    */
   method: TMethod;
-  
+
   /**
    * Optional wrapper to add context awareness (disposal checks, tracking, etc.)
    */
-  wrap?(method: TMethod, context: ExtensionContext): TMethod;
-  
+  adapt?(method: TMethod, context: ExtensionContext): TMethod;
+
   /**
    * Optional instrumentation wrapper for debugging/profiling
    */
-  instrument?(method: TMethod, instrumentation: InstrumentationContext, context: ExtensionContext): TMethod;
-  
+  instrument?(
+    method: TMethod,
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ): TMethod;
+
   /**
    * Called when the extension is added to a context
    */
   init?(context: ExtensionContext): void;
-  
+
   /**
    * Called when the context is disposed
    */
@@ -202,8 +206,8 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
     }
     
     // Apply context wrapper if provided
-    if (ext.wrap) {
-      method = ext.wrap(method, extensionContext);
+    if (ext.adapt) {
+      method = ext.adapt(method, extensionContext);
     }
     
     // Safe because we control the context type

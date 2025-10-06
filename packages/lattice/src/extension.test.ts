@@ -59,7 +59,7 @@ describe('Extension System', () => {
     const wrappedExtension: LatticeExtension<'wrapped', (value: string) => string> = {
       name: 'wrapped',
       method: (value: string) => value.toUpperCase(),
-      wrap(method, ctx) {
+      adapt(method, ctx) {
         return (value: string) => {
           if (ctx.isDestroyed) {
             throw new Error('Context is disposed');

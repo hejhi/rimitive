@@ -79,7 +79,7 @@ const apiExtension: LatticeExtension<'api', ApiClient> = {
   name: 'api',
   method: new ApiClient(),
   
-  wrap(client, context) {
+  adapt(client, context) {
     // Prevent usage after disposal
     return new Proxy(client, {
       get(target, prop) {
@@ -158,7 +158,7 @@ const eventBusExtension: LatticeExtension<'events', EventEmitter> = {
   name: 'events',
   method: new EventEmitter(),
   
-  wrap(emitter, context) {
+  adapt(emitter, context) {
     const listeners = new Set<{ event: string; handler: Function }>();
     
     return new Proxy(emitter, {

@@ -1,4 +1,4 @@
-import type { LatticeExtension } from '@lattice/lattice';
+import type { ExtensionContext, InstrumentationContext, LatticeExtension } from '@lattice/lattice';
 import { Scheduler } from './helpers/scheduler';
 import { GlobalContext } from './context';
 
@@ -6,16 +6,25 @@ export type BatchContext = GlobalContext & {
   scheduler: Scheduler;
 }
 
-// BatchFactory uses SignalContext which includes all helpers
-export function createBatchFactory(
-  opts: {
-    ctx: GlobalContext,
-    startBatch: Scheduler['startBatch'],
-    endBatch: Scheduler['endBatch']
-  }
-): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { startBatch, endBatch } = opts;
+export type BatchFactory = LatticeExtension<'batch', <T>(fn: () => T) => T>;
 
+export type BatchOpts = {
+  ctx: GlobalContext;
+  startBatch: Scheduler['startBatch'];
+  endBatch: Scheduler['endBatch'];
+  instrument?: (
+    method: <T>(fn: () => T) => T,
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ) => <T>(fn: () => T) => T;
+}
+
+// BatchFactory uses SignalContext which includes all helpers
+export function createBatchFactory({
+  startBatch,
+  endBatch,
+  instrument,
+}: BatchOpts): BatchFactory {
   // Signal writes propagate immediately during batch.
   // We only defer effect execution to batch end.
   const batch = function batch<T>(fn: () => T): T {
@@ -31,5 +40,6 @@ export function createBatchFactory(
   return {
     name: 'batch',
     method: batch,
+    ...(instrument && { instrument }),
   };
 }
