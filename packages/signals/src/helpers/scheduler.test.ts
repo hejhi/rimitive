@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
 import type { ScheduledNode, Dependency, FromNode } from '../types';
-import { CONSTANTS, setPending, setClean, setDisposed } from '../constants';
+import { CONSTANTS } from '../constants';
 
-const { SCHEDULED, DISPOSED, CLEAN, CONSUMER, STATE_MASK } = CONSTANTS;
+const { SCHEDULED, DISPOSED, CLEAN, CONSUMER, STATE_MASK, TYPE_MASK, PENDING } = CONSTANTS;
 
 /**
  * Pure unit tests for scheduler algorithm
@@ -92,15 +92,15 @@ describe('Scheduler Algorithm', () => {
     it('should only queue CLEAN nodes', () => {
       const executed: string[] = [];
       const node1 = createMockScheduledNode();
-      setClean(node1);  // Clean nodes get queued
+      node1.status = (node1.status & TYPE_MASK) | CLEAN;  // Clean nodes get queued
       node1.flush = vi.fn(() => executed.push('clean'));
 
       const node2 = createMockScheduledNode();
-      setPending(node2);  // Already pending - skip
+      node2.status = (node2.status & TYPE_MASK) | PENDING;
       node2.flush = vi.fn(() => executed.push('pending'));
 
       const node3 = createMockScheduledNode();
-      setPending(node3);  // Already scheduled - skip
+      node3.status = (node3.status & TYPE_MASK) | PENDING;
       node3.flush = vi.fn(() => executed.push('already-scheduled'));
 
       const depChain = createDepChain(node1, node2, node3)!;
@@ -237,7 +237,7 @@ describe('Scheduler Algorithm', () => {
 
       const node2 = createMockScheduledNode();
       node2.flush = vi.fn(() => executed.push('B'));
-      setDisposed(node2); // Set as disposed before queueing
+      node2.status = (node2.status & TYPE_MASK) | DISPOSED;
 
       const node3 = createMockScheduledNode();
       node3.flush = vi.fn(() => executed.push('C'));

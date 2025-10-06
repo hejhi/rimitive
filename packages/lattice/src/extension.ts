@@ -12,12 +12,12 @@ export interface ExtensionContext {
   /**
    * Register a cleanup function to be called when context is disposed
    */
-  onDispose(cleanup: () => void): void;
-  
+  destroy(cleanup: () => void): void;
+
   /**
    * Check if the context has been disposed
    */
-  readonly isDisposed: boolean;
+  readonly isDestroyed: boolean;
 }
 
 /**
@@ -76,12 +76,12 @@ export interface LatticeExtension<TName extends string, TMethod> {
   /**
    * Called when the extension is added to a context
    */
-  onCreate?(context: ExtensionContext): void;
+  init?(context: ExtensionContext): void;
   
   /**
    * Called when the context is disposed
    */
-  onDispose?(context: ExtensionContext): void;
+  destroy?(context: ExtensionContext): void;
 }
 
 /**
@@ -160,13 +160,13 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
   };
 
   const extensionContext: ExtensionContext = {
-    onDispose(cleanup: () => void): void {
+    destroy(cleanup: () => void): void {
       state.disposers.add(cleanup);
     },
-    
-    get isDisposed(): boolean {
+
+    get isDestroyed(): boolean {
       return state.disposed;
-    }
+    },
   };
 
   // Build the context object
@@ -177,7 +177,7 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
 
       // Call extension cleanup first
       for (const ext of extensions) {
-        ext.onDispose?.(extensionContext);
+        ext.destroy?.(extensionContext);
       }
 
       // Then call all registered disposers
@@ -190,8 +190,8 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
 
   // Add each extension's method to the context
   for (const ext of extensions) {
-    // Call onCreate lifecycle
-    ext.onCreate?.(extensionContext);
+    // Call init lifecycle
+    ext.init?.(extensionContext);
 
     // Start with the base method
     let method = ext.method;

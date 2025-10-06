@@ -28,54 +28,6 @@ export const SCHEDULED = 1 << 8;  // Scheduled node (effects)
 export const STATE_MASK = 0b00000111;    // Bits 0-2
 export const TYPE_MASK = 0b111000000;    // Bits 6-8
 
-// === Status Helpers (preserve type bits when updating state) ===
-import type { ReactiveNode } from './types';
-
-export function setClean(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | CLEAN;
-}
-
-export function setPending(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | PENDING;
-}
-
-export function setDirty(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | DIRTY;
-}
-
-export function setDisposed(node: ReactiveNode): void {
-  node.status = (node.status & TYPE_MASK) | DISPOSED;
-}
-
-export function isScheduled(node: ReactiveNode): boolean {
-  return !!(node.status & SCHEDULED);
-}
-
-export function isProducer(node: ReactiveNode): boolean {
-  return !!(node.status & PRODUCER);
-}
-
-export function isConsumer(node: ReactiveNode): boolean {
-  return !!(node.status & CONSUMER);
-}
-
-// State checking helpers
-export function isClean(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === CLEAN;
-}
-
-export function isPending(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === PENDING;
-}
-
-export function isDirty(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === DIRTY;
-}
-
-export function isDisposed(node: ReactiveNode): boolean {
-  return (node.status & STATE_MASK) === DISPOSED;
-}
-
 // Re-export as CONSTANTS
 export const CONSTANTS = {
   // State flags

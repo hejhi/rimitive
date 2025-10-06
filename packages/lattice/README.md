@@ -52,12 +52,12 @@ const databaseExtension: LatticeExtension<'db', Database> = {
   name: 'db',
   method: new Database(),
   
-  onCreate(context) {
+  init(context) {
     console.log('Database extension initialized');
     this.method.connect();
   },
   
-  onDispose(context) {
+  destroy(context) {
     console.log('Cleaning up database connection');
     this.method.disconnect();
   }
@@ -83,7 +83,7 @@ const apiExtension: LatticeExtension<'api', ApiClient> = {
     // Prevent usage after disposal
     return new Proxy(client, {
       get(target, prop) {
-        if (context.isDisposed) {
+        if (context.isDestroyed) {
           throw new Error('Cannot use API after context disposal');
         }
         return target[prop];
@@ -169,7 +169,7 @@ const eventBusExtension: LatticeExtension<'events', EventEmitter> = {
             listeners.add({ event, handler });
             
             // Auto-cleanup on disposal
-            context.onDispose(() => {
+            context.destroy(() => {
               target.off(event, handler);
             });
             
@@ -190,12 +190,12 @@ const websocketExtension: LatticeExtension<'ws', WebSocketManager> = {
   name: 'ws',
   method: new WebSocketManager(),
   
-  onCreate(context) {
+  init(context) {
     // Initialize connection pool
     this.method.initialize();
   },
   
-  onDispose() {
+  destroy() {
     // Close all connections
     this.method.closeAll();
   },
@@ -260,8 +260,8 @@ interface LatticeExtension<TName extends string, TMethod> {
   method: TMethod;                 // The functionality to provide
   wrap?(method, context): TMethod; // Optional context wrapper
   instrument?(method, instrumentation, context): TMethod; // Optional instrumentation
-  onCreate?(context): void;        // Called on creation
-  onDispose?(context): void;       // Called on disposal
+  init?(context): void;        // Called on creation
+  destroy?(context): void;       // Called on disposal
 }
 ```
 

@@ -35,22 +35,22 @@ describe('Extension System', () => {
   });
   
   it('should call lifecycle hooks', () => {
-    const onCreate = vi.fn();
-    const onDispose = vi.fn();
+    const init = vi.fn();
+    const destroy = vi.fn();
     
     const lifecycleExtension: LatticeExtension<'test', () => void> = {
       name: 'test',
       method: () => {},
-      onCreate,
-      onDispose,
+      init,
+      destroy,
     };
     
     const context = createContext(lifecycleExtension);
-    expect(onCreate).toHaveBeenCalledOnce();
-    expect(onDispose).not.toHaveBeenCalled();
+    expect(init).toHaveBeenCalledOnce();
+    expect(destroy).not.toHaveBeenCalled();
     
     context.dispose();
-    expect(onDispose).toHaveBeenCalledOnce();
+    expect(destroy).toHaveBeenCalledOnce();
   });
   
   it('should wrap methods when wrapper is provided', () => {
@@ -61,13 +61,13 @@ describe('Extension System', () => {
       method: (value: string) => value.toUpperCase(),
       wrap(method, ctx) {
         return (value: string) => {
-          if (ctx.isDisposed) {
+          if (ctx.isDestroyed) {
             throw new Error('Context is disposed');
           }
           return method(value) + '!';
         };
       },
-      onDispose() {
+      destroy() {
         disposed = true;
       },
     };
@@ -96,7 +96,7 @@ describe('Extension System', () => {
         disposables.push(resource.dispose);
         return resource;
       },
-      onDispose() {
+      destroy() {
         // Dispose all resources when context is disposed
         disposables.forEach(dispose => dispose());
       },
