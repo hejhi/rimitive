@@ -35,9 +35,8 @@ export function instrumentSignal(
         return currentValue;
       }
 
-      // Write - emit write event
+      // Write - emit write event BEFORE the write
       const oldValue = signal.peek();
-      signal(value!);
 
       instrumentation.emit({
         type: 'SIGNAL_WRITE',
@@ -48,6 +47,8 @@ export function instrumentSignal(
           newValue: value,
         },
       });
+
+      signal(value!);
     }
 
     // Copy over peek with proper binding

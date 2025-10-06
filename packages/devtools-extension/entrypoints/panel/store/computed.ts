@@ -49,18 +49,11 @@ export const filteredTransactions = devtoolsContext.computed(() => {
   const filter = devtoolsState.filter();
   const selectedContext = devtoolsState.selectedContext();
 
-  const filtered = filterLogs(logEntries, filter, selectedContext, [
+  return filterLogs(logEntries, filter, selectedContext, [
     'eventType',
     'nodeName',
     'data',
   ]);
-
-  // Timeline view filters - show only main events, not start/end pairs
-  return filtered.filter(
-    (log) =>
-      !log.eventType.includes('_START') &&
-      !log.eventType.includes('_BEGIN')
-  );
 });
 
 export const selectedContextData = devtoolsContext.computed(() => {
