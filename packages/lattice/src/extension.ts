@@ -206,9 +206,7 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
     }
     
     // Apply context wrapper if provided
-    if (ext.adapt) {
-      method = ext.adapt(method, extensionContext);
-    }
+    if (ext.adapt) method = ext.adapt(method, extensionContext);
     
     // Safe because we control the context type
     (context as Record<string, unknown>)[ext.name] = method;

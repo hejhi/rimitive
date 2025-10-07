@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import type { ComputedFunction } from '@lattice/signals/computed';
 import { SignalFunction } from '@lattice/signals/signal';
 
@@ -21,6 +21,11 @@ export interface SignalProviderProps {
 }
 
 export function SignalProvider({ api, children }: SignalProviderProps) {
+  // Dispose the API when the provider unmounts
+  useEffect(() => {
+    return () => api.dispose();
+  }, [api]);
+
   return (
     <SignalContext.Provider value={api}>
       {children}

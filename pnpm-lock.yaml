@@ -73,6 +73,9 @@ importers:
         specifier: ^2.0.5
         version: 2.0.5
     devDependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
       '@lattice/signals':
         specifier: workspace:*
         version: link:../signals

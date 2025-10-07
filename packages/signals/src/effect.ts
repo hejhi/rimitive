@@ -1,5 +1,6 @@
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import type { GlobalContext } from './context';
+import type { ScheduledNode } from './types';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
 import { Scheduler } from './helpers/scheduler';
@@ -31,6 +32,12 @@ export type EffectFactory = LatticeExtension<
   (fn: () => void | (() => void)) => () => void
   >;
 
+// Effect node interface
+interface EffectNode extends ScheduledNode {
+  __type: 'effect';
+  cleanup?: void | (() => void);
+}
+
 export function createEffectFactory(
   opts: EffectOpts
 ): EffectFactory {
@@ -40,29 +47,30 @@ export function createEffectFactory(
   } = opts;
 
   function createEffect(run: () => void | (() => void)): () => void {
-    let cleanup: void | (() => void);
-
-    const node = {
+    const node: EffectNode = {
       __type: 'effect' as const,
       status: EFFECT_CLEAN,
       dependencies:  undefined,
       dependencyTail:  undefined,
       nextScheduled: undefined,
-      trackingVersion: 0, // Initialize version tracking
+      trackingVersion: 0,
+      cleanup: undefined,
       flush(): void {
-        if (cleanup !== undefined) cleanup = cleanup();
-        cleanup = track(node, run);
+        if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+        node.cleanup = track(node, run);
       }
     };
 
     // Run a single time on creation
-    cleanup = track(node, run);
+    node.cleanup = track(node, run);
 
     // Return dispose function
-    return () => disposeNode(node, () => {
-      if (cleanup === undefined) return;
-      cleanup = cleanup();
-    });
+    return () => {
+      disposeNode(node, () => {
+        if (node.cleanup === undefined) return;
+        node.cleanup = node.cleanup();
+      });
+    };
   }
 
   const extension: EffectFactory = {

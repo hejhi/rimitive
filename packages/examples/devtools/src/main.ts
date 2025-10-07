@@ -9,7 +9,6 @@
  * Each component is framework-agnostic and can be tested in isolation.
  */
 
-import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
@@ -19,7 +18,7 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { instrumentSignal, instrumentComputed, instrumentEffect, instrumentBatch } from '@lattice/signals/instrumentation';
-import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
+import { devtoolsProvider, createInstrumentation, createApi } from '@lattice/lattice';
 
 // Import our portable components
 import { createCounter } from './components/counter';
@@ -52,10 +51,8 @@ function createContext() {
   };
 }
 
-type LatticeExtension<N extends string, M> = { name: N; method: M };
-
 // Create signal API instance
-const signalAPI = createSignalAPI(
+const signalAPI = createApi(
   {
     signal: (ctx: any) => createSignalFactory({ ...ctx, instrument: instrumentSignal }),
     computed: (ctx: any) => createComputedFactory({ ...ctx, instrument: instrumentComputed }),

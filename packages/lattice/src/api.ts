@@ -51,14 +51,7 @@ export function createApi<
   T extends Record<string, Factory>,
   TCtx extends ExtractContextRequirements<T>,
 >(factories: T, ctx: TCtx) {
-  const extensions = Object.values(factories).map((factory) =>
+  return createContext(...Object.values(factories).map((factory) =>
     factory(ctx as never)
-  ) as ReturnType<T[keyof T]>[];
-
-  // Check if ctx has instrumentation and pass it to createContext
-  if (ctx && typeof ctx === 'object' && 'instrumentation' in ctx && ctx.instrumentation) {
-    return createContext({ instrumentation: ctx.instrumentation as any }, ...extensions);
-  }
-
-  return createContext(...extensions);
+  ) as ReturnType<T[keyof T]>[]);
 }

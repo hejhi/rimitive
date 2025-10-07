@@ -10,11 +10,11 @@
 
 import React, { ReactNode } from 'react';
 import { SignalProvider, useComponent, useSubscribe } from '@lattice/react';
-import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
-import { createBatchFactory } from '@lattice/signals/batch';
+import { createApi } from '@lattice/lattice';
+import { createSignalFactory, SignalOpts } from '@lattice/signals/signal';
+import { ComputedOpts, createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory, EffectOpts } from '@lattice/signals/effect';
+import { BatchOpts, createBatchFactory } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -26,36 +26,36 @@ import { createModal } from '../components/modal';
 // Helper to create a signal API for a component instance
 function createComponentSignalAPI() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const pullPropagator = createPullPropagator({ track: graphEdges.track });
+  const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
+  const { propagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
+  const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
 
   const instrumentation = createInstrumentation({
     enabled: true,
     providers: [devtoolsProvider({ debug: false })],
   });
 
-  return createSignalAPI(
+  return createApi(
     {
-      signal: (ctx: any) =>
-        createSignalFactory({ ...ctx, instrument: instrumentSignal }),
-      computed: (ctx: any) =>
-        createComputedFactory({ ...ctx, instrument: instrumentComputed }),
-      effect: (ctx: any) =>
-        createEffectFactory({ ...ctx, instrument: instrumentEffect }),
-      batch: (ctx: any) =>
-        createBatchFactory({ ...ctx, instrument: instrumentBatch }),
+      signal: (opts: SignalOpts) =>
+        createSignalFactory({ ...opts, instrument: instrumentSignal }),
+      computed: (opts: ComputedOpts) =>
+        createComputedFactory({ ...opts, instrument: instrumentComputed }),
+      effect: (opts: EffectOpts) =>
+        createEffectFactory({ ...opts, instrument: instrumentEffect }),
+      batch: (opts: BatchOpts) =>
+        createBatchFactory({ ...opts, instrument: instrumentBatch }),
     },
     {
       ctx,
-      trackDependency: graphEdges.trackDependency,
-      propagate: scheduler.propagate,
-      track: graphEdges.track,
-      dispose: scheduler.dispose,
-      pullUpdates: pullPropagator.pullUpdates,
-      shallowPropagate: pullPropagator.shallowPropagate,
-      startBatch: scheduler.startBatch,
-      endBatch: scheduler.endBatch,
+      trackDependency,
+      propagate,
+      track,
+      dispose,
+      pullUpdates,
+      shallowPropagate,
+      startBatch,
+      endBatch,
       instrumentation,
     }
   );

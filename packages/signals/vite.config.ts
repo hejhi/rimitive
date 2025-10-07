@@ -62,7 +62,6 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        api: resolve(__dirname, 'src/api.ts'),
         signal: resolve(__dirname, 'src/signal.ts'),
         computed: resolve(__dirname, 'src/computed.ts'),
         effect: resolve(__dirname, 'src/effect.ts'),

@@ -45,10 +45,10 @@ Test components without any framework:
 
 ```typescript
 import { createCounter } from './counter';
-import { createSignalAPI } from '@lattice/signals/api';
+import { createApi } from '@lattice/signals/api';
 
 test('counter increments', () => {
-  const api = createSignalAPI(/* ... */);
+  const api = createApi(/* ... */);
   const counter = createCounter(api);
 
   counter.increment();
@@ -118,7 +118,7 @@ Statistics computed from a TodoList. Demonstrates:
 
 ```typescript
 // 1. Create your signal API
-const api = createSignalAPI(/* ... */);
+const api = createApi(/* ... */);
 
 // 2. Create component instances
 const counter = createCounter(api);

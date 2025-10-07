@@ -1,9 +1,9 @@
 // Setup file for vitest
 import '@testing-library/jest-dom';
 import { afterEach } from 'vitest';
-import React, { ReactElement } from 'react';
+import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
-import { createSignalAPI } from '@lattice/signals/api';
+import { createApi } from '@lattice/lattice';
 import { createSignalFactory, SignalFunction } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
@@ -17,20 +17,20 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 
 export function createContext() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const pullPropagator = createPullPropagator({ track: graphEdges.track });
+  const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
+  const { propagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
+  const pullPropagator = createPullPropagator({ track });
 
   return {
     ctx,
-    trackDependency: graphEdges.trackDependency,
-    propagate: scheduler.propagate,
-    track: graphEdges.track,
-    dispose: scheduler.dispose,
+    trackDependency,
+    propagate,
+    track,
+    dispose,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,
-    startBatch: scheduler.startBatch,
-    endBatch: scheduler.endBatch,
+    startBatch,
+    endBatch,
   };
 }
 
@@ -57,21 +57,21 @@ const testFactories = {
 } as const;
 
 // Type alias for the API created with our standard factories
-type TestSignalAPI = ReturnType<typeof createSignalAPI<typeof testFactories, ReturnType<typeof createContext>>>;
+type TestSignalAPI = ReturnType<
+  typeof createApi<typeof testFactories, ReturnType<typeof createContext>>
+>;
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
   // Create a fresh signal API for each test
-  const api = createSignalAPI(testFactories, createContext());
+  const api = createApi(testFactories, createContext());
 
-  return render(
-    React.createElement(SignalProvider, { api, children: ui })
-  );
+  return render(createElement(SignalProvider, { api, children: ui }));
 }
 
 // Also export api creation for tests that need direct access
 export function createTestSignalAPI(): TestSignalAPI {
-  return createSignalAPI(testFactories, createContext());
+  return createApi(testFactories, createContext());
 }
 
 // Clean up after each test to prevent memory leaks

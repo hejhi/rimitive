@@ -126,11 +126,9 @@ export function createComputedFactory({
     return computed;
   }
 
-  const extension: ComputedFactory = {
+  return {
     name: 'computed',
     method: createComputed,
     ...(instrument && { instrument }),
   };
-
-  return extension;
 }

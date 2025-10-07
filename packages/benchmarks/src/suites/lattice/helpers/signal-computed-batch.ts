@@ -1,13 +1,12 @@
-import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
 import { createBatchFactory } from '@lattice/signals/batch';
-
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createApi as createLatticeApi } from '@lattice/lattice';
 
 export const createApi = () => {
   const ctx = createBaseContext();
@@ -19,7 +18,7 @@ export const createApi = () => {
     detachAll
   });
 
-  return createSignalAPI(
+  return createLatticeApi(
     {
       signal: createSignalFactory,
       computed: createComputedFactory,
@@ -33,7 +32,7 @@ export const createApi = () => {
       startBatch,
       endBatch,
       track,
-      shallowPropagate
+      shallowPropagate,
     }
   );
 }

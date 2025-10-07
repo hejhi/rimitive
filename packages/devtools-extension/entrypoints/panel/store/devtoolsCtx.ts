@@ -1,4 +1,4 @@
-import { createSignalAPI } from '@lattice/signals/api';
+import { createApi } from '@lattice/lattice';
 import { createSignalFactory, type SignalFunction } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
@@ -29,7 +29,7 @@ function createContext() {
 }
 
 // Create a Lattice context for the devtools panel itself
-export const devtoolsContext = createSignalAPI(
+export const devtoolsContext = createApi(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,

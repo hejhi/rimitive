@@ -11,7 +11,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SignalProvider, useComponent, useSubscribe } from '@lattice/react';
-import { createSignalAPI } from '@lattice/signals/api';
+import { createApi } from '@lattice/lattice';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
@@ -60,12 +60,16 @@ function createContext() {
 }
 
 // Create signal API instance with instrumentation
-const signalAPI = createSignalAPI(
+const signalAPI = createApi(
   {
-    signal: (ctx: any) => createSignalFactory({ ...ctx, instrument: instrumentSignal }),
-    computed: (ctx: any) => createComputedFactory({ ...ctx, instrument: instrumentComputed }),
-    effect: (ctx: any) => createEffectFactory({ ...ctx, instrument: instrumentEffect }),
-    batch: (ctx: any) => createBatchFactory({ ...ctx, instrument: instrumentBatch }),
+    signal: (ctx: any) =>
+      createSignalFactory({ ...ctx, instrument: instrumentSignal }),
+    computed: (ctx: any) =>
+      createComputedFactory({ ...ctx, instrument: instrumentComputed }),
+    effect: (ctx: any) =>
+      createEffectFactory({ ...ctx, instrument: instrumentEffect }),
+    batch: (ctx: any) =>
+      createBatchFactory({ ...ctx, instrument: instrumentBatch }),
   },
   createContext()
 );

@@ -192,10 +192,10 @@ const validator = createFormValidator(api, rules);
 ### 2. Test Without Frameworks
 ```typescript
 import { createCounter } from './counter';
-import { createSignalAPI } from '@lattice/signals/api';
+import { createApi } from '@lattice/lattice';
 
 test('counter increments', () => {
-  const api = createSignalAPI(/* ... */);
+  const api = createApi(/* ... */);
   const counter = createCounter(api);
 
   counter.increment();
@@ -275,7 +275,7 @@ export function createFilteredTodos(api) {
 3. **Test it**:
    ```typescript
    test('your component works', () => {
-     const api = createSignalAPI(/* ... */);
+     const api = createApi(/* ... */);
      const component = createYourComponent(api, args);
 
      component.action();

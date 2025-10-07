@@ -49,9 +49,7 @@ export function useLatticeContext<E extends readonly LatticeExtension<string, un
   // Create context only once, using ref to ensure stability
   const contextRef = useRef<ExtensionsToContext<E> | null>(null);
   
-  if (!contextRef.current) {
-    contextRef.current = createContext(...extensions);
-  }
+  if (!contextRef.current) contextRef.current = createContext(...extensions);
   
   const context = contextRef.current;
 
