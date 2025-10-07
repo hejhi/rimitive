@@ -11,27 +11,24 @@ import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createContext as createLattice } from '@lattice/lattice';
-import { createBaseContext, GlobalContext } from './context';
-import { createGraphEdges, GraphEdges } from './helpers/graph-edges';
-import { createPullPropagator, PullPropagator } from './helpers/pull-propagator';
-import { createScheduler, Scheduler } from './helpers/scheduler';
+import { createBaseContext } from './context';
+import { createGraphEdges } from './helpers/graph-edges';
+import { createPullPropagator } from './helpers/pull-propagator';
+import { createScheduler } from './helpers/scheduler';
 import { createGraphTraversal } from './helpers/graph-traversal';
 
 // Create a complete context with all helpers
-export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler & {
-    ctx: GlobalContext;
-  } {
+export function createDefaultContext() {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges({ ctx });
   const { withVisitor } = createGraphTraversal();
-  const scheduler = createScheduler({
-    traverseGraph: withVisitor,
-    detachAll: graphEdges.detachAll,
-  });
+  const _scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const { withPropagate, ...scheduler } = _scheduler;
   const pull = createPullPropagator({ track: graphEdges.track });
 
   return {
     ctx,
+    propagate: withPropagate(withVisitor),
     ...graphEdges,
     ...scheduler,
     ...pull,

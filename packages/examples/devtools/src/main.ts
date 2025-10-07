@@ -31,10 +31,7 @@ function createContext() {
   const ctx = createBaseContext();
   const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
   const { withVisitor } = createGraphTraversal();
-  const scheduler = createScheduler({
-    traverseGraph: withVisitor,
-    detachAll,
-  });
+  const { withPropagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
   const pullPropagator = createPullPropagator({ track });
 
   const instrumentation = createInstrumentation({
@@ -45,13 +42,13 @@ function createContext() {
   return {
     ctx,
     trackDependency,
-    propagate: scheduler.propagate,
+    propagate: withPropagate(withVisitor),
     track,
-    dispose: scheduler.dispose,
+    dispose,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,
-    startBatch: scheduler.startBatch,
-    endBatch: scheduler.endBatch,
+    startBatch,
+    endBatch,
     instrumentation,
   };
 }

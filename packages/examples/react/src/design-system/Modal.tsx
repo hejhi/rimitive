@@ -29,10 +29,7 @@ function createComponentSignalAPI() {
   const ctx = createBaseContext();
   const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
   const { withVisitor } = createGraphTraversal();
-  const { propagate, dispose, startBatch, endBatch } = createScheduler({
-    traverseGraph: withVisitor,
-    detachAll,
-  });
+  const { withPropagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
 
   const instrumentation = createInstrumentation({
@@ -54,7 +51,7 @@ function createComponentSignalAPI() {
     {
       ctx,
       trackDependency,
-      propagate,
+      propagate: withPropagate(withVisitor),
       track,
       dispose,
       pullUpdates,

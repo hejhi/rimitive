@@ -20,16 +20,13 @@ export function createContext() {
   const ctx = createBaseContext();
   const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
   const { withVisitor } = createGraphTraversal();
-  const { propagate, dispose, startBatch, endBatch } = createScheduler({
-    traverseGraph: withVisitor,
-    detachAll,
-  });
+  const { withPropagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
 
   return {
     ctx,
     trackDependency,
-    propagate,
+    propagate: withPropagate(withVisitor),
     track,
     dispose,
     pullUpdates,

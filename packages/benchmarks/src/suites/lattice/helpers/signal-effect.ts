@@ -10,10 +10,7 @@ export const createApi = () => {
   const ctx = createBaseContext();
   const { withVisitor } = createGraphTraversal();
   const { detachAll, trackDependency, track } = createGraphEdges({ ctx });
-  const { dispose, propagate } = createScheduler({
-    traverseGraph: withVisitor,
-    detachAll,
-  });
+  const { dispose, withPropagate } = createScheduler({ detachAll });
 
   return createLatticeApi(
     {
@@ -25,7 +22,7 @@ export const createApi = () => {
       dispose,
       trackDependency,
       track,
-      propagate,
+      propagate: withPropagate(withVisitor),
       detachAll,
     }
   );

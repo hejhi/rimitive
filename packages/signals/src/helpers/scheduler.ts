@@ -22,7 +22,11 @@ export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
 export interface Scheduler {
   /** Propagate updates through subscriber graph (includes both computeds and effects) */
-  propagate: (subscribers: Dependency) => void;
+  withPropagate: (
+    visitorFn: (
+      v: (dep: Dependency) => void
+    ) => (subscribers: Dependency) => void
+  ) => (subscribers: Dependency) => void;
   /** Dispose a scheduled node */
   dispose: <T extends ScheduledNode>(
     node: T,
@@ -38,12 +42,8 @@ export interface Scheduler {
 
 export function createScheduler({
   detachAll,
-  traverseGraph,
 }: {
   detachAll: (dep: Dependency) => void;
-  traverseGraph: (
-    visit: (dep: Dependency) => void
-  ) => (subscribers: Dependency) => void;
 }): Scheduler {
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;
@@ -117,14 +117,21 @@ export function createScheduler({
     }
   };
 
-  const traverse = traverseGraph(queueIfScheduled);
-
   // Propagate through subscribers (both computeds and effects)
-  const propagate = (subscribers: Dependency): void => {
-    traverse(subscribers);
-    if (queueHead === undefined) return;
-    flush();
-  };
+  const withPropagate =
+    (
+      visitorFn: (
+        v: (dep: Dependency) => void
+      ) => (subscribers: Dependency) => void
+    ) => {
+      const traverse = visitorFn(queueIfScheduled);
+
+      return (subscribers: Dependency): void => {
+        traverse(subscribers);
+        if (queueHead === undefined) return;
+        flush();
+      }
+    };
 
   const startBatch = (): number => batchDepth++;
 
@@ -159,10 +166,12 @@ export function createScheduler({
   };
 
   return {
-    propagate,
+    withPropagate,
     dispose,
     startBatch,
     endBatch,
     flush,
   };
 }
+
+// const propagate = withPropagate((visit) => withVisitor(visit))
