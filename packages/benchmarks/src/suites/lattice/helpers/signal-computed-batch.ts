@@ -12,10 +12,10 @@ export const createApi = () => {
   const ctx = createBaseContext();
   const { trackDependency, track, detachAll } = createGraphEdges({ ctx });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
-  const { traverseGraph } = createGraphTraversal();
+  const { withVisitor } = createGraphTraversal();
   const { startBatch, endBatch, propagate } = createScheduler({
-    traverseGraph,
-    detachAll
+    traverseGraph: withVisitor,
+    detachAll,
   });
 
   return createLatticeApi(

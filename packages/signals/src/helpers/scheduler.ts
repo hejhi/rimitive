@@ -42,9 +42,8 @@ export function createScheduler({
 }: {
   detachAll: (dep: Dependency) => void;
   traverseGraph: (
-    subscribers: Dependency,
     visit: (dep: Dependency) => void
-  ) => void;
+  ) => (subscribers: Dependency) => void;
 }): Scheduler {
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;
@@ -118,9 +117,11 @@ export function createScheduler({
     }
   };
 
+  const traverse = traverseGraph(queueIfScheduled);
+
   // Propagate through subscribers (both computeds and effects)
   const propagate = (subscribers: Dependency): void => {
-    traverseGraph(subscribers, queueIfScheduled);
+    traverse(subscribers);
     if (queueHead === undefined) return;
     flush();
   };

@@ -10,7 +10,7 @@ export const createApi = () => {
   const ctx = createBaseContext();
   const { trackDependency, track } = createGraphEdges({ ctx });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
-  const { traverseGraph } = createGraphTraversal();
+  const { propagate } = createGraphTraversal();
 
   return createLatticeApi(
     {
@@ -20,7 +20,7 @@ export const createApi = () => {
     {
       ctx,
       trackDependency,
-      propagate: traverseGraph,
+      propagate,
       pullUpdates,
       track,
       shallowPropagate,

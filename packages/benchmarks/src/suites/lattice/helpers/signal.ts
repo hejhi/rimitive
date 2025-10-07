@@ -7,14 +7,14 @@ import { createApi as createLatticeApi } from '@lattice/lattice';
 export const createApi = () => {
   const ctx = createBaseContext();
   const { trackDependency } = createGraphEdges({ ctx });
-  const { traverseGraph } = createGraphTraversal();
+  const { propagate } = createGraphTraversal();
 
   return createLatticeApi(
     { signal: createSignalFactory },
     {
       ctx,
       trackDependency,
-      propagate: traverseGraph,
+      propagate,
     }
   );
 };

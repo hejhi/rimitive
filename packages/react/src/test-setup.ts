@@ -19,8 +19,11 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 export function createContext() {
   const ctx = createBaseContext();
   const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
-  const { traverseGraph } = createGraphTraversal();
-  const { propagate, dispose, startBatch, endBatch } = createScheduler({ traverseGraph, detachAll });
+  const { withVisitor } = createGraphTraversal();
+  const { propagate, dispose, startBatch, endBatch } = createScheduler({
+    traverseGraph: withVisitor,
+    detachAll,
+  });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
 
   return {

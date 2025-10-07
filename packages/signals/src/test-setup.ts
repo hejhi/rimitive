@@ -23,9 +23,9 @@ export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler 
   } {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges({ ctx });
-  const { traverseGraph } = createGraphTraversal();
+  const { withVisitor } = createGraphTraversal();
   const scheduler = createScheduler({
-    traverseGraph,
+    traverseGraph: withVisitor,
     detachAll: graphEdges.detachAll,
   });
   const pull = createPullPropagator({ track: graphEdges.track });

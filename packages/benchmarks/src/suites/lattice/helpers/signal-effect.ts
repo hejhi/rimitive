@@ -8,10 +8,10 @@ import { createApi as createLatticeApi } from '@lattice/lattice';
 
 export const createApi = () => {
   const ctx = createBaseContext();
-  const { traverseGraph } = createGraphTraversal();
+  const { withVisitor } = createGraphTraversal();
   const { detachAll, trackDependency, track } = createGraphEdges({ ctx });
   const { dispose, propagate } = createScheduler({
-    traverseGraph,
+    traverseGraph: withVisitor,
     detachAll,
   });
 

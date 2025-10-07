@@ -46,8 +46,8 @@ describe('Graph Traversal Algorithm', () => {
       b.subscribers = createDep(c);
       a.subscribers = createDep(b);
 
-      const { traverseGraph } = createGraphTraversal();
-      traverseGraph(a.subscribers);
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -71,8 +71,8 @@ describe('Graph Traversal Algorithm', () => {
       c.subscribers = createDep(f);
       a.subscribers = createDep(b, createDep(c));
 
-      const { traverseGraph } = createGraphTraversal();
-      traverseGraph(a.subscribers);
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -96,9 +96,9 @@ describe('Graph Traversal Algorithm', () => {
       c.subscribers = createDep(d);
       a.subscribers = createDep(b, createDep(c));
 
-      const { traverseGraph } = createGraphTraversal();
+      const { propagate } = createGraphTraversal();
 
-      traverseGraph(a.subscribers);
+      propagate(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -116,12 +116,13 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b);
 
       const leaves: DerivedNode[] = [];
-      const { traverseGraph } = createGraphTraversal();
+      const { withVisitor } = createGraphTraversal();
       const visit = (dep: Dependency) => {
         leaves.push(dep.consumer as DerivedNode);
       };
+      const propagate = withVisitor(visit);
 
-      traverseGraph(a.subscribers, visit);
+      propagate(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(leaves).toHaveLength(0); // Not visited again
@@ -133,8 +134,8 @@ describe('Graph Traversal Algorithm', () => {
 
       a.subscribers = createDep(b);
 
-      const { traverseGraph } = createGraphTraversal();
-      traverseGraph(a.subscribers);
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
     });
@@ -158,7 +159,7 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b, createDep(c));
 
       const order: DerivedNode[] = [];
-      const { traverseGraph } = createGraphTraversal();
+      const { propagate } = createGraphTraversal();
 
       // Track visit order via status changes
       const track = (node: DerivedNode) => {
@@ -177,7 +178,7 @@ describe('Graph Traversal Algorithm', () => {
       track(d);
       track(e);
 
-      traverseGraph(a.subscribers);
+      propagate(a.subscribers);
 
       // Depth-first: B -> D -> C -> E
       expect(order).toEqual([b, d, c, e]);
@@ -197,9 +198,9 @@ describe('Graph Traversal Algorithm', () => {
       b.subscribers = createDep(d);
       a.subscribers = createDep(b, createDep(c));
 
-      const { traverseGraph } = createGraphTraversal();
+      const { propagate } = createGraphTraversal();
 
-      traverseGraph(a.subscribers);
+      propagate(a.subscribers);
 
       // All nodes marked as pending
       expect(b.status & STATE_MASK).toBe(PENDING);
@@ -223,10 +224,10 @@ describe('Graph Traversal Algorithm', () => {
         nodes[i]!.subscribers = createDep(nodes[i + 1]!);
       }
 
-      const { traverseGraph } = createGraphTraversal();
+      const { propagate } = createGraphTraversal();
 
       expect(() => {
-        traverseGraph(createDep(nodes[0]!));
+        propagate(createDep(nodes[0]!));
       }).not.toThrow();
 
       // All marked
@@ -253,8 +254,8 @@ describe('Graph Traversal Algorithm', () => {
       }
       a.subscribers = subs;
 
-      const { traverseGraph } = createGraphTraversal();
-      traverseGraph(a.subscribers!);
+      const { propagate } = createGraphTraversal();
+      propagate(a.subscribers!);
 
       // All marked
       nodes.forEach(node => {
@@ -285,9 +286,9 @@ describe('Graph Traversal Algorithm', () => {
       d.subscribers = createDep(e);
       a.subscribers = createDep(b, createDep(c, createDep(d)));
 
-      const { traverseGraph } = createGraphTraversal();
+      const { propagate } = createGraphTraversal();
 
-      traverseGraph(a.subscribers);
+      propagate(a.subscribers);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(c.status & STATE_MASK).toBe(PENDING);
@@ -303,8 +304,8 @@ describe('Graph Traversal Algorithm', () => {
     it('should handle single node', () => {
       const a = createNode();
 
-      const { traverseGraph } = createGraphTraversal();
-      traverseGraph(createDep(a));
+      const { propagate } = createGraphTraversal();
+      propagate(createDep(a));
 
       expect(a.status & STATE_MASK).toBe(PENDING);
     });
