@@ -52,7 +52,7 @@ export function createGraphTraversal(): GraphTraversal {
        const stateStatus = status & STATE_MASK;
 
        depTraversal: if (stateStatus === CLEAN || stateStatus === DIRTY) {
-         if (visit !== null) visit(dep);
+         if (visit) visit(dep);
 
          // Mark as pending (invalidated) - no subscribers to process
          consumerNode.status = (consumerNode.status & TYPE_MASK) | PENDING;

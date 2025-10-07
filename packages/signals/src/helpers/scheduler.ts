@@ -118,20 +118,19 @@ export function createScheduler({
   };
 
   // Propagate through subscribers (both computeds and effects)
-  const withPropagate =
-    (
-      visitorFn: (
-        v: (dep: Dependency) => void
-      ) => (subscribers: Dependency) => void
-    ) => {
-      const traverse = visitorFn(queueIfScheduled);
+  const withPropagate = (
+    visit: (
+      queueDep: (dep: Dependency) => void
+    ) => (subscribers: Dependency) => void
+  ) => {
+    const traverse = visit(queueIfScheduled);
 
-      return (subscribers: Dependency): void => {
-        traverse(subscribers);
-        if (queueHead === undefined) return;
-        flush();
-      }
+    return (subscribers: Dependency): void => {
+      traverse(subscribers);
+      if (queueHead === undefined) return;
+      flush();
     };
+  };
 
   const startBatch = (): number => batchDepth++;
 
