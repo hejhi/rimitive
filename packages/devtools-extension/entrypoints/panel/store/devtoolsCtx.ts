@@ -8,18 +8,23 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 function createContext() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const pullPropagator = createPullPropagator({ track: graphEdges.track });
+  const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({
+    traverseGraph,
+    detachAll,
+  });
+  const pullPropagator = createPullPropagator({ track });
 
   return {
     ctx,
-    trackDependency: graphEdges.trackDependency,
+    trackDependency,
     propagate: scheduler.propagate,
-    track: graphEdges.track,
+    track,
     dispose: scheduler.dispose,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,

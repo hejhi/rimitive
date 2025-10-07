@@ -15,6 +15,7 @@ import { createBaseContext, GlobalContext } from './context';
 import { createGraphEdges, GraphEdges } from './helpers/graph-edges';
 import { createPullPropagator, PullPropagator } from './helpers/pull-propagator';
 import { createScheduler, Scheduler } from './helpers/scheduler';
+import { createGraphTraversal } from './helpers/graph-traversal';
 
 // Create a complete context with all helpers
 export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler & {
@@ -22,7 +23,9 @@ export function createDefaultContext(): PullPropagator & GraphEdges & Scheduler 
   } {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges({ ctx });
+  const { traverseGraph } = createGraphTraversal();
   const scheduler = createScheduler({
+    traverseGraph,
     detachAll: graphEdges.detachAll,
   });
   const pull = createPullPropagator({ track: graphEdges.track });

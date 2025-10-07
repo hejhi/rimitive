@@ -116,11 +116,12 @@ describe('Graph Traversal Algorithm', () => {
       a.subscribers = createDep(b);
 
       const leaves: DerivedNode[] = [];
-      const { traverseGraph } = createGraphTraversal((dep) => {
+      const { traverseGraph } = createGraphTraversal();
+      const visit = (dep: Dependency) => {
         leaves.push(dep.consumer as DerivedNode);
-      });
+      };
 
-      traverseGraph(a.subscribers);
+      traverseGraph(a.subscribers, visit);
 
       expect(b.status & STATE_MASK).toBe(PENDING);
       expect(leaves).toHaveLength(0); // Not visited again

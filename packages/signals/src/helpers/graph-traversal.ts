@@ -19,9 +19,11 @@ interface Stack<T> {
   prev: Stack<T> | undefined;
 }
 
+type Visit = (dep: Dependency) => void;
+
 export interface GraphTraversal {
   /** Traverse computed subscribers graph, marking nodes as invalidated */
-  traverseGraph: (subscribers: Dependency) => void;
+  traverseGraph: (subscribers: Dependency, visit?: Visit) => void;
 }
 
 /**
@@ -30,76 +32,74 @@ export interface GraphTraversal {
  *
  * @param schedule - Optional callback invoked for each node during traversal (typically for scheduling effects)
  */
-export function createGraphTraversal(
-  schedule?: (scheduledDep: Dependency) => void
-): GraphTraversal {
+export function createGraphTraversal(): GraphTraversal {
   /**
    * Traverse dependency graph depth-first, marking nodes as invalidated.
    * Calls visitor function for each leaf node (nodes without subscribers).
    * Uses alien-signals pattern: follow chains naturally, stack only at branch points.
   */
- const traverseGraph = (subscribers: Dependency): void => {
-    let dep: Dependency = subscribers;
-    let next: Dependency | undefined = subscribers.nextConsumer;
-    let stack: Stack<Dependency | undefined> | undefined;
+ const traverseGraph = (
+   subscribers: Dependency,
+   visit?: Visit
+ ): void => {
+   let dep: Dependency = subscribers;
+   let next: Dependency | undefined = subscribers.nextConsumer;
+   let stack: Stack<Dependency | undefined> | undefined;
 
-    traversal: for (;;) {
-      const consumerNode = dep.consumer;
-      const status = consumerNode.status;
-      const stateStatus = status & STATE_MASK;
+   traversal: for (;;) {
+     const consumerNode = dep.consumer;
+     const status = consumerNode.status;
+     const stateStatus = status & STATE_MASK;
 
+     processPending: if (stateStatus === CLEAN || stateStatus === DIRTY) {
+       if (visit) visit(dep);
 
-      processPending: if (
-        (stateStatus === CLEAN || stateStatus === DIRTY)
-      ) {
-        if (schedule) schedule(dep);
-        
-        // Mark as pending (invalidated) - no subscribers to process
-        consumerNode.status = (consumerNode.status & TYPE_MASK) | PENDING;
+       // Mark as pending (invalidated) - no subscribers to process
+       consumerNode.status = (consumerNode.status & TYPE_MASK) | PENDING;
 
-        // Fall through if there's no subscribers (not a producer)
-        if (!(status & PRODUCER)) break processPending;
+       // Fall through if there's no subscribers (not a producer)
+       if (!(status & PRODUCER)) break processPending;
 
-        // At this point, we know consumerNode is a ProducerNode
-        const producerNode = consumerNode as ProducerNode;
+       // At this point, we know consumerNode is a ProducerNode
+       const producerNode = consumerNode as ProducerNode;
 
-        // Get subscribers (both computeds and effects in single list)
-        const subscribers = producerNode.subscribers;
-        if (subscribers === undefined) break processPending;
+       // Get subscribers (both computeds and effects in single list)
+       const subscribers = producerNode.subscribers;
+       if (subscribers === undefined) break processPending;
 
-        // Continue traversal - branch node
-        dep = subscribers;
-        const nextSub = dep.nextConsumer;
+       // Continue traversal - branch node
+       dep = subscribers;
+       const nextSub = dep.nextConsumer;
 
-        if (nextSub === undefined) continue traversal;
+       if (nextSub === undefined) continue traversal;
 
-        stack = { value: next, prev: stack };
-        next = nextSub;
-        continue traversal;
-      }
+       stack = { value: next, prev: stack };
+       next = nextSub;
+       continue traversal;
+     }
 
-      // Advance to next sibling (unified advancement point)
-      if (next !== undefined) {
-        dep = next;
-        next = dep.nextConsumer;
-        continue traversal;
-      }
+     // Advance to next sibling (unified advancement point)
+     if (next !== undefined) {
+       dep = next;
+       next = dep.nextConsumer;
+       continue traversal;
+     }
 
-      if (stack === undefined) return;
+     if (stack === undefined) return;
 
-      // Unwind stack
-      do {
-        dep = stack.value!;
-        stack = stack.prev;
-        if (dep !== undefined) {
-          next = dep.nextConsumer;
-          continue traversal;
-        }
-      } while (stack);
+     // Unwind stack
+     do {
+       dep = stack.value!;
+       stack = stack.prev;
+       if (dep !== undefined) {
+         next = dep.nextConsumer;
+         continue traversal;
+       }
+     } while (stack);
 
-      return;
-    }
-  };
+     return;
+   }
+ };
 
   return {
     traverseGraph,

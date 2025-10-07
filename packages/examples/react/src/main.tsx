@@ -29,6 +29,7 @@ import { createTodoList } from './components/todo-list';
 import { createFilter } from './components/filter';
 import { createAppState } from './components/app-state';
 import { Modal } from './design-system/Modal';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 // ============================================================================
 // Create Instrumented Signal API with DevTools
@@ -36,9 +37,13 @@ import { Modal } from './design-system/Modal';
 
 function createContext() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const pullPropagator = createPullPropagator({ track: graphEdges.track });
+  const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({
+    traverseGraph,
+    detachAll,
+  });
+  const pullPropagator = createPullPropagator({ track });
 
   const instrumentation = createInstrumentation({
     enabled: true,
@@ -47,9 +52,9 @@ function createContext() {
 
   return {
     ctx,
-    trackDependency: graphEdges.trackDependency,
+    trackDependency,
     propagate: scheduler.propagate,
-    track: graphEdges.track,
+    track,
     dispose: scheduler.dispose,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,

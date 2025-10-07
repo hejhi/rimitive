@@ -103,14 +103,10 @@ describe('multiple effects on signal change', () => {
     // First update todos
     todos([...todos(), { id: 3, text: 'New todo', completed: false }]);
 
-    const runsAfterTodos = [...runs];
     runs.length = 0;
 
     // Then update count
     count(1);
-
-    console.log('Runs after todos:', runsAfterTodos);
-    console.log('Runs after count:', runs);
 
     // After count changes, effect2 should see the updated todos length (3)
     expect(runs).toContain('effect2: count=1, todos=3');

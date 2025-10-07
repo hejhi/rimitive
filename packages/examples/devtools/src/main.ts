@@ -25,12 +25,17 @@ import { createCounter } from './components/counter';
 import { createTodoList, type Todo } from './components/todo-list';
 import { createFilter, type FilterType } from './components/filter';
 import { createTodoStats } from './components/todo-stats';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 function createContext() {
   const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const pullPropagator = createPullPropagator({ track: graphEdges.track });
+  const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
+  const { traverseGraph } = createGraphTraversal();
+  const scheduler = createScheduler({
+    traverseGraph,
+    detachAll,
+  });
+  const pullPropagator = createPullPropagator({ track });
 
   const instrumentation = createInstrumentation({
     enabled: true,
@@ -39,9 +44,9 @@ function createContext() {
 
   return {
     ctx,
-    trackDependency: graphEdges.trackDependency,
+    trackDependency,
     propagate: scheduler.propagate,
-    track: graphEdges.track,
+    track,
     dispose: scheduler.dispose,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,

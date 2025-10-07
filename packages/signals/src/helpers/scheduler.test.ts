@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createScheduler } from './scheduler';
 import type { ScheduledNode, Dependency, FromNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createGraphTraversal } from './graph-traversal';
 
 const { SCHEDULED, DISPOSED, CLEAN, CONSUMER, STATE_MASK, TYPE_MASK, PENDING } = CONSTANTS;
 
@@ -61,8 +62,10 @@ describe('Scheduler Algorithm', () => {
       node3.flush = vi.fn(() => order.push('C'));
 
       const depChain = createDepChain(node1, node2, node3)!;
+      const { traverseGraph } = createGraphTraversal();
 
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -80,7 +83,10 @@ describe('Scheduler Algorithm', () => {
       node.flush = vi.fn(() => called++);
       const depChain = createDepChain(node)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -105,7 +111,10 @@ describe('Scheduler Algorithm', () => {
 
       const depChain = createDepChain(node1, node2, node3)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -118,7 +127,10 @@ describe('Scheduler Algorithm', () => {
 
   describe('Batch Management', () => {
     it('should increment batch depth on startBatch', () => {
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -129,7 +141,10 @@ describe('Scheduler Algorithm', () => {
     });
 
     it('should decrement batch depth on endBatch', () => {
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -145,7 +160,10 @@ describe('Scheduler Algorithm', () => {
       node.flush = vi.fn(() => executed.push('flushed'));
       const depChain = createDepChain(node)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -167,7 +185,10 @@ describe('Scheduler Algorithm', () => {
       node.flush = vi.fn(() => executed.push('flushed'));
       const depChain = createDepChain(node)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -189,7 +210,10 @@ describe('Scheduler Algorithm', () => {
       node.flush = vi.fn(() => executed.push('flushed'));
       const depChain = createDepChain(node)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -219,7 +243,10 @@ describe('Scheduler Algorithm', () => {
 
       const depChain = createDepChain(node)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -244,7 +271,10 @@ describe('Scheduler Algorithm', () => {
 
       const depChain = createDepChain(node1, node2, node3)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -273,7 +303,10 @@ describe('Scheduler Algorithm', () => {
 
       const depChain = createDepChain(node1, node2, node3)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -295,7 +328,10 @@ describe('Scheduler Algorithm', () => {
       node2.flush = vi.fn(() => order.push('inner'));
       const depChain2 = createDepChain(node2)!;
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -319,7 +355,10 @@ describe('Scheduler Algorithm', () => {
       const cleanup = vi.fn();
       const detachAll = vi.fn();
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll,
       });
 
@@ -333,7 +372,10 @@ describe('Scheduler Algorithm', () => {
       const node = createMockScheduledNode();
       const cleanup = vi.fn();
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll: vi.fn(),
       });
 
@@ -351,7 +393,10 @@ describe('Scheduler Algorithm', () => {
 
       const detachAll = vi.fn();
 
+      const { traverseGraph } = createGraphTraversal();
+
       const scheduler = createScheduler({
+        traverseGraph,
         detachAll,
       });
 

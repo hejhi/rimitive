@@ -22,12 +22,17 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { instrumentSignal, instrumentComputed, instrumentEffect, instrumentBatch } from '@lattice/signals/instrumentation';
 import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
 import { createModal } from '../components/modal';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 // Helper to create a signal API for a component instance
 function createComponentSignalAPI() {
   const ctx = createBaseContext();
   const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
-  const { propagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
+  const { traverseGraph } = createGraphTraversal();
+  const { propagate, dispose, startBatch, endBatch } = createScheduler({
+    traverseGraph,
+    detachAll
+  });
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
 
   const instrumentation = createInstrumentation({

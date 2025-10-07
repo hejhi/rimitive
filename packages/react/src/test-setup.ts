@@ -14,12 +14,14 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 export function createContext() {
   const ctx = createBaseContext();
   const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
-  const { propagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
-  const pullPropagator = createPullPropagator({ track });
+  const { traverseGraph } = createGraphTraversal();
+  const { propagate, dispose, startBatch, endBatch } = createScheduler({ traverseGraph, detachAll });
+  const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
 
   return {
     ctx,
@@ -27,8 +29,8 @@ export function createContext() {
     propagate,
     track,
     dispose,
-    pullUpdates: pullPropagator.pullUpdates,
-    shallowPropagate: pullPropagator.shallowPropagate,
+    pullUpdates,
+    shallowPropagate,
     startBatch,
     endBatch,
   };
