@@ -19,22 +19,49 @@ export interface GraphEdges {
   ) => T;
 }
 
+// Helper to unlink a dependency from producer's consumer list
+const unlinkFromProducer = (
+  producer: ProducerNode,
+  prevConsumer: Dependency | undefined,
+  nextConsumer: Dependency | undefined
+): void => {
+  if (nextConsumer !== undefined)
+    nextConsumer.prevConsumer = prevConsumer;
+  else producer.subscribersTail = prevConsumer;
+
+  if (prevConsumer !== undefined)
+    prevConsumer.nextConsumer = nextConsumer;
+  else producer.subscribers = nextConsumer;
+};
+
+/**
+ * Detach all dependencies from a consumer node.
+ * Used during disposal to completely disconnect a node from the graph.
+ */
+const detachAll = (dep: Dependency): void => {
+  // All dependencies in the chain share the same consumer
+  const consumer = dep.consumer;
+  let current: Dependency | undefined = dep;
+
+  do {
+    const next: Dependency | undefined = current.nextDependency;
+    const { producer, prevDependency, prevConsumer, nextConsumer } = current;
+
+    // Unlink from consumer chain
+    if (next) next.prevDependency = prevDependency;
+    else consumer.dependencyTail = prevDependency;
+
+    if (prevDependency) prevDependency.nextDependency = next;
+    else consumer.dependencies = next;
+
+    // Unlink from producer chain
+    unlinkFromProducer(producer, prevConsumer, nextConsumer);
+
+    current = next;
+  } while (current);
+};
+
 export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
-  // Helper to unlink a dependency from producer's consumer list
-  const unlinkFromProducer = (
-    producer: ProducerNode,
-    prevConsumer: Dependency | undefined,
-    nextConsumer: Dependency | undefined
-  ): void => {
-    if (nextConsumer !== undefined)
-      nextConsumer.prevConsumer = prevConsumer;
-    else producer.subscribersTail = prevConsumer;
-
-    if (prevConsumer !== undefined)
-      prevConsumer.nextConsumer = nextConsumer;
-    else producer.subscribers = nextConsumer;
-  };
-
   const trackDependency = (
     producer: FromNode,
     consumer: ToNode
@@ -79,35 +106,9 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
 
     // Wire producer side - single subscriber list for all consumers
     if (prevConsumer) prevConsumer.nextConsumer = dep;
+    else producer.subscribers = dep;
+    
     producer.subscribersTail = dep;
-    if (!prevConsumer) producer.subscribers = dep;
-  };
-
-  /**
-   * Detach all dependencies from a consumer node.
-   * Used during disposal to completely disconnect a node from the graph.
-   */
-  const detachAll = (dep: Dependency): void => {
-    // All dependencies in the chain share the same consumer
-    const consumer = dep.consumer;
-    let current: Dependency | undefined = dep;
-
-    do {
-      const next: Dependency | undefined = current.nextDependency;
-      const { producer, prevDependency, prevConsumer, nextConsumer } = current;
-
-      // Unlink from consumer chain
-      if (next) next.prevDependency = prevDependency;
-      else consumer.dependencyTail = prevDependency;
-
-      if (prevDependency) prevDependency.nextDependency = next;
-      else consumer.dependencies = next;
-
-      // Unlink from producer chain
-      unlinkFromProducer(producer, prevConsumer, nextConsumer);
-
-      current = next;
-    } while (current);
   };
 
   const track = <T>(node: ConsumerNode, fn: () => T): T => {
