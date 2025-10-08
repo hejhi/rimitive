@@ -76,7 +76,7 @@ export function createComputedFactory({
       if (prev === this.value) break update;
 
       const subs = this.subscribers;
-      if (subs !== undefined) shallowPropagate(subs);
+      if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
     } else if (isPending) this.status = COMPUTED_CLEAN;
 
     // Track dependency AFTER pulling updates
