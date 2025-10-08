@@ -40,7 +40,10 @@ const shallowPropagate = (sub: Dependency) => {
   } while (sub);
 };
 
-const STATUS_CHECK = DIRTY | PENDING;
+const PC = PRODUCER | CONSUMER;
+const PRODUCER_DIRTY = PRODUCER | DIRTY;
+const PC_DIRTY = PC | DIRTY;
+const PC_PENDING = PC | PENDING;
 
 export function createPullPropagator({
   track
@@ -61,46 +64,38 @@ export function createPullPropagator({
 			const status = producer.status;
 
       // Check if this dependency makes the consumer dirty
-      if ((consumer.status & STATE_MASK) === DIRTY) {
+      check: if ((consumer.status & STATE_MASK) === DIRTY) {
         dirty = true;
-      } else if (STATUS_CHECK) switch (status & STATE_MASK) {
-        case DIRTY: {
-          // Producer is dirty - either a signal or derived
-          if (producer.status & CONSUMER) {
-            // Producer is a dirty derived - recompute it
-            const derivedProducer = producer as DerivedNode;
-            const val = track(derivedProducer, derivedProducer.compute);
+      } else if ((status & PC_DIRTY) === PC_DIRTY) {
+        // Dirty derived - recompute it
+        const derivedProducer = producer as DerivedNode;
+        const val = track(derivedProducer, derivedProducer.compute);
 
-            // Value is unchanged - break out
-            if (val === derivedProducer.value) break;
+        // Value is unchanged - skip propagation
+        if (val === derivedProducer.value) break check;
+        derivedProducer.value = val;
+        const subs = producer.subscribers;
+        dirty = true;
 
-            derivedProducer.value = val;
-            const subs = producer.subscribers;
-            dirty = true;
+        if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
+      } else if ((status & PRODUCER_DIRTY) === PRODUCER_DIRTY) {
+        // Dirty signal - clear flag and mark dirty
+        producer.status = PRODUCER_CLEAN;
+        const subs = producer.subscribers;
+        dirty = true;
 
-            if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
-          } else {
-            // Signal updated - clear flag and mark dirty
-            producer.status = PRODUCER_CLEAN;
-            const subs = producer.subscribers;
-            dirty = true;
+        if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
+      } else if ((status & PC_PENDING) === PC_PENDING) {
+        // Pending derived - need to check its dependencies
+        const derivedProducer = producer as DerivedNode;
 
-            if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
-          }
-          break;
-        }
-        case PENDING: {
-          const derivedProducer = producer as DerivedNode;
-
-          // Check if producer was recomputed AFTER our edge to it was created
-          // This handles the "intermediate read" problem where a node is recomputed
-          // between two reads by its consumer
-          if (derivedProducer.trackingVersion > dep.version) {
-            // Producer is stale relative to our view - mark as dirty
-            dirty = true;
-            break;
-          }
-
+        // Check if producer was recomputed AFTER our edge to it was created
+        // This handles the "intermediate read" problem where a node is recomputed
+        // between two reads by its consumer
+        if (derivedProducer.trackingVersion > dep.version) {
+          // Producer is stale relative to our view - mark as dirty
+          dirty = true;
+        } else {
           // Producer is pending - need to check its dependencies first
           // Save position if there are siblings (optimization: no allocation in linear chains)
           if (
