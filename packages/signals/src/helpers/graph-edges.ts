@@ -19,18 +19,16 @@ export interface GraphEdges {
   ) => T;
 }
 
-// Helper to unlink a dependency from producer's consumer list
+// Unlink a dependency from producer's consumer list
 const unlinkFromProducer = (
   producer: ProducerNode,
   prevConsumer: Dependency | undefined,
   nextConsumer: Dependency | undefined
 ): void => {
-  if (nextConsumer !== undefined)
-    nextConsumer.prevConsumer = prevConsumer;
+  if (nextConsumer !== undefined) nextConsumer.prevConsumer = prevConsumer;
   else producer.subscribersTail = prevConsumer;
 
-  if (prevConsumer !== undefined)
-    prevConsumer.nextConsumer = nextConsumer;
+  if (prevConsumer !== undefined) prevConsumer.nextConsumer = nextConsumer;
   else producer.subscribers = nextConsumer;
 };
 
@@ -66,17 +64,17 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     producer: FromNode,
     consumer: ToNode
   ): void => {
-    const tail = consumer.dependencyTail;
+    const currDep = consumer.dependencyTail;
 
     // Fast path: tail already points to this producer
-    if (tail !== undefined && tail.producer === producer) {
+    if (currDep !== undefined && currDep.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      tail.version = ctx.trackingVersion;
+      currDep.version = ctx.trackingVersion;
       return; // Already tracking
     }
 
     // Check next dependency in sequence
-    const next = tail ? tail.nextDependency : consumer.dependencies;
+    const next = currDep ? currDep.nextDependency : consumer.dependencies;
     if (next !== undefined && next.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       next.version = ctx.trackingVersion;
@@ -91,7 +89,7 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
     const dep: Dependency = {
       producer,
       consumer,
-      prevDependency: tail,
+      prevDependency: currDep,
       prevConsumer,
       nextDependency: next,
       nextConsumer: undefined,
@@ -100,14 +98,15 @@ export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
 
     // Wire consumer side
     consumer.dependencyTail = dep;
+
     if (next) next.prevDependency = dep;
-    if (tail) tail.nextDependency = dep;
+    if (currDep) currDep.nextDependency = dep;
     else consumer.dependencies = dep;
 
     // Wire producer side - single subscriber list for all consumers
     if (prevConsumer) prevConsumer.nextConsumer = dep;
     else producer.subscribers = dep;
-    
+
     producer.subscribersTail = dep;
   };
 
