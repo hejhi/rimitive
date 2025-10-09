@@ -17,7 +17,10 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { instrumentSignal, instrumentComputed, instrumentEffect, instrumentBatch } from '@lattice/signals/instrumentation';
+import { instrumentSignal } from '@lattice/signals/devtools/signal';
+import { instrumentComputed } from '@lattice/signals/devtools/computed';
+import { instrumentEffect } from '@lattice/signals/devtools/effect';
+import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { devtoolsProvider, createInstrumentation, createApi } from '@lattice/lattice';
 
 // Import our portable components

@@ -6,10 +6,6 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    "./api": {
-      "import": "./dist/api.js",
-      "types": "./dist/api.d.ts"
-    },
     "./signal": {
       "import": "./dist/signal.js",
       "types": "./dist/signal.d.ts"
@@ -62,9 +58,21 @@
       "import": "./dist/helpers/pull-propagator.js",
       "types": "./dist/helpers/pull-propagator.d.ts"
     },
-    "./instrumentation": {
-      "import": "./dist/instrumentation.js",
-      "types": "./dist/instrumentation.d.ts"
+    "./devtools/signal": {
+      "import": "./dist/devtools/signal.js",
+      "types": "./dist/devtools/signal.d.ts"
+    },
+    "./devtools/computed": {
+      "import": "./dist/devtools/computed.js",
+      "types": "./dist/devtools/computed.d.ts"
+    },
+    "./devtools/effect": {
+      "import": "./dist/devtools/effect.js",
+      "types": "./dist/devtools/effect.d.ts"
+    },
+    "./devtools/batch": {
+      "import": "./dist/devtools/batch.js",
+      "types": "./dist/devtools/batch.d.ts"
     }
   },
   "files": [
