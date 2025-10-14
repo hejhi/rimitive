@@ -46,7 +46,7 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
   keyFn: (item: T) => unknown = (item) => item,
   renderer: Renderer<TElement, TText>
 ): void {
-  // OPTIMIZATION: Early bailout for identical lists (like pull-propagator checks dependencies)
+  // OPTIMIZATION: Early bailout for identical lists
   if (oldItems === newItems) return;
 
   const oldLen = oldItems.length;
@@ -54,32 +54,6 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
 
   // OPTIMIZATION: Fast path for empty cases
   if (newLen === 0 && oldLen === 0) return;
-
-  // OPTIMIZATION: Fast path for append-only (common in todo apps)
-  // If oldItems is prefix of newItems, just append the new ones
-  if (oldLen < newLen) {
-    let isAppendOnly = true;
-    for (let i = 0; i < oldLen; i++) {
-      if (oldItems[i] !== newItems[i]) {
-        isAppendOnly = false;
-        break;
-      }
-    }
-
-    if (isAppendOnly) {
-      // Just append new items
-      for (let i = oldLen; i < newLen; i++) {
-        const item = newItems[i];
-        if (item === undefined) continue;
-        const key = keyFn(item);
-        const element = renderItem(item);
-        const node = itemMap.get(key) || { key, element, itemData: item };
-        itemMap.set(key, node);
-        renderer.appendChild(container, element);
-      }
-      return;
-    }
-  }
 
   // Build key set for fast lookup (avoid intermediate array allocation)
   const newKeys = new Set<unknown>();
