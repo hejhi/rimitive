@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import { createViewContext } from './context';
 import type { Renderer } from './renderer';
 import type { Reactive, Disposable, ElementRef, LifecycleCallback } from './types';
+import { ELEMENT_REF } from './types';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -187,6 +188,7 @@ export function createElementRef<TElement>(element: TElement): ElementRef<TEleme
     return element;
   }) as ElementRef<TElement>;
   ref.element = element;
+  ref.refType = ELEMENT_REF;
   return ref;
 }
 

@@ -16,6 +16,7 @@ import type {
   ElementRef,
   DeferredListRef,
 } from './types';
+import { DEFERRED_LIST_REF } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { createReconciler } from './helpers/reconcile';
 import type { ViewContext } from './context';
@@ -125,8 +126,8 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       }
     }) as DeferredListRef<TElement>;
 
-    // Mark as deferred list for type checking
-    deferredRef.__type = 'deferred-list';
+    // Mark as deferred list using bit flag
+    deferredRef.refType = DEFERRED_LIST_REF;
 
     return deferredRef;
   }

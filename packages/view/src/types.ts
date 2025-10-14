@@ -4,6 +4,13 @@
 
 import type { Readable } from '@lattice/signals/types';
 
+// PATTERN: Bit flags for ref types (like signals PRODUCER/CONSUMER/SCHEDULED)
+// Using bits 0-1 for ref type discrimination
+export const ELEMENT_REF = 1 << 0;      // Regular element ref from el()
+export const DEFERRED_LIST_REF = 1 << 1; // Deferred list ref from elMap()
+
+export const REF_TYPE_MASK = ELEMENT_REF | DEFERRED_LIST_REF;
+
 /**
  * A reactive value that can be read as a signal or computed
  */
@@ -53,14 +60,16 @@ export type ElementChild =
  */
 export interface DeferredListRef<TElement = ReactiveElement> {
   (parent: TElement): void;
-  __type: 'deferred-list';
+  refType: number; // DEFERRED_LIST_REF bit flag
 }
 
 /**
  * Check if a value is a deferred list ref
  */
 export function isDeferredListRef(value: unknown): value is DeferredListRef {
-  return typeof value === 'function' && '__type' in value && (value as { __type: string }).__type === 'deferred-list';
+  return typeof value === 'function' &&
+    'refType' in value &&
+    ((value as { refType: number }).refType & DEFERRED_LIST_REF) !== 0;
 }
 
 /**
@@ -81,13 +90,16 @@ export type LifecycleCallback<TElement = object> = (element: TElement) => void |
 export interface ElementRef<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): TElement;
   element: TElement;
+  refType: number; // ELEMENT_REF bit flag
 }
 
 /**
  * Check if value is an element ref
  */
 export function isElementRef(value: unknown): value is ElementRef {
-  return typeof value === 'function' && 'element' in value;
+  return typeof value === 'function' &&
+    'refType' in value &&
+    ((value as { refType: number }).refType & ELEMENT_REF) !== 0;
 }
 
 /**

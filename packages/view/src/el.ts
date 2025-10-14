@@ -6,7 +6,7 @@ import type {
   LifecycleCallback,
   ElementRef,
 } from './types';
-import { isReactive, isDeferredListRef, isElementRef } from './types';
+import { isReactive, isDeferredListRef, isElementRef, ELEMENT_REF } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -93,6 +93,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 
     // Attach element to ref so it can be extracted
     ref.element = element;
+    ref.refType = ELEMENT_REF;
 
     return ref;
   }
