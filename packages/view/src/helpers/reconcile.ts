@@ -15,26 +15,6 @@ interface ItemNode<T, TElement = object> {
 /**
  * Reconcile a list of items against existing DOM nodes
  *
- * ALGORITHM: Two-phase reconciliation inspired by signals pull-propagator
- * 1. Remove phase: Walk oldItems, remove items not in newItems
- * 2. Position phase: Walk newItems, create/move/update items
- *
- * Complexity: O(n + m) where n = oldItems.length, m = newItems.length
- * - Phase 1: O(n) to check each old item
- * - Phase 2: O(m) to position each new item
- * - Map lookups: O(1) amortized
- *
- * Optimizations (inspired by signals):
- * - Early bailout for identical lists (pull-propagator line 54)
- * - Fast path for append-only (common in todo apps)
- * - Avoid intermediate allocations (build Set directly, no .map())
- * - Only move DOM nodes when position changed (skip unnecessary ops)
- * - Index-based iteration (consistent with signals traversal)
- *
- * Future optimizations:
- * - Longest Increasing Subsequence for minimal moves (React's approach)
- * - Track "moved" flag to avoid redundant position checks
- * - Virtual scrolling integration (only reconcile visible items)
  */
 export function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
   ctx: ViewContext,
@@ -46,16 +26,16 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
   keyFn: (item: T) => unknown = (item) => item,
   renderer: Renderer<TElement, TText>
 ): void {
-  // OPTIMIZATION: Early bailout for identical lists
+  // Early bailout for identical lists
   if (oldItems === newItems) return;
 
-  const oldLen = oldItems.length;
   const newLen = newItems.length;
+  const oldLen = oldItems.length;
 
-  // OPTIMIZATION: Fast path for empty cases
+  // Fast path for empty cases
   if (newLen === 0 && oldLen === 0) return;
 
-  // Build key set for fast lookup (avoid intermediate array allocation)
+  // Build key set for O(1) membership testing
   const newKeys = new Set<unknown>();
   for (let i = 0; i < newLen; i++) {
     const item = newItems[i];
@@ -63,33 +43,24 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
     newKeys.add(keyFn(item));
   }
 
-  // Phase 1: Remove items that no longer exist
-  // PATTERN: Like signals detachAll, walk structure and cleanup
-  for (let i = 0; i < oldLen; i++) {
-    const item = oldItems[i];
-    if (item === undefined) continue;
-
-    const key = keyFn(item);
+  // PHASE 1: Remove items not in newKeys
+  for (const [key, node] of itemMap) {
     if (!newKeys.has(key)) {
-      const node = itemMap.get(key);
-      if (node) {
-        // ALGORITHMIC: Dispose via scope tree walk (like signals cleanup)
-        const scope = ctx.elementScopes.get(node.element);
-        if (scope) {
-          disposeScope(scope);
-          ctx.elementScopes.delete(node.element);
-        }
-        // Remove from DOM
-        renderer.removeChild(container, node.element);
-        itemMap.delete(key);
+      const scope = ctx.elementScopes.get(node.element);
+      if (scope) {
+        disposeScope(scope);
+        ctx.elementScopes.delete(node.element);
       }
+      // Remove from DOM
+      renderer.removeChild(container, node.element);
+      itemMap.delete(key);
     }
   }
 
-  // Phase 2: Add new items and reorder existing ones
+  // PHASE 2: Position new items (create/update/move)
   let previousElement: TElement | null = null;
 
-  for (let i = 0; i < newItems.length; i++) {
+  for (let i = 0; i < newLen; i++) {
     const item = newItems[i];
     if (item === undefined) continue;
 
@@ -113,7 +84,6 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
       }
     } else {
       // Update existing item data
-      // PATTERN: Reuse existing nodes like signals/graph-edges.ts reuses dependencies
       if (node.itemData !== item) {
         node.itemData = item;
 
@@ -125,11 +95,10 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
     }
 
     // Position element correctly
-    // OPTIMIZATION: Only move if not already in correct position
+    // Only move if not already in correct position
     const element = node.element;
 
     // Determine where to insert this element
-    // We rely on DOM structure for positioning since elements maintain their order
     let nextElement: TElement | null;
     if (previousElement) {
       // Get the next sibling of the previous element
