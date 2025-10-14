@@ -2,20 +2,63 @@ import type { Disposable } from '../types';
 import type { ViewContext } from '../context';
 
 /**
- * Scope is a minimal data structure (like signals node)
- * Methods are standalone functions to avoid per-instance allocation
+ * ALGORITHM: Intrusive Linked-List Scope Tree
+ *
+ * Scope is a minimal data structure inspired by signals node design.
+ * Uses intrusive linked lists for memory efficiency and O(1) operations.
+ *
+ * Tree structure:
+ * - parent: Parent scope in the tree
+ * - firstChild: First child scope
+ * - nextSibling: Next sibling scope
+ *
+ * Disposables:
+ * - firstDisposable: Head of disposables linked list
+ *
+ * Status bits:
+ * - ACTIVE (0): Scope is active
+ * - DISPOSED (1): Scope has been disposed
  */
+
+const ACTIVE = 0;
+const DISPOSED = 1;
+
 export interface Scope {
-  disposables: Set<Disposable>;
+  parent: Scope | undefined;
+  firstChild: Scope | undefined;
+  nextSibling: Scope | undefined;
+  firstDisposable: DisposableNode | undefined;
+  status: number;
+}
+
+/**
+ * Wrapper for disposables to form linked list
+ */
+interface DisposableNode {
+  disposable: Disposable;
+  next: DisposableNode | undefined;
 }
 
 /**
  * Create a new disposal scope (minimal allocation)
+ * Optionally attach to parent scope in the tree
  */
-export function createScope(): Scope {
-  return {
-    disposables: new Set<Disposable>(),
+export function createScope(parent?: Scope): Scope {
+  const scope: Scope = {
+    parent,
+    firstChild: undefined,
+    nextSibling: undefined,
+    firstDisposable: undefined,
+    status: ACTIVE,
   };
+
+  // Attach to parent's child list
+  if (parent) {
+    scope.nextSibling = parent.firstChild;
+    parent.firstChild = scope;
+  }
+
+  return scope;
 }
 
 /**
@@ -35,23 +78,51 @@ export function runInScope<T>(ctx: ViewContext, scope: Scope, fn: () => T): T {
 /**
  * Track a disposable in the current scope (if any)
  * PATTERN: Like signals trackDependency - checks ctx first
+ * Uses linked list prepend for O(1) insertion
  */
 export function trackInScope(ctx: ViewContext, disposable: Disposable): void {
   const scope = ctx.currentScope;
-  if (scope) {
-    scope.disposables.add(disposable);
+  if (scope && scope.status === ACTIVE) {
+    // Prepend to linked list (O(1))
+    const node: DisposableNode = {
+      disposable,
+      next: scope.firstDisposable,
+    };
+    scope.firstDisposable = node;
   }
 }
 
 /**
- * Dispose all tracked subscriptions
+ * Dispose all tracked subscriptions and child scopes
  * PATTERN: Like signals/scheduler.ts dispose - idempotent cleanup
+ * Walks linked lists to dispose disposables and children
  */
 export function disposeScope(scope: Scope): void {
-  for (const d of scope.disposables) {
-    if (d && typeof d.dispose === 'function') {
-      d.dispose();
-    }
+  // Already disposed
+  if (scope.status === DISPOSED) return;
+
+  // Mark as disposed
+  scope.status = DISPOSED;
+
+  // Dispose all child scopes recursively
+  let child = scope.firstChild;
+  while (child) {
+    const next = child.nextSibling;
+    disposeScope(child);
+    child = next;
   }
-  scope.disposables.clear();
+
+  // Dispose all tracked disposables
+  let node = scope.firstDisposable;
+  while (node) {
+    const disposable = node.disposable;
+    if (disposable && typeof disposable.dispose === 'function') {
+      disposable.dispose();
+    }
+    node = node.next;
+  }
+
+  // Clear references
+  scope.firstChild = undefined;
+  scope.firstDisposable = undefined;
 }

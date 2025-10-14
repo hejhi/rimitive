@@ -19,10 +19,6 @@ import type {
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { reconcileList } from './helpers/reconcile';
 import type { ViewContext } from './context';
-import {
-  elementDisposeCallbacks,
-  elementCleanupCallbacks,
-} from './helpers/element-metadata';
 
 /**
  * Options passed to elMap factory
@@ -62,9 +58,7 @@ interface ItemNode<T, TElement = object> {
 export function createElMapFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
   opts: ElMapOpts<TElement, TText>
 ): ElMapFactory<TElement> {
-  const { signal, effect, renderer } = opts;
-  // ctx is passed through but not used directly here
-  // It's used by el() when render function is called
+  const { ctx, signal, effect, renderer } = opts;
 
   function elMap<T>(
     itemsSignal: Reactive<T[]>,
@@ -86,6 +80,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       const currentItems = itemsSignal();
 
       reconcileList<T, TElement, TText>(
+        ctx,
         container,
         previousItems,
         currentItems,
@@ -117,16 +112,16 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       previousItems = currentItems;
     });
 
-    // Store dispose callback in WeakMap
-    elementDisposeCallbacks.set(container, () => {
+    // Store dispose callback in context WeakMap
+    ctx.elementDisposeCallbacks.set(container, () => {
       // Dispose the main effect
       dispose();
 
       // Call cleanup callback if registered
-      const cleanup = elementCleanupCallbacks.get(container);
+      const cleanup = ctx.elementCleanupCallbacks.get(container);
       if (cleanup) {
         cleanup();
-        elementCleanupCallbacks.delete(container);
+        ctx.elementCleanupCallbacks.delete(container);
       }
     });
 
@@ -136,7 +131,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       if (renderer.isConnected(container)) {
         const cleanup = lifecycleCallback(container);
         if (cleanup) {
-          elementCleanupCallbacks.set(container, cleanup);
+          ctx.elementCleanupCallbacks.set(container, cleanup);
         }
       }
 

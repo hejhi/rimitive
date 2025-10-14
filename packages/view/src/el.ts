@@ -10,11 +10,6 @@ import { isReactive, isReactiveList, isElementRef } from './types';
 import { createScope, runInScope, disposeScope, trackInScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-import {
-  elementScopes,
-  elementDisposeCallbacks,
-  elementCleanupCallbacks,
-} from './helpers/element-metadata';
 
 /**
  * Options passed to el factory
@@ -64,19 +59,18 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       }
     });
 
-    // Store scope in WeakMap (cast to object for storage)
-    const elementKey = element;
-    elementScopes.set(elementKey, scope);
+    // Store scope in context WeakMap
+    ctx.elementScopes.set(element, scope);
 
-    // Store dispose callback
-    elementDisposeCallbacks.set(elementKey, () => {
+    // Store dispose callback in context WeakMap
+    ctx.elementDisposeCallbacks.set(element, () => {
       disposeScope(scope);
 
       // Call cleanup callback if registered
-      const cleanup = elementCleanupCallbacks.get(elementKey);
+      const cleanup = ctx.elementCleanupCallbacks.get(element);
       if (cleanup) {
         cleanup();
-        elementCleanupCallbacks.delete(elementKey);
+        ctx.elementCleanupCallbacks.delete(element);
       }
     });
 
@@ -88,7 +82,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
           return lifecycleCallback(el);
         },
         onDisconnected: () => {
-          const dispose = elementDisposeCallbacks.get(element);
+          const dispose = ctx.elementDisposeCallbacks.get(element);
           if (dispose) dispose();
         }
       });

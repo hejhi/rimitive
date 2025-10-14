@@ -1,5 +1,5 @@
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
-import { elementDisposeCallbacks } from './element-metadata';
+import type { ViewContext } from '../context';
 
 /**
  * Metadata for a list item
@@ -14,6 +14,7 @@ interface ItemNode<T, TElement = object> {
 /**
  * Reconcile a list of items against existing DOM nodes
  *
+ * @param ctx - View context for accessing element metadata
  * @param container - Parent element containing the list
  * @param oldItems - Previous array of items
  * @param newItems - New array of items
@@ -23,6 +24,7 @@ interface ItemNode<T, TElement = object> {
  * @param renderer - Renderer for DOM operations
  */
 export function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  ctx: ViewContext,
   container: TElement,
   oldItems: T[],
   newItems: T[],
@@ -41,7 +43,7 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
       const node = itemMap.get(key);
       if (node) {
         // Dispose the element's scope
-        const dispose = elementDisposeCallbacks.get(node.element);
+        const dispose = ctx.elementDisposeCallbacks.get(node.element);
         if (dispose) {
           dispose();
         }
@@ -130,6 +132,7 @@ function getNextElement<T extends object>(element: T, _container: T): T | null {
  * (useful for small lists or initial render)
  */
 export function replaceChildren<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  ctx: ViewContext,
   container: TElement,
   elements: TElement[],
   renderer: Renderer<TElement, TText>
@@ -137,7 +140,7 @@ export function replaceChildren<TElement extends RendererElement = RendererEleme
   // Clear existing children
   let firstChild = getFirstElement(container);
   while (firstChild) {
-    const dispose = elementDisposeCallbacks.get(firstChild);
+    const dispose = ctx.elementDisposeCallbacks.get(firstChild);
     if (dispose) {
       dispose();
     }
