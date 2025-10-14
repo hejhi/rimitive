@@ -25,7 +25,7 @@ export type ElOpts<TElement extends RendererElement = RendererElement, TText ext
  */
 export type ElFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
   'el',
-  (spec: ElementSpec) => ElementRef<TElement>
+  <Tag extends keyof HTMLElementTagNameMap>(spec: ElementSpec<Tag>) => ElementRef<TElement>
 >;
 
 /**
@@ -36,7 +36,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 ): ElFactory<TElement> {
   const { ctx, effect, renderer } = opts;
 
-  function el(spec: ElementSpec): ElementRef<TElement> {
+  function el<Tag extends keyof HTMLElementTagNameMap>(spec: ElementSpec<Tag>): ElementRef<TElement> {
     const [tag, ...rest] = spec;
 
     // Parse props and children from rest
@@ -106,11 +106,13 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 /**
  * Parse element spec into props and children
  */
-function parseSpec(rest: (ElementProps | ElementChild)[]): {
-  props: ElementProps;
+function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
+  rest: (ElementProps<Tag> | ElementChild)[]
+): {
+  props: ElementProps<Tag>;
   children: ElementChild[];
 } {
-  const props: ElementProps = {};
+  const props = {} as ElementProps<Tag>;
   const children: ElementChild[] = [];
 
   for (const item of rest) {
@@ -129,9 +131,13 @@ function parseSpec(rest: (ElementProps | ElementChild)[]): {
 /**
  * Apply props to element (with reactivity)
  */
-function applyProps<TElement extends RendererElement, TText extends TextNode>(
+function applyProps<
+  Tag extends keyof HTMLElementTagNameMap,
+  TElement extends RendererElement,
+  TText extends TextNode
+>(
   element: TElement,
-  props: ElementProps,
+  props: ElementProps<Tag>,
   effect: (fn: () => void | (() => void)) => () => void,
   ctx: ViewContext,
   renderer: Renderer<TElement, TText>

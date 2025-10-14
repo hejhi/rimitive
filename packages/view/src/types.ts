@@ -18,19 +18,20 @@ export function isReactive(value: unknown): value is Reactive {
 }
 
 /**
- * Element specification: [tag, ...propsAndChildren]
+ * Props for an element - type-safe based on the HTML tag
  */
-export type ElementSpec = [
-  tag: string,
-  ...content: (ElementProps | ElementChild)[]
-];
+export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> =
+  Partial<HTMLElementTagNameMap[Tag]> & {
+    style?: Partial<CSSStyleDeclaration>;
+  };
 
 /**
- * Props for an element (attributes, event handlers)
+ * Element specification: [tag, ...propsAndChildren]
  */
-export type ElementProps = {
-  [key: string]: unknown;
-};
+export type ElementSpec<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> = [
+  tag: Tag,
+  ...content: (ElementProps<Tag> | ElementChild)[]
+];
 
 /**
  * Valid child types for an element
