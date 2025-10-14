@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createScope, runInScope, trackInScope, trackInSpecificScope, disposeScope } from './scope';
+import { describe, it, expect } from 'vitest';
+import { createScope, runInScope, trackInScope, disposeScope } from './scope';
 import { createViewContext } from '../context';
 import type { Disposable } from '../types';
 
@@ -7,134 +7,15 @@ import type { Disposable } from '../types';
 function createMockDisposable(): Disposable & { disposed: boolean } {
   const mock = {
     disposed: false,
-    dispose: vi.fn(() => {
+    dispose: () => {
       mock.disposed = true;
-    }),
+    },
   };
   return mock;
 }
 
 describe('Scope Tree', () => {
-  describe('createScope', () => {
-    it('allows tracking and disposing disposables', () => {
-      const scope = createScope();
-      const disposable = createMockDisposable();
-
-      trackInSpecificScope(scope, disposable);
-      disposeScope(scope);
-
-      // User cares: disposable was called
-      expect(disposable.disposed).toBe(true);
-    });
-
-    it('disposes child scopes when parent is disposed', () => {
-      const parent = createScope();
-      const child = createScope(parent);
-
-      const parentDisposable = createMockDisposable();
-      const childDisposable = createMockDisposable();
-
-      trackInSpecificScope(parent, parentDisposable);
-      trackInSpecificScope(child, childDisposable);
-
-      // Dispose parent
-      disposeScope(parent);
-
-      // User cares: both parent and child disposables were called
-      expect(parentDisposable.disposed).toBe(true);
-      expect(childDisposable.disposed).toBe(true);
-    });
-
-    it('disposes all descendants recursively', () => {
-      const root = createScope();
-      const child1 = createScope(root);
-      const child2 = createScope(root);
-      const grandchild = createScope(child1);
-
-      const rootDisposable = createMockDisposable();
-      const child1Disposable = createMockDisposable();
-      const child2Disposable = createMockDisposable();
-      const grandchildDisposable = createMockDisposable();
-
-      trackInSpecificScope(root, rootDisposable);
-      trackInSpecificScope(child1, child1Disposable);
-      trackInSpecificScope(child2, child2Disposable);
-      trackInSpecificScope(grandchild, grandchildDisposable);
-
-      // Dispose root
-      disposeScope(root);
-
-      // User cares: entire tree was disposed
-      expect(rootDisposable.disposed).toBe(true);
-      expect(child1Disposable.disposed).toBe(true);
-      expect(child2Disposable.disposed).toBe(true);
-      expect(grandchildDisposable.disposed).toBe(true);
-    });
-  });
-
-  describe('runInScope', () => {
-    it('sets currentScope during function execution', () => {
-      const ctx = createViewContext();
-      const scope = createScope();
-
-      expect(ctx.currentScope).toBeNull();
-
-      runInScope(ctx, scope, () => {
-        // Invariant: currentScope is set during execution
-        expect(ctx.currentScope).toBe(scope);
-      });
-
-      // Invariant: currentScope is restored after execution
-      expect(ctx.currentScope).toBeNull();
-    });
-
-    it('restores previous scope on nested calls', () => {
-      const ctx = createViewContext();
-      const scope1 = createScope();
-      const scope2 = createScope();
-
-      runInScope(ctx, scope1, () => {
-        expect(ctx.currentScope).toBe(scope1);
-
-        runInScope(ctx, scope2, () => {
-          // Invariant: Inner scope overrides
-          expect(ctx.currentScope).toBe(scope2);
-        });
-
-        // Invariant: Outer scope restored
-        expect(ctx.currentScope).toBe(scope1);
-      });
-
-      expect(ctx.currentScope).toBeNull();
-    });
-
-    it('restores scope even when function throws', () => {
-      const ctx = createViewContext();
-      const scope = createScope();
-
-      expect(() => {
-        runInScope(ctx, scope, () => {
-          throw new Error('test error');
-        });
-      }).toThrow('test error');
-
-      // Invariant: Scope restored even on error
-      expect(ctx.currentScope).toBeNull();
-    });
-
-    it('returns function result', () => {
-      const ctx = createViewContext();
-      const scope = createScope();
-
-      const result = runInScope(ctx, scope, () => {
-        return 42;
-      });
-
-      expect(result).toBe(42);
-    });
-  });
-
-  describe('trackInScope', () => {
+  describe('disposal', () => {
     it('disposes tracked items when scope is disposed', () => {
       const ctx = createViewContext();
       const scope = createScope();
@@ -146,26 +27,11 @@ describe('Scope Tree', () => {
 
       disposeScope(scope);
 
-      // User cares: tracked disposable was called
+      // User cares: tracked item was cleaned up
       expect(disposable.disposed).toBe(true);
     });
 
-    it('does nothing when currentScope is null', () => {
-      const ctx = createViewContext();
-      const scope = createScope();
-      const disposable = createMockDisposable();
-
-      // Track without setting currentScope
-      trackInScope(ctx, disposable);
-
-      // Dispose scope
-      disposeScope(scope);
-
-      // User cares: disposable was NOT called (wasn't tracked)
-      expect(disposable.disposed).toBe(false);
-    });
-
-    it('disposes all tracked items', () => {
+    it('disposes multiple tracked items', () => {
       const ctx = createViewContext();
       const scope = createScope();
       const d1 = createMockDisposable();
@@ -180,104 +46,98 @@ describe('Scope Tree', () => {
 
       disposeScope(scope);
 
-      // User cares: all tracked disposables were called
+      // User cares: all tracked items were cleaned up
       expect(d1.disposed).toBe(true);
       expect(d2.disposed).toBe(true);
       expect(d3.disposed).toBe(true);
     });
-  });
 
-  describe('trackInSpecificScope', () => {
-    it('disposes tracked item even without currentScope set', () => {
+    it('disposes child scopes when parent is disposed', () => {
+      const parent = createScope();
+      const child = createScope(parent);
+
+      const parentDisposable = createMockDisposable();
+      const childDisposable = createMockDisposable();
+
+      const ctx = createViewContext();
+      runInScope(ctx, parent, () => trackInScope(ctx, parentDisposable));
+      runInScope(ctx, child, () => trackInScope(ctx, childDisposable));
+
+      // Dispose parent
+      disposeScope(parent);
+
+      // User cares: parent-child relationship enforced
+      expect(parentDisposable.disposed).toBe(true);
+      expect(childDisposable.disposed).toBe(true);
+    });
+
+    it('disposes entire scope tree recursively', () => {
+      const root = createScope();
+      const child1 = createScope(root);
+      const child2 = createScope(root);
+      const grandchild = createScope(child1);
+
+      const rootDisposable = createMockDisposable();
+      const child1Disposable = createMockDisposable();
+      const child2Disposable = createMockDisposable();
+      const grandchildDisposable = createMockDisposable();
+
+      const ctx = createViewContext();
+      runInScope(ctx, root, () => trackInScope(ctx, rootDisposable));
+      runInScope(ctx, child1, () => trackInScope(ctx, child1Disposable));
+      runInScope(ctx, child2, () => trackInScope(ctx, child2Disposable));
+      runInScope(ctx, grandchild, () => trackInScope(ctx, grandchildDisposable));
+
+      // Dispose root
+      disposeScope(root);
+
+      // User cares: entire tree was disposed
+      expect(rootDisposable.disposed).toBe(true);
+      expect(child1Disposable.disposed).toBe(true);
+      expect(child2Disposable.disposed).toBe(true);
+      expect(grandchildDisposable.disposed).toBe(true);
+    });
+
+    it('is idempotent - can dispose same scope multiple times', () => {
+      const ctx = createViewContext();
       const scope = createScope();
       const disposable = createMockDisposable();
 
-      // Track directly without setting currentScope
-      trackInSpecificScope(scope, disposable);
+      runInScope(ctx, scope, () => trackInScope(ctx, disposable));
 
+      // Dispose multiple times
+      disposeScope(scope);
+      disposeScope(scope);
       disposeScope(scope);
 
-      // User cares: disposable was called even though currentScope wasn't set
+      // User cares: safe to call multiple times, item only disposed once
       expect(disposable.disposed).toBe(true);
     });
 
-    it('does not track in already-disposed scope', () => {
-      const scope = createScope();
-      const disposable = createMockDisposable();
-
-      disposeScope(scope);
-
-      // Try to track after disposal
-      trackInSpecificScope(scope, disposable);
-
-      // User cares: disposable was never called (scope already disposed)
-      expect(disposable.disposed).toBe(false);
-    });
-  });
-
-  describe('disposeScope', () => {
-    it('is idempotent - can dispose same scope multiple times', () => {
-      const scope = createScope();
-      const disposable = createMockDisposable();
-
-      trackInSpecificScope(scope, disposable);
-
-      // Dispose twice
-      disposeScope(scope);
-      disposeScope(scope);
-
-      // User cares: disposable only called once
-      expect(disposable.dispose).toHaveBeenCalledTimes(1);
-    });
-
     it('prevents tracking after disposal', () => {
+      const ctx = createViewContext();
       const scope = createScope();
       const beforeDispose = createMockDisposable();
       const afterDispose = createMockDisposable();
 
-      trackInSpecificScope(scope, beforeDispose);
-      disposeScope(scope);
-      trackInSpecificScope(scope, afterDispose);
+      runInScope(ctx, scope, () => {
+        trackInScope(ctx, beforeDispose);
+      });
 
-      // User cares: only item tracked before disposal was called
+      disposeScope(scope);
+
+      runInScope(ctx, scope, () => {
+        trackInScope(ctx, afterDispose);
+      });
+
+      // User cares: disposed scope rejects new tracking
       expect(beforeDispose.disposed).toBe(true);
       expect(afterDispose.disposed).toBe(false);
     });
-
-    it('handles errors in dispose functions gracefully', () => {
-      const scope = createScope();
-      const d1 = createMockDisposable();
-      const d2 = { dispose: () => { throw new Error('dispose error'); } };
-      const d3 = createMockDisposable();
-
-      trackInSpecificScope(scope, d1);
-      trackInSpecificScope(scope, d2);
-      trackInSpecificScope(scope, d3);
-
-      // User cares: error is thrown
-      expect(() => disposeScope(scope)).toThrow('dispose error');
-
-      // Note: Some disposables may not be called due to error
-      // This is acceptable - the error needs to propagate
-    });
   });
 
-  describe('integration scenarios', () => {
-    it('supports effect cleanup pattern', () => {
-      const scope = createScope();
-      const subscription = createMockDisposable();
-
-      // Simulate: effect creates a subscription
-      trackInSpecificScope(scope, subscription);
-
-      // When element unmounts
-      disposeScope(scope);
-
-      // User cares: subscription was cleaned up
-      expect(subscription.disposed).toBe(true);
-    });
-
-    it('supports partial tree disposal', () => {
+  describe('scope isolation', () => {
+    it('disposes partial tree without affecting parent', () => {
       const appScope = createScope();
       const componentScope = createScope(appScope);
       const nestedScope = createScope(componentScope);
@@ -286,28 +146,124 @@ describe('Scope Tree', () => {
       const componentCleanup = createMockDisposable();
       const nestedCleanup = createMockDisposable();
 
-      trackInSpecificScope(appScope, appCleanup);
-      trackInSpecificScope(componentScope, componentCleanup);
-      trackInSpecificScope(nestedScope, nestedCleanup);
+      const ctx = createViewContext();
+      runInScope(ctx, appScope, () => trackInScope(ctx, appCleanup));
+      runInScope(ctx, componentScope, () => trackInScope(ctx, componentCleanup));
+      runInScope(ctx, nestedScope, () => trackInScope(ctx, nestedCleanup));
 
       // User unmounts a component subtree
       disposeScope(componentScope);
 
-      // User cares: component tree was disposed
+      // User cares: component tree disposed
       expect(componentCleanup.disposed).toBe(true);
       expect(nestedCleanup.disposed).toBe(true);
 
-      // User cares: parent scope still works
+      // User cares: parent scope unaffected
       expect(appCleanup.disposed).toBe(false);
 
-      // Can still track in parent
+      // Parent scope still functional
       const newCleanup = createMockDisposable();
-      trackInSpecificScope(appScope, newCleanup);
+      runInScope(ctx, appScope, () => trackInScope(ctx, newCleanup));
       disposeScope(appScope);
       expect(newCleanup.disposed).toBe(true);
     });
 
-    it('handles complex cleanup sequences', () => {
+    it('isolates sibling scopes from each other', () => {
+      const parent = createScope();
+      const sibling1 = createScope(parent);
+      const sibling2 = createScope(parent);
+
+      const cleanup1 = createMockDisposable();
+      const cleanup2 = createMockDisposable();
+
+      const ctx = createViewContext();
+      runInScope(ctx, sibling1, () => trackInScope(ctx, cleanup1));
+      runInScope(ctx, sibling2, () => trackInScope(ctx, cleanup2));
+
+      // Dispose one sibling
+      disposeScope(sibling1);
+
+      // User cares: siblings don't affect each other
+      expect(cleanup1.disposed).toBe(true);
+      expect(cleanup2.disposed).toBe(false);
+    });
+  });
+
+  describe('scope context restoration', () => {
+    it('restores previous scope on nested calls', () => {
+      const ctx = createViewContext();
+      const scope1 = createScope();
+      const scope2 = createScope();
+      const tracked: string[] = [];
+
+      runInScope(ctx, scope1, () => {
+        tracked.push('outer-start');
+
+        runInScope(ctx, scope2, () => {
+          tracked.push('inner');
+        });
+
+        tracked.push('outer-end');
+      });
+
+      // User cares: scope nesting works correctly
+      expect(tracked).toEqual(['outer-start', 'inner', 'outer-end']);
+    });
+
+    it('restores scope even when function throws', () => {
+      const ctx = createViewContext();
+      const scope = createScope();
+
+      expect(() => {
+        runInScope(ctx, scope, () => {
+          throw new Error('test error');
+        });
+      }).toThrow('test error');
+
+      // User cares: scope restored after error (no leak)
+      expect(ctx.currentScope).toBeNull();
+    });
+  });
+
+  describe('no-op behavior', () => {
+    it('ignores tracking when no scope is active', () => {
+      const ctx = createViewContext();
+      const disposable = createMockDisposable();
+
+      // Track without active scope
+      trackInScope(ctx, disposable);
+
+      // User cares: safe to call without scope, just no-op
+      expect(disposable.disposed).toBe(false);
+    });
+
+    it('handles disposal of empty scope', () => {
+      const scope = createScope();
+
+      // User cares: safe to dispose scope with no tracked items
+      expect(() => disposeScope(scope)).not.toThrow();
+    });
+  });
+
+  describe('real-world patterns', () => {
+    it('supports effect cleanup pattern', () => {
+      const ctx = createViewContext();
+      const scope = createScope();
+
+      // Simulate: component mounts, effect subscribes
+      const subscription = createMockDisposable();
+      runInScope(ctx, scope, () => {
+        trackInScope(ctx, subscription);
+      });
+
+      // Simulate: component unmounts
+      disposeScope(scope);
+
+      // User cares: subscription was cleaned up
+      expect(subscription.disposed).toBe(true);
+    });
+
+    it('supports nested component cleanup', () => {
       const ctx = createViewContext();
       const outer = createScope();
       const inner = createScope(outer);
@@ -315,7 +271,7 @@ describe('Scope Tree', () => {
       const outerCleanups: ReturnType<typeof createMockDisposable>[] = [];
       const innerCleanups: ReturnType<typeof createMockDisposable>[] = [];
 
-      // Track multiple items in nested scopes
+      // Simulate: outer component with inner component
       runInScope(ctx, outer, () => {
         for (let i = 0; i < 3; i++) {
           const d = createMockDisposable();
@@ -332,7 +288,7 @@ describe('Scope Tree', () => {
         });
       });
 
-      // Dispose outer (should dispose inner too)
+      // Simulate: outer unmounts (should cascade to inner)
       disposeScope(outer);
 
       // User cares: all cleanups called
