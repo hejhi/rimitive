@@ -26,10 +26,13 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
+        index: resolve(__dirname, 'src/index.ts'),
         el: resolve(__dirname, 'src/el.ts'),
         elMap: resolve(__dirname, 'src/elMap.ts'),
         context: resolve(__dirname, 'src/context.ts'),
         types: resolve(__dirname, 'src/types.ts'),
+        renderer: resolve(__dirname, 'src/renderer.ts'),
+        'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
         'helpers/reconcile': resolve(__dirname, 'src/helpers/reconcile.ts'),
       },

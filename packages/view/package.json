@@ -6,6 +6,14 @@
   "license": "MIT",
   "type": "module",
   "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./renderers/dom": {
+      "import": "./dist/renderers/dom.js",
+      "types": "./dist/renderers/dom.d.ts"
+    },
     "./el": {
       "import": "./dist/el.js",
       "types": "./dist/el.d.ts"
