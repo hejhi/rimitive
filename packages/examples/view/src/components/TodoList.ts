@@ -35,6 +35,83 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     }
   };
 
+  // Create input with event listeners
+  const todoInput = el([
+    'input',
+    {
+      className: 'todo-input',
+      type: 'text',
+      placeholder: 'What needs to be done?',
+      value: inputValue,
+    },
+  ]);
+  todoInput((el) => {
+    const input = el as HTMLInputElement;
+    const handleInput = (e: Event) => {
+      inputValue((e.target as HTMLInputElement).value);
+    };
+    input.addEventListener('input', handleInput);
+    input.addEventListener('keydown', handleKeyDown);
+    return () => {
+      input.removeEventListener('input', handleInput);
+      input.removeEventListener('keydown', handleKeyDown);
+    };
+  });
+
+  // Create "Add Todo" button
+  const addBtn = el(['button', {}, 'Add Todo']);
+  addBtn((el) => {
+    const btn = el as HTMLElement;
+    btn.addEventListener('click', handleAdd);
+    return () => btn.removeEventListener('click', handleAdd);
+  });
+
+  // Create filter buttons
+  const allBtn = el([
+    'button',
+    { className: api.computed(() => (todoList.filter() === 'all' ? 'active' : '')) },
+    'All',
+  ]);
+  allBtn((el) => {
+    const btn = el as HTMLElement;
+    const handler = () => todoList.setFilter('all');
+    btn.addEventListener('click', handler);
+    return () => btn.removeEventListener('click', handler);
+  });
+
+  const activeBtn = el([
+    'button',
+    { className: api.computed(() => (todoList.filter() === 'active' ? 'active' : '')) },
+    'Active',
+  ]);
+  activeBtn((el) => {
+    const btn = el as HTMLElement;
+    const handler = () => todoList.setFilter('active');
+    btn.addEventListener('click', handler);
+    return () => btn.removeEventListener('click', handler);
+  });
+
+  const completedBtn = el([
+    'button',
+    { className: api.computed(() => (todoList.filter() === 'completed' ? 'active' : '')) },
+    'Completed',
+  ]);
+  completedBtn((el) => {
+    const btn = el as HTMLElement;
+    const handler = () => todoList.setFilter('completed');
+    btn.addEventListener('click', handler);
+    return () => btn.removeEventListener('click', handler);
+  });
+
+  // Create "Clear Completed" button
+  const clearBtn = el(['button', {}, 'Clear Completed']);
+  clearBtn((el) => {
+    const btn = el as HTMLElement;
+    const handler = () => todoList.clearCompleted();
+    btn.addEventListener('click', handler);
+    return () => btn.removeEventListener('click', handler);
+  });
+
   return el([
     'div',
     { className: 'example' },
@@ -42,53 +119,10 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     el(['p', 'Demonstrates reactive lists with elMap, filtering, and complex state.']),
 
     // Input section
-    el([
-      'div',
-      el([
-        'input',
-        {
-          className: 'todo-input',
-          type: 'text',
-          placeholder: 'What needs to be done?',
-          value: inputValue,
-          onInput: (e: Event) => {
-            inputValue((e.target as HTMLInputElement).value);
-          },
-          onKeyDown: handleKeyDown,
-        },
-      ]),
-      el(['button', { onClick: handleAdd }, 'Add Todo']),
-    ]),
+    el(['div', {}, todoInput, addBtn]),
 
     // Filter buttons
-    el([
-      'div',
-      { className: 'filter-buttons' },
-      el([
-        'button',
-        {
-          className: api.computed(() => (todoList.filter() === 'all' ? 'active' : '')),
-          onClick: () => todoList.setFilter('all'),
-        },
-        'All',
-      ]),
-      el([
-        'button',
-        {
-          className: api.computed(() => (todoList.filter() === 'active' ? 'active' : '')),
-          onClick: () => todoList.setFilter('active'),
-        },
-        'Active',
-      ]),
-      el([
-        'button',
-        {
-          className: api.computed(() => (todoList.filter() === 'completed' ? 'active' : '')),
-          onClick: () => todoList.setFilter('completed'),
-        },
-        'Completed',
-      ]),
-    ]),
+    el(['div', { className: 'filter-buttons' }, allBtn, activeBtn, completedBtn]),
 
     // Todo list using elMap
     el([
@@ -98,17 +132,35 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
         todoList.filteredTodos,
         (todoSignal: Reactive<Todo>) => {
           const todo = todoSignal();
+
+          // Create checkbox with event listener
+          const checkbox = el([
+            'input',
+            {
+              type: 'checkbox',
+              checked: api.computed(() => todoSignal().completed),
+            },
+          ]);
+          checkbox((el) => {
+            const cb = el as HTMLInputElement;
+            const handler = () => todoList.toggleTodo(todo.id);
+            cb.addEventListener('change', handler);
+            return () => cb.removeEventListener('change', handler);
+          });
+
+          // Create remove button with event listener
+          const removeBtn = el(['button', { className: 'todo-remove' }, '×']);
+          removeBtn((el) => {
+            const btn = el as HTMLElement;
+            const handler = () => todoList.removeTodo(todo.id);
+            btn.addEventListener('click', handler);
+            return () => btn.removeEventListener('click', handler);
+          });
+
           return el([
             'div',
             { className: 'todo-item' },
-            el([
-              'input',
-              {
-                type: 'checkbox',
-                checked: api.computed(() => todoSignal().completed),
-                onChange: () => todoList.toggleTodo(todo.id),
-              },
-            ]),
+            checkbox,
             el([
               'span',
               {
@@ -118,14 +170,7 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
               },
               api.computed(() => todoSignal().text),
             ]),
-            el([
-              'button',
-              {
-                className: 'todo-remove',
-                onClick: () => todoList.removeTodo(todo.id),
-              },
-              '×',
-            ]),
+            removeBtn,
           ]);
         },
         (todo: Todo) => todo.id
@@ -141,11 +186,7 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
       ' | Completed: ',
       todoList.completedCount,
       ' | ',
-      el([
-        'button',
-        { onClick: () => todoList.clearCompleted() },
-        'Clear Completed',
-      ]),
+      clearBtn,
     ]),
   ]);
 }

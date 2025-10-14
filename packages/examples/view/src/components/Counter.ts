@@ -15,6 +15,28 @@ export function Counter(api: LatticeViewAPI, initialCount = 0): ElementRef {
   // Create headless behavior
   const counter = createCounter(api, initialCount);
 
+  // Create buttons with event listeners
+  const decrementBtn = el(['button', {}, '- Decrement']);
+  decrementBtn((el) => {
+    const btn = el as HTMLElement;
+    btn.addEventListener('click', counter.decrement);
+    return () => btn.removeEventListener('click', counter.decrement);
+  });
+
+  const incrementBtn = el(['button', {}, '+ Increment']);
+  incrementBtn((el) => {
+    const btn = el as HTMLElement;
+    btn.addEventListener('click', counter.increment);
+    return () => btn.removeEventListener('click', counter.increment);
+  });
+
+  const resetBtn = el(['button', {}, 'Reset']);
+  resetBtn((el) => {
+    const btn = el as HTMLElement;
+    btn.addEventListener('click', counter.reset);
+    return () => btn.removeEventListener('click', counter.reset);
+  });
+
   // Create UI using el() primitive - uses array syntax ['tag', props, ...children]
   return el([
     'div',
@@ -31,11 +53,6 @@ export function Counter(api: LatticeViewAPI, initialCount = 0): ElementRef {
       counter.doubled,
       ')',
     ]),
-    el([
-      'div',
-      el(['button', { onClick: counter.decrement }, '- Decrement']),
-      el(['button', { onClick: counter.increment }, '+ Increment']),
-      el(['button', { onClick: counter.reset }, 'Reset']),
-    ]),
+    el(['div', {}, decrementBtn, incrementBtn, resetBtn]),
   ]);
 }

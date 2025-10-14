@@ -137,14 +137,6 @@ function applyProps<TElement extends RendererElement, TText extends TextNode>(
   renderer: Renderer<TElement, TText>
 ): void {
   for (const [key, value] of Object.entries(props)) {
-    // Handle event listeners
-    if (key.startsWith('on')) {
-      const eventName = key.slice(2).toLowerCase();
-      const cleanup = renderer.addEventListener(element, eventName, value as (...args: unknown[]) => void);
-      trackInScope(ctx, { dispose: cleanup });
-      continue;
-    }
-
     // Handle reactive values
     if (isReactive(value)) {
       const dispose = effect(() => {
