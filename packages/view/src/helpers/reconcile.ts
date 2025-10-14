@@ -69,12 +69,18 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
     // Create new item if it doesn't exist
     if (!node) {
       const element = renderItem(item);
-      node = {
-        key,
-        element,
-        itemData: item
-      };
-      itemMap.set(key, node);
+      // IMPORTANT: renderItem may have already set itemMap with itemSignal
+      // Don't overwrite it - just fetch the node that was stored
+      node = itemMap.get(key);
+      if (!node) {
+        // Fallback: renderItem didn't set the map (non-elMap usage)
+        node = {
+          key,
+          element,
+          itemData: item
+        };
+        itemMap.set(key, node);
+      }
     } else {
       // Update existing item data
       // PATTERN: Reuse existing nodes like signals/graph-edges.ts reuses dependencies
