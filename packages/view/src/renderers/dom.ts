@@ -37,7 +37,7 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
       node.textContent = text;
     },
 
-    setAttribute(element: DOMElement, key: string, value: any): void {
+    setAttribute(element: DOMElement, key: string, value: unknown): void {
       Reflect.set(element, key, value);
     },
 
@@ -60,7 +60,7 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
     addEventListener(
       element: DOMElement,
       event: string,
-      handler: (...args: any[]) => void
+      handler: (...args: unknown[]) => void
     ): () => void {
       element.addEventListener(event, handler);
       return () => element.removeEventListener(event, handler);
@@ -94,11 +94,11 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
       return element.isConnected;
     },
 
-    isElement(value: any): value is DOMElement {
+    isElement(value: unknown): value is DOMElement {
       return value instanceof HTMLElement;
     },
 
-    isTextNode(value: any): value is DOMTextNode {
+    isTextNode(value: unknown): value is DOMTextNode {
       return value instanceof Text;
     },
   };

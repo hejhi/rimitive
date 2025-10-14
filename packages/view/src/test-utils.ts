@@ -12,11 +12,11 @@ export type { Reactive };
 export class MockElement {
   id: string;
   tag: string;
-  props: Record<string, any> = {};
+  props: Record<string, unknown> = {};
   children: Array<MockElement | MockText> = [];
   parent: MockElement | null = null;
   connected: boolean = false;
-  listeners: Map<string, Function> = new Map();
+  listeners: Map<string, (...args: unknown[]) => void> = new Map();
 
   constructor(tag: string) {
     this.id = Math.random().toString(36);
@@ -74,7 +74,7 @@ export function createMockRenderer() {
     updateTextNode: vi.fn((node: MockText, text: string) => {
       node.content = text;
     }),
-    setAttribute: vi.fn((element: MockElement, key: string, value: any) => {
+    setAttribute: vi.fn((element: MockElement, key: string, value: unknown) => {
       element.props[key] = value;
     }),
     appendChild: vi.fn((parent: MockElement, child: MockElement | MockText) => {
@@ -88,7 +88,7 @@ export function createMockRenderer() {
       if (index !== -1) parent.children.splice(index, 1);
       child.parent = null;
     }),
-    insertBefore: vi.fn((parent: MockElement, child: MockElement | MockText, ref: unknown | null) => {
+    insertBefore: vi.fn((parent: MockElement, child: MockElement | MockText, ref: MockElement | MockText | null) => {
       // Remove from old position if already in parent
       const oldIndex = parent.children.indexOf(child);
       if (oldIndex !== -1) {
@@ -99,7 +99,7 @@ export function createMockRenderer() {
       if (ref === null || ref === undefined) {
         parent.children.push(child);
       } else {
-        const refIndex = parent.children.indexOf(ref as MockElement | MockText);
+        const refIndex = parent.children.indexOf(ref);
         if (refIndex !== -1) {
           parent.children.splice(refIndex, 0, child);
         } else {
@@ -108,19 +108,22 @@ export function createMockRenderer() {
       }
       child.parent = parent;
     }),
-    addEventListener: vi.fn((element: MockElement, event: string, handler: any) => {
+    addEventListener: vi.fn((element: MockElement, event: string, handler: (...args: unknown[]) => void) => {
       element.listeners.set(event, handler);
       return () => element.listeners.delete(event);
     }),
-    observeLifecycle: vi.fn((element: MockElement, callbacks) => {
+    observeLifecycle: vi.fn((element: MockElement, callbacks: {
+      onConnected?: (el: MockElement) => void | (() => void);
+      onDisconnected?: (el: MockElement) => void;
+    }) => {
       lifecycleCallbacks.set(element, callbacks);
       return () => lifecycleCallbacks.delete(element);
     }),
     isConnected: vi.fn((element: MockElement) => element.connected),
-    isElement: (value): value is MockElement =>
+    isElement: (value: unknown): value is MockElement =>
       value !== null && typeof value === 'object' && 'tag' in value,
-    isTextNode: (value): value is MockText =>
-      value !== null && typeof value === 'object' && 'type' in value && value.type === 'text',
+    isTextNode: (value: unknown): value is MockText =>
+      value !== null && typeof value === 'object' && 'type' in value && (value as { type: string }).type === 'text',
   };
 
   // Helper to simulate connection
@@ -178,7 +181,9 @@ export function createMockDisposable(): Disposable & { disposed: boolean } {
  * Creates an ElementRef from an element for testing
  */
 export function createElementRef<TElement>(element: TElement): ElementRef<TElement> {
-  const ref = ((_lifecycleCallback: LifecycleCallback<TElement>): TElement => {
+  const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
+    // In tests, we don't need to actually call the lifecycle callback
+    void lifecycleCallback;
     return element;
   }) as ElementRef<TElement>;
   ref.element = element;
@@ -206,11 +211,11 @@ export function createTestEnv() {
   const { renderer, connect, disconnect } = createMockRenderer();
 
   // Simple signal factory that integrates with effect
-  const signalMap = new Map<Reactive<any>, Set<() => void>>();
+  const signalMap = new Map<Reactive<unknown>, Set<() => void>>();
 
   const signal = <T>(val: T): Reactive<T> => {
     const { read, subscribers } = createSignal(val);
-    signalMap.set(read, subscribers);
+    signalMap.set(read as Reactive<unknown>, subscribers);
     return read;
   };
 

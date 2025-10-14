@@ -118,8 +118,8 @@ function parseSpec(rest: (ElementProps | ElementChild)[]): {
       // It's props
       Object.assign(props, item);
     } else {
-      // It's a child
-      children.push(item);
+      // It's a child - not a plain object props, so must be ElementChild
+      children.push(item as ElementChild);
     }
   }
 
@@ -140,7 +140,7 @@ function applyProps<TElement extends RendererElement, TText extends TextNode>(
     // Handle event listeners
     if (key.startsWith('on')) {
       const eventName = key.slice(2).toLowerCase();
-      const cleanup = renderer.addEventListener(element, eventName, value);
+      const cleanup = renderer.addEventListener(element, eventName, value as (...args: unknown[]) => void);
       trackInScope(ctx, { dispose: cleanup });
       continue;
     }
@@ -195,7 +195,12 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     const textNode = renderer.createTextNode('');
     const dispose = effect(() => {
       const value = child();
-      renderer.updateTextNode(textNode, String(value ?? ''));
+      // Convert to string, handling null/undefined and primitives only
+      let stringValue = '';
+      if (value != null) {
+        stringValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+      }
+      renderer.updateTextNode(textNode, stringValue);
     });
     // Track effect for cleanup when element is removed
     trackInScope(ctx, { dispose });
@@ -225,12 +230,12 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
 /**
  * Check if value is a plain object (not a class instance, array, etc.)
  */
-function isPlainObject(value: any): value is Record<string, any> {
+function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
 
-  const proto = Object.getPrototypeOf(value);
+  const proto = Object.getPrototypeOf(value) as unknown;
   return proto === Object.prototype || proto === null;
 }
 

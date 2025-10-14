@@ -97,7 +97,7 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
     let nextElement: TElement | null;
     if (previousElement) {
       // Get the next sibling of the previous element
-      nextElement = getNextElement(previousElement, container);
+      nextElement = getNextElement(previousElement);
     } else {
       // This is the first element, get the first child of container
       nextElement = getFirstElement(container);
@@ -124,7 +124,7 @@ function getFirstElement<T extends object>(container: T): T | null {
 /**
  * Get next sibling element using DOM properties
  */
-function getNextElement<T extends object>(element: T, _container: T): T | null {
+function getNextElement<T extends object>(element: T): T | null {
   // Cast to access DOM properties - assumes DOM-like structure
   return (element as unknown as { nextSibling: T | null }).nextSibling;
 }

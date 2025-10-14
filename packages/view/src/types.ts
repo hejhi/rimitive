@@ -7,12 +7,12 @@ import type { Readable } from '@lattice/signals/types';
 /**
  * A reactive value that can be read as a signal or computed
  */
-export type Reactive<T = any> = Readable<T>;
+export type Reactive<T = unknown> = Readable<T>;
 
 /**
  * Check if a value is reactive (signal or computed)
  */
-export function isReactive(value: any): value is Reactive {
+export function isReactive(value: unknown): value is Reactive {
   return typeof value === 'function' &&
     ('peek' in value || '__type' in value);
 }
@@ -29,7 +29,7 @@ export type ElementSpec = [
  * Props for an element (attributes, event handlers)
  */
 export type ElementProps = {
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 /**
@@ -41,10 +41,10 @@ export type ElementChild =
   | boolean
   | null
   | undefined
-  | HTMLElement
+  | ReactiveElement
   | ElementRef
   | Reactive<string | number>
-  | ReactiveList<any>;
+  | ReactiveList<unknown>;
 
 /**
  * A reactive list returned by elMap()
@@ -60,8 +60,8 @@ export interface ReactiveList<T> {
 /**
  * Check if a value is a reactive list
  */
-export function isReactiveList(value: any): value is ReactiveList<any> {
-  return value?.__type === 'reactive-list';
+export function isReactiveList(value: unknown): value is ReactiveList<unknown> {
+  return typeof value === 'object' && value !== null && '__type' in value && (value as { __type: string }).__type === 'reactive-list';
 }
 
 /**
@@ -87,7 +87,7 @@ export interface ElementRef<TElement = ReactiveElement> {
 /**
  * Check if value is an element ref
  */
-export function isElementRef(value: any): value is ElementRef {
+export function isElementRef(value: unknown): value is ElementRef {
   return typeof value === 'function' && 'element' in value;
 }
 

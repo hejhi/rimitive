@@ -7,17 +7,15 @@
 
 /**
  * Generic element interface - platform-agnostic
+ * Renderers can extend this with their own element types
  */
-export interface Element {
-  // Minimal interface - renderers can extend with their own types
-}
+export type Element = object;
 
 /**
  * Generic text node interface
+ * Renderers can extend this with their own text node types
  */
-export interface TextNode {
-  // Minimal interface
-}
+export type TextNode = object;
 
 /**
  * Lifecycle observation callbacks
@@ -55,7 +53,7 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
   /**
    * Set an attribute/property on an element
    */
-  setAttribute(element: TElement, key: string, value: any): void;
+  setAttribute(element: TElement, key: string, value: unknown): void;
 
   /**
    * Append a child to a parent element
@@ -75,7 +73,7 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
   /**
    * Add an event listener to an element
    */
-  addEventListener(element: TElement, event: string, handler: (...args: any[]) => void): () => void;
+  addEventListener(element: TElement, event: string, handler: (...args: unknown[]) => void): () => void;
 
   /**
    * Observe element lifecycle (connection/disconnection from render tree)
@@ -91,10 +89,10 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
   /**
    * Check if a value is an element created by this renderer
    */
-  isElement(value: any): value is TElement;
+  isElement(value: unknown): value is TElement;
 
   /**
    * Check if a value is a text node created by this renderer
    */
-  isTextNode(value: any): value is TText;
+  isTextNode(value: unknown): value is TText;
 }

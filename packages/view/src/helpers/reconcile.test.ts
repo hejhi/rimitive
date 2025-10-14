@@ -22,7 +22,7 @@ function createMockRenderer(): Renderer<MockElement, MockElement> {
     }
   });
 
-  const insertBefore = vi.fn((parent: MockElement, child: MockElement, ref: unknown | null) => {
+  const insertBefore = vi.fn((parent: MockElement, child: MockElement, ref: MockElement | null) => {
     // Remove from old position if already in parent
     const oldIndex = parent.children.indexOf(child);
     if (oldIndex !== -1) {
@@ -33,7 +33,7 @@ function createMockRenderer(): Renderer<MockElement, MockElement> {
     if (ref === null || ref === undefined) {
       parent.children.push(child);
     } else if (typeof ref === 'object' && ref !== null && 'id' in ref) {
-      const refIndex = parent.children.indexOf(ref as MockElement);
+      const refIndex = parent.children.indexOf(ref);
       if (refIndex !== -1) {
         parent.children.splice(refIndex, 0, child);
       } else {
@@ -69,7 +69,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map();
+    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
 
     const items = ['a', 'b', 'c'];
 
@@ -99,7 +99,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map();
+    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
@@ -154,7 +154,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map();
+    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
     const disposables: ReturnType<typeof createMockDisposable>[] = [];
 
     // Initial render with scopes
@@ -199,7 +199,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map();
+    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
@@ -230,7 +230,8 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map();
+    type ItemType = { id: number; name: string };
+    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: ItemType }>();
 
     const objA = { id: 1, name: 'Alice' };
     const objB = { id: 2, name: 'Bob' };
@@ -274,7 +275,8 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map();
+    type ItemType = { id: number; name: string };
+    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: ItemType }>();
 
     const createElement = (item: { id: number; name: string }) => {
       const el = new MockElement('li');
@@ -324,7 +326,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map();
+    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
