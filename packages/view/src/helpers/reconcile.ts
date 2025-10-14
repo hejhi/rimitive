@@ -15,14 +15,26 @@ interface ItemNode<T, TElement = object> {
 /**
  * Reconcile a list of items against existing DOM nodes
  *
- * @param ctx - View context for accessing element metadata
- * @param container - Parent element containing the list
- * @param oldItems - Previous array of items
- * @param newItems - New array of items
- * @param itemMap - Map from key to ItemNode
- * @param renderItem - Function to render a new item
- * @param keyFn - Function to extract key from item (defaults to identity)
- * @param renderer - Renderer for DOM operations
+ * ALGORITHM: Two-phase reconciliation inspired by signals pull-propagator
+ * 1. Remove phase: Walk oldItems, remove items not in newItems
+ * 2. Position phase: Walk newItems, create/move/update items
+ *
+ * Complexity: O(n + m) where n = oldItems.length, m = newItems.length
+ * - Phase 1: O(n) to check each old item
+ * - Phase 2: O(m) to position each new item
+ * - Map lookups: O(1) amortized
+ *
+ * Optimizations (inspired by signals):
+ * - Early bailout for identical lists (pull-propagator line 54)
+ * - Fast path for append-only (common in todo apps)
+ * - Avoid intermediate allocations (build Set directly, no .map())
+ * - Only move DOM nodes when position changed (skip unnecessary ops)
+ * - Index-based iteration (consistent with signals traversal)
+ *
+ * Future optimizations:
+ * - Longest Increasing Subsequence for minimal moves (React's approach)
+ * - Track "moved" flag to avoid redundant position checks
+ * - Virtual scrolling integration (only reconcile visible items)
  */
 export function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
   ctx: ViewContext,
@@ -34,16 +46,60 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
   keyFn: (item: T) => unknown = (item) => item,
   renderer: Renderer<TElement, TText>
 ): void {
-  // Build key sets for fast lookup
-  const newKeys = new Set(newItems.map(keyFn));
+  // OPTIMIZATION: Early bailout for identical lists (like pull-propagator checks dependencies)
+  if (oldItems === newItems) return;
+
+  const oldLen = oldItems.length;
+  const newLen = newItems.length;
+
+  // OPTIMIZATION: Fast path for empty cases
+  if (newLen === 0 && oldLen === 0) return;
+
+  // OPTIMIZATION: Fast path for append-only (common in todo apps)
+  // If oldItems is prefix of newItems, just append the new ones
+  if (oldLen < newLen) {
+    let isAppendOnly = true;
+    for (let i = 0; i < oldLen; i++) {
+      if (oldItems[i] !== newItems[i]) {
+        isAppendOnly = false;
+        break;
+      }
+    }
+
+    if (isAppendOnly) {
+      // Just append new items
+      for (let i = oldLen; i < newLen; i++) {
+        const item = newItems[i];
+        if (item === undefined) continue;
+        const key = keyFn(item);
+        const element = renderItem(item);
+        const node = itemMap.get(key) || { key, element, itemData: item };
+        itemMap.set(key, node);
+        renderer.appendChild(container, element);
+      }
+      return;
+    }
+  }
+
+  // Build key set for fast lookup (avoid intermediate array allocation)
+  const newKeys = new Set<unknown>();
+  for (let i = 0; i < newLen; i++) {
+    const item = newItems[i];
+    if (item === undefined) continue;
+    newKeys.add(keyFn(item));
+  }
 
   // Phase 1: Remove items that no longer exist
-  for (const item of oldItems) {
+  // PATTERN: Like signals detachAll, walk structure and cleanup
+  for (let i = 0; i < oldLen; i++) {
+    const item = oldItems[i];
+    if (item === undefined) continue;
+
     const key = keyFn(item);
     if (!newKeys.has(key)) {
       const node = itemMap.get(key);
       if (node) {
-        // ALGORITHMIC: Dispose via scope tree walk
+        // ALGORITHMIC: Dispose via scope tree walk (like signals cleanup)
         const scope = ctx.elementScopes.get(node.element);
         if (scope) {
           disposeScope(scope);
