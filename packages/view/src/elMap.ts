@@ -94,7 +94,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
         (item: T) => {
           // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
           // This signal will be updated by reconcileList when item data changes
-          const itemSignal = signal(item) as Reactive<T> & ((value: T) => void);
+          const itemSignal = signal(item);
 
           // Render the item using the provided render function
           const elementRef = render(itemSignal);
@@ -119,30 +119,31 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
     });
 
     // Store dispose callback in WeakMap
-    const containerKey = container as object;
-    elementDisposeCallbacks.set(containerKey, () => {
+    elementDisposeCallbacks.set(container, () => {
       // Dispose the main effect
       dispose();
 
       // Call cleanup callback if registered
-      const cleanup = elementCleanupCallbacks.get(containerKey);
+      const cleanup = elementCleanupCallbacks.get(container);
       if (cleanup) {
         cleanup();
-        elementCleanupCallbacks.delete(containerKey);
+        elementCleanupCallbacks.delete(container);
       }
     });
 
     // Create the element ref - a callable function that holds the container
     const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
       // Store lifecycle callback (cast to base type for storage)
-      const containerKey = container as object;
-      elementLifecycleCallbacks.set(containerKey, lifecycleCallback as LifecycleCallback<object>);
+      elementLifecycleCallbacks.set(
+        container,
+        lifecycleCallback as LifecycleCallback<object>
+      );
 
       // If already connected, call immediately
       if (renderer.isConnected(container)) {
         const cleanup = lifecycleCallback(container);
         if (cleanup) {
-          elementCleanupCallbacks.set(containerKey, cleanup);
+          elementCleanupCallbacks.set(container, cleanup);
         }
       }
 

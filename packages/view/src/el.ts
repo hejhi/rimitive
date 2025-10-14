@@ -66,7 +66,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     });
 
     // Store scope in WeakMap (cast to object for storage)
-    const elementKey = element as object;
+    const elementKey = element;
     elementScopes.set(elementKey, scope);
 
     // Store dispose callback
@@ -84,7 +84,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     // Create the element ref - a callable function that holds the element
     const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
       // Store lifecycle callback (cast to base type for storage)
-      elementLifecycleCallbacks.set(element as object, lifecycleCallback as LifecycleCallback<object>);
+      elementLifecycleCallbacks.set(element, lifecycleCallback as LifecycleCallback<object>);
 
       // Observe element connection using renderer
       renderer.observeLifecycle(element, {
@@ -92,7 +92,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
           return lifecycleCallback(el);
         },
         onDisconnected: () => {
-          const dispose = elementDisposeCallbacks.get(element as object);
+          const dispose = elementDisposeCallbacks.get(element);
           if (dispose) dispose();
         }
       });
