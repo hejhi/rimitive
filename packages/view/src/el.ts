@@ -13,7 +13,6 @@ import type { Renderer, Element as RendererElement, TextNode } from './renderer'
 import {
   elementScopes,
   elementDisposeCallbacks,
-  elementLifecycleCallbacks,
   elementCleanupCallbacks,
 } from './helpers/element-metadata';
 
@@ -83,9 +82,6 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 
     // Create the element ref - a callable function that holds the element
     const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
-      // Store lifecycle callback (cast to base type for storage)
-      elementLifecycleCallbacks.set(element, lifecycleCallback as LifecycleCallback<object>);
-
       // Observe element connection using renderer
       renderer.observeLifecycle(element, {
         onConnected: (el) => {
@@ -185,7 +181,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
 
   // Element ref (from el() or elMap())
   if (isElementRef(child)) {
-    renderer.appendChild(element, child.element as TElement);
+    renderer.appendChild(element, child.element);
     return;
   }
 
@@ -194,7 +190,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     // The reactive list contains a container element
     // that will be managed by elMap's effect
     if (child.__container) {
-      renderer.appendChild(element, child.__container as TElement);
+      renderer.appendChild(element, child.__container);
     }
     return;
   }

@@ -57,8 +57,8 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
     if (!newKeys.has(key)) {
       const node = itemMap.get(key);
       if (node) {
-        // Dispose the element's scope (cast to object for WeakMap lookup)
-        const dispose = elementDisposeCallbacks.get(node.element as object);
+        // Dispose the element's scope
+        const dispose = elementDisposeCallbacks.get(node.element);
         if (dispose) {
           dispose();
         }
@@ -154,7 +154,7 @@ export function replaceChildren<TElement extends RendererElement = RendererEleme
   // Clear existing children
   let firstChild = getFirstElement(container);
   while (firstChild) {
-    const dispose = elementDisposeCallbacks.get(firstChild as object);
+    const dispose = elementDisposeCallbacks.get(firstChild);
     if (dispose) {
       dispose();
     }

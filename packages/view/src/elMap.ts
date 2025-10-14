@@ -21,7 +21,6 @@ import { reconcileList } from './helpers/reconcile';
 import type { ViewContext } from './context';
 import {
   elementDisposeCallbacks,
-  elementLifecycleCallbacks,
   elementCleanupCallbacks,
 } from './helpers/element-metadata';
 
@@ -133,12 +132,6 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
     // Create the element ref - a callable function that holds the container
     const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
-      // Store lifecycle callback (cast to base type for storage)
-      elementLifecycleCallbacks.set(
-        container,
-        lifecycleCallback as LifecycleCallback<object>
-      );
-
       // If already connected, call immediately
       if (renderer.isConnected(container)) {
         const cleanup = lifecycleCallback(container);

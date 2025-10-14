@@ -5,7 +5,6 @@
  * without adding properties directly to the elements themselves.
  */
 
-import type { LifecycleCallback } from '../types';
 import type { Scope } from './scope';
 
 /**
@@ -17,11 +16,6 @@ export const elementScopes = new WeakMap<object, Scope>();
  * Store element dispose callbacks
  */
 export const elementDisposeCallbacks = new WeakMap<object, () => void>();
-
-/**
- * Store element lifecycle callbacks
- */
-export const elementLifecycleCallbacks = new WeakMap<object, LifecycleCallback>();
 
 /**
  * Store element cleanup callbacks (returned from lifecycle callbacks)

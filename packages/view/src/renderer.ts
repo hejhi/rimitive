@@ -54,17 +54,17 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
   /**
    * Append a child to a parent element
    */
-  appendChild(parent: TElement, child: TElement | TText): void;
+  appendChild(parent: TElement, child: Element | TText): void;
 
   /**
    * Remove a child from a parent element
    */
-  removeChild(parent: TElement, child: TElement | TText): void;
+  removeChild(parent: TElement, child: Element | TText): void;
 
   /**
    * Insert a child before a reference node
    */
-  insertBefore(parent: TElement, child: TElement | TText, reference: TElement | TText | null): void;
+  insertBefore(parent: TElement, child: Element | TText, reference: Element | TText | null): void;
 
   /**
    * Add an event listener to an element
