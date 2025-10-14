@@ -209,7 +209,7 @@ export function createTestEnv() {
   const signalMap = new Map<Reactive<any>, Set<() => void>>();
 
   const signal = <T>(val: T): Reactive<T> => {
-    const { read, write, subscribers } = createSignal(val);
+    const { read, subscribers } = createSignal(val);
     signalMap.set(read, subscribers);
     return read;
   };

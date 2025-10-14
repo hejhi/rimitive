@@ -90,9 +90,9 @@ describe('reconcileList', () => {
 
     // User cares: all items are displayed
     expect(container.children).toHaveLength(3);
-    expect(container.children[0]!.id).toBe('item-a');
-    expect(container.children[1]!.id).toBe('item-b');
-    expect(container.children[2]!.id).toBe('item-c');
+    expect((container.children[0] as MockElement).id).toBe('item-a');
+    expect((container.children[1] as MockElement).id).toBe('item-b');
+    expect((container.children[2] as MockElement).id).toBe('item-c');
   });
 
   it('updates list when items added and removed', () => {
@@ -126,7 +126,7 @@ describe('reconcileList', () => {
 
     // User cares: new items added
     expect(container.children).toHaveLength(4);
-    expect(container.children.map((c) => c.id)).toEqual([
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual([
       'item-a',
       'item-b',
       'item-c',
@@ -147,7 +147,7 @@ describe('reconcileList', () => {
 
     // User cares: item removed
     expect(container.children).toHaveLength(3);
-    expect(container.children.map((c) => c.id)).toEqual(['item-a', 'item-c', 'item-d']);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-a', 'item-c', 'item-d']);
   });
 
   it('disposes scopes when items are removed', () => {
@@ -223,7 +223,7 @@ describe('reconcileList', () => {
     );
 
     // User cares: order changed
-    expect(container.children.map((c) => c.id)).toEqual(['item-c', 'item-b', 'item-a']);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-c', 'item-b', 'item-a']);
   });
 
   it('tracks items by object identity by default', () => {
@@ -267,7 +267,7 @@ describe('reconcileList', () => {
     );
 
     // User cares: objects recognized by identity
-    expect(container.children.map((c) => c.id)).toEqual(['item-3', 'item-1', 'item-2']);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-3', 'item-1', 'item-2']);
   });
 
   it('uses custom keyFn for tracking', () => {
@@ -317,7 +317,7 @@ describe('reconcileList', () => {
 
     // User cares: items recognized by key, not identity
     expect(container.children).toHaveLength(2);
-    expect(container.children.map((c) => c.id)).toEqual(['item-1', 'item-2']);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-1', 'item-2']);
   });
 
   it('handles add + remove + reorder in single pass', () => {
@@ -348,7 +348,7 @@ describe('reconcileList', () => {
     );
 
     // User cares: final state is correct
-    expect(container.children.map((c) => c.id)).toEqual(['item-d', 'item-e', 'item-c']);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-d', 'item-e', 'item-c']);
   });
 });
 
@@ -381,7 +381,7 @@ describe('replaceChildren', () => {
 
     // User cares: old children gone, new children present
     expect(container.children).toHaveLength(3);
-    expect(container.children.map((c) => c.id)).toEqual(['new-1', 'new-2', 'new-3']);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['new-1', 'new-2', 'new-3']);
   });
 
   it('disposes scopes of removed children', () => {

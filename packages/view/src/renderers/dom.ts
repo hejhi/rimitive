@@ -23,6 +23,12 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
       return document.createElement(tag);
     },
 
+    createContainer(): DOMElement {
+      const container = document.createElement('div');
+      container.style.display = 'contents';
+      return container;
+    },
+
     createTextNode(text: string): DOMTextNode {
       return document.createTextNode(text);
     },
