@@ -28,12 +28,16 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(items, (itemSignal) => {
-        const element = renderer.createElement('li');
-        const text = renderer.createTextNode(itemSignal());
-        renderer.appendChild(element, text);
-        return createElementRef(element);
-      });
+      const ref = elMap(
+        items,
+        (itemSignal) => {
+          const element = renderer.createElement('li');
+          const text = renderer.createTextNode(itemSignal());
+          renderer.appendChild(element, text);
+          return createElementRef(element);
+        },
+        (item) => item // Key by primitive value
+      );
 
       // User cares: all items displayed
       expect(ref.element.children).toHaveLength(3);
@@ -84,12 +88,16 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(items, (itemSignal) => {
-        const element = renderer.createElement('li');
-        const text = renderer.createTextNode(itemSignal());
-        renderer.appendChild(element, text);
-        return createElementRef(element);
-      });
+      const ref = elMap(
+        items,
+        (itemSignal) => {
+          const element = renderer.createElement('li');
+          const text = renderer.createTextNode(itemSignal());
+          renderer.appendChild(element, text);
+          return createElementRef(element);
+        },
+        (item) => item // Key by primitive value
+      );
 
       // Store reference to first element
       const firstElement = ref.element.children[0];
@@ -109,7 +117,7 @@ describe('elMap primitive', () => {
   });
 
   describe('identity-based tracking', () => {
-    it('tracks by object identity by default', () => {
+    it('uses ID for tracking instead of identity', () => {
       const ctx = createViewContext();
       const { renderer } = createMockRenderer();
 
@@ -137,8 +145,8 @@ describe('elMap primitive', () => {
           const text = renderer.createTextNode(itemSignal().name);
           renderer.appendChild(element, text);
           return createElementRef(element);
-        }
-        // No keyFn - uses identity
+        },
+        (item) => item.id // Key by ID (not identity)
       );
 
       // Store element reference
@@ -219,12 +227,16 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(items, (itemSignal) => {
-        const element = renderer.createElement('li');
-        const text = renderer.createTextNode(itemSignal());
-        renderer.appendChild(element, text);
-        return createElementRef(element);
-      });
+      const ref = elMap(
+        items,
+        (itemSignal) => {
+          const element = renderer.createElement('li');
+          const text = renderer.createTextNode(itemSignal());
+          renderer.appendChild(element, text);
+          return createElementRef(element);
+        },
+        (item) => item // Key by primitive value
+      );
 
       // Store reference to 'd' element
       const dElement = ref.element.children[3];

@@ -229,12 +229,12 @@ describe('reconcileList', () => {
     expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-c', 'item-b', 'item-a']);
   });
 
-  it('tracks items by object identity by default', () => {
+  it('tracks items by ID', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
     type ItemType = { id: number; name: string };
-    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: ItemType }>();
+    const itemMap = new Map<string, { key: string; element: MockElement; itemData: ItemType }>();
 
     const objA = { id: 1, name: 'Alice' };
     const objB = { id: 2, name: 'Bob' };
@@ -254,7 +254,7 @@ describe('reconcileList', () => {
       [objA, objB, objC],
       itemMap,
       createElement,
-      (item) => item, // identity-based
+      (item) => item.id, // Key by ID
       renderer
     );
 
@@ -266,11 +266,11 @@ describe('reconcileList', () => {
       [objC, objA, objB],
       itemMap,
       createElement,
-      (item) => item,
+      (item) => item.id, // Key by ID
       renderer
     );
 
-    // User cares: objects recognized by identity
+    // User cares: objects recognized by ID
     expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-3', 'item-1', 'item-2']);
   });
 
@@ -279,7 +279,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
     type ItemType = { id: number; name: string };
-    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: ItemType }>();
+    const itemMap = new Map<string, { key: string; element: MockElement; itemData: ItemType }>();
 
     const createElement = (item: { id: number; name: string }) => {
       const el = new MockElement('li');

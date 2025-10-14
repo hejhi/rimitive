@@ -18,7 +18,7 @@ import { disposeScope } from './scope';
  * Metadata for a list item
  */
 interface ItemNode<T, TElement = object> {
-  key: unknown;
+  key: string;
   element: TElement;
   itemData: T;
   itemSignal?: ((value: T) => void) & (() => T);
@@ -99,9 +99,9 @@ export function createReconciler() {
     container: TElement,
     oldItems: T[],
     newItems: T[],
-    itemMap: Map<unknown, ItemNode<T, TElement>>,
+    itemMap: Map<string, ItemNode<T, TElement>>,
     renderItem: (item: T) => TElement,
-    keyFn: (item: T) => unknown = (item) => item,
+    keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
     // Early bailout
@@ -112,22 +112,23 @@ export function createReconciler() {
 
     if (newLen === 0 && oldLen === 0) return;
 
-    // Phase 1: Build oldPos map
-    const oldPos = new Map<unknown, number>();
+    // Phase 1: Build oldPos map (plain object for speed)
+    const oldPos: Record<string, number> = Object.create(null);
     for (let i = 0; i < oldLen; i++) {
-      oldPos.set(keyFn(oldItems[i]!), i);
+      const key = String(keyFn(oldItems[i]!));
+      oldPos[key] = i;
     }
 
     // Phase 2: Build compacted arrays AND track newKeys
     // Buffers grow automatically via assignment
     let count = 0;
-    const newKeys = new Set<unknown>();
+    const newKeys: Record<string, boolean> = Object.create(null);
 
     for (let i = 0; i < newLen; i++) {
-      const key = keyFn(newItems[i]!);
-      newKeys.add(key); // Track for removal phase
+      const key = String(keyFn(newItems[i]!));
+      newKeys[key] = true; // Track for removal phase
 
-      const pos = oldPos.get(key);
+      const pos = oldPos[key];
       if (pos !== undefined) {
         oldIndicesBuf[count] = pos;
         newPosBuf[count] = i;
@@ -147,7 +148,7 @@ export function createReconciler() {
       const item = newItems[i];
       if (item === undefined) continue;
 
-      const key = keyFn(item);
+      const key = String(keyFn(item));
       let node = itemMap.get(key);
 
       // Create or reuse node
@@ -191,7 +192,7 @@ export function createReconciler() {
 
     // Phase 5: Remove items not in newKeys (no rebuild!)
     for (const [key, node] of itemMap) {
-      if (!newKeys.has(key)) {
+      if (!newKeys[key]) {
         const scope = ctx.elementScopes.get(node.element);
         if (scope) {
           disposeScope(scope);

@@ -39,7 +39,7 @@ export type ElMapFactory<TElement extends RendererElement = RendererElement> = L
   <T>(
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
-    keyFn?: (item: T) => unknown
+    keyFn: (item: T) => string | number
   ) => ElementRef<TElement>
 >;
 
@@ -47,7 +47,7 @@ export type ElMapFactory<TElement extends RendererElement = RendererElement> = L
  * Item node metadata
  */
 interface ItemNode<T, TElement = object> {
-  key: unknown;
+  key: string;
   element: TElement;
   itemData: T;
   itemSignal: Reactive<T> & ((value: T) => void); // Writable signal
@@ -67,14 +67,14 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
   function elMap<T>(
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
-    keyFn: (item: T) => unknown = (item) => item
+    keyFn: (item: T) => string | number
   ): ElementRef<TElement> {
     // Create a container element that will hold the list
     // The renderer decides what container makes sense (e.g., div with display:contents for DOM)
     const container = renderer.createContainer();
 
     // Track items by key
-    const itemMap = new Map<unknown, ItemNode<T, TElement>>();
+    const itemMap = new Map<string, ItemNode<T, TElement>>();
     let previousItems: T[] = [];
 
     // Create an effect that reconciles the list when items change
@@ -97,7 +97,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
           const elementRef = render(itemSignal);
 
           // Store item metadata including signal for updates
-          const key = keyFn(item);
+          const key = String(keyFn(item));
           itemMap.set(key, {
             key,
             element: elementRef.element,
