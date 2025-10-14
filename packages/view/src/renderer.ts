@@ -37,6 +37,12 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
   createElement(tag: string): TElement;
 
   /**
+   * Create a container element for list rendering
+   * The container should not affect layout (e.g., display: contents in DOM)
+   */
+  createContainer(): TElement;
+
+  /**
    * Create a text node with initial content
    */
   createTextNode(text: string): TText;

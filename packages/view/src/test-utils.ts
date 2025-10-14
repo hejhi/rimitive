@@ -65,6 +65,11 @@ export function createMockRenderer() {
 
   const renderer: Renderer<MockElement, MockText> = {
     createElement: vi.fn((tag: string) => new MockElement(tag)),
+    createContainer: vi.fn(() => {
+      const container = new MockElement('container');
+      container.props.style = { display: 'contents' };
+      return container;
+    }),
     createTextNode: vi.fn((text: string) => new MockText(text)),
     updateTextNode: vi.fn((node: MockText, text: string) => {
       node.content = text;

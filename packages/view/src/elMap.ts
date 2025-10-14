@@ -67,9 +67,8 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
     keyFn: (item: T) => unknown = (item) => item
   ): ElementRef<TElement> {
     // Create a container element that will hold the list
-    const container = renderer.createElement('div');
-    // Set display: contents so container doesn't affect layout
-    renderer.setAttribute(container, 'style', { display: 'contents' });
+    // The renderer decides what container makes sense (e.g., div with display:contents for DOM)
+    const container = renderer.createContainer();
 
     // Track items by key
     const itemMap = new Map<unknown, ItemNode<T, TElement>>();
