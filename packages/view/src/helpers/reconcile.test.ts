@@ -5,21 +5,6 @@ import { createScope, trackInSpecificScope } from './scope';
 import type { Renderer } from '../renderer';
 import type { Disposable } from '../types';
 
-/**
- * PRINCIPLED TESTS FOR LIST RECONCILIATION
- *
- * These tests validate the fundamental behaviors of identity-based
- * list reconciliation from the user's perspective.
- *
- * Core Behaviors:
- * 1. Add: New items are rendered and inserted into DOM
- * 2. Remove: Old items are removed from DOM and disposed
- * 3. Reorder: Items maintain identity when moved
- * 4. Update: Item data can change without re-creating DOM
- * 5. Minimal DOM ops: Only necessary changes are made
- * 6. Memory safety: Scopes are properly disposed
- */
-
 // Test utilities
 type MockElement = {
   id: string;
