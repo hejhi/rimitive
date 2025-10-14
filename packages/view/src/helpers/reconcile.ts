@@ -104,30 +104,25 @@ export function createReconciler() {
     keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
-    // Early bailout
+    // Early bailout - same reference
     if (oldItems === newItems) return;
-
-    const newLen = newItems.length;
-    const oldLen = oldItems.length;
-
-    if (newLen === 0 && oldLen === 0) return;
 
     // Phase 1: Build oldPos map (plain object for speed)
     const oldPos = Object.create(null) as Record<string, number>;
-    for (let i = 0; i < oldLen; i++) {
+    for (let i = 0; i < oldItems.length; i++) {
       // Cast for ts—we accept string|num|symbol but ts doesn't like that.
       const key = keyFn(oldItems[i]!) as string;
       oldPos[key] = i;
     }
 
-    // Phase 2: Build compacted arrays AND track newKeys
+    // Phase 2: Build compacted arrays + newKeys lookup (single loop!)
     // Buffers grow automatically via assignment
     let count = 0;
     const newKeys = Object.create(null) as Record<string, boolean>;
 
-    for (let i = 0; i < newLen; i++) {
+    for (let i = 0; i < newItems.length; i++) {
       const key = keyFn(newItems[i]!) as string;
-      newKeys[key] = true; // Track for removal phase
+      newKeys[key] = true; // Track which keys should exist
 
       const pos = oldPos[key];
       if (pos !== undefined) {
@@ -137,7 +132,7 @@ export function createReconciler() {
       }
     }
 
-    // Phase 3: Remove stale items (before positioning)
+    // Phase 3: Remove items not in newKeys
     for (const [key, node] of itemMap) {
       if (!newKeys[key]) {
         const scope = ctx.elementScopes.get(node.element);
@@ -158,7 +153,7 @@ export function createReconciler() {
     let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     let prevElement: TElement | null = null;
 
-    for (let i = 0; i < newLen; i++) {
+    for (let i = 0; i < newItems.length; i++) {
       const item = newItems[i];
       if (item === undefined) continue;
 
