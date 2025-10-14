@@ -1,20 +1,3 @@
-/**
- * ALGORITHM: Identity-Based List Reconciliation
- *
- * Efficient DOM updates for reactive lists without requiring explicit keys.
- * Uses object identity (referential equality) to track changes.
- *
- * KEY OPTIMIZATIONS:
- * 1. Reuse existing DOM nodes and signals (avoid allocations)
- * 2. Update signal values in-place (follows signals/graph-edges.ts pattern)
- * 3. Minimize DOM operations (only move when necessary)
- * 4. O(n) reconciliation using Map for O(1) lookups
- *
- * RECONCILIATION PHASES:
- * Phase 1: Remove - Dispose nodes no longer in list
- * Phase 2: Update & Reorder - Update data, create new nodes, reposition all
- */
-
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import { elementDisposeCallbacks } from './element-metadata';
 

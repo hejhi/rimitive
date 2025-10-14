@@ -1,20 +1,3 @@
-/**
- * PATTERN: Element-Scoped Disposal
- *
- * Each element gets its own scope that tracks all reactive subscriptions
- * (effects, computeds) created within it. When the element is removed from
- * the DOM, the scope disposes all subscriptions to prevent memory leaks.
- *
- * CONCURRENCY-SAFE:
- * Uses ViewContext to track current scope (not module-level state).
- * Multiple component trees can coexist without interference.
- *
- * MEMORY MANAGEMENT:
- * - Set<Disposable> is acceptable here (not a hot path like signal graph)
- * - Scope disposal happens infrequently (only on element removal)
- * - Effects integrate with scheduler automatically for batching
- */
-
 import type { Disposable } from '../types';
 import type { ViewContext } from '../context';
 
