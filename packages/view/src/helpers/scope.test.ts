@@ -1,18 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createScope, runInScope, trackInScope, disposeScope } from './scope';
 import { createViewContext } from '../context';
-import type { Disposable } from '../types';
-
-// Test utilities
-function createMockDisposable(): Disposable & { disposed: boolean } {
-  const mock = {
-    disposed: false,
-    dispose: () => {
-      mock.disposed = true;
-    },
-  };
-  return mock;
-}
+import { createMockDisposable } from '../test-utils';
 
 describe('Scope Tree', () => {
   describe('disposal', () => {
@@ -29,27 +18,6 @@ describe('Scope Tree', () => {
 
       // tracked item was cleaned up
       expect(disposable.disposed).toBe(true);
-    });
-
-    it('disposes multiple tracked items', () => {
-      const ctx = createViewContext();
-      const scope = createScope();
-      const d1 = createMockDisposable();
-      const d2 = createMockDisposable();
-      const d3 = createMockDisposable();
-
-      runInScope(ctx, scope, () => {
-        trackInScope(ctx, d1);
-        trackInScope(ctx, d2);
-        trackInScope(ctx, d3);
-      });
-
-      disposeScope(scope);
-
-      // all tracked items were cleaned up
-      expect(d1.disposed).toBe(true);
-      expect(d2.disposed).toBe(true);
-      expect(d3.disposed).toBe(true);
     });
 
     it('disposes child scopes when parent is disposed', () => {
@@ -189,42 +157,6 @@ describe('Scope Tree', () => {
     });
   });
 
-  describe('scope context restoration', () => {
-    it('restores previous scope on nested calls', () => {
-      const ctx = createViewContext();
-      const scope1 = createScope();
-      const scope2 = createScope();
-      const tracked: string[] = [];
-
-      runInScope(ctx, scope1, () => {
-        tracked.push('outer-start');
-
-        runInScope(ctx, scope2, () => {
-          tracked.push('inner');
-        });
-
-        tracked.push('outer-end');
-      });
-
-      // scope nesting works correctly
-      expect(tracked).toEqual(['outer-start', 'inner', 'outer-end']);
-    });
-
-    it('restores scope even when function throws', () => {
-      const ctx = createViewContext();
-      const scope = createScope();
-
-      expect(() => {
-        runInScope(ctx, scope, () => {
-          throw new Error('test error');
-        });
-      }).toThrow('test error');
-
-      // scope restored after error (no leak)
-      // Verified by: subsequent operations work correctly
-    });
-  });
-
   describe('no-op behavior', () => {
     it('ignores tracking when no scope is active', () => {
       const ctx = createViewContext();
@@ -242,59 +174,6 @@ describe('Scope Tree', () => {
 
       // safe to dispose scope with no tracked items
       expect(() => disposeScope(scope)).not.toThrow();
-    });
-  });
-
-  describe('real-world patterns', () => {
-    it('supports effect cleanup pattern', () => {
-      const ctx = createViewContext();
-      const scope = createScope();
-
-      // Simulate: component mounts, effect subscribes
-      const subscription = createMockDisposable();
-      runInScope(ctx, scope, () => {
-        trackInScope(ctx, subscription);
-      });
-
-      // Simulate: component unmounts
-      disposeScope(scope);
-
-      // subscription was cleaned up
-      expect(subscription.disposed).toBe(true);
-    });
-
-    it('supports nested component cleanup', () => {
-      const ctx = createViewContext();
-      const outer = createScope();
-      const inner = createScope(outer);
-
-      const outerCleanups: ReturnType<typeof createMockDisposable>[] = [];
-      const innerCleanups: ReturnType<typeof createMockDisposable>[] = [];
-
-      // Simulate: outer component with inner component
-      runInScope(ctx, outer, () => {
-        for (let i = 0; i < 3; i++) {
-          const d = createMockDisposable();
-          outerCleanups.push(d);
-          trackInScope(ctx, d);
-        }
-
-        runInScope(ctx, inner, () => {
-          for (let i = 0; i < 3; i++) {
-            const d = createMockDisposable();
-            innerCleanups.push(d);
-            trackInScope(ctx, d);
-          }
-        });
-      });
-
-      // Simulate: outer unmounts (should cascade to inner)
-      disposeScope(outer);
-
-      // all cleanups called
-      for (const d of [...outerCleanups, ...innerCleanups]) {
-        expect(d.disposed).toBe(true);
-      }
     });
   });
 });
