@@ -98,22 +98,22 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
           node,  // ← Pass DeferredListNode directly
           oldItems,
           currentItems,
-          (item: T) => {
+          (itemData: T) => {
             // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
             // This signal will be updated by reconcileList when item data changes
-            const itemSignal = signal(item);
+            const itemSignal = signal(itemData);
 
             // Render the item using the provided render function
             const elementRef = render(itemSignal);
 
             // Store item metadata including signal for updates
-            const key = String(keyFn(item));
+            const key = String(keyFn(itemData));
             (node.itemsByKey as Map<string, ListItemNode<T, TElement>>).set(key, {
-              refType: 0,
               key,
-              element: elementRef.node.element,
-              itemData: item,
+              itemData,
               itemSignal,
+              refType: 0,
+              element: elementRef.node.element,
               parentList: undefined,
               previousSibling: undefined,
               nextSibling: undefined,
