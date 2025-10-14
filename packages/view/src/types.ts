@@ -88,7 +88,7 @@ export interface ElementRef<TElement = ReactiveElement> {
  * Check if value is an element ref
  */
 export function isElementRef(value: any): value is ElementRef {
-  return typeof value === 'function' && 'element' in value && value.element instanceof HTMLElement;
+  return typeof value === 'function' && 'element' in value;
 }
 
 /**
