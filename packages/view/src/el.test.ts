@@ -21,9 +21,9 @@ describe('el primitive', () => {
       expect(ref.element.props.className).toBe('container');
     });
 
-    it('handles event listeners', () => {
+    it('handles event listeners via ref', () => {
       const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
+      const { renderer, connect } = createMockRenderer();
       const effect = (fn: () => void) => {
         fn();
         return () => {};
@@ -31,7 +31,16 @@ describe('el primitive', () => {
       const el = createElFactory({ ctx, effect, renderer }).method;
 
       const handleClick = vi.fn();
-      const ref = el(['button', { onClick: handleClick }]);
+      const ref = el(['button']);
+
+      // User manually attaches event listeners via ref callback
+      ref((el) => {
+        const cleanup = renderer.addEventListener(el, 'click', handleClick);
+        return cleanup;
+      });
+
+      // Simulate element being connected to DOM
+      connect(ref.element);
 
       // Simulate user clicking the button
       const clickHandler = ref.element.listeners.get('click');
