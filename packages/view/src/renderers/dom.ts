@@ -3,7 +3,7 @@
  */
 
 import type { Renderer, LifecycleCallbacks } from '../renderer';
-import { createLifecycleObserver } from '../helpers/lifecycle';
+import { createLifecycleObserver } from './dom-lifecycle';
 
 /**
  * DOM-specific element type
