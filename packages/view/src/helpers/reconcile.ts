@@ -3,126 +3,213 @@ import type { ViewContext } from '../context';
 import { disposeScope } from './scope';
 
 /**
+ * ALGORITHM: LIS-based List Reconciliation with Minimal Allocations
+ *
+ * Optimizations inspired by signals patterns:
+ * - Closure-captured reusable buffers (grow once per size increase)
+ * - O(n log n) LIS using patience sorting + binary search
+ * - Track newKeys during compaction (no map rebuild)
+ * - Inline calculations to reduce function call overhead
+ *
+ * Complexity: O(n log n) time, O(n) space (reused buffers)
+ */
+
+/**
  * Metadata for a list item
  */
 interface ItemNode<T, TElement = object> {
-  key: unknown;      // Extracted key (via keyFn or identity)
+  key: unknown;
   element: TElement;
-  itemData: T;       // The actual data object
-  itemSignal?: ((value: T) => void) & (() => T);  // Optional writable signal
+  itemData: T;
+  itemSignal?: ((value: T) => void) & (() => T);
 }
 
 /**
- * Reconcile a list of items against existing DOM nodes
- *
+ * Create reconciler with closure-captured buffers
+ * PATTERN: Like signals createScheduler/createGraphEdges
  */
-export function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
-  ctx: ViewContext,
-  container: TElement,
-  oldItems: T[],
-  newItems: T[],
-  itemMap: Map<unknown, ItemNode<T, TElement>>,
-  renderItem: (item: T) => TElement,
-  keyFn: (item: T) => unknown = (item) => item,
-  renderer: Renderer<TElement, TText>
-): void {
-  // Early bailout for identical lists
-  if (oldItems === newItems) return;
+export function createReconciler() {
+  // Closure-captured reusable buffers (grow automatically, zero allocations after first use)
+  const oldIndicesBuf: number[] = [];
+  const newPosBuf: number[] = [];
+  const lisBuf: number[] = [];
+  const tailsBuf: number[] = [];
+  const parentBuf: number[] = [];
 
-  const newLen = newItems.length;
-  const oldLen = oldItems.length;
+  /**
+   * Binary search for largest index where arr[tails[i]] < value
+   * tails array contains indices into arr
+   */
+  const binarySearch = (arr: number[], tails: number[], len: number, value: number): number => {
+    let lo = 0;
+    let hi = len - 1;
 
-  // Fast path for empty cases
-  if (newLen === 0 && oldLen === 0) return;
-
-  // Build key set for O(1) membership testing
-  const newKeys = new Set<unknown>();
-  for (let i = 0; i < newLen; i++) {
-    const item = newItems[i];
-    if (item === undefined) continue;
-    newKeys.add(keyFn(item));
-  }
-
-  // PHASE 1: Remove items not in newKeys
-  for (const [key, node] of itemMap) {
-    if (!newKeys.has(key)) {
-      const scope = ctx.elementScopes.get(node.element);
-      if (scope) {
-        disposeScope(scope);
-        ctx.elementScopes.delete(node.element);
+    while (lo <= hi) {
+      const mid = (lo + hi) >>> 1;
+      if (arr[tails[mid]!]! < value) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
       }
-      // Remove from DOM
-      renderer.removeChild(container, node.element);
-      itemMap.delete(key);
     }
-  }
 
-  // PHASE 2: Position new items (create/update/move)
-  let previousElement: TElement | null = null;
+    return lo;
+  };
 
-  for (let i = 0; i < newLen; i++) {
-    const item = newItems[i];
-    if (item === undefined) continue;
+  /**
+   * Inline O(n log n) LIS using patience sorting
+   * Returns length and writes indices to lisBuf
+   */
+  const findLIS = (arr: number[], n: number): number => {
+    if (n === 0) return 0;
+    if (n === 1) {
+      lisBuf[0] = 0;
+      return 1;
+    }
 
-    const key = keyFn(item);
-    let node = itemMap.get(key);
+    // Buffers grow automatically via assignment
 
-    // Create new item if it doesn't exist
-    if (!node) {
-      const element = renderItem(item);
-      // IMPORTANT: renderItem may have already set itemMap with itemSignal
-      // Don't overwrite it - just fetch the node that was stored
-      node = itemMap.get(key);
-      if (!node) {
-        // Fallback: renderItem didn't set the map (non-elMap usage)
-        node = {
-          key,
-          element,
-          itemData: item
-        };
-        itemMap.set(key, node);
+    let len = 0;
+
+    for (let i = 0; i < n; i++) {
+      const value = arr[i]!;
+      const pos = binarySearch(arr, tailsBuf, len, value);
+
+      parentBuf[i] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+      tailsBuf[pos] = i;
+
+      if (pos === len) len++;
+    }
+
+    // Backtrack to build LIS indices (lisBuf grows automatically)
+    let current = tailsBuf[len - 1]!;
+    for (let i = len - 1; i >= 0; i--) {
+      lisBuf[i] = current;
+      current = parentBuf[current]!;
+    }
+
+    return len;
+  };
+
+  /**
+   * Reconcile list with minimal allocations
+   */
+  function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+    ctx: ViewContext,
+    container: TElement,
+    oldItems: T[],
+    newItems: T[],
+    itemMap: Map<unknown, ItemNode<T, TElement>>,
+    renderItem: (item: T) => TElement,
+    keyFn: (item: T) => unknown = (item) => item,
+    renderer: Renderer<TElement, TText>
+  ): void {
+    // Early bailout
+    if (oldItems === newItems) return;
+
+    const newLen = newItems.length;
+    const oldLen = oldItems.length;
+
+    if (newLen === 0 && oldLen === 0) return;
+
+    // Phase 1: Build oldPos map
+    const oldPos = new Map<unknown, number>();
+    for (let i = 0; i < oldLen; i++) {
+      oldPos.set(keyFn(oldItems[i]!), i);
+    }
+
+    // Phase 2: Build compacted arrays AND track newKeys
+    // Buffers grow automatically via assignment
+    let count = 0;
+    const newKeys = new Set<unknown>();
+
+    for (let i = 0; i < newLen; i++) {
+      const key = keyFn(newItems[i]!);
+      newKeys.add(key); // Track for removal phase
+
+      const pos = oldPos.get(key);
+      if (pos !== undefined) {
+        oldIndicesBuf[count] = pos;
+        newPosBuf[count] = i;
+        count++;
       }
-    } else {
-      // Update existing item data
-      if (node.itemData !== item) {
-        node.itemData = item;
+    }
 
-        // Update the item signal if present (elMap stores this)
-        if (node.itemSignal && typeof node.itemSignal === 'function') {
-          node.itemSignal(item);
+    // Phase 3: Find LIS (inline O(n log n))
+    const lisLen = findLIS(oldIndicesBuf, count);
+
+    // Phase 4: Position items
+    let lisIdx = 0;
+    let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
+    let prevElement: TElement | null = null;
+
+    for (let i = 0; i < newLen; i++) {
+      const item = newItems[i];
+      if (item === undefined) continue;
+
+      const key = keyFn(item);
+      let node = itemMap.get(key);
+
+      // Create or reuse node
+      if (!node) {
+        const element = renderItem(item);
+        node = itemMap.get(key);
+        if (!node) {
+          node = { key, element, itemData: item };
+          itemMap.set(key, node);
+        }
+      } else {
+        // Update data
+        if (node.itemData !== item) {
+          node.itemData = item;
+          if (node.itemSignal) node.itemSignal(item);
         }
       }
+
+      const element = node.element;
+
+      // Check if in LIS
+      const inLIS = i === nextLISPos;
+      if (inLIS) {
+        lisIdx++;
+        nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
+      }
+
+      // Move if not in LIS
+      if (!inLIS) {
+        const next: TElement | null = prevElement
+          ? getNextElement(prevElement)
+          : getFirstElement(container);
+
+        if (element !== next) {
+          renderer.insertBefore(container, element, next);
+        }
+      }
+
+      prevElement = element;
     }
 
-    // Position element correctly
-    // Only move if not already in correct position
-    const element = node.element;
-
-    // Determine where to insert this element
-    let nextElement: TElement | null;
-    if (previousElement) {
-      // Get the next sibling of the previous element
-      nextElement = getNextElement(previousElement);
-    } else {
-      // This is the first element, get the first child of container
-      nextElement = getFirstElement(container);
+    // Phase 5: Remove items not in newKeys (no rebuild!)
+    for (const [key, node] of itemMap) {
+      if (!newKeys.has(key)) {
+        const scope = ctx.elementScopes.get(node.element);
+        if (scope) {
+          disposeScope(scope);
+          ctx.elementScopes.delete(node.element);
+        }
+        renderer.removeChild(container, node.element);
+        itemMap.delete(key);
+      }
     }
-
-    // Skip DOM operation if element is already in the right spot
-    if (element !== nextElement) {
-      // Element needs to be moved or inserted
-      renderer.insertBefore(container, element, nextElement);
-    }
-
-    previousElement = element;
   }
+
+  return reconcileList;
 }
 
 /**
  * Get first child element using DOM properties
  */
 function getFirstElement<T extends object>(container: T): T | null {
-  // Cast to access DOM properties - assumes DOM-like structure
   return (container as unknown as { firstChild: T | null }).firstChild;
 }
 
@@ -130,7 +217,6 @@ function getFirstElement<T extends object>(container: T): T | null {
  * Get next sibling element using DOM properties
  */
 function getNextElement<T extends object>(element: T): T | null {
-  // Cast to access DOM properties - assumes DOM-like structure
   return (element as unknown as { nextSibling: T | null }).nextSibling;
 }
 

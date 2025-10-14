@@ -17,7 +17,7 @@ import type {
   LifecycleCallback,
 } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-import { reconcileList } from './helpers/reconcile';
+import { createReconciler } from './helpers/reconcile';
 import type { ViewContext } from './context';
 import { createScope } from './helpers/scope';
 
@@ -60,6 +60,9 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
   opts: ElMapOpts<TElement, TText>
 ): ElMapFactory<TElement> {
   const { ctx, signal, effect, renderer } = opts;
+
+  // PATTERN: Create reconciler once with closure-captured buffers (like signals)
+  const reconcileList = createReconciler();
 
   function elMap<T>(
     itemsSignal: Reactive<T[]>,

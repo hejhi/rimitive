@@ -1,9 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { reconcileList, replaceChildren } from './reconcile';
+import { createReconciler, replaceChildren } from './reconcile';
 import { createViewContext } from '../context';
 import { createScope, trackInSpecificScope } from './scope';
 import type { Renderer } from '../renderer';
 import { createMockDisposable, MockElement } from '../test-utils';
+
+// Create reconciler once for all tests
+const reconcileList = createReconciler();
 
 // Mock renderer for reconcile tests
 function createMockRenderer(): Renderer<MockElement, MockElement> {
