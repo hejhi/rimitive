@@ -126,7 +126,7 @@ describe('el primitive', () => {
 
       const ref = el(['div']);
 
-      // User cares: correct tag used
+      // correct tag used
       expect(ref.element.tag).toBe('div');
     });
 
@@ -138,7 +138,7 @@ describe('el primitive', () => {
 
       const ref = el(['div', { className: 'foo', id: 'bar' }]);
 
-      // User cares: props applied
+      // props applied
       expect(ref.element.props.className).toBe('foo');
       expect(ref.element.props.id).toBe('bar');
     });
@@ -152,7 +152,7 @@ describe('el primitive', () => {
       const handleClick = vi.fn();
       const ref = el(['button', { onClick: handleClick }]);
 
-      // User cares: event handler attached
+      // event handler attached
       expect(ref.element.listeners.get('click')).toBe(handleClick);
     });
   });
@@ -166,7 +166,7 @@ describe('el primitive', () => {
 
       const ref = el(['div', 'hello', 42]);
 
-      // User cares: text children rendered
+      // text children rendered
       expect(ref.element.children).toHaveLength(2);
       expect(ref.element.children[0]).toMatchObject({ type: 'text', content: 'hello' });
       expect(ref.element.children[1]).toMatchObject({ type: 'text', content: '42' });
@@ -180,7 +180,7 @@ describe('el primitive', () => {
 
       const ref = el(['div', null, undefined, false]);
 
-      // User cares: falsy children ignored
+      // falsy children ignored
       expect(ref.element.children).toHaveLength(0);
     });
 
@@ -194,7 +194,7 @@ describe('el primitive', () => {
       // User passes .element property to nest elements
       const parent = el(['div', child.element]);
 
-      // User cares: child element is nested
+      // child element is nested
       expect(parent.element.children).toHaveLength(1);
       expect(parent.element.children[0]).toBe(child.element);
     });
@@ -213,13 +213,13 @@ describe('el primitive', () => {
       const ref = el(['div', signal]);
       const textNode = ref.element.children[0] as MockText;
 
-      // User cares: initial value rendered
+      // initial value rendered
       expect(textNode.content).toBe('initial');
 
       // Update signal
       setSignal('updated');
 
-      // User cares: text updates reactively
+      // text updates reactively
       expect(textNode.content).toBe('updated');
     });
   });
@@ -238,13 +238,13 @@ describe('el primitive', () => {
 
       const ref = el(['div', { className: signal }]);
 
-      // User cares: initial value set
+      // initial value set
       expect(ref.element.props.className).toBe('foo');
 
       // Update signal
       setSignal('bar');
 
-      // User cares: prop updates reactively
+      // prop updates reactively
       expect(ref.element.props.className).toBe('bar');
     });
 
@@ -266,7 +266,7 @@ describe('el primitive', () => {
 
       const ref = el(['div', { prop1: signal1, prop2: signal2 }]);
 
-      // User cares: both initial values set
+      // both initial values set
       expect(ref.element.props.prop1).toBe('value1');
       expect(ref.element.props.prop2).toBe('value2');
 
@@ -281,29 +281,10 @@ describe('el primitive', () => {
   });
 
   describe('lifecycle and cleanup', () => {
-    it('tracks effects in scope', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
-      const effect = (fn: () => void) => {
-        fn();
-        return () => {};
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
-
-      const [signal] = createSignal('value');
-      const ref = el(['div', { prop: signal }]);
-
-      // Simulate connection to trigger lifecycle
-      ref(() => {});
-
-      // User cares: effect was tracked (cleanup function exists)
-      expect(ctx.elementScopes.has(ref.element)).toBe(true);
-    });
-
     it('cleans up on disconnect', () => {
       const ctx = createViewContext();
       const { renderer, connect, disconnect } = createMockRenderer();
-      const [signal, , subscribers] = createSignal('initial');
+      const [signal, setSignal, subscribers] = createSignal('initial');
       const effect = (fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -317,14 +298,17 @@ describe('el primitive', () => {
       ref(() => {});
       connect(ref.element);
 
-      // Verify effect is active
-      expect(subscribers.size).toBeGreaterThan(0);
+      // Verify reactivity works before disconnect
+      expect(ref.element.props.prop).toBe('initial');
 
       // Disconnect
       disconnect(ref.element);
 
-      // User cares: scope disposed, effects cleaned up
-      expect(ctx.elementScopes.has(ref.element)).toBe(false);
+      // Update signal after disconnect
+      setSignal('updated');
+
+      // prop doesn't update after cleanup (effect was disposed)
+      expect(ref.element.props.prop).toBe('initial');
     });
 
     it('calls lifecycle cleanup function', () => {
@@ -343,7 +327,7 @@ describe('el primitive', () => {
       // Disconnect
       disconnect(ref.element);
 
-      // User cares: lifecycle cleanup was called
+      // lifecycle cleanup was called
       expect(cleanup).toHaveBeenCalled();
     });
   });
@@ -364,7 +348,7 @@ describe('el primitive', () => {
       // User passes .element to nest elements
       const parent = el(['div', { className: 'parent' }, 'Static ', child.element, ' text']);
 
-      // User cares: structure is correct
+      // structure is correct
       expect(parent.element.tag).toBe('div');
       expect(parent.element.props.className).toBe('parent');
       expect(parent.element.children).toHaveLength(3);
@@ -372,7 +356,7 @@ describe('el primitive', () => {
       // Update signal
       setSignal('changed');
 
-      // User cares: nested reactivity works
+      // nested reactivity works
       const childTextNode = (parent.element.children[1] as MockElement).children[0] as MockText;
       expect(childTextNode.content).toBe('changed');
     });
@@ -390,7 +374,7 @@ describe('el primitive', () => {
 
       const ref = el(['div', 'Count: ', count]);
 
-      // User cares: both rendered
+      // both rendered
       expect(ref.element.children).toHaveLength(2);
       expect((ref.element.children[0] as MockText).content).toBe('Count: ');
       expect((ref.element.children[1] as MockText).content).toBe('0');
@@ -398,7 +382,7 @@ describe('el primitive', () => {
       // Increment
       setCount(1);
 
-      // User cares: only reactive part updates
+      // only reactive part updates
       expect((ref.element.children[0] as MockText).content).toBe('Count: ');
       expect((ref.element.children[1] as MockText).content).toBe('1');
     });

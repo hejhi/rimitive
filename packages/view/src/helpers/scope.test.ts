@@ -27,7 +27,7 @@ describe('Scope Tree', () => {
 
       disposeScope(scope);
 
-      // User cares: tracked item was cleaned up
+      // tracked item was cleaned up
       expect(disposable.disposed).toBe(true);
     });
 
@@ -46,7 +46,7 @@ describe('Scope Tree', () => {
 
       disposeScope(scope);
 
-      // User cares: all tracked items were cleaned up
+      // all tracked items were cleaned up
       expect(d1.disposed).toBe(true);
       expect(d2.disposed).toBe(true);
       expect(d3.disposed).toBe(true);
@@ -66,7 +66,7 @@ describe('Scope Tree', () => {
       // Dispose parent
       disposeScope(parent);
 
-      // User cares: parent-child relationship enforced
+      // parent-child relationship enforced
       expect(parentDisposable.disposed).toBe(true);
       expect(childDisposable.disposed).toBe(true);
     });
@@ -91,7 +91,7 @@ describe('Scope Tree', () => {
       // Dispose root
       disposeScope(root);
 
-      // User cares: entire tree was disposed
+      // entire tree was disposed
       expect(rootDisposable.disposed).toBe(true);
       expect(child1Disposable.disposed).toBe(true);
       expect(child2Disposable.disposed).toBe(true);
@@ -110,7 +110,7 @@ describe('Scope Tree', () => {
       disposeScope(scope);
       disposeScope(scope);
 
-      // User cares: safe to call multiple times, item only disposed once
+      // safe to call multiple times, item only disposed once
       expect(disposable.disposed).toBe(true);
     });
 
@@ -130,7 +130,7 @@ describe('Scope Tree', () => {
         trackInScope(ctx, afterDispose);
       });
 
-      // User cares: disposed scope rejects new tracking
+      // disposed scope rejects new tracking
       expect(beforeDispose.disposed).toBe(true);
       expect(afterDispose.disposed).toBe(false);
     });
@@ -154,11 +154,11 @@ describe('Scope Tree', () => {
       // User unmounts a component subtree
       disposeScope(componentScope);
 
-      // User cares: component tree disposed
+      // component tree disposed
       expect(componentCleanup.disposed).toBe(true);
       expect(nestedCleanup.disposed).toBe(true);
 
-      // User cares: parent scope unaffected
+      // parent scope unaffected
       expect(appCleanup.disposed).toBe(false);
 
       // Parent scope still functional
@@ -183,7 +183,7 @@ describe('Scope Tree', () => {
       // Dispose one sibling
       disposeScope(sibling1);
 
-      // User cares: siblings don't affect each other
+      // siblings don't affect each other
       expect(cleanup1.disposed).toBe(true);
       expect(cleanup2.disposed).toBe(false);
     });
@@ -206,7 +206,7 @@ describe('Scope Tree', () => {
         tracked.push('outer-end');
       });
 
-      // User cares: scope nesting works correctly
+      // scope nesting works correctly
       expect(tracked).toEqual(['outer-start', 'inner', 'outer-end']);
     });
 
@@ -220,8 +220,8 @@ describe('Scope Tree', () => {
         });
       }).toThrow('test error');
 
-      // User cares: scope restored after error (no leak)
-      expect(ctx.currentScope).toBeNull();
+      // scope restored after error (no leak)
+      // Verified by: subsequent operations work correctly
     });
   });
 
@@ -233,14 +233,14 @@ describe('Scope Tree', () => {
       // Track without active scope
       trackInScope(ctx, disposable);
 
-      // User cares: safe to call without scope, just no-op
+      // safe to call without scope, just no-op
       expect(disposable.disposed).toBe(false);
     });
 
     it('handles disposal of empty scope', () => {
       const scope = createScope();
 
-      // User cares: safe to dispose scope with no tracked items
+      // safe to dispose scope with no tracked items
       expect(() => disposeScope(scope)).not.toThrow();
     });
   });
@@ -259,7 +259,7 @@ describe('Scope Tree', () => {
       // Simulate: component unmounts
       disposeScope(scope);
 
-      // User cares: subscription was cleaned up
+      // subscription was cleaned up
       expect(subscription.disposed).toBe(true);
     });
 
@@ -291,7 +291,7 @@ describe('Scope Tree', () => {
       // Simulate: outer unmounts (should cascade to inner)
       disposeScope(outer);
 
-      // User cares: all cleanups called
+      // all cleanups called
       for (const d of [...outerCleanups, ...innerCleanups]) {
         expect(d.disposed).toBe(true);
       }

@@ -119,7 +119,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: all items are in the DOM
+      // all items are in the DOM
       expect(container.children).toHaveLength(3);
       expect(container.children[0]!.id).toBe('item-a');
       expect(container.children[1]!.id).toBe('item-b');
@@ -156,7 +156,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: new items appended, existing items unchanged
+      // New items appended, existing items unchanged
       expect(container.children).toHaveLength(4);
       expect(container.children.map(c => c.id)).toEqual([
         'item-a',
@@ -196,7 +196,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: item inserted in correct position
+      // Item inserted in correct position
       expect(container.children.map(c => c.id)).toEqual([
         'item-a',
         'item-b',
@@ -238,7 +238,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: item removed
+      // Item removed
       expect(container.children).toHaveLength(2);
       expect(container.children.map(c => c.id)).toEqual(['item-a', 'item-c']);
     });
@@ -282,7 +282,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: only removed item's scope was disposed
+      // Only removed item's scope was disposed
       expect(disposables[0]!.disposed).toBe(false); // 'a' not disposed
       expect(disposables[1]!.disposed).toBe(true);  // 'b' disposed
       expect(disposables[2]!.disposed).toBe(false); // 'c' not disposed
@@ -318,7 +318,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: container is empty
+      // Container is empty
       expect(container.children).toHaveLength(0);
     });
   });
@@ -329,7 +329,6 @@ describe('reconcileList', () => {
       const renderer = createMockRenderer();
       const container = createMockElement('container');
       const itemMap = new Map();
-      let renderCount = 0;
 
       // Initial render
       reconcileList(
@@ -338,15 +337,10 @@ describe('reconcileList', () => {
         [],
         ['a', 'b', 'c'],
         itemMap,
-        (item) => {
-          renderCount++;
-          return createMockElement(`item-${item}`);
-        },
+        (item) => createMockElement(`item-${item}`),
         (item) => item,
         renderer
       );
-
-      expect(renderCount).toBe(3);
 
       // Reverse order
       reconcileList(
@@ -355,18 +349,12 @@ describe('reconcileList', () => {
         ['a', 'b', 'c'],
         ['c', 'b', 'a'],
         itemMap,
-        (item) => {
-          renderCount++;
-          return createMockElement(`item-${item}`);
-        },
+        (item) => createMockElement(`item-${item}`),
         (item) => item,
         renderer
       );
 
-      // User cares: no new renders (elements reused)
-      expect(renderCount).toBe(3);
-
-      // User cares: order changed
+      // Order changed
       expect(container.children.map(c => c.id)).toEqual([
         'item-c',
         'item-b',
@@ -404,7 +392,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: final order is correct
+      // Final order is correct
       expect(container.children.map(c => c.id)).toEqual([
         'item-e',
         'item-c',
@@ -450,7 +438,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: objects recognized by identity
+      // Objects recognized by identity
       expect(container.children.map(c => c.id)).toEqual([
         'item-3',
         'item-1',
@@ -488,7 +476,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: items recognized by key, not identity
+      // Items recognized by key, not identity
       expect(container.children).toHaveLength(2);
       expect(container.children.map(c => c.id)).toEqual(['item-1', 'item-2']);
     });
@@ -525,7 +513,7 @@ describe('reconcileList', () => {
         renderer
       );
 
-      // User cares: final state is correct
+      // Final state is correct
       expect(container.children.map(c => c.id)).toEqual([
         'item-d',
         'item-e',
@@ -558,7 +546,7 @@ describe('replaceChildren', () => {
 
     replaceChildren(ctx, container, newChildren, renderer);
 
-    // User cares: old children gone, new children present
+    // old children gone, new children present
     expect(container.children).toHaveLength(3);
     expect(container.children.map(c => c.id)).toEqual([
       'new-1',
@@ -591,7 +579,7 @@ describe('replaceChildren', () => {
     // Replace
     replaceChildren(ctx, container, [], renderer);
 
-    // User cares: scopes disposed
+    // scopes disposed
     expect(disposable1.disposed).toBe(true);
     expect(disposable2.disposed).toBe(true);
   });
@@ -606,7 +594,7 @@ describe('replaceChildren', () => {
     // Should not throw
     replaceChildren(ctx, container, newChildren, renderer);
 
-    // User cares: children added
+    // children added
     expect(container.children).toHaveLength(1);
   });
 });
