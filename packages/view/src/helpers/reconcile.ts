@@ -137,10 +137,23 @@ export function createReconciler() {
       }
     }
 
-    // Phase 3: Find LIS (inline O(n log n))
+    // Phase 3: Remove stale items (before positioning)
+    for (const [key, node] of itemMap) {
+      if (!newKeys[key]) {
+        const scope = ctx.elementScopes.get(node.element);
+        if (scope) {
+          disposeScope(scope);
+          ctx.elementScopes.delete(node.element);
+        }
+        renderer.removeChild(container, node.element);
+        itemMap.delete(key);
+      }
+    }
+
+    // Phase 4: Find LIS (inline O(n log n))
     const lisLen = findLIS(oldIndicesBuf, count);
 
-    // Phase 4: Position items
+    // Phase 5: Position items
     let lisIdx = 0;
     let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     let prevElement: TElement | null = null;
@@ -189,19 +202,6 @@ export function createReconciler() {
       }
 
       prevElement = element;
-    }
-
-    // Phase 5: Remove items not in newKeys (no rebuild!)
-    for (const [key, node] of itemMap) {
-      if (!newKeys[key]) {
-        const scope = ctx.elementScopes.get(node.element);
-        if (scope) {
-          disposeScope(scope);
-          ctx.elementScopes.delete(node.element);
-        }
-        renderer.removeChild(container, node.element);
-        itemMap.delete(key);
-      }
     }
   }
 
