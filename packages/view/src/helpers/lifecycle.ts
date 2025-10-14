@@ -7,18 +7,24 @@
  * Pattern:
  * - Factory function creates the observer with closure-captured state
  * - Returns interface with observe methods
- * - Lazy initialization of observer
+ * - Observer starts watching document on first tracked element
  * - Automatic cleanup when no elements are tracked
+ *
+ * Bookkeeping (2 structures):
+ * - WeakMap: tracks callbacks and cleanup per element
+ * - Set: enables iteration during mutation events
  */
 
 export type DOMElement = HTMLElement;
 
 /**
- * Lifecycle tracking callbacks
+ * Lifecycle tracking per element
+ * ALGORITHMIC: Single structure to reduce bookkeeping
  */
-interface LifecycleTracking {
+interface ElementTracking {
   onConnected?: (element: DOMElement) => void | (() => void);
   onDisconnected?: (element: DOMElement) => void;
+  cleanup?: () => void; // Cleanup function returned by onConnected
 }
 
 /**
@@ -42,93 +48,79 @@ export interface LifecycleObserver {
  * PATTERN: Closure-captured state like signals/graph-edges.ts
  */
 export function createLifecycleObserver(): LifecycleObserver {
-  // Closure-captured state
-  const lifecycleTracking = new WeakMap<DOMElement, LifecycleTracking>();
+  // Closure-captured state - minimal bookkeeping
+  const tracking = new WeakMap<DOMElement, ElementTracking>();
   const trackedElements = new Set<DOMElement>();
-  const disconnectionCleanupMap = new WeakMap<DOMElement, () => void>();
-  let sharedObserver: MutationObserver | null = null;
 
   /**
-   * Initialize the shared MutationObserver (lazy)
+   * Shared MutationObserver - created immediately
+   * ALGORITHMIC: Observer created eagerly, starts observing on first tracked element
    */
-  const ensureSharedObserver = (): void => {
-    if (sharedObserver) return;
+  const sharedObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      // Handle added nodes (connections)
+      if (mutation.addedNodes.length > 0) {
+        const addedNodes = Array.from(mutation.addedNodes);
+        for (const node of addedNodes) {
+          if (!(node instanceof Element)) continue;
 
-    sharedObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        // Handle added nodes (connections)
-        if (mutation.addedNodes.length > 0) {
-          const addedNodes = Array.from(mutation.addedNodes);
-          for (const node of addedNodes) {
-            if (!(node instanceof Element)) continue;
+          // Check each tracked element to see if it was affected
+          for (const element of trackedElements) {
+            const elementTracking = tracking.get(element);
+            if (!elementTracking?.onConnected) continue;
 
-            // Check each tracked element to see if it was affected
-            for (const element of trackedElements) {
-              const tracking = lifecycleTracking.get(element);
-              if (!tracking?.onConnected) continue;
-
-              // Check if element was added or is a descendant of added node
-              if (node === element || node.contains(element)) {
-                if (element.isConnected) {
-                  const cleanup = tracking.onConnected(element);
-                  if (cleanup) {
-                    disconnectionCleanupMap.set(element, cleanup);
-                  }
-                  // Clear the onConnected callback after firing once
-                  tracking.onConnected = undefined;
+            // Check if element was added or is a descendant of added node
+            if (node === element || node.contains(element)) {
+              if (element.isConnected) {
+                const cleanup = elementTracking.onConnected(element);
+                if (cleanup) {
+                  elementTracking.cleanup = cleanup;
                 }
-              }
-            }
-          }
-        }
-
-        // Handle removed nodes (disconnections)
-        if (mutation.removedNodes.length > 0) {
-          const removedNodes = Array.from(mutation.removedNodes);
-          for (const node of removedNodes) {
-            if (!(node instanceof Element)) continue;
-
-            // Check each tracked element to see if it was affected
-            for (const element of trackedElements) {
-              const tracking = lifecycleTracking.get(element);
-              if (!tracking?.onDisconnected) continue;
-
-              // Check if element was removed or is a descendant of removed node
-              if (node === element || node.contains(element)) {
-                if (!element.isConnected) {
-                  // Call any cleanup function stored during connection
-                  const cleanup = disconnectionCleanupMap.get(element);
-                  if (cleanup) {
-                    cleanup();
-                    disconnectionCleanupMap.delete(element);
-                  }
-
-                  // Call disconnection callback
-                  tracking.onDisconnected(element);
-
-                  // Clean up tracking
-                  lifecycleTracking.delete(element);
-                  trackedElements.delete(element);
-                }
+                // Clear the onConnected callback after firing once
+                elementTracking.onConnected = undefined;
               }
             }
           }
         }
       }
 
-      // Disconnect observer if no elements are being tracked
-      if (trackedElements.size === 0 && sharedObserver) {
-        sharedObserver.disconnect();
-        sharedObserver = null;
-      }
-    });
+      // Handle removed nodes (disconnections)
+      if (mutation.removedNodes.length > 0) {
+        const removedNodes = Array.from(mutation.removedNodes);
+        for (const node of removedNodes) {
+          if (!(node instanceof Element)) continue;
 
-    // Observe the entire document once
-    sharedObserver.observe(document.documentElement || document.body, {
-      childList: true,
-      subtree: true,
-    });
-  };
+          // Check each tracked element to see if it was affected
+          for (const element of trackedElements) {
+            const elementTracking = tracking.get(element);
+            if (!elementTracking?.onDisconnected) continue;
+
+            // Check if element was removed or is a descendant of removed node
+            if (node === element || node.contains(element)) {
+              if (!element.isConnected) {
+                // Call any cleanup function stored during connection
+                if (elementTracking.cleanup) {
+                  elementTracking.cleanup();
+                }
+
+                // Call disconnection callback
+                elementTracking.onDisconnected(element);
+
+                // Clean up tracking
+                tracking.delete(element);
+                trackedElements.delete(element);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Auto-disconnect observer when no elements tracked (memory optimization)
+    if (trackedElements.size === 0) {
+      sharedObserver.disconnect();
+    }
+  });
 
   /**
    * Observe when an element is connected to the DOM
@@ -145,28 +137,36 @@ export function createLifecycleObserver(): LifecycleObserver {
     if (element.isConnected) {
       const cleanup = onConnected(element);
       if (cleanup) {
-        disconnectionCleanupMap.set(element, cleanup);
+        const elementTracking = tracking.get(element) || {};
+        elementTracking.cleanup = cleanup;
+        tracking.set(element, elementTracking);
       }
       return () => {}; // No-op cleanup
     }
 
     // Add to shared tracking
-    const tracking = lifecycleTracking.get(element) || {};
-    tracking.onConnected = onConnected;
-    lifecycleTracking.set(element, tracking);
+    const elementTracking = tracking.get(element) || {};
+    elementTracking.onConnected = onConnected;
+    tracking.set(element, elementTracking);
     trackedElements.add(element);
 
-    ensureSharedObserver();
+    // Re-observe document if observer was disconnected
+    if (trackedElements.size === 1) {
+      sharedObserver.observe(document.documentElement || document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
 
     // Return cleanup function
     return () => {
-      const tracking = lifecycleTracking.get(element);
-      if (tracking && tracking.onConnected) {
-        tracking.onConnected = undefined;
+      const elementTracking = tracking.get(element);
+      if (elementTracking && elementTracking.onConnected) {
+        elementTracking.onConnected = undefined;
 
         // Remove from set if no callbacks remain
-        if (!tracking.onDisconnected) {
-          lifecycleTracking.delete(element);
+        if (!elementTracking.onDisconnected) {
+          tracking.delete(element);
           trackedElements.delete(element);
         }
       }
@@ -185,22 +185,28 @@ export function createLifecycleObserver(): LifecycleObserver {
     }
 
     // Add to shared tracking
-    const tracking = lifecycleTracking.get(element) || {};
-    tracking.onDisconnected = onDisconnected;
-    lifecycleTracking.set(element, tracking);
+    const elementTracking = tracking.get(element) || {};
+    elementTracking.onDisconnected = onDisconnected;
+    tracking.set(element, elementTracking);
     trackedElements.add(element);
 
-    ensureSharedObserver();
+    // Re-observe document if observer was disconnected
+    if (trackedElements.size === 1) {
+      sharedObserver.observe(document.documentElement || document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
 
     // Return cleanup function
     return () => {
-      const tracking = lifecycleTracking.get(element);
-      if (tracking && tracking.onDisconnected) {
-        tracking.onDisconnected = undefined;
+      const elementTracking = tracking.get(element);
+      if (elementTracking && elementTracking.onDisconnected) {
+        elementTracking.onDisconnected = undefined;
 
         // Remove from set if no callbacks remain
-        if (!tracking.onConnected) {
-          lifecycleTracking.delete(element);
+        if (!elementTracking.onConnected) {
+          tracking.delete(element);
           trackedElements.delete(element);
         }
       }
