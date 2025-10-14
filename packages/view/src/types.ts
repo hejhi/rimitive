@@ -45,24 +45,22 @@ export type ElementChild =
   | ReactiveElement
   | ElementRef
   | Reactive<string | number>
-  | ReactiveList<unknown>;
+  | DeferredListRef;
 
 /**
- * A reactive list returned by elMap()
+ * Deferred list ref - a callable that receives parent element
+ * Returned by elMap() and called by el() with parent element
  */
-export interface ReactiveList<T> {
-  __type: 'reactive-list';
-  signal: Reactive<T[]>;
-  render: (itemSignal: Reactive<T>) => HTMLElement;
-  keyFn?: (item: T) => unknown;
-  __container?: ReactiveElement;
+export interface DeferredListRef<TElement = ReactiveElement> {
+  (parent: TElement): void;
+  __type: 'deferred-list';
 }
 
 /**
- * Check if a value is a reactive list
+ * Check if a value is a deferred list ref
  */
-export function isReactiveList(value: unknown): value is ReactiveList<unknown> {
-  return typeof value === 'object' && value !== null && '__type' in value && (value as { __type: string }).__type === 'reactive-list';
+export function isDeferredListRef(value: unknown): value is DeferredListRef {
+  return typeof value === 'function' && '__type' in value && (value as { __type: string }).__type === 'deferred-list';
 }
 
 /**

@@ -28,7 +28,7 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(
+      const listRef = elMap(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -39,9 +39,13 @@ describe('elMap primitive', () => {
         (item) => item // Key by primitive value
       );
 
+      // Create parent and initialize list
+      const parent = renderer.createElement('ul');
+      listRef(parent);
+
       // User cares: all items displayed
-      expect(ref.element.children).toHaveLength(3);
-      const itemElements = ref.element.children as MockElement[];
+      expect(parent.children).toHaveLength(3);
+      const itemElements = parent.children as MockElement[];
       expect((itemElements[0]!.children[0] as MockText).content).toBe('a');
       expect((itemElements[1]!.children[0] as MockText).content).toBe('b');
       expect((itemElements[2]!.children[0] as MockText).content).toBe('c');
@@ -50,7 +54,7 @@ describe('elMap primitive', () => {
       setItems(['a', 'b', 'c', 'd', 'e']);
 
       // User cares: new items added
-      expect(ref.element.children).toHaveLength(5);
+      expect(parent.children).toHaveLength(5);
       expect((itemElements[3]!.children[0] as MockText).content).toBe('d');
       expect((itemElements[4]!.children[0] as MockText).content).toBe('e');
 
@@ -58,8 +62,8 @@ describe('elMap primitive', () => {
       setItems(['a', 'e']);
 
       // User cares: items removed
-      expect(ref.element.children).toHaveLength(2);
-      const updatedElements = ref.element.children as MockElement[];
+      expect(parent.children).toHaveLength(2);
+      const updatedElements = parent.children as MockElement[];
       expect((updatedElements[0]!.children[0] as MockText).content).toBe('a');
       expect((updatedElements[1]!.children[0] as MockText).content).toBe('e');
 
@@ -67,7 +71,7 @@ describe('elMap primitive', () => {
       setItems([]);
 
       // User cares: all items removed
-      expect(ref.element.children).toHaveLength(0);
+      expect(parent.children).toHaveLength(0);
     });
   });
 
@@ -88,7 +92,7 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(
+      const listRef = elMap(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -99,20 +103,24 @@ describe('elMap primitive', () => {
         (item) => item // Key by primitive value
       );
 
+      // Create parent and initialize list
+      const parent = renderer.createElement('ul');
+      listRef(parent);
+
       // Store reference to first element
-      const firstElement = ref.element.children[0];
+      const firstElement = parent.children[0];
 
       // Reverse order
       setItems(['c', 'b', 'a']);
 
       // User cares: order changed
-      const itemElements = ref.element.children as MockElement[];
+      const itemElements = parent.children as MockElement[];
       expect((itemElements[0]!.children[0] as MockText).content).toBe('c');
       expect((itemElements[1]!.children[0] as MockText).content).toBe('b');
       expect((itemElements[2]!.children[0] as MockText).content).toBe('a');
 
       // User cares: same element instances (not re-rendered)
-      expect(ref.element.children[2]).toBe(firstElement);
+      expect(parent.children[2]).toBe(firstElement);
     });
   });
 
@@ -138,7 +146,7 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(
+      const listRef = elMap(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -149,15 +157,19 @@ describe('elMap primitive', () => {
         (item) => item.id // Key by ID (not identity)
       );
 
+      // Create parent and initialize list
+      const parent = renderer.createElement('ul');
+      listRef(parent);
+
       // Store element reference
-      const aliceElement = ref.element.children[0];
+      const aliceElement = parent.children[0];
 
       // Reorder same objects
       setItems([objC, objA, objB]);
 
       // User cares: same objects recognized by identity
-      expect(ref.element.children[1]).toBe(aliceElement);
-      const itemElements = ref.element.children as MockElement[];
+      expect(parent.children[1]).toBe(aliceElement);
+      const itemElements = parent.children as MockElement[];
       expect((itemElements[0]!.children[0] as MockText).content).toBe('Charlie');
       expect((itemElements[1]!.children[0] as MockText).content).toBe('Alice');
       expect((itemElements[2]!.children[0] as MockText).content).toBe('Bob');
@@ -183,7 +195,7 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(
+      const listRef = elMap(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -194,8 +206,12 @@ describe('elMap primitive', () => {
         (item) => item.id // key by ID
       );
 
+      // Create parent and initialize list
+      const parent = renderer.createElement('ul');
+      listRef(parent);
+
       // Store element reference
-      const aliceElement = ref.element.children[0];
+      const aliceElement = parent.children[0];
 
       // Update with new objects but same IDs
       setItems([
@@ -205,8 +221,8 @@ describe('elMap primitive', () => {
 
       // User cares: items recognized by key, not identity
       // Same elements reused
-      expect(ref.element.children[0]).toBe(aliceElement);
-      expect(ref.element.children).toHaveLength(2);
+      expect(parent.children[0]).toBe(aliceElement);
+      expect(parent.children).toHaveLength(2);
     });
   });
 
@@ -227,7 +243,7 @@ describe('elMap primitive', () => {
       };
       const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const ref = elMap(
+      const listRef = elMap(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -238,21 +254,25 @@ describe('elMap primitive', () => {
         (item) => item // Key by primitive value
       );
 
+      // Create parent and initialize list
+      const parent = renderer.createElement('ul');
+      listRef(parent);
+
       // Store reference to 'd' element
-      const dElement = ref.element.children[3];
+      const dElement = parent.children[3];
 
       // Transform: d e c (removed: a, b; added: e; reordered: d, c)
       setItems(['d', 'e', 'c']);
 
       // User cares: final state correct
-      expect(ref.element.children).toHaveLength(3);
-      const itemElements = ref.element.children as MockElement[];
+      expect(parent.children).toHaveLength(3);
+      const itemElements = parent.children as MockElement[];
       expect((itemElements[0]!.children[0] as MockText).content).toBe('d');
       expect((itemElements[1]!.children[0] as MockText).content).toBe('e');
       expect((itemElements[2]!.children[0] as MockText).content).toBe('c');
 
       // User cares: existing elements reused
-      expect(ref.element.children[0]).toBe(dElement);
+      expect(parent.children[0]).toBe(dElement);
     });
   });
 });

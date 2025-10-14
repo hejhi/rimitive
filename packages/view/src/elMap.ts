@@ -14,12 +14,11 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type {
   Reactive,
   ElementRef,
-  LifecycleCallback,
+  DeferredListRef,
 } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { createReconciler } from './helpers/reconcile';
 import type { ViewContext } from './context';
-import { createScope } from './helpers/scope';
 
 /**
  * Options passed to elMap factory
@@ -40,7 +39,7 @@ export type ElMapFactory<TElement extends RendererElement = RendererElement> = L
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
     keyFn: (item: T) => string | number
-  ) => ElementRef<TElement>
+  ) => DeferredListRef<TElement>
 >;
 
 /**
@@ -68,83 +67,68 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
     keyFn: (item: T) => string | number
-  ): ElementRef<TElement> {
-    // Create a container element that will hold the list
-    // The renderer decides what container makes sense (e.g., div with display:contents for DOM)
-    const container = renderer.createContainer();
-
+  ): DeferredListRef<TElement> {
     // Track items by key
     const itemMap = new Map<string, ItemNode<T, TElement>>();
     let previousItems: T[] = [];
+    let dispose: (() => void) | undefined;
 
-    // Create an effect that reconciles the list when items change
-    // PATTERN: Effect automatically schedules via scheduler (like signals/effect.ts)
-    const dispose = effect(() => {
-      const currentItems = itemsSignal();
+    // Create the deferred list ref - a callable that receives parent element
+    const deferredRef = ((parent: TElement): void => {
+      // Create an effect that reconciles the list when items change
+      // PATTERN: Effect automatically schedules via scheduler (like signals/effect.ts)
+      dispose = effect(() => {
+        const currentItems = itemsSignal();
 
-      reconcileList<T, TElement, TText>(
-        ctx,
-        container,
-        previousItems,
-        currentItems,
-        itemMap,
-        (item: T) => {
-          // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
-          // This signal will be updated by reconcileList when item data changes
-          const itemSignal = signal(item);
+        reconcileList<T, TElement, TText>(
+          ctx,
+          parent,  // ← Use parent directly, no wrapper!
+          previousItems,
+          currentItems,
+          itemMap,
+          (item: T) => {
+            // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
+            // This signal will be updated by reconcileList when item data changes
+            const itemSignal = signal(item);
 
-          // Render the item using the provided render function
-          const elementRef = render(itemSignal);
+            // Render the item using the provided render function
+            const elementRef = render(itemSignal);
 
-          // Store item metadata including signal for updates
-          const key = String(keyFn(item));
-          itemMap.set(key, {
-            key,
-            element: elementRef.element,
-            itemData: item,
-            itemSignal
-          });
+            // Store item metadata including signal for updates
+            const key = String(keyFn(item));
+            itemMap.set(key, {
+              key,
+              element: elementRef.element,
+              itemData: item,
+              itemSignal
+            });
 
-          return elementRef.element;
-        },
-        keyFn,
-        renderer
-      );
+            return elementRef.element;
+          },
+          keyFn,
+          renderer
+        );
 
-      // Update previous items for next reconciliation
-      previousItems = currentItems;
-    });
+        // Update previous items for next reconciliation
+        previousItems = currentItems;
+      });
 
-    // Create container scope for the effect
-    // PATTERN: elMap has its own scope for the effect disposal
-    const containerScope = createScope();
-    containerScope.firstDisposable = {
-      disposable: { dispose },
-      next: undefined,
-    };
-    ctx.elementScopes.set(container, containerScope);
-
-    // Create the element ref - a callable function that holds the container
-    const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
-      // If already connected, call immediately
-      if (renderer.isConnected(container)) {
-        const cleanup = lifecycleCallback(container);
-        if (cleanup) {
-          // Track cleanup as disposable in container's scope
-          containerScope.firstDisposable = {
-            disposable: { dispose: cleanup },
-            next: containerScope.firstDisposable,
-          };
-        }
+      // Track dispose in parent's scope
+      // PATTERN: Parent owns the lifecycle
+      const parentScope = ctx.elementScopes.get(parent);
+      if (parentScope) {
+        const disposeNode = {
+          disposable: { dispose },
+          next: parentScope.firstDisposable,
+        };
+        parentScope.firstDisposable = disposeNode;
       }
+    }) as DeferredListRef<TElement>;
 
-      return container;
-    }) as ElementRef<TElement>;
+    // Mark as deferred list for type checking
+    deferredRef.__type = 'deferred-list';
 
-    // Attach container to ref so it can be extracted
-    ref.element = container;
-
-    return ref;
+    return deferredRef;
   }
 
   return {

@@ -6,7 +6,7 @@ import type {
   LifecycleCallback,
   ElementRef,
 } from './types';
-import { isReactive, isReactiveList, isElementRef } from './types';
+import { isReactive, isDeferredListRef, isElementRef } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -116,7 +116,7 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
   const children: ElementChild[] = [];
 
   for (const item of rest) {
-    if (isPlainObject(item) && !isReactive(item) && !isReactiveList(item)) {
+    if (isPlainObject(item) && !isReactive(item) && !isDeferredListRef(item)) {
       // It's props
       Object.assign(props, item);
     } else {
@@ -172,19 +172,15 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     return;
   }
 
-  // Element ref (from el() or elMap())
+  // Element ref (from el())
   if (isElementRef(child)) {
     renderer.appendChild(element, child.element);
     return;
   }
 
-  // Reactive list (elMap result)
-  if (isReactiveList(child)) {
-    // The reactive list contains a container element
-    // that will be managed by elMap's effect
-    if (child.__container) {
-      renderer.appendChild(element, child.__container);
-    }
+  // Deferred list ref (from elMap()) - call it with parent element
+  if (isDeferredListRef(child)) {
+    child(element); // ← Provide parent element, elMap renders directly into it
     return;
   }
 
