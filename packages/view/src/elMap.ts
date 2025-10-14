@@ -16,7 +16,7 @@ import type {
   ElementRef,
   DeferredListRef,
 } from './types';
-import { DEFERRED_LIST_REF } from './types';
+import { DEFERRED_LIST_REF, type DeferredListNode } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { createReconciler } from './helpers/reconcile';
 import type { ViewContext } from './context';
@@ -76,9 +76,9 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
     // PATTERN: Create internal node (like signals creates SignalNode)
     // Element is null until parent is provided
-    const node = {
+    const node: DeferredListNode<TElement> = {
       refType: DEFERRED_LIST_REF,
-      element: null as TElement | null,
+      element: null,
     };
 
     // PATTERN: Create ref function that closes over node (like signal function)

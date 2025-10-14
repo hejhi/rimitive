@@ -13,12 +13,29 @@ export const REF_TYPE_MASK = ELEMENT_REF | DEFERRED_LIST_REF;
 
 /**
  * PATTERN: Internal node representation (like signals ProducerNode/ConsumerNode)
- * ViewNode is the internal object that holds element state and metadata.
+ * ViewNode is the base interface for internal objects that hold element state.
  * The public API returns functions that close over these nodes.
  */
 export interface ViewNode<TElement = ReactiveElement> {
   refType: number;      // Bit flag for type discrimination
   element: TElement;    // The underlying element
+}
+
+/**
+ * Element node - created by el()
+ * Holds a single element with its associated metadata
+ */
+export interface ElementNode<TElement = ReactiveElement> extends ViewNode<TElement> {
+  refType: typeof ELEMENT_REF; // Always ELEMENT_REF
+}
+
+/**
+ * Deferred list node - created by elMap()
+ * Element is null until parent is provided via the deferred callback
+ */
+export interface DeferredListNode<TElement = ReactiveElement> extends ViewNode<TElement | null> {
+  refType: typeof DEFERRED_LIST_REF; // Always DEFERRED_LIST_REF
+  element: TElement | null; // null until parent provided
 }
 
 /**
@@ -67,11 +84,11 @@ export type ElementChild =
 /**
  * Deferred list ref - a callable that receives parent element
  * Returned by elMap() and called by el() with parent element
- * PATTERN: Like ElementRef, closes over internal node
+ * PATTERN: Like ElementRef, closes over internal DeferredListNode
  */
 export interface DeferredListRef<TElement = ReactiveElement> {
   (parent: TElement): void;
-  node: ViewNode<TElement | null>; // null element until parent provided
+  node: DeferredListNode<TElement>; // null element until parent provided
 }
 
 /**
@@ -80,7 +97,7 @@ export interface DeferredListRef<TElement = ReactiveElement> {
 export function isDeferredListRef(value: unknown): value is DeferredListRef {
   return typeof value === 'function' &&
     'node' in value &&
-    ((value as { node: ViewNode }).node.refType & DEFERRED_LIST_REF) !== 0;
+    ((value as { node: DeferredListNode }).node.refType & DEFERRED_LIST_REF) !== 0;
 }
 
 /**
@@ -96,12 +113,12 @@ export interface Disposable {
 export type LifecycleCallback<TElement = object> = (element: TElement) => void | (() => void);
 
 /**
- * Element ref - a callable function that closes over an internal ViewNode
+ * Element ref - a callable function that closes over an internal ElementNode
  * PATTERN: Like signals, the function is the public API, node is internal
  */
 export interface ElementRef<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): TElement;
-  node: ViewNode<TElement>; // Internal node (exposed for helpers)
+  node: ElementNode<TElement>; // Internal node (exposed for helpers)
 }
 
 /**
@@ -110,7 +127,7 @@ export interface ElementRef<TElement = ReactiveElement> {
 export function isElementRef(value: unknown): value is ElementRef {
   return typeof value === 'function' &&
     'node' in value &&
-    ((value as { node: ViewNode }).node.refType & ELEMENT_REF) !== 0;
+    ((value as { node: ElementNode }).node.refType & ELEMENT_REF) !== 0;
 }
 
 /**

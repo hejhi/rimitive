@@ -6,7 +6,7 @@ import type {
   LifecycleCallback,
   ElementRef,
 } from './types';
-import { isReactive, isDeferredListRef, isElementRef, ELEMENT_REF } from './types';
+import { isReactive, isDeferredListRef, isElementRef, ELEMENT_REF, type ElementNode } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -46,7 +46,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     const element = renderer.createElement(tag);
 
     // PATTERN: Create internal node (like signals creates SignalNode)
-    const node = {
+    const node: ElementNode<TElement> = {
       refType: ELEMENT_REF,
       element,
     };
