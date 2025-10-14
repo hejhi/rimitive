@@ -17,8 +17,8 @@ describe('el primitive', () => {
       const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
 
       // User cares: content is rendered
-      expect(getTextContent(ref.element)).toBe('Hello World');
-      expect(ref.element.props.className).toBe('container');
+      expect(getTextContent(ref.node.element)).toBe('Hello World');
+      expect(ref.node.element.props.className).toBe('container');
     });
 
     it('handles event listeners via ref', () => {
@@ -40,10 +40,10 @@ describe('el primitive', () => {
       });
 
       // Simulate element being connected to DOM
-      connect(ref.element);
+      connect(ref.node.element);
 
       // Simulate user clicking the button
-      const clickHandler = ref.element.listeners.get('click');
+      const clickHandler = ref.node.element.listeners.get('click');
       expect(clickHandler).toBeDefined();
       clickHandler?.();
 
@@ -61,11 +61,11 @@ describe('el primitive', () => {
       const el = createElFactory({ ctx, effect, renderer }).method;
 
       const child = el(['span', 'nested content']);
-      const parent = el(['div', child.element]);
+      const parent = el(['div', child]); // Pass ref directly, not .element
 
       // User cares: nested content is accessible
-      expect(getTextContent(parent.element)).toBe('nested content');
-      expect(parent.element.children).toContain(child.element);
+      expect(getTextContent(parent.node.element)).toBe('nested content');
+      expect(parent.node.element.children).toContain(child.node.element);
     });
   });
 
@@ -84,11 +84,11 @@ describe('el primitive', () => {
       const ref = el(['div', text]);
 
       // User cares: initial content is displayed
-      expect(getTextContent(ref.element)).toBe('initial');
+      expect(getTextContent(ref.node.element)).toBe('initial');
 
       // User cares: content updates when signal changes
       setText('updated');
-      expect(getTextContent(ref.element)).toBe('updated');
+      expect(getTextContent(ref.node.element)).toBe('updated');
     });
 
     it('updates reactive props', () => {
@@ -105,11 +105,11 @@ describe('el primitive', () => {
       const ref = el(['div', { className }]);
 
       // User cares: initial prop value is set
-      expect(ref.element.props.className).toBe('foo');
+      expect(ref.node.element.props.className).toBe('foo');
 
       // User cares: prop updates when signal changes
       setClassName('bar');
-      expect(ref.element.props.className).toBe('bar');
+      expect(ref.node.element.props.className).toBe('bar');
     });
 
     it('handles mixed static and reactive content', () => {
@@ -126,11 +126,11 @@ describe('el primitive', () => {
       const ref = el(['div', 'Count: ', count]);
 
       // User cares: mixed content displays correctly
-      expect(getTextContent(ref.element)).toBe('Count: 0');
+      expect(getTextContent(ref.node.element)).toBe('Count: 0');
 
       // User cares: only reactive part updates
       setCount(5);
-      expect(getTextContent(ref.element)).toBe('Count: 5');
+      expect(getTextContent(ref.node.element)).toBe('Count: 5');
     });
   });
 
@@ -150,19 +150,19 @@ describe('el primitive', () => {
 
       // Set up lifecycle
       ref(() => {});
-      connect(ref.element);
+      connect(ref.node.element);
 
       // Verify reactivity works before disconnect
-      expect(ref.element.props.prop).toBe('initial');
+      expect(ref.node.element.props.prop).toBe('initial');
 
       // User disconnects element (e.g., removes from DOM)
-      disconnect(ref.element);
+      disconnect(ref.node.element);
 
       // Update signal after disconnect
       setText('updated');
 
       // User cares: prop doesn't update after cleanup (effect was disposed)
-      expect(ref.element.props.prop).toBe('initial');
+      expect(ref.node.element.props.prop).toBe('initial');
     });
 
     it('calls lifecycle cleanup function', () => {
@@ -179,10 +179,10 @@ describe('el primitive', () => {
 
       // Register lifecycle callback
       ref(() => cleanup);
-      connect(ref.element);
+      connect(ref.node.element);
 
       // User disconnects element
-      disconnect(ref.element);
+      disconnect(ref.node.element);
 
       // User cares: cleanup was called
       expect(cleanup).toHaveBeenCalled();

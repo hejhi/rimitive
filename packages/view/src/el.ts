@@ -45,6 +45,12 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     // Create the element using renderer
     const element = renderer.createElement(tag);
 
+    // PATTERN: Create internal node (like signals creates SignalNode)
+    const node = {
+      refType: ELEMENT_REF,
+      element,
+    };
+
     // Create a minimal disposal scope
     const scope = createScope();
 
@@ -62,11 +68,11 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     // Store scope in context WeakMap (only lookup needed)
     ctx.elementScopes.set(element, scope);
 
-    // Create the element ref - a callable function that holds the element
+    // PATTERN: Create ref function that closes over node (like signal function)
     const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
       // Observe element connection using renderer
       // PATTERN: Lifecycle cleanup tracked as disposable in element's scope
-      const lifecycleDispose = renderer.observeLifecycle(element, {
+      const lifecycleDispose = renderer.observeLifecycle(node.element, {
         onConnected: (el) => {
           const cleanup = lifecycleCallback(el);
           // Track cleanup as disposable in element's scope (not currentScope)
@@ -77,10 +83,10 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
         },
         onDisconnected: () => {
           // ALGORITHMIC: Look up scope and dispose via tree walk
-          const elementScope = ctx.elementScopes.get(element);
+          const elementScope = ctx.elementScopes.get(node.element);
           if (elementScope) {
             disposeScope(elementScope);
-            ctx.elementScopes.delete(element);
+            ctx.elementScopes.delete(node.element);
           }
         }
       });
@@ -88,12 +94,11 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       // Track lifecycle observer disposal in element's scope
       trackInSpecificScope(scope, { dispose: lifecycleDispose });
 
-      return element;
+      return node.element;
     }) as ElementRef<TElement>;
 
-    // Attach element to ref so it can be extracted
-    ref.element = element;
-    ref.refType = ELEMENT_REF;
+    // Attach node to ref (internal state, exposed for helpers)
+    ref.node = node;
 
     return ref;
   }
@@ -175,7 +180,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
 
   // Element ref (from el())
   if (isElementRef(child)) {
-    renderer.appendChild(element, child.element);
+    renderer.appendChild(element, child.node.element);
     return;
   }
 

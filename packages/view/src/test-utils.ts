@@ -182,13 +182,19 @@ export function createMockDisposable(): Disposable & { disposed: boolean } {
  * Creates an ElementRef from an element for testing
  */
 export function createElementRef<TElement>(element: TElement): ElementRef<TElement> {
+  // PATTERN: Create node first (like signals)
+  const node = {
+    refType: ELEMENT_REF,
+    element,
+  };
+
   const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
     // In tests, we don't need to actually call the lifecycle callback
     void lifecycleCallback;
-    return element;
+    return node.element;
   }) as ElementRef<TElement>;
-  ref.element = element;
-  ref.refType = ELEMENT_REF;
+
+  ref.node = node;
   return ref;
 }
 

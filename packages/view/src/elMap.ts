@@ -74,8 +74,18 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
     let previousItems: T[] = [];
     let dispose: (() => void) | undefined;
 
-    // Create the deferred list ref - a callable that receives parent element
+    // PATTERN: Create internal node (like signals creates SignalNode)
+    // Element is null until parent is provided
+    const node = {
+      refType: DEFERRED_LIST_REF,
+      element: null as TElement | null,
+    };
+
+    // PATTERN: Create ref function that closes over node (like signal function)
     const deferredRef = ((parent: TElement): void => {
+      // Store parent in node
+      node.element = parent;
+
       // Create an effect that reconciles the list when items change
       // PATTERN: Effect automatically schedules via scheduler (like signals/effect.ts)
       dispose = effect(() => {
@@ -99,12 +109,12 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
             const key = String(keyFn(item));
             itemMap.set(key, {
               key,
-              element: elementRef.element,
+              element: elementRef.node.element,
               itemData: item,
               itemSignal
             });
 
-            return elementRef.element;
+            return elementRef.node.element;
           },
           keyFn,
           renderer
@@ -126,8 +136,8 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       }
     }) as DeferredListRef<TElement>;
 
-    // Mark as deferred list using bit flag
-    deferredRef.refType = DEFERRED_LIST_REF;
+    // Attach node to ref (internal state, exposed for helpers)
+    deferredRef.node = node;
 
     return deferredRef;
   }
