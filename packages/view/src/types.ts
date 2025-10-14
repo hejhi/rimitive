@@ -3,7 +3,6 @@
  */
 
 import type { Readable } from '@lattice/signals/types';
-import type { Scope } from './helpers/scope';
 
 /**
  * A reactive value that can be read as a signal or computed
@@ -43,6 +42,7 @@ export type ElementChild =
   | null
   | undefined
   | HTMLElement
+  | ElementRef
   | Reactive<string | number>
   | ReactiveList<any>;
 
@@ -72,9 +72,28 @@ export interface Disposable {
 }
 
 /**
- * Extended element type with scope tracking
+ * Lifecycle callback for element connection/disconnection
+ */
+export type LifecycleCallback = (element: HTMLElement) => void | (() => void);
+
+/**
+ * Element ref - a callable function that holds the element
+ */
+export interface ElementRef {
+  (lifecycleCallback: LifecycleCallback): HTMLElement;
+  element: ReactiveElement;
+}
+
+/**
+ * Check if value is an element ref
+ */
+export function isElementRef(value: any): value is ElementRef {
+  return typeof value === 'function' && 'element' in value && value.element instanceof HTMLElement;
+}
+
+/**
+ * Extended element type (no internal properties - metadata stored in WeakMaps)
  */
 export interface ReactiveElement extends HTMLElement {
-  __scope?: Scope;
-  __disposeCallback?: () => void;
+  // Clean - no properties added to DOM nodes
 }

@@ -1,37 +1,21 @@
-/**
- * PRIMITIVE: Element Creation with Automatic Reactivity
- *
- * Creates real DOM elements with reactive bindings. When signals/computeds
- * are used in props or children, el() automatically creates effects to update
- * the DOM when those values change.
- *
- * ARCHITECTURE:
- * - Component functions run ONCE (not on every update)
- * - Reactive values auto-detected and wired via effects
- * - Each element gets disposal scope for memory safety
- * - Effects integrate with scheduler for automatic batching
- *
- * INTEGRATION WITH SIGNALS:
- * - Effects created via effect() are scheduled automatically
- * - Updates batch naturally through scheduler (see signals/scheduler.ts)
- * - No manual flush needed - scheduler handles it
- *
- * MEMORY MANAGEMENT:
- * - Element scope tracks all subscriptions (effects, computeds)
- * - Disposal on element removal prevents memory leaks
- * - Child scopes nested within parent scopes
- */
-
 import type { LatticeExtension } from '@lattice/lattice';
 import type {
   ElementSpec,
   ElementProps,
   ElementChild,
   ReactiveElement,
+  LifecycleCallback,
+  ElementRef,
 } from './types';
-import { isReactive, isReactiveList } from './types';
-import { createScope, runInScope, disposeScope } from './helpers/scope';
+import { isReactive, isReactiveList, isElementRef } from './types';
+import { createScope, runInScope, disposeScope, trackInScope } from './helpers/scope';
 import type { ViewContext } from './context';
+import {
+  elementScopes,
+  elementDisposeCallbacks,
+  elementLifecycleCallbacks,
+  elementCleanupCallbacks,
+} from './helpers/element-metadata';
 
 /**
  * Options passed to el factory
@@ -46,7 +30,7 @@ export type ElOpts = {
  */
 export type ElFactory = LatticeExtension<
   'el',
-  (spec: ElementSpec) => ReactiveElement
+  (spec: ElementSpec) => ElementRef
 >;
 
 /**
@@ -55,7 +39,7 @@ export type ElFactory = LatticeExtension<
 export function createElFactory(opts: ElOpts): ElFactory {
   const { ctx, effect } = opts;
 
-  function el(spec: ElementSpec): ReactiveElement {
+  function el(spec: ElementSpec): ElementRef {
     const [tag, ...rest] = spec;
 
     // Parse props and children from rest
@@ -70,19 +54,44 @@ export function createElFactory(opts: ElOpts): ElFactory {
     // Run all reactive setup within this scope
     runInScope(ctx, scope, () => {
       // Apply props
-      applyProps(element, props, effect);
+      applyProps(element, props, effect, ctx);
 
       // Handle children
       for (const child of children) {
-        handleChild(element, child, effect);
+        handleChild(element, child, effect, ctx);
       }
     });
 
-    // Attach scope to element for cleanup
-    element.__scope = scope;
-    element.__disposeCallback = () => disposeScope(scope);
+    // Store scope in WeakMap
+    elementScopes.set(element, scope);
 
-    return element;
+    // Store dispose callback
+    elementDisposeCallbacks.set(element, () => {
+      disposeScope(scope);
+
+      // Call cleanup callback if registered
+      const cleanup = elementCleanupCallbacks.get(element);
+      if (cleanup) {
+        cleanup();
+        elementCleanupCallbacks.delete(element);
+      }
+    });
+
+    // Create the element ref - a callable function that holds the element
+    const ref = ((lifecycleCallback: LifecycleCallback): HTMLElement => {
+      // Store lifecycle callback
+      elementLifecycleCallbacks.set(element, lifecycleCallback);
+
+      // Observe element connection to DOM
+      observeConnection(element, lifecycleCallback);
+
+      return element;
+    }) as ElementRef;
+
+    // Attach element to ref so it can be extracted
+    ref.element = element;
+
+    return ref;
   }
 
   return {
@@ -120,7 +129,8 @@ function parseSpec(rest: (ElementProps | ElementChild)[]): {
 function applyProps(
   element: HTMLElement,
   props: ElementProps,
-  effect: (fn: () => void | (() => void)) => () => void
+  effect: (fn: () => void | (() => void)) => () => void,
+  ctx: ViewContext
 ): void {
   for (const [key, value] of Object.entries(props)) {
     // Handle event listeners
@@ -132,9 +142,11 @@ function applyProps(
 
     // Handle reactive values
     if (isReactive(value)) {
-      effect(() => {
+      const dispose = effect(() => {
         Reflect.set(element, key, value());
       });
+      // Track effect for cleanup when element is removed
+      trackInScope(ctx, { dispose });
     } else {
       // Static value
       Reflect.set(element, key, value);
@@ -148,10 +160,17 @@ function applyProps(
 function handleChild(
   element: HTMLElement,
   child: ElementChild,
-  effect: (fn: () => void | (() => void)) => () => void
+  effect: (fn: () => void | (() => void)) => () => void,
+  ctx: ViewContext
 ): void {
   // Skip null/undefined/false
   if (child == null || child === false) {
+    return;
+  }
+
+  // Element ref (from el() or elMap())
+  if (isElementRef(child)) {
+    element.appendChild(child.element);
     return;
   }
 
@@ -168,15 +187,17 @@ function handleChild(
   // Reactive value (signal or computed)
   if (isReactive(child)) {
     const textNode = document.createTextNode('');
-    effect(() => {
+    const dispose = effect(() => {
       const value = child();
       textNode.textContent = String(value ?? '');
     });
+    // Track effect for cleanup when element is removed
+    trackInScope(ctx, { dispose });
     element.appendChild(textNode);
     return;
   }
 
-  // HTMLElement (from nested el())
+  // HTMLElement (direct DOM node)
   if (child && typeof child === 'object' && 'nodeType' in child && child.nodeType === 1) {
     element.appendChild(child as Node);
     return;
@@ -204,4 +225,80 @@ function isPlainObject(value: any): value is Record<string, any> {
 
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Observe when an element is connected to and disconnected from the DOM
+ */
+function observeConnection(
+  element: ReactiveElement,
+  lifecycleCallback: LifecycleCallback
+): void {
+  // If already connected, call immediately
+  if (element.isConnected) {
+    const cleanup = lifecycleCallback(element);
+    if (cleanup) {
+      elementCleanupCallbacks.set(element, cleanup);
+    }
+    return;
+  }
+
+  // Otherwise, wait for connection using MutationObserver
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      const addedNodes = Array.from(mutation.addedNodes);
+      for (const node of addedNodes) {
+        if (node === element || (node instanceof Element && node.contains(element))) {
+          // Element was connected
+          const cleanup = lifecycleCallback(element);
+          if (cleanup) {
+            elementCleanupCallbacks.set(element, cleanup);
+          }
+
+          // Now observe for disconnection
+          observeDisconnection(element);
+
+          // Stop observing for connection
+          observer.disconnect();
+          return;
+        }
+      }
+    }
+  });
+
+  // Observe the entire document for additions
+  observer.observe(document.documentElement || document.body, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+/**
+ * Observe when an element is disconnected from the DOM
+ */
+function observeDisconnection(element: ReactiveElement): void {
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      const removedNodes = Array.from(mutation.removedNodes);
+      for (const node of removedNodes) {
+        if (node === element || (node instanceof Element && node.contains(element))) {
+          // Element was disconnected - call dispose callback
+          const dispose = elementDisposeCallbacks.get(element);
+          if (dispose) {
+            dispose();
+          }
+
+          // Stop observing
+          observer.disconnect();
+          return;
+        }
+      }
+    }
+  });
+
+  // Observe the document for removals
+  observer.observe(document.documentElement || document.body, {
+    childList: true,
+    subtree: true,
+  });
 }

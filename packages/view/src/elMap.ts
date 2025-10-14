@@ -13,11 +13,17 @@
 import type { LatticeExtension } from '@lattice/lattice';
 import type {
   Reactive,
-  ReactiveList,
   ReactiveElement,
+  ElementRef,
+  LifecycleCallback,
 } from './types';
 import { reconcileList } from './helpers/reconcile';
 import type { ViewContext } from './context';
+import {
+  elementDisposeCallbacks,
+  elementLifecycleCallbacks,
+  elementCleanupCallbacks,
+} from './helpers/element-metadata';
 
 /**
  * Options passed to elMap factory
@@ -35,9 +41,9 @@ export type ElMapFactory = LatticeExtension<
   'elMap',
   <T>(
     itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ReactiveElement,
+    render: (itemSignal: Reactive<T>) => ElementRef,
     keyFn?: (item: T) => unknown
-  ) => ReactiveList<T>
+  ) => ElementRef
 >;
 
 /**
@@ -60,9 +66,9 @@ export function createElMapFactory(opts: ElMapOpts): ElMapFactory {
 
   function elMap<T>(
     itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ReactiveElement,
+    render: (itemSignal: Reactive<T>) => ElementRef,
     keyFn: (item: T) => unknown = (item) => item
-  ): ReactiveList<T> {
+  ): ElementRef {
     // Create a container element that will hold the list
     const container = document.createElement('div') as ReactiveElement;
     container.style.display = 'contents'; // Don't affect layout
@@ -92,18 +98,18 @@ export function createElMapFactory(opts: ElMapOpts): ElMapFactory {
           const itemSignal = signal(item) as Reactive<T> & ((value: T) => void);
 
           // Render the item using the provided render function
-          const element = render(itemSignal);
+          const elementRef = render(itemSignal);
 
           // Store item metadata including signal for updates
           const key = keyFn(item);
           itemMap.set(key, {
             key,
-            element,
+            element: elementRef.element,
             itemData: item,
             itemSignal
           });
 
-          return element;
+          return elementRef.element;
         },
         keyFn
       );
@@ -112,19 +118,39 @@ export function createElMapFactory(opts: ElMapOpts): ElMapFactory {
       previousItems = currentItems;
     });
 
-    // Attach dispose to container
-    container.__disposeCallback = dispose;
+    // Store dispose callback in WeakMap
+    elementDisposeCallbacks.set(container, () => {
+      // Dispose the main effect
+      dispose();
 
-    // Return the reactive list descriptor with container
-    const reactiveList: ReactiveList<T> & { __container?: ReactiveElement } = {
-      __type: 'reactive-list',
-      signal: itemsSignal,
-      render,
-      keyFn,
-      __container: container
-    };
+      // Call cleanup callback if registered
+      const cleanup = elementCleanupCallbacks.get(container);
+      if (cleanup) {
+        cleanup();
+        elementCleanupCallbacks.delete(container);
+      }
+    });
 
-    return reactiveList as ReactiveList<T>;
+    // Create the element ref - a callable function that holds the container
+    const ref = ((lifecycleCallback: LifecycleCallback): HTMLElement => {
+      // Store lifecycle callback
+      elementLifecycleCallbacks.set(container, lifecycleCallback);
+
+      // If already connected, call immediately
+      if (container.isConnected) {
+        const cleanup = lifecycleCallback(container);
+        if (cleanup) {
+          elementCleanupCallbacks.set(container, cleanup);
+        }
+      }
+
+      return container;
+    }) as ElementRef;
+
+    // Attach container to ref so it can be extracted
+    ref.element = container;
+
+    return ref;
   }
 
   return {

@@ -16,6 +16,7 @@
  */
 
 import type { ReactiveElement } from '../types';
+import { elementDisposeCallbacks } from './element-metadata';
 
 /**
  * Metadata for a list item
@@ -55,8 +56,9 @@ export function reconcileList<T>(
       const node = itemMap.get(key);
       if (node) {
         // Dispose the element's scope
-        if (node.element.__disposeCallback) {
-          node.element.__disposeCallback();
+        const dispose = elementDisposeCallbacks.get(node.element);
+        if (dispose) {
+          dispose();
         }
         // Remove from DOM
         if (node.element.parentNode === container) {
@@ -127,8 +129,9 @@ export function replaceChildren(
   // Clear existing children
   while (container.firstChild) {
     const child = container.firstChild as ReactiveElement;
-    if (child.__disposeCallback) {
-      child.__disposeCallback();
+    const dispose = elementDisposeCallbacks.get(child);
+    if (dispose) {
+      dispose();
     }
     container.removeChild(child);
   }
