@@ -1,171 +1,164 @@
 /**
- * PATTERN: List edge management (inspired by signals/helpers/graph-edges.ts)
+ * PATTERN: List node management (like DOM node manipulation)
  *
  * Manages the doubly-linked list of items in a reactive list.
- * Like signals' Dependency edges, ListItemEdge participates in TWO lists:
- * 1. Parent's children list (sibling navigation)
- * 2. Item's parent reference (hierarchy navigation)
+ * Like DOM nodes, ListItemNodes link directly to each other (no separate edge objects).
+ *
+ * DOM parallel:
+ * - appendChild ↔ appendChild
+ * - insertBefore ↔ insertBefore
+ * - removeChild ↔ removeChild
  */
 
-import type { DeferredListNode, ListItemNode, ListItemEdge } from '../types';
+import type { DeferredListNode, ListItemNode } from '../types';
 
 /**
- * Unlink an item edge from parent's children list
- * PATTERN: Like unlinkFromProducer in signals
+ * Unlink a node from parent's children list
+ * PATTERN: Like DOM removeChild internal logic
  */
 function unlinkFromParent<T, TElement>(
   parent: DeferredListNode<TElement>,
-  edge: ListItemEdge<T, TElement>
+  node: ListItemNode<T, TElement>
 ): void {
-  const { prevSibling, nextSibling } = edge;
+  const { previousSibling, nextSibling } = node;
 
   // Update next sibling's backward pointer
   if (nextSibling !== undefined) {
-    nextSibling.prevSibling = prevSibling;
+    nextSibling.previousSibling = previousSibling;
   } else {
     // This was the last child
-    parent.lastChild = prevSibling as ListItemEdge<unknown, TElement> | undefined;
+    parent.lastChild = previousSibling;
   }
 
   // Update prev sibling's forward pointer
-  if (prevSibling !== undefined) {
-    prevSibling.nextSibling = nextSibling;
+  if (previousSibling !== undefined) {
+    previousSibling.nextSibling = nextSibling;
   } else {
     // This was the first child
-    parent.firstChild = nextSibling as ListItemEdge<unknown, TElement> | undefined;
+    parent.firstChild = nextSibling;
   }
 }
 
 /**
- * Append an item edge to parent's children list
- * PATTERN: Like appending to producer.subscribers in signals
+ * Append a node to parent's children list
+ * PATTERN: Like DOM appendChild
  */
 export function appendChild<T, TElement>(
   parent: DeferredListNode<TElement>,
-  item: ListItemNode<T, TElement>
-): ListItemEdge<T, TElement> {
+  node: ListItemNode<T, TElement>
+): void {
   // Get current tail for O(1) append
-  const prevSibling = parent.lastChild as ListItemEdge<T, TElement> | undefined;
+  const prevSibling = parent.lastChild as ListItemNode<T, TElement> | undefined;
 
-  // Create new edge
-  const edge: ListItemEdge<T, TElement> = {
-    parent,
-    item,
-    prevSibling,
-    nextSibling: undefined,
-  };
+  // Wire node into list
+  node.parentList = parent;
+  node.previousSibling = prevSibling;
+  node.nextSibling = undefined;
 
-  // Wire into parent's children list
+  // Update parent's tail pointer
   if (prevSibling !== undefined) {
-    prevSibling.nextSibling = edge;
+    prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
   } else {
     // This is the first child
-    parent.firstChild = edge as ListItemEdge<unknown, TElement>;
+    parent.firstChild = node as ListItemNode<unknown, TElement>;
   }
 
-  parent.lastChild = edge as ListItemEdge<unknown, TElement>;
-
-  // Wire into item's parent reference
-  item.parentEdge = edge;
-
-  return edge;
+  parent.lastChild = node as ListItemNode<unknown, TElement>;
 }
 
 /**
- * Insert an item edge before a reference sibling
- * PATTERN: Like inserting into dependency list in signals
+ * Insert a node before a reference sibling
+ * PATTERN: Like DOM insertBefore
  */
 export function insertBefore<T, TElement>(
   parent: DeferredListNode<TElement>,
-  item: ListItemNode<T, TElement>,
-  refSibling: ListItemEdge<T, TElement> | undefined
-): ListItemEdge<T, TElement> {
+  node: ListItemNode<T, TElement>,
+  refSibling: ListItemNode<T, TElement> | undefined
+): void {
   if (refSibling === undefined) {
     // Insert at end
-    return appendChild(parent, item);
+    appendChild(parent, node);
+    return;
   }
 
-  const prevSibling = refSibling.prevSibling;
+  const prevSibling = refSibling.previousSibling as ListItemNode<T, TElement> | undefined;
 
-  // Create new edge
-  const edge: ListItemEdge<T, TElement> = {
-    parent,
-    item,
-    prevSibling,
-    nextSibling: refSibling,
-  };
+  // Wire node into list
+  node.parentList = parent;
+  node.previousSibling = prevSibling;
+  node.nextSibling = refSibling as ListItemNode<unknown, TElement>;
 
-  // Wire into parent's children list
-  refSibling.prevSibling = edge;
+  // Update sibling pointers
+  refSibling.previousSibling = node as ListItemNode<unknown, TElement>;
 
   if (prevSibling !== undefined) {
-    prevSibling.nextSibling = edge;
+    prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
   } else {
     // Inserting at head
-    parent.firstChild = edge as ListItemEdge<unknown, TElement>;
+    parent.firstChild = node as ListItemNode<unknown, TElement>;
   }
-
-  // Wire into item's parent reference
-  item.parentEdge = edge;
-
-  return edge;
 }
 
 /**
- * Remove an item from the list
- * PATTERN: Like detaching dependency in signals
+ * Remove a node from the list
+ * PATTERN: Like DOM removeChild
  */
 export function removeChild<T, TElement>(
-  edge: ListItemEdge<T, TElement>
+  node: ListItemNode<T, TElement>
 ): void {
-  const { parent, item } = edge;
+  const parent = node.parentList;
+  if (!parent) return;
 
   // Unlink from parent's children list
-  unlinkFromParent(parent, edge);
+  unlinkFromParent(parent, node);
 
-  // Clear item's parent reference
-  item.parentEdge = undefined;
+  // Clear node's parent reference
+  node.parentList = undefined;
+  node.previousSibling = undefined;
+  node.nextSibling = undefined;
 }
 
 /**
- * Move an item to a new position (before refSibling)
+ * Move a node to a new position (before refSibling)
  * Optimized operation: remove + insert
+ * PATTERN: Like moving DOM nodes
  */
 export function moveChild<T, TElement>(
-  edge: ListItemEdge<T, TElement>,
-  refSibling: ListItemEdge<T, TElement> | undefined
+  node: ListItemNode<T, TElement>,
+  refSibling: ListItemNode<T, TElement> | undefined
 ): void {
-  const { parent } = edge;
+  const parent = node.parentList;
+  if (!parent) return;
 
   // Remove from current position
-  unlinkFromParent(parent, edge);
+  unlinkFromParent(parent, node);
 
   // Insert at new position
   if (refSibling === undefined) {
     // Move to end
-    const prevSibling = parent.lastChild as ListItemEdge<T, TElement> | undefined;
-    edge.prevSibling = prevSibling;
-    edge.nextSibling = undefined;
+    const prevSibling = parent.lastChild as ListItemNode<T, TElement> | undefined;
+    node.previousSibling = prevSibling;
+    node.nextSibling = undefined;
 
     if (prevSibling !== undefined) {
-      prevSibling.nextSibling = edge;
+      prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
     } else {
-      parent.firstChild = edge as ListItemEdge<unknown, TElement>;
+      parent.firstChild = node as ListItemNode<unknown, TElement>;
     }
 
-    parent.lastChild = edge as ListItemEdge<unknown, TElement>;
+    parent.lastChild = node as ListItemNode<unknown, TElement>;
   } else {
     // Move before refSibling
-    const prevSibling = refSibling.prevSibling;
-    edge.prevSibling = prevSibling;
-    edge.nextSibling = refSibling;
+    const prevSibling = refSibling.previousSibling as ListItemNode<T, TElement> | undefined;
+    node.previousSibling = prevSibling;
+    node.nextSibling = refSibling as ListItemNode<unknown, TElement>;
 
-    refSibling.prevSibling = edge;
+    refSibling.previousSibling = node as ListItemNode<unknown, TElement>;
 
     if (prevSibling !== undefined) {
-      prevSibling.nextSibling = edge;
+      prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
     } else {
-      parent.firstChild = edge as ListItemEdge<unknown, TElement>;
+      parent.firstChild = node as ListItemNode<unknown, TElement>;
     }
   }
 }

@@ -80,7 +80,6 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      previousItems: [],
     };
 
     const items = ['a', 'b', 'c'];
@@ -117,7 +116,6 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      previousItems: [],
     };
 
     const createElement = (item: string) => {
@@ -178,7 +176,6 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      previousItems: [],
     };
 
     const disposables: ReturnType<typeof createMockDisposable>[] = [];
@@ -230,7 +227,6 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      previousItems: [],
     };
 
     const createElement = (item: string) => {
@@ -268,7 +264,6 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      previousItems: [],
     };
 
     const objA = { id: 1, name: 'Alice' };
@@ -318,7 +313,6 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      previousItems: [],
     };
 
     const createElement = (item: { id: number; name: string }) => {
@@ -374,7 +368,6 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      previousItems: [],
     };
 
     const createElement = (item: string) => {

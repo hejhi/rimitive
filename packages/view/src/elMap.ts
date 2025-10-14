@@ -65,14 +65,13 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
     // PATTERN: Create internal node (like signals creates SignalNode)
     // Element is null until parent is provided
-    // Store itemsByKey and previousItems on node (like signals stores deps on node)
+    // Store itemsByKey on node (like signals stores deps on node)
     const node: DeferredListNode<TElement> = {
       refType: DEFERRED_LIST_REF,
       element: null,
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, TElement>>(),
-      previousItems: [],
     };
 
     // PATTERN: Create ref function that closes over node (like signal function)
@@ -85,10 +84,19 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       dispose = effect(() => {
         const currentItems = itemsSignal();
 
+        // PATTERN: Snapshot linked list to get previous items (single source of truth)
+        // This eliminates redundant state and prevents sync bugs
+        const oldItems: T[] = [];
+        let current = node.firstChild;
+        while (current) {
+          oldItems.push((current as ListItemNode<T, TElement>).itemData);
+          current = current.nextSibling;
+        }
+
         reconcileList<T, TElement, TText>(
           ctx,
           node,  // ← Pass DeferredListNode directly
-          node.previousItems as T[],
+          oldItems,
           currentItems,
           (item: T) => {
             // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
@@ -106,7 +114,9 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
               element: elementRef.node.element,
               itemData: item,
               itemSignal,
-              parentEdge: undefined,
+              parentList: undefined,
+              previousSibling: undefined,
+              nextSibling: undefined,
             });
 
             return elementRef.node.element;
@@ -114,9 +124,6 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
           keyFn,
           renderer
         );
-
-        // Update previous items for next reconciliation
-        node.previousItems = currentItems;
       });
 
       // Track dispose in parent's scope

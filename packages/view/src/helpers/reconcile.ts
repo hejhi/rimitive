@@ -1,16 +1,16 @@
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { ViewContext } from '../context';
-import type { DeferredListNode, ListItemNode, ListItemEdge } from '../types';
+import type { DeferredListNode, ListItemNode } from '../types';
 import { disposeScope } from './scope';
 import { appendChild, removeChild, moveChild } from './list-edges';
 
 /**
- * ALGORITHM: LIS-based List Reconciliation with Edge-based Structure
+ * ALGORITHM: LIS-based List Reconciliation with DOM-like Structure
  *
- * PATTERN: Like signals graph edges, uses doubly-linked list for relationships
- * - Items connected via ListItemEdge (like Dependency in signals)
- * - O(1) sibling traversal via edge.nextSibling
- * - O(1) parent access via item.parentEdge.parent
+ * PATTERN: Like DOM nodes, uses intrusive doubly-linked list for relationships
+ * - Nodes link directly to each other (no separate edge objects)
+ * - O(1) sibling traversal via node.nextSibling
+ * - O(1) parent access via node.parentList
  * - Map for O(1) key-based lookup during reconciliation
  *
  * Optimizations:
@@ -143,9 +143,9 @@ export function createReconciler() {
           ctx.elementScopes.delete(node.element);
         }
 
-        // Remove via edge
-        if (node.parentEdge) {
-          removeChild(node.parentEdge);
+        // Remove from list structure
+        if (node.parentList) {
+          removeChild(node);
         }
 
         // Remove from renderer
@@ -160,7 +160,7 @@ export function createReconciler() {
     // Phase 5: Position items
     let lisIdx = 0;
     let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-    let prevEdge: ListItemEdge<T, TElement> | undefined = undefined;
+    let prevNode: ListItemNode<T, TElement> | undefined = undefined;
 
     for (let i = 0; i < newItems.length; i++) {
       const item = newItems[i];
@@ -180,12 +180,14 @@ export function createReconciler() {
             key,
             element,
             itemData: item,
-            parentEdge: undefined,
+            parentList: undefined,
+            previousSibling: undefined,
+            nextSibling: undefined,
           } as ListItemNode<T, TElement>;
           itemsByKey.set(key, node);
         }
 
-        // Append to parent (creates edge)
+        // Append to parent
         appendChild(parent, node);
 
         // Also append to DOM
@@ -199,7 +201,6 @@ export function createReconciler() {
       }
 
       const element = node.element;
-      const edge = node.parentEdge;
 
       // Check if in LIS
       const inLIS = i === nextLISPos;
@@ -209,24 +210,24 @@ export function createReconciler() {
       }
 
       // Move if not in LIS
-      if (!inLIS && edge) {
+      if (!inLIS && node.parentList) {
         // Calculate reference sibling (next position in list)
-        const refSibling: ListItemEdge<T, TElement> | undefined = prevEdge ? prevEdge.nextSibling : parent.firstChild as ListItemEdge<T, TElement> | undefined;
+        const refSibling: ListItemNode<T, TElement> | undefined = prevNode ? prevNode.nextSibling as ListItemNode<T, TElement> | undefined : parent.firstChild as ListItemNode<T, TElement> | undefined;
 
         // Only move if not already in correct position
-        if (edge !== refSibling) {
-          // Move in edge structure
-          moveChild(edge, refSibling);
+        if (node !== refSibling) {
+          // Move in list structure
+          moveChild(node, refSibling);
 
           // Move in DOM
-          const nextElement = refSibling ? refSibling.item.element : null;
+          const nextElement = refSibling ? refSibling.element : null;
           if (element !== nextElement) {
             renderer.insertBefore(container, element, nextElement);
           }
         }
       }
 
-      prevEdge = edge;
+      prevNode = node;
     }
   }
 

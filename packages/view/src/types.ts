@@ -31,56 +31,44 @@ export interface ElementNode<TElement = ReactiveElement> extends ViewNode<TEleme
 
 /**
  * List item node - represents an item in a reactive list
- * PATTERN: Like ProducerNode/ConsumerNode in signals - participates in graph
+ * PATTERN: Like DOM Node - forms intrusive doubly-linked list via sibling pointers
+ *
+ * DOM parallel:
+ * - parentNode ↔ parentList
+ * - previousSibling ↔ previousSibling
+ * - nextSibling ↔ nextSibling
  */
 export interface ListItemNode<T = unknown, TElement = ReactiveElement> extends ViewNode<TElement> {
   key: string;              // Unique key for reconciliation
   itemData: T;              // The actual data
   itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
 
-  // Edge to parent list (like consumer.dependencies in signals)
-  parentEdge: ListItemEdge<T, TElement> | undefined;
-}
-
-/**
- * List item edge - connects list container to item
- * PATTERN: Like Dependency in signals - exists in TWO doubly-linked lists simultaneously:
- * 1. Parent's children list (sibling navigation: prevSibling/nextSibling)
- * 2. Item's parent edge (hierarchy navigation: parent/item)
- *
- * This dual-list structure enables:
- * - O(1) sibling traversal (like iterating producer's subscribers)
- * - O(1) parent/child navigation (like accessing dependency's producer/consumer)
- * - Efficient insertion/removal from both lists
- */
-export interface ListItemEdge<T = unknown, TElement = ReactiveElement> {
-  parent: DeferredListNode<TElement>;  // The parent list container
-  item: ListItemNode<T, TElement>;     // The child item node
-
-  // Sibling list navigation (parent's children)
-  // PATTERN: Like Dependency's prevConsumer/nextConsumer
-  prevSibling: ListItemEdge<T, TElement> | undefined;
-  nextSibling: ListItemEdge<T, TElement> | undefined;
+  // DOM-like navigation (intrusive linked list - nodes link directly to each other)
+  parentList: DeferredListNode<TElement> | undefined;     // Like DOM parentNode
+  previousSibling: ListItemNode<unknown, TElement> | undefined;  // Like DOM previousSibling
+  nextSibling: ListItemNode<unknown, TElement> | undefined;      // Like DOM nextSibling
 }
 
 /**
  * Deferred list node - created by elMap()
- * PATTERN: Like ProducerNode, maintains head/tail of children list
+ * PATTERN: Like DOM ParentNode - maintains head/tail of children
+ *
+ * DOM parallel:
+ * - firstChild ↔ firstChild
+ * - lastChild ↔ lastChild
+ * - childNodes ↔ itemsByKey (Map is for efficient key lookup, DOM uses array)
  */
 export interface DeferredListNode<TElement = ReactiveElement> extends ViewNode<TElement | null> {
   refType: typeof DEFERRED_LIST_REF; // Always DEFERRED_LIST_REF
   element: TElement | null; // null until parent provided
 
-  // Intrusive doubly-linked list of children (like producer.subscribers)
-  firstChild: ListItemEdge<unknown, TElement> | undefined;  // Head of children list
-  lastChild: ListItemEdge<unknown, TElement> | undefined;   // Tail for O(1) append
+  // DOM-like children list (intrusive doubly-linked list)
+  firstChild: ListItemNode<unknown, TElement> | undefined;  // Like DOM firstChild
+  lastChild: ListItemNode<unknown, TElement> | undefined;   // Like DOM lastChild
 
-  // Key-based lookup for O(1) reconciliation (signals doesn't need this because
-  // it uses identity-based lookup via trackDependency walking the list)
+  // Key-based lookup for O(1) reconciliation during diffing
+  // (DOM uses array-based childNodes, we use Map for key lookup)
   itemsByKey: Map<string, ListItemNode<unknown, TElement>>;
-
-  // Track previous items for reconciliation
-  previousItems: unknown[];
 }
 
 /**
