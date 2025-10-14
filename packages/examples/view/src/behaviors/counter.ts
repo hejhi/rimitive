@@ -7,7 +7,7 @@
  */
 
 import type { LatticeViewAPI } from '../types';
-import type { Reactive } from '@lattice/view';
+import type { Reactive } from '@lattice/view/types';
 
 export interface CounterAPI {
   count: Reactive<number>;

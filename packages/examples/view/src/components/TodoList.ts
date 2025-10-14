@@ -6,7 +6,7 @@
  */
 
 import type { LatticeViewAPI } from '../types';
-import type { ElementRef, Reactive } from '@lattice/view';
+import type { ElementRef, Reactive } from '@lattice/view/types';
 import { createTodoList } from '../behaviors/todo-list';
 import type { Todo } from '../behaviors/todo-list';
 

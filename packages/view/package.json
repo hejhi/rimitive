@@ -6,13 +6,13 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
     "./renderers/dom": {
       "import": "./dist/renderers/dom.js",
       "types": "./dist/renderers/dom.d.ts"
+    },
+    "./renderer": {
+      "import": "./dist/renderer.js",
+      "types": "./dist/renderer.d.ts"
     },
     "./el": {
       "import": "./dist/el.js",
@@ -62,6 +62,7 @@
     "esbuild": "^0.25.8",
     "happy-dom": "^15.11.7",
     "rimraf": "^6.0.1",
+    "terser": "^5.36.0",
     "typescript": "^5.8.3",
     "vite": "^7.1.1",
     "vite-plugin-dts": "^4.5.4",

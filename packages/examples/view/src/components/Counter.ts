@@ -6,7 +6,7 @@
  */
 
 import type { LatticeViewAPI } from '../types';
-import type { ElementRef } from '@lattice/view';
+import type { ElementRef } from '@lattice/view/types';
 import { createCounter } from '../behaviors/counter';
 
 export function Counter(api: LatticeViewAPI, initialCount = 0): ElementRef {

@@ -2,7 +2,7 @@
  * Type definitions for the Lattice API with Signals + View
  */
 
-import type { ElementRef, ElementSpec, Reactive } from '@lattice/view';
+import type { ElementRef, ElementSpec, Reactive } from '@lattice/view/types';
 
 /**
  * Combined Lattice API with signals and view primitives
