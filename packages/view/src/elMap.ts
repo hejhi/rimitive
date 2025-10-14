@@ -15,7 +15,7 @@ import type {
   Reactive,
   ElementRef,
   DeferredListRef,
-  ItemNode,
+  ListItemNode,
 } from './types';
 import { DEFERRED_LIST_REF, type DeferredListNode } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -65,11 +65,13 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
     // PATTERN: Create internal node (like signals creates SignalNode)
     // Element is null until parent is provided
-    // Store itemMap and previousItems on node (like signals stores deps on node)
+    // Store itemsByKey and previousItems on node (like signals stores deps on node)
     const node: DeferredListNode<TElement> = {
       refType: DEFERRED_LIST_REF,
       element: null,
-      itemMap: new Map<string, ItemNode<T, TElement>>(),
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, TElement>>(),
       previousItems: [],
     };
 
@@ -85,10 +87,9 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
         reconcileList<T, TElement, TText>(
           ctx,
-          parent,  // ← Use parent directly, no wrapper!
+          node,  // ← Pass DeferredListNode directly
           node.previousItems as T[],
           currentItems,
-          node.itemMap as Map<string, ItemNode<T, TElement>>,
           (item: T) => {
             // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
             // This signal will be updated by reconcileList when item data changes
@@ -99,11 +100,13 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
             // Store item metadata including signal for updates
             const key = String(keyFn(item));
-            (node.itemMap as Map<string, ItemNode<T, TElement>>).set(key, {
+            (node.itemsByKey as Map<string, ListItemNode<T, TElement>>).set(key, {
+              refType: 0,
               key,
               element: elementRef.node.element,
               itemData: item,
-              itemSignal
+              itemSignal,
+              parentEdge: undefined,
             });
 
             return elementRef.node.element;

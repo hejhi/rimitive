@@ -1,11 +1,19 @@
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { ViewContext } from '../context';
+import type { DeferredListNode, ListItemNode, ListItemEdge } from '../types';
 import { disposeScope } from './scope';
+import { appendChild, removeChild, moveChild } from './list-edges';
 
 /**
- * ALGORITHM: LIS-based List Reconciliation with Minimal Allocations
+ * ALGORITHM: LIS-based List Reconciliation with Edge-based Structure
  *
- * Optimizations inspired by signals patterns:
+ * PATTERN: Like signals graph edges, uses doubly-linked list for relationships
+ * - Items connected via ListItemEdge (like Dependency in signals)
+ * - O(1) sibling traversal via edge.nextSibling
+ * - O(1) parent access via item.parentEdge.parent
+ * - Map for O(1) key-based lookup during reconciliation
+ *
+ * Optimizations:
  * - Closure-captured reusable buffers (grow once per size increase)
  * - O(n log n) LIS using patience sorting + binary search
  * - Track newKeys during compaction (no map rebuild)
@@ -13,16 +21,6 @@ import { disposeScope } from './scope';
  *
  * Complexity: O(n log n) time, O(n) space (reused buffers)
  */
-
-/**
- * Metadata for a list item
- */
-interface ItemNode<T, TElement = object> {
-  key: string;
-  element: TElement;
-  itemData: T;
-  itemSignal?: ((value: T) => void) & (() => T);
-}
 
 /**
  * Create reconciler with closure-captured buffers
@@ -96,16 +94,20 @@ export function createReconciler() {
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
-    container: TElement,
+    parent: DeferredListNode<TElement>,
     oldItems: T[],
     newItems: T[],
-    itemMap: Map<string, ItemNode<T, TElement>>,
     renderItem: (item: T) => TElement,
     keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
     // Early bailout - same reference
     if (oldItems === newItems) return;
+
+    const container = parent.element;
+    if (!container) return; // No parent yet
+
+    const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
     // Phase 1: Build oldPos map (plain object for speed)
     const oldPos = Object.create(null) as Record<string, number>;
@@ -133,15 +135,22 @@ export function createReconciler() {
     }
 
     // Phase 3: Remove items not in newKeys
-    for (const [key, node] of itemMap) {
+    for (const [key, node] of itemsByKey) {
       if (!newKeys[key]) {
         const scope = ctx.elementScopes.get(node.element);
         if (scope) {
           disposeScope(scope);
           ctx.elementScopes.delete(node.element);
         }
+
+        // Remove via edge
+        if (node.parentEdge) {
+          removeChild(node.parentEdge);
+        }
+
+        // Remove from renderer
         renderer.removeChild(container, node.element);
-        itemMap.delete(key);
+        itemsByKey.delete(key);
       }
     }
 
@@ -151,23 +160,36 @@ export function createReconciler() {
     // Phase 5: Position items
     let lisIdx = 0;
     let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-    let prevElement: TElement | null = null;
+    let prevEdge: ListItemEdge<T, TElement> | undefined = undefined;
 
     for (let i = 0; i < newItems.length; i++) {
       const item = newItems[i];
       if (item === undefined) continue;
 
       const key = keyFn(item) as string;
-      let node = itemMap.get(key);
+      let node = itemsByKey.get(key);
 
       // Create or reuse node
       if (!node) {
         const element = renderItem(item);
-        node = itemMap.get(key);
+        node = itemsByKey.get(key);
         if (!node) {
-          node = { key, element, itemData: item };
-          itemMap.set(key, node);
+          // Create new ListItemNode
+          node = {
+            refType: 0, // Will be set by ViewNode if needed
+            key,
+            element,
+            itemData: item,
+            parentEdge: undefined,
+          } as ListItemNode<T, TElement>;
+          itemsByKey.set(key, node);
         }
+
+        // Append to parent (creates edge)
+        appendChild(parent, node);
+
+        // Also append to DOM
+        renderer.appendChild(container, element);
       } else {
         // Update data
         if (node.itemData !== item) {
@@ -177,6 +199,7 @@ export function createReconciler() {
       }
 
       const element = node.element;
+      const edge = node.parentEdge;
 
       // Check if in LIS
       const inLIS = i === nextLISPos;
@@ -186,17 +209,24 @@ export function createReconciler() {
       }
 
       // Move if not in LIS
-      if (!inLIS) {
-        const next: TElement | null = prevElement
-          ? getNextElement(prevElement)
-          : getFirstElement(container);
+      if (!inLIS && edge) {
+        // Calculate reference sibling (next position in list)
+        const refSibling: ListItemEdge<T, TElement> | undefined = prevEdge ? prevEdge.nextSibling : parent.firstChild as ListItemEdge<T, TElement> | undefined;
 
-        if (element !== next) {
-          renderer.insertBefore(container, element, next);
+        // Only move if not already in correct position
+        if (edge !== refSibling) {
+          // Move in edge structure
+          moveChild(edge, refSibling);
+
+          // Move in DOM
+          const nextElement = refSibling ? refSibling.item.element : null;
+          if (element !== nextElement) {
+            renderer.insertBefore(container, element, nextElement);
+          }
         }
       }
 
-      prevElement = element;
+      prevEdge = edge;
     }
   }
 
@@ -208,13 +238,6 @@ export function createReconciler() {
  */
 function getFirstElement<T extends object>(container: T): T | null {
   return (container as unknown as { firstChild: T | null }).firstChild;
-}
-
-/**
- * Get next sibling element using DOM properties
- */
-function getNextElement<T extends object>(element: T): T | null {
-  return (element as unknown as { nextSibling: T | null }).nextSibling;
 }
 
 /**

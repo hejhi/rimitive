@@ -4,6 +4,7 @@ import { createViewContext } from '../context';
 import { createScope, trackInSpecificScope } from './scope';
 import type { Renderer } from '../renderer';
 import { createMockDisposable, MockElement } from '../test-utils';
+import { DEFERRED_LIST_REF, type DeferredListNode, type ListItemNode } from '../types';
 
 // Create reconciler once for all tests
 const reconcileList = createReconciler();
@@ -72,16 +73,23 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      previousItems: [],
+    };
 
     const items = ['a', 'b', 'c'];
 
     reconcileList(
       ctx,
-      container,
+      parent,
       [], // old items
       items, // new items
-      itemMap,
       (item) => {
         const el = new MockElement('li');
         el.id = `item-${item}`;
@@ -102,7 +110,15 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      previousItems: [],
+    };
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
@@ -111,17 +127,16 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileList(ctx, container, [], ['a', 'b'], itemMap, createElement, (item) => item, renderer);
+    reconcileList(ctx, parent, [], ['a', 'b'], createElement, (item) => item, renderer);
 
     expect(container.children).toHaveLength(2);
 
     // Add more items
     reconcileList(
       ctx,
-      container,
+      parent,
       ['a', 'b'],
       ['a', 'b', 'c', 'd'],
-      itemMap,
       createElement,
       (item) => item,
       renderer
@@ -139,10 +154,9 @@ describe('reconcileList', () => {
     // Remove middle item
     reconcileList(
       ctx,
-      container,
+      parent,
       ['a', 'b', 'c', 'd'],
       ['a', 'c', 'd'],
-      itemMap,
       createElement,
       (item) => item,
       renderer
@@ -157,16 +171,24 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      previousItems: [],
+    };
+
     const disposables: ReturnType<typeof createMockDisposable>[] = [];
 
     // Initial render with scopes
     reconcileList(
       ctx,
-      container,
+      parent,
       [],
       ['a', 'b', 'c'],
-      itemMap,
       (item) => {
         const element = new MockElement(`item-${item}`);
         const scope = createScope();
@@ -183,10 +205,9 @@ describe('reconcileList', () => {
     // Remove item 'b'
     reconcileList(
       ctx,
-      container,
+      parent,
       ['a', 'b', 'c'],
       ['a', 'c'],
-      itemMap,
       (item) => new MockElement(`item-${item}`),
       (item) => item,
       renderer
@@ -202,7 +223,15 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      previousItems: [],
+    };
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
@@ -211,15 +240,14 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileList(ctx, container, [], ['a', 'b', 'c'], itemMap, createElement, (item) => item, renderer);
+    reconcileList(ctx, parent, [], ['a', 'b', 'c'], createElement, (item) => item, renderer);
 
     // Reverse order
     reconcileList(
       ctx,
-      container,
+      parent,
       ['a', 'b', 'c'],
       ['c', 'b', 'a'],
-      itemMap,
       createElement,
       (item) => item,
       renderer
@@ -233,8 +261,15 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    type ItemType = { id: number; name: string };
-    const itemMap = new Map<string, { key: string; element: MockElement; itemData: ItemType }>();
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      previousItems: [],
+    };
 
     const objA = { id: 1, name: 'Alice' };
     const objB = { id: 2, name: 'Bob' };
@@ -249,10 +284,9 @@ describe('reconcileList', () => {
     // Initial render
     reconcileList(
       ctx,
-      container,
+      parent,
       [],
       [objA, objB, objC],
-      itemMap,
       createElement,
       (item) => item.id, // Key by ID
       renderer
@@ -261,10 +295,9 @@ describe('reconcileList', () => {
     // Reorder same objects
     reconcileList(
       ctx,
-      container,
+      parent,
       [objA, objB, objC],
       [objC, objA, objB],
-      itemMap,
       createElement,
       (item) => item.id, // Key by ID
       renderer
@@ -278,8 +311,15 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    type ItemType = { id: number; name: string };
-    const itemMap = new Map<string, { key: string; element: MockElement; itemData: ItemType }>();
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      previousItems: [],
+    };
 
     const createElement = (item: { id: number; name: string }) => {
       const el = new MockElement('li');
@@ -290,13 +330,12 @@ describe('reconcileList', () => {
     // Initial render with objects having IDs
     reconcileList(
       ctx,
-      container,
+      parent,
       [],
       [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
       ],
-      itemMap,
       createElement,
       (item) => item.id, // key by ID
       renderer
@@ -305,7 +344,7 @@ describe('reconcileList', () => {
     // Update with new objects but same IDs
     reconcileList(
       ctx,
-      container,
+      parent,
       [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
@@ -314,7 +353,6 @@ describe('reconcileList', () => {
         { id: 1, name: 'Alicia' }, // different object!
         { id: 2, name: 'Robert' },
       ],
-      itemMap,
       createElement,
       (item) => item.id,
       renderer
@@ -329,7 +367,15 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      previousItems: [],
+    };
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
@@ -338,15 +384,14 @@ describe('reconcileList', () => {
     };
 
     // Initial: a b c d
-    reconcileList(ctx, container, [], ['a', 'b', 'c', 'd'], itemMap, createElement, (item) => item, renderer);
+    reconcileList(ctx, parent, [], ['a', 'b', 'c', 'd'], createElement, (item) => item, renderer);
 
     // Transform: d e c (removed: a, b; added: e; reordered: d, c)
     reconcileList(
       ctx,
-      container,
+      parent,
       ['a', 'b', 'c', 'd'],
       ['d', 'e', 'c'],
-      itemMap,
       createElement,
       (item) => item,
       renderer
