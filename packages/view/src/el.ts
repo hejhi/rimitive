@@ -7,7 +7,7 @@ import type {
   ElementRef,
 } from './types';
 import { isReactive, isReactiveList, isElementRef } from './types';
-import { createScope, runInScope, disposeScope, trackInScope } from './helpers/scope';
+import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 
@@ -59,33 +59,34 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       }
     });
 
-    // Store scope in context WeakMap
+    // Store scope in context WeakMap (only lookup needed)
     ctx.elementScopes.set(element, scope);
-
-    // Store dispose callback in context WeakMap
-    ctx.elementDisposeCallbacks.set(element, () => {
-      disposeScope(scope);
-
-      // Call cleanup callback if registered
-      const cleanup = ctx.elementCleanupCallbacks.get(element);
-      if (cleanup) {
-        cleanup();
-        ctx.elementCleanupCallbacks.delete(element);
-      }
-    });
 
     // Create the element ref - a callable function that holds the element
     const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
       // Observe element connection using renderer
-      renderer.observeLifecycle(element, {
+      // PATTERN: Lifecycle cleanup tracked as disposable in element's scope
+      const lifecycleDispose = renderer.observeLifecycle(element, {
         onConnected: (el) => {
-          return lifecycleCallback(el);
+          const cleanup = lifecycleCallback(el);
+          // Track cleanup as disposable in element's scope (not currentScope)
+          if (cleanup) {
+            trackInSpecificScope(scope, { dispose: cleanup });
+          }
+          return cleanup;
         },
         onDisconnected: () => {
-          const dispose = ctx.elementDisposeCallbacks.get(element);
-          if (dispose) dispose();
+          // ALGORITHMIC: Look up scope and dispose via tree walk
+          const elementScope = ctx.elementScopes.get(element);
+          if (elementScope) {
+            disposeScope(elementScope);
+            ctx.elementScopes.delete(element);
+          }
         }
       });
+
+      // Track lifecycle observer disposal in element's scope
+      trackInSpecificScope(scope, { dispose: lifecycleDispose });
 
       return element;
     }) as ElementRef<TElement>;

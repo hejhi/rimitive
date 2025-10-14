@@ -15,26 +15,16 @@ export interface ViewContext {
   currentScope: Scope | null;
 
   /**
-   * Map element to its scope (for disposal)
+   * Map element to its scope
+   * PATTERN: Minimal external storage (like signals ctx)
+   * This is the only lookup needed - everything else is algorithmic
    */
   elementScopes: WeakMap<object, Scope>;
-
-  /**
-   * Map element to its dispose callback
-   */
-  elementDisposeCallbacks: WeakMap<object, () => void>;
-
-  /**
-   * Map element to cleanup callbacks from lifecycle
-   */
-  elementCleanupCallbacks: WeakMap<object, () => void>;
 }
 
 export function createViewContext(): ViewContext {
   return {
     currentScope: null,
     elementScopes: new WeakMap(),
-    elementDisposeCallbacks: new WeakMap(),
-    elementCleanupCallbacks: new WeakMap(),
   };
 }

@@ -19,6 +19,7 @@ import type {
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { reconcileList } from './helpers/reconcile';
 import type { ViewContext } from './context';
+import { createScope } from './helpers/scope';
 
 /**
  * Options passed to elMap factory
@@ -112,18 +113,14 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       previousItems = currentItems;
     });
 
-    // Store dispose callback in context WeakMap
-    ctx.elementDisposeCallbacks.set(container, () => {
-      // Dispose the main effect
-      dispose();
-
-      // Call cleanup callback if registered
-      const cleanup = ctx.elementCleanupCallbacks.get(container);
-      if (cleanup) {
-        cleanup();
-        ctx.elementCleanupCallbacks.delete(container);
-      }
-    });
+    // Create container scope for the effect
+    // PATTERN: elMap has its own scope for the effect disposal
+    const containerScope = createScope();
+    containerScope.firstDisposable = {
+      disposable: { dispose },
+      next: undefined,
+    };
+    ctx.elementScopes.set(container, containerScope);
 
     // Create the element ref - a callable function that holds the container
     const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
@@ -131,7 +128,11 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       if (renderer.isConnected(container)) {
         const cleanup = lifecycleCallback(container);
         if (cleanup) {
-          ctx.elementCleanupCallbacks.set(container, cleanup);
+          // Track cleanup as disposable in container's scope
+          containerScope.firstDisposable = {
+            disposable: { dispose: cleanup },
+            next: containerScope.firstDisposable,
+          };
         }
       }
 

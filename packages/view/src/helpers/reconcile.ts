@@ -1,5 +1,6 @@
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { ViewContext } from '../context';
+import { disposeScope } from './scope';
 
 /**
  * Metadata for a list item
@@ -42,10 +43,11 @@ export function reconcileList<T, TElement extends RendererElement = RendererElem
     if (!newKeys.has(key)) {
       const node = itemMap.get(key);
       if (node) {
-        // Dispose the element's scope
-        const dispose = ctx.elementDisposeCallbacks.get(node.element);
-        if (dispose) {
-          dispose();
+        // ALGORITHMIC: Dispose via scope tree walk
+        const scope = ctx.elementScopes.get(node.element);
+        if (scope) {
+          disposeScope(scope);
+          ctx.elementScopes.delete(node.element);
         }
         // Remove from DOM
         renderer.removeChild(container, node.element);
@@ -140,9 +142,11 @@ export function replaceChildren<TElement extends RendererElement = RendererEleme
   // Clear existing children
   let firstChild = getFirstElement(container);
   while (firstChild) {
-    const dispose = ctx.elementDisposeCallbacks.get(firstChild);
-    if (dispose) {
-      dispose();
+    // ALGORITHMIC: Dispose via scope tree walk
+    const scope = ctx.elementScopes.get(firstChild);
+    if (scope) {
+      disposeScope(scope);
+      ctx.elementScopes.delete(firstChild);
     }
     renderer.removeChild(container, firstChild);
     firstChild = getFirstElement(container);

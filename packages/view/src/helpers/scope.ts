@@ -82,7 +82,18 @@ export function runInScope<T>(ctx: ViewContext, scope: Scope, fn: () => T): T {
  */
 export function trackInScope(ctx: ViewContext, disposable: Disposable): void {
   const scope = ctx.currentScope;
-  if (scope && scope.status === ACTIVE) {
+  if (scope) {
+    trackInSpecificScope(scope, disposable);
+  }
+}
+
+/**
+ * Track a disposable in a specific scope (not current)
+ * PATTERN: Direct scope manipulation for when currentScope isn't set
+ * Uses linked list prepend for O(1) insertion
+ */
+export function trackInSpecificScope(scope: Scope, disposable: Disposable): void {
+  if (scope.status === ACTIVE) {
     // Prepend to linked list (O(1))
     const node: DisposableNode = {
       disposable,
