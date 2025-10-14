@@ -17,6 +17,7 @@ import type {
   ElementRef,
   LifecycleCallback,
 } from './types';
+import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { reconcileList } from './helpers/reconcile';
 import type { ViewContext } from './context';
 import {
@@ -28,10 +29,11 @@ import {
 /**
  * Options passed to elMap factory
  */
-export type ElMapOpts = {
+export type ElMapOpts<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode> = {
   ctx: ViewContext;
   signal: <T>(value: T) => Reactive<T>;
   effect: (fn: () => void | (() => void)) => () => void;
+  renderer: Renderer<TElement, TText>;
 };
 
 /**
@@ -59,8 +61,10 @@ interface ItemNode<T> {
 /**
  * Create the elMap primitive factory
  */
-export function createElMapFactory(opts: ElMapOpts): ElMapFactory {
-  const { signal, effect } = opts;
+export function createElMapFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  opts: ElMapOpts<TElement, TText>
+): ElMapFactory {
+  const { signal, effect, renderer } = opts;
   // ctx is passed through but not used directly here
   // It's used by el() when render function is called
 
@@ -70,8 +74,10 @@ export function createElMapFactory(opts: ElMapOpts): ElMapFactory {
     keyFn: (item: T) => unknown = (item) => item
   ): ElementRef {
     // Create a container element that will hold the list
-    const container = document.createElement('div') as ReactiveElement;
-    container.style.display = 'contents'; // Don't affect layout
+    const container = renderer.createElement('div') as unknown as ReactiveElement;
+    // Set display: contents so container doesn't affect layout
+    const rendererContainer = container as unknown as TElement;
+    renderer.setAttribute(rendererContainer, 'style', { display: 'contents' });
 
     // Track items by key
     const itemMap = new Map<any, ItemNode<T>>();
@@ -111,7 +117,8 @@ export function createElMapFactory(opts: ElMapOpts): ElMapFactory {
 
           return elementRef.element;
         },
-        keyFn
+        keyFn,
+        renderer
       );
 
       // Update previous items for next reconciliation

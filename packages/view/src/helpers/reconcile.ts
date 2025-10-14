@@ -16,6 +16,7 @@
  */
 
 import type { ReactiveElement } from '../types';
+import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import { elementDisposeCallbacks } from './element-metadata';
 
 /**
@@ -37,19 +38,23 @@ interface ItemNode<T> {
  * @param itemMap - Map from key to ItemNode
  * @param renderItem - Function to render a new item
  * @param keyFn - Function to extract key from item (defaults to identity)
+ * @param renderer - Renderer for DOM operations
  */
-export function reconcileList<T>(
-  container: HTMLElement,
+export function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  container: ReactiveElement,
   oldItems: T[],
   newItems: T[],
   itemMap: Map<unknown, ItemNode<T>>,
   renderItem: (item: T) => ReactiveElement,
-  keyFn: (item: T) => unknown = (item) => item
+  keyFn: (item: T) => unknown = (item) => item,
+  renderer: Renderer<TElement, TText>
 ): void {
   // Build key sets for fast lookup
   const newKeys = new Set(newItems.map(keyFn));
 
   // Phase 1: Remove items that no longer exist
+  const rendererContainer = container as unknown as TElement;
+
   for (const item of oldItems) {
     const key = keyFn(item);
     if (!newKeys.has(key)) {
@@ -61,9 +66,8 @@ export function reconcileList<T>(
           dispose();
         }
         // Remove from DOM
-        if (node.element.parentNode === container) {
-          container.removeChild(node.element);
-        }
+        const rendererElement = node.element as unknown as TElement;
+        renderer.removeChild(rendererContainer, rendererElement);
         itemMap.delete(key);
       }
     }
@@ -104,14 +108,21 @@ export function reconcileList<T>(
     // Position element correctly
     // OPTIMIZATION: Only move if not already in correct position
     const element = node.element;
-    const nextSibling: Node | null = previousElement
-      ? previousElement.nextSibling
-      : container.firstChild;
+
+    // Determine where to insert this element
+    let nextElement: ReactiveElement | null;
+    if (previousElement) {
+      nextElement = getNextSibling(previousElement);
+    } else {
+      nextElement = getFirstChild(container);
+    }
 
     // Skip DOM operation if element is already in the right spot
-    if (element !== nextSibling) {
+    if (element !== nextElement) {
       // Element needs to be moved or inserted
-      container.insertBefore(element, nextSibling);
+      const rendererElement = element as unknown as TElement;
+      const rendererNext = nextElement as unknown as TElement | null;
+      renderer.insertBefore(rendererContainer, rendererElement, rendererNext);
     }
 
     previousElement = element;
@@ -119,13 +130,30 @@ export function reconcileList<T>(
 }
 
 /**
+ * Get first child of a container (typed for renderer operations)
+ */
+function getFirstChild(container: ReactiveElement): ReactiveElement | null {
+  return container.firstChild as ReactiveElement | null;
+}
+
+/**
+ * Get next sibling of an element (typed for renderer operations)
+ */
+function getNextSibling(element: ReactiveElement): ReactiveElement | null {
+  return element.nextSibling as ReactiveElement | null;
+}
+
+/**
  * Simple reconciliation for cases where we can just replace all children
  * (useful for small lists or initial render)
  */
-export function replaceChildren(
-  container: HTMLElement,
-  elements: ReactiveElement[]
+export function replaceChildren<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  container: ReactiveElement,
+  elements: ReactiveElement[],
+  renderer: Renderer<TElement, TText>
 ): void {
+  const rendererContainer = container as unknown as TElement;
+
   // Clear existing children
   while (container.firstChild) {
     const child = container.firstChild as ReactiveElement;
@@ -133,11 +161,13 @@ export function replaceChildren(
     if (dispose) {
       dispose();
     }
-    container.removeChild(child);
+    const rendererChild = child as unknown as TElement;
+    renderer.removeChild(rendererContainer, rendererChild);
   }
 
   // Add new children
   for (const element of elements) {
-    container.appendChild(element);
+    const rendererElement = element as unknown as TElement;
+    renderer.appendChild(rendererContainer, rendererElement);
   }
 }

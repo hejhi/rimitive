@@ -10,6 +10,7 @@ import type {
 import { isReactive, isReactiveList, isElementRef } from './types';
 import { createScope, runInScope, disposeScope, trackInScope } from './helpers/scope';
 import type { ViewContext } from './context';
+import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import {
   elementScopes,
   elementDisposeCallbacks,
@@ -20,9 +21,10 @@ import {
 /**
  * Options passed to el factory
  */
-export type ElOpts = {
+export type ElOpts<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode> = {
   ctx: ViewContext;
   effect: (fn: () => void | (() => void)) => () => void;
+  renderer: Renderer<TElement, TText>;
 };
 
 /**
@@ -36,8 +38,10 @@ export type ElFactory = LatticeExtension<
 /**
  * Create the el primitive factory
  */
-export function createElFactory(opts: ElOpts): ElFactory {
-  const { ctx, effect } = opts;
+export function createElFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  opts: ElOpts<TElement, TText>
+): ElFactory {
+  const { ctx, effect, renderer } = opts;
 
   function el(spec: ElementSpec): ElementRef {
     const [tag, ...rest] = spec;
@@ -45,8 +49,9 @@ export function createElFactory(opts: ElOpts): ElFactory {
     // Parse props and children from rest
     const { props, children } = parseSpec(rest);
 
-    // Create the DOM element
-    const element = document.createElement(tag) as ReactiveElement;
+    // Create the element using renderer
+    // The element from renderer needs to be treated as ReactiveElement for metadata storage
+    const element = renderer.createElement(tag) as unknown as ReactiveElement;
 
     // Create a minimal disposal scope
     const scope = createScope();
@@ -54,11 +59,11 @@ export function createElFactory(opts: ElOpts): ElFactory {
     // Run all reactive setup within this scope
     runInScope(ctx, scope, () => {
       // Apply props
-      applyProps(element, props, effect, ctx);
+      applyProps(element, props, effect, ctx, renderer);
 
       // Handle children
       for (const child of children) {
-        handleChild(element, child, effect, ctx);
+        handleChild(element, child, effect, ctx, renderer);
       }
     });
 
@@ -82,10 +87,20 @@ export function createElFactory(opts: ElOpts): ElFactory {
       // Store lifecycle callback
       elementLifecycleCallbacks.set(element, lifecycleCallback);
 
-      // Observe element connection to DOM
-      observeConnection(element, lifecycleCallback);
+      // Observe element connection using renderer
+      // Wrap the callback to handle type conversion
+      renderer.observeLifecycle(element as unknown as TElement, {
+        onConnected: (el) => {
+          // Convert renderer element type back to HTMLElement for user callback
+          return lifecycleCallback(el as unknown as HTMLElement);
+        },
+        onDisconnected: () => {
+          const dispose = elementDisposeCallbacks.get(element);
+          if (dispose) dispose();
+        }
+      });
 
-      return element;
+      return element as unknown as HTMLElement;
     }) as ElementRef;
 
     // Attach element to ref so it can be extracted
@@ -126,30 +141,33 @@ function parseSpec(rest: (ElementProps | ElementChild)[]): {
 /**
  * Apply props to element (with reactivity)
  */
-function applyProps(
-  element: HTMLElement,
+function applyProps<TElement extends RendererElement, TText extends TextNode>(
+  element: ReactiveElement,
   props: ElementProps,
   effect: (fn: () => void | (() => void)) => () => void,
-  ctx: ViewContext
+  ctx: ViewContext,
+  renderer: Renderer<TElement, TText>
 ): void {
+  const rendererElement = element as unknown as TElement;
   for (const [key, value] of Object.entries(props)) {
     // Handle event listeners
     if (key.startsWith('on')) {
       const eventName = key.slice(2).toLowerCase();
-      element.addEventListener(eventName, value);
+      const cleanup = renderer.addEventListener(rendererElement, eventName, value);
+      trackInScope(ctx, { dispose: cleanup });
       continue;
     }
 
     // Handle reactive values
     if (isReactive(value)) {
       const dispose = effect(() => {
-        Reflect.set(element, key, value());
+        renderer.setAttribute(rendererElement, key, value());
       });
       // Track effect for cleanup when element is removed
       trackInScope(ctx, { dispose });
     } else {
       // Static value
-      Reflect.set(element, key, value);
+      renderer.setAttribute(rendererElement, key, value);
     }
   }
 }
@@ -157,12 +175,14 @@ function applyProps(
 /**
  * Handle a single child (static, reactive, or reactive list)
  */
-function handleChild(
-  element: HTMLElement,
+function handleChild<TElement extends RendererElement, TText extends TextNode>(
+  element: ReactiveElement,
   child: ElementChild,
   effect: (fn: () => void | (() => void)) => () => void,
-  ctx: ViewContext
+  ctx: ViewContext,
+  renderer: Renderer<TElement, TText>
 ): void {
+  const rendererElement = element as unknown as TElement;
   // Skip null/undefined/false
   if (child == null || child === false) {
     return;
@@ -170,7 +190,8 @@ function handleChild(
 
   // Element ref (from el() or elMap())
   if (isElementRef(child)) {
-    element.appendChild(child.element);
+    const childElement = child.element as unknown as TElement;
+    renderer.appendChild(rendererElement, childElement);
     return;
   }
 
@@ -179,33 +200,35 @@ function handleChild(
     // The reactive list contains a container element
     // that will be managed by elMap's effect
     if (child.__container) {
-      element.appendChild(child.__container);
+      const childElement = child.__container as unknown as TElement;
+      renderer.appendChild(rendererElement, childElement);
     }
     return;
   }
 
   // Reactive value (signal or computed)
   if (isReactive(child)) {
-    const textNode = document.createTextNode('');
+    const textNode = renderer.createTextNode('');
     const dispose = effect(() => {
       const value = child();
-      textNode.textContent = String(value ?? '');
+      renderer.updateTextNode(textNode, String(value ?? ''));
     });
     // Track effect for cleanup when element is removed
     trackInScope(ctx, { dispose });
-    element.appendChild(textNode);
+    renderer.appendChild(rendererElement, textNode);
     return;
   }
 
-  // HTMLElement (direct DOM node)
-  if (child && typeof child === 'object' && 'nodeType' in child && child.nodeType === 1) {
-    element.appendChild(child as Node);
+  // Element (check using renderer)
+  if (renderer.isElement(child)) {
+    renderer.appendChild(rendererElement, child);
     return;
   }
 
   // Static primitive (string, number)
   if (typeof child === 'string' || typeof child === 'number') {
-    element.appendChild(document.createTextNode(String(child)));
+    const textNode = renderer.createTextNode(String(child));
+    renderer.appendChild(rendererElement, textNode);
     return;
   }
 
@@ -227,78 +250,4 @@ function isPlainObject(value: any): value is Record<string, any> {
   return proto === Object.prototype || proto === null;
 }
 
-/**
- * Observe when an element is connected to and disconnected from the DOM
- */
-function observeConnection(
-  element: ReactiveElement,
-  lifecycleCallback: LifecycleCallback
-): void {
-  // If already connected, call immediately
-  if (element.isConnected) {
-    const cleanup = lifecycleCallback(element);
-    if (cleanup) {
-      elementCleanupCallbacks.set(element, cleanup);
-    }
-    return;
-  }
-
-  // Otherwise, wait for connection using MutationObserver
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      const addedNodes = Array.from(mutation.addedNodes);
-      for (const node of addedNodes) {
-        if (node === element || (node instanceof Element && node.contains(element))) {
-          // Element was connected
-          const cleanup = lifecycleCallback(element);
-          if (cleanup) {
-            elementCleanupCallbacks.set(element, cleanup);
-          }
-
-          // Now observe for disconnection
-          observeDisconnection(element);
-
-          // Stop observing for connection
-          observer.disconnect();
-          return;
-        }
-      }
-    }
-  });
-
-  // Observe the entire document for additions
-  observer.observe(document.documentElement || document.body, {
-    childList: true,
-    subtree: true,
-  });
-}
-
-/**
- * Observe when an element is disconnected from the DOM
- */
-function observeDisconnection(element: ReactiveElement): void {
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      const removedNodes = Array.from(mutation.removedNodes);
-      for (const node of removedNodes) {
-        if (node === element || (node instanceof Element && node.contains(element))) {
-          // Element was disconnected - call dispose callback
-          const dispose = elementDisposeCallbacks.get(element);
-          if (dispose) {
-            dispose();
-          }
-
-          // Stop observing
-          observer.disconnect();
-          return;
-        }
-      }
-    }
-  });
-
-  // Observe the document for removals
-  observer.observe(document.documentElement || document.body, {
-    childList: true,
-    subtree: true,
-  });
-}
+// Lifecycle observation is now handled by the renderer
