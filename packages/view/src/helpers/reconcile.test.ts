@@ -72,7 +72,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
+    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
 
     const items = ['a', 'b', 'c'];
 
@@ -102,7 +102,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
+    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
@@ -157,7 +157,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
+    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
     const disposables: ReturnType<typeof createMockDisposable>[] = [];
 
     // Initial render with scopes
@@ -202,7 +202,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
+    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
 
     const createElement = (item: string) => {
       const el = new MockElement('li');
@@ -329,7 +329,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const itemMap = new Map<unknown, { key: unknown; element: MockElement; itemData: string }>();
+    const itemMap = new Map<string, { key: string; element: MockElement; itemData: string }>();
 
     const createElement = (item: string) => {
       const el = new MockElement('li');

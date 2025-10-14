@@ -113,19 +113,20 @@ export function createReconciler() {
     if (newLen === 0 && oldLen === 0) return;
 
     // Phase 1: Build oldPos map (plain object for speed)
-    const oldPos: Record<string, number> = Object.create(null);
+    const oldPos = Object.create(null) as Record<string, number>;
     for (let i = 0; i < oldLen; i++) {
-      const key = String(keyFn(oldItems[i]!));
+      // Cast for ts—we accept string|num|symbol but ts doesn't like that.
+      const key = keyFn(oldItems[i]!) as string;
       oldPos[key] = i;
     }
 
     // Phase 2: Build compacted arrays AND track newKeys
     // Buffers grow automatically via assignment
     let count = 0;
-    const newKeys: Record<string, boolean> = Object.create(null);
+    const newKeys = Object.create(null) as Record<string, boolean>;
 
     for (let i = 0; i < newLen; i++) {
-      const key = String(keyFn(newItems[i]!));
+      const key = keyFn(newItems[i]!) as string;
       newKeys[key] = true; // Track for removal phase
 
       const pos = oldPos[key];
@@ -148,7 +149,7 @@ export function createReconciler() {
       const item = newItems[i];
       if (item === undefined) continue;
 
-      const key = String(keyFn(item));
+      const key = keyFn(item) as string;
       let node = itemMap.get(key);
 
       // Create or reuse node
