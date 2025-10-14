@@ -11,19 +11,19 @@ import type { Scope } from './scope';
 /**
  * Store element scopes
  */
-export const elementScopes = new WeakMap<HTMLElement, Scope>();
+export const elementScopes = new WeakMap<object, Scope>();
 
 /**
  * Store element dispose callbacks
  */
-export const elementDisposeCallbacks = new WeakMap<HTMLElement, () => void>();
+export const elementDisposeCallbacks = new WeakMap<object, () => void>();
 
 /**
  * Store element lifecycle callbacks
  */
-export const elementLifecycleCallbacks = new WeakMap<HTMLElement, LifecycleCallback>();
+export const elementLifecycleCallbacks = new WeakMap<object, LifecycleCallback>();
 
 /**
  * Store element cleanup callbacks (returned from lifecycle callbacks)
  */
-export const elementCleanupCallbacks = new WeakMap<HTMLElement, () => void>();
+export const elementCleanupCallbacks = new WeakMap<object, () => void>();

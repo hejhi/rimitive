@@ -22,9 +22,9 @@ export interface TextNode {
 /**
  * Lifecycle observation callbacks
  */
-export interface LifecycleCallbacks {
-  onConnected?: (element: Element) => void | (() => void);
-  onDisconnected?: (element: Element) => void;
+export interface LifecycleCallbacks<TElement extends Element = Element> {
+  onConnected?: (element: TElement) => void | (() => void);
+  onDisconnected?: (element: TElement) => void;
 }
 
 /**
@@ -75,7 +75,7 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
    * Observe element lifecycle (connection/disconnection from render tree)
    * Returns a cleanup function to stop observing
    */
-  observeLifecycle(element: TElement, callbacks: LifecycleCallbacks): () => void;
+  observeLifecycle(element: TElement, callbacks: LifecycleCallbacks<TElement>): () => void;
 
   /**
    * Check if an element is currently connected to the render tree

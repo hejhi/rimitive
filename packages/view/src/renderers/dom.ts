@@ -60,7 +60,7 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
       return () => element.removeEventListener(event, handler);
     },
 
-    observeLifecycle(element: DOMElement, callbacks: LifecycleCallbacks): () => void {
+    observeLifecycle(element: DOMElement, callbacks: LifecycleCallbacks<DOMElement>): () => void {
       const { onConnected, onDisconnected } = callbacks;
 
       // If already connected, call immediately

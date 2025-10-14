@@ -13,7 +13,6 @@
 import type { LatticeExtension } from '@lattice/lattice';
 import type {
   Reactive,
-  ReactiveElement,
   ElementRef,
   LifecycleCallback,
 } from './types';
@@ -39,21 +38,21 @@ export type ElMapOpts<TElement extends RendererElement = RendererElement, TText 
 /**
  * Factory return type
  */
-export type ElMapFactory = LatticeExtension<
+export type ElMapFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
   'elMap',
   <T>(
     itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ElementRef,
+    render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
     keyFn?: (item: T) => unknown
-  ) => ElementRef
+  ) => ElementRef<TElement>
 >;
 
 /**
  * Item node metadata
  */
-interface ItemNode<T> {
+interface ItemNode<T, TElement = object> {
   key: unknown;
-  element: ReactiveElement;
+  element: TElement;
   itemData: T;
   itemSignal: Reactive<T> & ((value: T) => void); // Writable signal
 }
@@ -63,24 +62,23 @@ interface ItemNode<T> {
  */
 export function createElMapFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
   opts: ElMapOpts<TElement, TText>
-): ElMapFactory {
+): ElMapFactory<TElement> {
   const { signal, effect, renderer } = opts;
   // ctx is passed through but not used directly here
   // It's used by el() when render function is called
 
   function elMap<T>(
     itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ElementRef,
+    render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
     keyFn: (item: T) => unknown = (item) => item
-  ): ElementRef {
+  ): ElementRef<TElement> {
     // Create a container element that will hold the list
-    const container = renderer.createElement('div') as unknown as ReactiveElement;
+    const container = renderer.createElement('div');
     // Set display: contents so container doesn't affect layout
-    const rendererContainer = container as unknown as TElement;
-    renderer.setAttribute(rendererContainer, 'style', { display: 'contents' });
+    renderer.setAttribute(container, 'style', { display: 'contents' });
 
     // Track items by key
-    const itemMap = new Map<any, ItemNode<T>>();
+    const itemMap = new Map<unknown, ItemNode<T, TElement>>();
     let previousItems: T[] = [];
 
     // Create an effect that reconciles the list when items change
@@ -88,16 +86,11 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
     const dispose = effect(() => {
       const currentItems = itemsSignal();
 
-      reconcileList(
+      reconcileList<T, TElement, TText>(
         container,
         previousItems,
         currentItems,
-        itemMap as Map<unknown, {
-          key: unknown;
-          element: ReactiveElement;
-          itemData: T;
-          itemSignal?: ((value: T) => void) & (() => T);
-        }>,
+        itemMap,
         (item: T) => {
           // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
           // This signal will be updated by reconcileList when item data changes
@@ -126,33 +119,35 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
     });
 
     // Store dispose callback in WeakMap
-    elementDisposeCallbacks.set(container, () => {
+    const containerKey = container as object;
+    elementDisposeCallbacks.set(containerKey, () => {
       // Dispose the main effect
       dispose();
 
       // Call cleanup callback if registered
-      const cleanup = elementCleanupCallbacks.get(container);
+      const cleanup = elementCleanupCallbacks.get(containerKey);
       if (cleanup) {
         cleanup();
-        elementCleanupCallbacks.delete(container);
+        elementCleanupCallbacks.delete(containerKey);
       }
     });
 
     // Create the element ref - a callable function that holds the container
-    const ref = ((lifecycleCallback: LifecycleCallback): HTMLElement => {
-      // Store lifecycle callback
-      elementLifecycleCallbacks.set(container, lifecycleCallback);
+    const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
+      // Store lifecycle callback (cast to base type for storage)
+      const containerKey = container as object;
+      elementLifecycleCallbacks.set(containerKey, lifecycleCallback as LifecycleCallback<object>);
 
       // If already connected, call immediately
-      if (container.isConnected) {
+      if (renderer.isConnected(container)) {
         const cleanup = lifecycleCallback(container);
         if (cleanup) {
-          elementCleanupCallbacks.set(container, cleanup);
+          elementCleanupCallbacks.set(containerKey, cleanup);
         }
       }
 
       return container;
-    }) as ElementRef;
+    }) as ElementRef<TElement>;
 
     // Attach container to ref so it can be extracted
     ref.element = container;

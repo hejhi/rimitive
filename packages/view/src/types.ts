@@ -74,14 +74,14 @@ export interface Disposable {
 /**
  * Lifecycle callback for element connection/disconnection
  */
-export type LifecycleCallback = (element: HTMLElement) => void | (() => void);
+export type LifecycleCallback<TElement = object> = (element: TElement) => void | (() => void);
 
 /**
  * Element ref - a callable function that holds the element
  */
-export interface ElementRef {
-  (lifecycleCallback: LifecycleCallback): HTMLElement;
-  element: ReactiveElement;
+export interface ElementRef<TElement = ReactiveElement> {
+  (lifecycleCallback: LifecycleCallback<TElement>): TElement;
+  element: TElement;
 }
 
 /**
@@ -92,8 +92,8 @@ export function isElementRef(value: any): value is ElementRef {
 }
 
 /**
- * Extended element type (no internal properties - metadata stored in WeakMaps)
+ * Base element type for reactive elements
+ * This is intentionally minimal - just an object that can be used as WeakMap keys
+ * The actual element type is determined by the renderer
  */
-export interface ReactiveElement extends HTMLElement {
-  // Clean - no properties added to DOM nodes
-}
+export type ReactiveElement = object;

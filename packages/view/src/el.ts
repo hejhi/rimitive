@@ -3,7 +3,6 @@ import type {
   ElementSpec,
   ElementProps,
   ElementChild,
-  ReactiveElement,
   LifecycleCallback,
   ElementRef,
 } from './types';
@@ -30,9 +29,9 @@ export type ElOpts<TElement extends RendererElement = RendererElement, TText ext
 /**
  * Factory return type
  */
-export type ElFactory = LatticeExtension<
+export type ElFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
   'el',
-  (spec: ElementSpec) => ElementRef
+  (spec: ElementSpec) => ElementRef<TElement>
 >;
 
 /**
@@ -40,18 +39,17 @@ export type ElFactory = LatticeExtension<
  */
 export function createElFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
   opts: ElOpts<TElement, TText>
-): ElFactory {
+): ElFactory<TElement> {
   const { ctx, effect, renderer } = opts;
 
-  function el(spec: ElementSpec): ElementRef {
+  function el(spec: ElementSpec): ElementRef<TElement> {
     const [tag, ...rest] = spec;
 
     // Parse props and children from rest
     const { props, children } = parseSpec(rest);
 
     // Create the element using renderer
-    // The element from renderer needs to be treated as ReactiveElement for metadata storage
-    const element = renderer.createElement(tag) as unknown as ReactiveElement;
+    const element = renderer.createElement(tag);
 
     // Create a minimal disposal scope
     const scope = createScope();
@@ -67,41 +65,40 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       }
     });
 
-    // Store scope in WeakMap
-    elementScopes.set(element, scope);
+    // Store scope in WeakMap (cast to object for storage)
+    const elementKey = element as object;
+    elementScopes.set(elementKey, scope);
 
     // Store dispose callback
-    elementDisposeCallbacks.set(element, () => {
+    elementDisposeCallbacks.set(elementKey, () => {
       disposeScope(scope);
 
       // Call cleanup callback if registered
-      const cleanup = elementCleanupCallbacks.get(element);
+      const cleanup = elementCleanupCallbacks.get(elementKey);
       if (cleanup) {
         cleanup();
-        elementCleanupCallbacks.delete(element);
+        elementCleanupCallbacks.delete(elementKey);
       }
     });
 
     // Create the element ref - a callable function that holds the element
-    const ref = ((lifecycleCallback: LifecycleCallback): HTMLElement => {
-      // Store lifecycle callback
-      elementLifecycleCallbacks.set(element, lifecycleCallback);
+    const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
+      // Store lifecycle callback (cast to base type for storage)
+      elementLifecycleCallbacks.set(element as object, lifecycleCallback as LifecycleCallback<object>);
 
       // Observe element connection using renderer
-      // Wrap the callback to handle type conversion
-      renderer.observeLifecycle(element as unknown as TElement, {
+      renderer.observeLifecycle(element, {
         onConnected: (el) => {
-          // Convert renderer element type back to HTMLElement for user callback
-          return lifecycleCallback(el as unknown as HTMLElement);
+          return lifecycleCallback(el);
         },
         onDisconnected: () => {
-          const dispose = elementDisposeCallbacks.get(element);
+          const dispose = elementDisposeCallbacks.get(element as object);
           if (dispose) dispose();
         }
       });
 
-      return element as unknown as HTMLElement;
-    }) as ElementRef;
+      return element;
+    }) as ElementRef<TElement>;
 
     // Attach element to ref so it can be extracted
     ref.element = element;
@@ -142,18 +139,17 @@ function parseSpec(rest: (ElementProps | ElementChild)[]): {
  * Apply props to element (with reactivity)
  */
 function applyProps<TElement extends RendererElement, TText extends TextNode>(
-  element: ReactiveElement,
+  element: TElement,
   props: ElementProps,
   effect: (fn: () => void | (() => void)) => () => void,
   ctx: ViewContext,
   renderer: Renderer<TElement, TText>
 ): void {
-  const rendererElement = element as unknown as TElement;
   for (const [key, value] of Object.entries(props)) {
     // Handle event listeners
     if (key.startsWith('on')) {
       const eventName = key.slice(2).toLowerCase();
-      const cleanup = renderer.addEventListener(rendererElement, eventName, value);
+      const cleanup = renderer.addEventListener(element, eventName, value);
       trackInScope(ctx, { dispose: cleanup });
       continue;
     }
@@ -161,13 +157,13 @@ function applyProps<TElement extends RendererElement, TText extends TextNode>(
     // Handle reactive values
     if (isReactive(value)) {
       const dispose = effect(() => {
-        renderer.setAttribute(rendererElement, key, value());
+        renderer.setAttribute(element, key, value());
       });
       // Track effect for cleanup when element is removed
       trackInScope(ctx, { dispose });
     } else {
       // Static value
-      renderer.setAttribute(rendererElement, key, value);
+      renderer.setAttribute(element, key, value);
     }
   }
 }
@@ -176,13 +172,12 @@ function applyProps<TElement extends RendererElement, TText extends TextNode>(
  * Handle a single child (static, reactive, or reactive list)
  */
 function handleChild<TElement extends RendererElement, TText extends TextNode>(
-  element: ReactiveElement,
+  element: TElement,
   child: ElementChild,
   effect: (fn: () => void | (() => void)) => () => void,
   ctx: ViewContext,
   renderer: Renderer<TElement, TText>
 ): void {
-  const rendererElement = element as unknown as TElement;
   // Skip null/undefined/false
   if (child == null || child === false) {
     return;
@@ -190,8 +185,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
 
   // Element ref (from el() or elMap())
   if (isElementRef(child)) {
-    const childElement = child.element as unknown as TElement;
-    renderer.appendChild(rendererElement, childElement);
+    renderer.appendChild(element, child.element as TElement);
     return;
   }
 
@@ -200,8 +194,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     // The reactive list contains a container element
     // that will be managed by elMap's effect
     if (child.__container) {
-      const childElement = child.__container as unknown as TElement;
-      renderer.appendChild(rendererElement, childElement);
+      renderer.appendChild(element, child.__container as TElement);
     }
     return;
   }
@@ -215,20 +208,20 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     });
     // Track effect for cleanup when element is removed
     trackInScope(ctx, { dispose });
-    renderer.appendChild(rendererElement, textNode);
+    renderer.appendChild(element, textNode);
     return;
   }
 
   // Element (check using renderer)
   if (renderer.isElement(child)) {
-    renderer.appendChild(rendererElement, child);
+    renderer.appendChild(element, child);
     return;
   }
 
   // Static primitive (string, number)
   if (typeof child === 'string' || typeof child === 'number') {
     const textNode = renderer.createTextNode(String(child));
-    renderer.appendChild(rendererElement, textNode);
+    renderer.appendChild(element, textNode);
     return;
   }
 
