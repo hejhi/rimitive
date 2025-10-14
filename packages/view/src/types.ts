@@ -30,12 +30,26 @@ export interface ElementNode<TElement = ReactiveElement> extends ViewNode<TEleme
 }
 
 /**
+ * Item node metadata for list items
+ * PATTERN: Like Dependency in signals, stores relationship metadata
+ */
+export interface ItemNode<T = unknown, TElement = ReactiveElement> {
+  key: string;
+  element: TElement;
+  itemData: T;
+  itemSignal?: ((value: T) => void) & (() => T); // Writable signal
+}
+
+/**
  * Deferred list node - created by elMap()
  * Element is null until parent is provided via the deferred callback
+ * PATTERN: Stores itemMap on node (like signals stores dependencies on node)
  */
 export interface DeferredListNode<TElement = ReactiveElement> extends ViewNode<TElement | null> {
   refType: typeof DEFERRED_LIST_REF; // Always DEFERRED_LIST_REF
   element: TElement | null; // null until parent provided
+  itemMap: Map<string, ItemNode<unknown, TElement>>; // Track items by key
+  previousItems: unknown[]; // Track previous items for reconciliation
 }
 
 /**
