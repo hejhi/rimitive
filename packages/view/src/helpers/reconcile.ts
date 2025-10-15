@@ -102,31 +102,21 @@ export function createReconciler() {
       if (item === undefined) continue;
 
       const key = keyFn(item) as string;
-      const node = itemsByKey.get(key);
+      let node = itemsByKey.get(key);
 
       if (node) {
         oldIndicesBuf[count] = node.position;
         newPosBuf[count] = i;
         count++;
-      }
-    }
+        // Mark existing node as visited
+        node.status |= VISITED;
 
-    // Calculate LIS
-    const lisLen = findLIS(oldIndicesBuf, count);
-
-    // Loop 2: Position items + mark as visited
-    let lisIdx = 0;
-    let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-    let prevNode: ListItemNode<T, TElement> | undefined = undefined;
-
-    for (let i = 0; i < newItems.length; i++) {
-      const item = newItems[i];
-      if (item === undefined) continue;
-
-      const key = keyFn(item) as string;
-      let node = itemsByKey.get(key);
-
-      if (!node) {
+        // Update data
+        if (node.itemData !== item) {
+          node.itemData = item;
+          if (node.itemSignal) node.itemSignal(item);
+        }
+      } else {
         // Create new node
         const rendered = renderItem(item);
 
@@ -146,16 +136,25 @@ export function createReconciler() {
         appendChild(parent, node);
         itemsByKey.set(key, node);
         renderer.appendChild(container, rendered.element);
-      } else {
-        // Mark existing node as visited
-        node.status |= VISITED;
-
-        // Update data
-        if (node.itemData !== item) {
-          node.itemData = item;
-          if (node.itemSignal) node.itemSignal(item);
-        }
       }
+    }
+
+    // Calculate LIS
+    const lisLen = findLIS(oldIndicesBuf, count);
+
+    // Loop 2: Position items + mark as visited
+    let lisIdx = 0;
+    let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
+    let prevNode: ListItemNode<T, TElement> | undefined = undefined;
+
+    for (let i = 0; i < newItems.length; i++) {
+      const item = newItems[i];
+      if (item === undefined) continue;
+
+      const key = keyFn(item) as string;
+      const node = itemsByKey.get(key);
+
+      if (!node) continue;
 
       const element = node.element;
 
