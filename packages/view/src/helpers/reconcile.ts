@@ -77,6 +77,28 @@ export function createReconciler() {
   };
 
   /**
+   * Remove a node and clean up all associated resources
+   * Inline helper for pruning unvisited nodes
+   */
+  const pruneNode = <T, TElement extends RendererElement>(
+    node: ListItemNode<T, TElement>,
+    ctx: ViewContext,
+    container: TElement,
+    itemsByKey: Map<string, ListItemNode<T, TElement>>,
+    renderer: Renderer<TElement, any>
+  ): void => {
+    const scope = ctx.elementScopes.get(node.element);
+    if (scope) {
+      disposeScope(scope);
+      ctx.elementScopes.delete(node.element);
+    }
+
+    removeChild(node);
+    renderer.removeChild(container, node.element);
+    itemsByKey.delete(node.key);
+  };
+
+  /**
    * Reconcile list with minimal allocations
    * PATTERN: Reordered loops - position first, then remove
    * Eliminates newKeys allocation by using status bits
@@ -163,9 +185,17 @@ export function createReconciler() {
         lisIdx++;
         nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
       } else if (node.parentList) {
-        // Move if not in LIS
-        const refSibling = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement>;
+        // Calculate reference sibling for insertion
+        let refSibling = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement> | undefined;
 
+        // Remove any unvisited nodes at the insertion point (cleanup as we go)
+        while (refSibling && !(refSibling.status & VISITED)) {
+          const nextRef = refSibling.nextSibling as ListItemNode<T, TElement> | undefined;
+          pruneNode(refSibling, ctx, container, itemsByKey, renderer);
+          refSibling = nextRef;
+        }
+
+        // Move if not in LIS and not already in correct position
         if (node !== refSibling) {
           moveChild(node, refSibling);
 
@@ -178,26 +208,14 @@ export function createReconciler() {
       prevNode = node;
     }
 
-    // Loop 3: Remove unvisited nodes
+    // Loop 3: Remove any remaining unvisited nodes (cleanup stragglers)
     let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
 
     while (current) {
       const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
 
-      if (!(current.status & VISITED)) {
-        const scope = ctx.elementScopes.get(current.element);
-        if (scope) {
-          disposeScope(scope);
-          ctx.elementScopes.delete(current.element);
-        }
-
-        removeChild(current);
-        renderer.removeChild(container, current.element);
-        itemsByKey.delete(current.key);
-      } else {
-        // Clear visited flag for next reconciliation
-        current.status = 0;
-      }
+      if (!(current.status & VISITED)) pruneNode(current, ctx, container, itemsByKey, renderer);
+      else current.status = 0;
 
       current = next;
     }
