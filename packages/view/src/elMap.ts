@@ -63,9 +63,6 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
   ): DeferredListRef<TElement> {
     let dispose: (() => void) | undefined;
 
-    // PATTERN: Create internal node (like signals creates SignalNode)
-    // Element is null until parent is provided
-    // Store itemsByKey on node (like signals stores deps on node)
     const node: DeferredListNode<TElement> = {
       refType: DEFERRED_LIST_REF,
       element: null,
@@ -89,31 +86,17 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
         reconcileList<T, TElement, TText>(
           ctx,
           node,  // ← Pass DeferredListNode directly
-          node.firstChild as ListItemNode<T, TElement> | undefined,
           currentItems,
           (itemData: T) => {
-            // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
-            // This signal will be updated by reconcileList when item data changes
+            // PATTERN: Render callback only creates DOM element
+            // Reconciler will wrap it in ListItemNode
             const itemSignal = signal(itemData);
-
-            // Render the item using the provided render function
             const elementRef = render(itemSignal);
 
-            // Store item metadata including signal for updates
-            const key = String(keyFn(itemData));
-
-            node.itemsByKey.set(key, {
-              key,
-              itemData,
-              itemSignal,
-              refType: 0,
+            return {
               element: elementRef.node.element,
-              parentList: undefined,
-              previousSibling: undefined,
-              nextSibling: undefined,
-            });
-
-            return elementRef.node.element;
+              itemSignal,
+            };
           },
           keyFn,
           renderer

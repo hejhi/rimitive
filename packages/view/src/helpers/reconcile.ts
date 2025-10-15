@@ -44,7 +44,6 @@ export function createReconciler() {
     }
 
     // Buffers grow automatically via assignment
-
     let len = 0;
 
     for (let i = 0; i < n; i++) {
@@ -69,13 +68,13 @@ export function createReconciler() {
 
   /**
    * Reconcile list with minimal allocations
+   * PATTERN: Linked list is source of truth, Map is lookup cache
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
     parent: DeferredListNode<TElement>,
-    oldHead: ListItemNode<T, TElement> | undefined,
     newItems: T[],
-    renderItem: (item: T) => TElement,
+    renderItem: (item: T) => { element: TElement; itemSignal?: ((value: T) => void) & (() => T) },
     keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
@@ -86,10 +85,10 @@ export function createReconciler() {
 
     const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
-    // Phase 1: Build oldPos map by traversing linked list (plain object for speed)
+    // Phase 1: Build oldPos map by traversing linked list (SOURCE OF TRUTH)
     const oldPos = Object.create(null) as Record<string, number>;
     let i = 0;
-    let current = oldHead;
+    let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
     while (current) {
       // Cast for ts—we accept string|num|symbol but ts doesn't like that.
       const key = keyFn(current.itemData) as string;
@@ -115,24 +114,30 @@ export function createReconciler() {
       }
     }
 
-    // Phase 3: Remove items not in newKeys
-    for (const [key, node] of itemsByKey) {
+    // Phase 3: Remove items not in newKeys by traversing linked list (SOURCE OF TRUTH)
+    current = parent.firstChild as ListItemNode<T, TElement> | undefined;
+    while (current) {
+      const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
+      const key = keyFn(current.itemData) as string;
+
       if (!newKeys[key]) {
-        const scope = ctx.elementScopes.get(node.element);
+        const scope = ctx.elementScopes.get(current.element);
         if (scope) {
           disposeScope(scope);
-          ctx.elementScopes.delete(node.element);
+          ctx.elementScopes.delete(current.element);
         }
 
-        // Remove from list structure
-        if (node.parentList) {
-          removeChild(node);
-        }
+        // Remove from list structure (SOURCE OF TRUTH)
+        removeChild(current);
 
         // Remove from renderer
-        renderer.removeChild(container, node.element);
+        renderer.removeChild(container, current.element);
+
+        // Update cache to stay in sync
         itemsByKey.delete(key);
       }
+
+      current = next;
     }
 
     // Phase 4: Find LIS (inline O(n log n))
@@ -152,32 +157,35 @@ export function createReconciler() {
 
       // Create or reuse node
       if (!node) {
-        const element = renderItem(item);
-        node = itemsByKey.get(key);
+        // PATTERN: Reconciler creates ListItemNode, render callback creates element
+        const rendered = renderItem(item);
 
-        if (!node) {
-          // Create new ListItemNode
-          node = {
-            refType: 0, // Will be set by ViewNode if needed
-            key,
-            element,
-            itemData: item,
-            parentList: undefined,
-            previousSibling: undefined,
-            nextSibling: undefined,
-          };
-          itemsByKey.set(key, node);
-        }
+        // Create new ListItemNode
+        node = {
+          refType: 0, // Will be set by ViewNode if needed
+          key,
+          element: rendered.element,
+          itemData: item,
+          itemSignal: rendered.itemSignal,
+          parentList: undefined,
+          previousSibling: undefined,
+          nextSibling: undefined,
+        } as ListItemNode<T, TElement>;
 
-        // Append to parent
+        // Add to linked list (SOURCE OF TRUTH)
         appendChild(parent, node);
 
+        // Update cache to stay in sync
+        itemsByKey.set(key, node);
+
         // Also append to DOM
-        renderer.appendChild(container, element);
+        renderer.appendChild(container, rendered.element);
+      } else {
         // Update data
-      } else if (node.itemData !== item) {
-        node.itemData = item;
-        if (node.itemSignal) node.itemSignal(item);
+        if (node.itemData !== item) {
+          node.itemData = item;
+          if (node.itemSignal) node.itemSignal(item);
+        }
       }
 
       const element = node.element;
