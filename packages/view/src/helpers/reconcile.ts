@@ -167,7 +167,7 @@ export function createReconciler() {
           parentList: undefined,
           previousSibling: undefined,
           nextSibling: undefined,
-        } as ListItemNode<T, TElement>;
+        };
 
         // Add to linked list (SOURCE OF TRUTH)
         appendChild(parent, node);
