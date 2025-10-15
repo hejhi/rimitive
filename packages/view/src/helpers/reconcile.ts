@@ -84,12 +84,14 @@ export function createReconciler() {
     keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
-
     const container = parent.element;
 
     if (!container) return; // No parent yet
 
-    const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
+    const itemsByKey = parent.itemsByKey as Map<
+      string,
+      ListItemNode<T, TElement>
+    >;
 
     // Build compacted arrays + newKeys lookup
     let count = 0;
@@ -108,11 +110,14 @@ export function createReconciler() {
       }
     }
 
+    // Find LIS (inline O(n log n))
+    const lisLen = findLIS(oldIndicesBuf, count);
+
     // Remove items not in newKeys by traversing linked list (SOURCE OF TRUTH)
-    let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
+    let current = parent.firstChild;
 
     while (current) {
-      const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
+      const next = current.nextSibling;
       const key = current.key;
 
       if (!newKeys[key]) {
@@ -134,9 +139,6 @@ export function createReconciler() {
 
       current = next;
     }
-
-    // Find LIS (inline O(n log n))
-    const lisLen = findLIS(oldIndicesBuf, count);
 
     // Position items
     let lisIdx = 0;
@@ -193,7 +195,9 @@ export function createReconciler() {
         // Move if not in LIS
       } else if (node.parentList) {
         // Calculate reference sibling (next position in list)
-        const refSibling = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement>;
+        const refSibling = (
+          prevNode ? prevNode.nextSibling : parent.firstChild
+        ) as ListItemNode<T, TElement>;
 
         // Only move if not already in correct position
         if (node !== refSibling) {
@@ -203,7 +207,8 @@ export function createReconciler() {
           // Move in DOM
           const nextElement = refSibling ? refSibling.element : null;
 
-          if (element !== nextElement) renderer.insertBefore(container, element, nextElement);
+          if (element !== nextElement)
+            renderer.insertBefore(container, element, nextElement);
         }
       }
 
