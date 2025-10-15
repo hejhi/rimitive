@@ -38,7 +38,7 @@ export function createReconciler() {
    * Single loop with forward pass followed by backtrack phase
    */
   const findLIS = (arr: number[], n: number): number => {
-    if (n === 0) return 0;
+    if (n <= 0) return 0;
     if (n === 1) {
       lisBuf[0] = 0;
       return 1;
@@ -47,36 +47,30 @@ export function createReconciler() {
     // Buffers grow automatically via assignment
     let len = 0;
     let depth = 0;
-    let current = -1; // Backtrack cursor (-1 = not started)
 
     for (;;) {
       // Forward phase: build tails and parent pointers
-      if (current === -1) {
-        if (depth < n) {
-          const value = arr[depth]!;
-          const pos = binarySearch(arr, tailsBuf, len, value);
+      if (depth < n) {
+        const value = arr[depth]!;
+        const pos = binarySearch(arr, tailsBuf, len, value);
 
-          parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
-          tailsBuf[pos] = depth;
+        parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+        tailsBuf[pos] = depth;
 
-          if (pos === len) len++;
-          depth++;
-          continue;
-        }
-
-        // Fall through to backtrack
-        depth = len - 1;
-        current = tailsBuf[depth]!;
+        if (pos === len) len++;
+        depth++;
+        continue;
       }
 
+      depth = len - 1;
+      let current = tailsBuf[depth]!;
+  
+      // Backtrack phase: reconstruct LIS using parent chain
       do {
-        // Backtrack phase: reconstruct LIS using parent chain
         lisBuf[depth] = current;
         current = parentBuf[current]!;
-        depth--;
-      } while (depth > -1);
-
-      // Both phases complete
+      } while (depth--);
+  
       return len;
     }
   };

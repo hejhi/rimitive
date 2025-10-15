@@ -54,8 +54,8 @@ const findLIS_TwoLoop = (arr: number[], n: number): number => {
   return len;
 };
 
-// NEW: Single loop with phase switching
-const findLIS_SingleLoop = (arr: number[], n: number): number => {
+// OLD: Single loop with phase switching (current === -1)
+const findLIS_SingleLoop_Old = (arr: number[], n: number): number => {
   if (n === 0) return 0;
   if (n === 1) {
     lisBuf[0] = 0;
@@ -95,6 +95,198 @@ const findLIS_SingleLoop = (arr: number[], n: number): number => {
 
     return len;
   }
+};
+
+// LATEST: Simplified with depth check and do-while backtrack
+const findLIS_Latest = (arr: number[], n: number): number => {
+  if (n === 0) return 0;
+  if (n === 1) {
+    lisBuf[0] = 0;
+    return 1;
+  }
+
+  let len = 0;
+  let depth = 0;
+
+  for (;;) {
+    // Forward phase: build tails and parent pointers
+    if (depth < n) {
+      const value = arr[depth]!;
+      const pos = binarySearch(arr, tailsBuf, len, value);
+
+      parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+      tailsBuf[pos] = depth;
+
+      if (pos === len) len++;
+      depth++;
+      continue;
+    }
+
+    // Transition to backtrack
+    depth = len - 1;
+    let current = tailsBuf[depth]!;
+
+    // Backtrack phase: reconstruct LIS using parent chain
+    do {
+      lisBuf[depth] = current;
+      current = parentBuf[current]!;
+    } while (depth--);
+
+    return len;
+  }
+};
+
+// NEWEST: Both phases using do-while loops with inline increments
+const findLIS_DoWhile = (arr: number[], n: number): number => {
+  if (n === 0) return 0;
+  if (n === 1) {
+    lisBuf[0] = 0;
+    return 1;
+  }
+
+  let len = 0;
+  let depth = 0;
+  let current = 0;
+
+  do {
+    const value = arr[depth]!;
+    const pos = binarySearch(arr, tailsBuf, len, value);
+
+    parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+    tailsBuf[pos] = depth;
+
+    if (pos === len) len++;
+  } while (depth++ < n);
+
+  depth = len - 1;
+  current = tailsBuf[depth]!;
+
+  do {
+    lisBuf[depth] = current;
+    current = parentBuf[current]!;
+  } while (depth--);
+
+  return len;
+};
+
+// CURRENT: Forward with break, backtrack with do-while
+const findLIS_Current = (arr: number[], n: number): number => {
+  if (n === 0) return 0;
+  if (n === 1) {
+    lisBuf[0] = 0;
+    return 1;
+  }
+
+  let len = 0;
+  let depth = 0;
+  let current = 0;
+
+  for (;;) {
+    // Forward phase: build tails and parent pointers
+    if (depth < n) {
+      const value = arr[depth]!;
+      const pos = binarySearch(arr, tailsBuf, len, value);
+
+      parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+      tailsBuf[pos] = depth;
+
+      if (pos === len) len++;
+      depth++;
+      continue;
+    }
+    break;
+  }
+
+  depth = len - 1;
+  current = tailsBuf[depth]!;
+
+  // Backtrack phase: reconstruct LIS using parent chain
+  do {
+    lisBuf[depth] = current;
+    current = parentBuf[current]!;
+  } while (depth--);
+
+  return len;
+};
+
+// ORIGINAL OPTIMIZED: Both phases using do-while (from earlier iterations)
+const findLIS_DoWhile_Original = (arr: number[], n: number): number => {
+  if (n === 0) return 0;
+  if (n === 1) {
+    lisBuf[0] = 0;
+    return 1;
+  }
+
+  let len = 0;
+  let depth = 0;
+  let current = 0;
+
+  // Forward phase: build tails and parent pointers
+  do {
+    const value = arr[depth]!;
+    const pos = binarySearch(arr, tailsBuf, len, value);
+
+    parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+    tailsBuf[pos] = depth;
+
+    if (pos === len) len++;
+    depth++;
+  } while (depth < n);
+
+  // Transition to backtrack
+  depth = len - 1;
+  current = tailsBuf[depth]!;
+
+  // Backtrack phase: reconstruct LIS using parent chain
+  do {
+    lisBuf[depth] = current;
+    current = parentBuf[current]!;
+  } while (depth--);
+
+  return len;
+};
+
+// NEWEST: Backtrack pulled out of loop with break
+const findLIS_Newest = (arr: number[], n: number): number => {
+  if (n === 0) return 0;
+  if (n === 1) {
+    lisBuf[0] = 0;
+    return 1;
+  }
+
+  let len = 0;
+  let depth = 0;
+  let current = 0;
+
+  for (;;) {
+    // Forward phase: build tails and parent pointers
+    if (depth < n) {
+      const value = arr[depth]!;
+      const pos = binarySearch(arr, tailsBuf, len, value);
+
+      parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+      tailsBuf[pos] = depth;
+
+      if (pos === len) len++;
+      depth++;
+      continue;
+    }
+
+    // Transition to backtrack
+    depth = len - 1;
+    current = tailsBuf[depth]!;
+
+    // Both phases complete
+    break;
+  }
+
+  // Backtrack phase: reconstruct LIS using parent chain
+  do {
+    lisBuf[depth] = current;
+    current = parentBuf[current]!;
+  } while (depth--);
+
+  return len;
 };
 
 // Generate test data
@@ -140,18 +332,34 @@ for (const size of sizes) {
   const testData = generateTestData(size);
 
   benchmark('Two-Loop', findLIS_TwoLoop, testData, iterations);
-  benchmark('Single-Loop', findLIS_SingleLoop, testData, iterations);
+  benchmark('Single-Loop (Old)', findLIS_SingleLoop_Old, testData, iterations);
+  benchmark('Latest', findLIS_Latest, testData, iterations);
+  benchmark('DoWhile', findLIS_DoWhile, testData, iterations);
+  benchmark('Current', findLIS_Current, testData, iterations);
 
   // Verify they produce same results
   const result1 = findLIS_TwoLoop(testData, testData.length);
   const lis1 = [...lisBuf.slice(0, result1)];
 
-  const result2 = findLIS_SingleLoop(testData, testData.length);
+  const result2 = findLIS_SingleLoop_Old(testData, testData.length);
   const lis2 = [...lisBuf.slice(0, result2)];
 
-  if (result1 !== result2 || JSON.stringify(lis1) !== JSON.stringify(lis2)) {
+  const result3 = findLIS_Latest(testData, testData.length);
+  const lis3 = [...lisBuf.slice(0, result3)];
+
+  const result4 = findLIS_DoWhile(testData, testData.length);
+  const lis4 = [...lisBuf.slice(0, result4)];
+
+  const result5 = findLIS_Current(testData, testData.length);
+  const lis5 = [...lisBuf.slice(0, result5)];
+
+  if (result1 !== result2 || result1 !== result3 || result1 !== result4 || result1 !== result5 ||
+      JSON.stringify(lis1) !== JSON.stringify(lis2) ||
+      JSON.stringify(lis1) !== JSON.stringify(lis3) ||
+      JSON.stringify(lis1) !== JSON.stringify(lis4) ||
+      JSON.stringify(lis1) !== JSON.stringify(lis5)) {
     console.error('ERROR: Results differ!');
   } else {
-    console.log('✓ Results match');
+    console.log('✓ All results match');
   }
 }
