@@ -95,26 +95,28 @@ export function createReconciler() {
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
     parent: DeferredListNode<TElement>,
-    oldItems: T[],
+    oldHead: ListItemNode<T, TElement> | undefined,
     newItems: T[],
     renderItem: (item: T) => TElement,
     keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
-    // Early bailout - same reference
-    if (oldItems === newItems) return;
 
     const container = parent.element;
     if (!container) return; // No parent yet
 
     const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
-    // Phase 1: Build oldPos map (plain object for speed)
+    // Phase 1: Build oldPos map by traversing linked list (plain object for speed)
     const oldPos = Object.create(null) as Record<string, number>;
-    for (let i = 0; i < oldItems.length; i++) {
+    let i = 0;
+    let current = oldHead;
+    while (current) {
       // Cast for ts—we accept string|num|symbol but ts doesn't like that.
-      const key = keyFn(oldItems[i]!) as string;
+      const key = keyFn(current.itemData) as string;
       oldPos[key] = i;
+      i++;
+      current = current.nextSibling as ListItemNode<T, TElement> | undefined;
     }
 
     // Phase 2: Build compacted arrays + newKeys lookup (single loop!)

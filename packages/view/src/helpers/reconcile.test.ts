@@ -87,7 +87,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      [], // old items
+      undefined, // old head (empty list)
       items, // new items
       (item) => {
         const el = new MockElement('li');
@@ -125,7 +125,7 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileList(ctx, parent, [], ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileList(ctx, parent, undefined, ['a', 'b'], createElement, (item) => item, renderer);
 
     expect(container.children).toHaveLength(2);
 
@@ -133,7 +133,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      ['a', 'b'],
+      parent.firstChild as ListItemNode<string, MockElement> | undefined,
       ['a', 'b', 'c', 'd'],
       createElement,
       (item) => item,
@@ -153,7 +153,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      ['a', 'b', 'c', 'd'],
+      parent.firstChild as ListItemNode<string, MockElement> | undefined,
       ['a', 'c', 'd'],
       createElement,
       (item) => item,
@@ -184,7 +184,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      [],
+      undefined,
       ['a', 'b', 'c'],
       (item) => {
         const element = new MockElement(`item-${item}`);
@@ -203,7 +203,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      ['a', 'b', 'c'],
+      parent.firstChild as ListItemNode<string, MockElement> | undefined,
       ['a', 'c'],
       (item) => new MockElement(`item-${item}`),
       (item) => item,
@@ -236,13 +236,13 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileList(ctx, parent, [], ['a', 'b', 'c'], createElement, (item) => item, renderer);
+    reconcileList(ctx, parent, undefined, ['a', 'b', 'c'], createElement, (item) => item, renderer);
 
     // Reverse order
     reconcileList(
       ctx,
       parent,
-      ['a', 'b', 'c'],
+      parent.firstChild as ListItemNode<string, MockElement> | undefined,
       ['c', 'b', 'a'],
       createElement,
       (item) => item,
@@ -280,7 +280,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      [],
+      undefined,
       [objA, objB, objC],
       createElement,
       (item) => item.id, // Key by ID
@@ -291,7 +291,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      [objA, objB, objC],
+      parent.firstChild as ListItemNode<{ id: number; name: string }, MockElement> | undefined,
       [objC, objA, objB],
       createElement,
       (item) => item.id, // Key by ID
@@ -325,7 +325,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      [],
+      undefined,
       [
         { id: 1, name: 'Alice' },
         { id: 2, name: 'Bob' },
@@ -339,10 +339,7 @@ describe('reconcileList', () => {
     reconcileList(
       ctx,
       parent,
-      [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ],
+      parent.firstChild as ListItemNode<{ id: number; name: string }, MockElement> | undefined,
       [
         { id: 1, name: 'Alicia' }, // different object!
         { id: 2, name: 'Robert' },
@@ -377,13 +374,13 @@ describe('reconcileList', () => {
     };
 
     // Initial: a b c d
-    reconcileList(ctx, parent, [], ['a', 'b', 'c', 'd'], createElement, (item) => item, renderer);
+    reconcileList(ctx, parent, undefined, ['a', 'b', 'c', 'd'], createElement, (item) => item, renderer);
 
     // Transform: d e c (removed: a, b; added: e; reordered: d, c)
     reconcileList(
       ctx,
       parent,
-      ['a', 'b', 'c', 'd'],
+      parent.firstChild as ListItemNode<string, MockElement> | undefined,
       ['d', 'e', 'c'],
       createElement,
       (item) => item,

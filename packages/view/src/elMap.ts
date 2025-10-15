@@ -82,22 +82,14 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       // Create an effect that reconciles the list when items change
       // PATTERN: Effect automatically schedules via scheduler (like signals/effect.ts)
       dispose = effect(() => {
-        let current = node.firstChild;
         const currentItems = itemsSignal();
 
-        // PATTERN: Snapshot linked list to get previous items (single source of truth)
-        // This eliminates redundant state and prevents sync bugs
-        const oldItems: T[] = [];
-
-        while (current) {
-          oldItems.push((current as ListItemNode<T, TElement>).itemData);
-          current = current.nextSibling;
-        }
-
+        // PATTERN: Pass linked list head directly to reconciler (single source of truth)
+        // This eliminates array allocation and prevents sync bugs
         reconcileList<T, TElement, TText>(
           ctx,
           node,  // ← Pass DeferredListNode directly
-          oldItems,
+          node.firstChild as ListItemNode<T, TElement> | undefined,
           currentItems,
           (itemData: T) => {
             // PATTERN: Create signal once and reuse (like graph-edges.ts reuses deps)
