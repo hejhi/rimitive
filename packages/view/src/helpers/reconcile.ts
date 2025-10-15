@@ -176,6 +176,7 @@ export function createReconciler() {
       if (!node) {
         const element = renderItem(item);
         node = itemsByKey.get(key);
+
         if (!node) {
           // Create new ListItemNode
           node = {
@@ -204,9 +205,7 @@ export function createReconciler() {
       const element = node.element;
 
       // Check if in LIS
-      const inLIS = i === nextLISPos;
-
-      if (inLIS) {
+      if (i === nextLISPos) {
         lisIdx++;
         nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
         // Move if not in LIS
