@@ -65,8 +65,8 @@ export function createReconciler() {
         }
 
         // Fall through to backtrack
-        current = tailsBuf[len - 1]!;
         depth = len - 1;
+        current = tailsBuf[depth]!;
       }
 
       // Backtrack phase: reconstruct LIS using parent chain
