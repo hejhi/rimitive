@@ -4,28 +4,6 @@ import type { DeferredListNode, ListItemNode } from '../types';
 import { disposeScope } from './scope';
 import { appendChild, removeChild, moveChild } from './list-edges';
 
-/**
- * ALGORITHM: LIS-based List Reconciliation with DOM-like Structure
- *
- * PATTERN: Like DOM nodes, uses intrusive doubly-linked list for relationships
- * - Nodes link directly to each other (no separate edge objects)
- * - O(1) sibling traversal via node.nextSibling
- * - O(1) parent access via node.parentList
- * - Map for O(1) key-based lookup during reconciliation
- *
- * Optimizations:
- * - Closure-captured reusable buffers (grow once per size increase)
- * - O(n log n) LIS using patience sorting + binary search
- * - Track newKeys during compaction (no map rebuild)
- * - Inline calculations to reduce function call overhead
- *
- * Complexity: O(n log n) time, O(n) space (reused buffers)
- */
-
-/**
- * Create reconciler with closure-captured buffers
- * PATTERN: Like signals createScheduler/createGraphEdges
- */
 export function createReconciler() {
   // Closure-captured reusable buffers (grow automatically, zero allocations after first use)
   const oldIndicesBuf: number[] = [];
