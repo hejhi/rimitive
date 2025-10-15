@@ -51,23 +51,22 @@ export function createReconciler() {
 
     for (;;) {
       // Forward phase: build tails and parent pointers
-      if (current === -1 && depth < n) {
-        const value = arr[depth]!;
-        const pos = binarySearch(arr, tailsBuf, len, value);
-
-        parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
-        tailsBuf[pos] = depth;
-
-        if (pos === len) len++;
-        depth++;
-        continue;
-      }
-
-      // Transition: initialize backtrack at end of forward pass
       if (current === -1) {
+        if (depth < n) {
+          const value = arr[depth]!;
+          const pos = binarySearch(arr, tailsBuf, len, value);
+
+          parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+          tailsBuf[pos] = depth;
+
+          if (pos === len) len++;
+          depth++;
+          continue;
+        }
+
+        // Fall through to backtrack
         current = tailsBuf[len - 1]!;
         depth = len - 1;
-        // Fall through to backtrack
       }
 
       // Backtrack phase: reconstruct LIS using parent chain
@@ -75,7 +74,7 @@ export function createReconciler() {
       current = parentBuf[current]!;
       depth--;
 
-      if (depth >= 0) continue;
+      if (depth > -1) continue;
 
       // Both phases complete
       return len;
