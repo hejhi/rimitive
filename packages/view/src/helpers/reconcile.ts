@@ -103,6 +103,7 @@ export function createReconciler() {
   ): void {
 
     const container = parent.element;
+
     if (!container) return; // No parent yet
 
     const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
@@ -185,7 +186,7 @@ export function createReconciler() {
             parentList: undefined,
             previousSibling: undefined,
             nextSibling: undefined,
-          } as ListItemNode<T, TElement>;
+          };
           itemsByKey.set(key, node);
         }
 
@@ -194,27 +195,24 @@ export function createReconciler() {
 
         // Also append to DOM
         renderer.appendChild(container, element);
-      } else {
         // Update data
-        if (node.itemData !== item) {
-          node.itemData = item;
-          if (node.itemSignal) node.itemSignal(item);
-        }
+      } else if (node.itemData !== item) {
+        node.itemData = item;
+        if (node.itemSignal) node.itemSignal(item);
       }
 
       const element = node.element;
 
       // Check if in LIS
       const inLIS = i === nextLISPos;
+
       if (inLIS) {
         lisIdx++;
         nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-      }
-
-      // Move if not in LIS
-      if (!inLIS && node.parentList) {
+        // Move if not in LIS
+      } else if (node.parentList) {
         // Calculate reference sibling (next position in list)
-        const refSibling: ListItemNode<T, TElement> | undefined = prevNode ? prevNode.nextSibling as ListItemNode<T, TElement> | undefined : parent.firstChild as ListItemNode<T, TElement> | undefined;
+        const refSibling = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement>;
 
         // Only move if not already in correct position
         if (node !== refSibling) {
@@ -223,9 +221,8 @@ export function createReconciler() {
 
           // Move in DOM
           const nextElement = refSibling ? refSibling.element : null;
-          if (element !== nextElement) {
-            renderer.insertBefore(container, element, nextElement);
-          }
+
+          if (element !== nextElement) renderer.insertBefore(container, element, nextElement);
         }
       }
 
