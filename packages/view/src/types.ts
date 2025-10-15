@@ -43,6 +43,7 @@ export interface ListItemNode<T = unknown, TElement = ReactiveElement> extends V
   itemData: T;              // The actual data
   itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
   position: number;         // Current position in list (cached for LIS algorithm)
+  status: number;           // Status bits for reconciliation (VISITED, etc.)
 
   // DOM-like navigation (intrusive linked list - nodes link directly to each other)
   parentList: DeferredListNode<TElement> | undefined;     // Like DOM parentNode

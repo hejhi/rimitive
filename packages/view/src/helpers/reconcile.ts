@@ -4,6 +4,9 @@ import type { DeferredListNode, ListItemNode } from '../types';
 import { disposeScope } from './scope';
 import { appendChild, removeChild, moveChild } from './list-edges';
 
+// Status bits for reconciliation (like signals CLEAN/DIRTY/PENDING)
+const VISITED = 1 << 0;  // Node exists in newItems array
+
 export function createReconciler() {
   // Closure-captured reusable buffers (grow automatically, zero allocations after first use)
   const oldIndicesBuf: number[] = [];
@@ -75,6 +78,8 @@ export function createReconciler() {
 
   /**
    * Reconcile list with minimal allocations
+   * PATTERN: Reordered loops - position first, then remove
+   * Eliminates newKeys allocation by using status bits
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
@@ -85,24 +90,20 @@ export function createReconciler() {
     renderer: Renderer<TElement, TText>
   ): void {
     const container = parent.element;
+    if (!container) return;
 
-    if (!container) return; // No parent yet
+    const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
-    const itemsByKey = parent.itemsByKey as Map<
-      string,
-      ListItemNode<T, TElement>
-    >;
-
-    // Build compacted arrays + newKeys lookup
+    // Loop 1: Build LIS arrays
     let count = 0;
-    const newKeys = Object.create(null) as Record<string, boolean>;
 
     for (let i = 0; i < newItems.length; i++) {
-      const key = keyFn(newItems[i]!) as string;
-      newKeys[key] = true; // Track which keys should exist
+      const item = newItems[i];
+      if (item === undefined) continue;
 
-      // Use cached position from node instead of oldPos map
+      const key = keyFn(item) as string;
       const node = itemsByKey.get(key);
+
       if (node) {
         oldIndicesBuf[count] = node.position;
         newPosBuf[count] = i;
@@ -110,37 +111,10 @@ export function createReconciler() {
       }
     }
 
-    // Find LIS (inline O(n log n))
+    // Calculate LIS
     const lisLen = findLIS(oldIndicesBuf, count);
 
-    // Remove items not in newKeys by traversing linked list (SOURCE OF TRUTH)
-    let current = parent.firstChild;
-
-    while (current) {
-      const next = current.nextSibling;
-      const key = current.key;
-
-      if (!newKeys[key]) {
-        const scope = ctx.elementScopes.get(current.element);
-        if (scope) {
-          disposeScope(scope);
-          ctx.elementScopes.delete(current.element);
-        }
-
-        // Remove from list structure (SOURCE OF TRUTH)
-        removeChild(current);
-
-        // Remove from renderer
-        renderer.removeChild(container, current.element);
-
-        // Update cache to stay in sync
-        itemsByKey.delete(key);
-      }
-
-      current = next;
-    }
-
-    // Position items
+    // Loop 2: Position items + mark as visited
     let lisIdx = 0;
     let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     let prevNode: ListItemNode<T, TElement> | undefined = undefined;
@@ -152,33 +126,30 @@ export function createReconciler() {
       const key = keyFn(item) as string;
       let node = itemsByKey.get(key);
 
-      // Create or reuse node
       if (!node) {
-        // Reconciler creates ListItemNode, render callback creates element
+        // Create new node
         const rendered = renderItem(item);
 
-        // Create new ListItemNode
         node = {
-          refType: 0, // Will be set by ViewNode if needed
+          refType: 0,
           key,
           element: rendered.element,
           itemData: item,
           itemSignal: rendered.itemSignal,
-          position: i, // Initialize position (will be updated at end of loop)
+          position: i,
+          status: VISITED, // Mark as visited on creation
           parentList: undefined,
           previousSibling: undefined,
           nextSibling: undefined,
         };
 
-        // Add to linked list (SOURCE OF TRUTH)
         appendChild(parent, node);
-
-        // Update cache to stay in sync
         itemsByKey.set(key, node);
-
-        // Also append to DOM
         renderer.appendChild(container, rendered.element);
       } else {
+        // Mark existing node as visited
+        node.status |= VISITED;
+
         // Update data
         if (node.itemData !== item) {
           node.itemData = item;
@@ -192,29 +163,44 @@ export function createReconciler() {
       if (i === nextLISPos) {
         lisIdx++;
         nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-        // Move if not in LIS
       } else if (node.parentList) {
-        // Calculate reference sibling (next position in list)
-        const refSibling = (
-          prevNode ? prevNode.nextSibling : parent.firstChild
-        ) as ListItemNode<T, TElement>;
+        // Move if not in LIS
+        const refSibling = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement>;
 
-        // Only move if not already in correct position
         if (node !== refSibling) {
-          // Move in list structure
           moveChild(node, refSibling);
 
-          // Move in DOM
           const nextElement = refSibling ? refSibling.element : null;
-
-          if (element !== nextElement)
-            renderer.insertBefore(container, element, nextElement);
+          if (element !== nextElement) renderer.insertBefore(container, element, nextElement);
         }
       }
 
-      // Update position inline (no extra traversal needed!)
       node.position = i;
       prevNode = node;
+    }
+
+    // Loop 3: Remove unvisited nodes
+    let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
+
+    while (current) {
+      const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
+
+      if (!(current.status & VISITED)) {
+        const scope = ctx.elementScopes.get(current.element);
+        if (scope) {
+          disposeScope(scope);
+          ctx.elementScopes.delete(current.element);
+        }
+
+        removeChild(current);
+        renderer.removeChild(container, current.element);
+        itemsByKey.delete(current.key);
+      } else {
+        // Clear visited flag for next reconciliation
+        current.status = 0;
+      }
+
+      current = next;
     }
   }
 
