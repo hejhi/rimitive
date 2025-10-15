@@ -68,7 +68,6 @@ export function createReconciler() {
 
   /**
    * Reconcile list with minimal allocations
-   * PATTERN: Linked list is source of truth, Map is lookup cache
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
@@ -90,9 +89,7 @@ export function createReconciler() {
     let i = 0;
     let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
     while (current) {
-      // Cast for ts—we accept string|num|symbol but ts doesn't like that.
-      const key = keyFn(current.itemData) as string;
-      oldPos[key] = i;
+      oldPos[current.key] = i;
       i++;
       current = current.nextSibling as ListItemNode<T, TElement> | undefined;
     }
@@ -118,7 +115,7 @@ export function createReconciler() {
     current = parent.firstChild as ListItemNode<T, TElement> | undefined;
     while (current) {
       const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
-      const key = keyFn(current.itemData) as string;
+      const key = current.key;
 
       if (!newKeys[key]) {
         const scope = ctx.elementScopes.get(current.element);
