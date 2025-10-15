@@ -7,7 +7,7 @@ import { createMockDisposable, MockElement } from '../test-utils';
 import { DEFERRED_LIST_REF, type DeferredListNode, type ListItemNode } from '../types';
 
 // Create reconciler once for all tests
-const reconcileList = createReconciler();
+const { reconcileList, findLIS } = createReconciler();
 
 // Mock renderer for reconcile tests
 function createMockRenderer(): Renderer<MockElement, MockElement> {
@@ -67,6 +67,37 @@ function createMockRenderer(): Renderer<MockElement, MockElement> {
     isTextNode: (_value): _value is MockElement => false,
   };
 }
+
+describe('findLIS', () => {
+  it('computes correct LIS length for simple increasing sequence', () => {
+    const arr = [0, 1, 2, 3];
+    const result = findLIS(arr, arr.length);
+    expect(result).toBe(4);
+  });
+
+  it('computes correct LIS length for shuffled sequence', () => {
+    const arr = [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15];
+    const result = findLIS(arr, arr.length);
+    expect(result).toBe(6); // LIS is [0, 2, 6, 9, 13, 15]
+  });
+
+  it('handles empty array', () => {
+    const result = findLIS([], 0);
+    expect(result).toBe(0);
+  });
+
+  it('handles single element', () => {
+    const arr = [5];
+    const result = findLIS(arr, 1);
+    expect(result).toBe(1);
+  });
+
+  it('handles decreasing sequence', () => {
+    const arr = [5, 4, 3, 2, 1];
+    const result = findLIS(arr, arr.length);
+    expect(result).toBe(1); // Any single element
+  });
+});
 
 describe('reconcileList', () => {
   it('displays all items in list', () => {

@@ -54,7 +54,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
   const { ctx, signal, effect, renderer } = opts;
 
   // PATTERN: Create reconciler once with closure-captured buffers (like signals)
-  const reconcileList = createReconciler();
+  const { reconcileList } = createReconciler();
 
   function elMap<T>(
     itemsSignal: Reactive<T[]>,

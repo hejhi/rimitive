@@ -44,8 +44,6 @@ export function createReconciler() {
       return 1;
     }
 
-    const aN = n + 1;
-
     // Buffers grow automatically via assignment
     let len = 0;
     let depth = 0;
@@ -54,7 +52,7 @@ export function createReconciler() {
     for (;;) {
       // Forward phase: build tails and parent pointers
       if (current === -1) {
-        if (depth <= aN) {
+        if (depth < n) {
           const value = arr[depth]!;
           const pos = binarySearch(arr, tailsBuf, len, value);
 
@@ -67,7 +65,8 @@ export function createReconciler() {
         }
 
         // Fall through to backtrack
-        current = tailsBuf[aN]!;
+        depth = len - 1;
+        current = tailsBuf[depth]!;
       }
 
       // Backtrack phase: reconstruct LIS using parent chain
@@ -222,5 +221,8 @@ export function createReconciler() {
     }
   }
 
-  return reconcileList;
+  return {
+    reconcileList,
+    findLIS,
+  };
 }
