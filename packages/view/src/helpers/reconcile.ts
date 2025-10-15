@@ -111,8 +111,8 @@ export function createReconciler() {
     keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
-    const container = parent.element;
-    if (!container) return;
+    const containerEl = parent.element;
+    if (!containerEl) return;
 
     const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
@@ -157,7 +157,7 @@ export function createReconciler() {
 
         appendChild(parent, node);
         itemsByKey.set(key, node);
-        renderer.appendChild(container, rendered.element);
+        renderer.appendChild(containerEl, rendered.element);
       }
     }
 
@@ -178,7 +178,7 @@ export function createReconciler() {
 
       if (!node) continue;
 
-      const element = node.element;
+      const el = node.element;
 
       // Check if in LIS
       if (i === nextLISPos) {
@@ -186,21 +186,23 @@ export function createReconciler() {
         nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
       } else if (node.parentList) {
         // Calculate reference sibling for insertion
-        let refSibling = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement> | undefined;
+        let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement> | undefined;
 
         // Remove any unvisited nodes at the insertion point (cleanup as we go)
-        while (refSibling && !(refSibling.status & VISITED)) {
-          const nextRef = refSibling.nextSibling as ListItemNode<T, TElement> | undefined;
-          pruneNode(refSibling, ctx, container, itemsByKey, renderer);
-          refSibling = nextRef;
+        while (child && !(child.status & VISITED)) {
+          const nextChild = child.nextSibling as
+            | ListItemNode<T, TElement>
+            | undefined;
+          pruneNode(child, ctx, containerEl, itemsByKey, renderer);
+          child = nextChild;
         }
 
         // Move if not in LIS and not already in correct position
-        if (node !== refSibling) {
-          moveChild(node, refSibling);
+        if (node !== child) {
+          moveChild(node, child);
 
-          const nextElement = refSibling ? refSibling.element : null;
-          if (element !== nextElement) renderer.insertBefore(container, element, nextElement);
+          const nextEl = child ? child.element : null;
+          if (el !== nextEl) renderer.insertBefore(containerEl, el, nextEl);
         }
       }
 
@@ -209,15 +211,15 @@ export function createReconciler() {
     }
 
     // Loop 3: Remove any remaining unvisited nodes (cleanup stragglers)
-    let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
+    let child = parent.firstChild as ListItemNode<T, TElement> | undefined;
 
-    while (current) {
-      const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
+    while (child) {
+      const nextChild = child.nextSibling as ListItemNode<T, TElement> | undefined;
 
-      if (!(current.status & VISITED)) pruneNode(current, ctx, container, itemsByKey, renderer);
-      else current.status = 0;
+      if (!(child.status & VISITED)) pruneNode(child, ctx, containerEl, itemsByKey, renderer);
+      else child.status = 0;
 
-      current = next;
+      child = nextChild;
     }
   }
 
