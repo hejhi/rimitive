@@ -69,12 +69,12 @@ export function createReconciler() {
         current = tailsBuf[depth]!;
       }
 
-      // Backtrack phase: reconstruct LIS using parent chain
-      lisBuf[depth] = current;
-      current = parentBuf[current]!;
-      depth--;
-
-      if (depth > -1) continue;
+      do {
+        // Backtrack phase: reconstruct LIS using parent chain
+        lisBuf[depth] = current;
+        current = parentBuf[current]!;
+        depth--;
+      } while (depth > -1);
 
       // Both phases complete
       return len;
