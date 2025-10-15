@@ -68,14 +68,6 @@ export function createReconciler() {
 
   /**
    * Reconcile list with minimal allocations
-   * PATTERN: Linked list is source of truth, Map is lookup cache
-   *
-   * OPTIMIZATIONS:
-   * 1. Uses node.key instead of keyFn where possible (Phase 3)
-   *    - Eliminates 50% of keyFn calls (from 4n to 2n)
-   * 2. Caches position on node, eliminates Phase 1 traversal
-   *    - Positions updated inline during Phase 5 (no extra cost)
-   *    - Replaces O(n) traversal + Map allocation with 4-byte field
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
@@ -92,11 +84,7 @@ export function createReconciler() {
 
     const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
-    // Phase 1: SKIP! Positions cached on nodes (see Phase 5 for updates)
-    // OPTIMIZATION: Eliminates O(n) traversal by using node.position field
-
-    // Phase 2: Build compacted arrays + newKeys lookup (single loop!)
-    // Buffers grow automatically via assignment
+    // Build compacted arrays + newKeys lookup
     let count = 0;
     const newKeys = Object.create(null) as Record<string, boolean>;
 
@@ -104,7 +92,7 @@ export function createReconciler() {
       const key = keyFn(newItems[i]!) as string;
       newKeys[key] = true; // Track which keys should exist
 
-      // OPTIMIZATION: Use cached position from node instead of oldPos map
+      // Use cached position from node instead of oldPos map
       const node = itemsByKey.get(key);
       if (node) {
         oldIndicesBuf[count] = node.position;
@@ -113,7 +101,7 @@ export function createReconciler() {
       }
     }
 
-    // Phase 3: Remove items not in newKeys by traversing linked list (SOURCE OF TRUTH)
+    // Remove items not in newKeys by traversing linked list (SOURCE OF TRUTH)
     let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
 
     while (current) {
@@ -140,10 +128,10 @@ export function createReconciler() {
       current = next;
     }
 
-    // Phase 4: Find LIS (inline O(n log n))
+    // Find LIS (inline O(n log n))
     const lisLen = findLIS(oldIndicesBuf, count);
 
-    // Phase 5: Position items
+    // Position items
     let lisIdx = 0;
     let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     let prevNode: ListItemNode<T, TElement> | undefined = undefined;
@@ -157,7 +145,7 @@ export function createReconciler() {
 
       // Create or reuse node
       if (!node) {
-        // PATTERN: Reconciler creates ListItemNode, render callback creates element
+        // Reconciler creates ListItemNode, render callback creates element
         const rendered = renderItem(item);
 
         // Create new ListItemNode
@@ -212,9 +200,8 @@ export function createReconciler() {
         }
       }
 
-      // OPTIMIZATION: Update position inline (no extra traversal needed!)
+      // Update position inline (no extra traversal needed!)
       node.position = i;
-
       prevNode = node;
     }
   }
