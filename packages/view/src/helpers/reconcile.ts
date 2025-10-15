@@ -68,6 +68,14 @@ export function createReconciler() {
 
   /**
    * Reconcile list with minimal allocations
+   * PATTERN: Linked list is source of truth, Map is lookup cache
+   *
+   * OPTIMIZATIONS:
+   * 1. Uses node.key instead of keyFn where possible (Phase 3)
+   *    - Eliminates 50% of keyFn calls (from 4n to 2n)
+   * 2. Caches position on node, eliminates Phase 1 traversal
+   *    - Positions updated inline during Phase 5 (no extra cost)
+   *    - Replaces O(n) traversal + Map allocation with 4-byte field
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
@@ -84,16 +92,8 @@ export function createReconciler() {
 
     const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
-    // Phase 1: Build oldPos map by traversing linked list (SOURCE OF TRUTH)
-    const oldPos = Object.create(null) as Record<string, number>;
-    let i = 0;
-    let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
-
-    while (current) {
-      oldPos[current.key] = i;
-      i++;
-      current = current.nextSibling as ListItemNode<T, TElement> | undefined;
-    }
+    // Phase 1: SKIP! Positions cached on nodes (see Phase 5 for updates)
+    // OPTIMIZATION: Eliminates O(n) traversal by using node.position field
 
     // Phase 2: Build compacted arrays + newKeys lookup (single loop!)
     // Buffers grow automatically via assignment
@@ -104,16 +104,17 @@ export function createReconciler() {
       const key = keyFn(newItems[i]!) as string;
       newKeys[key] = true; // Track which keys should exist
 
-      const pos = oldPos[key];
-      if (pos !== undefined) {
-        oldIndicesBuf[count] = pos;
+      // OPTIMIZATION: Use cached position from node instead of oldPos map
+      const node = itemsByKey.get(key);
+      if (node) {
+        oldIndicesBuf[count] = node.position;
         newPosBuf[count] = i;
         count++;
       }
     }
 
     // Phase 3: Remove items not in newKeys by traversing linked list (SOURCE OF TRUTH)
-    current = parent.firstChild as ListItemNode<T, TElement> | undefined;
+    let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
 
     while (current) {
       const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
@@ -166,6 +167,7 @@ export function createReconciler() {
           element: rendered.element,
           itemData: item,
           itemSignal: rendered.itemSignal,
+          position: i, // Initialize position (will be updated at end of loop)
           parentList: undefined,
           previousSibling: undefined,
           nextSibling: undefined,
@@ -209,6 +211,9 @@ export function createReconciler() {
           if (element !== nextElement) renderer.insertBefore(container, element, nextElement);
         }
       }
+
+      // OPTIMIZATION: Update position inline (no extra traversal needed!)
+      node.position = i;
 
       prevNode = node;
     }

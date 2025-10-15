@@ -42,6 +42,7 @@ export interface ListItemNode<T = unknown, TElement = ReactiveElement> extends V
   key: string;              // Unique key for reconciliation
   itemData: T;              // The actual data
   itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
+  position: number;         // Current position in list (cached for LIS algorithm)
 
   // DOM-like navigation (intrusive linked list - nodes link directly to each other)
   parentList: DeferredListNode<TElement> | undefined;     // Like DOM parentNode
