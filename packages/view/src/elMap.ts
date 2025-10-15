@@ -82,12 +82,13 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       // Create an effect that reconciles the list when items change
       // PATTERN: Effect automatically schedules via scheduler (like signals/effect.ts)
       dispose = effect(() => {
+        let current = node.firstChild;
         const currentItems = itemsSignal();
 
         // PATTERN: Snapshot linked list to get previous items (single source of truth)
         // This eliminates redundant state and prevents sync bugs
         const oldItems: T[] = [];
-        let current = node.firstChild;
+
         while (current) {
           oldItems.push((current as ListItemNode<T, TElement>).itemData);
           current = current.nextSibling;
@@ -108,7 +109,8 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
             // Store item metadata including signal for updates
             const key = String(keyFn(itemData));
-            (node.itemsByKey as Map<string, ListItemNode<T, TElement>>).set(key, {
+
+            node.itemsByKey.set(key, {
               key,
               itemData,
               itemSignal,
