@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createReconciler, replaceChildren } from './reconcile';
+import { createReconciler } from './reconcile';
 import { createViewContext } from '../context';
 import { createScope, trackInSpecificScope } from './scope';
 import type { Renderer } from '../renderer';
@@ -378,67 +378,5 @@ describe('reconcileList', () => {
 
     // User cares: final state is correct
     expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-d', 'item-e', 'item-c']);
-  });
-});
-
-describe('replaceChildren', () => {
-  it('replaces all children', () => {
-    const ctx = createViewContext();
-    const renderer = createMockRenderer();
-    const container = new MockElement('container');
-
-    // Add some children manually
-    const child1 = new MockElement('div');
-    child1.id = 'old-1';
-    const child2 = new MockElement('div');
-    child2.id = 'old-2';
-    renderer.appendChild(container, child1);
-    renderer.appendChild(container, child2);
-
-    expect(container.children).toHaveLength(2);
-
-    // Replace with new children
-    const new1 = new MockElement('div');
-    new1.id = 'new-1';
-    const new2 = new MockElement('div');
-    new2.id = 'new-2';
-    const new3 = new MockElement('div');
-    new3.id = 'new-3';
-    const newChildren = [new1, new2, new3];
-
-    replaceChildren(ctx, container, newChildren, renderer);
-
-    // User cares: old children gone, new children present
-    expect(container.children).toHaveLength(3);
-    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['new-1', 'new-2', 'new-3']);
-  });
-
-  it('disposes scopes of removed children', () => {
-    const ctx = createViewContext();
-    const renderer = createMockRenderer();
-    const container = new MockElement('container');
-
-    // Add children with scopes
-    const child1 = new MockElement('child-1');
-    const child2 = new MockElement('child-2');
-    const scope1 = createScope();
-    const scope2 = createScope();
-    const disposable1 = createMockDisposable();
-    const disposable2 = createMockDisposable();
-
-    trackInSpecificScope(scope1, disposable1);
-    trackInSpecificScope(scope2, disposable2);
-    ctx.elementScopes.set(child1, scope1);
-    ctx.elementScopes.set(child2, scope2);
-
-    renderer.appendChild(container, child1);
-    renderer.appendChild(container, child2);
-
-    // Replace with empty
-    replaceChildren(ctx, container, [], renderer);
-
-    // User cares: scopes disposed
-    expect(disposable1.disposed).toBe(true);
-    expect(disposable2.disposed).toBe(true);
   });
 });

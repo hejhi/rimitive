@@ -88,6 +88,7 @@ export function createReconciler() {
     const oldPos = Object.create(null) as Record<string, number>;
     let i = 0;
     let current = parent.firstChild as ListItemNode<T, TElement> | undefined;
+
     while (current) {
       oldPos[current.key] = i;
       i++;
@@ -113,6 +114,7 @@ export function createReconciler() {
 
     // Phase 3: Remove items not in newKeys by traversing linked list (SOURCE OF TRUTH)
     current = parent.firstChild as ListItemNode<T, TElement> | undefined;
+
     while (current) {
       const next = current.nextSibling as ListItemNode<T, TElement> | undefined;
       const key = current.key;
@@ -213,40 +215,4 @@ export function createReconciler() {
   }
 
   return reconcileList;
-}
-
-/**
- * Get first child element using DOM properties
- */
-function getFirstElement<T extends object>(container: T): T | null {
-  return (container as unknown as { firstChild: T | null }).firstChild;
-}
-
-/**
- * Simple reconciliation for cases where we can just replace all children
- * (useful for small lists or initial render)
- */
-export function replaceChildren<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
-  ctx: ViewContext,
-  container: TElement,
-  elements: TElement[],
-  renderer: Renderer<TElement, TText>
-): void {
-  // Clear existing children
-  let firstChild = getFirstElement(container);
-  while (firstChild) {
-    // ALGORITHMIC: Dispose via scope tree walk
-    const scope = ctx.elementScopes.get(firstChild);
-    if (scope) {
-      disposeScope(scope);
-      ctx.elementScopes.delete(firstChild);
-    }
-    renderer.removeChild(container, firstChild);
-    firstChild = getFirstElement(container);
-  }
-
-  // Add new children
-  for (const element of elements) {
-    renderer.appendChild(container, element);
-  }
 }
