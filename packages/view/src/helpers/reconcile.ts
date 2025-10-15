@@ -44,15 +44,13 @@ export function createReconciler() {
       return 1;
     }
 
-    // Buffers grow automatically via assignment
     let len = 0;
     let depth = 0;
 
     for (;;) {
       // Forward phase: build tails and parent pointers
       if (depth < n) {
-        const value = arr[depth]!;
-        const pos = binarySearch(arr, tailsBuf, len, value);
+        const pos = binarySearch(arr, tailsBuf, len, arr[depth]!);
 
         parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
         tailsBuf[pos] = depth;
