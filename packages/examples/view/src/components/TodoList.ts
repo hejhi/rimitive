@@ -181,11 +181,8 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     el([
       'div',
       { className: 'todo-stats' },
-      'Active: ',
-      todoList.activeCount,
-      ' | Completed: ',
-      todoList.completedCount,
-      ' | ',
+      // UI-level computed concerns
+      api.computed(() => `Active: ${todoList.activeCount()} | Completed: ${todoList.completedCount()} | `),
       clearBtn,
     ]),
   ]);
