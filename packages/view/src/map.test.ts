@@ -175,6 +175,74 @@ describe('map primitive', () => {
       expect((itemElements[2]!.children[0] as MockText).content).toBe('Bob');
     });
 
+    it('maintains position when list becomes empty then refills with siblings present', () => {
+      const ctx = createViewContext();
+      const { renderer } = createMockRenderer();
+      const { read: items, write: setItems, subscribers } = createSignal(['a', 'b']);
+      const signal = <T>(val: T): Reactive<T> => {
+        const s = () => val;
+        s.peek = () => val;
+        return s;
+      };
+      const effect = (fn: () => void) => {
+        subscribers.add(fn);
+        fn();
+        return () => subscribers.delete(fn);
+      };
+      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
+
+      const listRef = map(
+        items,
+        (itemSignal) => {
+          const element = renderer.createElement('li');
+          const text = renderer.createTextNode(itemSignal());
+          renderer.appendChild(element, text);
+          return createElementRef(element);
+        },
+        (item) => item
+      );
+
+      // Create parent with map in middle
+      const parent = renderer.createElement('ul');
+      const header = renderer.createElement('li');
+      const headerText = renderer.createTextNode('HEADER');
+      renderer.appendChild(header, headerText);
+      renderer.appendChild(parent, header);
+
+      listRef(parent); // Map attaches here
+
+      const footer = renderer.createElement('li');
+      const footerText = renderer.createTextNode('FOOTER');
+      renderer.appendChild(footer, footerText);
+      renderer.appendChild(parent, footer);
+
+      // Initial: HEADER, a, b, FOOTER
+      expect(parent.children).toHaveLength(4);
+      expect((parent.children[0] as MockElement).children[0] as MockText).toHaveProperty('content', 'HEADER');
+      expect((parent.children[1] as MockElement).children[0] as MockText).toHaveProperty('content', 'a');
+      expect((parent.children[2] as MockElement).children[0] as MockText).toHaveProperty('content', 'b');
+      expect((parent.children[3] as MockElement).children[0] as MockText).toHaveProperty('content', 'FOOTER');
+
+      // Empty the list
+      setItems([]);
+
+      // Should be: HEADER, FOOTER
+      expect(parent.children).toHaveLength(2);
+      expect((parent.children[0] as MockElement).children[0] as MockText).toHaveProperty('content', 'HEADER');
+      expect((parent.children[1] as MockElement).children[0] as MockText).toHaveProperty('content', 'FOOTER');
+
+      // Refill the list
+      setItems(['c', 'd']);
+
+      // Should maintain position: HEADER, c, d, FOOTER
+      // WITHOUT nextSibling tracking, items might append at end: HEADER, FOOTER, c, d
+      expect(parent.children).toHaveLength(4);
+      expect((parent.children[0] as MockElement).children[0] as MockText).toHaveProperty('content', 'HEADER');
+      expect((parent.children[1] as MockElement).children[0] as MockText).toHaveProperty('content', 'c');
+      expect((parent.children[2] as MockElement).children[0] as MockText).toHaveProperty('content', 'd');
+      expect((parent.children[3] as MockElement).children[0] as MockText).toHaveProperty('content', 'FOOTER');
+    });
+
     it('uses custom keyFn for tracking', () => {
       const ctx = createViewContext();
       const { renderer } = createMockRenderer();
