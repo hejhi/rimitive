@@ -15,7 +15,8 @@
     "@lattice/view": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^6.0.5",
-    "typescript": "^5.8.3"
+    "rollup-plugin-visualizer": "^6.0.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.0.5"
   }
 }

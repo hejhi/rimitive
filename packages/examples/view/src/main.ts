@@ -100,8 +100,8 @@ if (app) {
   const todoList = TodoList(api);
 
   // Append to DOM (renderer returns HTMLElement for DOM renderer)
-  app.appendChild(counter.element as HTMLElement);
-  app.appendChild(todoList.element as HTMLElement);
+  app.appendChild(counter.node.element as HTMLElement);
+  app.appendChild(todoList.node.element as HTMLElement);
 
   // Trigger lifecycle callbacks (for DOM connection observers)
   counter((el) => {
