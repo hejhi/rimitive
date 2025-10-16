@@ -5,6 +5,8 @@
  * Returns unsubscribe function for manual cleanup or use in lifecycle callbacks
  */
 
+import type { ElementRef } from './types';
+
 /**
  * Attach an event listener to an element with automatic type inference
  * Returns unsubscribe function to remove the listener
@@ -63,13 +65,13 @@ export function on<K extends keyof HTMLElementEventMap>(
  * ```
  */
 export function listener<TElement extends HTMLElement>(
-  elementRef: (callback: (element: TElement) => void | (() => void)) => TElement,
+  elementRef: ElementRef<TElement>,
   setup: (on: <K extends keyof HTMLElementEventMap>(
     event: K,
     handler: (event: HTMLElementEventMap[K]) => void,
     options?: boolean | AddEventListenerOptions
   ) => void) => void
-): typeof elementRef {
+): ElementRef<TElement> {
   elementRef((element) => {
     const cleanups: Array<() => void> = [];
 

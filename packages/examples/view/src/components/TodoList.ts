@@ -32,9 +32,7 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
 
   // Handle enter key in input
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleAdd();
-    }
+    if (e.key === 'Enter') handleAdd();
   };
 
   // Create input with event listeners
@@ -55,34 +53,31 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
   );
 
   // Create "Add Todo" button
-  const addBtn = el(['button', {}, 'Add Todo']);
-  addBtn((btn) => on(btn, 'click', handleAdd));
+  const addBtn = el(['button', {}, 'Add Todo'])((btn) =>
+    on(btn, 'click', handleAdd)
+  );
 
   // Create filter buttons
   const allBtn = el([
     'button',
     { className: api.computed(() => (todoList.filter() === 'all' ? 'active' : '')) },
     'All',
-  ]);
-  allBtn((btn) => on(btn, 'click', () => todoList.setFilter('all')));
+  ])((btn) => on(btn, 'click', () => todoList.setFilter('all')));
 
   const activeBtn = el([
     'button',
     { className: api.computed(() => (todoList.filter() === 'active' ? 'active' : '')) },
     'Active',
-  ]);
-  activeBtn((btn) => on(btn, 'click', () => todoList.setFilter('active')));
+  ])((btn) => on(btn, 'click', () => todoList.setFilter('active')));
 
   const completedBtn = el([
     'button',
     { className: api.computed(() => (todoList.filter() === 'completed' ? 'active' : '')) },
     'Completed',
-  ]);
-  completedBtn((btn) => on(btn, 'click', () => todoList.setFilter('completed')));
+  ])((btn) => on(btn, 'click', () => todoList.setFilter('completed')));
 
   // Create "Clear Completed" button
-  const clearBtn = el(['button', 'Clear Completed']);
-  clearBtn((btn) => on(btn, 'click', () => todoList.clearCompleted()));
+  const clearBtn = el(['button', 'Clear Completed'])((btn) => on(btn, 'click', () => todoList.clearCompleted()));
 
   return el([
     'div',
