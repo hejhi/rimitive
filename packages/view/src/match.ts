@@ -94,9 +94,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
       // Track dispose in parent's scope
       const parentScope = ctx.elementScopes.get(parent);
-      if (parentScope) {
-        trackInSpecificScope(parentScope, { dispose });
-      }
+      if (parentScope) trackInSpecificScope(parentScope, { dispose });
     }) as MatchFragment<TElement>;
 
     // Attach refType to fragment (type discrimination)
