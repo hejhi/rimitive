@@ -16,22 +16,22 @@ export function Counter(api: LatticeViewAPI, initialCount = 0): ElementRef {
   const counter = createCounter(api, initialCount);
 
   // Create buttons with event listeners
-  const decrementBtn = el(['button', {}, '- Decrement']);
-  decrementBtn((el) => {
-    el.addEventListener('click', counter.decrement);
-    return () => el.removeEventListener('click', counter.decrement);
+  const decrementBtn = el(['button', '- Decrement']);
+  decrementBtn((btn) => {
+    btn.addEventListener('click', counter.decrement);
+    return () => btn.removeEventListener('click', counter.decrement);
   });
 
-  const incrementBtn = el(['button', {}, '+ Increment']);
-  incrementBtn((el) => {
-    el.addEventListener('click', counter.increment);
-    return () => el.removeEventListener('click', counter.increment);
+  const incrementBtn = el(['button', '+ Increment']);
+  incrementBtn((btn) => {
+    btn.addEventListener('click', counter.increment);
+    return () => btn.removeEventListener('click', counter.increment);
   });
 
-  const resetBtn = el(['button', {}, 'Reset']);
-  resetBtn((el) => {
-    el.addEventListener('click', counter.reset);
-    return () => el.removeEventListener('click', counter.reset);
+  const resetBtn = el(['button', 'Reset']);
+  resetBtn((btn) => {
+    btn.addEventListener('click', counter.reset);
+    return () => btn.removeEventListener('click', counter.reset);
   });
 
   // Create UI using el() primitive
