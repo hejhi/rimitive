@@ -100,7 +100,7 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
   });
 
   // Create "Clear Completed" button
-  const clearBtn = el(['button', {}, 'Clear Completed']);
+  const clearBtn = el(['button', 'Clear Completed']);
   clearBtn((btn) => {
     const handler = () => todoList.clearCompleted();
     btn.addEventListener('click', handler);
@@ -114,7 +114,7 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     el(['p', 'Demonstrates reactive lists with elMap, filtering, and complex state.']),
 
     // Input section
-    el(['div', {}, todoInput, addBtn]),
+    el(['div', todoInput, addBtn]),
 
     // Filter buttons
     el(['div', { className: 'filter-buttons' }, allBtn, activeBtn, completedBtn]),
