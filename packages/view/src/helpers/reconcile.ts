@@ -14,7 +14,6 @@ export function createReconciler() {
   const lisBuf: number[] = [];
   const tailsBuf: number[] = [];
   const parentBuf: number[] = [];
-  const visitedNodesBuf: ListItemNode[] = []; // Reusable buffer for visited nodes
 
   /**
    * Binary search for largest index where arr[tails[i]] < value
@@ -115,13 +114,17 @@ export function createReconciler() {
     const containerEl = parent.element;
     if (!containerEl) return;
 
-    const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
+    const newLen = newItems.length;
+    const itemsByKey = parent.itemsByKey as Map<
+      string,
+      ListItemNode<T, TElement>
+    >;
+    const visitedNodesBuf: ListItemNode<T, TElement>[] = Array(newLen);
 
     // Loop 1: Build LIS arrays + collect visited nodes
     let count = 0;
-    visitedNodesBuf.length = newItems.length;
 
-    for (let i = 0; i < newItems.length; i++) {
+    for (let i = 0; i < newLen; i++) {
       const item = newItems[i]!;
       const key = keyFn(item) as string;
       let node = itemsByKey.get(key);
@@ -164,8 +167,8 @@ export function createReconciler() {
         renderer.appendChild(containerEl, rendered.element);
       }
 
-      // Collect visited nodes (direct assignment)
-      visitedNodesBuf[i] = node as ListItemNode<T, TElement>;
+      // Collect visited nodes
+      visitedNodesBuf[i] = node;
     }
 
     // Calculate LIS
@@ -173,11 +176,10 @@ export function createReconciler() {
 
     // Loop 2: Traverse visited nodes and position
     let lisIdx = 0;
-    let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-    let prevNode: ListItemNode<T, TElement> | undefined = undefined;
+    let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
+    let prevNode: ListItemNode<T, TElement> | undefined;
 
-    for (let i = 0; i < newItems.length; i++) {
-      const node = visitedNodesBuf[i]! as ListItemNode<T, TElement>;
+    for (const node of visitedNodesBuf) {
       const el = node.element;
 
       // Check if in LIS
@@ -192,9 +194,7 @@ export function createReconciler() {
 
         // Remove any unvisited nodes at the insertion point (cleanup as we go)
         while (child && !(child.status & VISITED)) {
-          const nextChild = child.nextSibling as
-            | ListItemNode<T, TElement>
-            | undefined;
+          const nextChild = child.nextSibling as | ListItemNode<T, TElement>;
           pruneNode(child, ctx, containerEl, itemsByKey, renderer);
           child = nextChild;
         }
@@ -212,16 +212,20 @@ export function createReconciler() {
     }
 
     // Loop 3: Remove any remaining unvisited nodes (cleanup stragglers)
-    let child = parent.firstChild as ListItemNode<T, TElement> | undefined;
+    let child = parent.firstChild;
 
-    while (child) {
-      const nextChild = child.nextSibling as ListItemNode<T, TElement> | undefined;
+    if (!child) return;
+
+    do {
+      const nextChild = child.nextSibling as
+        | ListItemNode<T, TElement>
+        | undefined;
 
       if (!(child.status & VISITED)) pruneNode(child, ctx, containerEl, itemsByKey, renderer);
       else child.status = 0;
 
       child = nextChild;
-    }
+    } while (child);
   }
 
   return {
