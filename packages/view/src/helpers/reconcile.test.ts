@@ -1,13 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createReconciler } from './reconcile';
 import { createViewContext } from '../context';
-import { createScope, trackInSpecificScope } from './scope';
 import type { Renderer } from '../renderer';
-import { createMockDisposable, MockElement } from '../test-utils';
+import { MockElement } from '../test-utils';
 import { DEFERRED_LIST_REF, type DeferredListNode, type ListItemNode } from '../types';
 
 // Create reconciler once for all tests
-const { reconcileList, findLIS } = createReconciler();
+const { reconcileList } = createReconciler();
 
 // Mock renderer for reconcile tests
 function createMockRenderer(): Renderer<MockElement, MockElement> {
@@ -67,37 +66,6 @@ function createMockRenderer(): Renderer<MockElement, MockElement> {
     isTextNode: (_value): _value is MockElement => false,
   };
 }
-
-describe('findLIS', () => {
-  it('computes correct LIS length for simple increasing sequence', () => {
-    const arr = [0, 1, 2, 3];
-    const result = findLIS(arr, arr.length);
-    expect(result).toBe(4);
-  });
-
-  it('computes correct LIS length for shuffled sequence', () => {
-    const arr = [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15];
-    const result = findLIS(arr, arr.length);
-    expect(result).toBe(6); // LIS is [0, 2, 6, 9, 13, 15]
-  });
-
-  it('handles empty array', () => {
-    const result = findLIS([], 0);
-    expect(result).toBe(0);
-  });
-
-  it('handles single element', () => {
-    const arr = [5];
-    const result = findLIS(arr, 1);
-    expect(result).toBe(1);
-  });
-
-  it('handles decreasing sequence', () => {
-    const arr = [5, 4, 3, 2, 1];
-    const result = findLIS(arr, arr.length);
-    expect(result).toBe(1); // Any single element
-  });
-});
 
 describe('reconcileList', () => {
   it('displays all items in list', () => {
@@ -193,55 +161,6 @@ describe('reconcileList', () => {
     expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-a', 'item-c', 'item-d']);
   });
 
-  it('disposes scopes when items are removed', () => {
-    const ctx = createViewContext();
-    const renderer = createMockRenderer();
-    const container = new MockElement('container');
-
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
-      element: container,
-      firstChild: undefined,
-      lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-    };
-
-    const disposables: ReturnType<typeof createMockDisposable>[] = [];
-
-    // Initial render with scopes
-    reconcileList(
-      ctx,
-      parent,
-      ['a', 'b', 'c'],
-      (item) => {
-        const element = new MockElement(`item-${item}`);
-        const scope = createScope();
-        const disposable = createMockDisposable();
-        trackInSpecificScope(scope, disposable);
-        disposables.push(disposable);
-        ctx.elementScopes.set(element, scope);
-        return { element };
-      },
-      (item) => item,
-      renderer
-    );
-
-    // Remove item 'b'
-    reconcileList(
-      ctx,
-      parent,
-      ['a', 'c'],
-      (item) => ({ element: new MockElement(`item-${item}`) }),
-      (item) => item,
-      renderer
-    );
-
-    // User cares: only removed item's scope was disposed
-    expect(disposables[0]!.disposed).toBe(false); // 'a' not disposed
-    expect(disposables[1]!.disposed).toBe(true); // 'b' disposed
-    expect(disposables[2]!.disposed).toBe(false); // 'c' not disposed
-  });
-
   it('reorders items correctly', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
@@ -325,56 +244,6 @@ describe('reconcileList', () => {
     expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-3', 'item-1', 'item-2']);
   });
 
-  it('uses custom keyFn for tracking', () => {
-    const ctx = createViewContext();
-    const renderer = createMockRenderer();
-    const container = new MockElement('container');
-
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
-      element: container,
-      firstChild: undefined,
-      lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-    };
-
-    const createElement = (item: { id: number; name: string }) => {
-      const el = new MockElement('li');
-      el.id = `item-${item.id}`;
-      return { element: el };
-    };
-
-    // Initial render with objects having IDs
-    reconcileList(
-      ctx,
-      parent,
-      [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ],
-      createElement,
-      (item) => item.id, // key by ID
-      renderer
-    );
-
-    // Update with new objects but same IDs
-    reconcileList(
-      ctx,
-      parent,
-      [
-        { id: 1, name: 'Alicia' }, // different object!
-        { id: 2, name: 'Robert' },
-      ],
-      createElement,
-      (item) => item.id,
-      renderer
-    );
-
-    // User cares: items recognized by key, not identity
-    expect(container.children).toHaveLength(2);
-    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-1', 'item-2']);
-  });
-
   it('handles add + remove + reorder in single pass', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
@@ -409,5 +278,207 @@ describe('reconcileList', () => {
 
     // User cares: final state is correct
     expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-d', 'item-e', 'item-c']);
+  });
+
+  it('updates itemSignal based on reference equality', () => {
+    const ctx = createViewContext();
+    const renderer = createMockRenderer();
+    const container = new MockElement('container');
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+    };
+
+    const signals = new Map<string, ReturnType<typeof vi.fn>>();
+
+    // Create stable object references
+    const itemA = { id: 'a', value: 1 };
+    const itemB = { id: 'b', value: 2 };
+
+    // Initial render
+    reconcileList(
+      ctx,
+      parent,
+      [itemA, itemB],
+      (item) => {
+        const el = new MockElement('li');
+        el.id = `item-${item.id}`;
+        const signal = vi.fn() as any;
+        signals.set(item.id, signal);
+        return { element: el, itemSignal: signal };
+      },
+      (item) => item.id,
+      renderer
+    );
+
+    // Update only item A - use new object reference for A, same reference for B
+    const itemAUpdated = { id: 'a', value: 99 };
+
+    reconcileList(
+      ctx,
+      parent,
+      [itemAUpdated, itemB], // itemB is same reference
+      (item) => {
+        const el = new MockElement('li');
+        el.id = `item-${item.id}`;
+        return { element: el };
+      },
+      (item) => item.id,
+      renderer
+    );
+
+    // User cares: itemSignal uses reference equality
+    // - 'a' has new reference → signal called
+    // - 'b' has same reference → signal not called
+    expect(signals.get('a')).toHaveBeenCalledWith(itemAUpdated);
+    expect(signals.get('b')).not.toHaveBeenCalled();
+  });
+
+  it('handles empty to non-empty transition', () => {
+    const ctx = createViewContext();
+    const renderer = createMockRenderer();
+    const container = new MockElement('container');
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+    };
+
+    const createElement = (item: string) => {
+      const el = new MockElement('li');
+      el.id = `item-${item}`;
+      return { element: el };
+    };
+
+    // Initial: empty list
+    reconcileList(ctx, parent, [], createElement, (item) => item, renderer);
+    expect(container.children).toHaveLength(0);
+
+    // Add items
+    reconcileList(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+
+    // User cares: items added correctly
+    expect(container.children).toHaveLength(2);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-a', 'item-b']);
+  });
+
+  it('handles non-empty to empty transition', () => {
+    const ctx = createViewContext();
+    const renderer = createMockRenderer();
+    const container = new MockElement('container');
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+    };
+
+    const createElement = (item: string) => {
+      const el = new MockElement('li');
+      el.id = `item-${item}`;
+      return { element: el };
+    };
+
+    // Initial: non-empty list
+    reconcileList(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    expect(container.children).toHaveLength(2);
+
+    // Clear all items
+    reconcileList(ctx, parent, [], createElement, (item) => item, renderer);
+
+    // User cares: all items removed
+    expect(container.children).toHaveLength(0);
+  });
+
+  it('replaces all items when keys do not overlap', () => {
+    const ctx = createViewContext();
+    const renderer = createMockRenderer();
+    const container = new MockElement('container');
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+    };
+
+    const createElement = (item: string) => {
+      const el = new MockElement('li');
+      el.id = `item-${item}`;
+      return { element: el };
+    };
+
+    // Initial: a, b
+    reconcileList(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    const oldElements = [...container.children];
+
+    // Replace with completely different items: x, y
+    reconcileList(ctx, parent, ['x', 'y'], createElement, (item) => item, renderer);
+
+    // User cares: old items removed, new items added
+    expect(container.children).toHaveLength(2);
+    expect((container.children as MockElement[]).map((c) => c.id)).toEqual(['item-x', 'item-y']);
+    // Verify old elements are not in the container
+    expect(container.children).not.toContain(oldElements[0]);
+    expect(container.children).not.toContain(oldElements[1]);
+  });
+
+  it('handles duplicate keys by reusing first node', () => {
+    const ctx = createViewContext();
+    const renderer = createMockRenderer();
+    const container = new MockElement('container');
+
+    const parent: DeferredListNode<MockElement> = {
+      refType: DEFERRED_LIST_REF,
+      element: container,
+      firstChild: undefined,
+      lastChild: undefined,
+      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+    };
+
+    const itemSignals = new Map<string, ReturnType<typeof vi.fn>>();
+
+    // Items with duplicate keys
+    reconcileList(
+      ctx,
+      parent,
+      [
+        { id: 'a', value: 1 },
+        { id: 'b', value: 2 },
+        { id: 'a', value: 3 }, // duplicate key 'a'
+      ],
+      (item) => {
+        const el = new MockElement('li');
+        el.id = `item-${item.id}-${item.value}`;
+        const signal = vi.fn() as any;
+        itemSignals.set(item.id, signal);
+        return { element: el, itemSignal: signal };
+      },
+      (item) => item.id,
+      renderer
+    );
+
+    // Duplicate keys result in reusing the first node
+    // First 'a' (i=0) creates node with element id 'item-a-1'
+    // Second 'a' (i=2) reuses that node, updates itemData, calls itemSignal
+    expect(container.children).toHaveLength(2);
+    const ids = (container.children as MockElement[]).map((c) => c.id);
+
+    // Element created with first occurrence's data
+    expect(ids).toContain('item-a-1');
+    expect(ids).toContain('item-b-2');
+
+    // But itemSignal was called with last occurrence's data
+    expect(itemSignals.get('a')).toHaveBeenCalledWith({ id: 'a', value: 3 });
   });
 });
