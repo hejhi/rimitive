@@ -130,6 +130,10 @@ export function createReconciler() {
         oldIndicesBuf[count] = node.position;
         newPosBuf[count] = i;
         count++;
+
+        // Update position immediately (old position already cached in oldIndicesBuf)
+        node.position = i;
+
         // Mark existing node as visited
         node.status |= VISITED;
 
@@ -181,12 +185,14 @@ export function createReconciler() {
       const el = node.element;
 
       // Check if in LIS
-      if (i === nextLISPos) {
+      if (node.position === nextLISPos) {
         lisIdx++;
         nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
       } else if (node.parentList) {
         // Calculate reference sibling for insertion
-        let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as ListItemNode<T, TElement> | undefined;
+        let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
+          | ListItemNode<T, TElement>
+          | undefined;
 
         // Remove any unvisited nodes at the insertion point (cleanup as we go)
         while (child && !(child.status & VISITED)) {
@@ -206,7 +212,6 @@ export function createReconciler() {
         }
       }
 
-      node.position = i;
       prevNode = node;
     }
 
