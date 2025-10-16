@@ -208,9 +208,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
       const value = child();
       // Convert to string, handling null/undefined and primitives only
       let stringValue = '';
-      if (value != null) {
-        stringValue = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
-      }
+      if (value != null) stringValue = String(value);
       renderer.updateTextNode(textNode, stringValue);
     });
     // Track effect for cleanup when element is removed
