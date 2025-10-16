@@ -29,7 +29,7 @@ export function TodoItem(
   checkbox((el) => on(el, 'change', () => onToggle(todo.id)));
 
   // Create remove button with event listener
-  const removeBtn = el(['button', { className: 'todo-remove' }, '×']);
+  const removeBtn = el(['button', { className: 'todo-remove' }, 'x']);
   removeBtn((el) => on(el, 'click', () => onRemove(todo.id)));
 
   return el([
