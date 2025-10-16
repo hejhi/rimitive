@@ -100,7 +100,7 @@ export function createReconciler() {
 
   /**
    * Reconcile list with minimal allocations
-   * PATTERN: Reordered loops - position first, then remove
+   * Reordered loops - position first, then remove
    * Eliminates newKeys allocation by using status bits
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(

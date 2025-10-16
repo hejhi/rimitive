@@ -23,7 +23,7 @@ export type DOM = DOMElement;
 
 /**
  * Shared lifecycle observer instance
- * PATTERN: Create once and reuse like signals context
+ * Create once and reuse like signals context
  */
 const lifecycleObserver = createLifecycleObserver();
 

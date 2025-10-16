@@ -1,7 +1,7 @@
 /**
  * Counter Behavior - Framework Agnostic
  *
- * PATTERN: Component Pattern (see COMPONENT_PATTERN.md)
+ * Component Pattern (see COMPONENT_PATTERN.md)
  * This is a headless component - pure logic with no UI concerns.
  * Can be used with any renderer (view, React, Vue, Svelte, etc.)
  */

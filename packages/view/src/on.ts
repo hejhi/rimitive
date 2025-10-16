@@ -1,7 +1,7 @@
 /**
  * Event listener helper with automatic cleanup
  *
- * PATTERN: Simple primitive that wraps addEventListener with cleanup
+ * Simple primitive that wraps addEventListener with cleanup
  * Returns unsubscribe function for manual cleanup or use in lifecycle callbacks
  */
 

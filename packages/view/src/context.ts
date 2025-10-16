@@ -1,7 +1,7 @@
 /**
  * View context for concurrency-safe scope tracking
  *
- * PATTERN: Context-scoped state (like signals GlobalContext)
+ * Context-scoped state (like signals GlobalContext)
  * All per-request state lives here, not in global module variables.
  * This enables concurrent SSR - each request gets its own context.
  */
@@ -16,7 +16,7 @@ export interface ViewContext {
 
   /**
    * Map element to its scope
-   * PATTERN: Minimal external storage (like signals ctx)
+   * Minimal external storage (like signals ctx)
    * This is the only lookup needed - everything else is algorithmic
    */
   elementScopes: WeakMap<object, Scope>;

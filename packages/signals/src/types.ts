@@ -13,7 +13,7 @@
  * 4. Intrusive linked lists: Memory-efficient graph representation
  */
 
-// PATTERN: Type Brand
+// Type Brand
 // The __type field acts as a nominal type brand to distinguish reactive nodes
 // from regular objects at runtime. This is a common TypeScript pattern for
 // creating nominal types in a structural type system.
@@ -25,7 +25,7 @@ export interface ReactiveNode {
 // DESIGN: User-facing API contracts
 // These interfaces define the public API without exposing internal graph mechanics.
 // This separation allows changing the implementation without breaking the API.
-// ALIEN-SIGNALS PATTERN: Function-based APIs for cleaner usage
+// ALIEN-SIGNALS Function-based APIs for cleaner usage
 export interface Readable<T = unknown> {
   (): T;             // Triggers dependency tracking when called
   peek(): T;         // Read without creating dependencies (optimization)
@@ -59,7 +59,7 @@ export interface DerivedNode<T = unknown> extends ProducerNode, ConsumerNode {
   compute: () => T; // The computation function
 }
 
-// PATTERN: Deferred Execution Queue
+// Deferred Execution Queue
 // ScheduledNode represents consumers that batch their updates.
 // Uses intrusive linked list for zero-allocation scheduling queue.
 export interface ScheduledNode extends ConsumerNode {

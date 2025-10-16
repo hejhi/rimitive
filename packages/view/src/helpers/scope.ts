@@ -63,7 +63,7 @@ export function createScope(parent?: Scope): Scope {
 
 /**
  * Run function within scope context
- * PATTERN: Standalone function like signals/graph-edges.ts track()
+ * Standalone function like signals/graph-edges.ts track()
  */
 export function runInScope<T>(ctx: ViewContext, scope: Scope, fn: () => T): T {
   const prevScope = ctx.currentScope;
@@ -77,7 +77,7 @@ export function runInScope<T>(ctx: ViewContext, scope: Scope, fn: () => T): T {
 
 /**
  * Track a disposable in the current scope (if any)
- * PATTERN: Like signals trackDependency - checks ctx first
+ * Like signals trackDependency - checks ctx first
  * Uses linked list prepend for O(1) insertion
  */
 export function trackInScope(ctx: ViewContext, disposable: Disposable): void {
@@ -89,7 +89,7 @@ export function trackInScope(ctx: ViewContext, disposable: Disposable): void {
 
 /**
  * Track a disposable in a specific scope (not current)
- * PATTERN: Direct scope manipulation for when currentScope isn't set
+ * Direct scope manipulation for when currentScope isn't set
  * Uses linked list prepend for O(1) insertion
  */
 export function trackInSpecificScope(scope: Scope, disposable: Disposable): void {
@@ -105,7 +105,7 @@ export function trackInSpecificScope(scope: Scope, disposable: Disposable): void
 
 /**
  * Dispose all tracked subscriptions and child scopes
- * PATTERN: Like signals/scheduler.ts dispose - idempotent cleanup
+ * Like signals/scheduler.ts dispose - idempotent cleanup
  * Walks linked lists to dispose disposables and children
  */
 export function disposeScope(scope: Scope): void {

@@ -53,7 +53,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     // Create the element using renderer
     const element = renderer.createElement(tag);
 
-    // PATTERN: Create internal node (like signals creates SignalNode)
+    // Create internal node (like signals creates SignalNode)
     const node: ElementNode<TElement> = {
       refType: ELEMENT_REF,
       element,
@@ -76,37 +76,40 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     // Store scope in context WeakMap (only lookup needed)
     ctx.elementScopes.set(element, scope);
 
-    // PATTERN: Create ref function that closes over node (like signal function)
-    const ref = ((lifecycleCallback: LifecycleCallback<TElement>): TElement => {
-      // Observe element connection using renderer
-      // PATTERN: Lifecycle cleanup tracked as disposable in element's scope
-      const lifecycleDispose = renderer.observeLifecycle(node.element, {
-        onConnected: (el) => {
-          const cleanup = lifecycleCallback(el);
-          // Track cleanup as disposable in element's scope (not currentScope)
-          if (cleanup) {
-            trackInSpecificScope(scope, { dispose: cleanup });
-          }
-          return cleanup;
-        },
-        onDisconnected: () => {
-          // ALGORITHMIC: Look up scope and dispose via tree walk
-          const elementScope = ctx.elementScopes.get(node.element);
-          if (elementScope) {
-            disposeScope(elementScope);
-            ctx.elementScopes.delete(node.element);
-          }
+    // Closure variable for lifecycle callback
+    let lifecycleCallback: LifecycleCallback<TElement> | undefined;
+
+    // Set up lifecycle observer (always, for automatic cleanup)
+    const lifecycleDispose = renderer.observeLifecycle(node.element, {
+      onConnected: (el) => {
+        // Call user callback if provided
+        const cleanup = lifecycleCallback ? lifecycleCallback(el) : undefined;
+        // Track cleanup as disposable in element's scope (not currentScope)
+        if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
+        return cleanup;
+      },
+      onDisconnected: () => {
+        // Look up scope and dispose via tree walk
+        const elementScope = ctx.elementScopes.get(node.element);
+        if (elementScope) {
+          disposeScope(elementScope);
+          ctx.elementScopes.delete(node.element);
         }
-      });
+      }
+    });
 
-      // Track lifecycle observer disposal in element's scope
-      trackInSpecificScope(scope, { dispose: lifecycleDispose });
+    // Track lifecycle observer disposal in element's scope
+    trackInSpecificScope(scope, { dispose: lifecycleDispose });
 
+    // Create ref function that closes over node
+    const ref = ((callback?: LifecycleCallback<TElement>): TElement => {
+      // Store callback if provided (used by lifecycle observer)
+      if (callback) lifecycleCallback = callback;
       return node.element;
     }) as ElementRef<TElement>;
 
-    // Attach node to ref (internal state, exposed for helpers)
-    ref.node = node;
+    // Add element() accessor method (like signal.peek())
+    ref.element = () => node.element;
 
     return ref;
   }
@@ -188,7 +191,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
 
   // Element ref (from el())
   if (isElementRef(child)) {
-    renderer.appendChild(element, child.node.element);
+    renderer.appendChild(element, child.element());
     return;
   }
 

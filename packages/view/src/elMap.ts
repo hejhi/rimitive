@@ -55,7 +55,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 ): ElMapFactory<TElement> {
   const { ctx, signal, effect, renderer } = opts;
 
-  // PATTERN: Create reconciler once with closure-captured buffers (like signals)
+  // Create reconciler once with closure-captured buffers (like signals)
   const { reconcileList } = createReconciler();
 
   function elMap<T>(
@@ -73,30 +73,30 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       itemsByKey: new Map<string, ListItemNode<unknown, TElement>>(),
     };
 
-    // PATTERN: Create ref function that closes over node (like signal function)
+    // Create ref function that closes over node (like signal function)
     const deferredRef = ((parent: TElement): void => {
       // Store parent in node
       node.element = parent;
 
       // Create an effect that reconciles the list when items change
-      // PATTERN: Effect automatically schedules via scheduler (like signals/effect.ts)
+      // Effect automatically schedules via scheduler (like signals/effect.ts)
       dispose = effect(() => {
         const currentItems = itemsSignal();
 
-        // PATTERN: Pass linked list head directly to reconciler (single source of truth)
+        // Pass linked list head directly to reconciler (single source of truth)
         // This eliminates array allocation and prevents sync bugs
         reconcileList<T, TElement, TText>(
           ctx,
           node,  // ← Pass DeferredListNode directly
           currentItems,
           (itemData: T) => {
-            // PATTERN: Render callback only creates DOM element
+            // Render callback only creates DOM element
             // Reconciler will wrap it in ListItemNode
             const itemSignal = signal(itemData);
             const elementRef = render(itemSignal);
 
             return {
-              element: elementRef.node.element,
+              element: elementRef.element(),
               itemSignal,
             };
           },
@@ -106,7 +106,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
       });
 
       // Track dispose in parent's scope
-      // PATTERN: Parent owns the lifecycle
+      // Parent owns the lifecycle
       const parentScope = ctx.elementScopes.get(parent);
       if (parentScope) {
         const disposeNode = {

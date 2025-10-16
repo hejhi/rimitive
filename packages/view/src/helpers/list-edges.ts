@@ -1,5 +1,5 @@
 /**
- * PATTERN: List node management (like DOM node manipulation)
+ * List node management (like DOM node manipulation)
  *
  * Manages the doubly-linked list of items in a reactive list.
  * Like DOM nodes, ListItemNodes link directly to each other (no separate edge objects).
@@ -14,7 +14,7 @@ import type { DeferredListNode, ListItemNode } from '../types';
 
 /**
  * Unlink a node from parent's children list
- * PATTERN: Like DOM removeChild internal logic
+ * Like DOM removeChild internal logic
  */
 function unlinkFromParent<T, TElement>(
   parent: DeferredListNode<TElement>,
@@ -41,7 +41,7 @@ function unlinkFromParent<T, TElement>(
 
 /**
  * Append a node to parent's children list
- * PATTERN: Like DOM appendChild
+ * Like DOM appendChild
  */
 export function appendChild<T, TElement>(
   parent: DeferredListNode<TElement>,
@@ -68,7 +68,7 @@ export function appendChild<T, TElement>(
 
 /**
  * Insert a node before a reference sibling
- * PATTERN: Like DOM insertBefore
+ * Like DOM insertBefore
  */
 export function insertBefore<T, TElement>(
   parent: DeferredListNode<TElement>,
@@ -101,7 +101,7 @@ export function insertBefore<T, TElement>(
 
 /**
  * Remove a node from the list
- * PATTERN: Like DOM removeChild
+ * Like DOM removeChild
  */
 export function removeChild<T, TElement>(
   node: ListItemNode<T, TElement>
@@ -121,7 +121,7 @@ export function removeChild<T, TElement>(
 /**
  * Move a node to a new position (before refSibling)
  * Optimized operation: remove + insert
- * PATTERN: Like moving DOM nodes
+ * Like moving DOM nodes
  */
 export function moveChild<T, TElement>(
   node: ListItemNode<T, TElement>,

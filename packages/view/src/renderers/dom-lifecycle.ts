@@ -19,7 +19,7 @@ export type DOMElement = HTMLElement;
 
 /**
  * Lifecycle tracking per element
- * ALGORITHMIC: Single structure to reduce bookkeeping
+ * Single structure to reduce bookkeeping
  */
 interface ElementTracking {
   onConnected?: (element: DOMElement) => void | (() => void);
@@ -45,7 +45,7 @@ export interface LifecycleObserver {
 
 /**
  * Create a lifecycle observer with shared MutationObserver
- * PATTERN: Closure-captured state like signals/graph-edges.ts
+ * Closure-captured state like signals/graph-edges.ts
  */
 export function createLifecycleObserver(): LifecycleObserver {
   // Closure-captured state - minimal bookkeeping
@@ -54,7 +54,7 @@ export function createLifecycleObserver(): LifecycleObserver {
 
   /**
    * Shared MutationObserver - created immediately
-   * ALGORITHMIC: Observer created eagerly, starts observing on first tracked element
+   * Observer created eagerly, starts observing on first tracked element
    */
   const sharedObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {

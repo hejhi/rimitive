@@ -4,7 +4,7 @@
 
 import type { Readable } from '@lattice/signals/types';
 
-// PATTERN: Bit flags for ref types (like signals PRODUCER/CONSUMER/SCHEDULED)
+// Bit flags for ref types (like signals PRODUCER/CONSUMER/SCHEDULED)
 // Using bits 0-1 for ref type discrimination
 export const ELEMENT_REF = 1 << 0;      // Regular element ref from el()
 export const DEFERRED_LIST_REF = 1 << 1; // Deferred list ref from elMap()
@@ -12,7 +12,7 @@ export const DEFERRED_LIST_REF = 1 << 1; // Deferred list ref from elMap()
 export const REF_TYPE_MASK = ELEMENT_REF | DEFERRED_LIST_REF;
 
 /**
- * PATTERN: Internal node representation (like signals ProducerNode/ConsumerNode)
+ * Internal node representation (like signals ProducerNode/ConsumerNode)
  * ViewNode is the base interface for internal objects that hold element state.
  * The public API returns functions that close over these nodes.
  */
@@ -31,7 +31,7 @@ export interface ElementNode<TElement = ReactiveElement> extends ViewNode<TEleme
 
 /**
  * List item node - represents an item in a reactive list
- * PATTERN: Like DOM Node - forms intrusive doubly-linked list via sibling pointers
+ * Like DOM Node - forms intrusive doubly-linked list via sibling pointers
  *
  * DOM parallel:
  * - parentNode ↔ parentList
@@ -53,7 +53,7 @@ export interface ListItemNode<T = unknown, TElement = ReactiveElement> extends V
 
 /**
  * Deferred list node - created by elMap()
- * PATTERN: Like DOM ParentNode - maintains head/tail of children
+ * Like DOM ParentNode - maintains head/tail of children
  *
  * DOM parallel:
  * - firstChild ↔ firstChild
@@ -119,7 +119,7 @@ export type ElementChild =
 /**
  * Deferred list ref - a callable that receives parent element
  * Returned by elMap() and called by el() with parent element
- * PATTERN: Like ElementRef, closes over internal DeferredListNode
+ * Like ElementRef, closes over internal DeferredListNode
  */
 export interface DeferredListRef<TElement = ReactiveElement> {
   (parent: TElement): void;
@@ -149,11 +149,12 @@ export type LifecycleCallback<TElement = object> = (element: TElement) => void |
 
 /**
  * Element ref - a callable function that closes over an internal ElementNode
- * PATTERN: Like signals, the function is the public API, node is internal
+ * Like signals, the function is the public API, node is internal
  */
 export interface ElementRef<TElement = ReactiveElement> {
-  (lifecycleCallback: LifecycleCallback<TElement>): TElement;
-  node: ElementNode<TElement>; // Internal node (exposed for helpers)
+  (): TElement; // Call without args to get element (reactive way)
+  (lifecycleCallback: LifecycleCallback<TElement>): TElement; // Call with callback for lifecycle
+  element(): TElement; // Peek at element (non-reactive, like signal.peek())
 }
 
 /**
@@ -161,8 +162,8 @@ export interface ElementRef<TElement = ReactiveElement> {
  */
 export function isElementRef(value: unknown): value is ElementRef {
   return typeof value === 'function' &&
-    'node' in value &&
-    ((value as { node: ElementNode }).node.refType & ELEMENT_REF) !== 0;
+    'element' in value &&
+    typeof (value as { element: unknown }).element === 'function';
 }
 
 /**
