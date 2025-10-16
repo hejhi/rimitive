@@ -7,6 +7,7 @@
 import type { LatticeViewAPI } from '../types';
 import type { ElementRef, Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
+import { on } from '@lattice/view/on';
 
 export function TodoItem(
   api: LatticeViewAPI,
@@ -25,21 +26,11 @@ export function TodoItem(
       checked: api.computed(() => todoSignal().completed),
     },
   ]);
-  checkbox((el) => {
-    const cb = el as HTMLInputElement;
-    const handler = () => onToggle(todo.id);
-    cb.addEventListener('change', handler);
-    return () => cb.removeEventListener('change', handler);
-  });
+  checkbox((el) => on(el, 'change', () => onToggle(todo.id)));
 
   // Create remove button with event listener
   const removeBtn = el(['button', { className: 'todo-remove' }, '×']);
-  removeBtn((el) => {
-    const btn = el as HTMLElement;
-    const handler = () => onRemove(todo.id);
-    btn.addEventListener('click', handler);
-    return () => btn.removeEventListener('click', handler);
-  });
+  removeBtn((el) => on(el, 'click', () => onRemove(todo.id)));
 
   return el([
     'div',

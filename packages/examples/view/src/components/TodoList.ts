@@ -10,6 +10,7 @@ import type { ElementRef, Reactive } from '@lattice/view/types';
 import { createTodoList } from '../behaviors/todo-list';
 import type { Todo } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';
+import { on, listener } from '@lattice/view/on';
 
 export function TodoList(api: LatticeViewAPI): ElementRef {
   const { el, elMap, signal } = api;
@@ -37,33 +38,25 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
   };
 
   // Create input with event listeners
-  const todoInput = el([
-    'input',
-    {
-      className: 'todo-input',
-      type: 'text',
-      placeholder: 'What needs to be done?',
-      value: inputValue,
-    },
-  ]);
-  todoInput((input) => {
-    const handleInput = (e: Event) => {
-      inputValue((e.target as HTMLInputElement).value);
-    };
-    input.addEventListener('input', handleInput);
-    input.addEventListener('keydown', handleKeyDown);
-    return () => {
-      input.removeEventListener('input', handleInput);
-      input.removeEventListener('keydown', handleKeyDown);
-    };
-  });
+  const todoInput = listener(
+    el([
+      'input',
+      {
+        className: 'todo-input',
+        type: 'text',
+        placeholder: 'What needs to be done?',
+        value: inputValue,
+      },
+    ]),
+    (on) => {
+      on('input', (e) => inputValue((e.target as HTMLInputElement).value));
+      on('keydown', handleKeyDown);
+    }
+  );
 
   // Create "Add Todo" button
   const addBtn = el(['button', {}, 'Add Todo']);
-  addBtn((btn) => {
-    btn.addEventListener('click', handleAdd);
-    return () => btn.removeEventListener('click', handleAdd);
-  });
+  addBtn((btn) => on(btn, 'click', handleAdd));
 
   // Create filter buttons
   const allBtn = el([
@@ -71,41 +64,25 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     { className: api.computed(() => (todoList.filter() === 'all' ? 'active' : '')) },
     'All',
   ]);
-  allBtn((btn) => {
-    const handler = () => todoList.setFilter('all');
-    btn.addEventListener('click', handler);
-    return () => btn.removeEventListener('click', handler);
-  });
+  allBtn((btn) => on(btn, 'click', () => todoList.setFilter('all')));
 
   const activeBtn = el([
     'button',
     { className: api.computed(() => (todoList.filter() === 'active' ? 'active' : '')) },
     'Active',
   ]);
-  activeBtn((btn) => {
-    const handler = () => todoList.setFilter('active');
-    btn.addEventListener('click', handler);
-    return () => btn.removeEventListener('click', handler);
-  });
+  activeBtn((btn) => on(btn, 'click', () => todoList.setFilter('active')));
 
   const completedBtn = el([
     'button',
     { className: api.computed(() => (todoList.filter() === 'completed' ? 'active' : '')) },
     'Completed',
   ]);
-  completedBtn((btn) => {
-    const handler = () => todoList.setFilter('completed');
-    btn.addEventListener('click', handler);
-    return () => btn.removeEventListener('click', handler);
-  });
+  completedBtn((btn) => on(btn, 'click', () => todoList.setFilter('completed')));
 
   // Create "Clear Completed" button
   const clearBtn = el(['button', 'Clear Completed']);
-  clearBtn((btn) => {
-    const handler = () => todoList.clearCompleted();
-    btn.addEventListener('click', handler);
-    return () => btn.removeEventListener('click', handler);
-  });
+  clearBtn((btn) => on(btn, 'click', () => todoList.clearCompleted()));
 
   return el([
     'div',

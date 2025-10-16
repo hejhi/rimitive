@@ -66,6 +66,7 @@ export default defineConfig({
         context: resolve(__dirname, 'src/context.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         renderer: resolve(__dirname, 'src/renderer.ts'),
+        on: resolve(__dirname, 'src/on.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
         'helpers/reconcile': resolve(__dirname, 'src/helpers/reconcile.ts'),
