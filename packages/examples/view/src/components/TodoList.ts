@@ -9,6 +9,7 @@ import type { LatticeViewAPI } from '../types';
 import type { ElementRef, Reactive } from '@lattice/view/types';
 import { createTodoList } from '../behaviors/todo-list';
 import type { Todo } from '../behaviors/todo-list';
+import { TodoItem } from './TodoItem';
 
 export function TodoList(api: LatticeViewAPI): ElementRef {
   const { el, elMap, signal } = api;
@@ -124,55 +125,14 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     // Filter buttons
     el(['div', { className: 'filter-buttons' }, allBtn, activeBtn, completedBtn]),
 
-    // Todo list using elMap
+    // Todo list using elMap with composed TodoItem component
     el([
       'div',
       { className: 'todo-list' },
       elMap(
         todoList.filteredTodos,
-        (todoSignal: Reactive<Todo>) => {
-          const todo = todoSignal();
-
-          // Create checkbox with event listener
-          const checkbox = el([
-            'input',
-            {
-              type: 'checkbox',
-              checked: api.computed(() => todoSignal().completed),
-            },
-          ]);
-          checkbox((el) => {
-            const cb = el as HTMLInputElement;
-            const handler = () => todoList.toggleTodo(todo.id);
-            cb.addEventListener('change', handler);
-            return () => cb.removeEventListener('change', handler);
-          });
-
-          // Create remove button with event listener
-          const removeBtn = el(['button', { className: 'todo-remove' }, '×']);
-          removeBtn((el) => {
-            const btn = el as HTMLElement;
-            const handler = () => todoList.removeTodo(todo.id);
-            btn.addEventListener('click', handler);
-            return () => btn.removeEventListener('click', handler);
-          });
-
-          return el([
-            'div',
-            { className: 'todo-item' },
-            checkbox,
-            el([
-              'span',
-              {
-                className: api.computed(() =>
-                  todoSignal().completed ? 'todo-text completed' : 'todo-text'
-                ),
-              },
-              api.computed(() => todoSignal().text),
-            ]),
-            removeBtn,
-          ]);
-        },
+        (todoSignal: Reactive<Todo>) =>
+          TodoItem(api, todoSignal, todoList.toggleTodo, todoList.removeTodo),
         (todo: Todo) => todo.id
       ),
     ]),
