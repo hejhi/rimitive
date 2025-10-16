@@ -31,10 +31,12 @@ export interface ElementNode<TElement = ReactiveElement> extends ViewNode<TEleme
 
 /**
  * List item node - represents an item in a reactive list
- * Like DOM Node - forms intrusive doubly-linked list via sibling pointers
+ * Forms intrusive doubly-linked list via sibling pointers
+ *
+ * Unidirectional edges: parent knows children (via firstChild/lastChild),
+ * but children don't know parent. Siblings link to each other.
  *
  * DOM parallel:
- * - parentNode ↔ parentList
  * - previousSibling ↔ previousSibling
  * - nextSibling ↔ nextSibling
  */
@@ -45,8 +47,7 @@ export interface ListItemNode<T = unknown, TElement = ReactiveElement> extends V
   position: number;         // Current position in list (cached for LIS algorithm)
   status: number;           // Status bits for reconciliation (VISITED, etc.)
 
-  // DOM-like navigation (intrusive linked list - nodes link directly to each other)
-  parentList: MapFragmentState<TElement> | undefined;     // Like DOM parentNode
+  // Sibling navigation (intrusive linked list - nodes link to siblings only)
   previousSibling: ListItemNode<unknown, TElement> | undefined;  // Like DOM previousSibling
   nextSibling: ListItemNode<unknown, TElement> | undefined;      // Like DOM nextSibling
 }

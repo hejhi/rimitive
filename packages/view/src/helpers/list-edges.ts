@@ -50,8 +50,7 @@ export function appendChild<T, TElement>(
   // Get current tail for O(1) append
   const prevSibling = parent.lastChild as ListItemNode<T, TElement> | undefined;
 
-  // Wire node into list
-  node.parentList = parent;
+  // Wire node into list (unidirectional: parent→child, not child→parent)
   node.previousSibling = prevSibling;
   node.nextSibling = undefined;
 
@@ -83,8 +82,7 @@ export function insertBefore<T, TElement>(
 
   const prevSibling = refSibling.previousSibling as ListItemNode<T, TElement> | undefined;
 
-  // Wire node into list
-  node.parentList = parent;
+  // Wire node into list (unidirectional: parent→child, not child→parent)
   node.previousSibling = prevSibling;
   node.nextSibling = refSibling as ListItemNode<unknown, TElement>;
 
@@ -104,16 +102,13 @@ export function insertBefore<T, TElement>(
  * Like DOM removeChild
  */
 export function removeChild<T, TElement>(
+  parent: MapFragmentState<TElement>,
   node: ListItemNode<T, TElement>
 ): void {
-  const parent = node.parentList;
-  if (!parent) return;
-
   // Unlink from parent's children list
   unlinkFromParent(parent, node);
 
-  // Clear node's parent reference
-  node.parentList = undefined;
+  // Clear node's sibling references
   node.previousSibling = undefined;
   node.nextSibling = undefined;
 }
@@ -124,11 +119,10 @@ export function removeChild<T, TElement>(
  * Like moving DOM nodes
  */
 export function moveChild<T, TElement>(
+  parent: MapFragmentState<TElement>,
   node: ListItemNode<T, TElement>,
   refSibling: ListItemNode<T, TElement> | undefined
 ): void {
-  const parent = node.parentList;
-  if (!parent) return;
 
   // Remove from current position
   unlinkFromParent(parent, node);

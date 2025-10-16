@@ -81,6 +81,7 @@ export function createReconciler() {
    * Inline helper for pruning unvisited nodes
    */
   const pruneNode = <T, TElement extends RendererElement, TText extends TextNode>(
+    parent: MapFragmentState<TElement>,
     node: ListItemNode<T, TElement>,
     ctx: ViewContext,
     container: TElement,
@@ -93,7 +94,7 @@ export function createReconciler() {
       ctx.elementScopes.delete(node.element);
     }
 
-    removeChild(node);
+    removeChild(parent, node);
     renderer.removeChild(container, node.element);
     itemsByKey.delete(node.key);
   };
@@ -157,7 +158,6 @@ export function createReconciler() {
           itemSignal: rendered.itemSignal,
           position: i,
           status: VISITED, // Mark as visited on creation
-          parentList: undefined,
           previousSibling: undefined,
           nextSibling: undefined,
         };
@@ -186,7 +186,8 @@ export function createReconciler() {
       if (node.position === nextLISPos) {
         lisIdx++;
         nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-      } else if (node.parentList) {
+      } else {
+        // Node not in LIS - needs repositioning
         // Calculate reference sibling for insertion
         let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
           | ListItemNode<T, TElement>
@@ -195,13 +196,13 @@ export function createReconciler() {
         // Remove any unvisited nodes at the insertion point (cleanup as we go)
         while (child && !(child.status & VISITED)) {
           const nextChild = child.nextSibling as | ListItemNode<T, TElement>;
-          pruneNode(child, ctx, containerEl, itemsByKey, renderer);
+          pruneNode(parent, child, ctx, containerEl, itemsByKey, renderer);
           child = nextChild;
         }
 
         // Move if not in LIS and not already in correct position
         if (node !== child) {
-          moveChild(node, child);
+          moveChild(parent, node, child);
 
           const nextEl = child ? child.element : null;
           if (el !== nextEl) renderer.insertBefore(containerEl, el, nextEl);
@@ -221,7 +222,7 @@ export function createReconciler() {
         | ListItemNode<T, TElement>
         | undefined;
 
-      if (!(child.status & VISITED)) pruneNode(child, ctx, containerEl, itemsByKey, renderer);
+      if (!(child.status & VISITED)) pruneNode(parent, child, ctx, containerEl, itemsByKey, renderer);
       else child.status = 0;
 
       child = nextChild;
