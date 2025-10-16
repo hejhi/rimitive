@@ -205,7 +205,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
       const value = child();
       // Convert to string, handling null/undefined and primitives only
       let stringValue = '';
-      if (value != null) stringValue = String(value);
+      if (value != null) stringValue = String(value as unknown as string); // for linting
       renderer.updateTextNode(textNode, stringValue);
     });
     // Track effect for cleanup when element is removed

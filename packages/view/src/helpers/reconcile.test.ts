@@ -307,7 +307,7 @@ describe('reconcileList', () => {
       (item) => {
         const el = new MockElement('li');
         el.id = `item-${item.id}`;
-        const signal = vi.fn() as any;
+        const signal = vi.fn();
         signals.set(item.id, signal);
         return { element: el, itemSignal: signal };
       },
@@ -460,7 +460,7 @@ describe('reconcileList', () => {
       (item) => {
         const el = new MockElement('li');
         el.id = `item-${item.id}-${item.value}`;
-        const signal = vi.fn() as any;
+        const signal = vi.fn();
         itemSignals.set(item.id, signal);
         return { element: el, itemSignal: signal };
       },
