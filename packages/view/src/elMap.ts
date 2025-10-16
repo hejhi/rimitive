@@ -96,7 +96,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
             const elementRef = render(itemSignal);
 
             return {
-              element: elementRef.element(),
+              element: elementRef.create(),
               itemSignal,
             };
           },

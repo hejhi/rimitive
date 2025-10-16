@@ -148,13 +148,12 @@ export interface Disposable {
 export type LifecycleCallback<TElement = object> = (element: TElement) => void | (() => void);
 
 /**
- * Element ref - a callable function that closes over an internal ElementNode
- * Like signals, the function is the public API, node is internal
+ * Element ref - a blueprint that can be instantiated multiple times
+ * PATTERN: Like signals, the function is the public API, blueprint is internal
  */
 export interface ElementRef<TElement = ReactiveElement> {
-  (): TElement; // Call without args to get element (reactive way)
-  (lifecycleCallback: LifecycleCallback<TElement>): TElement; // Call with callback for lifecycle
-  element(): TElement; // Peek at element (non-reactive, like signal.peek())
+  (lifecycleCallback: LifecycleCallback<TElement>): ElementRef<TElement>; // Register lifecycle callback (chainable)
+  create(): TElement; // Instantiate blueprint → creates new DOM element instance
 }
 
 /**
@@ -162,8 +161,8 @@ export interface ElementRef<TElement = ReactiveElement> {
  */
 export function isElementRef(value: unknown): value is ElementRef {
   return typeof value === 'function' &&
-    'element' in value &&
-    typeof (value as { element: unknown }).element === 'function';
+    'create' in value &&
+    typeof (value as { create: unknown }).create === 'function';
 }
 
 /**

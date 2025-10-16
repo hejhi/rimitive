@@ -6,7 +6,7 @@ import type {
   LifecycleCallback,
   ElementRef,
 } from './types';
-import { isReactive, isDeferredListRef, isElementRef, ELEMENT_REF, type ElementNode } from './types';
+import { isReactive, isDeferredListRef, isElementRef } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -47,69 +47,66 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
   function el<Tag extends keyof HTMLElementTagNameMap>(spec: ElementSpec<Tag>): ElementRef<TElement> {
     const [tag, ...rest] = spec;
 
-    // Parse props and children from rest
+    // Parse props and children from rest (blueprint data)
     const { props, children } = parseSpec(rest);
 
-    // Create the element using renderer
-    const element = renderer.createElement(tag);
+    // Store lifecycle callbacks that will be applied to each instance
+    const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
-    // Create internal node (like signals creates SignalNode)
-    const node: ElementNode<TElement> = {
-      refType: ELEMENT_REF,
-      element,
-    };
-
-    // Create a minimal disposal scope
-    const scope = createScope();
-
-    // Run all reactive setup within this scope
-    runInScope(ctx, scope, () => {
-      // Apply props
-      applyProps(element, props, effect, ctx, renderer);
-
-      // Handle children
-      for (const child of children) {
-        handleChild(element, child, effect, ctx, renderer);
-      }
-    });
-
-    // Store scope in context WeakMap (only lookup needed)
-    ctx.elementScopes.set(element, scope);
-
-    // Closure variable for lifecycle callback
-    let lifecycleCallback: LifecycleCallback<TElement> | undefined;
-
-    // Set up lifecycle observer (always, for automatic cleanup)
-    const lifecycleDispose = renderer.observeLifecycle(node.element, {
-      onConnected: (el) => {
-        // Call user callback if provided
-        const cleanup = lifecycleCallback ? lifecycleCallback(el) : undefined;
-        // Track cleanup as disposable in element's scope (not currentScope)
-        if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
-        return cleanup;
-      },
-      onDisconnected: () => {
-        // Look up scope and dispose via tree walk
-        const elementScope = ctx.elementScopes.get(node.element);
-        if (elementScope) {
-          disposeScope(elementScope);
-          ctx.elementScopes.delete(node.element);
-        }
-      }
-    });
-
-    // Track lifecycle observer disposal in element's scope
-    trackInSpecificScope(scope, { dispose: lifecycleDispose });
-
-    // Create ref function that closes over node
-    const ref = ((callback?: LifecycleCallback<TElement>): TElement => {
-      // Store callback if provided (used by lifecycle observer)
-      if (callback) lifecycleCallback = callback;
-      return node.element;
+    // Create ref function for registering lifecycle callbacks
+    const ref = ((lifecycleCallback: LifecycleCallback<TElement>): ElementRef<TElement> => {
+      lifecycleCallbacks.push(lifecycleCallback);
+      return ref; // Chainable
     }) as ElementRef<TElement>;
 
-    // Add element() accessor method (like signal.peek())
-    ref.element = () => node.element;
+    // Factory function - creates a new instance each time
+    ref.create = (): TElement => {
+      // Create the element using renderer
+      const element = renderer.createElement(tag);
+
+      // Create a scope for this instance
+      const scope = createScope();
+
+      // Run all reactive setup within this instance's scope
+      runInScope(ctx, scope, () => {
+        // Apply props
+        applyProps(element, props, effect, ctx, renderer);
+
+        // Handle children
+        for (const child of children) {
+          handleChild(element, child, effect, ctx, renderer);
+        }
+      });
+
+      // Store scope in context WeakMap (for cleanup)
+      ctx.elementScopes.set(element, scope);
+
+      // Set up lifecycle observer for THIS instance
+      const lifecycleDispose = renderer.observeLifecycle(element, {
+        onConnected: (el) => {
+          // Run all registered callbacks for this instance
+          for (const callback of lifecycleCallbacks) {
+            const cleanup = callback(el);
+            if (cleanup) {
+              trackInSpecificScope(scope, { dispose: cleanup });
+            }
+          }
+        },
+        onDisconnected: () => {
+          // Look up scope and dispose
+          const elementScope = ctx.elementScopes.get(element);
+          if (elementScope) {
+            disposeScope(elementScope);
+            ctx.elementScopes.delete(element);
+          }
+        }
+      });
+
+      // Track lifecycle observer disposal in element's scope
+      trackInSpecificScope(scope, { dispose: lifecycleDispose });
+
+      return element;
+    };
 
     return ref;
   }
@@ -189,9 +186,9 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     return;
   }
 
-  // Element ref (from el())
+  // Element ref (from el()) - instantiate blueprint
   if (isElementRef(child)) {
-    renderer.appendChild(element, child.element());
+    renderer.appendChild(element, child.create());
     return;
   }
 

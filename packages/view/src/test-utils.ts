@@ -188,14 +188,24 @@ export function createElementRef<TElement>(element: TElement): ElementRef<TEleme
     element,
   };
 
-  const ref = ((lifecycleCallback?: LifecycleCallback<TElement>): TElement => {
-    // In tests, we don't need to actually call the lifecycle callback
-    void lifecycleCallback;
-    return node.element;
+  // Store lifecycle callbacks
+  const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
+
+  const ref = ((lifecycleCallback: LifecycleCallback<TElement>): ElementRef<TElement> => {
+    lifecycleCallbacks.push(lifecycleCallback);
+    return ref;
   }) as ElementRef<TElement>;
 
-  // Add element() accessor method
-  ref.element = () => node.element;
+  // Factory method - for tests, just return the same element
+  ref.create = () => {
+    // In tests, we create the element once and reuse it
+    // Call lifecycle callbacks if any
+    for (const callback of lifecycleCallbacks) {
+      callback(node.element);
+    }
+    return node.element;
+  };
+
   return ref;
 }
 
