@@ -76,12 +76,17 @@ export interface MapFragmentState<TElement = ReactiveElement> extends ViewNode<T
 /**
  * Match fragment state - created by match()
  * Fragment that manages parent→conditional child relationship
+ *
+ * Tracks territory in parent via currentChild and nextSibling:
+ * - When visible: currentChild points to rendered element
+ * - When hidden: currentChild is null, but nextSibling marks position
+ * - Insert before nextSibling to maintain stable position
  */
 export interface MatchFragmentState<TElement = ReactiveElement> extends ViewNode<TElement | null> {
   refType: typeof FRAGMENT;
   element: TElement | null; // Parent element (null until fragment attached)
   currentChild: TElement | null; // Currently rendered child element (null when hidden)
-  anchor: unknown; // Text node anchor for stable position
+  nextSibling: TElement | null; // DOM element after our territory (for stable insertion, null = append at end)
 }
 
 /**

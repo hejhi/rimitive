@@ -45,7 +45,7 @@ describe('match primitive', () => {
       matchRef(parent);
 
       // User cares: correct element displayed initially
-      expect(parent.children).toHaveLength(2); // element + anchor
+      expect(parent.children).toHaveLength(1); // just the element
       const firstChild = parent.children[0] as MockElement;
       expect(getTextContent(firstChild)).toBe('yes');
 
@@ -53,7 +53,7 @@ describe('match primitive', () => {
       setCondition(false);
 
       // User cares: element swapped to 'no'
-      expect(parent.children).toHaveLength(2); // element + anchor
+      expect(parent.children).toHaveLength(1); // just the element
       const newChild = parent.children[0] as MockElement;
       expect(getTextContent(newChild)).toBe('no');
     });
@@ -87,14 +87,14 @@ describe('match primitive', () => {
       matchRef(parent);
 
       // User cares: element displayed
-      expect(parent.children).toHaveLength(2); // element + anchor
+      expect(parent.children).toHaveLength(1); // just the element
       expect(getTextContent(parent.children[0] as MockElement)).toBe('visible');
 
       // Hide element
       setShow(false);
 
-      // User cares: element removed (only anchor remains)
-      expect(parent.children).toHaveLength(1); // only anchor
+      // User cares: element removed (nothing remains)
+      expect(parent.children).toHaveLength(0); // empty when hidden
     });
 
     it('works with el() blueprints', () => {

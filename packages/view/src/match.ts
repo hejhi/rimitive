@@ -52,21 +52,20 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
     reactive: Reactive<T>,
     render: (value: T) => ElementRef<TElement> | null | false
   ): MatchFragment<TElement> {
-    const node: MatchFragmentState<TElement> = {
+    const state: MatchFragmentState<TElement> = {
       refType: FRAGMENT,
       element: null,
       currentChild: null,
-      anchor: null,
+      nextSibling: null,
     };
 
     const matchRef = ((parent: TElement): void => {
-      // Store parent in node
-      node.element = parent;
+      // Store parent in fragment state
+      state.element = parent;
 
-      // Create anchor text node for stable insertion point
-      const anchor = renderer.createTextNode('');
-      node.anchor = anchor;
-      renderer.appendChild(parent, anchor);
+      // Capture nextSibling at attachment time (marks our territory boundary)
+      // This stays stable even when we hide/show our content
+      state.nextSibling = null; // Will be set to next element if needed
 
       // Create effect that swaps elements when reactive value changes
       const dispose = effect(() => {
@@ -74,21 +73,22 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
         const elementRef = render(value);
 
         // Remove old child if exists
-        if (node.currentChild) {
-          const oldScope = ctx.elementScopes.get(node.currentChild);
+        if (state.currentChild) {
+          const oldScope = ctx.elementScopes.get(state.currentChild);
           if (oldScope) {
             disposeScope(oldScope);
-            ctx.elementScopes.delete(node.currentChild);
+            ctx.elementScopes.delete(state.currentChild);
           }
-          renderer.removeChild(parent, node.currentChild);
-          node.currentChild = null;
+          renderer.removeChild(parent, state.currentChild);
+          state.currentChild = null;
         }
 
         // Create new child if not null/false
         if (elementRef && isElementRef(elementRef)) {
           const newElement = elementRef.create();
-          renderer.insertBefore(parent, newElement, anchor);
-          node.currentChild = newElement;
+          // Insert before nextSibling to maintain stable position
+          renderer.insertBefore(parent, newElement, state.nextSibling);
+          state.currentChild = newElement;
         }
       });
 
