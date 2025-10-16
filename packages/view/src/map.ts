@@ -65,7 +65,7 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
   ): MapFragment<TElement> {
     let dispose: (() => void) | undefined;
 
-    const node: MapFragmentState<TElement> = {
+    const state: MapFragmentState<TElement> = {
       refType: FRAGMENT,
       element: null,
       firstChild: undefined,
@@ -76,7 +76,7 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
     // Create ref function that closes over node (like signal function)
     const mapFragment = ((parent: TElement): void => {
       // Store parent in node
-      node.element = parent;
+      state.element = parent;
 
       // Create an effect that reconciles the list when items change
       // Effect automatically schedules via scheduler (like signals/effect.ts)
@@ -87,7 +87,7 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
         // This eliminates array allocation and prevents sync bugs
         reconcileList<T, TElement, TText>(
           ctx,
-          node,  // ← Pass MapFragmentState directly
+          state,
           currentItems,
           (itemData: T) => {
             // Render callback only creates DOM element
