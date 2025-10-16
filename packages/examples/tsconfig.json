@@ -1,13 +1,18 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx"
   },
   "include": [
-    "devtools/**/*.ts"
+    "devtools/**/*.ts",
+    "react/**/*.ts",
+    "react/**/*.tsx",
+    "view/**/*.ts"
   ],
   "exclude": [
     "**/node_modules",
-    "**/dist"
+    "**/dist",
+    "**/vite.config.ts"
   ]
 }
