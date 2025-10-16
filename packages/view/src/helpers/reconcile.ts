@@ -14,6 +14,7 @@ export function createReconciler() {
   const lisBuf: number[] = [];
   const tailsBuf: number[] = [];
   const parentBuf: number[] = [];
+  const visitedNodesBuf: ListItemNode[] = []; // Reusable buffer for visited nodes
 
   /**
    * Binary search for largest index where arr[tails[i]] < value
@@ -116,13 +117,12 @@ export function createReconciler() {
 
     const itemsByKey = parent.itemsByKey as Map<string, ListItemNode<T, TElement>>;
 
-    // Loop 1: Build LIS arrays
+    // Loop 1: Build LIS arrays + collect visited nodes
     let count = 0;
+    visitedNodesBuf.length = newItems.length;
 
     for (let i = 0; i < newItems.length; i++) {
-      const item = newItems[i];
-      if (item === undefined) continue;
-
+      const item = newItems[i]!;
       const key = keyFn(item) as string;
       let node = itemsByKey.get(key);
 
@@ -163,25 +163,21 @@ export function createReconciler() {
         itemsByKey.set(key, node);
         renderer.appendChild(containerEl, rendered.element);
       }
+
+      // Collect visited nodes (direct assignment)
+      visitedNodesBuf[i] = node as ListItemNode<T, TElement>;
     }
 
     // Calculate LIS
     const lisLen = findLIS(oldIndicesBuf, count);
 
-    // Loop 2: Position items + mark as visited
+    // Loop 2: Traverse visited nodes and position
     let lisIdx = 0;
     let nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     let prevNode: ListItemNode<T, TElement> | undefined = undefined;
 
     for (let i = 0; i < newItems.length; i++) {
-      const item = newItems[i];
-      if (item === undefined) continue;
-
-      const key = keyFn(item) as string;
-      const node = itemsByKey.get(key);
-
-      if (!node) continue;
-
+      const node = visitedNodesBuf[i]! as ListItemNode<T, TElement>;
       const el = node.element;
 
       // Check if in LIS
