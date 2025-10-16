@@ -3,7 +3,7 @@ import { createReconciler } from './reconcile';
 import { createViewContext } from '../context';
 import type { Renderer } from '../renderer';
 import { MockElement } from '../test-utils';
-import { DEFERRED_LIST_REF, type DeferredListNode, type ListItemNode } from '../types';
+import { FRAGMENT, type MapFragmentState, type ListItemNode } from '../types';
 
 // Create reconciler once for all tests
 const { reconcileList } = createReconciler();
@@ -73,8 +73,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -108,8 +108,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -166,8 +166,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -202,8 +202,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -249,8 +249,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -285,8 +285,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -343,8 +343,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -374,8 +374,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -404,8 +404,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -438,8 +438,8 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: DeferredListNode<MockElement> = {
-      refType: DEFERRED_LIST_REF,
+    const parent: MapFragmentState<MockElement> = {
+      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,

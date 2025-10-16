@@ -1,7 +1,7 @@
 /**
  * TodoList UI Component
  *
- * Uses @lattice/view primitives (el, elMap) to create a reactive UI
+ * Uses @lattice/view primitives (el, map) to create a reactive UI
  * Uses the headless todo-list behavior for logic
  */
 
@@ -13,7 +13,7 @@ import { TodoItem } from './TodoItem';
 import { on, listener } from '@lattice/view/on';
 
 export function TodoList(api: LatticeViewAPI): ElementRef {
-  const { el, elMap, signal } = api;
+  const { el, map, signal } = api;
 
   // Create headless behavior
   const todoList = createTodoList(api);
@@ -86,7 +86,7 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     'div',
     { className: 'example' },
     el(['h2', 'Todo List Example']),
-    el(['p', 'Demonstrates reactive lists with elMap, filtering, and complex state.']),
+    el(['p', 'Demonstrates reactive lists with map, filtering, and complex state.']),
 
     // Input section
     el(['div', todoInput, addBtn]),
@@ -94,11 +94,11 @@ export function TodoList(api: LatticeViewAPI): ElementRef {
     // Filter buttons
     el(['div', { className: 'filter-buttons' }, allBtn, activeBtn, completedBtn]),
 
-    // Todo list using elMap with composed TodoItem component
+    // Todo list using map with composed TodoItem component
     el([
       'div',
       { className: 'todo-list' },
-      elMap(
+      map(
         todoList.filteredTodos,
         (todoSignal: Reactive<Todo>) =>
           TodoItem(api, todoSignal, todoList.toggleTodo, todoList.removeTodo),

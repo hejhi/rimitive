@@ -1,0 +1,112 @@
+/**
+ * Conditional rendering primitive
+ *
+ * match() creates a reactive conditional that swaps elements when the reactive
+ * value changes. Unlike map which handles lists, match handles single element
+ * conditional rendering.
+ *
+ * Usage:
+ *   match(stateSignal, (state) => {
+ *     if (state === 'loading') return el(['div', 'Loading...']);
+ *     if (state === 'error') return el(['div', 'Error!']);
+ *     return el(['div', 'Success']);
+ *   })
+ */
+
+import type { LatticeExtension } from '@lattice/lattice';
+import type { Reactive, ElementRef, MatchFragment, MatchFragmentState } from './types';
+import { FRAGMENT, isElementRef } from './types';
+import type { Renderer, Element as RendererElement, TextNode } from './renderer';
+import { disposeScope, trackInSpecificScope } from './helpers/scope';
+import type { ViewContext } from './context';
+
+/**
+ * Options passed to match factory
+ */
+export type MatchOpts<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode> = {
+  ctx: ViewContext;
+  effect: (fn: () => void | (() => void)) => () => void;
+  renderer: Renderer<TElement, TText>;
+};
+
+/**
+ * Factory return type
+ */
+export type MatchFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
+  'match',
+  <T>(
+    reactive: Reactive<T>,
+    render: (value: T) => ElementRef<TElement> | null | false
+  ) => MatchFragment<TElement>
+>;
+
+/**
+ * Create the match primitive factory
+ */
+export function createMatchFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  opts: MatchOpts<TElement, TText>
+): MatchFactory<TElement> {
+  const { ctx, effect, renderer } = opts;
+
+  function match<T>(
+    reactive: Reactive<T>,
+    render: (value: T) => ElementRef<TElement> | null | false
+  ): MatchFragment<TElement> {
+    const node: MatchFragmentState<TElement> = {
+      refType: FRAGMENT,
+      element: null,
+      currentChild: null,
+      anchor: null,
+    };
+
+    const matchRef = ((parent: TElement): void => {
+      // Store parent in node
+      node.element = parent;
+
+      // Create anchor text node for stable insertion point
+      const anchor = renderer.createTextNode('');
+      node.anchor = anchor;
+      renderer.appendChild(parent, anchor);
+
+      // Create effect that swaps elements when reactive value changes
+      const dispose = effect(() => {
+        const value = reactive();
+        const elementRef = render(value);
+
+        // Remove old child if exists
+        if (node.currentChild) {
+          const oldScope = ctx.elementScopes.get(node.currentChild);
+          if (oldScope) {
+            disposeScope(oldScope);
+            ctx.elementScopes.delete(node.currentChild);
+          }
+          renderer.removeChild(parent, node.currentChild);
+          node.currentChild = null;
+        }
+
+        // Create new child if not null/false
+        if (elementRef && isElementRef(elementRef)) {
+          const newElement = elementRef.create();
+          renderer.insertBefore(parent, newElement, anchor);
+          node.currentChild = newElement;
+        }
+      });
+
+      // Track dispose in parent's scope
+      const parentScope = ctx.elementScopes.get(parent);
+      if (parentScope) {
+        trackInSpecificScope(parentScope, { dispose });
+      }
+    }) as MatchFragment<TElement>;
+
+    // Attach refType to fragment (type discrimination)
+    matchRef.refType = FRAGMENT;
+
+    return matchRef;
+  }
+
+  return {
+    name: 'match',
+    method: match as MatchFactory<TElement>['method'],
+  };
+}

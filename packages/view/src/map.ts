@@ -1,7 +1,7 @@
 /**
  * Reactive list primitive
  *
- * elMap() creates a reactive list that efficiently updates the DOM when items
+ * map creates a reactive list that efficiently updates the DOM when items
  * are added, removed, or reordered. It uses identity-based tracking by default
  * (no keys required), but supports an optional key function for cases where
  * data objects are recreated.
@@ -14,18 +14,18 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type {
   Reactive,
   ElementRef,
-  DeferredListRef,
+  MapFragment,
   ListItemNode,
 } from './types';
-import { DEFERRED_LIST_REF, type DeferredListNode } from './types';
+import { FRAGMENT, type MapFragmentState } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { createReconciler } from './helpers/reconcile';
 import type { ViewContext } from './context';
 
 /**
- * Options passed to elMap factory
+ * Options passed to map factory
  */
-export type ElMapOpts<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode> = {
+export type MapOpts<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode> = {
   ctx: ViewContext;
   signal: <T>(value: T) => Reactive<T>;
   effect: (fn: () => void | (() => void)) => () => void;
@@ -35,38 +35,38 @@ export type ElMapOpts<TElement extends RendererElement = RendererElement, TText 
 /**
  * Factory return type
  * Generic over element type - instantiate with specific renderer element type
- * Example: ElMapFactory<HTMLElement> for DOM
+ * Example: MapFactory<HTMLElement> for DOM
  */
-export type ElMapFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
-  'elMap',
+export type MapFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
+  'map',
   <T>(
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => ElementRef,
     keyFn: (item: T) => string | number
-  ) => DeferredListRef<TElement>
+  ) => MapFragment<TElement>
 >;
 
 
 /**
- * Create the elMap primitive factory
+ * Create the map primitive factory
  */
-export function createElMapFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
-  opts: ElMapOpts<TElement, TText>
-): ElMapFactory<TElement> {
+export function createMapFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+  opts: MapOpts<TElement, TText>
+): MapFactory<TElement> {
   const { ctx, signal, effect, renderer } = opts;
 
   // Create reconciler once with closure-captured buffers (like signals)
   const { reconcileList } = createReconciler();
 
-  function elMap<T>(
+  function map<T>(
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
     keyFn: (item: T) => string | number
-  ): DeferredListRef<TElement> {
+  ): MapFragment<TElement> {
     let dispose: (() => void) | undefined;
 
-    const node: DeferredListNode<TElement> = {
-      refType: DEFERRED_LIST_REF,
+    const node: MapFragmentState<TElement> = {
+      refType: FRAGMENT,
       element: null,
       firstChild: undefined,
       lastChild: undefined,
@@ -74,7 +74,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
     };
 
     // Create ref function that closes over node (like signal function)
-    const deferredRef = ((parent: TElement): void => {
+    const mapFragment = ((parent: TElement): void => {
       // Store parent in node
       node.element = parent;
 
@@ -87,7 +87,7 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
         // This eliminates array allocation and prevents sync bugs
         reconcileList<T, TElement, TText>(
           ctx,
-          node,  // ← Pass DeferredListNode directly
+          node,  // ← Pass MapFragmentState directly
           currentItems,
           (itemData: T) => {
             // Render callback only creates DOM element
@@ -115,16 +115,16 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
         };
         parentScope.firstDisposable = disposeNode;
       }
-    }) as DeferredListRef<TElement>;
+    }) as MapFragment<TElement>;
 
-    // Attach node to ref (internal state, exposed for helpers)
-    deferredRef.node = node;
+    // Attach refType to fragment (type discrimination)
+    mapFragment.refType = FRAGMENT;
 
-    return deferredRef;
+    return mapFragment;
   }
 
   return {
-    name: 'elMap',
-    method: elMap as ElMapFactory<TElement>['method'],
+    name: 'map',
+    method: map as MapFactory<TElement>['method'],
   };
 }

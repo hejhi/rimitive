@@ -65,12 +65,12 @@ el(['div',
 ])
 ```
 
-### `elMap(itemsSignal, renderFn, keyFn?)` - Reactive lists
+### `map(itemsSignal, renderFn, keyFn?)` - Reactive lists
 
 Renders lists efficiently without explicit keys.
 
 ```ts
-elMap(
+map(
   itemsSignal,           // Signal<T[]>
   (itemSignal) => el,    // Render function receiving Signal<T>
   (item) => item.id      // Optional key extractor
@@ -91,7 +91,7 @@ const todos = signal([
 ]);
 
 el(['ul',
-  elMap(
+  map(
     todos,
     (todoSignal) => el(['li',
       {
@@ -164,7 +164,7 @@ todos([item2]);         // Remove item1's DOM node
 For immutable patterns, provide a key function:
 
 ```ts
-elMap(
+map(
   todos,
   renderFn,
   (todo) => todo.id  // Use id as key
@@ -183,7 +183,7 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createElFactory } from '@lattice/view/el';
-import { createElMapFactory } from '@lattice/view/elMap';
+import { createElMapFactory } from '@lattice/view/map';
 import { createViewContext } from '@lattice/view/context';
 
 // Create context (concurrency-safe)
@@ -214,7 +214,7 @@ const api = createApi({
   computed: createComputedFactory,
   effect: createEffectFactory,
   el: (ctx) => createElFactory({ ctx: context.viewCtx, effect: ctx.effect }),
-  elMap: (ctx) => createElMapFactory({
+  map: (ctx) => createElMapFactory({
     ctx: context.viewCtx,
     signal: ctx.signal,
     effect: ctx.effect
@@ -222,7 +222,7 @@ const api = createApi({
 }, context);
 
 function TodoApp() {
-  const { signal, computed, el, elMap } = api;
+  const { signal, computed, el, map } = api;
 
   const todos = signal([]);
   const filter = signal('all');
@@ -252,7 +252,7 @@ function TodoApp() {
     }]),
 
     el(['ul',
-      elMap(
+      map(
         filteredTodos,
         (todoSignal) => el(['li',
           el(['input', {
@@ -316,7 +316,7 @@ When `computed()` or `effect()` is called within an element's scope, it's automa
 
 ### List Reconciliation
 
-`elMap` uses an efficient reconciliation algorithm:
+`map` uses an efficient reconciliation algorithm:
 
 1. **Removal Pass**: Dispose items no longer in the list
 2. **Addition & Move Pass**: Create new items, reposition existing ones

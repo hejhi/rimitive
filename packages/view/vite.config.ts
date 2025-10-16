@@ -62,7 +62,8 @@ export default defineConfig({
     lib: {
       entry: {
         el: resolve(__dirname, 'src/el.ts'),
-        elMap: resolve(__dirname, 'src/elMap.ts'),
+        map: resolve(__dirname, 'src/map.ts'),
+        match: resolve(__dirname, 'src/match.ts'),
         context: resolve(__dirname, 'src/context.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         renderer: resolve(__dirname, 'src/renderer.ts'),

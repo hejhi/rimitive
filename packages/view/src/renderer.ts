@@ -1,7 +1,7 @@
 /**
  * Renderer interface - abstracts all platform-specific concerns
  *
- * This allows el() and elMap() to be pure reactive primitives that work
+ * This allows el() and map() to be pure reactive primitives that work
  * with any rendering target (DOM, SSR, React Native, etc.)
  */
 

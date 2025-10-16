@@ -15,7 +15,7 @@ export function TodoItem(
   onToggle: (id: number) => void,
   onRemove: (id: number) => void
 ): ElementRef {
-  const { el } = api;
+  const { el, match } = api;
   const todo = todoSignal();
 
   // Create checkbox with event listener
@@ -36,15 +36,22 @@ export function TodoItem(
     'div',
     { className: 'todo-item' },
     checkbox,
-    el([
-      'span',
-      {
-        className: api.computed(() =>
-          todoSignal().completed ? 'todo-text completed' : 'todo-text'
-        ),
-      },
-      api.computed(() => todoSignal().text),
-    ]),
+    // Use match() to conditionally render completed vs active todo text
+    match(
+      api.computed(() => todoSignal().completed),
+      (completed: boolean) =>
+        completed
+          ? el([
+              'span',
+              { className: 'todo-text completed' },
+              api.computed(() => todoSignal().text),
+            ])
+          : el([
+              'span',
+              { className: 'todo-text' },
+              api.computed(() => todoSignal().text),
+            ])
+    ),
     removeBtn,
   ]);
 }

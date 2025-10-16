@@ -3,7 +3,7 @@
  *
  * Demonstrates:
  * 1. Component Pattern - headless behaviors separated from UI
- * 2. View Primitives - el() and elMap() for reactive DOM
+ * 2. View Primitives - el() and map() for reactive DOM
  * 3. Framework-agnostic - works without React, Vue, or any framework
  */
 
@@ -17,7 +17,8 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createElFactory } from '@lattice/view/el';
-import { createElMapFactory } from '@lattice/view/elMap';
+import { createMapFactory } from '@lattice/view/map';
+import { createMatchFactory } from '@lattice/view/match';
 import { createViewContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import type { LatticeViewAPI } from './types';
@@ -62,17 +63,18 @@ const effectWrapper = (fn: () => void | (() => void)): (() => void) => {
   return effectFactory.method(fn);
 };
 
-// Create an intermediate signal function for elMap
+// Create an intermediate signal function for map
 const signalFn = signalFactory.method;
 
 // Build view factories
 const elFactory = createElFactory({ ctx: viewCtx, effect: effectWrapper, renderer });
-const elMapFactory = createElMapFactory({
+const mapFactory = createMapFactory({
   ctx: viewCtx,
   signal: signalFn,
   effect: effectWrapper,
   renderer,
 });
+const matchFactory = createMatchFactory({ ctx: viewCtx, effect: effectWrapper, renderer });
 
 // Create the combined API
 const rawApi = createApi(
@@ -81,7 +83,8 @@ const rawApi = createApi(
     computed: () => computedFactory,
     effect: () => effectFactory,
     el: () => elFactory,
-    elMap: () => elMapFactory,
+    map: () => mapFactory,
+    match: () => matchFactory,
   },
   {} // No shared context needed
 );

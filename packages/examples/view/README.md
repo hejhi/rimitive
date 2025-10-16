@@ -20,7 +20,7 @@ These are **headless components** - pure logic with no UI concerns. They can be:
 
 See `src/components/`:
 - `Counter.ts` - Uses `el()` for reactive elements
-- `TodoList.ts` - Uses `el()` and `elMap()` for reactive lists
+- `TodoList.ts` - Uses `el()` and `map()` for reactive lists
 
 The view primitives provide:
 - **No virtual DOM** - direct DOM manipulation
@@ -57,10 +57,10 @@ el({
 - Functions are tracked as effects - re-run when dependencies change
 - Automatic DOM updates when reactive values change
 
-### elMap() - Reactive Lists
+### map() - Reactive Lists
 
 ```typescript
-elMap(
+map(
   () => todoList.filteredTodos(), // Source signal
   (todoSignal) => {                // Render function
     return el({
@@ -106,7 +106,7 @@ counter((el) => {
                │
 ┌──────────────▼──────────────────────────┐
 │ View Components (Renderer-Specific)     │
-│  - Uses el(), elMap()                   │
+│  - Uses el(), map()                   │
 │  - Binds behaviors to DOM               │
 │  - Handles events                       │
 └──────────────┬──────────────────────────┘

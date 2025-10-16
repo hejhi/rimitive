@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createElMapFactory } from './elMap';
+import { createMapFactory } from './map';
 import { createViewContext } from './context';
 import {
   createMockRenderer,
@@ -10,7 +10,7 @@ import {
   type Reactive,
 } from './test-utils';
 
-describe('elMap primitive', () => {
+describe('map primitive', () => {
   describe('list rendering', () => {
     it('displays items in list', () => {
       const ctx = createViewContext();
@@ -26,9 +26,9 @@ describe('elMap primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const listRef = elMap(
+      const listRef = map(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -90,9 +90,9 @@ describe('elMap primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const listRef = elMap(
+      const listRef = map(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -144,9 +144,9 @@ describe('elMap primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const listRef = elMap(
+      const listRef = map(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -193,9 +193,9 @@ describe('elMap primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const listRef = elMap(
+      const listRef = map(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');
@@ -241,9 +241,9 @@ describe('elMap primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const elMap = createElMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
 
-      const listRef = elMap(
+      const listRef = map(
         items,
         (itemSignal) => {
           const element = renderer.createElement('li');

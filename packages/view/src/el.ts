@@ -6,7 +6,7 @@ import type {
   LifecycleCallback,
   ElementRef,
 } from './types';
-import { isReactive, isDeferredListRef, isElementRef } from './types';
+import { isReactive, isFragment, isElementRef } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -130,7 +130,7 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
   const children: ElementChild[] = [];
 
   for (const item of rest) {
-    if (isPlainObject(item) && !isReactive(item) && !isDeferredListRef(item)) {
+    if (isPlainObject(item) && !isReactive(item) && !isFragment(item)) {
       // It's props
       Object.assign(props, item);
     } else {
@@ -192,9 +192,9 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     return;
   }
 
-  // Deferred list ref (from elMap()) - call it with parent element
-  if (isDeferredListRef(child)) {
-    child(element); // ← Provide parent element, elMap renders directly into it
+  // Fragment (from map() or match()) - call it with parent element
+  if (isFragment(child)) {
+    child(element); // ← Attach fragment to parent element
     return;
   }
 

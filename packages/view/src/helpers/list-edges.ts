@@ -10,14 +10,14 @@
  * - removeChild ↔ removeChild
  */
 
-import type { DeferredListNode, ListItemNode } from '../types';
+import type { MapFragmentState, ListItemNode } from '../types';
 
 /**
  * Unlink a node from parent's children list
  * Like DOM removeChild internal logic
  */
 function unlinkFromParent<T, TElement>(
-  parent: DeferredListNode<TElement>,
+  parent: MapFragmentState<TElement>,
   node: ListItemNode<T, TElement>
 ): void {
   const { previousSibling, nextSibling } = node;
@@ -44,7 +44,7 @@ function unlinkFromParent<T, TElement>(
  * Like DOM appendChild
  */
 export function appendChild<T, TElement>(
-  parent: DeferredListNode<TElement>,
+  parent: MapFragmentState<TElement>,
   node: ListItemNode<T, TElement>
 ): void {
   // Get current tail for O(1) append
@@ -71,7 +71,7 @@ export function appendChild<T, TElement>(
  * Like DOM insertBefore
  */
 export function insertBefore<T, TElement>(
-  parent: DeferredListNode<TElement>,
+  parent: MapFragmentState<TElement>,
   node: ListItemNode<T, TElement>,
   refSibling: ListItemNode<T, TElement> | undefined
 ): void {

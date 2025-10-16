@@ -18,9 +18,13 @@
       "import": "./dist/el.js",
       "types": "./dist/el.d.ts"
     },
-    "./elMap": {
-      "import": "./dist/elMap.js",
-      "types": "./dist/elMap.d.ts"
+    "./map": {
+      "import": "./dist/map.js",
+      "types": "./dist/map.d.ts"
+    },
+    "./match": {
+      "import": "./dist/match.js",
+      "types": "./dist/match.d.ts"
     },
     "./context": {
       "import": "./dist/context.js",

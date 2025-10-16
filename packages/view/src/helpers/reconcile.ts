@@ -1,6 +1,6 @@
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { ViewContext } from '../context';
-import type { DeferredListNode, ListItemNode } from '../types';
+import type { MapFragmentState, ListItemNode } from '../types';
 import { disposeScope } from './scope';
 import { appendChild, removeChild, moveChild } from './list-edges';
 
@@ -105,7 +105,7 @@ export function createReconciler() {
    */
   function reconcileList<T, TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
     ctx: ViewContext,
-    parent: DeferredListNode<TElement>,
+    parent: MapFragmentState<TElement>,
     newItems: T[],
     renderItem: (item: T) => { element: TElement; itemSignal?: ((value: T) => void) & (() => T) },
     keyFn: (item: T) => string | number,

@@ -5,11 +5,11 @@
 import type { Readable } from '@lattice/signals/types';
 
 // Bit flags for ref types (like signals PRODUCER/CONSUMER/SCHEDULED)
-// Using bits 0-1 for ref type discrimination
-export const ELEMENT_REF = 1 << 0;      // Regular element ref from el()
-export const DEFERRED_LIST_REF = 1 << 1; // Deferred list ref from elMap()
+// Nodes create actual DOM elements, Fragments manage relationships/containers
+export const ELEMENT_REF = 1 << 0;  // Nodes: create elements (el)
+export const FRAGMENT = 1 << 1;     // Fragments: manage relationships (map, match, custom)
 
-export const REF_TYPE_MASK = ELEMENT_REF | DEFERRED_LIST_REF;
+export const REF_TYPE_MASK = ELEMENT_REF | FRAGMENT;
 
 /**
  * Internal node representation (like signals ProducerNode/ConsumerNode)
@@ -46,23 +46,23 @@ export interface ListItemNode<T = unknown, TElement = ReactiveElement> extends V
   status: number;           // Status bits for reconciliation (VISITED, etc.)
 
   // DOM-like navigation (intrusive linked list - nodes link directly to each other)
-  parentList: DeferredListNode<TElement> | undefined;     // Like DOM parentNode
+  parentList: MapFragmentState<TElement> | undefined;     // Like DOM parentNode
   previousSibling: ListItemNode<unknown, TElement> | undefined;  // Like DOM previousSibling
   nextSibling: ListItemNode<unknown, TElement> | undefined;      // Like DOM nextSibling
 }
 
 /**
- * Deferred list node - created by elMap()
- * Like DOM ParentNode - maintains head/tail of children
+ * Map fragment state - created by map()
+ * Fragment that manages parent→children list relationship
  *
- * DOM parallel:
+ * Maintains head/tail of children like DOM ParentNode:
  * - firstChild ↔ firstChild
  * - lastChild ↔ lastChild
  * - childNodes ↔ itemsByKey (Map is for efficient key lookup, DOM uses array)
  */
-export interface DeferredListNode<TElement = ReactiveElement> extends ViewNode<TElement | null> {
-  refType: typeof DEFERRED_LIST_REF; // Always DEFERRED_LIST_REF
-  element: TElement | null; // null until parent provided
+export interface MapFragmentState<TElement = ReactiveElement> extends ViewNode<TElement | null> {
+  refType: typeof FRAGMENT;
+  element: TElement | null; // Parent element (null until fragment attached)
 
   // DOM-like children list (intrusive doubly-linked list)
   firstChild: ListItemNode<unknown, TElement> | undefined;  // Like DOM firstChild
@@ -71,6 +71,17 @@ export interface DeferredListNode<TElement = ReactiveElement> extends ViewNode<T
   // Key-based lookup for O(1) reconciliation during diffing
   // (DOM uses array-based childNodes, we use Map for key lookup)
   itemsByKey: Map<string, ListItemNode<unknown, TElement>>;
+}
+
+/**
+ * Match fragment state - created by match()
+ * Fragment that manages parent→conditional child relationship
+ */
+export interface MatchFragmentState<TElement = ReactiveElement> extends ViewNode<TElement | null> {
+  refType: typeof FRAGMENT;
+  element: TElement | null; // Parent element (null until fragment attached)
+  currentChild: TElement | null; // Currently rendered child element (null when hidden)
+  anchor: unknown; // Text node anchor for stable position
 }
 
 /**
@@ -103,6 +114,40 @@ export type ElementSpec<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElem
 ];
 
 /**
+ * Map fragment - a callable that receives parent element
+ * Returned by map() and called by el() with parent element
+ * Fragment that manages parent→children list relationship
+ */
+export interface MapFragment<TElement = ReactiveElement> {
+  (parent: TElement): void;
+  refType: typeof FRAGMENT;
+}
+
+/**
+ * Match fragment - a callable that receives parent element
+ * Returned by match() and called by el() with parent element
+ * Fragment that manages parent→conditional child relationship
+ */
+export interface MatchFragment<TElement = ReactiveElement> {
+  (parent: TElement): void;
+  refType: typeof FRAGMENT;
+}
+
+/**
+ * Fragment - union of all fragment types (map, match, custom)
+ */
+export type Fragment<TElement = ReactiveElement> = MapFragment<TElement> | MatchFragment<TElement>;
+
+/**
+ * Check if a value is a fragment
+ */
+export function isFragment(value: unknown): value is Fragment {
+  return typeof value === 'function' &&
+    'refType' in value &&
+    ((value as { refType: number }).refType & FRAGMENT) !== 0;
+}
+
+/**
  * Valid child types for an element
  */
 export type ElementChild =
@@ -114,26 +159,7 @@ export type ElementChild =
   | ReactiveElement
   | ElementRef
   | Reactive<string | number>
-  | DeferredListRef;
-
-/**
- * Deferred list ref - a callable that receives parent element
- * Returned by elMap() and called by el() with parent element
- * Like ElementRef, closes over internal DeferredListNode
- */
-export interface DeferredListRef<TElement = ReactiveElement> {
-  (parent: TElement): void;
-  node: DeferredListNode<TElement>; // null element until parent provided
-}
-
-/**
- * Check if a value is a deferred list ref
- */
-export function isDeferredListRef(value: unknown): value is DeferredListRef {
-  return typeof value === 'function' &&
-    'node' in value &&
-    ((value as { node: DeferredListNode }).node.refType & DEFERRED_LIST_REF) !== 0;
-}
+  | Fragment;
 
 /**
  * Something that can be disposed
