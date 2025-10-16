@@ -22,10 +22,18 @@ export type ElOpts<TElement extends RendererElement = RendererElement, TText ext
 
 /**
  * Factory return type
+ * Generic over element type
+ *
+ * IMPORTANT: When using with HTMLElement, this automatically returns specific HTML element types.
+ * Example: ElFactory<HTMLElement> returns HTMLButtonElement for el(['button', ...])
+ *
+ * This works because HTMLElement has an index signature that maps to HTMLElementTagNameMap.
  */
 export type ElFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
   'el',
-  <Tag extends keyof HTMLElementTagNameMap>(spec: ElementSpec<Tag>) => ElementRef<TElement>
+  <Tag extends keyof HTMLElementTagNameMap>(
+    spec: ElementSpec<Tag>
+  ) => ElementRef<TElement extends HTMLElement ? HTMLElementTagNameMap[Tag] : TElement>
 >;
 
 /**
@@ -105,7 +113,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 
   return {
     name: 'el',
-    method: el,
+    method: el as ElFactory<TElement>['method'],
   };
 }
 

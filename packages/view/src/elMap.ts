@@ -34,12 +34,14 @@ export type ElMapOpts<TElement extends RendererElement = RendererElement, TText 
 
 /**
  * Factory return type
+ * Generic over element type - instantiate with specific renderer element type
+ * Example: ElMapFactory<HTMLElement> for DOM
  */
 export type ElMapFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
   'elMap',
   <T>(
     itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
+    render: (itemSignal: Reactive<T>) => ElementRef,
     keyFn: (item: T) => string | number
   ) => DeferredListRef<TElement>
 >;
@@ -123,6 +125,6 @@ export function createElMapFactory<TElement extends RendererElement = RendererEl
 
   return {
     name: 'elMap',
-    method: elMap,
+    method: elMap as ElMapFactory<TElement>['method'],
   };
 }

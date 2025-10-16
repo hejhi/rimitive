@@ -3,8 +3,6 @@
  */
 
 import type { Renderer, LifecycleCallbacks } from '../renderer';
-import type { LatticeExtension, ExtensionsToContext } from '@lattice/lattice';
-import type { ElementSpec, ElementRef, DeferredListRef, Reactive } from '../types';
 import { createLifecycleObserver } from './dom-lifecycle';
 
 /**
@@ -18,31 +16,10 @@ export type DOMElement = HTMLElement;
 export type DOMTextNode = Text;
 
 /**
- * DOM-specific el() factory type with proper HTML element typing
+ * Convenience type alias for DOM renderer element type
+ * Use this to parameterize view factories for DOM
  */
-export type DOMElFactory = LatticeExtension<
-  'el',
-  <Tag extends keyof HTMLElementTagNameMap>(spec: ElementSpec<Tag>) => ElementRef<HTMLElementTagNameMap[Tag]>
->;
-
-/**
- * DOM-specific elMap() factory type
- */
-export type DOMElMapFactory = LatticeExtension<
-  'elMap',
-  <T>(
-    itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ElementRef,
-    keyFn: (item: T) => string | number
-  ) => DeferredListRef<DOMElement>
->;
-
-/**
- * Helper to create properly-typed DOM view API
- * Usage: DOMViewAPI<[SignalFactory, ComputedFactory, EffectFactory]>
- */
-export type DOMViewAPI<SignalExtensions extends readonly LatticeExtension<string, unknown>[]> =
-  ExtensionsToContext<[...SignalExtensions, DOMElFactory, DOMElMapFactory]>;
+export type DOM = DOMElement;
 
 /**
  * Shared lifecycle observer instance
