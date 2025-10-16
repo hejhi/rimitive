@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { on, listener } from './on';
+import { ElementRef } from './types';
 
 describe('on', () => {
   it('should attach event listener and return unsubscribe function', () => {
@@ -88,12 +89,17 @@ describe('listener', () => {
     let cleanup: (() => void) | undefined;
 
     // Mock element ref pattern
-    const elementRef = (callback: (el: HTMLInputElement) => void | (() => void)) => {
-      cleanup = callback(element) as (() => void) | undefined;
-      return element;
-    };
+    function createMockRef(el: HTMLInputElement): ElementRef<HTMLInputElement> {
+      const ref: ElementRef<HTMLInputElement> = (callback: (element: HTMLInputElement) => void | (() => void)) => {
+        cleanup = callback(el) as (() => void) | undefined;
+        return ref;
+      };
+      ref.create = () => el;
+      return ref;
+    }
+    const elementRef = createMockRef(element);
 
-    listener(elementRef as any, (on) => {
+    listener(elementRef, (on) => {
       on('input', inputHandler);
       on('keydown', keydownHandler);
     });
@@ -120,12 +126,17 @@ describe('listener', () => {
     const handler = vi.fn();
     let cleanup: (() => void) | undefined;
 
-    const elementRef = (callback: (el: HTMLButtonElement) => void | (() => void)) => {
-      cleanup = callback(element) as (() => void) | undefined;
-      return element;
-    };
+    function createMockRef(el: HTMLButtonElement): ElementRef<HTMLButtonElement> {
+      const ref: ElementRef<HTMLButtonElement> = (callback) => {
+        cleanup = callback(el) as (() => void) | undefined;
+        return ref;
+      };
+      ref.create = () => el;
+      return ref;
+    }
+    const elementRef = createMockRef(element);
 
-    listener(elementRef as any, (on) => {
+    listener(elementRef, (on) => {
       on('click', handler, { once: true });
     });
 
@@ -145,15 +156,20 @@ describe('listener', () => {
     let cleanup1: (() => void) | undefined;
     let cleanup2: (() => void) | undefined;
 
-    const elementRef = (callback: (el: HTMLInputElement) => void | (() => void)) => {
-      const result = callback(element) as (() => void) | undefined;
-      if (!cleanup1) cleanup1 = result;
-      else cleanup2 = result;
-      return element;
-    };
+    function createMockRef(el: HTMLInputElement): ElementRef<HTMLInputElement> {
+      const ref: ElementRef<HTMLInputElement> = (callback) => {
+        const result = callback(el) as (() => void) | undefined;
+        if (!cleanup1) cleanup1 = result;
+        else cleanup2 = result;
+        return ref;
+      };
+      ref.create = () => el;
+      return ref;
+    }
+    const elementRef = createMockRef(element);
 
     // Use listener helper
-    const ref = listener(elementRef as any, (on) => {
+    const ref = listener(elementRef, (on) => {
       on('input', inputHandler);
     });
 

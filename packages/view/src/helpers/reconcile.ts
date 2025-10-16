@@ -80,12 +80,12 @@ export function createReconciler() {
    * Remove a node and clean up all associated resources
    * Inline helper for pruning unvisited nodes
    */
-  const pruneNode = <T, TElement extends RendererElement>(
+  const pruneNode = <T, TElement extends RendererElement, TText extends TextNode>(
     node: ListItemNode<T, TElement>,
     ctx: ViewContext,
     container: TElement,
     itemsByKey: Map<string, ListItemNode<T, TElement>>,
-    renderer: Renderer<TElement, any>
+    renderer: Renderer<TElement, TText>
   ): void => {
     const scope = ctx.elementScopes.get(node.element);
     if (scope) {
@@ -119,7 +119,7 @@ export function createReconciler() {
       string,
       ListItemNode<T, TElement>
     >;
-    const visitedNodesBuf: ListItemNode<T, TElement>[] = Array(newLen);
+    const visitedNodesBuf: ListItemNode<T, TElement>[] = Array<ListItemNode<T, TElement>>(newLen);
 
     // Loop 1: Build LIS arrays + collect visited nodes
     let count = 0;
