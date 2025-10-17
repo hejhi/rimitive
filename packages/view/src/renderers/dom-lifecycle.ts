@@ -80,10 +80,8 @@ export function createLifecycleObserver(): LifecycleObserver {
       const firstChild: Element | null = el.firstElementChild;
       if (firstChild) {
         const nextSibling: Element | null = el.nextElementSibling;
-        if (nextSibling) {
-          // Branch point - push sibling to stack
-          stack = { el: nextSibling, prev: stack };
-        }
+        // Branch point - push sibling to stack
+        if (nextSibling) stack = { el: nextSibling, prev: stack };
         el = firstChild;
         continue;
       }
@@ -126,10 +124,8 @@ export function createLifecycleObserver(): LifecycleObserver {
       }
     }
 
-    // Auto-disconnect when empty (memory optimization)
-    if (trackedCount === 0) {
-      observer.disconnect();
-    }
+    // Auto-disconnect when empty
+    if (trackedCount === 0) observer.disconnect();
   });
 
   /**
@@ -167,9 +163,7 @@ export function createLifecycleObserver(): LifecycleObserver {
         }
 
         return () => {
-          if (tracking.delete(element)) {
-            trackedCount--; // Decrement only if was tracked
-          }
+          if (tracking.delete(element)) trackedCount--;
         };
       }
 
@@ -178,7 +172,6 @@ export function createLifecycleObserver(): LifecycleObserver {
 
     // Deferred path: track for future connection
     const existing = tracking.get(element);
-    const isNew = !existing;
 
     tracking.set(element, {
       status: existing?.status ?? 0,
@@ -187,7 +180,7 @@ export function createLifecycleObserver(): LifecycleObserver {
       cleanup: existing?.cleanup,
     });
 
-    if (isNew) trackedCount++; // Increment only for new tracking
+    if (!existing) trackedCount++; // Increment only for new tracking
 
     // Start observer if first element
     if (trackedCount === 1) {
@@ -198,9 +191,7 @@ export function createLifecycleObserver(): LifecycleObserver {
     }
 
     return () => {
-      if (tracking.delete(element)) {
-        trackedCount--; // Decrement only if was tracked
-      }
+      if (tracking.delete(element)) trackedCount--;
     };
   };
 
