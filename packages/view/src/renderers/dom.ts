@@ -65,17 +65,7 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
     },
 
     observeLifecycle(element: DOMElement, callbacks: LifecycleCallbacks<DOMElement>): () => void {
-      const { onConnected, onDisconnected } = callbacks;
-
-      // Set up observers using shared lifecycle observer
-      const cleanupConnect = lifecycleObserver.observeConnection(element, onConnected);
-      const cleanupDisconnect = lifecycleObserver.observeDisconnection(element, onDisconnected);
-
-      // Return cleanup function
-      return () => {
-        cleanupConnect();
-        cleanupDisconnect();
-      };
+      return lifecycleObserver.observe(element, callbacks);
     },
 
     isConnected(element: DOMElement): boolean {

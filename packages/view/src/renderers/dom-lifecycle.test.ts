@@ -28,7 +28,7 @@ describe('Lifecycle Observer', () => {
       const element = document.createElement('div');
       const onConnected = vi.fn();
 
-      observer.observeConnection(element, onConnected);
+      observer.observe(element, { onConnected });
 
       // element not yet connected
       expect(onConnected).not.toHaveBeenCalled();
@@ -51,7 +51,7 @@ describe('Lifecycle Observer', () => {
       // element already in DOM
       expect(element.isConnected).toBe(true);
 
-      observer.observeConnection(element, onConnected);
+      observer.observe(element, { onConnected });
 
       // callback fired immediately
       expect(onConnected).toHaveBeenCalledOnce();
@@ -65,7 +65,7 @@ describe('Lifecycle Observer', () => {
       parent.appendChild(child);
       const onConnected = vi.fn();
 
-      observer.observeConnection(child, onConnected);
+      observer.observe(child, { onConnected });
 
       // User adds parent (with child inside) to DOM
       container.appendChild(parent);
@@ -80,7 +80,7 @@ describe('Lifecycle Observer', () => {
       const element = document.createElement('div');
       const onConnected = vi.fn();
 
-      const cleanup = observer.observeConnection(element, onConnected);
+      const cleanup = observer.observe(element, { onConnected });
 
       // User cancels observation before connection
       cleanup();
@@ -98,8 +98,8 @@ describe('Lifecycle Observer', () => {
       const connectionCleanup = vi.fn();
       const onConnected = vi.fn(() => connectionCleanup);
 
-      observer.observeConnection(element, onConnected);
-      observer.observeDisconnection(element, vi.fn());
+      observer.observe(element, { onConnected });
+      observer.observe(element, { onDisconnected: vi.fn() });
 
       // Element connects
       container.appendChild(element);
@@ -123,7 +123,7 @@ describe('Lifecycle Observer', () => {
       container.appendChild(element);
       const onDisconnected = vi.fn();
 
-      observer.observeDisconnection(element, onDisconnected);
+      observer.observe(element, { onDisconnected });
 
       // User removes element from DOM
       container.removeChild(element);
@@ -142,7 +142,7 @@ describe('Lifecycle Observer', () => {
       container.appendChild(parent);
       const onDisconnected = vi.fn();
 
-      observer.observeDisconnection(child, onDisconnected);
+      observer.observe(child, { onDisconnected });
 
       // User removes parent (with child inside) from DOM
       container.removeChild(parent);
@@ -158,7 +158,7 @@ describe('Lifecycle Observer', () => {
       container.appendChild(element);
       const onDisconnected = vi.fn();
 
-      const cleanup = observer.observeDisconnection(element, onDisconnected);
+      const cleanup = observer.observe(element, { onDisconnected });
 
       // User cancels observation before disconnection
       cleanup();
@@ -179,8 +179,8 @@ describe('Lifecycle Observer', () => {
       const onConnected1 = vi.fn();
       const onConnected2 = vi.fn();
 
-      observer.observeConnection(element1, onConnected1);
-      observer.observeConnection(element2, onConnected2);
+      observer.observe(element1, { onConnected: onConnected1 });
+      observer.observe(element2, { onConnected: onConnected2 });
 
       // Connect first element
       container.appendChild(element1);
@@ -207,8 +207,8 @@ describe('Lifecycle Observer', () => {
       const onDisconnected1 = vi.fn();
       const onDisconnected2 = vi.fn();
 
-      observer.observeDisconnection(element1, onDisconnected1);
-      observer.observeDisconnection(element2, onDisconnected2);
+      observer.observe(element1, { onDisconnected: onDisconnected1 });
+      observer.observe(element2, { onDisconnected: onDisconnected2 });
 
       // Disconnect first element
       container.removeChild(element1);
@@ -232,8 +232,8 @@ describe('Lifecycle Observer', () => {
       const element = document.createElement('div');
 
       // safe to pass undefined
-      const cleanup1 = observer.observeConnection(element, undefined);
-      const cleanup2 = observer.observeDisconnection(element, undefined);
+      const cleanup1 = observer.observe(element, {});
+      const cleanup2 = observer.observe(element, {});
 
       container.appendChild(element);
       container.removeChild(element);
@@ -248,7 +248,7 @@ describe('Lifecycle Observer', () => {
       const element = document.createElement('div');
       const onConnected = vi.fn();
 
-      const cleanup = observer.observeConnection(element, onConnected);
+      const cleanup = observer.observe(element, { onConnected });
 
       // safe to call cleanup multiple times
       cleanup();
@@ -272,8 +272,8 @@ describe('Lifecycle Observer', () => {
       const onConnected = vi.fn(() => connectionCleanup);
       const onDisconnected = vi.fn(() => callOrder.push('disconnected'));
 
-      observer.observeConnection(element, onConnected);
-      observer.observeDisconnection(element, onDisconnected);
+      observer.observe(element, { onConnected });
+      observer.observe(element, { onDisconnected });
 
       container.appendChild(element);
       await waitForMutations();
@@ -289,7 +289,7 @@ describe('Lifecycle Observer', () => {
       const element = document.createElement('div');
       const onDisconnected = vi.fn();
 
-      observer.observeDisconnection(element, onDisconnected);
+      observer.observe(element, { onDisconnected });
 
       // Connect and disconnect
       container.appendChild(element);
