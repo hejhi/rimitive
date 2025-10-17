@@ -173,8 +173,10 @@ export function createMapFactory<
   };
 }
 
-// Status bits for reconciliation (like signals CLEAN/DIRTY/PENDING)
-const VISITED = 1 << 0; // Node exists in newItems array
+// Status bits for reconciliation (like signals CLEAN/DIRTY/STALE)
+const STALE = 0;       // Node from previous cycle, not yet confirmed in newItems
+const DIRTY = 1 << 0;  // Node exists in newItems array, needs positioning
+const CLEAN = 1 << 1;  // Node has been positioned/handled
 
 /**
  * Binary search for largest index where arr[tails[i]] < value
@@ -320,8 +322,8 @@ export function reconcileList<
       // Update position immediately (old position already cached in oldIndicesBuf)
       node.position = i;
 
-      // Mark existing node as visited
-      node.status |= VISITED;
+      // Mark existing node as dirty (needs positioning)
+      node.status = DIRTY;
 
       // Update data
       if (node.itemData !== item) {
@@ -338,7 +340,7 @@ export function reconcileList<
         itemData: item,
         itemSignal: rendered.itemSignal,
         position: i,
-        status: VISITED, // Mark as visited on creation
+        status: DIRTY, // Mark as dirty (needs positioning)
         previousSibling: undefined,
         nextSibling: undefined,
       };
@@ -377,8 +379,8 @@ export function reconcileList<
         | undefined;
 
       if (child) {
-        // Remove any unvisited nodes at the insertion point (cleanup as we go)
-        while (!(child.status & VISITED)) {
+        // Remove any stale nodes at the insertion point (cleanup as we go)
+        while (child.status === STALE) {
           const nextChild = child.nextSibling as ListItemNode<T, TElement>;
           pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
           child = nextChild;
@@ -396,18 +398,25 @@ export function reconcileList<
       }
     }
 
+    // Mark node as clean (handled)--we're repositioning here while pruning inline, so we need to make
+    // sure we don't reposition and prune a node that was repositioned in a previous iteration.
+    node.status = CLEAN;
     prevNode = node;
   }
 
-  // Cleanup phase - remove any remaining unvisited nodes
+  // Cleanup phase - remove any remaining unhandled nodes and reset status
   let child = parent.firstChild;
   while (child) {
     const nextChild = child.nextSibling as
       | ListItemNode<T, TElement>
       | undefined;
+    const status = child.status;
 
-    if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-    else child.status = 0;
+    // Prune any children left that are STALE 
+    if (status === STALE) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+    // Set any CLEAN children to STALE for next reconciliation.
+    // There should not be any DIRTY left by now.
+    else child.status = STALE;
 
     child = nextChild;
   }
