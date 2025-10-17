@@ -43,7 +43,7 @@ export interface LifecycleObserver {
  */
 export function createLifecycleObserver(): LifecycleObserver {
   const tracking = new WeakMap<DOMElement, Tracking>();
-  const tracked = new Set<DOMElement>();
+  let trackedCount = 0; // Reference count (no memory leaks)
 
   /**
    * Process tree with descent/unwind pattern (like graph-traversal.ts)
@@ -71,7 +71,7 @@ export function createLifecycleObserver(): LifecycleObserver {
             t.cleanup?.();
             t.onDisconnect?.(el);
             tracking.delete(el);
-            tracked.delete(el);
+            trackedCount--; // Decrement count
           }
 
           // Clear status (ready for next batch)
@@ -130,7 +130,7 @@ export function createLifecycleObserver(): LifecycleObserver {
     }
 
     // Auto-disconnect when empty (memory optimization)
-    if (tracked.size === 0) {
+    if (trackedCount === 0) {
       observer.disconnect();
     }
   });
@@ -159,10 +159,10 @@ export function createLifecycleObserver(): LifecycleObserver {
           onDisconnect: onDisconnected,
           cleanup
         });
-        tracked.add(element);
+        trackedCount++; // Increment count
 
         // Start observer if first element
-        if (tracked.size === 1) {
+        if (trackedCount === 1) {
           observer.observe(document.documentElement, {
             childList: true,
             subtree: true,
@@ -170,8 +170,9 @@ export function createLifecycleObserver(): LifecycleObserver {
         }
 
         return () => {
-          tracking.delete(element);
-          tracked.delete(element);
+          if (tracking.delete(element)) {
+            trackedCount--; // Decrement only if was tracked
+          }
         };
       }
 
@@ -180,16 +181,19 @@ export function createLifecycleObserver(): LifecycleObserver {
 
     // Deferred path: track for future connection
     const existing = tracking.get(element);
+    const isNew = !existing;
+
     tracking.set(element, {
       status: existing?.status ?? 0,
       onConnect: onConnected ?? existing?.onConnect,
       onDisconnect: onDisconnected ?? existing?.onDisconnect,
       cleanup: existing?.cleanup,
     });
-    tracked.add(element);
+
+    if (isNew) trackedCount++; // Increment only for new tracking
 
     // Start observer if first element
-    if (tracked.size === 1) {
+    if (trackedCount === 1) {
       observer.observe(document.documentElement, {
         childList: true,
         subtree: true,
@@ -197,8 +201,9 @@ export function createLifecycleObserver(): LifecycleObserver {
     }
 
     return () => {
-      tracking.delete(element);
-      tracked.delete(element);
+      if (tracking.delete(element)) {
+        trackedCount--; // Decrement only if was tracked
+      }
     };
   };
 
