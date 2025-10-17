@@ -236,7 +236,7 @@ export type LifecycleCallback<TElement = object> = (element: TElement) => void |
  */
 export interface ElementRef<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): ElementRef<TElement>; // Register lifecycle callback (chainable)
-  create(): ElementRefNode<TElement>; // Instantiate blueprint → creates ref node with DOM element
+  create(): TElement; // Instantiate blueprint → creates DOM element
 }
 
 /**

@@ -103,8 +103,8 @@ if (app) {
   const todoList = TodoList(api);
 
   // Instantiate blueprints and append to DOM
-  app.appendChild(counter.create().element as HTMLElement);
-  app.appendChild(todoList.create().element as HTMLElement);
+  app.appendChild(counter.create() as HTMLElement);
+  app.appendChild(todoList.create() as HTMLElement);
 
   // Trigger lifecycle callbacks (for DOM connection observers)
   counter((el) => {

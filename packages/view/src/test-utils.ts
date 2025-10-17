@@ -1,8 +1,7 @@
 import { vi } from 'vitest';
 import { createViewContext } from './context';
 import type { Renderer } from './renderer';
-import type { Reactive, Disposable, ElementRef, LifecycleCallback, ElementRefNode } from './types';
-import { ELEMENT_REF, type ElementNode } from './types';
+import type { Reactive, Disposable, ElementRef, LifecycleCallback } from './types';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -182,12 +181,6 @@ export function createMockDisposable(): Disposable & { disposed: boolean } {
  * Creates an ElementRef from an element for testing
  */
 export function createElementRef<TElement>(element: TElement): ElementRef<TElement> {
-  // Create node first (like signals)
-  const node: ElementNode<TElement> = {
-    refType: ELEMENT_REF,
-    element,
-  };
-
   // Store lifecycle callbacks
   const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
@@ -196,20 +189,14 @@ export function createElementRef<TElement>(element: TElement): ElementRef<TEleme
     return ref;
   }) as ElementRef<TElement>;
 
-  // Factory method - for tests, return ElementRefNode
-  ref.create = (): ElementRefNode<TElement> => {
+  // Factory method - for tests, return element directly
+  ref.create = () => {
     // In tests, we create the element once and reuse it
     // Call lifecycle callbacks if any
     for (const callback of lifecycleCallbacks) {
-      callback(node.element);
+      callback(element);
     }
-    // Return ref node with element (tests don't need sibling chain)
-    return {
-      refType: ELEMENT_REF,
-      element: node.element,
-      prev: undefined,
-      next: undefined,
-    };
+    return element;
   };
 
   return ref;

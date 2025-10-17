@@ -85,10 +85,10 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
         // Create new child if not null/false
         if (elementRef && isElementRef(elementRef)) {
-          const refNode = elementRef.create();
+          const newElement = elementRef.create();
           // Insert before nextSibling to maintain stable position
-          renderer.insertBefore(parent, refNode.element, state.nextSibling);
-          state.currentChild = refNode.element;
+          renderer.insertBefore(parent, newElement, state.nextSibling);
+          state.currentChild = newElement;
         }
       });
 

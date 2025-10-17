@@ -96,10 +96,9 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
             // Reconciler will wrap it in ListItemNode
             const itemSignal = signal(itemData);
             const elementRef = render(itemSignal);
-            const refNode = elementRef.create();
 
             return {
-              element: refNode.element, // Extract element from ref node
+              element: elementRef.create(), // Create returns element directly
               itemSignal,
             };
           },

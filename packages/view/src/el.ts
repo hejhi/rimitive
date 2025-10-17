@@ -5,7 +5,6 @@ import type {
   ElementChild,
   LifecycleCallback,
   ElementRef,
-  ElementRefNode,
   ChildRefNode,
   FragmentRefNode,
 } from './types';
@@ -63,14 +62,14 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     }) as ElementRef<TElement>;
 
     // Factory function - creates a new instance each time
-    ref.create = (): ElementRefNode<TElement> => {
+    ref.create = (): TElement => {
       // Create the element using renderer
       const element = renderer.createElement(tag);
 
       // Create a scope for this instance
       const scope = createScope();
 
-      // Build linked list of child ref nodes
+      // Build linked list of child ref nodes (INTERNAL - used only for fragment positioning)
       const childRefNodes: ChildRefNode<TElement>[] = [];
 
       // Run all reactive setup within this instance's scope
@@ -133,13 +132,8 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       // Track lifecycle observer disposal in element's scope
       trackInSpecificScope(scope, { dispose: lifecycleDispose });
 
-      // Return ref node containing element and sibling links
-      return {
-        refType: ELEMENT_REF,
-        element,
-        prev: undefined,
-        next: undefined,
-      };
+      // Return just the element (ref nodes were internal implementation detail)
+      return element;
     };
 
     return ref;
@@ -223,9 +217,15 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
 
   // Element ref (from el()) - instantiate blueprint
   if (isElementRef(child)) {
-    const refNode = child.create();
-    renderer.appendChild(element, refNode.element);
-    return refNode as unknown as ChildRefNode<TElement>;
+    const childElement = (child as ElementRef<TElement>).create();
+    renderer.appendChild(element, childElement);
+    // Wrap in ref node for internal sibling tracking
+    return {
+      refType: ELEMENT_REF,
+      element: childElement,
+      prev: undefined,
+      next: undefined,
+    };
   }
 
   // Fragment (from map() or match()) - defer attachment, return ref node
