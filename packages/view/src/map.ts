@@ -312,7 +312,7 @@ export function createReconciler() {
     const newPosBuf: number[] = [];
     const lisBuf: number[] = [];
 
-    // Loop 1: Build phase - process newItems and collect for LIS
+    //  Build phase - create nodes and collect info for LIS
     let count = 0;
     for (let i = 0; i < newItems.length; i++) {
       const item = newItems[i]!;
@@ -364,12 +364,12 @@ export function createReconciler() {
       nodes[i] = node;
     }
 
-    // Calculate LIS
+    // Transition: Calculate LIS
     const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
     let lisIdx = 0;
     let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
-    // Loop 2: Position phase - reorder nodes based on LIS
+    // Positioning phase - reorder nodes based on LIS
     let prevNode: ListItemNode<T, TElement> | undefined;
     for (const node of nodes) {
       // Check if in LIS
@@ -407,18 +407,15 @@ export function createReconciler() {
       prevNode = node;
     }
 
-    // Loop 3: Cleanup phase - remove remaining unvisited nodes
+    // Cleanup phase - remove any remaining unvisited nodes
     let child = parent.firstChild;
     while (child) {
       const nextChild = child.nextSibling as
         | ListItemNode<T, TElement>
         | undefined;
 
-      if (!(child.status & VISITED)) {
-        pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-      } else {
-        child.status = 0;
-      }
+      if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+      else child.status = 0;
 
       child = nextChild;
     }
