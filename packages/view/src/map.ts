@@ -206,7 +206,7 @@ function binarySearch(
  * Returns length and writes indices to lisBuf
  * Single loop with forward pass followed by backtrack phase
  */
-function findLIS(arr: number[], n: number, lisBuf: number[]): number {
+export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
   if (n <= 0) return 0;
   if (n === 1) {
     lisBuf[0] = 0;
