@@ -35,12 +35,6 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
   createElement(tag: string): TElement;
 
   /**
-   * Create a container element for list rendering
-   * The container should not affect layout (e.g., display: contents in DOM)
-   */
-  createContainer(): TElement;
-
-  /**
    * Create a text node with initial content
    */
   createTextNode(text: string): TText;
@@ -71,11 +65,6 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
   insertBefore(parent: TElement, child: Element | TText, reference: Element | TText | null): void;
 
   /**
-   * Add an event listener to an element
-   */
-  addEventListener(element: TElement, event: string, handler: (...args: unknown[]) => void): () => void;
-
-  /**
    * Observe element lifecycle (connection/disconnection from render tree)
    * Returns a cleanup function to stop observing
    */
@@ -90,9 +79,4 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
    * Check if a value is an element created by this renderer
    */
   isElement(value: unknown): value is TElement;
-
-  /**
-   * Check if a value is a text node created by this renderer
-   */
-  isTextNode(value: unknown): value is TText;
 }

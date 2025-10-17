@@ -65,11 +65,6 @@ export function createMockRenderer() {
 
   const renderer: Renderer<MockElement, MockText> = {
     createElement: vi.fn((tag: string) => new MockElement(tag)),
-    createContainer: vi.fn(() => {
-      const container = new MockElement('container');
-      container.props.style = { display: 'contents' };
-      return container;
-    }),
     createTextNode: vi.fn((text: string) => new MockText(text)),
     updateTextNode: vi.fn((node: MockText, text: string) => {
       node.content = text;
@@ -108,10 +103,6 @@ export function createMockRenderer() {
       }
       child.parent = parent;
     }),
-    addEventListener: vi.fn((element: MockElement, event: string, handler: (...args: unknown[]) => void) => {
-      element.listeners.set(event, handler);
-      return () => element.listeners.delete(event);
-    }),
     observeLifecycle: vi.fn((element: MockElement, callbacks: {
       onConnected?: (el: MockElement) => void | (() => void);
       onDisconnected?: (el: MockElement) => void;
@@ -122,8 +113,6 @@ export function createMockRenderer() {
     isConnected: vi.fn((element: MockElement) => element.connected),
     isElement: (value: unknown): value is MockElement =>
       value !== null && typeof value === 'object' && 'tag' in value,
-    isTextNode: (value: unknown): value is MockText =>
-      value !== null && typeof value === 'object' && 'type' in value && (value as { type: string }).type === 'text',
   };
 
   // Helper to simulate connection

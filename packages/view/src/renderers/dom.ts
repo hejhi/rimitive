@@ -36,12 +36,6 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
       return document.createElement(tag);
     },
 
-    createContainer(): DOMElement {
-      const container = document.createElement('div');
-      container.style.display = 'contents';
-      return container;
-    },
-
     createTextNode(text: string): DOMTextNode {
       return document.createTextNode(text);
     },
@@ -70,15 +64,6 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
       parent.insertBefore(child as Node, reference as Node | null);
     },
 
-    addEventListener(
-      element: DOMElement,
-      event: string,
-      handler: (...args: unknown[]) => void
-    ): () => void {
-      element.addEventListener(event, handler);
-      return () => element.removeEventListener(event, handler);
-    },
-
     observeLifecycle(element: DOMElement, callbacks: LifecycleCallbacks<DOMElement>): () => void {
       const { onConnected, onDisconnected } = callbacks;
 
@@ -99,10 +84,6 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
 
     isElement(value: unknown): value is DOMElement {
       return value instanceof HTMLElement;
-    },
-
-    isTextNode(value: unknown): value is DOMTextNode {
-      return value instanceof Text;
     },
   };
 }

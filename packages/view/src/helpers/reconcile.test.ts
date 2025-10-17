@@ -48,22 +48,16 @@ function createMockRenderer(): Renderer<MockElement, MockElement> {
 
   return {
     createElement: vi.fn((tag: string) => new MockElement(tag)),
-    createContainer: vi.fn(() => {
-      const container = new MockElement('container');
-      return container;
-    }),
     createTextNode: vi.fn((text: string) => new MockElement(`text:${text}`)),
     updateTextNode: vi.fn(),
     setAttribute: vi.fn(),
     appendChild,
     removeChild,
     insertBefore,
-    addEventListener: vi.fn(() => () => {}),
     observeLifecycle: vi.fn(() => () => {}),
     isConnected: vi.fn(() => true),
     isElement: (value): value is MockElement =>
       value !== null && typeof value === 'object' && 'id' in value,
-    isTextNode: (_value): _value is MockElement => false,
   };
 }
 
