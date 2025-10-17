@@ -1,13 +1,9 @@
 /**
  * Shared MutationObserver for DOM Lifecycle Tracking
  *
- * Inspired by graph-traversal.ts descent/unwind and pull-propagator.ts mark/propagate patterns.
- * Uses labeled loops, status bits, and reusable buffers for zero-allocation steady state.
- *
- * Algorithm:
- * - mark: Traverse mutation trees, mark tracked elements with status bits
- * - fire: Process marked elements, call callbacks, update state
- * - Auto-disconnect when no elements tracked (memory optimization)
+ * Uses descent/unwind pattern from graph-traversal.ts - processes trees inline
+ * without array buffering. Status bits track connection state, callbacks fire
+ * during traversal for zero-allocation steady state.
  */
 
 export type DOMElement = HTMLElement;
@@ -22,6 +18,12 @@ interface Tracking {
   onDisconnect?: (el: DOMElement) => void;
   cleanup?: () => void;
   status: number;
+}
+
+/** Stack node for tree branches (like graph-traversal.ts) */
+interface StackNode {
+  el: Element;
+  prev: StackNode | undefined;
 }
 
 /** Lifecycle observer interface */
@@ -43,74 +45,88 @@ export function createLifecycleObserver(): LifecycleObserver {
   const tracking = new WeakMap<DOMElement, Tracking>();
   const tracked = new Set<DOMElement>();
 
-  // Reusable buffer (grow automatically, zero allocations after warmup)
-  const markedBuf: DOMElement[] = [];
-
   /**
-   * Mark tracked descendants in tree (descent pattern like graph-traversal.ts)
+   * Process tree with descent/unwind pattern (like graph-traversal.ts)
+   * Fires callbacks inline during traversal - no array buffering
    */
-  const markTree = (root: Element, statusBit: number): void => {
-    // Process current node
-    if (root instanceof HTMLElement) {
-      const t = tracking.get(root);
-      if (t && !(t.status & statusBit)) {
-        t.status |= statusBit;
-        markedBuf.push(root);
-      }
-    }
+  const processTree = (root: Element, statusBit: number): void => {
+    let el: Element | null = root;
+    let stack: StackNode | undefined;
 
-    // Descend to children (using DOM traversal, not recursion stack for large trees)
-    let child = root.firstElementChild;
-    while (child) {
-      markTree(child, statusBit);
-      child = child.nextElementSibling;
+    descent: for (;;) {
+      // Process current element if tracked (HTMLElement only)
+      if (el instanceof HTMLElement) {
+        const t = tracking.get(el);
+        if (t && !(t.status & statusBit)) {
+          // Mark with status bit
+          t.status |= statusBit;
+
+          // Fire callback inline (like pull-propagator marking + pulling in one pass)
+          if (statusBit === CONNECTED && el.isConnected) {
+            if (t.onConnect) {
+              t.cleanup = t.onConnect(el) ?? t.cleanup;
+              t.onConnect = undefined; // Fire once per instance
+            }
+          } else if (statusBit === DISCONNECTED && !el.isConnected) {
+            t.cleanup?.();
+            t.onDisconnect?.(el);
+            tracking.delete(el);
+            tracked.delete(el);
+          }
+
+          // Clear status (ready for next batch)
+          t.status = 0;
+        }
+      }
+
+      // Descend to first child
+      const firstChild: Element | null = el.firstElementChild;
+      if (firstChild) {
+        const nextSibling: Element | null = el.nextElementSibling;
+        if (nextSibling) {
+          // Branch point - push sibling to stack
+          stack = { el: nextSibling, prev: stack };
+        }
+        el = firstChild;
+        continue descent;
+      }
+
+      // No children - try next sibling
+      const sibling: Element | null = el.nextElementSibling;
+      if (sibling) {
+        el = sibling;
+        continue descent;
+      }
+
+      // Unwind stack (like graph-traversal.ts unwind phase)
+      if (stack) {
+        el = stack.el;
+        stack = stack.prev;
+        continue descent;
+      }
+
+      // Done
+      break descent;
     }
   };
 
   /**
-   * Shared MutationObserver with labeled phases (like pull-propagator.ts)
+   * Shared MutationObserver - processes trees inline, no buffering
    */
   const observer = new MutationObserver((mutations) => {
-    markedBuf.length = 0; // Clear buffer (reuse array)
-
-    // Phase 1: Mark affected elements
+    // Process each mutation's trees immediately
     for (const mutation of mutations) {
-      // Mark added nodes (connections)
+      // Handle additions
       for (let i = 0; i < mutation.addedNodes.length; i++) {
         const node = mutation.addedNodes[i];
-        if (node instanceof Element) markTree(node, CONNECTED);
+        if (node instanceof Element) processTree(node, CONNECTED);
       }
 
-      // Mark removed nodes (disconnections)
+      // Handle removals
       for (let i = 0; i < mutation.removedNodes.length; i++) {
         const node = mutation.removedNodes[i];
-        if (node instanceof Element) markTree(node, DISCONNECTED);
+        if (node instanceof Element) processTree(node, DISCONNECTED);
       }
-    }
-
-    // Phase 2: Fire callbacks for marked elements
-    for (const el of markedBuf) {
-      const t = tracking.get(el);
-      if (!t) continue;
-
-      // Handle connection
-      if (t.status & CONNECTED && el.isConnected) {
-        if (t.onConnect) {
-          t.cleanup = t.onConnect(el) ?? t.cleanup;
-          t.onConnect = undefined; // Fire once per instance
-        }
-      }
-
-      // Handle disconnection
-      if (t.status & DISCONNECTED && !el.isConnected) {
-        t.cleanup?.();
-        t.onDisconnect?.(el);
-        tracking.delete(el);
-        tracked.delete(el);
-      }
-
-      // Clear status for next batch
-      t.status = 0;
     }
 
     // Auto-disconnect when empty (memory optimization)
@@ -131,14 +147,18 @@ export function createLifecycleObserver(): LifecycleObserver {
   ): (() => void) => {
     const { onConnected, onDisconnected } = callbacks;
 
-    // Handle already-connected case (common path)
+    // Fast path: already connected, fire immediately
     if (element.isConnected && onConnected) {
-      const cleanup = onConnected(element);
+      const result = onConnected(element);
+      const cleanup = typeof result === 'function' ? result : undefined;
 
-      // If we have both cleanup and disconnect callback, track for later
-      if (cleanup && onDisconnected) {
-        const t: Tracking = { status: 0, onDisconnect: onDisconnected, cleanup };
-        tracking.set(element, t);
+      // Track for disconnect if needed
+      if (cleanup || onDisconnected) {
+        tracking.set(element, {
+          status: 0,
+          onDisconnect: onDisconnected,
+          cleanup
+        });
         tracked.add(element);
 
         // Start observer if first element
@@ -155,15 +175,17 @@ export function createLifecycleObserver(): LifecycleObserver {
         };
       }
 
-      return () => {}; // No-op, already fired
+      return () => {}; // No tracking needed
     }
 
-    // Set up tracking for future connection (merge with existing if present)
+    // Deferred path: track for future connection
     const existing = tracking.get(element);
-    const t: Tracking = existing || { status: 0 };
-    if (onConnected) t.onConnect = onConnected;
-    if (onDisconnected) t.onDisconnect = onDisconnected;
-    tracking.set(element, t);
+    tracking.set(element, {
+      status: existing?.status ?? 0,
+      onConnect: onConnected ?? existing?.onConnect,
+      onDisconnect: onDisconnected ?? existing?.onDisconnect,
+      cleanup: existing?.cleanup,
+    });
     tracked.add(element);
 
     // Start observer if first element
