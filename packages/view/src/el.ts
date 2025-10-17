@@ -128,7 +128,6 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 
       // Create a scope for this instance
       const scope = createScope();
-
       
       // Run all reactive setup within this instance's scope
       runInScope(ctx, scope, () => {
@@ -137,40 +136,29 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 
         // Track tail of intrusive linked list (traverse backwards from here)
         let lastChildRef: NodeRef<TElement> | undefined;
-        let count = 0;
 
-        for (;;) {
-          const child = children[count];
+        for (const child of children) {
+          // Build: process children forward
+          const refNode = handleChild(element, child, effect, ctx, renderer);
 
-          if (child !== undefined) {
-            // Build: process children forward
-            const refNode = handleChild(element, child, effect, ctx, renderer);
-
-            if (refNode) {
-              if (lastChildRef) {
-                lastChildRef.next = refNode;
-                refNode.prev = lastChildRef;
-              }
-              lastChildRef = refNode;
-            }
-
-            count++;
-            continue;
+          if (!refNode) continue;
+          if (lastChildRef) {
+            lastChildRef.next = refNode;
+            refNode.prev = lastChildRef;
           }
-
-          // Unwind: traverse backwards and attach fragments
-          if (!lastChildRef) break;
-
-          let nextElement: TElement | null = null;
-
-          do {
-            if ('attach' in lastChildRef) lastChildRef.attach(element, nextElement);
-            else nextElement = lastChildRef.element;
-
-            lastChildRef = lastChildRef.prev;
-          } while (lastChildRef);
-          break;
+          lastChildRef = refNode;
         }
+
+        // Unwind: traverse backwards and attach fragments
+        if (!lastChildRef) return;
+        let nextElement: TElement | null = null;
+
+        do {
+          if ('attach' in lastChildRef) lastChildRef.attach(element, nextElement);
+          else nextElement = lastChildRef.element;
+
+          lastChildRef = lastChildRef.prev;
+        } while (lastChildRef);
       });
 
       // Store scope in context WeakMap (for cleanup)
@@ -224,13 +212,10 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
   const children: ElRefSpecChild[] = [];
   
   for (const item of rest) {
-    if (isPlainObject(item) && !isReactive(item)) {
-      // It's props
-      Object.assign(props, item);
-    } else {
-      // It's a child - not a plain object props, so must be RefSpecChild
-      children.push(item as ElRefSpecChild);
-    }
+    // It's props
+    if (isPlainObject(item) && !isReactive(item)) Object.assign(props, item);
+    // It's a child - not a plain object props, so must be RefSpecChild
+    else children.push(item as ElRefSpecChild);
   }
 
   return { props, children };
@@ -253,15 +238,10 @@ function applyProps<
   for (const [key, value] of Object.entries(props)) {
     // Handle reactive values
     if (isReactive(value)) {
-      const dispose = effect(() => {
-        renderer.setAttribute(element, key, value());
-      });
+      const dispose = effect(() => renderer.setAttribute(element, key, value()));
       // Track effect for cleanup when element is removed
       trackInScope(ctx, { dispose });
-    } else {
-      // Static value
-      renderer.setAttribute(element, key, value);
-    }
+    } else renderer.setAttribute(element, key, value); // Static value
   }
 }
 
@@ -277,9 +257,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   renderer: Renderer<TElement, TText>
 ): NodeRef<TElement> | null {
   // Skip null/undefined/false
-  if (child == null || child === false) {
-    return null;
-  }
+  if (child == null || child === false) return null;
   if (typeof child === 'function') {
     // Element ref (from el()) - instantiate blueprint
     if (isRefSpec<TElement>(child)) {
@@ -337,9 +315,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   }
 
   // Boolean - ignore
-  if (typeof child === 'boolean') {
-    return null;
-  }
+  if (typeof child === 'boolean') return null;
 
   return null; // Default case
 }
@@ -348,9 +324,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
  * Check if value is a plain object (not a class instance, array, etc.)
  */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
+  if (typeof value !== 'object' || value === null) return false;
 
   const proto = Object.getPrototypeOf(value) as unknown;
   return proto === Object.prototype || proto === null;
