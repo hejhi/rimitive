@@ -38,10 +38,6 @@
       "import": "./dist/helpers/scope.js",
       "types": "./dist/helpers/scope.d.ts"
     },
-    "./helpers/reconcile": {
-      "import": "./dist/helpers/reconcile.js",
-      "types": "./dist/helpers/reconcile.d.ts"
-    },
     "./on": {
       "import": "./dist/on.js",
       "types": "./dist/on.d.ts"
