@@ -137,7 +137,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
         // Apply props
         applyProps(element, props, effect, ctx, renderer);
 
-        // Loop 1: Instantiate children and build intrusive linked list
+        // Instantiate children and build intrusive linked list
         for (const child of children) {
           const refNode = handleChild(element, child, effect, ctx, renderer);
 
