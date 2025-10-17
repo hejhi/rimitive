@@ -129,38 +129,47 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       // Create a scope for this instance
       const scope = createScope();
 
-      // Track tail of intrusive linked list (traverse backwards from here)
-      let lastChildRef: NodeRef<TElement> | undefined;
-
+      
       // Run all reactive setup within this instance's scope
       runInScope(ctx, scope, () => {
         // Apply props
         applyProps(element, props, effect, ctx, renderer);
 
-        // Instantiate children and build intrusive linked list
-        for (const child of children) {
-          const refNode = handleChild(element, child, effect, ctx, renderer);
+        // Track tail of intrusive linked list (traverse backwards from here)
+        let lastChildRef: NodeRef<TElement> | undefined;
+        let count = 0;
 
-          if (!refNode) continue;
+        for (;;) {
+          const child = children[count];
 
-          if (lastChildRef) {
-            lastChildRef.next = refNode;
-            refNode.prev = lastChildRef;
+          if (child !== undefined) {
+            // Build: process children forward
+            const refNode = handleChild(element, child, effect, ctx, renderer);
+
+            if (refNode) {
+              if (lastChildRef) {
+                lastChildRef.next = refNode;
+                refNode.prev = lastChildRef;
+              }
+              lastChildRef = refNode;
+            }
+
+            count++;
+            continue;
           }
 
-          lastChildRef = refNode;
-        }
+          // Unwind: traverse backwards and attach fragments
+          if (!lastChildRef) break;
 
-        // By going backwards, we can track the next DOM element as we go
-        let nextElement: TElement | null = null;
-        let current = lastChildRef;
-        while (current) {
-          if ('attach' in current) {
-            // Fragment - attach with next DOM element we've seen
-            current.attach(element, nextElement);
-            // DOM element - becomes nextSibling for previous fragments
-          } else nextElement = current.element;
-          current = current.prev;
+          let nextElement: TElement | null = null;
+
+          do {
+            if ('attach' in lastChildRef) lastChildRef.attach(element, nextElement);
+            else nextElement = lastChildRef.element;
+
+            lastChildRef = lastChildRef.prev;
+          } while (lastChildRef);
+          break;
         }
       });
 
