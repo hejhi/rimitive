@@ -101,7 +101,6 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
           }
         });
 
-        // Track dispose in parent's scope
         const parentScope = ctx.elementScopes.get(parent);
         if (parentScope) trackInSpecificScope(parentScope, { dispose });
       }

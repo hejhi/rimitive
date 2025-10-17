@@ -18,7 +18,31 @@ import type {
   TextNode,
 } from './renderer';
 import type { ViewContext } from './context';
-import { disposeScope } from './helpers/scope';
+import { disposeScope, trackInSpecificScope } from './helpers/scope';
+
+/**
+ * List item node - represents an item in a reactive list
+ * Forms intrusive doubly-linked list via sibling pointers
+ *
+ * Unidirectional edges: parent knows children (via firstChild/lastChild),
+ * but children don't know parent. Siblings link to each other.
+ *
+ * DOM parallel:
+ * - previousSibling ↔ previousSibling
+ * - nextSibling ↔ nextSibling
+ */
+export interface ListItemNode<T = unknown, TElement = ReactiveElement>
+  extends ViewNode<TElement> {
+  key: string; // Unique key for reconciliation
+  itemData: T; // The actual data
+  itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
+  position: number; // Current position in list (cached for LIS algorithm)
+  status: number; // Status bits for reconciliation (VISITED, etc.)
+
+  // Sibling navigation (intrusive linked list - nodes link to siblings only)
+  previousSibling: ListItemNode<unknown, TElement> | undefined; // Like DOM previousSibling
+  nextSibling: ListItemNode<unknown, TElement> | undefined; // Like DOM nextSibling
+}
 
 /**
  * Options passed to map factory
@@ -135,16 +159,8 @@ export function createMapFactory<
           );
         });
 
-        // Track dispose in parent's scope
-        // Parent owns the lifecycle
         const parentScope = ctx.elementScopes.get(parent);
-        if (parentScope) {
-          const disposeNode = {
-            disposable: { dispose },
-            next: parentScope.firstDisposable,
-          };
-          parentScope.firstDisposable = disposeNode;
-        }
+        if (parentScope) trackInSpecificScope(parentScope, { dispose });
       }
     };
   }
@@ -158,7 +174,7 @@ export function createMapFactory<
 // Status bits for reconciliation (like signals CLEAN/DIRTY/PENDING)
 const VISITED = 1 << 0; // Node exists in newItems array
 
-export function createReconciler() {
+function createReconciler() {
   // Closure-captured reusable buffers (grow automatically, zero allocations after first use)
   const oldIndicesBuf: number[] = [];
   const newPosBuf: number[] = [];
@@ -519,28 +535,4 @@ function moveChild<T, TElement>(
       parent.firstChild = node as ListItemNode<unknown, TElement>;
     }
   }
-}
-
-/**
- * List item node - represents an item in a reactive list
- * Forms intrusive doubly-linked list via sibling pointers
- *
- * Unidirectional edges: parent knows children (via firstChild/lastChild),
- * but children don't know parent. Siblings link to each other.
- *
- * DOM parallel:
- * - previousSibling ↔ previousSibling
- * - nextSibling ↔ nextSibling
- */
-export interface ListItemNode<T = unknown, TElement = ReactiveElement>
-  extends ViewNode<TElement> {
-  key: string; // Unique key for reconciliation
-  itemData: T; // The actual data
-  itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
-  position: number; // Current position in list (cached for LIS algorithm)
-  status: number; // Status bits for reconciliation (VISITED, etc.)
-
-  // Sibling navigation (intrusive linked list - nodes link to siblings only)
-  previousSibling: ListItemNode<unknown, TElement> | undefined; // Like DOM previousSibling
-  nextSibling: ListItemNode<unknown, TElement> | undefined; // Like DOM nextSibling
 }
