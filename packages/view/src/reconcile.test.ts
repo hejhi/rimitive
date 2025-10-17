@@ -4,6 +4,40 @@ import { createViewContext } from './context';
 import type { Renderer } from './renderer';
 import { MockElement } from './test-utils';
 
+// Shared buffers for tests (mimics buffer pooling in actual implementation)
+const testBuffers = {
+  oldIndices: [] as number[],
+  newPos: [] as number[],
+  lis: [] as number[],
+};
+
+// Helper to wrap reconcileList with buffer management for tests
+function reconcileListTest<T>(
+  ctx: ReturnType<typeof createViewContext>,
+  parent: MapState<MockElement>,
+  newItems: T[],
+  renderItem: (item: T) => { element: MockElement; itemSignal?: ((value: T) => void) & (() => T) },
+  keyFn: (item: T) => string | number,
+  renderer: Renderer<MockElement, MockElement>
+): void {
+  // Clear buffers before each use
+  testBuffers.oldIndices.length = 0;
+  testBuffers.newPos.length = 0;
+  testBuffers.lis.length = 0;
+
+  reconcileList(
+    ctx,
+    parent,
+    newItems,
+    renderItem,
+    keyFn,
+    renderer,
+    testBuffers.oldIndices,
+    testBuffers.newPos,
+    testBuffers.lis
+  );
+}
+
 // Mock renderer for reconcile tests
 function createMockRenderer(): Renderer<MockElement, MockElement> {
   const appendChild = vi.fn((parent: MockElement, child: MockElement) => {
@@ -73,7 +107,7 @@ describe('reconcileList', () => {
 
     const items = ['a', 'b', 'c'];
 
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       items, // new items
@@ -113,12 +147,12 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileList(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
 
     expect(container.children).toHaveLength(2);
 
     // Add more items
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       ['a', 'b', 'c', 'd'],
@@ -137,7 +171,7 @@ describe('reconcileList', () => {
     ]);
 
     // Remove middle item
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       ['a', 'c', 'd'],
@@ -171,10 +205,10 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileList(ctx, parent, ['a', 'b', 'c'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b', 'c'], createElement, (item) => item, renderer);
 
     // Reverse order
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       ['c', 'b', 'a'],
@@ -211,7 +245,7 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       [objA, objB, objC],
@@ -221,7 +255,7 @@ describe('reconcileList', () => {
     );
 
     // Reorder same objects
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       [objC, objA, objB],
@@ -254,10 +288,10 @@ describe('reconcileList', () => {
     };
 
     // Initial: a b c d
-    reconcileList(ctx, parent, ['a', 'b', 'c', 'd'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b', 'c', 'd'], createElement, (item) => item, renderer);
 
     // Transform: d e c (removed: a, b; added: e; reordered: d, c)
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       ['d', 'e', 'c'],
@@ -290,7 +324,7 @@ describe('reconcileList', () => {
     const itemB = { id: 'b', value: 2 };
 
     // Initial render
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       [itemA, itemB],
@@ -308,7 +342,7 @@ describe('reconcileList', () => {
     // Update only item A - use new object reference for A, same reference for B
     const itemAUpdated = { id: 'a', value: 99 };
 
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       [itemAUpdated, itemB], // itemB is same reference
@@ -348,11 +382,11 @@ describe('reconcileList', () => {
     };
 
     // Initial: empty list
-    reconcileList(ctx, parent, [], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, [], createElement, (item) => item, renderer);
     expect(container.children).toHaveLength(0);
 
     // Add items
-    reconcileList(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
 
     // User cares: items added correctly
     expect(container.children).toHaveLength(2);
@@ -379,11 +413,11 @@ describe('reconcileList', () => {
     };
 
     // Initial: non-empty list
-    reconcileList(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
     expect(container.children).toHaveLength(2);
 
     // Clear all items
-    reconcileList(ctx, parent, [], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, [], createElement, (item) => item, renderer);
 
     // User cares: all items removed
     expect(container.children).toHaveLength(0);
@@ -409,11 +443,11 @@ describe('reconcileList', () => {
     };
 
     // Initial: a, b
-    reconcileList(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
     const oldElements = [...container.children];
 
     // Replace with completely different items: x, y
-    reconcileList(ctx, parent, ['x', 'y'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['x', 'y'], createElement, (item) => item, renderer);
 
     // User cares: old items removed, new items added
     expect(container.children).toHaveLength(2);
@@ -439,7 +473,7 @@ describe('reconcileList', () => {
     const itemSignals = new Map<string, ReturnType<typeof vi.fn>>();
 
     // Items with duplicate keys
-    reconcileList(
+    reconcileListTest(
       ctx,
       parent,
       [

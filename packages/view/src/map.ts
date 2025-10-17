@@ -118,6 +118,11 @@ export function createMapFactory<
   ): FragmentSpec<TElement> {
     let dispose: (() => void) | undefined;
 
+    // Pooled buffers for LIS calculation - reused across reconciliations
+    const oldIndicesBuf: number[] = [];
+    const newPosBuf: number[] = [];
+    const lisBuf: number[] = [];
+
     // internal
     const state: MapState<TElement> = {
       element: null,
@@ -138,6 +143,11 @@ export function createMapFactory<
       dispose = effect(() => {
         const currentItems = itemsSignal();
 
+        // Clear pooled buffers before reuse
+        oldIndicesBuf.length = 0;
+        newPosBuf.length = 0;
+        lisBuf.length = 0;
+
         // Pass linked list head directly to reconciler (single source of truth)
         // This eliminates array allocation and prevents sync bugs
         reconcileList<T, TElement, TText>(
@@ -156,7 +166,10 @@ export function createMapFactory<
             };
           },
           keyFn,
-          renderer
+          renderer,
+          oldIndicesBuf,
+          newPosBuf,
+          lisBuf
         );
       });
 
@@ -275,6 +288,7 @@ function pruneNode<
  * Reconcile list with minimal allocations
  * Reordered loops - position first, then remove
  * Eliminates newKeys allocation by using status bits
+ * Buffers are passed in and reused across reconciliations
  */
 export function reconcileList<
   T,
@@ -289,7 +303,10 @@ export function reconcileList<
     itemSignal?: ((value: T) => void) & (() => T);
   },
   keyFn: (item: T) => string | number,
-  renderer: Renderer<TElement, TText>
+  renderer: Renderer<TElement, TText>,
+  oldIndicesBuf: number[],
+  newPosBuf: number[],
+  lisBuf: number[]
 ): void {
   const parentEl = parent.element;
   if (!parentEl) return;
@@ -300,12 +317,7 @@ export function reconcileList<
   >;
 
   // Pre-allocate nodes buffer to avoid Map lookup in position phase
-  const nodes: ListItemNode<T, TElement>[] = Array(newItems.length);
-
-  // Local buffers for LIS calculation
-  const oldIndicesBuf: number[] = [];
-  const newPosBuf: number[] = [];
-  const lisBuf: number[] = [];
+  const nodes: ListItemNode<T, TElement>[] = Array(newItems.length) as ListItemNode<T, TElement>[];
 
   //  Build phase - create nodes and collect info for LIS
   let count = 0;
