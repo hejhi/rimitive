@@ -40,40 +40,12 @@ export function isRefSpec(value: unknown): value is RefSpec {
 }
 
 /**
- * Element ref node - returned by RefSpec.create()
- * Represents an instantiated element with sibling pointers
- */
-export interface ElementRef<TElement> {
-  refType: typeof ELEMENT_REF;
-  element: TElement; // The actual DOM element
-  prev?: NodeRef<TElement>; // Previous sibling (element or fragment)
-  next?: NodeRef<TElement>; // Next sibling (element or fragment)
-}
-
-
-/**
  * Fragment - ref with no container and one or more children
  */
 export type Fragment<TElement = ReactiveElement> = {
   (parent: TElement, nextSibling?: TElement | null): void;
   refType: typeof FRAGMENT;
 };
-
-/**
- * Fragment ref node - returned by Fragment attach
- * Represents an instantiated fragment (transparent, no element)
- */
-export interface FragmentRef<TElement>
-  extends Omit<ElementRef<TElement>, 'element'> {
-  refType: typeof FRAGMENT;
-  element: null; // Fragments are transparent (no element)
-  attach: (parent: TElement, nextSibling: TElement | null) => void; // Deferred attachment
-}
-
-/**
- * Ref node - union of instantiated specs
- */
-export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
  * A reactive value that can be read as a signal or computed

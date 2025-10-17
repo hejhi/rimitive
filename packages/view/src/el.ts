@@ -2,8 +2,6 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type {
   LifecycleCallback,
   RefSpec,
-  NodeRef,
-  FragmentRef,
   ReactiveElement,
   Reactive,
   Fragment,
@@ -18,6 +16,37 @@ import {
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
+
+/**
+ * Internal tracking nodes for sibling chain
+ * These are implementation details of el() and not exposed publicly
+ */
+
+/**
+ * Element ref node - wraps created elements for sibling tracking
+ */
+interface ElementRef<TElement> {
+  refType: typeof ELEMENT_REF;
+  element: TElement;
+  prev?: NodeRef<TElement>;
+  next?: NodeRef<TElement>;
+}
+
+/**
+ * Fragment ref node - wraps fragments for deferred attachment
+ */
+interface FragmentRef<TElement> {
+  refType: typeof FRAGMENT;
+  element: null;
+  prev?: NodeRef<TElement>;
+  next?: NodeRef<TElement>;
+  attach: (parent: TElement, nextSibling: TElement | null) => void;
+}
+
+/**
+ * Ref node - union of element/fragment tracking nodes
+ */
+type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
  * Props for an element - type-safe based on the HTML tag
