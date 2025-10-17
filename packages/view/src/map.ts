@@ -308,140 +308,120 @@ export function createReconciler() {
       ListItemNode<T, TElement>
     >;
 
-    let i = 0;
-    let count = 0;
-
-    // LIS state (hoisted for phase 1)
-    let lisLen = -1;
-    let lisIdx = 0;
-    let nextLISPos = -1;
-    let prevNode: ListItemNode<T, TElement> | undefined;
-
     // Pre-allocate nodes buffer to avoid Map lookup in position phase
     const nodesBuf: ListItemNode<T, TElement>[] = Array(newItems.length);
 
-    for (;;) {
-      if (lisLen === -1) {
-        // Build phase: process newItems forward
-        const item = newItems[i];
+    // Loop 1: Build phase - process newItems and collect for LIS
+    let count = 0;
+    for (let i = 0; i < newItems.length; i++) {
+      const item = newItems[i]!;
+      const key = keyFn(item) as string;
+      let node = itemsByKey.get(key);
 
-        if (item !== undefined) {
-          const key = keyFn(item) as string;
-          let node = itemsByKey.get(key);
+      if (node) {
+        oldIndicesBuf[count] = node.position;
+        newPosBuf[count] = i;
+        count++;
 
-          if (node) {
-            oldIndicesBuf[count] = node.position;
-            newPosBuf[count] = i;
-            count++;
+        // Update position immediately (old position already cached in oldIndicesBuf)
+        node.position = i;
 
-            // Update position immediately (old position already cached in oldIndicesBuf)
-            node.position = i;
+        // Mark existing node as visited
+        node.status |= VISITED;
 
-            // Mark existing node as visited
-            node.status |= VISITED;
-
-            // Update data
-            if (node.itemData !== item) {
-              node.itemData = item;
-              if (node.itemSignal) node.itemSignal(item);
-            }
-          } else {
-            // Create new node
-            const rendered = renderItem(item);
-
-            node = {
-              element: rendered.element,
-              key,
-              itemData: item,
-              itemSignal: rendered.itemSignal,
-              position: i,
-              status: VISITED, // Mark as visited on creation
-              previousSibling: undefined,
-              nextSibling: undefined,
-            };
-
-            appendChild(parent, node);
-            itemsByKey.set(key, node);
-            // Insert before parent.nextSibling to maintain fragment position
-            renderer.insertBefore(
-              parentEl,
-              rendered.element,
-              parent.nextSibling
-            );
-          }
-
-          // Store node for position phase
-          nodesBuf[i] = node;
-
-          i++;
-          continue;
+        // Update data
+        if (node.itemData !== item) {
+          node.itemData = item;
+          if (node.itemSignal) node.itemSignal(item);
         }
+      } else {
+        // Create new node
+        const rendered = renderItem(item);
 
-        // Transition: calculate LIS
-        lisLen = findLIS(oldIndicesBuf, count);
-        nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
+        node = {
+          element: rendered.element,
+          key,
+          itemData: item,
+          itemSignal: rendered.itemSignal,
+          position: i,
+          status: VISITED, // Mark as visited on creation
+          previousSibling: undefined,
+          nextSibling: undefined,
+        };
 
-        // Reset for positioning
-        i = 0;
+        appendChild(parent, node);
+        itemsByKey.set(key, node);
+        // Insert before parent.nextSibling to maintain fragment position
+        renderer.insertBefore(
+          parentEl,
+          rendered.element,
+          parent.nextSibling
+        );
       }
 
-      // Position phase: iterate newItems again
-      const item = newItems[i];
-      if (item !== undefined) {
-        const node = nodesBuf[i]!;
-
-        // Check if in LIS
-        if (node.position === nextLISPos) {
-          lisIdx++;
-          nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-        } else {
-          // Node not in LIS - needs repositioning
-          // Calculate reference sibling for insertion
-          let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
-            | ListItemNode<T, TElement>
-            | undefined;
-
-          if (child) {
-            // Remove any unvisited nodes at the insertion point (cleanup as we go)
-            while (!(child.status & VISITED)) {
-              const nextChild = child.nextSibling as ListItemNode<T, TElement>;
-              pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-              child = nextChild;
-            }
-          }
-
-          // Move if not in LIS and not already in correct position
-          if (node !== child) {
-            // if child is undefined, we know to append at the end
-            moveChild(parent, node, child);
-
-            // Use parent.nextSibling as fallback to maintain fragment position
-            const nextEl = child ? child.element : parent.nextSibling;
-            if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
-          }
-        }
-
-        prevNode = node;
-        i++;
-        continue;
-      }
-      break;
+      // Store node for position phase
+      nodesBuf[i] = node;
     }
 
-    // Cleanup phase: remove remaining unvisited nodes
-    let child = parent.firstChild;
-    if (!child) return;
+    // Calculate LIS
+    const lisLen = findLIS(oldIndicesBuf, count);
+    let lisIdx = 0;
+    let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
-    do {
+    // Loop 2: Position phase - reorder nodes based on LIS
+    let prevNode: ListItemNode<T, TElement> | undefined;
+    for (let i = 0; i < newItems.length; i++) {
+      const node = nodesBuf[i]!;
+
+      // Check if in LIS
+      if (node.position === nextLISPos) {
+        lisIdx++;
+        nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
+      } else {
+        // Node not in LIS - needs repositioning
+        // Calculate reference sibling for insertion
+        let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
+          | ListItemNode<T, TElement>
+          | undefined;
+
+        if (child) {
+          // Remove any unvisited nodes at the insertion point (cleanup as we go)
+          while (!(child.status & VISITED)) {
+            const nextChild = child.nextSibling as ListItemNode<T, TElement>;
+            pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+            child = nextChild;
+          }
+        }
+
+        // Move if not in LIS and not already in correct position
+        if (node !== child) {
+          // if child is undefined, we know to append at the end
+          moveChild(parent, node, child);
+
+          // Use parent.nextSibling as fallback to maintain fragment position
+          const nextEl = child ? child.element : parent.nextSibling;
+          if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
+        }
+      }
+
+      prevNode = node;
+    }
+
+    // Loop 3: Cleanup phase - remove remaining unvisited nodes
+    let child = parent.firstChild;
+    while (child) {
       const nextChild = child.nextSibling as
         | ListItemNode<T, TElement>
         | undefined;
 
-      if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-      else child.status = 0;
+      if (!(child.status & VISITED)) {
+        pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+      } else {
+        child.status = 0;
+      }
 
       child = nextChild;
-    } while (child);
+    }
   }
 
   return {
