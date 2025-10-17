@@ -1,9 +1,7 @@
 /**
  * Shared MutationObserver for DOM Lifecycle Tracking
  *
- * Uses descent/unwind pattern from graph-traversal.ts - processes trees inline
- * without array buffering. Status bits track connection state, callbacks fire
- * during traversal for zero-allocation steady state.
+ * Uses descent/unwind pattern.
  */
 
 export type DOMElement = HTMLElement;
@@ -20,7 +18,7 @@ interface Tracking {
   status: number;
 }
 
-/** Stack node for tree branches (like graph-traversal.ts) */
+/** Stack node for tree branches */
 interface StackNode {
   el: Element;
   prev: StackNode | undefined;
@@ -39,21 +37,20 @@ export interface LifecycleObserver {
 
 /**
  * Create lifecycle observer with shared MutationObserver
- * Closure-captured state (like signals/graph-edges.ts)
  */
 export function createLifecycleObserver(): LifecycleObserver {
   const tracking = new WeakMap<DOMElement, Tracking>();
-  let trackedCount = 0; // Reference count (no memory leaks)
+  let trackedCount = 0;
 
   /**
-   * Process tree with descent/unwind pattern (like graph-traversal.ts)
+   * Process tree with descent/unwind pattern
    * Fires callbacks inline during traversal - no array buffering
    */
   const processTree = (root: Element, statusBit: number): void => {
     let el: Element | null = root;
     let stack: StackNode | undefined;
 
-    descent: for (;;) {
+    for (;;) {
       // Process current element if tracked (HTMLElement only)
       if (el instanceof HTMLElement) {
         const t = tracking.get(el);
@@ -61,7 +58,7 @@ export function createLifecycleObserver(): LifecycleObserver {
           // Mark with status bit
           t.status |= statusBit;
 
-          // Fire callback inline (like pull-propagator marking + pulling in one pass)
+          // Fire callback inline (single-pass mark + pull)
           if (statusBit === CONNECTED && el.isConnected) {
             if (t.onConnect) {
               t.cleanup = t.onConnect(el) ?? t.cleanup;
@@ -71,7 +68,7 @@ export function createLifecycleObserver(): LifecycleObserver {
             t.cleanup?.();
             t.onDisconnect?.(el);
             tracking.delete(el);
-            trackedCount--; // Decrement count
+            trackedCount--;
           }
 
           // Clear status (ready for next batch)
@@ -88,25 +85,25 @@ export function createLifecycleObserver(): LifecycleObserver {
           stack = { el: nextSibling, prev: stack };
         }
         el = firstChild;
-        continue descent;
+        continue;
       }
 
       // No children - try next sibling
       const sibling: Element | null = el.nextElementSibling;
       if (sibling) {
         el = sibling;
-        continue descent;
+        continue;
       }
 
-      // Unwind stack (like graph-traversal.ts unwind phase)
+      // Unwind stack
       if (stack) {
         el = stack.el;
         stack = stack.prev;
-        continue descent;
+        continue;
       }
 
       // Done
-      break descent;
+      break;
     }
   };
 
