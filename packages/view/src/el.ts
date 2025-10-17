@@ -10,8 +10,6 @@ import {
   isReactive,
   isFragment,
   isRefSpec,
-  ELEMENT_REF,
-  FRAGMENT,
 } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
@@ -26,7 +24,6 @@ import type { Renderer, Element as RendererElement, TextNode } from './renderer'
  * Element ref node - wraps created elements for sibling tracking
  */
 interface ElementRef<TElement> {
-  refType: typeof ELEMENT_REF;
   element: TElement;
   prev?: NodeRef<TElement>;
   next?: NodeRef<TElement>;
@@ -36,7 +33,6 @@ interface ElementRef<TElement> {
  * Fragment ref node - wraps fragments for deferred attachment
  */
 interface FragmentRef<TElement> {
-  refType: typeof FRAGMENT;
   element: null;
   prev?: NodeRef<TElement>;
   next?: NodeRef<TElement>;
@@ -166,7 +162,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
         // Loop 2: Traverse linked list and attach fragments
         let current = firstChildRef;
         while (current) {
-          if (current.refType === FRAGMENT) {
+          if ('attach' in current) {
             // Fragment - call attach with nextSibling from linked list
             const nextDOMElement = findNextDOMElement(current.next);
             (current as FragmentRef<TElement>).attach(element, nextDOMElement);
@@ -291,7 +287,6 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     renderer.appendChild(element, childElement);
     // Wrap in ref node for internal sibling tracking
     return {
-      refType: ELEMENT_REF,
       element: childElement,
       prev: undefined,
       next: undefined,
@@ -301,7 +296,6 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   // Fragment (from map() or match()) - defer attachment, return ref node
   if (isFragment(child)) {
     const fragmentRefNode: FragmentRef<TElement> = {
-      refType: FRAGMENT,
       element: null,
       prev: undefined,
       next: undefined,
