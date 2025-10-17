@@ -451,17 +451,17 @@ function appendChild<T, TElement>(
   node: ListItemNode<T, TElement>
 ): void {
   // Get current tail for O(1) append
-  const prevSibling = parent.lastChild as ListItemNode<T, TElement> | undefined;
+  const prevSibling = parent.lastChild;
 
   // Wire node into list (unidirectional: parent→child, not child→parent)
   node.previousSibling = prevSibling;
   node.nextSibling = undefined;
 
   // Update parent's tail pointer
-  if (prevSibling !== undefined) prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
-  else parent.firstChild = node as ListItemNode<unknown, TElement>;
+  if (prevSibling !== undefined) prevSibling.nextSibling = node;
+  else parent.firstChild = node;
 
-  parent.lastChild = node as ListItemNode<unknown, TElement>;
+  parent.lastChild = node;
 }
 
 /**
@@ -502,21 +502,21 @@ function moveChild<T, TElement>(
     node.previousSibling = prevSibling;
     node.nextSibling = undefined;
 
-    if (prevSibling !== undefined) prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
-    else parent.firstChild = node as ListItemNode<unknown, TElement>;
+    if (prevSibling !== undefined) prevSibling.nextSibling = node;
+    else parent.firstChild = node;
 
-    parent.lastChild = node as ListItemNode<unknown, TElement>;
+    parent.lastChild = node;
   } else {
     // Move before refSibling
     const prevSibling = refSibling.previousSibling as
       | ListItemNode<T, TElement>
       | undefined;
     node.previousSibling = prevSibling;
-    node.nextSibling = refSibling as ListItemNode<unknown, TElement>;
+    node.nextSibling = refSibling;
 
-    refSibling.previousSibling = node as ListItemNode<unknown, TElement>;
+    refSibling.previousSibling = node;
 
-    if (prevSibling !== undefined) prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
-    else parent.firstChild = node as ListItemNode<unknown, TElement>;
+    if (prevSibling !== undefined) prevSibling.nextSibling = node;
+    else parent.firstChild = node;
   }
 }

@@ -89,22 +89,20 @@ export type ElFactory<TElement extends RendererElement = RendererElement> =
     'el',
     <Tag extends keyof HTMLElementTagNameMap>(
       spec: ElRefSpec<Tag>
-    ) => RefSpec<
-      TElement extends HTMLElement ? HTMLElementTagNameMap[Tag] : TElement
-    >
+    ) => RefSpec<TElement>
   >;
 
 /**
  * Create the el primitive factory
  */
-export function createElFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
+export function createElFactory<TElement extends RendererElement, TText extends TextNode = TextNode>(
   opts: ElOpts<TElement, TText>
 ): ElFactory<TElement> {
   const { ctx, effect, renderer } = opts;
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag>
-  ): RefSpec<TElement> {
+  ) {
     const [tag, ...rest] = spec;
 
     // Store lifecycle callbacks that will be applied to each instance
@@ -195,7 +193,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 
   return {
     name: 'el',
-    method: el as unknown as ElFactory<TElement>['method'],
+    method: el,
   };
 }
 
