@@ -69,39 +69,39 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       // Create a scope for this instance
       const scope = createScope();
 
-      // Build linked list of child ref nodes (INTERNAL - used only for fragment positioning)
-      const childRefNodes: ChildRefNode<TElement>[] = [];
+      // Track intrusive linked list of child ref nodes (zero allocation)
+      let firstChildRef: ChildRefNode<TElement> | undefined;
+      let lastChildRef: ChildRefNode<TElement> | undefined;
 
       // Run all reactive setup within this instance's scope
       runInScope(ctx, scope, () => {
         // Apply props
         applyProps(element, props, effect, ctx, renderer);
 
-        // Pass 1: Instantiate children and collect ref nodes (fragments deferred)
+        // Loop 1: Instantiate children and build intrusive linked list
         for (const child of children) {
           const refNode = handleChild(element, child, effect, ctx, renderer);
-          if (refNode) childRefNodes.push(refNode);
+          if (refNode) {
+            // Link into list (intrusive - no array allocation)
+            if (lastChildRef) {
+              lastChildRef.next = refNode;
+              refNode.prev = lastChildRef;
+            } else {
+              firstChildRef = refNode;
+            }
+            lastChildRef = refNode;
+          }
         }
 
-        // Link ref nodes into sibling chain
-        for (let i = 0; i < childRefNodes.length; i++) {
-          if (i > 0) childRefNodes[i]!.prev = childRefNodes[i - 1];
-          if (i < childRefNodes.length - 1) childRefNodes[i]!.next = childRefNodes[i + 1];
-        }
-
-        // Pass 2: Attach fragments now that sibling chain is built
-        for (const refNode of childRefNodes) {
-          if (refNode.refType === ELEMENT_REF) continue; // Skip elements, already added
-
-          // Fragment - call attach with nextSibling from linked list
-          const nextDOMElement = findNextDOMElement(refNode.next);
-          (refNode as FragmentRefNode<TElement>).attach(element, nextDOMElement);
-        }
-
-        // Break circular references to allow GC (ref nodes only needed during attachment)
-        for (const refNode of childRefNodes) {
-          refNode.prev = undefined;
-          refNode.next = undefined;
+        // Loop 2: Traverse linked list and attach fragments
+        let current = firstChildRef;
+        while (current) {
+          if (current.refType === FRAGMENT) {
+            // Fragment - call attach with nextSibling from linked list
+            const nextDOMElement = findNextDOMElement(current.next);
+            (current as FragmentRefNode<TElement>).attach(element, nextDOMElement);
+          }
+          current = current.next;
         }
       });
 
