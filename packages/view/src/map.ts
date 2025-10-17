@@ -384,7 +384,6 @@ export function createReconciler() {
 
       if (item !== undefined) {
         const node = itemsByKey.get(keyFn(item) as string)!;
-        const el = node.element;
 
         // Check if in LIS
         if (node.position === nextLISPos) {
@@ -396,23 +395,24 @@ export function createReconciler() {
           let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
             | ListItemNode<T, TElement>
             | undefined;
-          
+
           if (child) {
             // Remove any unvisited nodes at the insertion point (cleanup as we go)
-            do {
+            while (!(child.status & VISITED)) {
               const nextChild = child.nextSibling as ListItemNode<T, TElement>;
               pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
               child = nextChild;
-            } while (!(child.status & VISITED));
+            }
           }
 
           // Move if not in LIS and not already in correct position
           if (node !== child) {
+            // if child is undefined, we know to append at the end
             moveChild(parent, node, child);
 
             // Use parent.nextSibling as fallback to maintain fragment position
             const nextEl = child ? child.element : parent.nextSibling;
-            if (el !== nextEl) renderer.insertBefore(parentEl, el, nextEl);
+            if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
           }
         }
 
