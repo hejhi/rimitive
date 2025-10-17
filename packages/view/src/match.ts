@@ -19,18 +19,16 @@ import type {
   RefSpec,
   Fragment,
   ReactiveElement,
-  ViewNode,
 } from './types';
 import { FRAGMENT, isRefSpec } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { disposeScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 
-export interface MatchFragmentState<TElement = ReactiveElement> extends ViewNode<TElement | null> {
-  refType: typeof FRAGMENT;
-  element: TElement | null; // Parent element (null until fragment attached)
-  currentChild: TElement | null; // Currently rendered child element (null when hidden)
-  nextSibling: TElement | null; // DOM element after our territory (for stable insertion, null = append at end)
+interface MatchState<TElement = ReactiveElement> {
+  element: TElement | null;
+  currentChild: TElement | null;
+  nextSibling: TElement | null;
 }
 
 /**
@@ -66,8 +64,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
     reactive: Reactive<T>,
     render: (value: T) => RefSpec<TElement> | null | false
   ): Fragment<TElement> {
-    const state: MatchFragmentState<TElement> = {
-      refType: FRAGMENT,
+    const state: MatchState<TElement> = {
       element: null,
       currentChild: null,
       nextSibling: null,
@@ -122,6 +119,6 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
   return {
     name: 'match',
-    method: match as MatchFactory<TElement>['method'],
+    method: match,
   };
 }
