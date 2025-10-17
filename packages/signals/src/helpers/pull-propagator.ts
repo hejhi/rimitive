@@ -139,10 +139,8 @@ export function createPullPropagator({
           const prevValue = consumer.value;
           consumer.value = track(consumer, consumer.compute);
 
-          if (prevValue === consumer.value) {
-            // Value unchanged - but keep dirty flag for sibling checks
-            break update;
-          }
+          // Value unchanged - but keep dirty flag for sibling checks
+          if (prevValue === consumer.value) break update;
           if (hasMultipleSubs) shallowPropagate(currConsumer);
 
           consumer = dep.consumer as DerivedNode;
