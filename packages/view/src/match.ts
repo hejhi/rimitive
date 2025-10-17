@@ -59,13 +59,13 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
       nextSibling: null,
     };
 
-    const matchRef = ((parent: TElement): void => {
+    const matchRef = ((parent: TElement, nextSibling?: TElement | null): void => {
       // Store parent in fragment state
       state.element = parent;
 
       // Capture nextSibling at attachment time (marks our territory boundary)
       // This stays stable even when we hide/show our content
-      state.nextSibling = null; // Will be set to next element if needed
+      state.nextSibling = nextSibling ?? null;
 
       // Create effect that swaps elements when reactive value changes
       const dispose = effect(() => {
@@ -85,10 +85,10 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
         // Create new child if not null/false
         if (elementRef && isElementRef(elementRef)) {
-          const newElement = elementRef.create();
+          const refNode = elementRef.create();
           // Insert before nextSibling to maintain stable position
-          renderer.insertBefore(parent, newElement, state.nextSibling);
-          state.currentChild = newElement;
+          renderer.insertBefore(parent, refNode.element, state.nextSibling);
+          state.currentChild = refNode.element;
         }
       });
 

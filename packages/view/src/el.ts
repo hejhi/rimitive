@@ -5,8 +5,11 @@ import type {
   ElementChild,
   LifecycleCallback,
   ElementRef,
+  ElementRefNode,
+  ChildRefNode,
+  FragmentRefNode,
 } from './types';
-import { isReactive, isFragment, isElementRef } from './types';
+import { isReactive, isFragment, isElementRef, ELEMENT_REF, FRAGMENT, findNextDOMElement } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -60,21 +63,40 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
     }) as ElementRef<TElement>;
 
     // Factory function - creates a new instance each time
-    ref.create = (): TElement => {
+    ref.create = (): ElementRefNode<TElement> => {
       // Create the element using renderer
       const element = renderer.createElement(tag);
 
       // Create a scope for this instance
       const scope = createScope();
 
+      // Build linked list of child ref nodes
+      const childRefNodes: ChildRefNode<TElement>[] = [];
+
       // Run all reactive setup within this instance's scope
       runInScope(ctx, scope, () => {
         // Apply props
         applyProps(element, props, effect, ctx, renderer);
 
-        // Handle children
+        // Pass 1: Instantiate children and collect ref nodes (fragments deferred)
         for (const child of children) {
-          handleChild(element, child, effect, ctx, renderer);
+          const refNode = handleChild(element, child, effect, ctx, renderer);
+          if (refNode) childRefNodes.push(refNode);
+        }
+
+        // Link ref nodes into sibling chain
+        for (let i = 0; i < childRefNodes.length; i++) {
+          if (i > 0) childRefNodes[i]!.prev = childRefNodes[i - 1];
+          if (i < childRefNodes.length - 1) childRefNodes[i]!.next = childRefNodes[i + 1];
+        }
+
+        // Pass 2: Attach fragments now that sibling chain is built
+        for (const refNode of childRefNodes) {
+          if (refNode.refType === ELEMENT_REF) continue; // Skip elements, already added
+
+          // Fragment - call attach with nextSibling from linked list
+          const nextDOMElement = findNextDOMElement(refNode.next);
+          (refNode as FragmentRefNode<TElement>).attach(element, nextDOMElement);
         }
       });
 
@@ -105,7 +127,13 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       // Track lifecycle observer disposal in element's scope
       trackInSpecificScope(scope, { dispose: lifecycleDispose });
 
-      return element;
+      // Return ref node containing element and sibling links
+      return {
+        refType: ELEMENT_REF,
+        element,
+        prev: undefined,
+        next: undefined,
+      };
     };
 
     return ref;
@@ -113,7 +141,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 
   return {
     name: 'el',
-    method: el as ElFactory<TElement>['method'],
+    method: el as unknown as ElFactory<TElement>['method'],
   };
 }
 
@@ -173,6 +201,7 @@ function applyProps<
 
 /**
  * Handle a single child (static, reactive, or reactive list)
+ * Returns a ChildRefNode for elements/fragments that need sibling tracking
  */
 function handleChild<TElement extends RendererElement, TText extends TextNode>(
   element: TElement,
@@ -180,22 +209,31 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   effect: (fn: () => void | (() => void)) => () => void,
   ctx: ViewContext,
   renderer: Renderer<TElement, TText>
-): void {
+): ChildRefNode<TElement> | null {
   // Skip null/undefined/false
   if (child == null || child === false) {
-    return;
+    return null;
   }
 
   // Element ref (from el()) - instantiate blueprint
   if (isElementRef(child)) {
-    renderer.appendChild(element, child.create());
-    return;
+    const refNode = child.create();
+    renderer.appendChild(element, refNode.element);
+    return refNode as unknown as ChildRefNode<TElement>;
   }
 
-  // Fragment (from map() or match()) - call it with parent element
+  // Fragment (from map() or match()) - defer attachment, return ref node
   if (isFragment(child)) {
-    child(element); // ← Attach fragment to parent element
-    return;
+    const fragmentRefNode: FragmentRefNode<TElement> = {
+      refType: FRAGMENT,
+      element: null,
+      prev: undefined,
+      next: undefined,
+      attach: (parent: TElement, nextSibling: TElement | null) => {
+        child(parent, nextSibling); // Pass nextSibling to fragment
+      }
+    };
+    return fragmentRefNode;
   }
 
   // Reactive value (signal or computed)
@@ -211,26 +249,28 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
     // Track effect for cleanup when element is removed
     trackInScope(ctx, { dispose });
     renderer.appendChild(element, textNode);
-    return;
+    return null; // Text nodes don't participate in ref node chain
   }
 
   // Element (check using renderer)
   if (renderer.isElement(child)) {
     renderer.appendChild(element, child);
-    return;
+    return null; // Raw elements don't participate in ref node chain
   }
 
   // Static primitive (string, number)
   if (typeof child === 'string' || typeof child === 'number') {
     const textNode = renderer.createTextNode(String(child));
     renderer.appendChild(element, textNode);
-    return;
+    return null; // Text nodes don't participate in ref node chain
   }
 
   // Boolean - ignore
   if (typeof child === 'boolean') {
-    return;
+    return null;
   }
+
+  return null; // Default case
 }
 
 /**

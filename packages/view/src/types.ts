@@ -30,6 +30,54 @@ export interface ElementNode<TElement = ReactiveElement> extends ViewNode<TEleme
 }
 
 /**
+ * Ref node types - instantiated versions of blueprints/fragments
+ * These form a linked list of children within a parent, allowing traversal
+ * without DOM querying
+ */
+
+/**
+ * Element ref node - returned by ElementRef.create()
+ * Represents an instantiated element with sibling pointers
+ */
+export interface ElementRefNode<TElement = ReactiveElement> {
+  refType: typeof ELEMENT_REF;
+  element: TElement;                           // The actual DOM element
+  prev?: ChildRefNode<TElement>;               // Previous sibling (element or fragment)
+  next?: ChildRefNode<TElement>;               // Next sibling (element or fragment)
+}
+
+/**
+ * Fragment ref node - returned by Fragment attach
+ * Represents an instantiated fragment (transparent, no element)
+ */
+export interface FragmentRefNode<TElement = ReactiveElement> {
+  refType: typeof FRAGMENT;
+  element: null;                               // Fragments are transparent (no element)
+  prev?: ChildRefNode<TElement>;               // Previous sibling (element or fragment)
+  next?: ChildRefNode<TElement>;               // Next sibling (element or fragment)
+  attach: (parent: TElement, nextSibling: TElement | null) => void;  // Deferred attachment
+}
+
+/**
+ * Child ref node - union of instantiated children
+ */
+export type ChildRefNode<TElement = ReactiveElement> = ElementRefNode<TElement> | FragmentRefNode<TElement>;
+
+/**
+ * Helper to find next DOM element by traversing ref node chain
+ */
+export function findNextDOMElement<TElement = ReactiveElement>(
+  node: ChildRefNode<TElement> | undefined
+): TElement | null {
+  let current = node;
+  while (current) {
+    if (current.element) return current.element;
+    current = current.next;
+  }
+  return null;
+}
+
+/**
  * List item node - represents an item in a reactive list
  * Forms intrusive doubly-linked list via sibling pointers
  *
@@ -72,6 +120,9 @@ export interface MapFragmentState<TElement = ReactiveElement> extends ViewNode<T
   // Key-based lookup for O(1) reconciliation during diffing
   // (DOM uses array-based childNodes, we use Map for key lookup)
   itemsByKey: Map<string, ListItemNode<unknown, TElement>>;
+
+  // Boundary marker for stable positioning (like match fragment)
+  nextSibling: TElement | null; // Element after this fragment's territory
 }
 
 /**
@@ -120,22 +171,22 @@ export type ElementSpec<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElem
 ];
 
 /**
- * Map fragment - a callable that receives parent element
+ * Map fragment - a callable that receives parent element and optional nextSibling
  * Returned by map() and called by el() with parent element
  * Fragment that manages parent→children list relationship
  */
 export interface MapFragment<TElement = ReactiveElement> {
-  (parent: TElement): void;
+  (parent: TElement, nextSibling?: TElement | null): void;
   refType: typeof FRAGMENT;
 }
 
 /**
- * Match fragment - a callable that receives parent element
+ * Match fragment - a callable that receives parent element and optional nextSibling
  * Returned by match() and called by el() with parent element
  * Fragment that manages parent→conditional child relationship
  */
 export interface MatchFragment<TElement = ReactiveElement> {
-  (parent: TElement): void;
+  (parent: TElement, nextSibling?: TElement | null): void;
   refType: typeof FRAGMENT;
 }
 
@@ -185,7 +236,7 @@ export type LifecycleCallback<TElement = object> = (element: TElement) => void |
  */
 export interface ElementRef<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): ElementRef<TElement>; // Register lifecycle callback (chainable)
-  create(): TElement; // Instantiate blueprint → creates new DOM element instance
+  create(): ElementRefNode<TElement>; // Instantiate blueprint → creates ref node with DOM element
 }
 
 /**

@@ -41,7 +41,7 @@ export type MapFactory<TElement extends RendererElement = RendererElement> = Lat
   'map',
   <T>(
     itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ElementRef,
+    render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
     keyFn: (item: T) => string | number
   ) => MapFragment<TElement>
 >;
@@ -71,12 +71,14 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, TElement>>(),
+      nextSibling: null,
     };
 
     // Create ref function that closes over node (like signal function)
-    const mapFragment = ((parent: TElement): void => {
-      // Store parent in node
+    const mapFragment = ((parent: TElement, nextSibling?: TElement | null): void => {
+      // Store parent and nextSibling boundary marker
       state.element = parent;
+      state.nextSibling = nextSibling ?? null;
 
       // Create an effect that reconciles the list when items change
       // Effect automatically schedules via scheduler (like signals/effect.ts)
@@ -94,9 +96,10 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
             // Reconciler will wrap it in ListItemNode
             const itemSignal = signal(itemData);
             const elementRef = render(itemSignal);
+            const refNode = elementRef.create();
 
             return {
-              element: elementRef.create(),
+              element: refNode.element, // Extract element from ref node
               itemSignal,
             };
           },
@@ -125,6 +128,6 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
 
   return {
     name: 'map',
-    method: map as MapFactory<TElement>['method'],
+    method: map as unknown as MapFactory<TElement>['method'],
   };
 }

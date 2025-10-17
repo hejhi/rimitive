@@ -202,18 +202,19 @@ describe('map primitive', () => {
         (item) => item
       );
 
-      // Create parent with map in middle
-      const parent = renderer.createElement('ul');
+      // Create parent with map in middle - wrapped properly
       const header = renderer.createElement('li');
       const headerText = renderer.createTextNode('HEADER');
       renderer.appendChild(header, headerText);
-      renderer.appendChild(parent, header);
-
-      listRef(parent); // Map attaches here
 
       const footer = renderer.createElement('li');
       const footerText = renderer.createTextNode('FOOTER');
       renderer.appendChild(footer, footerText);
+
+      const parent = renderer.createElement('ul');
+      renderer.appendChild(parent, header);
+      // Map gets nextSibling reference to footer when processed as sibling
+      listRef(parent, footer); // Pass footer as nextSibling explicitly
       renderer.appendChild(parent, footer);
 
       // Initial: HEADER, a, b, FOOTER

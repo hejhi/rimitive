@@ -79,6 +79,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const items = ['a', 'b', 'c'];
@@ -114,6 +115,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const createElement = (item: string) => {
@@ -172,6 +174,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const createElement = (item: string) => {
@@ -208,6 +211,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const objA = { id: 1, name: 'Alice' };
@@ -255,6 +259,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const createElement = (item: string) => {
@@ -291,6 +296,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const signals = new Map<string, ReturnType<typeof vi.fn>>();
@@ -349,6 +355,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const createElement = (item: string) => {
@@ -380,6 +387,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const createElement = (item: string) => {
@@ -410,6 +418,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const createElement = (item: string) => {
@@ -444,6 +453,7 @@ describe('reconcileList', () => {
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
+      nextSibling: null,
     };
 
     const itemSignals = new Map<string, ReturnType<typeof vi.fn>>();

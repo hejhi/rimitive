@@ -112,8 +112,8 @@ export function createReconciler() {
     keyFn: (item: T) => string | number,
     renderer: Renderer<TElement, TText>
   ): void {
-    const containerEl = parent.element;
-    if (!containerEl) return;
+    const parentEl = parent.element;
+    if (!parentEl) return;
 
     const newLen = newItems.length;
     const itemsByKey = parent.itemsByKey as Map<
@@ -164,7 +164,8 @@ export function createReconciler() {
 
         appendChild(parent, node);
         itemsByKey.set(key, node);
-        renderer.appendChild(containerEl, rendered.element);
+        // Insert before parent.nextSibling to maintain fragment position
+        renderer.insertBefore(parentEl, rendered.element, parent.nextSibling);
       }
 
       // Collect visited nodes
@@ -196,7 +197,7 @@ export function createReconciler() {
         // Remove any unvisited nodes at the insertion point (cleanup as we go)
         while (child && !(child.status & VISITED)) {
           const nextChild = child.nextSibling as | ListItemNode<T, TElement>;
-          pruneNode(parent, child, ctx, containerEl, itemsByKey, renderer);
+          pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
           child = nextChild;
         }
 
@@ -204,8 +205,9 @@ export function createReconciler() {
         if (node !== child) {
           moveChild(parent, node, child);
 
-          const nextEl = child ? child.element : null;
-          if (el !== nextEl) renderer.insertBefore(containerEl, el, nextEl);
+          // Use parent.nextSibling as fallback to maintain fragment position
+          const nextEl = child ? child.element : parent.nextSibling;
+          if (el !== nextEl) renderer.insertBefore(parentEl, el, nextEl);
         }
       }
 
@@ -222,7 +224,7 @@ export function createReconciler() {
         | ListItemNode<T, TElement>
         | undefined;
 
-      if (!(child.status & VISITED)) pruneNode(parent, child, ctx, containerEl, itemsByKey, renderer);
+      if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
       else child.status = 0;
 
       child = nextChild;

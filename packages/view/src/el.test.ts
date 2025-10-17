@@ -17,8 +17,8 @@ describe('el primitive', () => {
       const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
 
       // User cares: content is rendered
-      expect(getTextContent(ref.create())).toBe('Hello World');
-      expect(ref.create().props.className).toBe('container');
+      expect(getTextContent(ref.create().element)).toBe('Hello World');
+      expect(ref.create().element.props.className).toBe('container');
     });
 
     it('handles event listeners via ref', () => {
@@ -40,7 +40,7 @@ describe('el primitive', () => {
       });
 
       // Create instance once
-      const element = ref.create();
+      const element = ref.create().element;
 
       // Simulate element being connected to DOM
       connect(element);
@@ -67,7 +67,7 @@ describe('el primitive', () => {
       const parent = el(['div', child]); // Pass blueprint - will be instantiated
 
       // Create parent instance (which instantiates child)
-      const parentElement = parent.create();
+      const parentElement = parent.create().element;
 
       // User cares: nested content is accessible
       expect(getTextContent(parentElement)).toBe('nested content');
@@ -91,11 +91,11 @@ describe('el primitive', () => {
       const ref = el(['div', text]);
 
       // User cares: initial content is displayed
-      expect(getTextContent(ref.create())).toBe('initial');
+      expect(getTextContent(ref.create().element)).toBe('initial');
 
       // User cares: content updates when signal changes
       setText('updated');
-      expect(getTextContent(ref.create())).toBe('updated');
+      expect(getTextContent(ref.create().element)).toBe('updated');
     });
 
     it('updates reactive props', () => {
@@ -112,11 +112,11 @@ describe('el primitive', () => {
       const ref = el(['div', { className }]);
 
       // User cares: initial prop value is set
-      expect(ref.create().props.className).toBe('foo');
+      expect(ref.create().element.props.className).toBe('foo');
 
       // User cares: prop updates when signal changes
       setClassName('bar');
-      expect(ref.create().props.className).toBe('bar');
+      expect(ref.create().element.props.className).toBe('bar');
     });
 
     it('handles mixed static and reactive content', () => {
@@ -133,11 +133,11 @@ describe('el primitive', () => {
       const ref = el(['div', 'Count: ', count]);
 
       // User cares: mixed content displays correctly
-      expect(getTextContent(ref.create())).toBe('Count: 0');
+      expect(getTextContent(ref.create().element)).toBe('Count: 0');
 
       // User cares: only reactive part updates
       setCount(5);
-      expect(getTextContent(ref.create())).toBe('Count: 5');
+      expect(getTextContent(ref.create().element)).toBe('Count: 5');
     });
   });
 
@@ -159,7 +159,7 @@ describe('el primitive', () => {
       ref(() => {});
 
       // Create instance once
-      const element = ref.create();
+      const element = ref.create().element;
       connect(element);
 
       // Verify reactivity works before disconnect
@@ -191,7 +191,7 @@ describe('el primitive', () => {
       ref(() => cleanup);
 
       // Create instance once
-      const element = ref.create();
+      const element = ref.create().element;
       connect(element);
 
       // User disconnects element

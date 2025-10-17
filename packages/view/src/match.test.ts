@@ -202,7 +202,7 @@ describe('match primitive', () => {
         ),
       ]);
 
-      const element = container.create();
+      const element = container.create().element;
 
       // User cares: logged out message displayed
       expect(getTextContent(element)).toBe('Please log in');
