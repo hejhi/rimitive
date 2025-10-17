@@ -180,13 +180,6 @@ export function createMapFactory<
 const VISITED = 1 << 0; // Node exists in newItems array
 
 export function createReconciler() {
-  // Closure-captured reusable buffers (grow automatically, zero allocations after first use)
-  const oldIndicesBuf: number[] = [];
-  const newPosBuf: number[] = [];
-  const lisBuf: number[] = [];
-  const tailsBuf: number[] = [];
-  const parentBuf: number[] = [];
-
   /**
    * Binary search for largest index where arr[tails[i]] < value
    * tails array contains indices into arr
@@ -217,12 +210,15 @@ export function createReconciler() {
    * Returns length and writes indices to lisBuf
    * Single loop with forward pass followed by backtrack phase
    */
-  const findLIS = (arr: number[], n: number): number => {
+  const findLIS = (arr: number[], n: number, lisBuf: number[]): number => {
     if (n <= 0) return 0;
     if (n === 1) {
       lisBuf[0] = 0;
       return 1;
     }
+
+    const tailsBuf: number[] = [];
+    const parentBuf: number[] = [];
 
     let len = 0;
     let depth = 0;
@@ -311,6 +307,11 @@ export function createReconciler() {
     // Pre-allocate nodes buffer to avoid Map lookup in position phase
     const nodesBuf: ListItemNode<T, TElement>[] = Array(newItems.length);
 
+    // Local buffers for LIS calculation
+    const oldIndicesBuf: number[] = [];
+    const newPosBuf: number[] = [];
+    const lisBuf: number[] = [];
+
     // Loop 1: Build phase - process newItems and collect for LIS
     let count = 0;
     for (let i = 0; i < newItems.length; i++) {
@@ -364,7 +365,7 @@ export function createReconciler() {
     }
 
     // Calculate LIS
-    const lisLen = findLIS(oldIndicesBuf, count);
+    const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
     let lisIdx = 0;
     let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
