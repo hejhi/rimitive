@@ -317,6 +317,9 @@ export function createReconciler() {
     let nextLISPos = -1;
     let prevNode: ListItemNode<T, TElement> | undefined;
 
+    // Pre-allocate nodes buffer to avoid Map lookup in position phase
+    const nodesBuf: ListItemNode<T, TElement>[] = Array(newItems.length);
+
     for (;;) {
       if (lisLen === -1) {
         // Build phase: process newItems forward
@@ -367,6 +370,9 @@ export function createReconciler() {
             );
           }
 
+          // Store node for position phase
+          nodesBuf[i] = node;
+
           i++;
           continue;
         }
@@ -381,9 +387,8 @@ export function createReconciler() {
 
       // Position phase: iterate newItems again
       const item = newItems[i];
-
       if (item !== undefined) {
-        const node = itemsByKey.get(keyFn(item) as string)!;
+        const node = nodesBuf[i]!;
 
         // Check if in LIS
         if (node.position === nextLISPos) {
