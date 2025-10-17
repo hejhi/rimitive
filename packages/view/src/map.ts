@@ -11,7 +11,12 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
-import type { Reactive, RefSpec, Fragment, ReactiveElement, ViewNode } from './types';
+import type {
+  Reactive,
+  RefSpec,
+  FragmentSpec,
+  ReactiveElement,
+} from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -31,8 +36,8 @@ import { disposeScope, trackInSpecificScope } from './helpers/scope';
  * - previousSibling ↔ previousSibling
  * - nextSibling ↔ nextSibling
  */
-export interface ListItemNode<T = unknown, TElement = ReactiveElement>
-  extends ViewNode<TElement> {
+export interface ListItemNode<T = unknown, TElement = ReactiveElement> {
+  element: TElement; // The underlying element
   key: string; // Unique key for reconciliation
   itemData: T; // The actual data
   itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
@@ -69,7 +74,7 @@ export type MapFactory<TElement extends RendererElement = RendererElement> =
       itemsSignal: Reactive<T[]>,
       render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
       keyFn: (item: T) => string | number
-    ) => Fragment<TElement>
+    ) => FragmentSpec<TElement>
   >;
 
 
@@ -113,7 +118,7 @@ export function createMapFactory<
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
     keyFn: (item: T) => string | number
-  ): Fragment<TElement> {
+  ): FragmentSpec<TElement> {
     let dispose: (() => void) | undefined;
 
     // internal
@@ -161,7 +166,7 @@ export function createMapFactory<
 
         const parentScope = ctx.elementScopes.get(parent);
         if (parentScope) trackInSpecificScope(parentScope, { dispose });
-      }
+      },
     };
   }
 

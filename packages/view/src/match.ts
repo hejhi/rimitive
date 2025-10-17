@@ -14,12 +14,7 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
-import type {
-  Reactive,
-  RefSpec,
-  Fragment,
-  ReactiveElement,
-} from './types';
+import type { Reactive, RefSpec, FragmentSpec, ReactiveElement } from './types';
 import { isRefSpec } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { disposeScope, trackInSpecificScope } from './helpers/scope';
@@ -49,7 +44,7 @@ export type MatchFactory<TElement extends RendererElement = RendererElement> =
     <T>(
       reactive: Reactive<T>,
       render: (value: T) => RefSpec<TElement> | null | false
-    ) => Fragment<TElement>
+    ) => FragmentSpec<TElement>
   >;
 
 /**
@@ -63,7 +58,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
   function match<T>(
     reactive: Reactive<T>,
     render: (value: T) => RefSpec<TElement> | null | false
-  ): Fragment<TElement> {
+  ): FragmentSpec<TElement> {
     const state: MatchState<TElement> = {
       element: null,
       currentChild: null,
@@ -103,7 +98,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
         const parentScope = ctx.elementScopes.get(parent);
         if (parentScope) trackInSpecificScope(parentScope, { dispose });
-      }
+      },
     };
   }
 

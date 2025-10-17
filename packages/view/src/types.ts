@@ -5,15 +5,6 @@
 import type { Readable } from '@lattice/signals/types';
 
 /**
- * Internal node representation (like signals ProducerNode/ConsumerNode)
- * ViewNode is the base interface for internal objects that hold element state.
- * The public API returns functions that close over these nodes.
- */
-export interface ViewNode<TElement = ReactiveElement> {
-  element: TElement;    // The underlying element
-}
-
-/**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  */
 export interface RefSpec<TElement = ReactiveElement> {
@@ -29,10 +20,17 @@ export function isRefSpec<TElement>(value: unknown): value is RefSpec<TElement> 
 }
 
 /**
- * Fragment - manages DOM relationships without a container element
+ * FragmentSpec - manages DOM relationships without a container element
  */
-export interface Fragment<TElement = ReactiveElement> {
+export interface FragmentSpec<TElement = ReactiveElement> {
   attach(parent: TElement, nextSibling?: TElement | null): void;
+}
+
+/**
+ * Check if value is a ref spec
+ */
+export function isFragmentSpec<TElement>(value: unknown): value is FragmentSpec<TElement> {
+  return typeof value === 'function' && 'attach' in value;
 }
 
 /**

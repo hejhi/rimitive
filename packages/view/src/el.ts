@@ -4,20 +4,16 @@ import type {
   RefSpec,
   ReactiveElement,
   Reactive,
-  Fragment,
+  FragmentSpec,
 } from './types';
 import {
+  isFragmentSpec,
   isReactive,
   isRefSpec,
 } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-
-/**
- * Internal tracking nodes for sibling chain
- * These are implementation details of el() and not exposed publicly
- */
 
 /**
  * Element ref node - wraps created elements for sibling tracking
@@ -69,7 +65,7 @@ export type ElRefSpecChild =
   | ReactiveElement
   | RefSpec
   | Reactive<string | number>
-  | Fragment;
+  | FragmentSpec;
 
 /**
  * Options passed to el factory
@@ -161,10 +157,10 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
         // Loop 2: Traverse linked list and attach fragments
         let current = firstChildRef;
         while (current) {
-          if ('attach' in current) {
+          if (isFragmentSpec(current)) {
             // Fragment - call attach with nextSibling from linked list
             const nextDOMElement = findNextDOMElement(current.next);
-            (current as FragmentRef<TElement>).attach(element, nextDOMElement);
+            current.attach(element, nextDOMElement);
           }
           current = current.next;
         }
@@ -179,9 +175,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
           // Run all registered callbacks for this instance
           for (const callback of lifecycleCallbacks) {
             const cleanup = callback(el);
-            if (cleanup) {
-              trackInSpecificScope(scope, { dispose: cleanup });
-            }
+            if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
           }
         },
         onDisconnected: () => {
@@ -223,7 +217,7 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
   const children: ElRefSpecChild[] = [];
 
   for (const item of rest) {
-    if (isPlainObject(item) && !isReactive(item) && !('attach' in item)) {
+    if (isPlainObject(item) && !isReactive(item) && !isFragmentSpec(item)) {
       // It's props
       Object.assign(props, item);
     } else {
@@ -293,8 +287,8 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   }
 
   // Fragment (from map() or match()) - defer attachment, return ref node
-  if (typeof child === 'object' && child !== null && 'attach' in child) {
-    const fragment = child as Fragment<TElement>;
+  if (typeof child === 'object' && child !== null && isFragmentSpec(child)) {
+    const fragment = child as FragmentSpec<TElement>;
     const fragmentRefNode: FragmentRef<TElement> = {
       element: null,
       prev: undefined,
