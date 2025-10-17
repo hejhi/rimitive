@@ -1,7 +1,5 @@
 /**
  * Shared MutationObserver for DOM Lifecycle Tracking
- *
- * Uses descent/unwind pattern.
  */
 
 export type DOMElement = HTMLElement;
@@ -100,7 +98,6 @@ export function createLifecycleObserver(): LifecycleObserver {
         continue;
       }
 
-      // Done
       break;
     }
   };
