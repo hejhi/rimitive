@@ -179,7 +179,7 @@ export function createMapFactory<
 // Status bits for reconciliation (like signals CLEAN/DIRTY/PENDING)
 const VISITED = 1 << 0; // Node exists in newItems array
 
-function createReconciler() {
+export function createReconciler() {
   // Closure-captured reusable buffers (grow automatically, zero allocations after first use)
   const oldIndicesBuf: number[] = [];
   const newPosBuf: number[] = [];
