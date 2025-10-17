@@ -399,8 +399,7 @@ export function createReconciler() {
 
           // Use parent.nextSibling as fallback to maintain fragment position
           const nextEl = child ? child.element : parent.nextSibling;
-          if (node.element !== nextEl)
-            renderer.insertBefore(parentEl, node.element, nextEl);
+          if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
         }
       }
 
@@ -438,20 +437,12 @@ function unlinkFromParent<T, TElement>(
   const { previousSibling, nextSibling } = node;
 
   // Update next sibling's backward pointer
-  if (nextSibling !== undefined) {
-    nextSibling.previousSibling = previousSibling;
-  } else {
-    // This was the last child
-    parent.lastChild = previousSibling;
-  }
+  if (nextSibling !== undefined) nextSibling.previousSibling = previousSibling;
+  else parent.lastChild = previousSibling;
 
   // Update prev sibling's forward pointer
-  if (previousSibling !== undefined) {
-    previousSibling.nextSibling = nextSibling;
-  } else {
-    // This was the first child
-    parent.firstChild = nextSibling;
-  }
+  if (previousSibling !== undefined) previousSibling.nextSibling = nextSibling;
+  else parent.firstChild = nextSibling;
 }
 
 /**
@@ -470,12 +461,8 @@ function appendChild<T, TElement>(
   node.nextSibling = undefined;
 
   // Update parent's tail pointer
-  if (prevSibling !== undefined) {
-    prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
-  } else {
-    // This is the first child
-    parent.firstChild = node as ListItemNode<unknown, TElement>;
-  }
+  if (prevSibling !== undefined) prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
+  else parent.firstChild = node as ListItemNode<unknown, TElement>;
 
   parent.lastChild = node as ListItemNode<unknown, TElement>;
 }
@@ -518,11 +505,8 @@ function moveChild<T, TElement>(
     node.previousSibling = prevSibling;
     node.nextSibling = undefined;
 
-    if (prevSibling !== undefined) {
-      prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
-    } else {
-      parent.firstChild = node as ListItemNode<unknown, TElement>;
-    }
+    if (prevSibling !== undefined) prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
+    else parent.firstChild = node as ListItemNode<unknown, TElement>;
 
     parent.lastChild = node as ListItemNode<unknown, TElement>;
   } else {
@@ -535,10 +519,7 @@ function moveChild<T, TElement>(
 
     refSibling.previousSibling = node as ListItemNode<unknown, TElement>;
 
-    if (prevSibling !== undefined) {
-      prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
-    } else {
-      parent.firstChild = node as ListItemNode<unknown, TElement>;
-    }
+    if (prevSibling !== undefined) prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
+    else parent.firstChild = node as ListItemNode<unknown, TElement>;
   }
 }
