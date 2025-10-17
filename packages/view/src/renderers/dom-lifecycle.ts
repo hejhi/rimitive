@@ -1,30 +1,35 @@
 /**
  * ALGORITHM: Shared MutationObserver for DOM Lifecycle Tracking
  *
- * Uses a single MutationObserver to track connection/disconnection of all elements.
- * Captures state in closure for tree-shakeability and replaceability.
+ * Uses FRP-style phase-based processing with status bits, similar to:
+ * - pull-propagator.ts (mark + propagate phases)
+ * - graph-traversal.ts (descent + unwind pattern)
+ * - reconcile.ts (multiple focused passes)
+ *
+ * Complexity: O(mutated_nodes + marked_elements)
+ * vs old approach: O(mutations × trackedElements × tree_depth)
  *
  * Pattern:
- * - Factory function creates the observer with closure-captured state
- * - Returns interface with observe methods
- * - Observer starts watching document on first tracked element
- * - Automatic cleanup when no elements are tracked
- *
- * Bookkeeping (2 structures):
- * - WeakMap: tracks callbacks and cleanup per element
- * - Set: enables iteration during mutation events
+ * 1. Mark phase: Traverse mutation trees, mark affected tracked elements
+ * 2. Fire phase: Process marked elements in single pass
+ * 3. Cleanup: Auto-disconnect when no elements tracked
  */
 
 export type DOMElement = HTMLElement;
 
+// Status bits for lifecycle state (like signals CLEAN/DIRTY/PENDING)
+const PENDING_CONNECT = 1 << 0;
+const PENDING_DISCONNECT = 1 << 1;
+
 /**
  * Lifecycle tracking per element
- * Single structure to reduce bookkeeping
+ * Includes status bits for efficient batching
  */
 interface ElementTracking {
   onConnected?: (element: DOMElement) => void | (() => void);
   onDisconnected?: (element: DOMElement) => void;
   cleanup?: () => void; // Cleanup function returned by onConnected
+  status: number; // Status bits for pending operations
 }
 
 /**
@@ -52,68 +57,93 @@ export function createLifecycleObserver(): LifecycleObserver {
   const tracking = new WeakMap<DOMElement, ElementTracking>();
   const trackedElements = new Set<DOMElement>();
 
+  // Reusable buffer for marked elements (grow automatically, zero allocations after first use)
+  const markedBuf: DOMElement[] = [];
+
   /**
-   * Shared MutationObserver - created immediately
-   * Observer created eagerly, starts observing on first tracked element
+   * Traverse element tree and mark tracked descendants
+   * Recursively walks tree to find all tracked elements that need callbacks
+   */
+  const markTrackedDescendants = (root: Element, statusBit: number): void => {
+    // Check if root is tracked
+    if (root instanceof HTMLElement) {
+      const rootTracking = tracking.get(root);
+      if (rootTracking) {
+        rootTracking.status |= statusBit;
+        markedBuf.push(root);
+      }
+    }
+
+    // Traverse descendants
+    let child = root.firstElementChild;
+    while (child) {
+      markTrackedDescendants(child, statusBit);
+      child = child.nextElementSibling;
+    }
+  };
+
+  /**
+   * Shared MutationObserver with phase-based processing
+   * Phase 1: Mark affected elements
+   * Phase 2: Fire callbacks for marked elements
    */
   const sharedObserver = new MutationObserver((mutations) => {
+    markedBuf.length = 0; // Clear buffer (reuse array)
+
+    // Phase 1: Mark - traverse mutation trees and mark tracked elements
     for (const mutation of mutations) {
       // Handle added nodes (connections)
-      if (mutation.addedNodes.length > 0) {
-        const addedNodes = Array.from(mutation.addedNodes);
-        for (const node of addedNodes) {
-          if (!(node instanceof Element)) continue;
-
-          // Check each tracked element to see if it was affected
-          for (const element of trackedElements) {
-            const elementTracking = tracking.get(element);
-            if (!elementTracking?.onConnected) continue;
-
-            // Check if element was added or is a descendant of added node
-            if (node === element || node.contains(element)) {
-              if (element.isConnected) {
-                const cleanup = elementTracking.onConnected(element);
-                if (cleanup) {
-                  elementTracking.cleanup = cleanup;
-                }
-                // Clear the onConnected callback after firing once
-                elementTracking.onConnected = undefined;
-              }
-            }
-          }
-        }
+      for (let i = 0; i < mutation.addedNodes.length; i++) {
+        const node = mutation.addedNodes[i];
+        if (!(node instanceof Element)) continue;
+        markTrackedDescendants(node, PENDING_CONNECT);
       }
 
       // Handle removed nodes (disconnections)
-      if (mutation.removedNodes.length > 0) {
-        const removedNodes = Array.from(mutation.removedNodes);
-        for (const node of removedNodes) {
-          if (!(node instanceof Element)) continue;
+      for (let i = 0; i < mutation.removedNodes.length; i++) {
+        const node = mutation.removedNodes[i];
+        if (!(node instanceof Element)) continue;
+        markTrackedDescendants(node, PENDING_DISCONNECT);
+      }
+    }
 
-          // Check each tracked element to see if it was affected
-          for (const element of trackedElements) {
-            const elementTracking = tracking.get(element);
-            if (!elementTracking?.onDisconnected) continue;
+    // Phase 2: Fire - process marked elements in single pass
+    for (const element of markedBuf) {
+      const elementTracking = tracking.get(element);
+      if (!elementTracking) continue;
 
-            // Check if element was removed or is a descendant of removed node
-            if (node === element || node.contains(element)) {
-              if (!element.isConnected) {
-                // Call any cleanup function stored during connection
-                if (elementTracking.cleanup) {
-                  elementTracking.cleanup();
-                }
-
-                // Call disconnection callback
-                elementTracking.onDisconnected(element);
-
-                // Clean up tracking
-                tracking.delete(element);
-                trackedElements.delete(element);
-              }
-            }
+      // Handle connection
+      if (elementTracking.status & PENDING_CONNECT) {
+        if (elementTracking.onConnected && element.isConnected) {
+          const cleanup = elementTracking.onConnected(element);
+          if (cleanup) {
+            elementTracking.cleanup = cleanup;
           }
+          // Clear the onConnected callback after firing once
+          elementTracking.onConnected = undefined;
         }
       }
+
+      // Handle disconnection
+      if (elementTracking.status & PENDING_DISCONNECT) {
+        if (elementTracking.onDisconnected && !element.isConnected) {
+          // Call any cleanup function stored during connection
+          if (elementTracking.cleanup) {
+            elementTracking.cleanup();
+            elementTracking.cleanup = undefined;
+          }
+
+          // Call disconnection callback
+          elementTracking.onDisconnected(element);
+
+          // Clean up tracking
+          tracking.delete(element);
+          trackedElements.delete(element);
+        }
+      }
+
+      // Clear status bits for next batch
+      elementTracking.status = 0;
     }
 
     // Auto-disconnect observer when no elements tracked (memory optimization)
@@ -137,7 +167,7 @@ export function createLifecycleObserver(): LifecycleObserver {
     if (element.isConnected) {
       const cleanup = onConnected(element);
       if (cleanup) {
-        const elementTracking = tracking.get(element) || {};
+        const elementTracking = tracking.get(element) || { status: 0 };
         elementTracking.cleanup = cleanup;
         tracking.set(element, elementTracking);
       }
@@ -145,7 +175,7 @@ export function createLifecycleObserver(): LifecycleObserver {
     }
 
     // Add to shared tracking
-    const elementTracking = tracking.get(element) || {};
+    const elementTracking = tracking.get(element) || { status: 0 };
     elementTracking.onConnected = onConnected;
     tracking.set(element, elementTracking);
     trackedElements.add(element);
@@ -185,7 +215,7 @@ export function createLifecycleObserver(): LifecycleObserver {
     }
 
     // Add to shared tracking
-    const elementTracking = tracking.get(element) || {};
+    const elementTracking = tracking.get(element) || { status: 0 };
     elementTracking.onDisconnected = onDisconnected;
     tracking.set(element, elementTracking);
     trackedElements.add(element);
