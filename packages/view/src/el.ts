@@ -98,6 +98,12 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
           const nextDOMElement = findNextDOMElement(refNode.next);
           (refNode as FragmentRefNode<TElement>).attach(element, nextDOMElement);
         }
+
+        // Break circular references to allow GC (ref nodes only needed during attachment)
+        for (const refNode of childRefNodes) {
+          refNode.prev = undefined;
+          refNode.next = undefined;
+        }
       });
 
       // Store scope in context WeakMap (for cleanup)
