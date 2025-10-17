@@ -180,12 +180,12 @@ const VISITED = 1 << 0; // Node exists in newItems array
  * Binary search for largest index where arr[tails[i]] < value
  * tails array contains indices into arr
  */
-const binarySearch = (
+export function binarySearch(
   arr: number[],
   tails: number[],
   len: number,
   value: number
-): number => {
+): number {
   let lo = 0;
   let hi = len - 1;
 
@@ -206,7 +206,7 @@ const binarySearch = (
  * Returns length and writes indices to lisBuf
  * Single loop with forward pass followed by backtrack phase
  */
-const findLIS = (arr: number[], n: number, lisBuf: number[]): number => {
+export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
   if (n <= 0) return 0;
   if (n === 1) {
     lisBuf[0] = 0;
@@ -246,7 +246,7 @@ const findLIS = (arr: number[], n: number, lisBuf: number[]): number => {
  * Remove a node and clean up all associated resources
  * Inline helper for pruning unvisited nodes
  */
-const pruneNode = <
+export function pruneNode<
   T,
   TElement extends RendererElement,
   TText extends TextNode,
@@ -257,7 +257,7 @@ const pruneNode = <
   container: TElement,
   itemsByKey: Map<string, ListItemNode<T, TElement>>,
   renderer: Renderer<TElement, TText>
-): void => {
+): void {
   const scope = ctx.elementScopes.get(node.element);
   if (scope) {
     disposeScope(scope);
@@ -417,7 +417,7 @@ export function reconcileList<
  * Unlink a node from parent's children list
  * Like DOM removeChild internal logic
  */
-function unlinkFromParent<T, TElement>(
+export function unlinkFromParent<T, TElement>(
   parent: MapState<TElement>,
   node: ListItemNode<T, TElement>
 ): void {
@@ -436,7 +436,7 @@ function unlinkFromParent<T, TElement>(
  * Append a node to parent's children list
  * Like DOM appendChild
  */
-function appendChild<T, TElement>(
+export function appendChild<T, TElement>(
   parent: MapState<TElement>,
   node: ListItemNode<T, TElement>
 ): void {
@@ -458,7 +458,7 @@ function appendChild<T, TElement>(
  * Remove a node from the list
  * Like DOM removeChild
  */
-function removeChild<T, TElement>(
+export function removeChild<T, TElement>(
   parent: MapState<TElement>,
   node: ListItemNode<T, TElement>
 ): void {
@@ -475,7 +475,7 @@ function removeChild<T, TElement>(
  * Optimized operation: remove + insert
  * Like moving DOM nodes
  */
-function moveChild<T, TElement>(
+export function moveChild<T, TElement>(
   parent: MapState<TElement>,
   node: ListItemNode<T, TElement>,
   refSibling: ListItemNode<T, TElement> | undefined
