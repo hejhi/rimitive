@@ -396,12 +396,14 @@ export function createReconciler() {
           let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
             | ListItemNode<T, TElement>
             | undefined;
-
-          // Remove any unvisited nodes at the insertion point (cleanup as we go)
-          while (child && !(child.status & VISITED)) {
-            const nextChild = child.nextSibling as ListItemNode<T, TElement>;
-            pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-            child = nextChild;
+          
+          if (child) {
+            // Remove any unvisited nodes at the insertion point (cleanup as we go)
+            do {
+              const nextChild = child.nextSibling as ListItemNode<T, TElement>;
+              pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+              child = nextChild;
+            } while (!(child.status & VISITED));
           }
 
           // Move if not in LIS and not already in correct position
@@ -428,13 +430,11 @@ export function createReconciler() {
           | ListItemNode<T, TElement>
           | undefined;
 
-        if (!(child.status & VISITED))
-          pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+        if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
         else child.status = 0;
 
         child = nextChild;
       } while (child);
-
       break;
     }
   }
