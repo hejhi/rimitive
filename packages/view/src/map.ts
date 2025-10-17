@@ -111,9 +111,6 @@ export function createMapFactory<
 >(opts: MapOpts<TElement, TText>): MapFactory<TElement> {
   const { ctx, signal, effect, renderer } = opts;
 
-  // Create reconciler once with closure-captured buffers (like signals)
-  const { reconcileList } = createReconciler();
-
   function map<T>(
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
@@ -179,248 +176,241 @@ export function createMapFactory<
 // Status bits for reconciliation (like signals CLEAN/DIRTY/PENDING)
 const VISITED = 1 << 0; // Node exists in newItems array
 
-export function createReconciler() {
-  /**
-   * Binary search for largest index where arr[tails[i]] < value
-   * tails array contains indices into arr
-   */
-  const binarySearch = (
-    arr: number[],
-    tails: number[],
-    len: number,
-    value: number
-  ): number => {
-    let lo = 0;
-    let hi = len - 1;
+/**
+ * Binary search for largest index where arr[tails[i]] < value
+ * tails array contains indices into arr
+ */
+const binarySearch = (
+  arr: number[],
+  tails: number[],
+  len: number,
+  value: number
+): number => {
+  let lo = 0;
+  let hi = len - 1;
 
-    while (lo <= hi) {
-      const mid = (lo + hi) >>> 1;
-      if (arr[tails[mid]!]! < value) {
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-
-    return lo;
-  };
-
-  /**
-   * Inline O(n log n) LIS using patience sorting
-   * Returns length and writes indices to lisBuf
-   * Single loop with forward pass followed by backtrack phase
-   */
-  const findLIS = (arr: number[], n: number, lisBuf: number[]): number => {
-    if (n <= 0) return 0;
-    if (n === 1) {
-      lisBuf[0] = 0;
-      return 1;
-    }
-
-    const tailsBuf: number[] = [];
-    const parentBuf: number[] = [];
-
-    let len = 0;
-    let depth = 0;
-
-    // Forward phase: build tails and parent pointers
-    while (depth < n) {
-      const pos = binarySearch(arr, tailsBuf, len, arr[depth]!);
-
-      parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
-      tailsBuf[pos] = depth;
-
-      if (pos === len) len++;
-      depth++;
-    }
-
-    depth = len - 1;
-    let current = tailsBuf[depth]!;
-
-    // Backtrack phase: reconstruct LIS using parent chain
-    do {
-      lisBuf[depth] = current;
-      current = parentBuf[current]!;
-    } while (depth--);
-
-    return len;
-  };
-
-  /**
-   * Remove a node and clean up all associated resources
-   * Inline helper for pruning unvisited nodes
-   */
-  const pruneNode = <
-    T,
-    TElement extends RendererElement,
-    TText extends TextNode,
-  >(
-    parent: MapState<TElement>,
-    node: ListItemNode<T, TElement>,
-    ctx: ViewContext,
-    container: TElement,
-    itemsByKey: Map<string, ListItemNode<T, TElement>>,
-    renderer: Renderer<TElement, TText>
-  ): void => {
-    const scope = ctx.elementScopes.get(node.element);
-    if (scope) {
-      disposeScope(scope);
-      ctx.elementScopes.delete(node.element);
-    }
-
-    removeChild(parent, node);
-    renderer.removeChild(container, node.element);
-    itemsByKey.delete(node.key);
-  };
-
-  /**
-   * Reconcile list with minimal allocations
-   * Reordered loops - position first, then remove
-   * Eliminates newKeys allocation by using status bits
-   */
-  function reconcileList<
-    T,
-    TElement extends RendererElement = RendererElement,
-    TText extends TextNode = TextNode,
-  >(
-    ctx: ViewContext,
-    parent: MapState<TElement>,
-    newItems: T[],
-    renderItem: (item: T) => {
-      element: TElement;
-      itemSignal?: ((value: T) => void) & (() => T);
-    },
-    keyFn: (item: T) => string | number,
-    renderer: Renderer<TElement, TText>
-  ): void {
-    const parentEl = parent.element;
-    if (!parentEl) return;
-
-    const itemsByKey = parent.itemsByKey as Map<
-      string,
-      ListItemNode<T, TElement>
-    >;
-
-    // Pre-allocate nodes buffer to avoid Map lookup in position phase
-    const nodes: ListItemNode<T, TElement>[] = Array(newItems.length);
-
-    // Local buffers for LIS calculation
-    const oldIndicesBuf: number[] = [];
-    const newPosBuf: number[] = [];
-    const lisBuf: number[] = [];
-
-    //  Build phase - create nodes and collect info for LIS
-    let count = 0;
-    for (let i = 0; i < newItems.length; i++) {
-      const item = newItems[i]!;
-      const key = keyFn(item) as string;
-      let node = itemsByKey.get(key);
-
-      if (node) {
-        oldIndicesBuf[count] = node.position;
-        newPosBuf[count] = i;
-        count++;
-
-        // Update position immediately (old position already cached in oldIndicesBuf)
-        node.position = i;
-
-        // Mark existing node as visited
-        node.status |= VISITED;
-
-        // Update data
-        if (node.itemData !== item) {
-          node.itemData = item;
-          if (node.itemSignal) node.itemSignal(item);
-        }
-      } else {
-        // Create new node
-        const rendered = renderItem(item);
-
-        node = {
-          element: rendered.element,
-          key,
-          itemData: item,
-          itemSignal: rendered.itemSignal,
-          position: i,
-          status: VISITED, // Mark as visited on creation
-          previousSibling: undefined,
-          nextSibling: undefined,
-        };
-
-        appendChild(parent, node);
-        itemsByKey.set(key, node);
-        // Insert before parent.nextSibling to maintain fragment position
-        renderer.insertBefore(
-          parentEl,
-          rendered.element,
-          parent.nextSibling
-        );
-      }
-
-      // Store node for position phase
-      nodes[i] = node;
-    }
-
-    // Transition: Calculate LIS
-    const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
-    let lisIdx = 0;
-    let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
-
-    // Positioning phase - reorder nodes based on LIS
-    let prevNode: ListItemNode<T, TElement> | undefined;
-    for (const node of nodes) {
-      // Check if in LIS
-      if (node.position === nextLISPos) {
-        lisIdx++;
-        nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-      } else {
-        // Node not in LIS - needs repositioning
-        // Calculate reference sibling for insertion
-        let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
-          | ListItemNode<T, TElement>
-          | undefined;
-
-        if (child) {
-          // Remove any unvisited nodes at the insertion point (cleanup as we go)
-          while (!(child.status & VISITED)) {
-            const nextChild = child.nextSibling as ListItemNode<T, TElement>;
-            pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-            child = nextChild;
-          }
-        }
-
-        // Move if not in LIS and not already in correct position
-        if (node !== child) {
-          // if child is undefined, we know to append at the end
-          moveChild(parent, node, child);
-
-          // Use parent.nextSibling as fallback to maintain fragment position
-          const nextEl = child ? child.element : parent.nextSibling;
-          if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
-        }
-      }
-
-      prevNode = node;
-    }
-
-    // Cleanup phase - remove any remaining unvisited nodes
-    let child = parent.firstChild;
-    while (child) {
-      const nextChild = child.nextSibling as
-        | ListItemNode<T, TElement>
-        | undefined;
-
-      if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-      else child.status = 0;
-
-      child = nextChild;
+  while (lo <= hi) {
+    const mid = (lo + hi) >>> 1;
+    if (arr[tails[mid]!]! < value) {
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
     }
   }
 
-  return {
-    reconcileList,
-    findLIS,
-  };
+  return lo;
+};
+
+/**
+ * Inline O(n log n) LIS using patience sorting
+ * Returns length and writes indices to lisBuf
+ * Single loop with forward pass followed by backtrack phase
+ */
+const findLIS = (arr: number[], n: number, lisBuf: number[]): number => {
+  if (n <= 0) return 0;
+  if (n === 1) {
+    lisBuf[0] = 0;
+    return 1;
+  }
+
+  const tailsBuf: number[] = [];
+  const parentBuf: number[] = [];
+
+  let len = 0;
+  let depth = 0;
+
+  // Forward phase: build tails and parent pointers
+  while (depth < n) {
+    const pos = binarySearch(arr, tailsBuf, len, arr[depth]!);
+
+    parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+    tailsBuf[pos] = depth;
+
+    if (pos === len) len++;
+    depth++;
+  }
+
+  depth = len - 1;
+  let current = tailsBuf[depth]!;
+
+  // Backtrack phase: reconstruct LIS using parent chain
+  do {
+    lisBuf[depth] = current;
+    current = parentBuf[current]!;
+  } while (depth--);
+
+  return len;
+};
+
+/**
+ * Remove a node and clean up all associated resources
+ * Inline helper for pruning unvisited nodes
+ */
+const pruneNode = <
+  T,
+  TElement extends RendererElement,
+  TText extends TextNode,
+>(
+  parent: MapState<TElement>,
+  node: ListItemNode<T, TElement>,
+  ctx: ViewContext,
+  container: TElement,
+  itemsByKey: Map<string, ListItemNode<T, TElement>>,
+  renderer: Renderer<TElement, TText>
+): void => {
+  const scope = ctx.elementScopes.get(node.element);
+  if (scope) {
+    disposeScope(scope);
+    ctx.elementScopes.delete(node.element);
+  }
+
+  removeChild(parent, node);
+  renderer.removeChild(container, node.element);
+  itemsByKey.delete(node.key);
+};
+
+/**
+ * Reconcile list with minimal allocations
+ * Reordered loops - position first, then remove
+ * Eliminates newKeys allocation by using status bits
+ */
+export function reconcileList<
+  T,
+  TElement extends RendererElement = RendererElement,
+  TText extends TextNode = TextNode,
+>(
+  ctx: ViewContext,
+  parent: MapState<TElement>,
+  newItems: T[],
+  renderItem: (item: T) => {
+    element: TElement;
+    itemSignal?: ((value: T) => void) & (() => T);
+  },
+  keyFn: (item: T) => string | number,
+  renderer: Renderer<TElement, TText>
+): void {
+  const parentEl = parent.element;
+  if (!parentEl) return;
+
+  const itemsByKey = parent.itemsByKey as Map<
+    string,
+    ListItemNode<T, TElement>
+  >;
+
+  // Pre-allocate nodes buffer to avoid Map lookup in position phase
+  const nodes: ListItemNode<T, TElement>[] = Array(newItems.length);
+
+  // Local buffers for LIS calculation
+  const oldIndicesBuf: number[] = [];
+  const newPosBuf: number[] = [];
+  const lisBuf: number[] = [];
+
+  //  Build phase - create nodes and collect info for LIS
+  let count = 0;
+  for (let i = 0; i < newItems.length; i++) {
+    const item = newItems[i]!;
+    const key = keyFn(item) as string;
+    let node = itemsByKey.get(key);
+
+    if (node) {
+      oldIndicesBuf[count] = node.position;
+      newPosBuf[count] = i;
+      count++;
+
+      // Update position immediately (old position already cached in oldIndicesBuf)
+      node.position = i;
+
+      // Mark existing node as visited
+      node.status |= VISITED;
+
+      // Update data
+      if (node.itemData !== item) {
+        node.itemData = item;
+        if (node.itemSignal) node.itemSignal(item);
+      }
+    } else {
+      // Create new node
+      const rendered = renderItem(item);
+
+      node = {
+        element: rendered.element,
+        key,
+        itemData: item,
+        itemSignal: rendered.itemSignal,
+        position: i,
+        status: VISITED, // Mark as visited on creation
+        previousSibling: undefined,
+        nextSibling: undefined,
+      };
+
+      appendChild(parent, node);
+      itemsByKey.set(key, node);
+      // Insert before parent.nextSibling to maintain fragment position
+      renderer.insertBefore(
+        parentEl,
+        rendered.element,
+        parent.nextSibling
+      );
+    }
+
+    // Store node for position phase
+    nodes[i] = node;
+  }
+
+  // Transition: Calculate LIS
+  const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
+  let lisIdx = 0;
+  let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
+
+  // Positioning phase - reorder nodes based on LIS
+  let prevNode: ListItemNode<T, TElement> | undefined;
+  for (const node of nodes) {
+    // Check if in LIS
+    if (node.position === nextLISPos) {
+      lisIdx++;
+      nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
+    } else {
+      // Node not in LIS - needs repositioning
+      // Calculate reference sibling for insertion
+      let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
+        | ListItemNode<T, TElement>
+        | undefined;
+
+      if (child) {
+        // Remove any unvisited nodes at the insertion point (cleanup as we go)
+        while (!(child.status & VISITED)) {
+          const nextChild = child.nextSibling as ListItemNode<T, TElement>;
+          pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+          child = nextChild;
+        }
+      }
+
+      // Move if not in LIS and not already in correct position
+      if (node !== child) {
+        // if child is undefined, we know to append at the end
+        moveChild(parent, node, child);
+
+        // Use parent.nextSibling as fallback to maintain fragment position
+        const nextEl = child ? child.element : parent.nextSibling;
+        if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
+      }
+    }
+
+    prevNode = node;
+  }
+
+  // Cleanup phase - remove any remaining unvisited nodes
+  let child = parent.firstChild;
+  while (child) {
+    const nextChild = child.nextSibling as
+      | ListItemNode<T, TElement>
+      | undefined;
+
+    if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+    else child.status = 0;
+
+    child = nextChild;
+  }
 }
 
 /**

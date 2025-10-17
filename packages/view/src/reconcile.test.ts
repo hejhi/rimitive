@@ -1,11 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createReconciler, ListItemNode, MapState } from './map';
+import { reconcileList, ListItemNode, MapState } from './map';
 import { createViewContext } from './context';
 import type { Renderer } from './renderer';
 import { MockElement } from './test-utils';
-
-// Create reconciler once for all tests
-const { reconcileList } = createReconciler();
 
 // Mock renderer for reconcile tests
 function createMockRenderer(): Renderer<MockElement, MockElement> {
