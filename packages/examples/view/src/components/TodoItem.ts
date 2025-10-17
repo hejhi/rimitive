@@ -5,7 +5,7 @@
  */
 
 import type { LatticeViewAPI } from '../types';
-import type { ElementRef, Reactive } from '@lattice/view/types';
+import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
 import { on } from '@lattice/view/on';
 
@@ -14,7 +14,7 @@ export function TodoItem(
   todoSignal: Reactive<Todo>,
   onToggle: (id: number) => void,
   onRemove: (id: number) => void
-): ElementRef {
+) {
   const { el, match } = api;
   const todo = todoSignal();
 
