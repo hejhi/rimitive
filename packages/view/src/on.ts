@@ -5,7 +5,7 @@
  * Returns unsubscribe function for manual cleanup or use in lifecycle callbacks
  */
 
-import type { ElementRef } from './types';
+import type { RefSpec } from './types';
 
 /**
  * Attach an event listener to an element with automatic type inference
@@ -45,7 +45,7 @@ export function on<K extends keyof HTMLElementEventMap>(
 /**
  * Helper to attach multiple event listeners with a single cleanup
  * Provides an `on` function scoped to the element
- * Returns the ElementRef to allow chaining lifecycle callbacks
+ * Returns the RefSpec to allow chaining lifecycle callbacks
  *
  * @example
  * ```ts
@@ -65,13 +65,13 @@ export function on<K extends keyof HTMLElementEventMap>(
  * ```
  */
 export function listener<TElement extends HTMLElement>(
-  elementRef: ElementRef<TElement>,
+  elementRef: RefSpec<TElement>,
   setup: (on: <K extends keyof HTMLElementEventMap>(
     event: K,
     handler: (event: HTMLElementEventMap[K]) => void,
     options?: boolean | AddEventListenerOptions
   ) => void) => void
-): ElementRef<TElement> {
+): RefSpec<TElement> {
   elementRef((element) => {
     const cleanups: Array<() => void> = [];
 

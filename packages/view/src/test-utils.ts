@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { createViewContext } from './context';
 import type { Renderer } from './renderer';
-import type { Reactive, Disposable, ElementRef, LifecycleCallback } from './types';
+import type { Reactive, Disposable, RefSpec, LifecycleCallback } from './types';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -167,16 +167,16 @@ export function createMockDisposable(): Disposable & { disposed: boolean } {
 }
 
 /**
- * Creates an ElementRef from an element for testing
+ * Creates an RefSpec from an element for testing
  */
-export function createElementRef<TElement>(element: TElement): ElementRef<TElement> {
+export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
   // Store lifecycle callbacks
   const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
-  const ref = ((lifecycleCallback: LifecycleCallback<TElement>): ElementRef<TElement> => {
+  const ref = ((lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement> => {
     lifecycleCallbacks.push(lifecycleCallback);
     return ref;
-  }) as ElementRef<TElement>;
+  }) as RefSpec<TElement>;
 
   // Factory method - for tests, return element directly
   ref.create = () => {

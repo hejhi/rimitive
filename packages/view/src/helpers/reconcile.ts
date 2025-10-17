@@ -1,8 +1,7 @@
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { ViewContext } from '../context';
-import type { MapFragmentState, ListItemNode } from '../types';
+import type { ViewNode, ReactiveElement } from '../types';
 import { disposeScope } from './scope';
-import { appendChild, removeChild, moveChild } from './list-edges';
 
 // Status bits for reconciliation (like signals CLEAN/DIRTY/PENDING)
 const VISITED = 1 << 0;  // Node exists in newItems array
@@ -235,4 +234,167 @@ export function createReconciler() {
     reconcileList,
     findLIS,
   };
+}
+
+/**
+ * Unlink a node from parent's children list
+ * Like DOM removeChild internal logic
+ */
+function unlinkFromParent<T, TElement>(
+  parent: MapFragmentState<TElement>,
+  node: ListItemNode<T, TElement>
+): void {
+  const { previousSibling, nextSibling } = node;
+
+  // Update next sibling's backward pointer
+  if (nextSibling !== undefined) {
+    nextSibling.previousSibling = previousSibling;
+  } else {
+    // This was the last child
+    parent.lastChild = previousSibling;
+  }
+
+  // Update prev sibling's forward pointer
+  if (previousSibling !== undefined) {
+    previousSibling.nextSibling = nextSibling;
+  } else {
+    // This was the first child
+    parent.firstChild = nextSibling;
+  }
+}
+
+/**
+ * Append a node to parent's children list
+ * Like DOM appendChild
+ */
+function appendChild<T, TElement>(
+  parent: MapFragmentState<TElement>,
+  node: ListItemNode<T, TElement>
+): void {
+  // Get current tail for O(1) append
+  const prevSibling = parent.lastChild as ListItemNode<T, TElement> | undefined;
+
+  // Wire node into list (unidirectional: parent→child, not child→parent)
+  node.previousSibling = prevSibling;
+  node.nextSibling = undefined;
+
+  // Update parent's tail pointer
+  if (prevSibling !== undefined) {
+    prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
+  } else {
+    // This is the first child
+    parent.firstChild = node as ListItemNode<unknown, TElement>;
+  }
+
+  parent.lastChild = node as ListItemNode<unknown, TElement>;
+}
+
+/**
+ * Remove a node from the list
+ * Like DOM removeChild
+ */
+function removeChild<T, TElement>(
+  parent: MapFragmentState<TElement>,
+  node: ListItemNode<T, TElement>
+): void {
+  // Unlink from parent's children list
+  unlinkFromParent(parent, node);
+
+  // Clear node's sibling references
+  node.previousSibling = undefined;
+  node.nextSibling = undefined;
+}
+
+/**
+ * Move a node to a new position (before refSibling)
+ * Optimized operation: remove + insert
+ * Like moving DOM nodes
+ */
+function moveChild<T, TElement>(
+  parent: MapFragmentState<TElement>,
+  node: ListItemNode<T, TElement>,
+  refSibling: ListItemNode<T, TElement> | undefined
+): void {
+  // Remove from current position
+  unlinkFromParent(parent, node);
+
+  // Insert at new position
+  if (refSibling === undefined) {
+    // Move to end
+    const prevSibling = parent.lastChild as
+      | ListItemNode<T, TElement>
+      | undefined;
+    node.previousSibling = prevSibling;
+    node.nextSibling = undefined;
+
+    if (prevSibling !== undefined) {
+      prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
+    } else {
+      parent.firstChild = node as ListItemNode<unknown, TElement>;
+    }
+
+    parent.lastChild = node as ListItemNode<unknown, TElement>;
+  } else {
+    // Move before refSibling
+    const prevSibling = refSibling.previousSibling as
+      | ListItemNode<T, TElement>
+      | undefined;
+    node.previousSibling = prevSibling;
+    node.nextSibling = refSibling as ListItemNode<unknown, TElement>;
+
+    refSibling.previousSibling = node as ListItemNode<unknown, TElement>;
+
+    if (prevSibling !== undefined) {
+      prevSibling.nextSibling = node as ListItemNode<unknown, TElement>;
+    } else {
+      parent.firstChild = node as ListItemNode<unknown, TElement>;
+    }
+  }
+}
+
+/**
+ * List item node - represents an item in a reactive list
+ * Forms intrusive doubly-linked list via sibling pointers
+ *
+ * Unidirectional edges: parent knows children (via firstChild/lastChild),
+ * but children don't know parent. Siblings link to each other.
+ *
+ * DOM parallel:
+ * - previousSibling ↔ previousSibling
+ * - nextSibling ↔ nextSibling
+ */
+export interface ListItemNode<T = unknown, TElement = ReactiveElement> extends ViewNode<TElement> {
+  key: string;              // Unique key for reconciliation
+  itemData: T;              // The actual data
+  itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
+  position: number;         // Current position in list (cached for LIS algorithm)
+  status: number;           // Status bits for reconciliation (VISITED, etc.)
+
+  // Sibling navigation (intrusive linked list - nodes link to siblings only)
+  previousSibling: ListItemNode<unknown, TElement> | undefined;  // Like DOM previousSibling
+  nextSibling: ListItemNode<unknown, TElement> | undefined;      // Like DOM nextSibling
+}
+
+/**
+ * Map fragment state - created by map()
+ * Fragment that manages parent→children list relationship
+ *
+ * Maintains head/tail of children like DOM ParentNode:
+ * - firstChild ↔ firstChild
+ * - lastChild ↔ lastChild
+ * - childNodes ↔ itemsByKey (Map is for efficient key lookup, DOM uses array)
+ */
+export interface MapFragmentState<TElement> {
+  element: TElement | null; // Parent element (null until fragment attached)
+
+  // DOM-like children list (intrusive doubly-linked list)
+  firstChild: ListItemNode<unknown, TElement> | undefined;  // Like DOM firstChild
+  lastChild: ListItemNode<unknown, TElement> | undefined;   // Like DOM lastChild
+
+  // Key-based lookup for O(1) reconciliation during diffing
+  // (DOM uses array-based childNodes, we use Map for key lookup)
+  itemsByKey: Map<string, ListItemNode<unknown, TElement>>;
+
+  // Boundary marker for stable positioning (like match fragment)
+  nextSibling: TElement | null; // Element after this fragment's territory
 }

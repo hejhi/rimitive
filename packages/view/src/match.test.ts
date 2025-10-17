@@ -4,7 +4,7 @@ import { createViewContext } from './context';
 import {
   createMockRenderer,
   createSignal,
-  createElementRef,
+  createRefSpec,
   getTextContent,
   type MockElement,
 } from './test-utils';
@@ -30,12 +30,12 @@ describe('match primitive', () => {
             const yesEl = renderer.createElement('span');
             const yesText = renderer.createTextNode('yes');
             renderer.appendChild(yesEl, yesText);
-            return createElementRef(yesEl);
+            return createRefSpec(yesEl);
           } else {
             const noEl = renderer.createElement('span');
             const noText = renderer.createTextNode('no');
             renderer.appendChild(noEl, noText);
-            return createElementRef(noEl);
+            return createRefSpec(noEl);
           }
         }
       );
@@ -76,7 +76,7 @@ describe('match primitive', () => {
             const el = renderer.createElement('div');
             const text = renderer.createTextNode('visible');
             renderer.appendChild(el, text);
-            return createElementRef(el);
+            return createRefSpec(el);
           }
           return null; // Hide element
         }
@@ -155,7 +155,7 @@ describe('match primitive', () => {
         condition,
         () => {
           const el = renderer.createElement('div');
-          const ref = createElementRef(el);
+          const ref = createRefSpec(el);
           return ref;
         }
       );
@@ -167,7 +167,7 @@ describe('match primitive', () => {
       const firstElement = parent.children[0] as MockElement;
 
       // Verify scope exists
-      expect(ctx.elementScopes.has(firstElement)).toBe(false); // createElementRef doesn't create scope in tests
+      expect(ctx.elementScopes.has(firstElement)).toBe(false); // createRefSpec doesn't create scope in tests
 
       // Change condition (swap elements)
       setCondition(false);

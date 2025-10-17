@@ -11,16 +11,36 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
-import type {
-  Reactive,
-  ElementRef,
-  MapFragment,
-  ListItemNode,
-} from './types';
-import { FRAGMENT, type MapFragmentState } from './types';
+import type { Reactive, RefSpec, Fragment } from './types';
+import { FRAGMENT } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-import { createReconciler } from './helpers/reconcile';
+import { createReconciler, ListItemNode, MapFragmentState } from './helpers/reconcile';
 import type { ViewContext } from './context';
+
+/**
+ * Map fragment state - created by map()
+ * Fragment that manages parent→children list relationship
+ *
+ * Maintains head/tail of children like DOM ParentNode:
+ * - firstChild ↔ firstChild
+ * - lastChild ↔ lastChild
+ * - childNodes ↔ itemsByKey (Map is for efficient key lookup, DOM uses array)
+ */
+export interface MapState<TElement> extends MapFragmentState<TElement | null> {
+  refType: typeof FRAGMENT;
+  element: TElement | null; // Parent element (null until fragment attached)
+
+  // DOM-like children list (intrusive doubly-linked list)
+  firstChild: ListItemNode<unknown, TElement> | undefined;  // Like DOM firstChild
+  lastChild: ListItemNode<unknown, TElement> | undefined;   // Like DOM lastChild
+
+  // Key-based lookup for O(1) reconciliation during diffing
+  // (DOM uses array-based childNodes, we use Map for key lookup)
+  itemsByKey: Map<string, ListItemNode<unknown, TElement>>;
+
+  // Boundary marker for stable positioning (like match fragment)
+  nextSibling: TElement | null; // Element after this fragment's territory
+}
 
 /**
  * Options passed to map factory
@@ -37,14 +57,15 @@ export type MapOpts<TElement extends RendererElement = RendererElement, TText ex
  * Generic over element type - instantiate with specific renderer element type
  * Example: MapFactory<HTMLElement> for DOM
  */
-export type MapFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
-  'map',
-  <T>(
-    itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
-    keyFn: (item: T) => string | number
-  ) => MapFragment<TElement>
->;
+export type MapFactory<TElement extends RendererElement = RendererElement> =
+  LatticeExtension<
+    'map',
+    <T>(
+      itemsSignal: Reactive<T[]>,
+      render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
+      keyFn: (item: T) => string | number
+    ) => Fragment<TElement>
+  >;
 
 
 /**
@@ -60,12 +81,12 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
 
   function map<T>(
     itemsSignal: Reactive<T[]>,
-    render: (itemSignal: Reactive<T>) => ElementRef<TElement>,
+    render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
     keyFn: (item: T) => string | number
-  ): MapFragment<TElement> {
+  ): Fragment<TElement> {
     let dispose: (() => void) | undefined;
 
-    const state: MapFragmentState<TElement> = {
+    const state: MapState<TElement> = {
       refType: FRAGMENT,
       element: null,
       firstChild: undefined,
@@ -75,7 +96,10 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
     };
 
     // Create ref function that closes over node (like signal function)
-    const mapFragment = ((parent: TElement, nextSibling?: TElement | null): void => {
+    const mapFragment = ((
+      parent: TElement,
+      nextSibling?: TElement | null
+    ): void => {
       // Store parent and nextSibling boundary marker
       state.element = parent;
       state.nextSibling = nextSibling ?? null;
@@ -117,7 +141,7 @@ export function createMapFactory<TElement extends RendererElement = RendererElem
         };
         parentScope.firstDisposable = disposeNode;
       }
-    }) as MapFragment<TElement>;
+    }) as Fragment<TElement>;
 
     // Attach refType to fragment (type discrimination)
     mapFragment.refType = FRAGMENT;

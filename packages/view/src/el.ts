@@ -1,17 +1,51 @@
 import type { LatticeExtension } from '@lattice/lattice';
 import type {
-  ElementSpec,
-  ElementProps,
-  ElementChild,
   LifecycleCallback,
-  ElementRef,
-  ChildRefNode,
-  FragmentRefNode,
+  RefSpec,
+  NodeRef,
+  FragmentRef,
+  ReactiveElement,
+  Reactive,
+  Fragment,
 } from './types';
-import { isReactive, isFragment, isElementRef, ELEMENT_REF, FRAGMENT, findNextDOMElement } from './types';
+import {
+  isReactive,
+  isFragment,
+  isRefSpec,
+  ELEMENT_REF,
+  FRAGMENT,
+} from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
+
+/**
+ * Props for an element - type-safe based on the HTML tag
+ */
+export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> =
+  Partial<HTMLElementTagNameMap[Tag]> & {
+    style?: Partial<CSSStyleDeclaration>;
+  };
+
+/**
+ * Element specification: [tag, ...propsAndChildren]
+ */
+export type ElRefSpec<
+  Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap,
+> = [tag: Tag, ...content: (ElementProps<Tag> | ElRefSpecChild)[]];
+
+/**
+ * Valid child types for an element
+ */
+export type ElRefSpecChild =
+  | string
+  | number
+  | boolean
+  | null
+  | ReactiveElement
+  | RefSpec
+  | Reactive<string | number>
+  | Fragment;
 
 /**
  * Options passed to el factory
@@ -31,12 +65,15 @@ export type ElOpts<TElement extends RendererElement = RendererElement, TText ext
  *
  * This works because HTMLElement has an index signature that maps to HTMLElementTagNameMap.
  */
-export type ElFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
-  'el',
-  <Tag extends keyof HTMLElementTagNameMap>(
-    spec: ElementSpec<Tag>
-  ) => ElementRef<TElement extends HTMLElement ? HTMLElementTagNameMap[Tag] : TElement>
->;
+export type ElFactory<TElement extends RendererElement = RendererElement> =
+  LatticeExtension<
+    'el',
+    <Tag extends keyof HTMLElementTagNameMap>(
+      spec: ElRefSpec<Tag>
+    ) => RefSpec<
+      TElement extends HTMLElement ? HTMLElementTagNameMap[Tag] : TElement
+    >
+  >;
 
 /**
  * Create the el primitive factory
@@ -46,20 +83,24 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
 ): ElFactory<TElement> {
   const { ctx, effect, renderer } = opts;
 
-  function el<Tag extends keyof HTMLElementTagNameMap>(spec: ElementSpec<Tag>): ElementRef<TElement> {
+  function el<Tag extends keyof HTMLElementTagNameMap>(
+    spec: ElRefSpec<Tag>
+  ): RefSpec<TElement> {
     const [tag, ...rest] = spec;
-
-    // Parse props and children from rest (blueprint data)
-    const { props, children } = parseSpec(rest);
 
     // Store lifecycle callbacks that will be applied to each instance
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
     // Create ref function for registering lifecycle callbacks
-    const ref = ((lifecycleCallback: LifecycleCallback<TElement>): ElementRef<TElement> => {
+    const ref = ((
+      lifecycleCallback: LifecycleCallback<TElement>
+    ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
       return ref; // Chainable
-    }) as ElementRef<TElement>;
+    }) as RefSpec<TElement>;
+
+    // Parse props and children from rest (blueprint data)
+    const { props, children } = parseSpec(rest);
 
     // Factory function - creates a new instance each time
     ref.create = (): TElement => {
@@ -70,8 +111,8 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       const scope = createScope();
 
       // Track intrusive linked list of child ref nodes (zero allocation)
-      let firstChildRef: ChildRefNode<TElement> | undefined;
-      let lastChildRef: ChildRefNode<TElement> | undefined;
+      let firstChildRef: NodeRef<TElement> | undefined;
+      let lastChildRef: NodeRef<TElement> | undefined;
 
       // Run all reactive setup within this instance's scope
       runInScope(ctx, scope, () => {
@@ -99,7 +140,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
           if (current.refType === FRAGMENT) {
             // Fragment - call attach with nextSibling from linked list
             const nextDOMElement = findNextDOMElement(current.next);
-            (current as FragmentRefNode<TElement>).attach(element, nextDOMElement);
+            (current as FragmentRef<TElement>).attach(element, nextDOMElement);
           }
           current = current.next;
         }
@@ -126,7 +167,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
             disposeScope(elementScope);
             ctx.elementScopes.delete(element);
           }
-        }
+        },
       });
 
       // Track lifecycle observer disposal in element's scope
@@ -149,21 +190,21 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
  * Parse element spec into props and children
  */
 function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
-  rest: (ElementProps<Tag> | ElementChild)[]
+  rest: (ElementProps<Tag> | ElRefSpecChild)[]
 ): {
   props: ElementProps<Tag>;
-  children: ElementChild[];
+  children: ElRefSpecChild[];
 } {
   const props = {} as ElementProps<Tag>;
-  const children: ElementChild[] = [];
+  const children: ElRefSpecChild[] = [];
 
   for (const item of rest) {
     if (isPlainObject(item) && !isReactive(item) && !isFragment(item)) {
       // It's props
       Object.assign(props, item);
     } else {
-      // It's a child - not a plain object props, so must be ElementChild
-      children.push(item as ElementChild);
+      // It's a child - not a plain object props, so must be RefSpecChild
+      children.push(item as ElRefSpecChild);
     }
   }
 
@@ -201,23 +242,23 @@ function applyProps<
 
 /**
  * Handle a single child (static, reactive, or reactive list)
- * Returns a ChildRefNode for elements/fragments that need sibling tracking
+ * Returns a NodeRef for elements/fragments that need sibling tracking
  */
 function handleChild<TElement extends RendererElement, TText extends TextNode>(
   element: TElement,
-  child: ElementChild,
+  child: ElRefSpecChild,
   effect: (fn: () => void | (() => void)) => () => void,
   ctx: ViewContext,
   renderer: Renderer<TElement, TText>
-): ChildRefNode<TElement> | null {
+): NodeRef<TElement> | null {
   // Skip null/undefined/false
   if (child == null || child === false) {
     return null;
   }
 
   // Element ref (from el()) - instantiate blueprint
-  if (isElementRef(child)) {
-    const childElement = (child as ElementRef<TElement>).create();
+  if (isRefSpec(child)) {
+    const childElement = (child as RefSpec<TElement>).create();
     renderer.appendChild(element, childElement);
     // Wrap in ref node for internal sibling tracking
     return {
@@ -230,14 +271,14 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
 
   // Fragment (from map() or match()) - defer attachment, return ref node
   if (isFragment(child)) {
-    const fragmentRefNode: FragmentRefNode<TElement> = {
+    const fragmentRefNode: FragmentRef<TElement> = {
       refType: FRAGMENT,
       element: null,
       prev: undefined,
       next: undefined,
       attach: (parent: TElement, nextSibling: TElement | null) => {
         child(parent, nextSibling); // Pass nextSibling to fragment
-      }
+      },
     };
     return fragmentRefNode;
   }
@@ -291,4 +332,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-// Lifecycle observation is now handled by the renderer
+/**
+ * Helper to find next DOM element by traversing ref node chain
+ */
+export function findNextDOMElement<TElement>(
+  node: NodeRef<TElement> | undefined
+): TElement | null {
+  let current = node;
+  while (current) {
+    if (current.element) return current.element;
+    current = current.next;
+  }
+  return null;
+}

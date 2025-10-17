@@ -14,11 +14,24 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
-import type { Reactive, ElementRef, MatchFragment, MatchFragmentState } from './types';
-import { FRAGMENT, isElementRef } from './types';
+import type {
+  Reactive,
+  RefSpec,
+  Fragment,
+  ReactiveElement,
+  ViewNode,
+} from './types';
+import { FRAGMENT, isRefSpec } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { disposeScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
+
+export interface MatchFragmentState<TElement = ReactiveElement> extends ViewNode<TElement | null> {
+  refType: typeof FRAGMENT;
+  element: TElement | null; // Parent element (null until fragment attached)
+  currentChild: TElement | null; // Currently rendered child element (null when hidden)
+  nextSibling: TElement | null; // DOM element after our territory (for stable insertion, null = append at end)
+}
 
 /**
  * Options passed to match factory
@@ -32,13 +45,14 @@ export type MatchOpts<TElement extends RendererElement = RendererElement, TText 
 /**
  * Factory return type
  */
-export type MatchFactory<TElement extends RendererElement = RendererElement> = LatticeExtension<
-  'match',
-  <T>(
-    reactive: Reactive<T>,
-    render: (value: T) => ElementRef<TElement> | null | false
-  ) => MatchFragment<TElement>
->;
+export type MatchFactory<TElement extends RendererElement = RendererElement> =
+  LatticeExtension<
+    'match',
+    <T>(
+      reactive: Reactive<T>,
+      render: (value: T) => RefSpec<TElement> | null | false
+    ) => Fragment<TElement>
+  >;
 
 /**
  * Create the match primitive factory
@@ -50,8 +64,8 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
   function match<T>(
     reactive: Reactive<T>,
-    render: (value: T) => ElementRef<TElement> | null | false
-  ): MatchFragment<TElement> {
+    render: (value: T) => RefSpec<TElement> | null | false
+  ): Fragment<TElement> {
     const state: MatchFragmentState<TElement> = {
       refType: FRAGMENT,
       element: null,
@@ -59,7 +73,10 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
       nextSibling: null,
     };
 
-    const matchRef = ((parent: TElement, nextSibling?: TElement | null): void => {
+    const matchRef = ((
+      parent: TElement,
+      nextSibling?: TElement | null
+    ): void => {
       // Store parent in fragment state
       state.element = parent;
 
@@ -84,7 +101,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
         }
 
         // Create new child if not null/false
-        if (elementRef && isElementRef(elementRef)) {
+        if (elementRef && isRefSpec(elementRef)) {
           const newElement = elementRef.create();
           // Insert before nextSibling to maintain stable position
           renderer.insertBefore(parent, newElement, state.nextSibling);
@@ -95,7 +112,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
       // Track dispose in parent's scope
       const parentScope = ctx.elementScopes.get(parent);
       if (parentScope) trackInSpecificScope(parentScope, { dispose });
-    }) as MatchFragment<TElement>;
+    }) as Fragment<TElement>;
 
     // Attach refType to fragment (type discrimination)
     matchRef.refType = FRAGMENT;

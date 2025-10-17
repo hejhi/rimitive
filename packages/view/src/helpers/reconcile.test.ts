@@ -1,9 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createReconciler } from './reconcile';
+import { createReconciler, ListItemNode, MapFragmentState } from './reconcile';
 import { createViewContext } from '../context';
 import type { Renderer } from '../renderer';
 import { MockElement } from '../test-utils';
-import { FRAGMENT, type MapFragmentState, type ListItemNode } from '../types';
 
 // Create reconciler once for all tests
 const { reconcileList } = createReconciler();
@@ -68,7 +67,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -104,7 +102,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -163,7 +160,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -200,7 +196,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -248,7 +243,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -285,7 +279,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -344,7 +337,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -376,7 +368,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -407,7 +398,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,
@@ -442,7 +432,6 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapFragmentState<MockElement> = {
-      refType: FRAGMENT,
       element: container,
       firstChild: undefined,
       lastChild: undefined,

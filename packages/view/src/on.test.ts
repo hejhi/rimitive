@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { on, listener } from './on';
-import { ElementRef } from './types';
+import { RefSpec } from './types';
 
 describe('on', () => {
   it('should attach event listener and return unsubscribe function', () => {
@@ -89,8 +89,8 @@ describe('listener', () => {
     let cleanup: (() => void) | undefined;
 
     // Mock element ref pattern
-    function createMockRef(el: HTMLInputElement): ElementRef<HTMLInputElement> {
-      const ref: ElementRef<HTMLInputElement> = (callback: (element: HTMLInputElement) => void | (() => void)) => {
+    function createMockRef(el: HTMLInputElement): RefSpec<HTMLInputElement> {
+      const ref: RefSpec<HTMLInputElement> = (callback: (element: HTMLInputElement) => void | (() => void)) => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
@@ -126,8 +126,8 @@ describe('listener', () => {
     const handler = vi.fn();
     let cleanup: (() => void) | undefined;
 
-    function createMockRef(el: HTMLButtonElement): ElementRef<HTMLButtonElement> {
-      const ref: ElementRef<HTMLButtonElement> = (callback) => {
+    function createMockRef(el: HTMLButtonElement): RefSpec<HTMLButtonElement> {
+      const ref: RefSpec<HTMLButtonElement> = (callback) => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
@@ -149,15 +149,15 @@ describe('listener', () => {
     if (cleanup) cleanup();
   });
 
-  it('should return ElementRef allowing chained lifecycle callbacks', () => {
+  it('should return RefSpec allowing chained lifecycle callbacks', () => {
     const element = document.createElement('input');
     const inputHandler = vi.fn();
     const connectHandler = vi.fn();
     let cleanup1: (() => void) | undefined;
     let cleanup2: (() => void) | undefined;
 
-    function createMockRef(el: HTMLInputElement): ElementRef<HTMLInputElement> {
-      const ref: ElementRef<HTMLInputElement> = (callback) => {
+    function createMockRef(el: HTMLInputElement): RefSpec<HTMLInputElement> {
+      const ref: RefSpec<HTMLInputElement> = (callback) => {
         const result = callback(el) as (() => void) | undefined;
         if (!cleanup1) cleanup1 = result;
         else cleanup2 = result;

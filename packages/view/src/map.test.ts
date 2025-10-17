@@ -4,7 +4,7 @@ import { createViewContext } from './context';
 import {
   createMockRenderer,
   createSignal,
-  createElementRef,
+  createRefSpec,
   type MockElement,
   type MockText,
   type Reactive,
@@ -34,7 +34,7 @@ describe('map primitive', () => {
           const element = renderer.createElement('li');
           const text = renderer.createTextNode(itemSignal());
           renderer.appendChild(element, text);
-          return createElementRef(element);
+          return createRefSpec(element);
         },
         (item) => item // Key by primitive value
       );
@@ -98,7 +98,7 @@ describe('map primitive', () => {
           const element = renderer.createElement('li');
           const text = renderer.createTextNode(itemSignal());
           renderer.appendChild(element, text);
-          return createElementRef(element);
+          return createRefSpec(element);
         },
         (item) => item // Key by primitive value
       );
@@ -152,7 +152,7 @@ describe('map primitive', () => {
           const element = renderer.createElement('li');
           const text = renderer.createTextNode(itemSignal().name);
           renderer.appendChild(element, text);
-          return createElementRef(element);
+          return createRefSpec(element);
         },
         (item) => item.id // Key by ID (not identity)
       );
@@ -197,7 +197,7 @@ describe('map primitive', () => {
           const element = renderer.createElement('li');
           const text = renderer.createTextNode(itemSignal());
           renderer.appendChild(element, text);
-          return createElementRef(element);
+          return createRefSpec(element);
         },
         (item) => item
       );
@@ -270,7 +270,7 @@ describe('map primitive', () => {
           const element = renderer.createElement('li');
           const text = renderer.createTextNode(itemSignal().name);
           renderer.appendChild(element, text);
-          return createElementRef(element);
+          return createRefSpec(element);
         },
         (item) => item.id // key by ID
       );
@@ -318,7 +318,7 @@ describe('map primitive', () => {
           const element = renderer.createElement('li');
           const text = renderer.createTextNode(itemSignal());
           renderer.appendChild(element, text);
-          return createElementRef(element);
+          return createRefSpec(element);
         },
         (item) => item // Key by primitive value
       );
