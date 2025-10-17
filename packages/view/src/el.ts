@@ -8,7 +8,6 @@ import type {
 } from './types';
 import {
   isReactive,
-  isFragmentSpec,
   isRefSpec,
 } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
@@ -224,7 +223,7 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
   const children: ElRefSpecChild[] = [];
 
   for (const item of rest) {
-    if (isPlainObject(item) && !isReactive(item) && !isFragmentSpec(item)) {
+    if (isPlainObject(item) && !isReactive(item) && !('attach' in item)) {
       // It's props
       Object.assign(props, item);
     } else {
@@ -294,13 +293,14 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   }
 
   // Fragment (from map() or match()) - defer attachment, return ref node
-  if (isFragmentSpec(child)) {
+  if (typeof child === 'object' && child !== null && 'attach' in child) {
+    const fragment = child as Fragment<TElement>;
     const fragmentRefNode: FragmentRef<TElement> = {
       element: null,
       prev: undefined,
       next: undefined,
       attach: (parent: TElement, nextSibling: TElement | null) => {
-        child(parent, nextSibling); // Pass nextSibling to fragment
+        fragment.attach(parent, nextSibling); // Call fragment's attach method
       },
     };
     return fragmentRefNode;

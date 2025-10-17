@@ -20,7 +20,7 @@ import type {
   Fragment,
   ReactiveElement,
 } from './types';
-import { FRAGMENT, isRefSpec } from './types';
+import { isRefSpec } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { disposeScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
@@ -70,51 +70,42 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
       nextSibling: null,
     };
 
-    const matchRef = ((
-      parent: TElement,
-      nextSibling?: TElement | null
-    ): void => {
-      // Store parent in fragment state
-      state.element = parent;
+    return {
+      attach: (parent: TElement, nextSibling?: TElement | null): void => {
+        // Store parent in fragment state
+        state.element = parent;
+        state.nextSibling = nextSibling ?? null;
 
-      // Capture nextSibling at attachment time (marks our territory boundary)
-      // This stays stable even when we hide/show our content
-      state.nextSibling = nextSibling ?? null;
+        // Create effect that swaps elements when reactive value changes
+        const dispose = effect(() => {
+          const value = reactive();
+          const elementRef = render(value);
 
-      // Create effect that swaps elements when reactive value changes
-      const dispose = effect(() => {
-        const value = reactive();
-        const elementRef = render(value);
-
-        // Remove old child if exists
-        if (state.currentChild) {
-          const oldScope = ctx.elementScopes.get(state.currentChild);
-          if (oldScope) {
-            disposeScope(oldScope);
-            ctx.elementScopes.delete(state.currentChild);
+          // Remove old child if exists
+          if (state.currentChild) {
+            const oldScope = ctx.elementScopes.get(state.currentChild);
+            if (oldScope) {
+              disposeScope(oldScope);
+              ctx.elementScopes.delete(state.currentChild);
+            }
+            renderer.removeChild(parent, state.currentChild);
+            state.currentChild = null;
           }
-          renderer.removeChild(parent, state.currentChild);
-          state.currentChild = null;
-        }
 
-        // Create new child if not null/false
-        if (elementRef && isRefSpec(elementRef)) {
-          const newElement = elementRef.create();
-          // Insert before nextSibling to maintain stable position
-          renderer.insertBefore(parent, newElement, state.nextSibling);
-          state.currentChild = newElement;
-        }
-      });
+          // Create new child if not null/false
+          if (elementRef && isRefSpec(elementRef)) {
+            const newElement = elementRef.create();
+            // Insert before nextSibling to maintain stable position
+            renderer.insertBefore(parent, newElement, state.nextSibling);
+            state.currentChild = newElement;
+          }
+        });
 
-      // Track dispose in parent's scope
-      const parentScope = ctx.elementScopes.get(parent);
-      if (parentScope) trackInSpecificScope(parentScope, { dispose });
-    }) as Fragment<TElement>;
-
-    // Attach refType to fragment (type discrimination)
-    matchRef.refType = FRAGMENT;
-
-    return matchRef;
+        // Track dispose in parent's scope
+        const parentScope = ctx.elementScopes.get(parent);
+        if (parentScope) trackInSpecificScope(parentScope, { dispose });
+      }
+    };
   }
 
   return {

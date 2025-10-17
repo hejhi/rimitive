@@ -12,7 +12,6 @@
 
 import type { LatticeExtension } from '@lattice/lattice';
 import type { Reactive, RefSpec, Fragment, ReactiveElement, ViewNode } from './types';
-import { FRAGMENT } from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -102,58 +101,52 @@ export function createMapFactory<
       nextSibling: null,
     };
 
-    // Create ref function that closes over node (like signal function)
-    const mapFragment = ((
-      parent: TElement,
-      nextSibling?: TElement | null
-    ): void => {
-      // Store parent and nextSibling boundary marker
-      state.element = parent;
-      state.nextSibling = nextSibling ?? null;
+    // Return fragment with attach method
+    return {
+      attach: (parent: TElement, nextSibling?: TElement | null): void => {
+        // Store parent and nextSibling boundary marker
+        state.element = parent;
+        state.nextSibling = nextSibling ?? null;
 
-      // Create an effect that reconciles the list when items change
-      // Effect automatically schedules via scheduler (like signals/effect.ts)
-      dispose = effect(() => {
-        const currentItems = itemsSignal();
+        // Create an effect that reconciles the list when items change
+        // Effect automatically schedules via scheduler (like signals/effect.ts)
+        dispose = effect(() => {
+          const currentItems = itemsSignal();
 
-        // Pass linked list head directly to reconciler (single source of truth)
-        // This eliminates array allocation and prevents sync bugs
-        reconcileList<T, TElement, TText>(
-          ctx,
-          state,
-          currentItems,
-          (itemData: T) => {
-            // Render callback only creates DOM element
-            // Reconciler will wrap it in ListItemNode
-            const itemSignal = signal(itemData);
-            const elementRef = render(itemSignal);
+          // Pass linked list head directly to reconciler (single source of truth)
+          // This eliminates array allocation and prevents sync bugs
+          reconcileList<T, TElement, TText>(
+            ctx,
+            state,
+            currentItems,
+            (itemData: T) => {
+              // Render callback only creates DOM element
+              // Reconciler will wrap it in ListItemNode
+              const itemSignal = signal(itemData);
+              const elementRef = render(itemSignal);
 
-            return {
-              element: elementRef.create(), // Create returns element directly
-              itemSignal,
-            };
-          },
-          keyFn,
-          renderer
-        );
-      });
+              return {
+                element: elementRef.create(), // Create returns element directly
+                itemSignal,
+              };
+            },
+            keyFn,
+            renderer
+          );
+        });
 
-      // Track dispose in parent's scope
-      // Parent owns the lifecycle
-      const parentScope = ctx.elementScopes.get(parent);
-      if (parentScope) {
-        const disposeNode = {
-          disposable: { dispose },
-          next: parentScope.firstDisposable,
-        };
-        parentScope.firstDisposable = disposeNode;
+        // Track dispose in parent's scope
+        // Parent owns the lifecycle
+        const parentScope = ctx.elementScopes.get(parent);
+        if (parentScope) {
+          const disposeNode = {
+            disposable: { dispose },
+            next: parentScope.firstDisposable,
+          };
+          parentScope.firstDisposable = disposeNode;
+        }
       }
-    }) as Fragment<TElement>;
-
-    // Attach refType to fragment (type discrimination)
-    mapFragment.refType = FRAGMENT;
-
-    return mapFragment;
+    };
   }
 
   return {
@@ -326,9 +319,8 @@ export function createReconciler() {
         const rendered = renderItem(item);
 
         node = {
-          refType: 0,
-          key,
           element: rendered.element,
+          key,
           itemData: item,
           itemSignal: rendered.itemSignal,
           position: i,
@@ -344,7 +336,7 @@ export function createReconciler() {
       }
 
       // Collect visited nodes
-      visitedNodesBuf[i] = node;
+      visitedNodesBuf[i] = node!;
     }
 
     // Calculate LIS

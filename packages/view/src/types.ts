@@ -4,17 +4,12 @@
 
 import type { Readable } from '@lattice/signals/types';
 
-// Bit flags for ref types (like signals PRODUCER/CONSUMER/SCHEDULED)
-// Nodes create actual DOM elements, Fragments manage relationships/containers
-export const FRAGMENT = 1 << 1;     // Fragments: manage relationships (map, match, custom)
-
 /**
  * Internal node representation (like signals ProducerNode/ConsumerNode)
  * ViewNode is the base interface for internal objects that hold element state.
  * The public API returns functions that close over these nodes.
  */
 export interface ViewNode<TElement = ReactiveElement> {
-  refType: number;      // Bit flag for type discrimination
   element: TElement;    // The underlying element
 }
 
@@ -34,12 +29,11 @@ export function isRefSpec<TElement>(value: unknown): value is RefSpec<TElement> 
 }
 
 /**
- * Fragment - ref with no container and one or more children
+ * Fragment - manages DOM relationships without a container element
  */
-export type Fragment<TElement = ReactiveElement> = {
-  (parent: TElement, nextSibling?: TElement | null): void;
-  refType: typeof FRAGMENT;
-};
+export interface Fragment<TElement = ReactiveElement> {
+  attach(parent: TElement, nextSibling?: TElement | null): void;
+}
 
 /**
  * A reactive value that can be read as a signal or computed
@@ -52,17 +46,6 @@ export type Reactive<T = unknown> = Readable<T>;
 export function isReactive(value: unknown): value is Reactive {
   return typeof value === 'function' &&
     ('peek' in value || '__type' in value);
-}
-
-/**
- * Check if a value is a fragment
- */
-export function isFragmentSpec(value: unknown): value is Fragment {
-  return (
-    typeof value === 'function' &&
-    'refType' in value &&
-    ((value as { refType: number }).refType & FRAGMENT) !== 0
-  );
 }
 
 /**

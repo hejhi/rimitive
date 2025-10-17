@@ -42,7 +42,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      matchRef.attach(parent);
 
       // User cares: correct element displayed initially
       expect(parent.children).toHaveLength(1); // just the element
@@ -84,7 +84,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      matchRef.attach(parent);
 
       // User cares: element displayed
       expect(parent.children).toHaveLength(1); // just the element
@@ -120,7 +120,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      matchRef.attach(parent);
 
       // User cares: loading state displayed
       expect(getTextContent(parent.children[0] as MockElement)).toBe('Loading...');
@@ -162,7 +162,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      matchRef.attach(parent);
 
       const firstElement = parent.children[0] as MockElement;
 

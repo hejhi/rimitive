@@ -41,7 +41,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      listRef(parent);
+      listRef.attach(parent);
 
       // User cares: all items displayed
       expect(parent.children).toHaveLength(3);
@@ -105,7 +105,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      listRef(parent);
+      listRef.attach(parent);
 
       // Store reference to first element
       const firstElement = parent.children[0];
@@ -159,7 +159,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      listRef(parent);
+      listRef.attach(parent);
 
       // Store element reference
       const aliceElement = parent.children[0];
@@ -214,7 +214,7 @@ describe('map primitive', () => {
       const parent = renderer.createElement('ul');
       renderer.appendChild(parent, header);
       // Map gets nextSibling reference to footer when processed as sibling
-      listRef(parent, footer); // Pass footer as nextSibling explicitly
+      listRef.attach(parent, footer); // Pass footer as nextSibling explicitly
       renderer.appendChild(parent, footer);
 
       // Initial: HEADER, a, b, FOOTER
@@ -277,7 +277,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      listRef(parent);
+      listRef.attach(parent);
 
       // Store element reference
       const aliceElement = parent.children[0];
@@ -325,7 +325,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      listRef(parent);
+      listRef.attach(parent);
 
       // Store reference to 'd' element
       const dElement = parent.children[3];
