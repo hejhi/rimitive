@@ -305,7 +305,7 @@ export function createReconciler() {
     >;
 
     // Pre-allocate nodes buffer to avoid Map lookup in position phase
-    const nodesBuf: ListItemNode<T, TElement>[] = Array(newItems.length);
+    const nodes: ListItemNode<T, TElement>[] = Array(newItems.length);
 
     // Local buffers for LIS calculation
     const oldIndicesBuf: number[] = [];
@@ -361,7 +361,7 @@ export function createReconciler() {
       }
 
       // Store node for position phase
-      nodesBuf[i] = node;
+      nodes[i] = node;
     }
 
     // Calculate LIS
@@ -371,9 +371,7 @@ export function createReconciler() {
 
     // Loop 2: Position phase - reorder nodes based on LIS
     let prevNode: ListItemNode<T, TElement> | undefined;
-    for (let i = 0; i < newItems.length; i++) {
-      const node = nodesBuf[i]!;
-
+    for (const node of nodes) {
       // Check if in LIS
       if (node.position === nextLISPos) {
         lisIdx++;
@@ -401,7 +399,8 @@ export function createReconciler() {
 
           // Use parent.nextSibling as fallback to maintain fragment position
           const nextEl = child ? child.element : parent.nextSibling;
-          if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
+          if (node.element !== nextEl)
+            renderer.insertBefore(parentEl, node.element, nextEl);
         }
       }
 
