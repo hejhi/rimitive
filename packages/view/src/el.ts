@@ -129,8 +129,7 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
       // Create a scope for this instance
       const scope = createScope();
 
-      // Track intrusive linked list of child ref nodes (zero allocation)
-      let firstChildRef: NodeRef<TElement> | undefined;
+      // Track tail of intrusive linked list (traverse backwards from here)
       let lastChildRef: NodeRef<TElement> | undefined;
 
       // Run all reactive setup within this instance's scope
@@ -141,28 +140,27 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
         // Loop 1: Instantiate children and build intrusive linked list
         for (const child of children) {
           const refNode = handleChild(element, child, effect, ctx, renderer);
-          if (refNode) {
-            // Link into list (intrusive - no array allocation)
-            if (lastChildRef) {
-              lastChildRef.next = refNode;
-              refNode.prev = lastChildRef;
-            } else {
-              firstChildRef = refNode;
-            }
-            lastChildRef = refNode;
+
+          if (!refNode) continue;
+
+          if (lastChildRef) {
+            lastChildRef.next = refNode;
+            refNode.prev = lastChildRef;
           }
+
+          lastChildRef = refNode;
         }
 
-        // Loop 2: Traverse linked list and attach fragments
-        let current = firstChildRef;
+        // By going backwards, we can track the next DOM element as we go
+        let nextElement: TElement | null = null;
+        let current = lastChildRef;
         while (current) {
-          // Check if it's a FragmentRef (has attach method)
           if ('attach' in current) {
-            // Fragment - call attach with nextSibling from linked list
-            const nextDOMElement = findNextDOMElement(current.next);
-            current.attach(element, nextDOMElement);
-          }
-          current = current.next;
+            // Fragment - attach with next DOM element we've seen
+            current.attach(element, nextElement);
+            // DOM element - becomes nextSibling for previous fragments
+          } else nextElement = current.element;
+          current = current.prev;
         }
       });
 
@@ -347,18 +345,4 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
   const proto = Object.getPrototypeOf(value) as unknown;
   return proto === Object.prototype || proto === null;
-}
-
-/**
- * Helper to find next DOM element by traversing ref node chain
- */
-export function findNextDOMElement<TElement>(
-  node: NodeRef<TElement> | undefined
-): TElement | null {
-  let current = node;
-  while (current) {
-    if (current.element) return current.element;
-    current = current.next;
-  }
-  return null;
 }
