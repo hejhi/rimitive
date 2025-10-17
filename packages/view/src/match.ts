@@ -98,7 +98,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
       const parentScope = ctx.elementScopes.get(parent);
       if (parentScope) trackInSpecificScope(parentScope, { dispose });
-    }) as FragmentSpec<TElement>;
+    });
 
     return fragment;
   }

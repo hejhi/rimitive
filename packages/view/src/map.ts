@@ -162,7 +162,7 @@ export function createMapFactory<
 
       const parentScope = ctx.elementScopes.get(parent);
       if (parentScope) trackInSpecificScope(parentScope, { dispose });
-    }) as FragmentSpec<TElement>;
+    });
 
     return fragment;
   }
