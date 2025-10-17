@@ -223,30 +223,27 @@ export function createReconciler() {
     let len = 0;
     let depth = 0;
 
-    for (;;) {
-      // Forward phase: build tails and parent pointers
-      if (depth < n) {
-        const pos = binarySearch(arr, tailsBuf, len, arr[depth]!);
+    // Forward phase: build tails and parent pointers
+    while (depth < n) {
+      const pos = binarySearch(arr, tailsBuf, len, arr[depth]!);
 
-        parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
-        tailsBuf[pos] = depth;
+      parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+      tailsBuf[pos] = depth;
 
-        if (pos === len) len++;
-        depth++;
-        continue;
-      }
-
-      depth = len - 1;
-      let current = tailsBuf[depth]!;
-
-      // Backtrack phase: reconstruct LIS using parent chain
-      do {
-        lisBuf[depth] = current;
-        current = parentBuf[current]!;
-      } while (depth--);
-
-      return len;
+      if (pos === len) len++;
+      depth++;
     }
+
+    depth = len - 1;
+    let current = tailsBuf[depth]!;
+
+    // Backtrack phase: reconstruct LIS using parent chain
+    do {
+      lisBuf[depth] = current;
+      current = parentBuf[current]!;
+    } while (depth--);
+
+    return len;
   };
 
   /**
