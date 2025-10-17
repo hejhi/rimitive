@@ -420,23 +420,23 @@ export function createReconciler() {
         i++;
         continue;
       }
-
-      // Cleanup phase: remove remaining unvisited nodes
-      let child = parent.firstChild;
-      if (!child) break;
-
-      do {
-        const nextChild = child.nextSibling as
-          | ListItemNode<T, TElement>
-          | undefined;
-
-        if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
-        else child.status = 0;
-
-        child = nextChild;
-      } while (child);
       break;
     }
+
+    // Cleanup phase: remove remaining unvisited nodes
+    let child = parent.firstChild;
+    if (!child) return;
+
+    do {
+      const nextChild = child.nextSibling as
+        | ListItemNode<T, TElement>
+        | undefined;
+
+      if (!(child.status & VISITED)) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+      else child.status = 0;
+
+      child = nextChild;
+    } while (child);
   }
 
   return {
