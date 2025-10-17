@@ -6,10 +6,7 @@ import type { Readable } from '@lattice/signals/types';
 
 // Bit flags for ref types (like signals PRODUCER/CONSUMER/SCHEDULED)
 // Nodes create actual DOM elements, Fragments manage relationships/containers
-export const ELEMENT_REF = 1 << 0;  // Nodes: create elements (el)
 export const FRAGMENT = 1 << 1;     // Fragments: manage relationships (map, match, custom)
-
-export const REF_TYPE_MASK = ELEMENT_REF | FRAGMENT;
 
 /**
  * Internal node representation (like signals ProducerNode/ConsumerNode)
@@ -32,11 +29,8 @@ export interface RefSpec<TElement = ReactiveElement> {
 /**
  * Check if value is a ref spec
  */
-export function isRefSpec(value: unknown): value is RefSpec {
-  return (
-    typeof value === 'function' &&
-    'create' in value
-  );
+export function isRefSpec<TElement>(value: unknown): value is RefSpec<TElement> {
+  return typeof value === 'function' && 'create' in value;
 }
 
 /**
@@ -63,10 +57,12 @@ export function isReactive(value: unknown): value is Reactive {
 /**
  * Check if a value is a fragment
  */
-export function isFragment(value: unknown): value is Fragment {
-  return typeof value === 'function' &&
+export function isFragmentSpec(value: unknown): value is Fragment {
+  return (
+    typeof value === 'function' &&
     'refType' in value &&
-    ((value as { refType: number }).refType & FRAGMENT) !== 0;
+    ((value as { refType: number }).refType & FRAGMENT) !== 0
+  );
 }
 
 /**

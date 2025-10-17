@@ -8,7 +8,7 @@ import type {
 } from './types';
 import {
   isReactive,
-  isFragment,
+  isFragmentSpec,
   isRefSpec,
 } from './types';
 import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
@@ -224,7 +224,7 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
   const children: ElRefSpecChild[] = [];
 
   for (const item of rest) {
-    if (isPlainObject(item) && !isReactive(item) && !isFragment(item)) {
+    if (isPlainObject(item) && !isReactive(item) && !isFragmentSpec(item)) {
       // It's props
       Object.assign(props, item);
     } else {
@@ -282,8 +282,8 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   }
 
   // Element ref (from el()) - instantiate blueprint
-  if (isRefSpec(child)) {
-    const childElement = (child as RefSpec<TElement>).create();
+  if (isRefSpec<TElement>(child)) {
+    const childElement = child.create();
     renderer.appendChild(element, childElement);
     // Wrap in ref node for internal sibling tracking
     return {
@@ -294,7 +294,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   }
 
   // Fragment (from map() or match()) - defer attachment, return ref node
-  if (isFragment(child)) {
+  if (isFragmentSpec(child)) {
     const fragmentRefNode: FragmentRef<TElement> = {
       element: null,
       prev: undefined,
