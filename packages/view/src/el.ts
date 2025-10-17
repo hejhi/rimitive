@@ -7,7 +7,6 @@ import type {
   FragmentSpec,
 } from './types';
 import {
-  isFragmentSpec,
   isReactive,
   isRefSpec,
 } from './types';
@@ -157,7 +156,8 @@ export function createElFactory<TElement extends RendererElement = RendererEleme
         // Loop 2: Traverse linked list and attach fragments
         let current = firstChildRef;
         while (current) {
-          if (isFragmentSpec(current)) {
+          // Check if it's a FragmentRef (has attach method)
+          if ('attach' in current) {
             // Fragment - call attach with nextSibling from linked list
             const nextDOMElement = findNextDOMElement(current.next);
             current.attach(element, nextDOMElement);
@@ -215,9 +215,9 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
 } {
   const props = {} as ElementProps<Tag>;
   const children: ElRefSpecChild[] = [];
-
+  
   for (const item of rest) {
-    if (isPlainObject(item) && !isReactive(item) && !isFragmentSpec(item)) {
+    if (isPlainObject(item) && !isReactive(item)) {
       // It's props
       Object.assign(props, item);
     } else {
@@ -273,47 +273,47 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   if (child == null || child === false) {
     return null;
   }
+  if (typeof child === 'function') {
+    // Element ref (from el()) - instantiate blueprint
+    if (isRefSpec<TElement>(child)) {
+      const childElement = child.create();
+      renderer.appendChild(element, childElement);
+      // Wrap in ref node for internal sibling tracking
+      return {
+        element: childElement,
+        prev: undefined,
+        next: undefined,
+      };
+    }
 
-  // Element ref (from el()) - instantiate blueprint
-  if (isRefSpec<TElement>(child)) {
-    const childElement = child.create();
-    renderer.appendChild(element, childElement);
-    // Wrap in ref node for internal sibling tracking
-    return {
-      element: childElement,
-      prev: undefined,
-      next: undefined,
-    };
-  }
+    // The only other functions allowed are reactives or fragments
+    if (isReactive(child)) {
+      // Reactive value (signal or computed) - check BEFORE FragmentSpec
+      // since reactive values are also functions without .create()
+      const textNode = renderer.createTextNode('');
+      const dispose = effect(() => {
+        const value = child();
+        // Convert to string, handling null/undefined and primitives only
+        let stringValue = '';
+        if (value != null) stringValue = String(value as unknown as string); // for linting
+        renderer.updateTextNode(textNode, stringValue);
+      });
 
-  // Fragment (from map() or match()) - defer attachment, return ref node
-  if (typeof child === 'object' && child !== null && isFragmentSpec(child)) {
-    const fragment = child as FragmentSpec<TElement>;
+      // Track effect for cleanup when element is removed
+      trackInScope(ctx, { dispose });
+      renderer.appendChild(element, textNode);
+      return null; // Text nodes don't participate in ref node chain
+    }
+
+    // Fragment (from map() or match()) - defer attachment, return ref node
+    const fragment = child;
     const fragmentRefNode: FragmentRef<TElement> = {
       element: null,
       prev: undefined,
       next: undefined,
-      attach: (parent: TElement, nextSibling: TElement | null) => {
-        fragment.attach(parent, nextSibling); // Call fragment's attach method
-      },
-    };
+      attach: fragment, // Fragment is already the right signature
+    } as FragmentRef<TElement>;
     return fragmentRefNode;
-  }
-
-  // Reactive value (signal or computed)
-  if (isReactive(child)) {
-    const textNode = renderer.createTextNode('');
-    const dispose = effect(() => {
-      const value = child();
-      // Convert to string, handling null/undefined and primitives only
-      let stringValue = '';
-      if (value != null) stringValue = String(value as unknown as string); // for linting
-      renderer.updateTextNode(textNode, stringValue);
-    });
-    // Track effect for cleanup when element is removed
-    trackInScope(ctx, { dispose });
-    renderer.appendChild(element, textNode);
-    return null; // Text nodes don't participate in ref node chain
   }
 
   // Element (check using renderer)

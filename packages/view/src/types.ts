@@ -21,16 +21,10 @@ export function isRefSpec<TElement>(value: unknown): value is RefSpec<TElement> 
 
 /**
  * FragmentSpec - manages DOM relationships without a container element
+ * Callable function that attaches to parent
  */
 export interface FragmentSpec<TElement = ReactiveElement> {
-  attach(parent: TElement, nextSibling?: TElement | null): void;
-}
-
-/**
- * Check if value is a ref spec
- */
-export function isFragmentSpec<TElement>(value: unknown): value is FragmentSpec<TElement> {
-  return typeof value === 'function' && 'attach' in value;
+  (parent: TElement, nextSibling?: TElement | null): void;
 }
 
 /**

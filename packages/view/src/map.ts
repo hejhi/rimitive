@@ -130,44 +130,44 @@ export function createMapFactory<
       nextSibling: null,
     };
 
-    // Return fragment with attach method
-    return {
-      attach: (parent: TElement, nextSibling?: TElement | null): void => {
-        // Store parent and nextSibling boundary marker
-        state.element = parent;
-        state.nextSibling = nextSibling ?? null;
+    // Return callable fragment (like signals - function closes over state)
+    const fragment = ((parent: TElement, nextSibling?: TElement | null): void => {
+      // Store parent and nextSibling boundary marker
+      state.element = parent;
+      state.nextSibling = nextSibling ?? null;
 
-        // Create an effect that reconciles the list when items change
-        // Effect automatically schedules via scheduler (like signals/effect.ts)
-        dispose = effect(() => {
-          const currentItems = itemsSignal();
+      // Create an effect that reconciles the list when items change
+      // Effect automatically schedules via scheduler (like signals/effect.ts)
+      dispose = effect(() => {
+        const currentItems = itemsSignal();
 
-          // Pass linked list head directly to reconciler (single source of truth)
-          // This eliminates array allocation and prevents sync bugs
-          reconcileList<T, TElement, TText>(
-            ctx,
-            state,
-            currentItems,
-            (itemData: T) => {
-              // Render callback only creates DOM element
-              // Reconciler will wrap it in ListItemNode
-              const itemSignal = signal(itemData);
-              const elementRef = render(itemSignal);
+        // Pass linked list head directly to reconciler (single source of truth)
+        // This eliminates array allocation and prevents sync bugs
+        reconcileList<T, TElement, TText>(
+          ctx,
+          state,
+          currentItems,
+          (itemData: T) => {
+            // Render callback only creates DOM element
+            // Reconciler will wrap it in ListItemNode
+            const itemSignal = signal(itemData);
+            const elementRef = render(itemSignal);
 
-              return {
-                element: elementRef.create(), // Create returns element directly
-                itemSignal,
-              };
-            },
-            keyFn,
-            renderer
-          );
-        });
+            return {
+              element: elementRef.create(), // Create returns element directly
+              itemSignal,
+            };
+          },
+          keyFn,
+          renderer
+        );
+      });
 
-        const parentScope = ctx.elementScopes.get(parent);
-        if (parentScope) trackInSpecificScope(parentScope, { dispose });
-      },
-    };
+      const parentScope = ctx.elementScopes.get(parent);
+      if (parentScope) trackInSpecificScope(parentScope, { dispose });
+    }) as FragmentSpec<TElement>;
+
+    return fragment;
   }
 
   return {
