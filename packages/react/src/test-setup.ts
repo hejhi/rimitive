@@ -4,11 +4,10 @@ import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { createApi } from '@lattice/lattice';
-import { createSignalFactory, SignalFunction } from '@lattice/signals/signal';
-import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
-import { createBatchFactory } from '@lattice/signals/batch';
-import type { LatticeExtension } from '@lattice/lattice';
+import { createSignalFactory, SignalOpts } from '@lattice/signals/signal';
+import { createComputedFactory, ComputedOpts } from '@lattice/signals/computed';
+import { createEffectFactory, EffectOpts } from '@lattice/signals/effect';
+import { createBatchFactory, BatchOpts } from '@lattice/signals/batch';
 import { SignalProvider } from './signals/context';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
@@ -38,24 +37,10 @@ export function createContext() {
 
 // Define the factories type for consistent usage
 const testFactories = {
-  signal: createSignalFactory as (
-    ctx: unknown
-  ) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>,
-  computed: createComputedFactory as (
-    ctx: unknown
-  ) => LatticeExtension<
-    'computed',
-    <T>(compute: () => T) => ComputedFunction<T>
-  >,
-  effect: createEffectFactory as (
-    ctx: unknown
-  ) => LatticeExtension<
-    'effect',
-    (fn: () => void | (() => void)) => () => void
-  >,
-  batch: createBatchFactory as (
-    ctx: unknown
-  ) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+  signal: (opts: SignalOpts) => createSignalFactory(opts),
+  computed: (opts: ComputedOpts) => createComputedFactory(opts),
+  effect: (opts: EffectOpts) => createEffectFactory(opts),
+  batch: (opts: BatchOpts) => createBatchFactory(opts),
 } as const;
 
 // Type alias for the API created with our standard factories
