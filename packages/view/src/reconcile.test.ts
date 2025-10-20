@@ -84,7 +84,6 @@ function createMockRenderer(): Renderer<MockElement, MockElement> {
     appendChild,
     removeChild,
     insertBefore,
-    observeLifecycle: vi.fn(() => () => {}),
     isConnected: vi.fn(() => true),
     isElement: (value): value is MockElement =>
       value !== null && typeof value === 'object' && 'id' in value,

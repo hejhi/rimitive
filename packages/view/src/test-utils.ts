@@ -58,11 +58,6 @@ export class MockText {
  * Creates a mock renderer for testing
  */
 export function createMockRenderer() {
-  const lifecycleCallbacks = new Map<MockElement, {
-    onConnected?: (el: MockElement) => void | (() => void);
-    onDisconnected?: (el: MockElement) => void;
-  }>();
-
   const renderer: Renderer<MockElement, MockText> = {
     createElement: vi.fn((tag: string) => new MockElement(tag)),
     createTextNode: vi.fn((text: string) => new MockText(text)),
@@ -103,36 +98,12 @@ export function createMockRenderer() {
       }
       child.parent = parent;
     }),
-    observeLifecycle: vi.fn((element: MockElement, callbacks: {
-      onConnected?: (el: MockElement) => void | (() => void);
-      onDisconnected?: (el: MockElement) => void;
-    }) => {
-      lifecycleCallbacks.set(element, callbacks);
-      return () => lifecycleCallbacks.delete(element);
-    }),
     isConnected: vi.fn((element: MockElement) => element.connected),
     isElement: (value: unknown): value is MockElement =>
       value !== null && typeof value === 'object' && 'tag' in value,
   };
 
-  // Helper to simulate connection
-  const connect = (element: MockElement) => {
-    element.connected = true;
-    const callbacks = lifecycleCallbacks.get(element);
-    if (callbacks?.onConnected) {
-      callbacks.onConnected(element);
-    }
-  };
-
-  const disconnect = (element: MockElement) => {
-    element.connected = false;
-    const callbacks = lifecycleCallbacks.get(element);
-    if (callbacks?.onDisconnected) {
-      callbacks.onDisconnected(element);
-    }
-  };
-
-  return { renderer, connect, disconnect };
+  return { renderer };
 }
 
 /**
@@ -209,7 +180,7 @@ export function getTextContent(element: MockElement | MockText): string {
  */
 export function createTestEnv() {
   const ctx = createViewContext();
-  const { renderer, connect, disconnect } = createMockRenderer();
+  const { renderer } = createMockRenderer();
 
   // Simple signal factory that integrates with effect
   const signalMap = new Map<Reactive<unknown>, Set<() => void>>();
@@ -236,8 +207,6 @@ export function createTestEnv() {
   return {
     ctx,
     renderer,
-    connect,
-    disconnect,
     signal,
     effect,
   };

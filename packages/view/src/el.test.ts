@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createElFactory } from './el';
 import { createViewContext } from './context';
 import { createMockRenderer, createSignal, getTextContent } from './test-utils';
+import { disposeScope } from './helpers/scope';
 
 describe('el primitive', () => {
   describe('static content', () => {
@@ -111,7 +112,7 @@ describe('el primitive', () => {
   describe('lifecycle and cleanup', () => {
     it('cleans up effects on disconnect', () => {
       const ctx = createViewContext();
-      const { renderer, connect, disconnect } = createMockRenderer();
+      const { renderer } = createMockRenderer();
       const { read: text, write: setText, subscribers } = createSignal('initial');
       const effect = (fn: () => void) => {
         subscribers.add(fn);
@@ -127,15 +128,18 @@ describe('el primitive', () => {
 
       // Create instance once
       const element = ref.create();
-      connect(element);
 
-      // Verify reactivity works before disconnect
+      // Verify reactivity works
       expect(element.props.prop).toBe('initial');
 
-      // User disconnects element (e.g., removes from DOM)
-      disconnect(element);
+      // Reconciler removes element (disposes scope explicitly)
+      const scope = ctx.elementScopes.get(element);
+      if (scope) {
+        disposeScope(scope);
+        ctx.elementScopes.delete(element);
+      }
 
-      // Update signal after disconnect
+      // Update signal after disposal
       setText('updated');
 
       // User cares: prop doesn't update after cleanup (effect was disposed)
@@ -144,7 +148,7 @@ describe('el primitive', () => {
 
     it('calls lifecycle cleanup function', () => {
       const ctx = createViewContext();
-      const { renderer, connect, disconnect} = createMockRenderer();
+      const { renderer } = createMockRenderer();
       const effect = (fn: () => void) => {
         fn();
         return () => {};
@@ -154,15 +158,18 @@ describe('el primitive', () => {
       const cleanup = vi.fn();
       const ref = el(['div']);
 
-      // Register lifecycle callback
+      // Register lifecycle callback that returns cleanup
       ref(() => cleanup);
 
-      // Create instance once
+      // Create instance - lifecycle callback runs immediately
       const element = ref.create();
-      connect(element);
 
-      // User disconnects element
-      disconnect(element);
+      // Reconciler removes element (disposes scope explicitly)
+      const scope = ctx.elementScopes.get(element);
+      if (scope) {
+        disposeScope(scope);
+        ctx.elementScopes.delete(element);
+      }
 
       // User cares: cleanup was called
       expect(cleanup).toHaveBeenCalled();

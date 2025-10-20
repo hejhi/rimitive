@@ -18,14 +18,6 @@ export type Element = object;
 export type TextNode = object;
 
 /**
- * Lifecycle observation callbacks
- */
-export interface LifecycleCallbacks<TElement extends Element = Element> {
-  onConnected?: (element: TElement) => void | (() => void);
-  onDisconnected?: (element: TElement) => void;
-}
-
-/**
  * Renderer interface - all platform-specific operations
  */
 export interface Renderer<TElement extends Element = Element, TText extends TextNode = TextNode> {
@@ -63,12 +55,6 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
    * Insert a child before a reference node
    */
   insertBefore(parent: TElement, child: Element | TText, reference: Element | TText | null): void;
-
-  /**
-   * Observe element lifecycle (connection/disconnection from render tree)
-   * Returns a cleanup function to stop observing
-   */
-  observeLifecycle(element: TElement, callbacks: LifecycleCallbacks<TElement>): () => void;
 
   /**
    * Check if an element is currently connected to the render tree

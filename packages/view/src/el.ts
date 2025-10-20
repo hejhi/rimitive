@@ -10,7 +10,7 @@ import {
   isReactive,
   isRefSpec,
 } from './types';
-import { createScope, runInScope, disposeScope, trackInScope, trackInSpecificScope } from './helpers/scope';
+import { createScope, runInScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 
@@ -162,27 +162,12 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       // Store scope in context WeakMap (for cleanup)
       ctx.elementScopes.set(element, scope);
 
-      // Set up lifecycle observer for THIS instance
-      const lifecycleDispose = renderer.observeLifecycle(element, {
-        onConnected: (el) => {
-          // Run all registered callbacks for this instance
-          for (const callback of lifecycleCallbacks) {
-            const cleanup = callback(el);
-            if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
-          }
-        },
-        onDisconnected: () => {
-          // Look up scope and dispose
-          const elementScope = ctx.elementScopes.get(element);
-          if (elementScope) {
-            disposeScope(elementScope);
-            ctx.elementScopes.delete(element);
-          }
-        },
-      });
-
-      // Track lifecycle observer disposal in element's scope
-      trackInSpecificScope(scope, { dispose: lifecycleDispose });
+      // Run lifecycle callbacks immediately (no MutationObserver needed)
+      // Cleanup happens via scope disposal when element is removed by reconciler
+      for (const callback of lifecycleCallbacks) {
+        const cleanup = callback(element);
+        if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
+      }
 
       // Return just the element (ref nodes were internal implementation detail)
       return element;

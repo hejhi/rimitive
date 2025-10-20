@@ -2,8 +2,7 @@
  * DOM Renderer - browser implementation
  */
 
-import type { Renderer, LifecycleCallbacks } from '../renderer';
-import { createLifecycleObserver } from './dom-lifecycle';
+import type { Renderer } from '../renderer';
 
 /**
  * DOM-specific element type
@@ -20,12 +19,6 @@ export type DOMTextNode = Text;
  * Use this to parameterize view factories for DOM
  */
 export type DOM = DOMElement;
-
-/**
- * Shared lifecycle observer instance
- * Create once and reuse like signals context
- */
-const lifecycleObserver = createLifecycleObserver();
 
 /**
  * Create a DOM renderer for browser environments
@@ -62,10 +55,6 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
       reference: DOMElement | DOMTextNode | null
     ): void {
       parent.insertBefore(child as Node, reference as Node | null);
-    },
-
-    observeLifecycle(element: DOMElement, callbacks: LifecycleCallbacks<DOMElement>): () => void {
-      return lifecycleObserver.observe(element, callbacks);
     },
 
     isConnected(element: DOMElement): boolean {
