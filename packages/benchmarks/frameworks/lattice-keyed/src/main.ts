@@ -85,7 +85,7 @@ const api = createApi(
   {}
 );
 
-const { signal, batch, el, map } = api;
+const { signal, batch, el, map, computed } = api;
 
 // ============================================================================
 // Benchmark Data
@@ -252,12 +252,11 @@ const Row = (rowData: Reactive<RowData>) => {
   const id = rowData().id;
   const label = rowData().label;
 
-  // TEMPORARY: Test without computed to isolate performance issue
-  // const rowClass = computed(() => (selected() === id ? 'danger' : ''));
+  const rowClass = computed(() => (selected() === id ? 'danger' : ''));
 
   return el([
     'tr',
-    // { className: rowClass },
+    { className: rowClass },
     el(['td', { className: 'col-md-1' }, String(id)]),
     el([
       'td',
