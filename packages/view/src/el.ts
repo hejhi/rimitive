@@ -124,9 +124,9 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       // Create the element using renderer
       const element = renderer.createElement(tag);
 
-      // Create a scope for this instance
+      // Create a scope optimistically (might not need it)
       const scope = createScope();
-      
+
       // Run all reactive setup within this instance's scope
       runInScope(ctx, scope, () => {
         // Apply props
@@ -159,14 +159,17 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         } while (lastChildRef);
       });
 
-      // Store scope in context WeakMap (for cleanup)
-      ctx.elementScopes.set(element, scope);
-
       // Run lifecycle callbacks immediately (no MutationObserver needed)
       // Cleanup happens via scope disposal when element is removed by reconciler
       for (const callback of lifecycleCallbacks) {
         const cleanup = callback(element);
         if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
+      }
+
+      // Lazy scope creation: only store scope if it actually has disposables
+      // This saves memory for static elements with no reactive content
+      if (scope.firstDisposable !== undefined) {
+        ctx.elementScopes.set(element, scope);
       }
 
       // Return just the element (ref nodes were internal implementation detail)
