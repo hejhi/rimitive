@@ -2,7 +2,6 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type {
   LifecycleCallback,
   RefSpec,
-  ReactiveElement,
   Reactive,
   FragmentSpec,
 } from './types';
@@ -39,32 +38,42 @@ interface FragmentRef<TElement> {
 type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
+ * Makes each property in T accept either the value or a Reactive<value>
+ */
+type ReactiveProps<T> = {
+  [K in keyof T]?: T[K] | Reactive<T[K]>;
+};
+
+/**
  * Props for an element - type-safe based on the HTML tag
+ * Each prop can be either a static value or a Reactive value
+ * Includes all standard HTML properties and ARIA properties in camelCase (ariaLabel, ariaHidden, etc.)
  */
 export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> =
-  Partial<HTMLElementTagNameMap[Tag]> & {
+  ReactiveProps<HTMLElementTagNameMap[Tag]> & {
     style?: Partial<CSSStyleDeclaration>;
   };
+
+/**
+ * Valid child types for an element
+ * Generic over element type for proper FragmentSpec typing
+ */
+export type ElRefSpecChild<TElement = object> =
+  | string
+  | number
+  | boolean
+  | null
+  | RefSpec<TElement>
+  | Reactive<unknown>
+  | FragmentSpec<TElement>;
 
 /**
  * Element specification: [tag, ...propsAndChildren]
  */
 export type ElRefSpec<
   Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap,
-> = [tag: Tag, ...content: (ElementProps<Tag> | ElRefSpecChild)[]];
-
-/**
- * Valid child types for an element
- */
-export type ElRefSpecChild =
-  | string
-  | number
-  | boolean
-  | null
-  | ReactiveElement
-  | RefSpec
-  | Reactive<string | number>
-  | FragmentSpec;
+  TElement = object
+> = [tag: Tag, ...content: (ElementProps<Tag> | ElRefSpecChild<TElement>)[]];
 
 /**
  * Options passed to el factory
@@ -88,7 +97,7 @@ export type ElFactory<TElement extends RendererElement = RendererElement> =
   LatticeExtension<
     'el',
     <Tag extends keyof HTMLElementTagNameMap>(
-      spec: ElRefSpec<Tag>
+      spec: ElRefSpec<Tag, TElement>
     ) => RefSpec<TElement>
   >;
 
@@ -101,7 +110,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   const { ctx, effect, renderer } = opts;
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
-    spec: ElRefSpec<Tag>
+    spec: ElRefSpec<Tag, TElement>
   ) {
     const [tag, ...rest] = spec;
 
@@ -188,20 +197,20 @@ export function createElFactory<TElement extends RendererElement, TText extends 
 /**
  * Parse element spec into props and children
  */
-function parseSpec<Tag extends keyof HTMLElementTagNameMap>(
-  rest: (ElementProps<Tag> | ElRefSpecChild)[]
+function parseSpec<Tag extends keyof HTMLElementTagNameMap, TElement>(
+  rest: (ElementProps<Tag> | ElRefSpecChild<TElement>)[]
 ): {
   props: ElementProps<Tag>;
-  children: ElRefSpecChild[];
+  children: ElRefSpecChild<TElement>[];
 } {
   const props = {} as ElementProps<Tag>;
-  const children: ElRefSpecChild[] = [];
+  const children: ElRefSpecChild<TElement>[] = [];
   
   for (const item of rest) {
     // It's props
     if (isPlainObject(item) && !isReactive(item)) Object.assign(props, item);
     // It's a child - not a plain object props, so must be RefSpecChild
-    else children.push(item as ElRefSpecChild);
+    else children.push(item);
   }
 
   return { props, children };
@@ -237,7 +246,7 @@ function applyProps<
  */
 function handleChild<TElement extends RendererElement, TText extends TextNode>(
   element: TElement,
-  child: ElRefSpecChild,
+  child: ElRefSpecChild<TElement>,
   effect: (fn: () => void | (() => void)) => () => void,
   ctx: ViewContext,
   renderer: Renderer<TElement, TText>

@@ -121,7 +121,7 @@ describe('el primitive', () => {
       };
       const el = createElFactory({ ctx, effect, renderer }).method;
 
-      const ref = el(['div', { prop: text }]);
+      const ref = el(['div', { title: text }]);
 
       // Set up lifecycle
       ref(() => {});
@@ -130,7 +130,7 @@ describe('el primitive', () => {
       const element = ref.create();
 
       // Verify reactivity works
-      expect(element.props.prop).toBe('initial');
+      expect(element.props.title).toBe('initial');
 
       // Reconciler removes element (disposes scope explicitly)
       const scope = ctx.elementScopes.get(element);
@@ -142,8 +142,8 @@ describe('el primitive', () => {
       // Update signal after disposal
       setText('updated');
 
-      // User cares: prop doesn't update after cleanup (effect was disposed)
-      expect(element.props.prop).toBe('initial');
+      // User cares: title doesn't update after cleanup (effect was disposed)
+      expect(element.props.title).toBe('initial');
     });
 
     it('calls lifecycle cleanup function', () => {

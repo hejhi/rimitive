@@ -8,11 +8,35 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createElFactory } from '@lattice/view/el';
+import type { ElementProps, ElRefSpecChild } from '@lattice/view/el';
 import { createMapFactory } from '@lattice/view/map';
 import { createViewContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { on } from '@lattice/view/on';
-import type { Reactive } from '@lattice/view/types';
+import { isReactive, type Reactive } from '@lattice/view/types';
+
+type ClassValue = string | Reactive<string> | null | undefined | false;
+
+function cn(...classes: ClassValue[]): string | Reactive<string> {
+  // Check if any are reactive
+  const hasReactive = classes.some((c) => c && isReactive(c));
+
+  if (hasReactive) {
+    // Create a computed that evaluates all classes
+    return computed(() => {
+      return classes
+        .map((c) => {
+          if (!c) return '';
+          return isReactive(c) ? c() : c;
+        })
+        .filter(Boolean)
+        .join(' ');
+    });
+  }
+
+  // All static - just join
+  return classes.filter((c) => c && typeof c === 'string').join(' ');
+}
 
 // ============================================================================
 // Create Lattice API
@@ -214,24 +238,33 @@ const select = (id: number) => {
 // Components
 // ============================================================================
 
-const Button = (id: string, text: string, fn: () => void) =>
+const Button = (
+  props: ElementProps<'button'> & { id: string },
+  children: ElRefSpecChild<HTMLElement>[] = []
+) =>
   el([
-    'div',
-    { className: 'col-sm-6 smallpad' },
-    el([
-      'button',
-      {
-        id,
-        className: 'btn btn-primary btn-block',
-        type: 'button',
-      },
-      text,
-    ])((btn) => on(btn, 'click', fn)),
+    'button',
+    {
+      className: cn(
+        'btn',
+        'btn-primary',
+        'btn-block',
+        'col-sm-6',
+        'smallpad',
+        props.className
+      ),
+      type: 'button',
+      ...props,
+    },
+    ...children,
   ]);
 
-const Row = (rowData: Reactive<RowData>) => {
-  const id = rowData().id;
-  const label = rowData().label;
+const Row = (
+  props: { data: Reactive<RowData> },
+  children: ElRefSpecChild<HTMLElement>[] = []
+) => {
+  const id = props.data().id;
+  const label = props.data().label;
   const rowClass = computed(() => (selected() === id ? 'danger' : ''));
 
   return el([
@@ -248,10 +281,11 @@ const Row = (rowData: Reactive<RowData>) => {
       { className: 'col-md-1' },
       el([
         'a',
-        el(['span', { className: 'glyphicon glyphicon-remove', 'aria-hidden': 'true' }]),
+        el(['span', { className: 'glyphicon glyphicon-remove', ariaHidden: 'true' }]),
       ])((a) => on(a, 'click', () => remove(id))),
     ]),
     el(['td', { className: 'col-md-6' }]),
+    ...children,
   ]);
 };
 
@@ -272,12 +306,24 @@ const App = () => {
           el([
             'div',
             { className: 'row' },
-            Button('run', 'Create 1,000 rows', run),
-            Button('runlots', 'Create 10,000 rows', runLots),
-            Button('add', 'Append 1,000 rows', add),
-            Button('update', 'Update every 10th row', update),
-            Button('clear', 'Clear', clear),
-            Button('swaprows', 'Swap Rows', swapRows),
+            Button({ id: 'run' }, ['Create 1,000 rows'])((btn) =>
+              on(btn, 'click', run)
+            ),
+            Button({ id: 'runlots' }, ['Create 10,000 rows'])((btn) =>
+              on(btn, 'click', runLots)
+            ),
+            Button({ id: 'add' }, ['Append 1,000 rows'])((btn) =>
+              on(btn, 'click', add)
+            ),
+            Button({ id: 'update' }, ['Update every 10th row'])((btn) =>
+              on(btn, 'click', update)
+            ),
+            Button({ id: 'clear' }, ['Clear'])((btn) =>
+              on(btn, 'click', clear)
+            ),
+            Button({ id: 'swaprows' }, ['Swap Rows'])((btn) =>
+              on(btn, 'click', swapRows)
+            ),
           ]),
         ]),
       ]),
@@ -285,13 +331,20 @@ const App = () => {
     el([
       'table',
       { className: 'table table-hover table-striped test-data' },
-      el(['tbody', map(data, Row, (row: RowData) => row.id)]),
+      el([
+        'tbody',
+        map(
+          data,
+          (rowData) => Row({ data: rowData }),
+          (row: RowData) => row.id
+        ),
+      ]),
     ]),
     el([
       'span',
       {
         className: 'preloadicon glyphicon glyphicon-remove',
-        'aria-hidden': 'true',
+        ariaHidden: 'true',
       },
     ]),
   ]);

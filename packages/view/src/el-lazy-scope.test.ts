@@ -33,10 +33,10 @@ describe('el primitive - lazy scope creation', () => {
     const el = createElFactory({ ctx, effect, renderer }).method;
 
     // Element with reactive prop
-    const ref = el(['div', { prop: text }]);
+    const ref = el(['div', { title: text }]);
     const element = ref.create();
 
-    // Should have a scope (tracks the effect for reactive prop)
+    // Should have a scope (tracks the effect for reactive title)
     expect(ctx.elementScopes.has(element)).toBe(true);
   });
 
