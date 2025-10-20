@@ -232,7 +232,6 @@ const Button = (id: string, text: string, fn: () => void) =>
 const Row = (rowData: Reactive<RowData>) => {
   const id = rowData().id;
   const label = rowData().label;
-
   const rowClass = computed(() => (selected() === id ? 'danger' : ''));
 
   return el([
@@ -266,11 +265,7 @@ const App = () => {
       el([
         'div',
         { className: 'row' },
-        el([
-          'div',
-          { className: 'col-md-6' },
-          el(['h1', 'Lattice-keyed']),
-        ]),
+        el(['div', { className: 'col-md-6' }, el(['h1', 'Lattice-keyed'])]),
         el([
           'div',
           { className: 'col-md-6' },
@@ -290,16 +285,15 @@ const App = () => {
     el([
       'table',
       { className: 'table table-hover table-striped test-data' },
-      el([
-        'tbody',
-        map(
-          data,
-          (rowSignal: Reactive<RowData>) => Row(rowSignal),
-          (row: RowData) => row.id
-        ),
-      ]),
+      el(['tbody', map(data, Row, (row: RowData) => row.id)]),
     ]),
-    el(['span', { className: 'preloadicon glyphicon glyphicon-remove', 'aria-hidden': 'true' }]),
+    el([
+      'span',
+      {
+        className: 'preloadicon glyphicon glyphicon-remove',
+        'aria-hidden': 'true',
+      },
+    ]),
   ]);
 };
 
