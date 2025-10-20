@@ -56,20 +56,15 @@ const batchFactory = createBatchFactory({
   endBatch: signalCtx.endBatch,
 });
 
-let effectCount = 0;
-const effectWrapper = (fn: () => void | (() => void)): (() => void) => {
-  effectCount++;
-  if (effectCount % 1000 === 0) console.log(`Created ${effectCount} effects`);
-  return effectFactory.method(fn);
-};
-
-const signalFn = signalFactory.method;
-
-const elFactory = createElFactory({ ctx: viewCtx, effect: effectWrapper, renderer });
+const elFactory = createElFactory({
+  ctx: viewCtx,
+  effect: effectFactory.method,
+  renderer
+});
 const mapFactory = createMapFactory({
   ctx: viewCtx,
-  signal: signalFn,
-  effect: effectWrapper,
+  signal: signalFactory.method,
+  effect: effectFactory.method,
   renderer,
 });
 
@@ -330,7 +325,4 @@ const appElement = document.getElementById('main');
 if (appElement) {
   const app = App();
   appElement.appendChild(app.create());
-  app(() => {
-    // Mounted
-  });
 }
