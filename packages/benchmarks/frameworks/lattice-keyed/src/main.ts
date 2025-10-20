@@ -2,7 +2,6 @@ import { createApi } from '@lattice/lattice';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
-import { createBatchFactory } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -35,9 +34,6 @@ function createSignalContext() {
     dispose: scheduler.dispose,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,
-    // Expose scheduler methods for batch
-    startBatch: _scheduler.startBatch,
-    endBatch: _scheduler.endBatch,
   };
 }
 
@@ -48,13 +44,6 @@ const renderer = createDOMRenderer();
 const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
-
-// Use the SAME scheduler from signalCtx
-const batchFactory = createBatchFactory({
-  ctx: signalCtx.ctx,
-  startBatch: signalCtx.startBatch,
-  endBatch: signalCtx.endBatch,
-});
 
 const elFactory = createElFactory({
   ctx: viewCtx,
@@ -73,14 +62,13 @@ const api = createApi(
     signal: () => signalFactory,
     computed: () => computedFactory,
     effect: () => effectFactory,
-    batch: () => batchFactory,
     el: () => elFactory,
     map: () => mapFactory,
   },
   {}
 );
 
-const { signal, batch, el, map, computed } = api;
+const { signal, el, map, computed } = api;
 
 // ============================================================================
 // Benchmark Data
@@ -189,15 +177,13 @@ const add = () => {
 
 const update = () => {
   const d = data();
-  batch(() => {
-    for (let i = 0; i < d.length; i += 10) {
-      const row = d[i];
-      if (!row) continue;
-      const labelSignal = row.label as (value?: string) => string | void;
-      const currentLabel = labelSignal();
-      labelSignal(currentLabel + ' !!!');
-    }
-  });
+  for (let i = 0; i < d.length; i += 10) {
+    const row = d[i];
+    if (!row) continue;
+    const labelSignal = row.label as (value?: string) => string | void;
+    const currentLabel = labelSignal();
+    labelSignal(currentLabel + ' !!!');
+  }
 };
 
 const swapRows = () => {
