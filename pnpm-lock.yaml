@@ -275,6 +275,19 @@ importers:
         version: 0.32.6
 
   packages/examples:
+    dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
+      '@lattice/react':
+        specifier: workspace:*
+        version: link:../react
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
+      '@lattice/view':
+        specifier: workspace:*
+        version: link:../view
     devDependencies:
       typescript:
         specifier: ^5.8.3

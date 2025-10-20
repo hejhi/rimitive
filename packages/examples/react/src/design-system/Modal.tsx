@@ -104,9 +104,9 @@ function ModalContent({ title, children, trigger }: ModalProps) {
     <>
       {/* Trigger button */}
       {trigger ? (
-        <div onClick={modal.open}>{trigger}</div>
+        <div onClick={() => modal.open()}>{trigger}</div>
       ) : (
-        <button onClick={modal.open}>Open {title}</button>
+        <button onClick={() => modal.open()}>Open {title}</button>
       )}
 
       {/* Modal overlay and content */}
@@ -125,7 +125,7 @@ function ModalContent({ title, children, trigger }: ModalProps) {
               justifyContent: 'center',
               zIndex: 1000,
             }}
-            onClick={modal.close}
+            onClick={() => modal.close()}
           >
             <div
               style={{
@@ -150,7 +150,7 @@ function ModalContent({ title, children, trigger }: ModalProps) {
               >
                 <h2 style={{ margin: 0 }}>{title}</h2>
                 <button
-                  onClick={modal.close}
+                  onClick={() => modal.close()}
                   style={{
                     background: 'none',
                     border: 'none',

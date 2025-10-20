@@ -67,13 +67,13 @@ function createContext() {
 // Create signal API instance with instrumentation
 const signalAPI = createApi(
   {
-    signal: (ctx: any) =>
+    signal: (ctx: ReturnType<typeof createContext>) =>
       createSignalFactory({ ...ctx, instrument: instrumentSignal }),
-    computed: (ctx: any) =>
+    computed: (ctx: ReturnType<typeof createContext>) =>
       createComputedFactory({ ...ctx, instrument: instrumentComputed }),
-    effect: (ctx: any) =>
+    effect: (ctx: ReturnType<typeof createContext>) =>
       createEffectFactory({ ...ctx, instrument: instrumentEffect }),
-    batch: (ctx: any) =>
+    batch: (ctx: ReturnType<typeof createContext>) =>
       createBatchFactory({ ...ctx, instrument: instrumentBatch }),
   },
   createContext()
@@ -96,10 +96,10 @@ function StepCounter() {
       <div className="counter-display">Step {step} / 5</div>
 
       <div>
-        <button onClick={counter.decrement} disabled={step === 0}>
+        <button onClick={() => counter.decrement()} disabled={step === 0}>
           ← Previous Step
         </button>
-        <button onClick={counter.increment} disabled={step === 5}>
+        <button onClick={() => counter.increment()} disabled={step === 5}>
           Next Step →
         </button>
         <button onClick={() => counter.set(0)}>Reset</button>
@@ -148,13 +148,13 @@ function SlideCarousel() {
       </div>
 
       <div>
-        <button onClick={counter.decrement} disabled={current === 0}>
+        <button onClick={() => counter.decrement()} disabled={current === 0}>
           ←
         </button>
         <span style={{ margin: '0 1rem' }}>
           Slide {current + 1} / {slides.length}
         </span>
-        <button onClick={counter.increment} disabled={current >= slides.length - 1}>
+        <button onClick={() => counter.increment()} disabled={current >= slides.length - 1}>
           →
         </button>
       </div>
@@ -253,7 +253,7 @@ function TodoApp() {
         <p>
           Active todos: <span className="computed-value">{activeCount}</span>
         </p>
-        <button onClick={todoList.toggleAll}>
+        <button onClick={() => todoList.toggleAll()}>
           {allCompleted ? 'Mark all active' : 'Mark all complete'}
         </button>
       </div>
@@ -350,10 +350,10 @@ function FineGrainedReactivityDemo() {
         <button onClick={() => appState.setUserEmail(`user${Math.floor(Math.random() * 100)}@example.com`)}>
           Change Email
         </button>
-        <button onClick={appState.toggleTheme}>
+        <button onClick={() => appState.toggleTheme()}>
           Toggle Theme
         </button>
-        <button onClick={appState.incrementClicks}>
+        <button onClick={() => appState.incrementClicks()}>
           Increment Clicks
         </button>
       </div>

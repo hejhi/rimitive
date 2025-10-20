@@ -141,7 +141,7 @@ interface RowData {
 }
 
 function buildData(count: number): RowData[] {
-  const data = new Array(count);
+  const data: RowData[] = new Array<RowData>(count);
   for (let i = 0; i < count; i++) {
     const label = signal(
       `${adjectives[_random(adjectives.length)]} ${

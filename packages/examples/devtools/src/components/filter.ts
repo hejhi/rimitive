@@ -5,6 +5,7 @@
  * Demonstrates composition - this component works with any todo list.
  */
 
+import type { Writable, Readable } from '@lattice/signals/types';
 import type { Todo } from './todo-list';
 
 export type FilterType = 'all' | 'active' | 'completed';
@@ -16,8 +17,8 @@ export interface FilterAPI {
 }
 
 export function createFilter(api: {
-  signal: <T>(value: T) => any;
-  computed: <T>(compute: () => T) => any;
+  signal: <T>(value: T) => Writable<T>;
+  computed: <T>(compute: () => T) => Readable<T>;
 }): FilterAPI {
   const currentFilter = api.signal<FilterType>('all');
 

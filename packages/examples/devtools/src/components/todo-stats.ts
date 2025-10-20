@@ -7,6 +7,7 @@
  * This shows composition through dependencies rather than creating everything internally.
  */
 
+import type { Readable } from '@lattice/signals/types';
 import type { TodoListAPI, Todo } from './todo-list';
 
 export interface TodoStatsAPI {
@@ -21,7 +22,7 @@ export interface TodoStatsAPI {
  */
 export function createTodoStats(
   api: {
-    computed: <T>(compute: () => T) => any;
+    computed: <T>(compute: () => T) => Readable<T>;
   },
   todoList: TodoListAPI
 ): TodoStatsAPI {

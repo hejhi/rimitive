@@ -16,6 +16,12 @@
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"
   },
+  "dependencies": {
+    "@lattice/signals": "workspace:*",
+    "@lattice/lattice": "workspace:*",
+    "@lattice/react": "workspace:*",
+    "@lattice/view": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^5.8.3"
   }

@@ -5,6 +5,8 @@
  * Demonstrates working with arrays in signals and computed values.
  */
 
+import type { Writable, Readable } from '@lattice/signals/types';
+
 export interface Todo {
   id: number;
   text: string;
@@ -22,8 +24,8 @@ export interface TodoListAPI {
 
 export function createTodoList(
   api: {
-    signal: <T>(value: T) => any;
-    computed: <T>(compute: () => T) => any;
+    signal: <T>(value: T) => Writable<T>;
+    computed: <T>(compute: () => T) => Readable<T>;
   },
   initialTodos: Todo[] = []
 ): TodoListAPI {

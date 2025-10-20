@@ -5,6 +5,8 @@
  * Demonstrates basic signal usage and computed values.
  */
 
+import type { Writable, Readable } from '@lattice/signals/types';
+
 export interface CounterAPI {
   count(): number;
   doubled(): number;
@@ -15,8 +17,8 @@ export interface CounterAPI {
 }
 
 export function createCounter(api: {
-  signal: <T>(value: T) => any;
-  computed: <T>(compute: () => T) => any;
+  signal: <T>(value: T) => Writable<T>;
+  computed: <T>(compute: () => T) => Readable<T>;
 }): CounterAPI {
   const count = api.signal(0);
   const doubled = api.computed(() => count() * 2);

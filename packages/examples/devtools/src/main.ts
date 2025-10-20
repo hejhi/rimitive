@@ -59,10 +59,10 @@ function createContext() {
 // Create signal API instance
 const signalAPI = createApi(
   {
-    signal: (ctx: any) => createSignalFactory({ ...ctx, instrument: instrumentSignal }),
-    computed: (ctx: any) => createComputedFactory({ ...ctx, instrument: instrumentComputed }),
-    effect: (ctx: any) => createEffectFactory({ ...ctx, instrument: instrumentEffect }),
-    batch: (ctx: any) => createBatchFactory({ ...ctx, instrument: instrumentBatch }),
+    signal: (ctx: ReturnType<typeof createContext>) => createSignalFactory({ ...ctx, instrument: instrumentSignal }),
+    computed: (ctx: ReturnType<typeof createContext>) => createComputedFactory({ ...ctx, instrument: instrumentComputed }),
+    effect: (ctx: ReturnType<typeof createContext>) => createEffectFactory({ ...ctx, instrument: instrumentEffect }),
+    batch: (ctx: ReturnType<typeof createContext>) => createBatchFactory({ ...ctx, instrument: instrumentBatch }),
   },
   createContext()
 );
