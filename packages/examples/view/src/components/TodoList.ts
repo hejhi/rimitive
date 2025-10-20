@@ -121,7 +121,7 @@ export function TodoList(api: LatticeViewAPI) {
       map(
         todoList.filteredTodos,
         (todoSignal: Reactive<Todo>) =>
-          TodoItem(api, todoSignal, todoList.toggleTodo, todoList.removeTodo),
+          TodoItem(api, todoSignal, (id) => todoList.toggleTodo(id), (id) => todoList.removeTodo(id)),
         (todo: Todo) => todo.id
       ),
     ]),
