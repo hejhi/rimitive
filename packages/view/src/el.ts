@@ -117,6 +117,9 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     // Store lifecycle callbacks that will be applied to each instance
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
+    // Parse props and children from rest (blueprint data)
+    const { props, children } = parseSpec(rest);
+
     // Create ref function for registering lifecycle callbacks
     const ref = ((
       lifecycleCallback: LifecycleCallback<TElement>
@@ -124,9 +127,6 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       lifecycleCallbacks.push(lifecycleCallback);
       return ref; // Chainable
     }) as RefSpec<TElement>;
-
-    // Parse props and children from rest (blueprint data)
-    const { props, children } = parseSpec(rest);
 
     // Factory function - creates a new instance each time
     ref.create = (): TElement => {
