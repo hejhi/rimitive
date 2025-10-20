@@ -21,7 +21,6 @@ import { createMapFactory } from '@lattice/view/map';
 import { createMatchFactory } from '@lattice/view/match';
 import { createViewContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
-import type { LatticeViewAPI } from './types';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 
@@ -58,26 +57,25 @@ const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
 
-// Create effect wrapper for view primitives - uses the actual effect factory
-const effectWrapper = (fn: () => void | (() => void)): (() => void) => {
-  return effectFactory.method(fn);
-};
-
-// Create an intermediate signal function for map
+const effectFn = effectFactory.method;
 const signalFn = signalFactory.method;
 
 // Build view factories
-const elFactory = createElFactory({ ctx: viewCtx, effect: effectWrapper, renderer });
+const elFactory = createElFactory({ ctx: viewCtx, effect: effectFn, renderer });
 const mapFactory = createMapFactory({
   ctx: viewCtx,
   signal: signalFn,
-  effect: effectWrapper,
+  effect: effectFn,
   renderer,
 });
-const matchFactory = createMatchFactory({ ctx: viewCtx, effect: effectWrapper, renderer });
+const matchFactory = createMatchFactory({
+  ctx: viewCtx,
+  effect: effectFn,
+  renderer,
+});
 
 // Create the combined API
-const rawApi = createApi(
+const api = createApi(
   {
     signal: () => signalFactory,
     computed: () => computedFactory,
@@ -88,9 +86,6 @@ const rawApi = createApi(
   },
   {} // No shared context needed
 );
-
-// Type-cast to our expected API shape
-const api = rawApi as unknown as LatticeViewAPI;
 
 // ============================================================================
 // Mount the App
