@@ -29,7 +29,6 @@ export interface ElementRef<TElement> extends BaseRef<TElement> {
  */
 export interface FragmentRef<TElement> extends BaseRef<TElement> {
   status: typeof STATUS_FRAGMENT;
-  ref?: ElementRef<TElement>; // parent node
   attach: (parent: TElement, nextSibling: TElement | null) => void;
 }
 

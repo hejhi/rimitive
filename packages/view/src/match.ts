@@ -22,7 +22,7 @@ import type { ViewContext } from './context';
 
 interface MatchState<TElement = ReactiveElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
-  parentElement?: TElement;
+  element?: TElement;
   currentChild: TElement | null;
   nextSibling: TElement | null;
 }
@@ -72,14 +72,13 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
     ref.create = (): FragmentRef<TElement> => {
       const state: MatchState<TElement> = {
         status: STATUS_FRAGMENT,
-        ref: undefined,
         prev: undefined,
         next: undefined,
         currentChild: null,
         nextSibling: null,
         attach: (parent: TElement, nextSibling?: TElement | null): void => {
           // Store parent element and nextSibling boundary marker
-          state.parentElement = parent;
+          state.element = parent;
           state.nextSibling = nextSibling ?? null;
 
           // Create effect that swaps elements when reactive value changes

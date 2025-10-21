@@ -106,7 +106,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -141,7 +141,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -199,7 +199,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -235,7 +235,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -282,7 +282,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -318,7 +318,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -376,7 +376,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -407,7 +407,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -437,7 +437,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -471,7 +471,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
+      status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),

@@ -92,7 +92,7 @@ export type MapFactory<TElement extends RendererElement = RendererElement> =
  */
 export interface MapState<TElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
-  parentElement?: TElement;
+  element?: TElement;
 
   // DOM-like children list (intrusive doubly-linked list)
   firstChild: ListItemNode<unknown, TElement> | undefined; // Like DOM firstChild
@@ -138,7 +138,6 @@ export function createMapFactory<
     ref.create = (): FragmentRef<TElement> => {
       const state: MapState<TElement> = {
         status: STATUS_FRAGMENT,
-        ref: undefined,
         prev: undefined,
         next: undefined,
         firstChild: undefined,
@@ -147,7 +146,7 @@ export function createMapFactory<
         nextSibling: null,
         attach: (parent: TElement, nextSibling?: TElement | null): void => {
           // Store parent element and nextSibling boundary marker
-          state.parentElement = parent;
+          state.element = parent;
           state.nextSibling = nextSibling ?? null;
 
           // Create an effect that reconciles the list when items change
@@ -324,7 +323,7 @@ export function reconcileList<
   newPosBuf: number[],
   lisBuf: number[]
 ): void {
-  const parentEl = parent.parentElement;
+  const parentEl = parent.element;
   if (!parentEl) return;
 
   const itemsByKey = parent.itemsByKey as Map<
