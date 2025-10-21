@@ -149,14 +149,19 @@ export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
     return ref;
   }) as RefSpec<TElement>;
 
-  // Factory method - for tests, return element directly
+  // Factory method - for tests, return element wrapped in NodeRef
   ref.create = () => {
     // In tests, we create the element once and reuse it
     // Call lifecycle callbacks if any
     for (const callback of lifecycleCallbacks) {
       callback(element);
     }
-    return element;
+    return {
+      status: 1, // STATUS_ELEMENT
+      element,
+      prev: undefined,
+      next: undefined,
+    };
   };
 
   return ref;

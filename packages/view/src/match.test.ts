@@ -9,6 +9,12 @@ import {
   type MockElement,
 } from './test-utils';
 import { createElFactory } from './el';
+import type { FragmentRef, ElementRef } from './types';
+
+// Helper to extract FragmentRef from NodeRef
+const asFragment = <T>(nodeRef: import('./types').NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
+// Helper to extract element from NodeRef
+const asElement = <T>(nodeRef: import('./types').NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
 
 describe('match primitive', () => {
   describe('conditional rendering', () => {
@@ -42,7 +48,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      asFragment(matchRef.create()).attach(parent, null);
 
       // User cares: correct element displayed initially
       expect(parent.children).toHaveLength(1); // just the element
@@ -84,7 +90,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      asFragment(matchRef.create()).attach(parent, null);
 
       // User cares: element displayed
       expect(parent.children).toHaveLength(1); // just the element
@@ -120,7 +126,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      asFragment(matchRef.create()).attach(parent, null);
 
       // User cares: loading state displayed
       expect(getTextContent(parent.children[0] as MockElement)).toBe('Loading...');
@@ -162,7 +168,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      matchRef(parent);
+      asFragment(matchRef.create()).attach(parent, null);
 
       const firstElement = parent.children[0] as MockElement;
 
@@ -202,7 +208,7 @@ describe('match primitive', () => {
         ),
       ]);
 
-      const element = container.create();
+      const element = asElement(container.create());
 
       // User cares: logged out message displayed
       expect(getTextContent(element)).toBe('Please log in');

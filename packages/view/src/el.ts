@@ -4,38 +4,17 @@ import type {
   RefSpec,
   Reactive,
   FragmentSpec,
+  NodeRef,
+  ElementRef,
 } from './types';
 import {
   isReactive,
   isRefSpec,
+  STATUS_ELEMENT,
 } from './types';
 import { createScope, runInScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-
-/**
- * Element ref node - wraps created elements for sibling tracking
- */
-interface ElementRef<TElement> {
-  element: TElement;
-  prev?: NodeRef<TElement>;
-  next?: NodeRef<TElement>;
-}
-
-/**
- * Fragment ref node - wraps fragments for deferred attachment
- */
-interface FragmentRef<TElement> {
-  element: null;
-  prev?: NodeRef<TElement>;
-  next?: NodeRef<TElement>;
-  attach: (parent: TElement, nextSibling: TElement | null) => void;
-}
-
-/**
- * Ref node - union of element/fragment tracking nodes
- */
-type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -129,9 +108,15 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     }) as RefSpec<TElement>;
 
     // Factory function - creates a new instance each time
-    ref.create = (): TElement => {
+    ref.create = (): NodeRef<TElement> => {
       // Create the element using renderer
       const element = renderer.createElement(tag);
+      const nodeRef: ElementRef<TElement> = {
+        element,
+        status: STATUS_ELEMENT,
+        prev: undefined,
+        next: undefined,
+      };
 
       // Create a scope optimistically (might not need it)
       const scope = createScope();
@@ -161,7 +146,8 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         let nextElement: TElement | null = null;
 
         do {
-          if ('attach' in lastChildRef) lastChildRef.attach(element, nextElement);
+          if ('attach' in lastChildRef)
+            lastChildRef.attach(element, nextElement);
           else nextElement = lastChildRef.element;
 
           lastChildRef = lastChildRef.prev;
@@ -182,7 +168,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       }
 
       // Return just the element (ref nodes were internal implementation detail)
-      return element;
+      return nodeRef;
     };
 
     return ref;
@@ -256,17 +242,17 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   if (typeof child === 'function') {
     // Element ref (from el()) - instantiate blueprint
     if (isRefSpec<TElement>(child)) {
-      const childElement = child.create();
-      renderer.appendChild(element, childElement);
-      // Wrap in ref node for internal sibling tracking
-      return {
-        element: childElement,
-        prev: undefined,
-        next: undefined,
-      };
+      const childRef = child.create();
+
+      // Append element if this is an ElementRef (fragments get attached later)
+      if ('element' in childRef) {
+        renderer.appendChild(element, childRef.element);
+      }
+
+      return childRef;
     }
 
-    // The only other functions allowed are reactives or fragments
+    // The only other functions allowed are reactives
     if (isReactive(child)) {
       // Reactive value (signal or computed) - check BEFORE FragmentSpec
       // since reactive values are also functions without .create()
@@ -284,16 +270,6 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
       renderer.appendChild(element, textNode);
       return null; // Text nodes don't participate in ref node chain
     }
-
-    // Fragment (from map() or match()) - defer attachment, return ref node
-    const fragment = child;
-    const fragmentRefNode: FragmentRef<TElement> = {
-      element: null,
-      prev: undefined,
-      next: undefined,
-      attach: fragment, // Fragment is already the right signature
-    } as FragmentRef<TElement>;
-    return fragmentRefNode;
   }
 
   // Element (check using renderer)

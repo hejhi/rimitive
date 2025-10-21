@@ -94,7 +94,7 @@ describe('listener', () => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
-      ref.create = () => el;
+      ref.create = () => ({ status: 1, element: el, prev: undefined, next: undefined });
       return ref;
     }
     const elementRef = createMockRef(element);
@@ -131,7 +131,7 @@ describe('listener', () => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
-      ref.create = () => el;
+      ref.create = () => ({ status: 1, element: el, prev: undefined, next: undefined });
       return ref;
     }
     const elementRef = createMockRef(element);
@@ -163,7 +163,7 @@ describe('listener', () => {
         else cleanup2 = result;
         return ref;
       };
-      ref.create = () => el;
+      ref.create = () => ({ status: 1, element: el, prev: undefined, next: undefined });
       return ref;
     }
     const elementRef = createMockRef(element);

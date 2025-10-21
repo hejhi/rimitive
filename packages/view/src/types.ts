@@ -5,11 +5,45 @@
 import type { Readable } from '@lattice/signals/types';
 
 /**
+ * Status bits for node ref type discrimination
+ */
+export const STATUS_ELEMENT = 1;
+export const STATUS_FRAGMENT = 2;
+
+interface BaseRef<TElement> {
+  status: number;
+  prev?: NodeRef<TElement>;
+  next?: NodeRef<TElement>;
+}
+
+/**
+ * Element ref node - wraps created elements for sibling tracking
+ */
+export interface ElementRef<TElement> extends BaseRef<TElement> {
+  status: typeof STATUS_ELEMENT;
+  element: TElement;
+}
+
+/**
+ * Fragment ref node - wraps fragments for deferred attachment
+ */
+export interface FragmentRef<TElement> extends BaseRef<TElement> {
+  status: typeof STATUS_FRAGMENT;
+  ref?: ElementRef<TElement>; // parent node
+  attach: (parent: TElement, nextSibling: TElement | null) => void;
+}
+
+/**
+ * Ref node - union of element/fragment tracking nodes
+ */
+export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
+
+/**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  */
 export interface RefSpec<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement>; // Register lifecycle callback (chainable)
-  create(): TElement; // Instantiate blueprint → creates DOM element
+  create(): NodeRef<TElement>; // Instantiate blueprint → creates DOM element
 }
 
 /**

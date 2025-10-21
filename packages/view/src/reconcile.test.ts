@@ -3,6 +3,15 @@ import { reconcileList, ListItemNode, MapState } from './map';
 import { createViewContext } from './context';
 import type { Renderer } from './renderer';
 import { MockElement } from './test-utils';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, type ElementRef } from './types';
+
+// Helper to create properly typed ElementRef
+const createElementRef = <T>(element: T): ElementRef<T> => ({
+  status: STATUS_ELEMENT,
+  element,
+  prev: undefined,
+  next: undefined,
+});
 
 // Shared buffers for tests (mimics buffer pooling in actual implementation)
 const testBuffers = {
@@ -16,7 +25,7 @@ function reconcileListTest<T>(
   ctx: ReturnType<typeof createViewContext>,
   parent: MapState<MockElement>,
   newItems: T[],
-  renderItem: (item: T) => { element: MockElement; itemSignal?: ((value: T) => void) & (() => T) },
+  renderItem: (item: T) => { element: import('./types').NodeRef<MockElement>; itemSignal?: ((value: T) => void) & (() => T) },
   keyFn: (item: T) => string | number,
   renderer: Renderer<MockElement, MockElement>
 ): void {
@@ -97,7 +106,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -113,7 +122,7 @@ describe('reconcileList', () => {
       (item) => {
         const el = new MockElement('li');
         el.id = `item-${item}`;
-        return { element: el };
+        return { element: createElementRef(el) };
       },
       (item) => item,
       renderer
@@ -132,7 +141,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -142,7 +151,7 @@ describe('reconcileList', () => {
     const createElement = (item: string) => {
       const el = new MockElement('li');
       el.id = `item-${item}`;
-      return { element: el };
+      return { element: createElementRef(el) };
     };
 
     // Initial render
@@ -190,7 +199,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -200,7 +209,7 @@ describe('reconcileList', () => {
     const createElement = (item: string) => {
       const el = new MockElement('li');
       el.id = `item-${item}`;
-      return { element: el };
+      return { element: createElementRef(el) };
     };
 
     // Initial render
@@ -226,7 +235,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -240,7 +249,7 @@ describe('reconcileList', () => {
     const createElement = (item: { id: number; name: string }) => {
       const el = new MockElement('li');
       el.id = `item-${item.id}`;
-      return { element: el };
+      return { element: createElementRef(el) };
     };
 
     // Initial render
@@ -273,7 +282,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -283,7 +292,7 @@ describe('reconcileList', () => {
     const createElement = (item: string) => {
       const el = new MockElement('li');
       el.id = `item-${item}`;
-      return { element: el };
+      return { element: createElementRef(el) };
     };
 
     // Initial: a b c d
@@ -309,7 +318,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -332,7 +341,7 @@ describe('reconcileList', () => {
         el.id = `item-${item.id}`;
         const signal = vi.fn();
         signals.set(item.id, signal);
-        return { element: el, itemSignal: signal };
+        return { element: createElementRef(el), itemSignal: signal };
       },
       (item) => item.id,
       renderer
@@ -348,7 +357,7 @@ describe('reconcileList', () => {
       (item) => {
         const el = new MockElement('li');
         el.id = `item-${item.id}`;
-        return { element: el };
+        return { element: createElementRef(el) };
       },
       (item) => item.id,
       renderer
@@ -367,7 +376,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -377,7 +386,7 @@ describe('reconcileList', () => {
     const createElement = (item: string) => {
       const el = new MockElement('li');
       el.id = `item-${item}`;
-      return { element: el };
+      return { element: createElementRef(el) };
     };
 
     // Initial: empty list
@@ -398,7 +407,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -408,7 +417,7 @@ describe('reconcileList', () => {
     const createElement = (item: string) => {
       const el = new MockElement('li');
       el.id = `item-${item}`;
-      return { element: el };
+      return { element: createElementRef(el) };
     };
 
     // Initial: non-empty list
@@ -428,7 +437,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -438,7 +447,7 @@ describe('reconcileList', () => {
     const createElement = (item: string) => {
       const el = new MockElement('li');
       el.id = `item-${item}`;
-      return { element: el };
+      return { element: createElementRef(el) };
     };
 
     // Initial: a, b
@@ -462,7 +471,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
 
     const parent: MapState<MockElement> = {
-      element: container,
+      status: STATUS_FRAGMENT, ref: undefined, prev: undefined, next: undefined, parentElement: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
       itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
@@ -485,7 +494,7 @@ describe('reconcileList', () => {
         el.id = `item-${item.id}-${item.value}`;
         const signal = vi.fn();
         itemSignals.set(item.id, signal);
-        return { element: el, itemSignal: signal };
+        return { element: createElementRef(el), itemSignal: signal };
       },
       (item) => item.id,
       renderer

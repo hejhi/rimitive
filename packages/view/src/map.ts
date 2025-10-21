@@ -14,9 +14,13 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type {
   Reactive,
   RefSpec,
-  FragmentSpec,
   ReactiveElement,
+  FragmentRef,
+  LifecycleCallback,
+  ElementRef,
+  NodeRef,
 } from './types';
+import { STATUS_FRAGMENT } from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -74,7 +78,7 @@ export type MapFactory<TElement extends RendererElement = RendererElement> =
       itemsSignal: Reactive<T[]>,
       render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
       keyFn: (item: T) => string | number
-    ) => FragmentSpec<TElement>
+    ) => RefSpec<TElement>
   >;
 
 
@@ -87,8 +91,9 @@ export type MapFactory<TElement extends RendererElement = RendererElement> =
  * - lastChild ↔ lastChild
  * - childNodes ↔ itemsByKey (Map is for efficient key lookup, DOM uses array)
  */
-export interface MapState<TElement> {
-  element: TElement | null; // Parent element (null until fragment attached)
+export interface MapState<TElement> extends FragmentRef<TElement> {
+  // Parent element (stored locally for reconciliation since attach only receives element)
+  parentElement?: TElement;
 
   // DOM-like children list (intrusive doubly-linked list)
   firstChild: ListItemNode<unknown, TElement> | undefined; // Like DOM firstChild
@@ -115,69 +120,81 @@ export function createMapFactory<
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
     keyFn: (item: T) => string | number
-  ): FragmentSpec<TElement> {
+  ): RefSpec<TElement> {
     let dispose: (() => void) | undefined;
+    const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
     // Pooled buffers for LIS calculation - reused across reconciliations
     const oldIndicesBuf: number[] = [];
     const newPosBuf: number[] = [];
     const lisBuf: number[] = [];
 
-    // internal
-    const state: MapState<TElement> = {
-      element: null,
-      firstChild: undefined,
-      lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, TElement>>(),
-      nextSibling: null,
+    const ref = ((
+      lifecycleCallback: LifecycleCallback<TElement>
+    ): RefSpec<TElement> => {
+      lifecycleCallbacks.push(lifecycleCallback);
+      return ref; // Chainable
+    }) as RefSpec<TElement>;
+
+    ref.create = (): FragmentRef<TElement> => {
+      const state: MapState<TElement> = {
+        status: STATUS_FRAGMENT,
+        ref: undefined,
+        prev: undefined,
+        next: undefined,
+        firstChild: undefined,
+        lastChild: undefined,
+        itemsByKey: new Map<string, ListItemNode<unknown, TElement>>(),
+        nextSibling: null,
+        attach: (parent: TElement, nextSibling?: TElement | null): void => {
+          // Store parent element and nextSibling boundary marker
+          state.parentElement = parent;
+          state.nextSibling = nextSibling ?? null;
+
+          // Create an effect that reconciles the list when items change
+          // Effect automatically schedules via scheduler (like signals/effect.ts)
+          dispose = effect(() => {
+            const currentItems = itemsSignal();
+
+            // Clear pooled buffers before reuse
+            oldIndicesBuf.length = 0;
+            newPosBuf.length = 0;
+            lisBuf.length = 0;
+
+            // Pass linked list head directly to reconciler (single source of truth)
+            // This eliminates array allocation and prevents sync bugs
+            reconcileList<T, TElement, TText>(
+              ctx,
+              state,
+              currentItems,
+              (itemData: T) => {
+                // Render callback only creates DOM element
+                // Reconciler will wrap it in ListItemNode
+                const itemSignal = signal(itemData);
+                const elementRef = render(itemSignal);
+
+                return {
+                  element: elementRef.create(), // Create returns element directly
+                  itemSignal,
+                };
+              },
+              keyFn,
+              renderer,
+              oldIndicesBuf,
+              newPosBuf,
+              lisBuf
+            );
+          });
+
+          const parentScope = ctx.elementScopes.get(parent);
+          if (parentScope) trackInSpecificScope(parentScope, { dispose });
+        },
+      };
+
+      return state;
     };
 
-    // Return callable fragment (like signals - function closes over state)
-    const fragment = ((parent: TElement, nextSibling?: TElement | null): void => {
-      // Store parent and nextSibling boundary marker
-      state.element = parent;
-      state.nextSibling = nextSibling ?? null;
-
-      // Create an effect that reconciles the list when items change
-      // Effect automatically schedules via scheduler (like signals/effect.ts)
-      dispose = effect(() => {
-        const currentItems = itemsSignal();
-
-        // Clear pooled buffers before reuse
-        oldIndicesBuf.length = 0;
-        newPosBuf.length = 0;
-        lisBuf.length = 0;
-
-        // Pass linked list head directly to reconciler (single source of truth)
-        // This eliminates array allocation and prevents sync bugs
-        reconcileList<T, TElement, TText>(
-          ctx,
-          state,
-          currentItems,
-          (itemData: T) => {
-            // Render callback only creates DOM element
-            // Reconciler will wrap it in ListItemNode
-            const itemSignal = signal(itemData);
-            const elementRef = render(itemSignal);
-
-            return {
-              element: elementRef.create(), // Create returns element directly
-              itemSignal,
-            };
-          },
-          keyFn,
-          renderer,
-          oldIndicesBuf,
-          newPosBuf,
-          lisBuf
-        );
-      });
-
-      const parentScope = ctx.elementScopes.get(parent);
-      if (parentScope) trackInSpecificScope(parentScope, { dispose });
-    });
-
-    return fragment;
+    return ref;
   }
 
   return {
@@ -299,7 +316,7 @@ export function reconcileList<
   parent: MapState<TElement>,
   newItems: T[],
   renderItem: (item: T) => {
-    element: TElement;
+    element: NodeRef<TElement>;
     itemSignal?: ((value: T) => void) & (() => T);
   },
   keyFn: (item: T) => string | number,
@@ -308,7 +325,7 @@ export function reconcileList<
   newPosBuf: number[],
   lisBuf: number[]
 ): void {
-  const parentEl = parent.element;
+  const parentEl = parent.parentElement;
   if (!parentEl) return;
 
   const itemsByKey = parent.itemsByKey as Map<
@@ -345,9 +362,11 @@ export function reconcileList<
     } else {
       // Create new node
       const rendered = renderItem(item);
+      // Map items should always be ElementRefs, not FragmentRefs
+      const nodeRef = rendered.element as ElementRef<TElement>;
 
       node = {
-        element: rendered.element,
+        element: nodeRef.element,
         key,
         itemData: item,
         itemSignal: rendered.itemSignal,
@@ -362,7 +381,7 @@ export function reconcileList<
       // Insert before parent.nextSibling to maintain fragment position
       renderer.insertBefore(
         parentEl,
-        rendered.element,
+        nodeRef.element,
         parent.nextSibling
       );
     }
