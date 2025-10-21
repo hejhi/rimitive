@@ -17,10 +17,9 @@ import type {
   ReactiveElement,
   FragmentRef,
   LifecycleCallback,
-  ElementRef,
   NodeRef,
 } from './types';
-import { STATUS_FRAGMENT } from './types';
+import { STATUS_FRAGMENT, isElementRef } from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -363,7 +362,11 @@ export function reconcileList<
       // Create new node
       const rendered = renderItem(item);
       // Map items should always be ElementRefs, not FragmentRefs
-      const nodeRef = rendered.element as ElementRef<TElement>;
+      const nodeRef = rendered.element;
+
+      if (!isElementRef(nodeRef)) {
+        throw new Error('Map render function must return ElementRef, not FragmentRef');
+      }
 
       node = {
         element: nodeRef.element,

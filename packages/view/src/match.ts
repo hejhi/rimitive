@@ -14,8 +14,8 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
-import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback, ElementRef } from './types';
-import { isRefSpec, STATUS_FRAGMENT } from './types';
+import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback } from './types';
+import { isRefSpec, isElementRef, STATUS_FRAGMENT } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { disposeScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
@@ -102,10 +102,12 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
             if (elementRef && isRefSpec(elementRef)) {
               const nodeRef = elementRef.create();
               // Match children should be ElementRefs
-              const childEl = (nodeRef as ElementRef<TElement>).element;
-              // Insert before nextSibling to maintain stable position
-              renderer.insertBefore(parent, childEl, state.nextSibling);
-              state.currentChild = childEl;
+              if (isElementRef(nodeRef)) {
+                const childEl = nodeRef.element;
+                // Insert before nextSibling to maintain stable position
+                renderer.insertBefore(parent, childEl, state.nextSibling);
+                state.currentChild = childEl;
+              }
             }
           });
 

@@ -10,6 +10,8 @@ import type {
 import {
   isReactive,
   isRefSpec,
+  isElementRef,
+  isFragmentRef,
   STATUS_ELEMENT,
 } from './types';
 import { createScope, runInScope, trackInScope, trackInSpecificScope } from './helpers/scope';
@@ -146,7 +148,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         let nextElement: TElement | null = null;
 
         do {
-          if ('attach' in lastChildRef)
+          if (isFragmentRef(lastChildRef))
             lastChildRef.attach(element, nextElement);
           else nextElement = lastChildRef.element;
 
@@ -245,7 +247,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
       const childRef = child.create();
 
       // Append element if this is an ElementRef (fragments get attached later)
-      if ('element' in childRef) {
+      if (isElementRef(childRef)) {
         renderer.appendChild(element, childRef.element);
       }
 

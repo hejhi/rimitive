@@ -39,6 +39,20 @@ export interface FragmentRef<TElement> extends BaseRef<TElement> {
 export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
+ * Type guard - check if NodeRef is an ElementRef
+ */
+export function isElementRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is ElementRef<TElement> {
+  return nodeRef.status === STATUS_ELEMENT;
+}
+
+/**
+ * Type guard - check if NodeRef is a FragmentRef
+ */
+export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is FragmentRef<TElement> {
+  return nodeRef.status === STATUS_FRAGMENT;
+}
+
+/**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  */
 export interface RefSpec<TElement = ReactiveElement> {
