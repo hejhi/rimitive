@@ -70,13 +70,15 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
       return ref; // Chainable
     }) as RefSpec<TElement>;
 
-    ref.create = (): FragmentRef<TElement> => {
+    ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
       const state: MatchState<TElement> = {
         status: STATUS_FRAGMENT,
+        element: undefined,
         prev: undefined,
         next: undefined,
         firstChild: undefined,
         lastChild: undefined,
+        ...extensions, // Spread extensions to override/add fields
         attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null): void => {
           // Store parent element for reconciliation
           state.element = parent;

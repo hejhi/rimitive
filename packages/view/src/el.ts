@@ -5,7 +5,6 @@ import type {
   Reactive,
   FragmentSpec,
   NodeRef,
-  ElementRef,
 } from './types';
 import {
   isReactive,
@@ -110,15 +109,17 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     }) as RefSpec<TElement>;
 
     // Factory function - creates a new instance each time
-    ref.create = (): NodeRef<TElement> => {
+    ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
       // Create the element using renderer
       const element = renderer.createElement(tag);
-      const nodeRef: ElementRef<TElement> = {
-        element,
+      // Create object with full shape at once (better for V8 hidden classes)
+      const nodeRef = {
         status: STATUS_ELEMENT,
+        element,
         prev: undefined,
         next: undefined,
-      };
+        ...extensions, // Spread extensions to override/add fields
+      } as NodeRef<TElement> & TExt;
 
       // Create a scope optimistically (might not need it)
       const scope = createScope();

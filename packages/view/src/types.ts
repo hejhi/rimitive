@@ -74,14 +74,11 @@ export function resolveNextElement<TElement>(ref: NodeRef<TElement> | undefined)
     if (current.firstChild) {
       const firstChild = current.firstChild;
 
-      // Check if firstChild is a ListItemNode (MapState case) - has .ref property
-      if ('ref' in firstChild && 'key' in firstChild) {
-        // ListItemNode from MapState - has .ref as NodeRef
-        const listItem = firstChild as { ref: NodeRef<TElement>; key: unknown };
-        const nodeRef = listItem.ref;
-        if (nodeRef.status === STATUS_ELEMENT) {
-          return nodeRef.element;
-        }
+      // Check if firstChild is a ListItemNode (MapState case) - has .element and .key
+      if ('element' in firstChild && 'key' in firstChild) {
+        // ListItemNode from MapState - has .element directly
+        const listItem = firstChild as { element: TElement; key: unknown };
+        return listItem.element;
       } else {
         // NodeRef (MatchState case) - could be ElementRef or FragmentRef
         const nodeRef = firstChild as NodeRef<TElement>;
@@ -102,7 +99,8 @@ export function resolveNextElement<TElement>(ref: NodeRef<TElement> | undefined)
  */
 export interface RefSpec<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement>; // Register lifecycle callback (chainable)
-  create(): NodeRef<TElement>; // Instantiate blueprint → creates DOM element
+  // Instantiate blueprint → creates DOM element with optional extensions
+  create<T = Record<string, unknown>>(extensions?: T): NodeRef<TElement> & T;
 }
 
 /**

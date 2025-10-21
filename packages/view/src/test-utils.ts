@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { createViewContext } from './context';
 import type { Renderer } from './renderer';
-import type { Reactive, Disposable, RefSpec, LifecycleCallback } from './types';
+import type { Reactive, Disposable, RefSpec, LifecycleCallback, NodeRef } from './types';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -149,19 +149,20 @@ export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
     return ref;
   }) as RefSpec<TElement>;
 
-  // Factory method - for tests, return element wrapped in NodeRef
-  ref.create = () => {
+  // Factory method - for tests, return element wrapped in NodeRef with extensions
+  ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
     // In tests, we create the element once and reuse it
     // Call lifecycle callbacks if any
     for (const callback of lifecycleCallbacks) {
       callback(element);
     }
     return {
-      status: 1, // STATUS_ELEMENT
+      status: 1 as const, // STATUS_ELEMENT
       element,
       prev: undefined,
       next: undefined,
-    };
+      ...extensions, // Spread extensions to override/add fields
+    } as NodeRef<TElement> & TExt;
   };
 
   return ref;

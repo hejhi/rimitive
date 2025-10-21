@@ -17,9 +17,8 @@ import type {
   FragmentRef,
   LifecycleCallback,
   NodeRef,
-  BaseRef,
 } from './types';
-import { STATUS_FRAGMENT, isElementRef, resolveNextElement, ElementRef } from './types';
+import { STATUS_FRAGMENT, resolveNextElement } from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -39,17 +38,18 @@ import { disposeScope, trackInSpecificScope } from './helpers/scope';
  * - previousSibling ↔ previousSibling
  * - nextSibling ↔ nextSibling
  */
-export interface ListItemNode<TElement, T = unknown> extends BaseRef<TElement> {
-  status: number; // Status bits for reconciliation (VISITED, etc.)
+// ListItemNode represents an item in the reactive list
+// Has the same structure as ElementRef but with map-specific fields
+export type ListItemNode<TElement, T = unknown> = {
+  status: number; // Reconciliation status bits (DIRTY, CLEAN, STALE) instead of STATUS_ELEMENT
+  element: TElement; // The DOM element
   prev: ListItemNode<TElement, unknown> | undefined; // Like DOM previousSibling
   next: ListItemNode<TElement, unknown> | undefined; // Like DOM nextSibling
-
-  ref: NodeRef<TElement>; // The element NodeRef (prevents memory leaks)
   key: string; // Unique key for reconciliation
   position: number; // Current position in list (cached for LIS algorithm)
   itemData: T; // The actual data
   itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
-}
+};
 
 /**
  * Options passed to map factory
@@ -127,14 +127,16 @@ export function createMapFactory<
       return ref; // Chainable
     }) as RefSpec<TElement>;
 
-    ref.create = (): FragmentRef<TElement> => {
+    ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
       const state: MapState<TElement> = {
         status: STATUS_FRAGMENT,
+        element: undefined,
         itemsByKey: new Map<string, ListItemNode<TElement, unknown>>(),
         prev: undefined,
         next: undefined,
         firstChild: undefined,
         lastChild: undefined,
+        ...extensions, // Spread extensions to override/add fields
         attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null): void => {
           // Store parent element for reconciliation
           state.element = parent;
@@ -162,13 +164,13 @@ export function createMapFactory<
               state,
               currentItems,
               (itemData: T) => {
-                // Render callback only creates DOM element
-                // Reconciler will wrap it in ListItemNode
+                // Render callback returns RefSpec and itemSignal
+                // Reconciler will call create() with ListItemNode extensions
                 const itemSignal = signal(itemData);
-                const elementRef = render(itemSignal);
+                const refSpec = render(itemSignal);
 
                 return {
-                  element: elementRef.create(), // Create returns element directly
+                  refSpec, // Return RefSpec, not created NodeRef
                   itemSignal,
                 };
               },
@@ -284,7 +286,7 @@ function pruneNode<
   itemsByKey: Map<string, ListItemNode<TElement, T>>,
   renderer: Renderer<TElement, TText>
 ): void {
-  const element = (node.ref as ElementRef<TElement>).element;
+  const element = node.element;
   const scope = ctx.elementScopes.get(element);
   if (scope) {
     disposeScope(scope);
@@ -311,7 +313,7 @@ export function reconcileList<
   parent: MapState<TElement>,
   newItems: T[],
   renderItem: (item: T) => {
-    element: NodeRef<TElement>;
+    refSpec: RefSpec<TElement>;
     itemSignal?: ((value: T) => void) & (() => T);
   },
   keyFn: (item: T) => string | number,
@@ -336,57 +338,51 @@ export function reconcileList<
   for (let i = 0; i < newItems.length; i++) {
     const item = newItems[i]!;
     const key = keyFn(item) as string;
-    let node = itemsByKey.get(key);
+    let ref: ListItemNode<TElement, T> = itemsByKey.get(key)!;
 
-    if (node) {
-      oldIndicesBuf[count] = node.position;
+    if (ref) {
+      oldIndicesBuf[count] = ref.position;
       newPosBuf[count] = i;
       count++;
 
       // Update position immediately (old position already cached in oldIndicesBuf)
-      node.position = i;
+      ref.position = i;
 
       // Mark existing node as dirty (needs positioning)
-      node.status = DIRTY;
+      ref.status = DIRTY;
 
       // Update data
-      if (node.itemData !== item) {
-        node.itemData = item;
-        if (node.itemSignal) node.itemSignal(item);
+      if (ref.itemData !== item) {
+        ref.itemData = item;
+        if (ref.itemSignal) ref.itemSignal(item);
       }
     } else {
-      // Create new node
+      // Create new node with full shape at creation (better for V8 hidden classes)
       const rendered = renderItem(item);
-      // Map items should always be ElementRefs, not FragmentRefs
-      const nodeRef = rendered.element;
 
-      if (!isElementRef(nodeRef)) {
-        throw new Error('Map render function must return ElementRef, not FragmentRef');
-      }
-
-      node = {
-        ref: nodeRef,
+      // Create ListItemNode with all fields at once (V8-friendly object shape)
+      // Cast is safe: render() must return ElementRef (checked by reconciler contract),
+      // and we're providing all map-specific fields. prev/next exist as undefined.
+      ref = rendered.refSpec.create({
         key,
         itemData: item,
         itemSignal: rendered.itemSignal,
         position: i,
         status: DIRTY, // Mark as dirty (needs positioning)
-        prev: undefined,
-        next: undefined,
-      };
+      }) as ListItemNode<TElement, T>;
 
-      appendChild(parent, node);
-      itemsByKey.set(key, node);
+      appendChild(parent, ref);
+      itemsByKey.set(key, ref);
       // Insert before next sibling element to maintain fragment position
       renderer.insertBefore(
         parentEl,
-        nodeRef.element,
+        ref.element,
         resolveNextElement(parent.next as NodeRef<TElement> | undefined)
       );
     }
 
     // Store node for position phase
-    nodes[i] = node;
+    nodes[i] = ref;
   }
 
   // Transition: Calculate LIS
@@ -424,9 +420,9 @@ export function reconcileList<
 
         // Use next sibling element as fallback to maintain fragment position
         const nextEl = child
-          ? (child.ref as ElementRef<TElement>).element
+          ? child.element
           : resolveNextElement(parent.next as NodeRef<TElement> | undefined);
-        const nodeElement = (node.ref as ElementRef<TElement>).element;
+        const nodeElement = node.element;
         if (nodeElement !== nextEl) renderer.insertBefore(parentEl, nodeElement, nextEl);
       }
     }
