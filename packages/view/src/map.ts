@@ -14,12 +14,12 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type {
   Reactive,
   RefSpec,
-  ReactiveElement,
   FragmentRef,
   LifecycleCallback,
   NodeRef,
+  BaseRef,
 } from './types';
-import { STATUS_FRAGMENT, isElementRef } from './types';
+import { STATUS_FRAGMENT, STATUS_ELEMENT, isElementRef, resolveNextElement, ElementRef } from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -39,17 +39,16 @@ import { disposeScope, trackInSpecificScope } from './helpers/scope';
  * - previousSibling ↔ previousSibling
  * - nextSibling ↔ nextSibling
  */
-export interface ListItemNode<T = unknown, TElement = ReactiveElement> {
-  element: TElement; // The underlying element
+export interface ListItemNode<TElement, T = unknown> extends BaseRef<TElement> {
+  status: number; // Status bits for reconciliation (VISITED, etc.)
+  prev: ListItemNode<TElement, unknown> | undefined; // Like DOM previousSibling
+  next: ListItemNode<TElement, unknown> | undefined; // Like DOM nextSibling
+
+  ref: NodeRef<TElement>; // The element NodeRef (prevents memory leaks)
   key: string; // Unique key for reconciliation
+  position: number; // Current position in list (cached for LIS algorithm)
   itemData: T; // The actual data
   itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
-  position: number; // Current position in list (cached for LIS algorithm)
-  status: number; // Status bits for reconciliation (VISITED, etc.)
-
-  // Sibling navigation (intrusive linked list - nodes link to siblings only)
-  previousSibling: ListItemNode<unknown, TElement> | undefined; // Like DOM previousSibling
-  nextSibling: ListItemNode<unknown, TElement> | undefined; // Like DOM nextSibling
 }
 
 /**
@@ -94,16 +93,9 @@ export interface MapState<TElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
   element?: TElement;
 
-  // DOM-like children list (intrusive doubly-linked list)
-  firstChild: ListItemNode<unknown, TElement> | undefined; // Like DOM firstChild
-  lastChild: ListItemNode<unknown, TElement> | undefined; // Like DOM lastChild
-
   // Key-based lookup for O(1) reconciliation during diffing
   // (DOM uses array-based childNodes, we use Map for key lookup)
-  itemsByKey: Map<string, ListItemNode<unknown, TElement>>;
-
-  // Boundary marker for stable positioning (like match fragment)
-  nextSibling: TElement | null; // Element after this fragment's territory
+  itemsByKey: Map<string, ListItemNode<TElement, unknown>>;
 }
 
 /**
@@ -138,16 +130,27 @@ export function createMapFactory<
     ref.create = (): FragmentRef<TElement> => {
       const state: MapState<TElement> = {
         status: STATUS_FRAGMENT,
+        itemsByKey: new Map<string, ListItemNode<TElement, unknown>>(),
         prev: undefined,
         next: undefined,
         firstChild: undefined,
         lastChild: undefined,
-        itemsByKey: new Map<string, ListItemNode<unknown, TElement>>(),
-        nextSibling: null,
         attach: (parent: TElement, nextSibling?: TElement | null): void => {
-          // Store parent element and nextSibling boundary marker
+          // Store parent element for reconciliation
           state.element = parent;
-          state.nextSibling = nextSibling ?? null;
+
+          // Store boundary marker if provided (for standalone usage)
+          // When created via el(), state.next will be set and takes precedence
+          if (nextSibling !== undefined && nextSibling !== null && !state.next) {
+            // Create a synthetic ElementRef to act as next sibling
+            const syntheticNext: NodeRef<TElement> = {
+              status: STATUS_ELEMENT,
+              element: nextSibling,
+              prev: undefined,
+              next: undefined,
+            };
+            state.next = syntheticNext;
+          }
 
           // Create an effect that reconciles the list when items change
           // Effect automatically schedules via scheduler (like signals/effect.ts)
@@ -282,20 +285,21 @@ function pruneNode<
   TText extends TextNode,
 >(
   parent: MapState<TElement>,
-  node: ListItemNode<T, TElement>,
+  node: ListItemNode<TElement, T>,
   ctx: ViewContext,
   container: TElement,
-  itemsByKey: Map<string, ListItemNode<T, TElement>>,
+  itemsByKey: Map<string, ListItemNode<TElement, T>>,
   renderer: Renderer<TElement, TText>
 ): void {
-  const scope = ctx.elementScopes.get(node.element);
+  const element = (node.ref as ElementRef<TElement>).element;
+  const scope = ctx.elementScopes.get(element);
   if (scope) {
     disposeScope(scope);
-    ctx.elementScopes.delete(node.element);
+    ctx.elementScopes.delete(element);
   }
 
   removeChild(parent, node);
-  renderer.removeChild(container, node.element);
+  renderer.removeChild(container, element);
   itemsByKey.delete(node.key);
 };
 
@@ -328,11 +332,11 @@ export function reconcileList<
 
   const itemsByKey = parent.itemsByKey as Map<
     string,
-    ListItemNode<T, TElement>
+    ListItemNode<TElement, T>
   >;
 
   // Pre-allocate nodes buffer to avoid Map lookup in position phase
-  const nodes: ListItemNode<T, TElement>[] = Array(newItems.length) as ListItemNode<T, TElement>[];
+  const nodes: ListItemNode<TElement, T>[] = Array(newItems.length) as ListItemNode<TElement, T>[];
 
   //  Build phase - create nodes and collect info for LIS
   let count = 0;
@@ -368,23 +372,23 @@ export function reconcileList<
       }
 
       node = {
-        element: nodeRef.element,
+        ref: nodeRef,
         key,
         itemData: item,
         itemSignal: rendered.itemSignal,
         position: i,
         status: DIRTY, // Mark as dirty (needs positioning)
-        previousSibling: undefined,
-        nextSibling: undefined,
+        prev: undefined,
+        next: undefined,
       };
 
       appendChild(parent, node);
       itemsByKey.set(key, node);
-      // Insert before parent.nextSibling to maintain fragment position
+      // Insert before next sibling element to maintain fragment position
       renderer.insertBefore(
         parentEl,
-        nodeRef.element,
-        parent.nextSibling
+        (nodeRef as ElementRef<TElement>).element,
+        resolveNextElement(parent.next as NodeRef<TElement> | undefined)
       );
     }
 
@@ -398,7 +402,7 @@ export function reconcileList<
   let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
   // Positioning phase - reorder nodes based on LIS
-  let prevNode: ListItemNode<T, TElement> | undefined;
+  let prevNode: ListItemNode<TElement, T> | undefined;
   for (const node of nodes) {
     // Check if in LIS
     if (node.position === nextLISPos) {
@@ -407,14 +411,14 @@ export function reconcileList<
     } else {
       // Node not in LIS - needs repositioning
       // Calculate reference sibling for insertion
-      let child = (prevNode ? prevNode.nextSibling : parent.firstChild) as
-        | ListItemNode<T, TElement>
+      let child = (prevNode ? prevNode.next : parent.firstChild) as
+        | ListItemNode<TElement, T>
         | undefined;
 
       if (child) {
         // Remove any stale nodes at the insertion point (cleanup as we go)
         while (child.status === STALE) {
-          const nextChild = child.nextSibling as ListItemNode<T, TElement>;
+          const nextChild = child.next as ListItemNode<TElement, T>;
           pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
           child = nextChild;
         }
@@ -425,9 +429,12 @@ export function reconcileList<
         // if child is undefined, we know to append at the end
         moveChild(parent, node, child);
 
-        // Use parent.nextSibling as fallback to maintain fragment position
-        const nextEl = child ? child.element : parent.nextSibling;
-        if (node.element !== nextEl) renderer.insertBefore(parentEl, node.element, nextEl);
+        // Use next sibling element as fallback to maintain fragment position
+        const nextEl = child
+          ? (child.ref as ElementRef<TElement>).element
+          : resolveNextElement(parent.next as NodeRef<TElement> | undefined);
+        const nodeElement = (node.ref as ElementRef<TElement>).element;
+        if (nodeElement !== nextEl) renderer.insertBefore(parentEl, nodeElement, nextEl);
       }
     }
 
@@ -438,14 +445,14 @@ export function reconcileList<
   }
 
   // Cleanup phase - remove any remaining unhandled nodes and reset status
-  let child = parent.firstChild;
+  let child = parent.firstChild as ListItemNode<TElement, T> | undefined;
   while (child) {
-    const nextChild = child.nextSibling as
-      | ListItemNode<T, TElement>
+    const nextChild = child.next as
+      | ListItemNode<TElement, T>
       | undefined;
     const status = child.status;
 
-    // Prune any children left that are STALE 
+    // Prune any children left that are STALE
     if (status === STALE) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
     // Set any CLEAN children to STALE for next reconciliation.
     // There should not be any DIRTY left by now.
@@ -461,16 +468,16 @@ export function reconcileList<
  */
 function unlinkFromParent<T, TElement>(
   parent: MapState<TElement>,
-  node: ListItemNode<T, TElement>
+  node: ListItemNode<TElement, T>
 ): void {
-  const { previousSibling, nextSibling } = node;
+  const { prev: prevSibling, next: nextSibling } = node;
 
   // Update next sibling's backward pointer
-  if (nextSibling !== undefined) nextSibling.previousSibling = previousSibling;
-  else parent.lastChild = previousSibling;
+  if (nextSibling !== undefined) nextSibling.prev = prevSibling;
+  else parent.lastChild = prevSibling;
 
   // Update prev sibling's forward pointer
-  if (previousSibling !== undefined) previousSibling.nextSibling = nextSibling;
+  if (prevSibling !== undefined) prevSibling.next = nextSibling;
   else parent.firstChild = nextSibling;
 }
 
@@ -480,17 +487,17 @@ function unlinkFromParent<T, TElement>(
  */
 function appendChild<T, TElement>(
   parent: MapState<TElement>,
-  node: ListItemNode<T, TElement>
+  node: ListItemNode<TElement, T>
 ): void {
   // Get current tail for O(1) append
-  const prevSibling = parent.lastChild;
+  const prevSibling = parent.lastChild as ListItemNode<TElement, unknown> | undefined;
 
   // Wire node into list (unidirectional: parent→child, not child→parent)
-  node.previousSibling = prevSibling;
-  node.nextSibling = undefined;
+  node.prev = prevSibling;
+  node.next = undefined;
 
   // Update parent's tail pointer
-  if (prevSibling !== undefined) prevSibling.nextSibling = node;
+  if (prevSibling !== undefined) prevSibling.next = node;
   else parent.firstChild = node;
 
   parent.lastChild = node;
@@ -502,14 +509,14 @@ function appendChild<T, TElement>(
  */
 function removeChild<T, TElement>(
   parent: MapState<TElement>,
-  node: ListItemNode<T, TElement>
+  node: ListItemNode<TElement, T>
 ): void {
   // Unlink from parent's children list
   unlinkFromParent(parent, node);
 
   // Clear node's sibling references
-  node.previousSibling = undefined;
-  node.nextSibling = undefined;
+  node.prev = undefined;
+  node.next = undefined;
 }
 
 /**
@@ -519,8 +526,8 @@ function removeChild<T, TElement>(
  */
 function moveChild<T, TElement>(
   parent: MapState<TElement>,
-  node: ListItemNode<T, TElement>,
-  refSibling: ListItemNode<T, TElement> | undefined
+  node: ListItemNode<TElement, T>,
+  refSibling: ListItemNode<TElement, T> | undefined
 ): void {
   // Remove from current position
   unlinkFromParent(parent, node);
@@ -529,26 +536,26 @@ function moveChild<T, TElement>(
   if (refSibling === undefined) {
     // Move to end
     const prevSibling = parent.lastChild as
-      | ListItemNode<T, TElement>
+      | ListItemNode<TElement, T>
       | undefined;
-    node.previousSibling = prevSibling;
-    node.nextSibling = undefined;
+    node.prev = prevSibling;
+    node.next = undefined;
 
-    if (prevSibling !== undefined) prevSibling.nextSibling = node;
+    if (prevSibling !== undefined) prevSibling.next = node;
     else parent.firstChild = node;
 
     parent.lastChild = node;
   } else {
     // Move before refSibling
-    const prevSibling = refSibling.previousSibling as
-      | ListItemNode<T, TElement>
+    const prevSibling = refSibling.prev as
+      | ListItemNode<TElement, T>
       | undefined;
-    node.previousSibling = prevSibling;
-    node.nextSibling = refSibling;
+    node.prev = prevSibling;
+    node.next = refSibling;
 
-    refSibling.previousSibling = node;
+    refSibling.prev = node;
 
-    if (prevSibling !== undefined) prevSibling.nextSibling = node;
+    if (prevSibling !== undefined) prevSibling.next = node;
     else parent.firstChild = node;
   }
 }

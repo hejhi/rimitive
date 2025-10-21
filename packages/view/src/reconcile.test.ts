@@ -109,8 +109,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const items = ['a', 'b', 'c'];
@@ -144,8 +143,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const createElement = (item: string) => {
@@ -202,8 +200,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const createElement = (item: string) => {
@@ -238,8 +235,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const objA = { id: 1, name: 'Alice' };
@@ -285,8 +281,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const createElement = (item: string) => {
@@ -321,8 +316,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const signals = new Map<string, ReturnType<typeof vi.fn>>();
@@ -379,8 +373,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const createElement = (item: string) => {
@@ -410,8 +403,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const createElement = (item: string) => {
@@ -440,8 +432,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const createElement = (item: string) => {
@@ -474,8 +465,7 @@ describe('reconcileList', () => {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
-      itemsByKey: new Map<string, ListItemNode<unknown, MockElement>>(),
-      nextSibling: null,
+      itemsByKey: new Map<string, ListItemNode<MockElement, unknown>>(),
     };
 
     const itemSignals = new Map<string, ReturnType<typeof vi.fn>>();

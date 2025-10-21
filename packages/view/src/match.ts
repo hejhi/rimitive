@@ -14,8 +14,8 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
-import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback } from './types';
-import { isRefSpec, isElementRef, STATUS_FRAGMENT } from './types';
+import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback, NodeRef, ElementRef } from './types';
+import { isRefSpec, isElementRef, STATUS_FRAGMENT, STATUS_ELEMENT, resolveNextElement } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { disposeScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
@@ -23,8 +23,9 @@ import type { ViewContext } from './context';
 interface MatchState<TElement = ReactiveElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
   element?: TElement;
-  currentChild: TElement | null;
-  nextSibling: TElement | null;
+  // Current child NodeRef (prevents memory leaks by retaining full reference)
+  firstChild?: NodeRef<TElement>;
+  lastChild?: NodeRef<TElement>; // Same as firstChild for single-child fragments
 }
 
 /**
@@ -74,12 +75,24 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
         status: STATUS_FRAGMENT,
         prev: undefined,
         next: undefined,
-        currentChild: null,
-        nextSibling: null,
+        firstChild: undefined,
+        lastChild: undefined,
         attach: (parent: TElement, nextSibling?: TElement | null): void => {
-          // Store parent element and nextSibling boundary marker
+          // Store parent element for reconciliation
           state.element = parent;
-          state.nextSibling = nextSibling ?? null;
+
+          // Store boundary marker if provided (for standalone usage)
+          // When created via el(), state.next will be set and takes precedence
+          if (nextSibling !== undefined && nextSibling !== null && !state.next) {
+            // Create a synthetic ElementRef to act as next sibling
+            const syntheticNext: import('./types').NodeRef<TElement> = {
+              status: STATUS_ELEMENT,
+              element: nextSibling,
+              prev: undefined,
+              next: undefined,
+            } as import('./types').ElementRef<TElement>;
+            state.next = syntheticNext;
+          }
 
           // Create effect that swaps elements when reactive value changes
           const dispose = effect(() => {
@@ -87,14 +100,16 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
             const elementRef = render(value);
 
             // Remove old child if exists
-            if (state.currentChild) {
-              const oldScope = ctx.elementScopes.get(state.currentChild);
+            if (state.firstChild) {
+              const oldElement = (state.firstChild as ElementRef<TElement>).element;
+              const oldScope = ctx.elementScopes.get(oldElement);
               if (oldScope) {
                 disposeScope(oldScope);
-                ctx.elementScopes.delete(state.currentChild);
+                ctx.elementScopes.delete(oldElement);
               }
-              renderer.removeChild(parent, state.currentChild);
-              state.currentChild = null;
+              renderer.removeChild(parent, oldElement);
+              state.firstChild = undefined;
+              state.lastChild = undefined;
             }
 
             // Create new child if not null/false
@@ -102,10 +117,11 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
               const nodeRef = elementRef.create();
               // Match children should be ElementRefs
               if (isElementRef(nodeRef)) {
-                const childEl = nodeRef.element;
-                // Insert before nextSibling to maintain stable position
-                renderer.insertBefore(parent, childEl, state.nextSibling);
-                state.currentChild = childEl;
+                // Store NodeRef to prevent memory leaks
+                state.firstChild = nodeRef;
+                state.lastChild = nodeRef;
+                // Insert before next sibling element to maintain stable position
+                renderer.insertBefore(parent, nodeRef.element, resolveNextElement(state.next as NodeRef<TElement> | undefined));
               }
             }
           });

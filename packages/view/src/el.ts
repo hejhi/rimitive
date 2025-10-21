@@ -148,11 +148,10 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         let nextElement: TElement | null = null;
 
         do {
-          if (isFragmentRef(lastChildRef))
-            lastChildRef.attach(element, nextElement);
+          if (isFragmentRef(lastChildRef)) lastChildRef.attach(element, nextElement);
           else nextElement = lastChildRef.element;
 
-          lastChildRef = lastChildRef.prev;
+          lastChildRef = lastChildRef.prev as NodeRef<TElement> | undefined;
         } while (lastChildRef);
       });
 

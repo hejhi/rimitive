@@ -10,10 +10,10 @@ import type { Readable } from '@lattice/signals/types';
 export const STATUS_ELEMENT = 1;
 export const STATUS_FRAGMENT = 2;
 
-interface BaseRef<TElement> {
+export interface BaseRef<TElement> {
   status: number;
-  prev?: NodeRef<TElement>;
-  next?: NodeRef<TElement>;
+  prev?: BaseRef<TElement>;
+  next?: BaseRef<TElement>;
 }
 
 /**
@@ -29,7 +29,11 @@ export interface ElementRef<TElement> extends BaseRef<TElement> {
  */
 export interface FragmentRef<TElement> extends BaseRef<TElement> {
   status: typeof STATUS_FRAGMENT;
-  attach: (parent: TElement, nextSibling: TElement | null) => void;
+  attach: (parent: TElement, nextSibling?: TElement | null) => void;
+  // Fragment children - specific fragments override with concrete types
+  // MapState: ListItemNode (extends BaseRef), MatchState: NodeRef<TElement> (extends BaseRef)
+  firstChild?: BaseRef<TElement>;
+  lastChild?: BaseRef<TElement>;
 }
 
 /**
@@ -49,6 +53,47 @@ export function isElementRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is E
  */
 export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is FragmentRef<TElement> {
   return nodeRef.status === STATUS_FRAGMENT;
+}
+
+/**
+ * Resolve the next DOM element from a NodeRef chain.
+ * Walks the `next` chain to find the first actual element, skipping empty fragments.
+ *
+ * @param ref - Starting NodeRef (typically fragment.next)
+ * @returns The next DOM element, or null if end of chain
+ */
+export function resolveNextElement<TElement>(ref: NodeRef<TElement> | undefined): TElement | null {
+  let current = ref;
+  while (current) {
+    // ElementRef - return element directly
+    if (current.status === STATUS_ELEMENT) {
+      return current.element;
+    }
+
+    // FragmentRef - try to get first child element
+    if (current.firstChild) {
+      const firstChild = current.firstChild;
+
+      // Check if firstChild is a ListItemNode (MapState case) - has .ref property
+      if ('ref' in firstChild && 'key' in firstChild) {
+        // ListItemNode from MapState - has .ref as NodeRef
+        const nodeRef = (firstChild as any).ref as NodeRef<TElement>;
+        if (nodeRef.status === STATUS_ELEMENT) {
+          return nodeRef.element;
+        }
+      } else {
+        // NodeRef (MatchState case) - could be ElementRef or FragmentRef
+        const nodeRef = firstChild as NodeRef<TElement>;
+        if (nodeRef.status === STATUS_ELEMENT) {
+          return nodeRef.element;
+        }
+      }
+    }
+
+    // Empty fragment - skip to next sibling
+    current = current.next as NodeRef<TElement> | undefined;
+  }
+  return null; // End of chain
 }
 
 /**
