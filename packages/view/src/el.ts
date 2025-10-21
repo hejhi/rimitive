@@ -239,17 +239,25 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
   ctx: ViewContext,
   renderer: Renderer<TElement, TText>
 ): NodeRef<TElement> | null {
+  const childType = typeof child;
+
   // Skip null/undefined/false
-  if (child == null || child === false) return null;
-  if (typeof child === 'function') {
+  if (child == null || child === false || childType === 'boolean') return null;
+
+  // Static primitive (string, number)
+  if (childType === 'string' || childType === 'number') {
+    const textNode = renderer.createTextNode(String(child));
+    renderer.appendChild(element, textNode);
+    return null; // Text nodes don't participate in ref node chain
+  }
+
+  if (childType === 'function') {
     // Element ref (from el()) - instantiate blueprint
     if (isRefSpec<TElement>(child)) {
       const childRef = child.create();
 
       // Append element if this is an ElementRef (fragments get attached later)
-      if (isElementRef(childRef)) {
-        renderer.appendChild(element, childRef.element);
-      }
+      if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
 
       return childRef;
     }
@@ -263,7 +271,7 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
         const value = child();
         // Convert to string, handling null/undefined and primitives only
         let stringValue = '';
-        if (value != null) stringValue = String(value as unknown as string); // for linting
+        if (value != null) stringValue = String(value); // for linting
         renderer.updateTextNode(textNode, stringValue);
       });
 
@@ -273,22 +281,6 @@ function handleChild<TElement extends RendererElement, TText extends TextNode>(
       return null; // Text nodes don't participate in ref node chain
     }
   }
-
-  // Element (check using renderer)
-  if (renderer.isElement(child)) {
-    renderer.appendChild(element, child);
-    return null; // Raw elements don't participate in ref node chain
-  }
-
-  // Static primitive (string, number)
-  if (typeof child === 'string' || typeof child === 'number') {
-    const textNode = renderer.createTextNode(String(child));
-    renderer.appendChild(element, textNode);
-    return null; // Text nodes don't participate in ref node chain
-  }
-
-  // Boolean - ignore
-  if (typeof child === 'boolean') return null;
 
   return null; // Default case
 }
