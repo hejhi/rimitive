@@ -145,11 +145,11 @@ export function createElFactory<TElement extends RendererElement, TText extends 
 
         // Unwind: traverse backwards and attach fragments
         if (!lastChildRef) return;
-        let nextElement: TElement | null = null;
+        let nextRef: NodeRef<TElement> | null = null;
 
         do {
-          if (isFragmentRef(lastChildRef)) lastChildRef.attach(element, nextElement);
-          else nextElement = lastChildRef.element;
+          if (isFragmentRef(lastChildRef)) lastChildRef.attach(element, nextRef);
+          else nextRef = lastChildRef;
 
           lastChildRef = lastChildRef.prev as NodeRef<TElement> | undefined;
         } while (lastChildRef);

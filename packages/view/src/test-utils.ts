@@ -168,6 +168,18 @@ export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
 }
 
 /**
+ * Wraps an element in an ElementRef for testing
+ */
+export function wrapElement<TElement>(element: TElement) {
+  return {
+    status: 1 as const, // STATUS_ELEMENT
+    element,
+    prev: undefined,
+    next: undefined,
+  };
+}
+
+/**
  * Extracts text content from mock element tree (simulates innerText)
  */
 export function getTextContent(element: MockElement | MockText): string {

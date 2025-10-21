@@ -15,7 +15,7 @@
 
 import type { LatticeExtension } from '@lattice/lattice';
 import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback, NodeRef, ElementRef } from './types';
-import { isRefSpec, isElementRef, STATUS_FRAGMENT, STATUS_ELEMENT, resolveNextElement } from './types';
+import { isRefSpec, isElementRef, STATUS_FRAGMENT, resolveNextElement } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { disposeScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
@@ -77,21 +77,14 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
         next: undefined,
         firstChild: undefined,
         lastChild: undefined,
-        attach: (parent: TElement, nextSibling?: TElement | null): void => {
+        attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null): void => {
           // Store parent element for reconciliation
           state.element = parent;
 
           // Store boundary marker if provided (for standalone usage)
           // When created via el(), state.next will be set and takes precedence
-          if (nextSibling !== undefined && nextSibling !== null && !state.next) {
-            // Create a synthetic ElementRef to act as next sibling
-            const syntheticNext: NodeRef<TElement> = {
-              status: STATUS_ELEMENT,
-              element: nextSibling,
-              prev: undefined,
-              next: undefined,
-            } as ElementRef<TElement>;
-            state.next = syntheticNext;
+          if (nextSibling && !state.next) {
+            state.next = nextSibling;
           }
 
           // Create effect that swaps elements when reactive value changes

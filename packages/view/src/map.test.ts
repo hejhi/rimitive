@@ -5,6 +5,7 @@ import {
   createMockRenderer,
   createSignal,
   createRefSpec,
+  wrapElement,
   type MockElement,
   type MockText,
   type Reactive,
@@ -218,7 +219,7 @@ describe('map primitive', () => {
       const parent = renderer.createElement('ul');
       renderer.appendChild(parent, header);
       // Map gets nextSibling reference to footer when processed as sibling
-      asFragment(listRef.create()).attach(parent, footer); // Pass footer as nextSibling explicitly
+      asFragment(listRef.create()).attach(parent, wrapElement(footer)); // Pass footer as nextSibling explicitly
       renderer.appendChild(parent, footer);
 
       // Initial: HEADER, a, b, FOOTER

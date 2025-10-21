@@ -19,7 +19,7 @@ import type {
   NodeRef,
   BaseRef,
 } from './types';
-import { STATUS_FRAGMENT, STATUS_ELEMENT, isElementRef, resolveNextElement, ElementRef } from './types';
+import { STATUS_FRAGMENT, isElementRef, resolveNextElement, ElementRef } from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -135,21 +135,14 @@ export function createMapFactory<
         next: undefined,
         firstChild: undefined,
         lastChild: undefined,
-        attach: (parent: TElement, nextSibling?: TElement | null): void => {
+        attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null): void => {
           // Store parent element for reconciliation
           state.element = parent;
 
           // Store boundary marker if provided (for standalone usage)
           // When created via el(), state.next will be set and takes precedence
-          if (nextSibling !== undefined && nextSibling !== null && !state.next) {
-            // Create a synthetic ElementRef to act as next sibling
-            const syntheticNext: NodeRef<TElement> = {
-              status: STATUS_ELEMENT,
-              element: nextSibling,
-              prev: undefined,
-              next: undefined,
-            };
-            state.next = syntheticNext;
+          if (nextSibling && !state.next) {
+            state.next = nextSibling;
           }
 
           // Create an effect that reconciles the list when items change
@@ -387,7 +380,7 @@ export function reconcileList<
       // Insert before next sibling element to maintain fragment position
       renderer.insertBefore(
         parentEl,
-        (nodeRef as ElementRef<TElement>).element,
+        nodeRef.element,
         resolveNextElement(parent.next as NodeRef<TElement> | undefined)
       );
     }

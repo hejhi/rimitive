@@ -29,7 +29,7 @@ export interface ElementRef<TElement> extends BaseRef<TElement> {
  */
 export interface FragmentRef<TElement> extends BaseRef<TElement> {
   status: typeof STATUS_FRAGMENT;
-  attach: (parent: TElement, nextSibling?: TElement | null) => void;
+  attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null) => void;
   // Fragment children - specific fragments override with concrete types
   // MapState: ListItemNode (extends BaseRef), MatchState: NodeRef<TElement> (extends BaseRef)
   firstChild?: BaseRef<TElement>;
@@ -77,7 +77,8 @@ export function resolveNextElement<TElement>(ref: NodeRef<TElement> | undefined)
       // Check if firstChild is a ListItemNode (MapState case) - has .ref property
       if ('ref' in firstChild && 'key' in firstChild) {
         // ListItemNode from MapState - has .ref as NodeRef
-        const nodeRef = (firstChild as any).ref as NodeRef<TElement>;
+        const listItem = firstChild as { ref: NodeRef<TElement>; key: unknown };
+        const nodeRef = listItem.ref;
         if (nodeRef.status === STATUS_ELEMENT) {
           return nodeRef.element;
         }
