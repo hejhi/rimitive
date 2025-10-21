@@ -3,7 +3,7 @@ import { reconcileList, ListItemNode, MapState } from './map';
 import { createViewContext } from './context';
 import type { Renderer } from './renderer';
 import { MockElement } from './test-utils';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, type ElementRef } from './types';
+import { NodeRef, STATUS_ELEMENT, STATUS_FRAGMENT, type ElementRef } from './types';
 
 // Helper to create properly typed ElementRef
 const createElementRef = <T>(element: T): ElementRef<T> => ({
@@ -25,7 +25,7 @@ function reconcileListTest<T>(
   ctx: ReturnType<typeof createViewContext>,
   parent: MapState<MockElement>,
   newItems: T[],
-  renderItem: (item: T) => { element: import('./types').NodeRef<MockElement>; itemSignal?: ((value: T) => void) & (() => T) },
+  renderItem: (item: T) => { element: NodeRef<MockElement>; itemSignal?: ((value: T) => void) & (() => T) },
   keyFn: (item: T) => string | number,
   renderer: Renderer<MockElement, MockElement>
 ): void {

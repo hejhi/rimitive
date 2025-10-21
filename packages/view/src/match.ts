@@ -85,12 +85,12 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
           // When created via el(), state.next will be set and takes precedence
           if (nextSibling !== undefined && nextSibling !== null && !state.next) {
             // Create a synthetic ElementRef to act as next sibling
-            const syntheticNext: import('./types').NodeRef<TElement> = {
+            const syntheticNext: NodeRef<TElement> = {
               status: STATUS_ELEMENT,
               element: nextSibling,
               prev: undefined,
               next: undefined,
-            } as import('./types').ElementRef<TElement>;
+            } as ElementRef<TElement>;
             state.next = syntheticNext;
           }
 

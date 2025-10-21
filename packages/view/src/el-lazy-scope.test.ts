@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { createElFactory } from './el';
 import { createViewContext } from './context';
 import { createMockRenderer, createSignal } from './test-utils';
-import type { ElementRef } from './types';
+import type { ElementRef, NodeRef } from './types';
 
 // Helper to extract element from NodeRef
-const asElement = <T>(nodeRef: import('./types').NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
+const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
 
 describe('el primitive - lazy scope creation', () => {
   it('does not create scope for fully static elements', () => {

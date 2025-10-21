@@ -9,10 +9,10 @@ import {
   type MockText,
   type Reactive,
 } from './test-utils';
-import type { FragmentRef } from './types';
+import type { FragmentRef, NodeRef } from './types';
 
 // Helper to extract FragmentRef from NodeRef
-const asFragment = <T>(nodeRef: import('./types').NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
+const asFragment = <T>(nodeRef: NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
 
 describe('map primitive', () => {
   describe('list rendering', () => {

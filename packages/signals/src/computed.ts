@@ -5,7 +5,7 @@
  */
 
 import { CONSTANTS } from './constants';
-import { DerivedNode } from './types';
+import { Dependency, DerivedNode } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
@@ -23,7 +23,7 @@ export type ComputedOpts = {
   trackDependency: GraphEdges['trackDependency'];
   pullUpdates: PullPropagator['pullUpdates'];
   track: GraphEdges['track'];
-  shallowPropagate: (sub: import('./types').Dependency) => void;
+  shallowPropagate: (sub: Dependency) => void;
   instrument?: (
     method: <T>(compute: () => T) => ComputedFunction<T>,
     instrumentation: InstrumentationContext,

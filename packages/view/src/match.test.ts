@@ -9,12 +9,12 @@ import {
   type MockElement,
 } from './test-utils';
 import { createElFactory } from './el';
-import type { FragmentRef, ElementRef } from './types';
+import type { FragmentRef, ElementRef, NodeRef } from './types';
 
 // Helper to extract FragmentRef from NodeRef
-const asFragment = <T>(nodeRef: import('./types').NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
+const asFragment = <T>(nodeRef: NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
 // Helper to extract element from NodeRef
-const asElement = <T>(nodeRef: import('./types').NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
+const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
 
 describe('match primitive', () => {
   describe('conditional rendering', () => {
