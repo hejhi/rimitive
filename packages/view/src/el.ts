@@ -91,7 +91,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>
-  ) {
+  ): RefSpec<TElement> {
     const [tag, ...rest] = spec;
 
     // Store lifecycle callbacks that will be applied to each instance

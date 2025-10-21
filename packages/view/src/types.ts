@@ -66,30 +66,19 @@ export function resolveNextElement<TElement>(ref: NodeRef<TElement> | undefined)
   let current = ref;
   while (current) {
     // ElementRef - return element directly
-    if (current.status === STATUS_ELEMENT) {
-      return current.element;
-    }
+    if (current.status === STATUS_ELEMENT) return current.element;
 
     // FragmentRef - try to get first child element
     if (current.firstChild) {
       const firstChild = current.firstChild;
 
       // Check if firstChild is a ListItemNode (MapState case) - has .element and .key
-      if ('element' in firstChild && 'key' in firstChild) {
-        // ListItemNode from MapState - has .element directly
-        const listItem = firstChild as { element: TElement; key: unknown };
-        return listItem.element;
-      } else {
-        // NodeRef (MatchState case) - could be ElementRef or FragmentRef
-        const nodeRef = firstChild as NodeRef<TElement>;
-        if (nodeRef.status === STATUS_ELEMENT) {
-          return nodeRef.element;
-        }
-      }
+      if ('element' in firstChild) return (firstChild as ElementRef<TElement>).element;
+      else if (firstChild.status === STATUS_ELEMENT) return (firstChild as ElementRef<TElement>).element;
     }
 
     // Empty fragment - skip to next sibling
-    current = current.next as NodeRef<TElement> | undefined;
+    current = current.next as NodeRef<TElement>;
   }
   return null; // End of chain
 }
@@ -100,7 +89,7 @@ export function resolveNextElement<TElement>(ref: NodeRef<TElement> | undefined)
 export interface RefSpec<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement>; // Register lifecycle callback (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
-  create<T = Record<string, unknown>>(extensions?: T): NodeRef<TElement> & T;
+  create<TExt = Record<string, unknown>>(extensions?: TExt): NodeRef<TElement> & TExt;
 }
 
 /**

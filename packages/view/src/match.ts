@@ -116,7 +116,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
                 state.firstChild = nodeRef;
                 state.lastChild = nodeRef;
                 // Insert before next sibling element to maintain stable position
-                renderer.insertBefore(parent, nodeRef.element, resolveNextElement(state.next as NodeRef<TElement> | undefined));
+                renderer.insertBefore(parent, nodeRef.element, resolveNextElement(state.next as NodeRef<TElement>));
               }
             }
           });
