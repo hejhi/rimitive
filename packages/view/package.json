@@ -38,6 +38,10 @@
       "import": "./dist/helpers/scope.js",
       "types": "./dist/helpers/scope.d.ts"
     },
+    "./helpers/processChildren": {
+      "import": "./dist/helpers/processChildren.js",
+      "types": "./dist/helpers/processChildren.d.ts"
+    },
     "./on": {
       "import": "./dist/on.js",
       "types": "./dist/on.d.ts"

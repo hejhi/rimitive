@@ -70,6 +70,10 @@ export default defineConfig({
         on: resolve(__dirname, 'src/on.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
+        'helpers/processChildren': resolve(
+          __dirname,
+          'src/helpers/processChildren.ts'
+        ),
       },
       formats: ['es'],
     },

@@ -7,13 +7,15 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createScopes } from '@lattice/view/helpers/scope';
+import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createElFactory } from '@lattice/view/el';
-import type { ElementProps, ElRefSpecChild } from '@lattice/view/el';
+import type { ElementProps } from '@lattice/view/el';
 import { createMapFactory } from '@lattice/view/map';
 import { createViewContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { on } from '@lattice/view/on';
-import { isReactive, type Reactive } from '@lattice/view/types';
+import { ElRefSpecChild, isReactive, type Reactive } from '@lattice/view/types';
 
 type ClassValue = string | Reactive<string> | null | undefined | false;
 
@@ -64,21 +66,31 @@ function createSignalContext() {
 const signalCtx = createSignalContext();
 const viewCtx = createViewContext();
 const renderer = createDOMRenderer();
+const { createScope, runInScope, trackInScope, trackInSpecificScope, disposeScope } =
+  createScopes({ ctx: viewCtx });
 
 const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
+const { processChildren } = createProcessChildren({ effect: effectFactory.method, renderer, trackInScope });
 
 const elFactory = createElFactory({
   ctx: viewCtx,
   effect: effectFactory.method,
-  renderer
+  renderer,
+  createScope,
+  runInScope,
+  trackInScope,
+  trackInSpecificScope,
+  processChildren,
 });
 const mapFactory = createMapFactory({
   ctx: viewCtx,
   signal: signalFactory.method,
   effect: effectFactory.method,
   renderer,
+  trackInSpecificScope,
+  disposeScope
 });
 
 const api = createApi(
@@ -357,5 +369,5 @@ const App = () => {
 const appElement = document.getElementById('main');
 if (appElement) {
   const app = App();
-  appElement.appendChild(app.create());
+  appElement.appendChild(app.create().element as HTMLElement);
 }
