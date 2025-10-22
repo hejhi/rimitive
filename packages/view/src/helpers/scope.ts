@@ -1,62 +1,91 @@
-import type { Disposable } from '../types';
-import type { ViewContext } from '../context';
+import type { Disposable, RenderScope, DisposableNode } from '../types';
+import type { LatticeContext } from '../context';
+import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
+import type { Scheduler } from '@lattice/signals/helpers/scheduler';
+import { CONSTANTS } from '@lattice/signals/constants';
 
-/**
- * Scope is a minimal data structure inspired by signals node design.
- * Uses intrusive linked lists for memory efficiency and O(1) operations.
- *
- * Tree structure:
- * - parent: Parent scope in the tree
- * - firstChild: First child scope
- * - nextSibling: Next sibling scope
- *
- * Disposables:
- * - firstDisposable: Head of disposables linked list
- *
- * Status bits:
- * - ACTIVE (0): Scope is active
- * - DISPOSED (1): Scope has been disposed
- */
+const { CLEAN, CONSUMER, SCHEDULED, DISPOSED, STATE_MASK } = CONSTANTS;
 
-const ACTIVE = 0;
-const DISPOSED = 1;
-
-export interface Scope {
-  parent: Scope | undefined;
-  firstChild: Scope | undefined;
-  nextSibling: Scope | undefined;
-  firstDisposable: DisposableNode | undefined;
-  status: number;
-}
-
-/**
- * Wrapper for disposables to form linked list
- */
-interface DisposableNode {
-  disposable: Disposable;
-  next: DisposableNode | undefined;
-}
+// Status combination for render scopes (consumer + scheduled + clean)
+const RENDER_SCOPE_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
 export type CreateScopes = {
-  createScope: (parent?: Scope) => Scope;
-  runInScope: <T>(scope: Scope, fn: () => T) => T;
+  createScope: <TElement = object>(
+    element: TElement,
+    parent?: RenderScope<TElement>,
+    renderFn?: () => void | (() => void)
+  ) => RenderScope<TElement>;
+  createRenderEffect: <TElement = object>(
+    element: TElement,
+    renderFn: () => void | (() => void),
+    parent?: RenderScope<TElement>
+  ) => RenderScope<TElement>;
+  runInScope: <T, TElement = object>(scope: RenderScope<TElement>, fn: () => T) => T;
   trackInScope: (disposable: Disposable) => void;
-  trackInSpecificScope: (scope: Scope, disposable: Disposable) => void;
-  disposeScope: (scope: Scope) => void;
+  trackInSpecificScope: <TElement = object>(scope: RenderScope<TElement>, disposable: Disposable) => void;
+  disposeScope: <TElement = object>(scope: RenderScope<TElement>) => void;
 };
 
-export function createScopes({ ctx }: { ctx: ViewContext }): CreateScopes {
+export function createScopes({
+  ctx,
+  track,
+  dispose: disposeNode,
+}: {
+  ctx: LatticeContext;
+  track: GraphEdges['track'];
+  dispose: Scheduler['dispose'];
+}): CreateScopes {
   /**
-   * Create a new disposal scope (minimal allocation)
-   * Optionally attach to parent scope in the tree
+   * Create a new RenderScope instance
+   * Combines reactive graph node (ScheduledNode) with tree structure (Scope)
    */
-  const createScope = (parent?: Scope): Scope => {
-    const scope: Scope = {
+  const createScope = <TElement = object>(
+    element: TElement,
+    parent?: RenderScope<TElement>,
+    renderFn?: () => void | (() => void)
+  ): RenderScope<TElement> => {
+    const scope: RenderScope<TElement> = {
+      // Reactive graph fields (from ScheduledNode -> ConsumerNode -> ReactiveNode)
+      __type: 'render-scope',
+      status: RENDER_SCOPE_CLEAN,
+      dependencies: undefined,
+      dependencyTail: undefined,
+      trackingVersion: 0,
+      nextScheduled: undefined,
+
+      // Flush method - re-runs render function with reactive tracking
+      // When signals change, scheduler marks this scope DIRTY and queues for flush
+      flush(): void {
+        if (scope.renderFn) {
+          // Clear previous cleanup
+          if (scope.cleanup) {
+            scope.cleanup();
+            scope.cleanup = undefined;
+          }
+          // Re-run render with dependency tracking
+          // track() establishes edges from signals to this scope
+          const result = track(scope, scope.renderFn);
+          // Store cleanup function if returned
+          if (typeof result === 'function') {
+            scope.cleanup = result;
+          }
+        }
+      },
+
+      // Tree structure (from Scope)
       parent,
       firstChild: undefined,
       nextSibling: undefined,
+
+      // Lifecycle & cleanup (from Scope)
       firstDisposable: undefined,
-      status: ACTIVE,
+
+      // Element binding
+      element,
+      cleanup: undefined,
+
+      // Reactive rendering
+      renderFn,
     };
 
     // Attach to parent's child list
@@ -65,42 +94,70 @@ export function createScopes({ ctx }: { ctx: ViewContext }): CreateScopes {
       parent.firstChild = scope;
     }
 
+    // Initial flush if renderFn provided - establishes initial dependencies
+    if (renderFn) {
+      scope.flush();
+    }
+
     return scope;
   };
 
   /**
-   * Run function within scope context
-   * Standalone function like signals/graph-edges.ts track()
+   * Create a RenderScope with a render function for reactive updates
+   * This is a convenience wrapper around createScope that always includes a renderFn
+   *
+   * Use this when you want a component that automatically re-renders when signals change.
+   * The renderFn will be tracked and any signals it reads will trigger re-renders.
    */
-  const runInScope = <T>(scope: Scope, fn: () => T): T => {
-    const prevScope = ctx.currentScope;
-    ctx.currentScope = scope;
+  const createRenderEffect = <TElement = object>(
+    element: TElement,
+    renderFn: () => void | (() => void),
+    parent?: RenderScope<TElement>
+  ): RenderScope<TElement> => {
+    return createScope(element, parent, renderFn);
+  };
+
+  /**
+   * Run function within scope context
+   * Sets the active scope for both reactive tracking and lifecycle management
+   */
+  const runInScope = <T, TElement = object>(
+    scope: RenderScope<TElement>,
+    fn: () => T
+  ): T => {
+    const prevScope = ctx.activeScope;
+    // Cast is needed because activeScope is typed as RenderScope<ReactiveElement> but scope might be RenderScope<TElement>
+    // This is safe because the element type doesn't affect the scope's behavior
+    ctx.activeScope = scope as RenderScope;
     try {
       return fn();
     } finally {
-      ctx.currentScope = prevScope;
+      ctx.activeScope = prevScope;
     }
   };
 
   /**
    * Track a disposable in the current scope (if any)
-   * Like signals trackDependency - checks ctx first
-   * Uses linked list prepend for O(1) insertion
+   * Checks ctx.activeScope and delegates to trackInSpecificScope
    */
   const trackInScope = (disposable: Disposable): void => {
-    const scope = ctx.currentScope;
+    const scope = ctx.activeScope;
     if (scope) {
       trackInSpecificScope(scope, disposable);
     }
   };
 
   /**
-   * Track a disposable in a specific scope (not current)
-   * Direct scope manipulation for when currentScope isn't set
+   * Track a disposable in a specific scope
+   * Direct scope manipulation for when activeScope isn't set
    * Uses linked list prepend for O(1) insertion
    */
-  const trackInSpecificScope = (scope: Scope, disposable: Disposable): void => {
-    if (scope.status === ACTIVE) {
+  const trackInSpecificScope = <TElement = object>(
+    scope: RenderScope<TElement>,
+    disposable: Disposable
+  ): void => {
+    // Only track if scope is not disposed
+    if ((scope.status & STATE_MASK) !== DISPOSED) {
       // Prepend to linked list (O(1))
       const node: DisposableNode = {
         disposable,
@@ -111,18 +168,26 @@ export function createScopes({ ctx }: { ctx: ViewContext }): CreateScopes {
   };
 
   /**
-   * Dispose all tracked subscriptions and child scopes
-   * Like signals/scheduler.ts dispose - idempotent cleanup
-   * Walks linked lists to dispose disposables and children
+   * Dispose a RenderScope and all its children/disposables
+   *
+   * This implements a layered disposal strategy that integrates the reactive graph
+   * (signals) with the view tree structure.
    */
-  const disposeScope = (scope: Scope): void => {
-    // Already disposed
-    if (scope.status === DISPOSED) return;
+  const disposeScope = <TElement = object>(scope: RenderScope<TElement>): void => {
+    // Already disposed (idempotent)
+    if ((scope.status & STATE_MASK) === DISPOSED) return;
 
-    // Mark as disposed
-    scope.status = DISPOSED;
+    // Use scheduler to dispose the reactive node
+    // This handles dependency graph cleanup and marks the node as disposed
+    disposeNode(scope, () => {
+      // Run cleanup function if present
+      if (scope.cleanup) {
+        scope.cleanup();
+        scope.cleanup = undefined;
+      }
+    });
 
-    // Dispose all child scopes recursively
+    // Dispose all child scopes recursively (tree structure)
     let child = scope.firstChild;
     while (child) {
       const next = child.nextSibling;
@@ -130,7 +195,7 @@ export function createScopes({ ctx }: { ctx: ViewContext }): CreateScopes {
       child = next;
     }
 
-    // Dispose all tracked disposables
+    // Dispose all tracked disposables (lifecycle tracking)
     let node = scope.firstDisposable;
     while (node) {
       const disposable = node.disposable;
@@ -147,6 +212,7 @@ export function createScopes({ ctx }: { ctx: ViewContext }): CreateScopes {
 
   return {
     createScope,
+    createRenderEffect,
     runInScope,
     trackInScope,
     trackInSpecificScope,

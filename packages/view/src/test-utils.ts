@@ -1,9 +1,13 @@
 import { vi } from 'vitest';
-import { createViewContext } from './context';
+import { createLatticeContext } from './context';
 import type { Renderer } from './renderer';
 import type { Reactive, Disposable, RefSpec, LifecycleCallback, NodeRef } from './types';
 import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createSignalFactory } from '@lattice/signals/signal';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -199,19 +203,36 @@ export function getTextContent(element: MockElement | MockText): string {
  * Creates a complete test environment with context, renderer, and reactive primitives
  */
 export function createTestEnv() {
-  const ctx = createViewContext();
+  const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
 
-  // Simple signal factory that integrates with effect
-  const signalMap = new Map<Reactive<unknown>, Set<() => void>>();
-
-  const signal = <T>(val: T): Reactive<T> => {
-    const { read, subscribers } = createSignal(val);
-    signalMap.set(read as Reactive<unknown>, subscribers);
-    return read;
+  // Create adapter for GlobalContext compatibility
+  // signals expects consumerScope but we have activeScope
+  const signalsCtx = {
+    get consumerScope() { return ctx.activeScope; },
+    set consumerScope(value) { ctx.activeScope = value; },
+    get trackingVersion() { return ctx.trackingVersion; },
+    set trackingVersion(value) { ctx.trackingVersion = value; },
   };
 
-  // Simple effect that subscribes to signals
+  // Use real signals integration for proper reactive updates
+  const graphEdges = createGraphEdges({ ctx: signalsCtx });
+  const { withVisitor } = createGraphTraversal();
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const propagate = scheduler.withPropagate(withVisitor);
+
+  // Create real signal factory
+  const signalFactory = createSignalFactory({
+    ctx: signalsCtx,
+    trackDependency: graphEdges.trackDependency,
+    propagate,
+  });
+
+  // Use real signal
+  const signal = signalFactory.method;
+
+  // Simple effect that subscribes to signals (for non-reactive test cases)
+  const signalMap = new Map<Reactive<unknown>, Set<() => void>>();
   const effect = (fn: () => void) => {
     const cleanup = () => {
       signalMap.forEach(subscribers => subscribers.delete(fn));
@@ -224,7 +245,10 @@ export function createTestEnv() {
     return cleanup;
   };
 
-  const { trackInScope, ...scopeRest } = createScopes({ ctx })
+  const track = graphEdges.track;
+  const dispose = scheduler.dispose;
+
+  const { trackInScope, ...scopeRest } = createScopes({ ctx, track, dispose })
 
   // Create helpers
   const { processChildren, handleChild} = createProcessChildren({ trackInScope, effect, renderer });

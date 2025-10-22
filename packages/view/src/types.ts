@@ -2,7 +2,7 @@
  * Core types for @lattice/view
  */
 
-import type { Readable } from '@lattice/signals/types';
+import type { Readable, ScheduledNode } from '@lattice/signals/types';
 
 /**
  * Status bits for node ref type discrimination
@@ -151,3 +151,70 @@ export type ElRefSpecChild<TElement = object> =
   | RefSpec<TElement>
   | Reactive<unknown>
   | FragmentSpec<TElement>;
+
+/**
+ * ARCHITECTURE: RenderScope - Unified Reactive Render Node
+ *
+ * RenderScope unifies @lattice/signals' ScheduledNode with @lattice/view's Scope.
+ * This creates a single node type that:
+ * 1. Participates in the reactive dependency graph (via ScheduledNode)
+ * 2. Manages view lifecycle and cleanup (via tree structure + disposables)
+ * 3. Enables zero-allocation scheduling for view updates
+ *
+ * Design rationale:
+ * - ScheduledNode provides: reactive tracking, scheduling queue participation, flush mechanism
+ * - Scope provides: tree structure for parent-child relationships, disposable tracking
+ * - Element binding: connects the node to its DOM element for updates
+ *
+ * This unification eliminates the need for separate "effect" and "scope" objects,
+ * reducing allocations and indirection while maintaining clear separation of concerns.
+ *
+ * Key fields by responsibility:
+ *
+ * REACTIVE GRAPH (from ScheduledNode -> ConsumerNode -> ReactiveNode):
+ * @property __type - Type brand for nominal typing (ReactiveNode)
+ * @property status - Node status bits: CLEAN/PENDING/DIRTY/DISPOSED + type flags (ReactiveNode)
+ * @property dependencies - Head of dependency list for tracking producers (ConsumerNode)
+ * @property dependencyTail - Current tracking position in dependency list (ConsumerNode)
+ * @property trackingVersion - Global version when last tracked (ConsumerNode)
+ * @property nextScheduled - Next node in scheduling queue (ScheduledNode)
+ * @property flush - Execute deferred render work (ScheduledNode)
+ *
+ * TREE STRUCTURE (from Scope):
+ * @property parent - Parent scope in the tree hierarchy
+ * @property firstChild - First child scope (intrusive linked list)
+ * @property nextSibling - Next sibling scope (intrusive linked list)
+ *
+ * LIFECYCLE & CLEANUP (from Scope):
+ * @property firstDisposable - Head of disposables linked list
+ *
+ * ELEMENT BINDING (view-specific):
+ * @property element - The DOM element this scope is rendering to
+ * @property cleanup - Optional cleanup function to run on disposal
+ */
+export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
+  // Tree structure (from Scope)
+  parent: RenderScope<TElement> | undefined;
+  firstChild: RenderScope<TElement> | undefined;
+  nextSibling: RenderScope<TElement> | undefined;
+
+  // Lifecycle & cleanup (from Scope)
+  firstDisposable: DisposableNode | undefined;
+
+  // Element binding (view-specific)
+  element: TElement;
+  cleanup?: () => void;
+
+  // Reactive rendering (for effect-based scopes)
+  renderFn?: () => void | (() => void);
+}
+
+/**
+ * Wrapper for disposables to form linked list
+ * Used by RenderScope to track cleanup functions
+ */
+export interface DisposableNode {
+  disposable: Disposable;
+  next: DisposableNode | undefined;
+}
+

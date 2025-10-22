@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { reconcileList, ListItemNode, MapState } from './map';
-import { createViewContext } from './context';
+import { createLatticeContext } from './context';
 import type { Renderer } from './renderer';
 import { MockElement, createRefSpec } from './test-utils';
 import { STATUS_FRAGMENT, type RefSpec } from './types';
-import { createScopes, CreateScopes } from './helpers/scope';
+import { createTestScopes } from './test-helpers';
+import type { CreateScopes } from './helpers/scope';
 
 // createRefSpec is imported from test-utils
 
@@ -17,7 +18,7 @@ const testBuffers = {
 
 // Helper to wrap reconcileList with buffer management for tests
 function reconcileListTest<T>(
-  ctx: ReturnType<typeof createViewContext>,
+  ctx: ReturnType<typeof createLatticeContext>,
   parent: MapState<MockElement>,
   newItems: T[],
   renderItem: (item: T) => { refSpec: RefSpec<MockElement>; itemSignal?: ((value: T) => void) & (() => T) },
@@ -98,10 +99,10 @@ function createMockRenderer(): Renderer<MockElement, MockElement> {
 
 describe('reconcileList', () => {
   it('displays all items in list', () => {
-    const ctx = createViewContext();
+    const ctx = createLatticeContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const { disposeScope } = createScopes({ ctx });
+    const { disposeScope } = createTestScopes();
 
     const parent: MapState<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
@@ -134,10 +135,10 @@ describe('reconcileList', () => {
   });
 
   it('updates list when items added and removed', () => {
-    const ctx = createViewContext();
+    const ctx = createLatticeContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
-    const { disposeScope } = createScopes({ ctx });
+    const { disposeScope } = createTestScopes();
 
     const parent: MapState<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
@@ -195,8 +196,8 @@ describe('reconcileList', () => {
   });
 
   it('reorders items correctly', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');
@@ -234,8 +235,8 @@ describe('reconcileList', () => {
   });
 
   it('tracks items by ID', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');
@@ -284,8 +285,8 @@ describe('reconcileList', () => {
   });
 
   it('handles add + remove + reorder in single pass', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');
@@ -323,8 +324,8 @@ describe('reconcileList', () => {
   });
 
   it('updates itemSignal based on reference equality', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');
@@ -384,8 +385,8 @@ describe('reconcileList', () => {
   });
 
   it('handles empty to non-empty transition', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');
@@ -416,8 +417,8 @@ describe('reconcileList', () => {
   });
 
   it('handles non-empty to empty transition', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');
@@ -447,8 +448,8 @@ describe('reconcileList', () => {
   });
 
   it('replaces all items when keys do not overlap', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');
@@ -482,8 +483,8 @@ describe('reconcileList', () => {
   });
 
   it('handles duplicate keys by reusing first node', () => {
-    const ctx = createViewContext();
-    const { disposeScope } = createScopes({ ctx });
+    const ctx = createLatticeContext();
+    const { disposeScope } = createTestScopes();
 
     const renderer = createMockRenderer();
     const container = new MockElement('container');

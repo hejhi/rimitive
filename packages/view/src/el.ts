@@ -10,7 +10,7 @@ import {
   isReactive,
   STATUS_ELEMENT,
 } from './types';
-import type { ViewContext } from './context';
+import type { LatticeContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import { CreateScopes } from './helpers/scope';
 
@@ -46,7 +46,7 @@ export type ElOpts<
   TElement extends RendererElement = RendererElement,
   TText extends TextNode = TextNode,
 > = {
-  ctx: ViewContext;
+  ctx: LatticeContext;
   createScope: CreateScopes['createScope'];
   runInScope: CreateScopes['runInScope'];
   trackInScope: CreateScopes['trackInScope'];
@@ -128,8 +128,8 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         ...extensions, // Spread extensions to override/add fields
       };
 
-      // Create a scope optimistically (might not need it)
-      const scope = createScope();
+      // Create a RenderScope for this element
+      const scope = createScope(element);
 
       // Run all reactive setup within this instance's scope
       runInScope(scope, () => {
@@ -196,7 +196,7 @@ function createApplyProps<
   TText extends TextNode
 >(opts: {
   effect: (fn: () => void | (() => void)) => () => void;
-  ctx: ViewContext;
+  ctx: LatticeContext;
   renderer: Renderer<TElement, TText>;
   trackInScope: CreateScopes['trackInScope']
 }) {

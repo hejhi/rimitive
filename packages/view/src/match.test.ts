@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createMatchFactory } from './match';
-import { createViewContext } from './context';
+import { createLatticeContext } from './context';
 import {
   createMockRenderer,
   createSignal,
@@ -11,7 +11,7 @@ import {
 import { createElFactory } from './el';
 import { createProcessChildren } from './helpers/processChildren';
 import type { FragmentRef, ElementRef, NodeRef } from './types';
-import { createScopes } from './helpers/scope';
+import { createTestScopes } from './test-helpers';
 
 // Helper to extract FragmentRef from NodeRef
 const asFragment = <T>(nodeRef: NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
@@ -21,9 +21,9 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 describe('match primitive', () => {
   describe('conditional rendering', () => {
     it('renders element based on reactive condition', () => {
-      const ctx = createViewContext();
+      const ctx = createLatticeContext();
       const { renderer } = createMockRenderer();
-      const { disposeScope, trackInSpecificScope } = createScopes({ ctx })
+      const { disposeScope, trackInSpecificScope } = createTestScopes()
       const { read: condition, write: setCondition, subscribers } = createSignal(true);
       const effect = (fn: () => void) => {
         subscribers.add(fn);
@@ -74,9 +74,9 @@ describe('match primitive', () => {
     });
 
     it('handles null/false to hide element', () => {
-      const ctx = createViewContext();
+      const ctx = createLatticeContext();
       const { renderer } = createMockRenderer();
-      const { disposeScope, trackInSpecificScope } = createScopes({ ctx })
+      const { disposeScope, trackInSpecificScope } = createTestScopes()
       const { read: show, write: setShow, subscribers } = createSignal(true);
       const effect = (fn: () => void) => {
         subscribers.add(fn);
@@ -120,7 +120,7 @@ describe('match primitive', () => {
     });
 
     it('works with el() blueprints', () => {
-      const ctx = createViewContext();
+      const ctx = createLatticeContext();
       const { renderer } = createMockRenderer();
       const {
         trackInScope,
@@ -128,7 +128,7 @@ describe('match primitive', () => {
         runInScope,
         trackInSpecificScope,
         disposeScope,
-      } = createScopes({ ctx });
+      } = createTestScopes();
       const { read: state, write: setState, subscribers } = createSignal<'loading' | 'success' | 'error'>('loading');
       const effect = (fn: () => void) => {
         subscribers.add(fn);
@@ -180,7 +180,7 @@ describe('match primitive', () => {
 
   describe('element lifecycle', () => {
     it('disposes old element scope when swapping', () => {
-      const ctx = createViewContext();
+      const ctx = createLatticeContext();
       const { renderer } = createMockRenderer();
       const { read: condition, write: setCondition, subscribers } = createSignal(true);
       const effect = (fn: () => void) => {
@@ -188,7 +188,7 @@ describe('match primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const { disposeScope, trackInSpecificScope } = createScopes({ ctx });
+      const { disposeScope, trackInSpecificScope } = createTestScopes();
       const match = createMatchFactory({
         ctx,
         effect,
@@ -225,7 +225,7 @@ describe('match primitive', () => {
 
   describe('integration with el()', () => {
     it('can be used as child of el()', () => {
-      const ctx = createViewContext();
+      const ctx = createLatticeContext();
       const { renderer } = createMockRenderer();
       const { read: isLoggedIn, write: setLoggedIn, subscribers } = createSignal(false);
       const effect = (fn: () => void) => {
@@ -234,7 +234,7 @@ describe('match primitive', () => {
         return () => subscribers.delete(fn);
       };
       const { createScope, runInScope, trackInScope, trackInSpecificScope, disposeScope } =
-        createScopes({ ctx });
+        createTestScopes();
       const { processChildren } = createProcessChildren({ effect, renderer, trackInScope });
       const el = createElFactory({
         ctx,

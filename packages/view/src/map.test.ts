@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createMapFactory } from './map';
-import { createViewContext } from './context';
+import { createLatticeContext } from './context';
 import {
   createMockRenderer,
   createSignal,
@@ -11,7 +11,7 @@ import {
   type Reactive,
 } from './test-utils';
 import type { FragmentRef, NodeRef } from './types';
-import { createScopes } from './helpers/scope';
+import { createTestScopes } from './test-helpers';
 
 // Helper to extract FragmentRef from NodeRef
 const asFragment = <T>(nodeRef: NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
@@ -19,8 +19,8 @@ const asFragment = <T>(nodeRef: NodeRef<T>): FragmentRef<T> => nodeRef as Fragme
 describe('map primitive', () => {
   describe('list rendering', () => {
     it('displays items in list', () => {
-      const ctx = createViewContext();
-      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b', 'c']);
       const signal = <T>(val: T): Reactive<T> => {
@@ -91,8 +91,8 @@ describe('map primitive', () => {
 
   describe('reordering', () => {
     it('preserves elements when reordering', () => {
-      const ctx = createViewContext();
-      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b', 'c']);
       const signal = <T>(val: T): Reactive<T> => {
@@ -148,8 +148,8 @@ describe('map primitive', () => {
 
   describe('identity-based tracking', () => {
     it('uses ID for tracking instead of identity', () => {
-      const ctx = createViewContext();
-      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
       const { renderer } = createMockRenderer();
 
       const objA = { id: 1, name: 'Alice' };
@@ -206,8 +206,8 @@ describe('map primitive', () => {
     });
 
     it('maintains position when list becomes empty then refills with siblings present', () => {
-      const ctx = createViewContext();
-      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
 
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b']);
@@ -284,8 +284,8 @@ describe('map primitive', () => {
     });
 
     it('uses custom keyFn for tracking', () => {
-      const ctx = createViewContext();
-      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
 
       const { renderer } = createMockRenderer();
 
@@ -345,8 +345,8 @@ describe('map primitive', () => {
 
   describe('complex operations', () => {
     it('handles add + remove + reorder in single update', () => {
-      const ctx = createViewContext();
-      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
 
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b', 'c', 'd']);

@@ -1,30 +1,46 @@
 /**
- * View context for concurrency-safe scope tracking
- *
- * Context-scoped state (like signals GlobalContext)
- * All per-request state lives here, not in global module variables.
- * This enables concurrent SSR - each request gets its own context.
+ * LatticeContext unifies the context requirements from both @lattice/signals and @lattice/view.
+ * This creates a single context that:
+ * 1. Tracks the active scope for reactive dependency tracking (from signals' GlobalContext.consumerScope)
+ * 2. Manages view lifecycle and cleanup through scope tracking (from view's ViewContext.currentScope)
+ * 3. Provides version tracking for change detection (from signals' GlobalContext.trackingVersion)
+ * 4. Maps elements to their scopes for efficient lookup (from view's ViewContext.elementScopes)
  */
 
-import type { Scope } from './helpers/scope';
+import type { RenderScope } from './types';
 
-export interface ViewContext {
+/**
+ * Combines reactive tracking (signals) with view lifecycle management (view)
+ */
+export interface LatticeContext {
   /**
-   * Current active scope for tracking disposables
+   * Active scope for reactive tracking and lifecycle management
    */
-  currentScope: Scope | null;
+  activeScope: RenderScope | null;
 
   /**
-   * Map element to its scope
-   * Minimal external storage (like signals ctx)
-   * This is the only lookup needed - everything else is algorithmic
+   * Global version counter for change detection
+   *
+   * Incremented on each reactive update cycle to detect stale dependencies.
    */
-  elementScopes: WeakMap<object, Scope>;
+  trackingVersion: number;
+
+  /**
+   * Map element to its render scope
+   */
+  elementScopes: WeakMap<object, RenderScope>;
 }
 
-export function createViewContext(): ViewContext {
+/**
+ * Create a new LatticeContext instance
+ *
+ * This should be called once per rendering context (e.g., per SSR request, per client app)
+ * to ensure isolation and enable concurrent rendering.
+ */
+export function createLatticeContext(): LatticeContext {
   return {
-    currentScope: null,
+    activeScope: null,
+    trackingVersion: 0,
     elementScopes: new WeakMap(),
   };
 }

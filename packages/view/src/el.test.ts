@@ -1,19 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createElFactory } from './el';
 import { createTestEnv, getTextContent, createMockRenderer, createSignal } from './test-utils';
-import { createViewContext } from './context';
+import { createLatticeContext } from './context';
 import { createProcessChildren } from './helpers/processChildren';
 import type { ElementRef, NodeRef } from './types';
-import { createScopes } from './helpers/scope';
+import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
 const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
 
 // Helper to create test environment for tests that need custom effect
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
-  const ctx = createViewContext();
+  const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
-  const { trackInScope, ...scopeRest } = createScopes({ ctx });
+  const { trackInScope, ...scopeRest } = createTestScopes();
   const { processChildren } = createProcessChildren({
     effect: effectFn,
     renderer,

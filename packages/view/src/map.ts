@@ -25,7 +25,7 @@ import type {
   Element as RendererElement,
   TextNode,
 } from './renderer';
-import type { ViewContext } from './context';
+import type { LatticeContext } from './context';
 import { CreateScopes } from './helpers/scope';
 
 /**
@@ -59,7 +59,7 @@ export type MapOpts<
   TElement extends RendererElement = RendererElement,
   TText extends TextNode = TextNode,
 > = {
-  ctx: ViewContext;
+  ctx: LatticeContext;
   signal: <T>(value: T) => Reactive<T>;
   effect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
@@ -285,7 +285,7 @@ function pruneNode<
 >(
   parent: MapState<TElement>,
   node: ListItemNode<TElement, T>,
-  ctx: ViewContext,
+  ctx: LatticeContext,
   container: TElement,
   itemsByKey: Map<string, ListItemNode<TElement, T>>,
   renderer: Renderer<TElement, TText>,
@@ -301,7 +301,7 @@ function pruneNode<
   removeChild(parent, node);
   renderer.removeChild(container, element);
   itemsByKey.delete(node.key);
-};
+}
 
 /**
  * Reconcile list with minimal allocations
@@ -314,7 +314,7 @@ export function reconcileList<
   TElement extends RendererElement = RendererElement,
   TText extends TextNode = TextNode,
 >(
-  ctx: ViewContext,
+  ctx: LatticeContext,
   parent: MapState<TElement>,
   newItems: T[],
   renderItem: (item: T) => {

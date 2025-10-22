@@ -106,6 +106,115 @@ el(['ul',
 ])
 ```
 
+### `on(element, event, handler)` - Event listeners with automatic batching
+
+Attaches event listeners with automatic cleanup and performance optimization.
+
+```ts
+on(
+  element,          // HTMLElement
+  event,            // Event name (e.g., 'click', 'input')
+  handler,          // Event handler function
+  options?          // Optional addEventListener options
+)
+```
+
+**Features:**
+- Automatic batching: Multiple signal updates trigger one re-render
+- Returns cleanup function for manual removal
+- Integrates with element lifecycle callbacks
+- Type-safe event inference
+
+**Example:**
+```ts
+import { createOnFactory } from '@lattice/view/on';
+
+// Create factory with scheduler
+const onFactory = createOnFactory({ startBatch, endBatch });
+const on = onFactory.method;
+
+const count = signal(0);
+const lastUpdated = signal(Date.now());
+
+const button = el(['button', 'Update']);
+
+// Attach event listener with automatic batching
+button((element) => {
+  return on(element, 'click', () => {
+    // Both updates happen in a batch - only ONE re-render!
+    count(count() + 1);
+    lastUpdated(Date.now());
+  });
+});
+```
+
+**Without batching:**
+```
+User clicks → count updates → re-render
+           → lastUpdated updates → re-render
+Result: 2 re-renders per click 😱
+```
+
+**With batching:**
+```
+User clicks → startBatch()
+           → count updates (marks dirty)
+           → lastUpdated updates (marks dirty)
+           → endBatch() → ONE re-render
+Result: 1 re-render per click ✨
+```
+
+### `listener(refSpec, setup)` - Multiple event listeners
+
+Helper for attaching multiple event listeners with a single cleanup.
+
+```ts
+listener(
+  elementRef,                    // RefSpec<TElement>
+  (on) => {                      // Setup function
+    on('input', handler1);
+    on('keydown', handler2);
+  }
+)
+```
+
+**Features:**
+- Scoped `on` function for the element
+- All handlers automatically batched
+- Single cleanup for all listeners
+- Chainable with other lifecycle callbacks
+
+**Example:**
+```ts
+import { createListenerFactory } from '@lattice/view/on';
+
+const listenerFactory = createListenerFactory({ startBatch, endBatch });
+const listener = listenerFactory.method;
+
+const inputValue = signal('');
+const lastKey = signal('');
+
+const input = listener(
+  el(['input', { type: 'text' }]),
+  (on) => {
+    on('input', (e) => {
+      // All updates batched together
+      inputValue((e.target as HTMLInputElement).value);
+      lastKey('input');
+    });
+
+    on('keydown', (e) => {
+      lastKey(e.key);
+    });
+  }
+);
+
+// Can still chain other lifecycle callbacks
+input((el) => {
+  console.log('Input element connected!');
+});
+```
+
 ## How It Works
 
 ### Component Functions Run Once
@@ -184,7 +293,7 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createElFactory } from '@lattice/view/el';
 import { createElMapFactory } from '@lattice/view/map';
-import { createViewContext } from '@lattice/view/context';
+import { createLatticeContext } from '@lattice/view/context';
 
 // Create context (concurrency-safe)
 function createContext() {
@@ -192,7 +301,7 @@ function createContext() {
   const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
   const { withPropagate, dispose } = createScheduler({ detachAll });
   const pullPropagator = createPullPropagator({ track });
-  const viewCtx = createViewContext();
+  const viewCtx = createLatticeContext();
 
   return {
     ctx,
@@ -290,11 +399,13 @@ document.body.appendChild(TodoApp());
 
 ### Concurrency-Safe Context
 
-Like `@lattice/signals`, the view layer uses a context object (`ViewContext`) for tracking the current scope:
+Like `@lattice/signals`, the view layer uses a context object (`LatticeContext`) for tracking the current scope:
 
 ```ts
-interface ViewContext {
-  currentScope: Scope | null;
+interface LatticeContext {
+  activeScope: RenderScope | null;
+  trackingVersion: number;
+  elementScopes: WeakMap<object, RenderScope>;
 }
 ```
 

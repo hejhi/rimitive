@@ -17,7 +17,7 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback, NodeRef, ElementRef } from './types';
 import { isRefSpec, isElementRef, STATUS_FRAGMENT, resolveNextElement } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-import type { ViewContext } from './context';
+import type { LatticeContext } from './context';
 import { CreateScopes } from './helpers/scope';
 
 interface MatchState<TElement = ReactiveElement> extends FragmentRef<TElement> {
@@ -32,7 +32,7 @@ interface MatchState<TElement = ReactiveElement> extends FragmentRef<TElement> {
  * Options passed to match factory
  */
 export type MatchOpts<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode> = {
-  ctx: ViewContext;
+  ctx: LatticeContext;
   effect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
   disposeScope: CreateScopes['disposeScope'];

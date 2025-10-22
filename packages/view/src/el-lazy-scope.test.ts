@@ -1,23 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import { createElFactory } from './el';
-import { createViewContext } from './context';
+import { createLatticeContext } from './context';
 import { createMockRenderer, createSignal } from './test-utils';
 import { createProcessChildren } from './helpers/processChildren';
 import type { ElementRef, NodeRef } from './types';
-import { createScopes } from './helpers/scope';
+import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
 const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
 
 // Helper to create test environment
 function createTestEnv(effectFn?: (fn: () => void) => () => void) {
-  const ctx = createViewContext();
+  const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
   const effect = effectFn || ((fn: () => void) => {
     fn();
     return () => {};
   });
-  const { trackInScope, runInScope, trackInSpecificScope, createScope } = createScopes({ ctx })
+  const { trackInScope, runInScope, trackInSpecificScope, createScope } = createTestScopes()
   const { handleChild, processChildren } = createProcessChildren({ effect, renderer, trackInScope });
 
   return {
