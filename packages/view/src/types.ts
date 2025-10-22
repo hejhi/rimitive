@@ -107,7 +107,10 @@ export function isRefSpec<TElement>(value: unknown): value is RefSpec<TElement> 
  * Callable function that attaches to parent
  */
 export interface FragmentSpec<TElement = ReactiveElement> {
-  (parent: TElement, nextSibling?: TElement | null): void;
+  (
+    parent: ElementRef<TElement>,
+    nextSibling?: ElementRef<TElement> | null
+  ): void;
 }
 
 /**
