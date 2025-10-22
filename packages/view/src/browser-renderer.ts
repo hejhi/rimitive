@@ -26,7 +26,7 @@ export function createBrowserRenderer(): Renderer<HTMLElement, Text> {
         element.addEventListener(eventName, value as EventListener);
       } else if (key in element) {
         // DOM properties
-        (element as any)[key] = value;
+        (element as unknown as Record<string, unknown>)[key] = value;
       } else {
         // Fallback to setAttribute
         element.setAttribute(key, String(value));

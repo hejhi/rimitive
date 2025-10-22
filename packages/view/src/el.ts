@@ -4,6 +4,7 @@ import type {
   RefSpec,
   Reactive,
   NodeRef,
+  ElementRef,
   ElRefSpecChild,
 } from './types';
 import {
@@ -54,7 +55,7 @@ export type ElOpts<
   effect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
   processChildren: (
-    parent: TElement,
+    parent: ElementRef<TElement>,
     children: ElRefSpecChild<TElement>[]
   ) => void;
 };
@@ -120,7 +121,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       // Create the element using renderer
       const element = renderer.createElement(tag);
       // Create object with full shape at once (better for V8 hidden classes)
-      const nodeRef: NodeRef<TElement> & TExt = {
+      const elRef: ElementRef<TElement> = {
         status: STATUS_ELEMENT,
         element,
         prev: undefined,
@@ -137,7 +138,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         applyProps(element, props);
 
         // Process children: build linked list and attach fragments
-        processChildren(element, children);
+        processChildren(elRef, children);
       });
 
       // Run lifecycle callbacks immediately (no MutationObserver needed)
@@ -154,7 +155,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       }
 
       // Return just the element (ref nodes were internal implementation detail)
-      return nodeRef;
+      return elRef;
     };
 
     return ref;

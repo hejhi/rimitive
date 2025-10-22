@@ -5,6 +5,7 @@ import {
   createMockRenderer,
   createSignal,
   createRefSpec,
+  wrapElement,
   getTextContent,
   type MockElement,
 } from './test-utils';
@@ -57,7 +58,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      asFragment(matchRef.create()).attach(parent, null);
+      asFragment(matchRef.create()).attach(wrapElement(parent), null);
 
       // User cares: correct element displayed initially
       expect(parent.children).toHaveLength(1); // just the element
@@ -106,7 +107,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      asFragment(matchRef.create()).attach(parent, null);
+      asFragment(matchRef.create()).attach(wrapElement(parent), null);
 
       // User cares: element displayed
       expect(parent.children).toHaveLength(1); // just the element
@@ -159,7 +160,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      asFragment(matchRef.create()).attach(parent, null);
+      asFragment(matchRef.create()).attach(wrapElement(parent), null);
 
       // User cares: loading state displayed
       expect(getTextContent(parent.children[0] as MockElement)).toBe('Loading...');
@@ -208,7 +209,7 @@ describe('match primitive', () => {
 
       // Create parent and initialize match
       const parent = renderer.createElement('div');
-      asFragment(matchRef.create()).attach(parent, null);
+      asFragment(matchRef.create()).attach(wrapElement(parent), null);
 
       const firstElement = parent.children[0] as MockElement;
 

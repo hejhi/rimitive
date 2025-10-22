@@ -6,7 +6,7 @@
  * 2. Backward pass: Attach fragment children with correct insertion points
  */
 
-import type { NodeRef, ElRefSpecChild, Disposable } from '../types';
+import type { NodeRef, ElementRef, ElRefSpecChild, Disposable } from '../types';
 import { isElementRef, isFragmentRef, isReactive, isRefSpec } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
@@ -18,9 +18,10 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
   const { effect, renderer, trackInScope } = opts;
 
   const handleChild = (
-    element: TElement,
+    parentRef: ElementRef<TElement>,
     child: ElRefSpecChild<TElement>
   ): NodeRef<TElement> | null => {
+    const element = parentRef.element;
     const childType = typeof child;
 
     // Skip null/undefined/false
@@ -70,7 +71,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
   }
 
   const processChildren = (
-    parent: TElement,
+    parent: ElementRef<TElement>,
     children: ElRefSpecChild<TElement>[]
   ): void => {
     // Forward pass: build intrusive linked list

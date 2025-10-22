@@ -140,9 +140,9 @@ export function createMapFactory<
         firstChild: undefined,
         lastChild: undefined,
         ...extensions, // Spread extensions to override/add fields
-        attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null): void => {
-          // Store parent element for reconciliation
-          state.element = parent;
+        attach: (parent, nextSibling): void => {
+          // Store parent element for reconciliation (extract from parent NodeRef)
+          state.element = parent.element;
 
           // Store boundary marker if provided (for standalone usage)
           // When created via el(), state.next will be set and takes precedence

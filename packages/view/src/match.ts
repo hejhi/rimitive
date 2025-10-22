@@ -24,8 +24,8 @@ interface MatchState<TElement = ReactiveElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
   element?: TElement;
   // Current child NodeRef (prevents memory leaks by retaining full reference)
-  firstChild?: NodeRef<TElement>;
-  lastChild?: NodeRef<TElement>; // Same as firstChild for single-child fragments
+  firstChild?: ElementRef<TElement>;
+  lastChild?: ElementRef<TElement>; // Same as firstChild for single-child fragments
 }
 
 /**
@@ -81,9 +81,11 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
         firstChild: undefined,
         lastChild: undefined,
         ...extensions, // Spread extensions to override/add fields
-        attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null): void => {
-          // Store parent element for reconciliation
-          state.element = parent;
+        attach: (parent, nextSibling): void => {
+          // Store parent element for reconciliation (extract from parent NodeRef)
+          // Parent is always an ElementRef in practice (fragments can't be parents)
+          const parentElement = parent.element;
+          state.element = parentElement;
 
           // Store boundary marker if provided (for standalone usage)
           // When created via el(), state.next will be set and takes precedence
@@ -98,13 +100,13 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
 
             // Remove old child if exists
             if (state.firstChild) {
-              const oldElement = (state.firstChild as ElementRef<TElement>).element;
+              const oldElement = state.firstChild.element;
               const oldScope = ctx.elementScopes.get(oldElement);
               if (oldScope) {
                 disposeScope(oldScope);
                 ctx.elementScopes.delete(oldElement);
               }
-              renderer.removeChild(parent, oldElement);
+              renderer.removeChild(parentElement, oldElement);
               state.firstChild = undefined;
               state.lastChild = undefined;
             }
@@ -118,12 +120,12 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
                 state.firstChild = nodeRef;
                 state.lastChild = nodeRef;
                 // Insert before next sibling element to maintain stable position
-                renderer.insertBefore(parent, nodeRef.element, resolveNextElement(state.next as NodeRef<TElement>));
+                renderer.insertBefore(parentElement, nodeRef.element, resolveNextElement(state.next as NodeRef<TElement>));
               }
             }
           });
 
-          const parentScope = ctx.elementScopes.get(parent);
+          const parentScope = ctx.elementScopes.get(parentElement);
           if (parentScope) trackInSpecificScope(parentScope, { dispose });
         },
       };

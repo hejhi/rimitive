@@ -29,7 +29,10 @@ export interface ElementRef<TElement> extends BaseRef<TElement> {
  */
 export interface FragmentRef<TElement> extends BaseRef<TElement> {
   status: typeof STATUS_FRAGMENT;
-  attach: (parent: TElement, nextSibling?: NodeRef<TElement> | null) => void;
+  attach: (
+    parent: ElementRef<TElement>,
+    nextSibling?: ElementRef<TElement> | null
+  ) => void;
   // Fragment children - specific fragments override with concrete types
   // MapState: ListItemNode (extends BaseRef), MatchState: NodeRef<TElement> (extends BaseRef)
   firstChild?: BaseRef<TElement>;

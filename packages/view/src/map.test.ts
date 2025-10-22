@@ -55,7 +55,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      asFragment(listRef.create()).attach(parent, null);
+      asFragment(listRef.create()).attach(wrapElement(parent), null);
 
       // User cares: all items displayed
       expect(parent.children).toHaveLength(3);
@@ -127,7 +127,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      asFragment(listRef.create()).attach(parent, null);
+      asFragment(listRef.create()).attach(wrapElement(parent), null);
 
       // Store reference to first element
       const firstElement = parent.children[0];
@@ -189,7 +189,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      asFragment(listRef.create()).attach(parent, null);
+      asFragment(listRef.create()).attach(wrapElement(parent), null);
 
       // Store element reference
       const aliceElement = parent.children[0];
@@ -253,7 +253,7 @@ describe('map primitive', () => {
       const parent = renderer.createElement('ul');
       renderer.appendChild(parent, header);
       // Map gets nextSibling reference to footer when processed as sibling
-      asFragment(listRef.create()).attach(parent, wrapElement(footer)); // Pass footer as nextSibling explicitly
+      asFragment(listRef.create()).attach(wrapElement(parent), wrapElement(footer)); // Pass footer as nextSibling explicitly
       renderer.appendChild(parent, footer);
 
       // Initial: HEADER, a, b, FOOTER
@@ -325,7 +325,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      asFragment(listRef.create()).attach(parent, null);
+      asFragment(listRef.create()).attach(wrapElement(parent), null);
 
       // Store element reference
       const aliceElement = parent.children[0];
@@ -382,7 +382,7 @@ describe('map primitive', () => {
 
       // Create parent and initialize list
       const parent = renderer.createElement('ul');
-      asFragment(listRef.create()).attach(parent, null);
+      asFragment(listRef.create()).attach(wrapElement(parent), null);
 
       // Store reference to 'd' element
       const dElement = parent.children[3];
