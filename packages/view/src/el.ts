@@ -3,14 +3,11 @@ import type {
   LifecycleCallback,
   RefSpec,
   Reactive,
-  FragmentSpec,
   NodeRef,
+  ElRefSpecChild,
 } from './types';
 import {
   isReactive,
-  isRefSpec,
-  isElementRef,
-  isFragmentRef,
   STATUS_ELEMENT,
 } from './types';
 import { createScope, runInScope, trackInScope, trackInSpecificScope } from './helpers/scope';
@@ -35,19 +32,6 @@ export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLEle
   };
 
 /**
- * Valid child types for an element
- * Generic over element type for proper FragmentSpec typing
- */
-export type ElRefSpecChild<TElement = object> =
-  | string
-  | number
-  | boolean
-  | null
-  | RefSpec<TElement>
-  | Reactive<unknown>
-  | FragmentSpec<TElement>;
-
-/**
  * Element specification: [tag, ...propsAndChildren]
  */
 export type ElRefSpec<
@@ -58,10 +42,17 @@ export type ElRefSpec<
 /**
  * Options passed to el factory
  */
-export type ElOpts<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode> = {
+export type ElOpts<
+  TElement extends RendererElement = RendererElement,
+  TText extends TextNode = TextNode,
+> = {
   ctx: ViewContext;
   effect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
+  processChildren: (
+    parent: TElement,
+    children: ElRefSpecChild<TElement>[]
+  ) => void;
 };
 
 /**
@@ -87,7 +78,10 @@ export type ElFactory<TElement extends RendererElement = RendererElement> =
 export function createElFactory<TElement extends RendererElement, TText extends TextNode = TextNode>(
   opts: ElOpts<TElement, TText>
 ): ElFactory<TElement> {
-  const { ctx, effect, renderer } = opts;
+  const { ctx, effect, renderer, processChildren } = opts;
+
+  // Create helper with captured dependencies
+  const applyProps = createApplyProps({ effect, ctx, renderer });
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>
@@ -113,13 +107,13 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       // Create the element using renderer
       const element = renderer.createElement(tag);
       // Create object with full shape at once (better for V8 hidden classes)
-      const nodeRef = {
+      const nodeRef: NodeRef<TElement> & TExt = {
         status: STATUS_ELEMENT,
         element,
         prev: undefined,
         next: undefined,
         ...extensions, // Spread extensions to override/add fields
-      } as NodeRef<TElement> & TExt;
+      };
 
       // Create a scope optimistically (might not need it)
       const scope = createScope();
@@ -127,33 +121,10 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       // Run all reactive setup within this instance's scope
       runInScope(ctx, scope, () => {
         // Apply props
-        applyProps(element, props, effect, ctx, renderer);
+        applyProps(element, props);
 
-        // Track tail of intrusive linked list (traverse backwards from here)
-        let lastChildRef: NodeRef<TElement> | undefined;
-
-        for (const child of children) {
-          // Build: process children forward
-          const refNode = handleChild(element, child, effect, ctx, renderer);
-
-          if (!refNode) continue;
-          if (lastChildRef) {
-            lastChildRef.next = refNode;
-            refNode.prev = lastChildRef;
-          }
-          lastChildRef = refNode;
-        }
-
-        // Unwind: traverse backwards and attach fragments
-        if (!lastChildRef) return;
-        let nextRef: NodeRef<TElement> | null = null;
-
-        do {
-          if (isFragmentRef(lastChildRef)) lastChildRef.attach(element, nextRef);
-          else nextRef = lastChildRef;
-
-          lastChildRef = lastChildRef.prev as NodeRef<TElement> | undefined;
-        } while (lastChildRef);
+        // Process children: build linked list and attach fragments
+        processChildren(element, children);
       });
 
       // Run lifecycle callbacks immediately (no MutationObserver needed)
@@ -207,82 +178,31 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap, TElement>(
 /**
  * Apply props to element (with reactivity)
  */
-function applyProps<
-  Tag extends keyof HTMLElementTagNameMap,
+function createApplyProps<
   TElement extends RendererElement,
   TText extends TextNode
->(
-  element: TElement,
-  props: ElementProps<Tag>,
-  effect: (fn: () => void | (() => void)) => () => void,
-  ctx: ViewContext,
-  renderer: Renderer<TElement, TText>
-): void {
-  for (const [key, value] of Object.entries(props)) {
-    // Handle reactive values
-    if (isReactive(value)) {
-      const dispose = effect(() => renderer.setAttribute(element, key, value()));
-      // Track effect for cleanup when element is removed
-      trackInScope(ctx, { dispose });
-    } else renderer.setAttribute(element, key, value); // Static value
-  }
-}
+>(opts: {
+  effect: (fn: () => void | (() => void)) => () => void;
+  ctx: ViewContext;
+  renderer: Renderer<TElement, TText>;
+}) {
+  const { effect, ctx, renderer } = opts;
 
-/**
- * Handle a single child (static, reactive, or reactive list)
- * Returns a NodeRef for elements/fragments that need sibling tracking
- */
-function handleChild<TElement extends RendererElement, TText extends TextNode>(
-  element: TElement,
-  child: ElRefSpecChild<TElement>,
-  effect: (fn: () => void | (() => void)) => () => void,
-  ctx: ViewContext,
-  renderer: Renderer<TElement, TText>
-): NodeRef<TElement> | null {
-  const childType = typeof child;
-
-  // Skip null/undefined/false
-  if (child == null || child === false || childType === 'boolean') return null;
-
-  // Static primitive (string, number)
-  if (childType === 'string' || childType === 'number') {
-    const textNode = renderer.createTextNode(String(child));
-    renderer.appendChild(element, textNode);
-    return null; // Text nodes don't participate in ref node chain
-  }
-
-  if (childType === 'function') {
-    // Element ref (from el()) - instantiate blueprint
-    if (isRefSpec<TElement>(child)) {
-      const childRef = child.create();
-
-      // Append element if this is an ElementRef (fragments get attached later)
-      if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
-
-      return childRef;
+  return function applyProps<Tag extends keyof HTMLElementTagNameMap>(
+    element: TElement,
+    props: ElementProps<Tag>
+  ): void {
+    for (const [key, val] of Object.entries(props)) {
+      // Handle reactive values - cast to unknown first to avoid complex union
+      const value = val as unknown;
+      if (typeof value === 'function' && ('peek' in value || '__type' in value)) {
+        const reactiveValue = value as unknown as () => unknown;
+        const dispose = effect(() => renderer.setAttribute(element, key, reactiveValue()));
+        // Track effect for cleanup when element is removed
+        trackInScope(ctx, { dispose });
+      } else renderer.setAttribute(element, key, value); // Static value
     }
-
-    // The only other functions allowed are reactives
-    if (isReactive(child)) {
-      // Reactive value (signal or computed) - check BEFORE FragmentSpec
-      // since reactive values are also functions without .create()
-      const textNode = renderer.createTextNode('');
-      const dispose = effect(() => {
-        const value = child();
-        // Convert to string, handling null/undefined and primitives only
-        let stringValue = '';
-        if (value != null) stringValue = String(value); // for linting
-        renderer.updateTextNode(textNode, stringValue);
-      });
-
-      // Track effect for cleanup when element is removed
-      trackInScope(ctx, { dispose });
-      renderer.appendChild(element, textNode);
-      return null; // Text nodes don't participate in ref node chain
-    }
-  }
-
-  return null; // Default case
+  };
 }
 
 /**

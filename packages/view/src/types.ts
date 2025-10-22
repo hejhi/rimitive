@@ -138,3 +138,16 @@ export type LifecycleCallback<TElement = object> = (element: TElement) => void |
  * The actual element type is determined by the renderer
  */
 export type ReactiveElement = object;
+
+/**
+ * Valid child types for an element
+ * Generic over element type for proper FragmentSpec typing
+ */
+export type ElRefSpecChild<TElement = object> =
+  | string
+  | number
+  | boolean
+  | null
+  | RefSpec<TElement>
+  | Reactive<unknown>
+  | FragmentSpec<TElement>;

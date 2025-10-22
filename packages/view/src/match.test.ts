@@ -9,7 +9,9 @@ import {
   type MockElement,
 } from './test-utils';
 import { createElFactory } from './el';
+import { createProcessChildren } from './helpers/processChildren';
 import type { FragmentRef, ElementRef, NodeRef } from './types';
+import { trackInScope } from './helpers/scope';
 
 // Helper to extract FragmentRef from NodeRef
 const asFragment = <T>(nodeRef: NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
@@ -112,7 +114,8 @@ describe('match primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      const { processChildren } = createProcessChildren({ effect, ctx, renderer, trackInScope });
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
       const match = createMatchFactory({ ctx, effect, renderer }).method;
 
       const matchRef = match(
@@ -193,7 +196,8 @@ describe('match primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      const { processChildren } = createProcessChildren({ effect, ctx, renderer, trackInScope });
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
       const match = createMatchFactory({ ctx, effect, renderer }).method;
 
       const container = el([

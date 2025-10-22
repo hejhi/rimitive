@@ -2,20 +2,29 @@ import { describe, it, expect } from 'vitest';
 import { createElFactory } from './el';
 import { createViewContext } from './context';
 import { createMockRenderer, createSignal } from './test-utils';
+import { createProcessChildren } from './helpers/processChildren';
 import type { ElementRef, NodeRef } from './types';
+import { trackInScope } from './helpers/scope';
 
 // Helper to extract element from NodeRef
 const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
 
+// Helper to create test environment
+function createTestEnv(effectFn?: (fn: () => void) => () => void) {
+  const ctx = createViewContext();
+  const { renderer } = createMockRenderer();
+  const effect = effectFn || ((fn: () => void) => {
+    fn();
+    return () => {};
+  });
+  const { handleChild, processChildren } = createProcessChildren({ effect, ctx, renderer, trackInScope });
+  return { ctx, renderer, effect, handleChild, processChildren };
+}
+
 describe('el primitive - lazy scope creation', () => {
   it('does not create scope for fully static elements', () => {
-    const ctx = createViewContext();
-    const { renderer } = createMockRenderer();
-    const effect = (fn: () => void) => {
-      fn();
-      return () => {};
-    };
-    const el = createElFactory({ ctx, effect, renderer }).method;
+    const { ctx, renderer, effect, processChildren } = createTestEnv();
+    const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
     const ref = el(['div', { className: 'static' }, 'Hello']);
@@ -26,15 +35,13 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('creates scope for elements with reactive props', () => {
-    const ctx = createViewContext();
-    const { renderer } = createMockRenderer();
     const { read: text, subscribers } = createSignal('initial');
-    const effect = (fn: () => void) => {
+    const { ctx, renderer, effect, processChildren } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
       return () => subscribers.delete(fn);
-    };
-    const el = createElFactory({ ctx, effect, renderer }).method;
+    });
+    const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
     // Element with reactive prop
     const ref = el(['div', { title: text }]);
@@ -45,15 +52,13 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('creates scope for elements with reactive children', () => {
-    const ctx = createViewContext();
-    const { renderer } = createMockRenderer();
     const { read: text, subscribers } = createSignal('dynamic');
-    const effect = (fn: () => void) => {
+    const { ctx, renderer, effect, processChildren } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
       return () => subscribers.delete(fn);
-    };
-    const el = createElFactory({ ctx, effect, renderer }).method;
+    });
+    const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
     // Element with reactive text child
     const ref = el(['div', text]);
@@ -64,13 +69,8 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('creates scope for elements with lifecycle cleanup', () => {
-    const ctx = createViewContext();
-    const { renderer } = createMockRenderer();
-    const effect = (fn: () => void) => {
-      fn();
-      return () => {};
-    };
-    const el = createElFactory({ ctx, effect, renderer }).method;
+    const { ctx, renderer, effect, processChildren } = createTestEnv();
+    const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
     // Static element with lifecycle callback that returns cleanup
     const ref = el(['div', 'Static content']);
@@ -85,13 +85,8 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('does not create scope when lifecycle callback returns undefined', () => {
-    const ctx = createViewContext();
-    const { renderer } = createMockRenderer();
-    const effect = (fn: () => void) => {
-      fn();
-      return () => {};
-    };
-    const el = createElFactory({ ctx, effect, renderer }).method;
+    const { ctx, renderer, effect, processChildren } = createTestEnv();
+    const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
     // Static element with lifecycle callback that returns nothing
     const ref = el(['div', 'Static content']);
@@ -106,13 +101,8 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('nested static elements should not create scopes', () => {
-    const ctx = createViewContext();
-    const { renderer } = createMockRenderer();
-    const effect = (fn: () => void) => {
-      fn();
-      return () => {};
-    };
-    const el = createElFactory({ ctx, effect, renderer }).method;
+    const { ctx, renderer, effect, processChildren } = createTestEnv();
+    const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
     // Nested static elements
     const child = el(['span', 'Child']);

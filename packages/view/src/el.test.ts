@@ -1,23 +1,32 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createElFactory } from './el';
+import { createTestEnv, getTextContent, createMockRenderer, createSignal } from './test-utils';
 import { createViewContext } from './context';
-import { createMockRenderer, createSignal, getTextContent } from './test-utils';
-import { disposeScope } from './helpers/scope';
+import { createProcessChildren } from './helpers/processChildren';
+import { disposeScope, trackInScope } from './helpers/scope';
 import type { ElementRef, NodeRef } from './types';
 
 // Helper to extract element from NodeRef
 const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
 
+// Helper to create test environment for tests that need custom effect
+function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
+  const ctx = createViewContext();
+  const { renderer } = createMockRenderer();
+  const { processChildren } = createProcessChildren({
+    effect: effectFn,
+    ctx,
+    renderer,
+    trackInScope
+  });
+  return { ctx, renderer, effect: effectFn, processChildren };
+}
+
 describe('el primitive', () => {
   describe('static content', () => {
     it('renders static content', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
-      const effect = (fn: () => void) => {
-        fn();
-        return () => {};
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      const { ctx, renderer, effect, processChildren } = createTestEnv();
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
       const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
 
@@ -27,13 +36,8 @@ describe('el primitive', () => {
     });
 
     it('nests elements', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
-      const effect = (fn: () => void) => {
-        fn();
-        return () => {};
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      const { ctx, renderer, effect, processChildren } = createTestEnv();
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
       const child = el(['span', 'nested content']);
       const parent = el(['div', child]); // Pass blueprint - will be instantiated
@@ -50,15 +54,13 @@ describe('el primitive', () => {
 
   describe('reactive content', () => {
     it('renders reactive text children', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
       const { read: text, write: setText, subscribers } = createSignal('initial');
-      const effect = (fn: () => void) => {
+      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      });
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
       const ref = el(['div', text]);
 
@@ -71,15 +73,13 @@ describe('el primitive', () => {
     });
 
     it('updates reactive props', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
       const { read: className, write: setClassName, subscribers } = createSignal('foo');
-      const effect = (fn: () => void) => {
+      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      });
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
       const ref = el(['div', { className }]);
 
@@ -92,15 +92,13 @@ describe('el primitive', () => {
     });
 
     it('handles mixed static and reactive content', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
       const { read: count, write: setCount, subscribers } = createSignal(0);
-      const effect = (fn: () => void) => {
+      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      });
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
       const ref = el(['div', 'Count: ', count]);
 
@@ -115,15 +113,13 @@ describe('el primitive', () => {
 
   describe('lifecycle and cleanup', () => {
     it('cleans up effects on disconnect', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
       const { read: text, write: setText, subscribers } = createSignal('initial');
-      const effect = (fn: () => void) => {
+      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      });
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
       const ref = el(['div', { title: text }]);
 
@@ -151,13 +147,8 @@ describe('el primitive', () => {
     });
 
     it('calls lifecycle cleanup function', () => {
-      const ctx = createViewContext();
-      const { renderer } = createMockRenderer();
-      const effect = (fn: () => void) => {
-        fn();
-        return () => {};
-      };
-      const el = createElFactory({ ctx, effect, renderer }).method;
+      const { ctx, renderer, effect, processChildren } = createTestEnv();
+      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
 
       const cleanup = vi.fn();
       const ref = el(['div']);
