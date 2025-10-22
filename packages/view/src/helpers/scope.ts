@@ -1,4 +1,4 @@
-import type { Disposable, RenderScope, DisposableNode } from '../types';
+import type { Disposable, RenderScope, DisposableNode, ReactiveElement } from '../types';
 import type { LatticeContext } from '../context';
 import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
@@ -126,9 +126,9 @@ export function createScopes({
     fn: () => T
   ): T => {
     const prevScope = ctx.activeScope;
-    // Cast is needed because activeScope is typed as RenderScope<ReactiveElement> but scope might be RenderScope<TElement>
-    // This is safe because the element type doesn't affect the scope's behavior
-    ctx.activeScope = scope as RenderScope;
+    // Cast is safe: element type is a phantom type that doesn't affect scope behavior.
+    // The scope participates in the reactive graph regardless of element type.
+    ctx.activeScope = scope as RenderScope<ReactiveElement>;
     try {
       return fn();
     } finally {

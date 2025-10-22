@@ -218,3 +218,18 @@ export interface DisposableNode {
   next: DisposableNode | undefined;
 }
 
+/**
+ * Type guard to check if a value is a RenderScope
+ * Useful for runtime checks when working with mixed node types
+ */
+export function isRenderScope<TElement = ReactiveElement>(
+  value: unknown
+): value is RenderScope<TElement> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '__type' in value &&
+    (value as { __type: string }).__type === 'render-scope'
+  );
+}
+
