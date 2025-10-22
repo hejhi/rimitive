@@ -63,7 +63,8 @@
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",
-    "@lattice/signals": "workspace:*"
+    "@lattice/signals": "workspace:*",
+    "linkedom": "^0.18.12"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
