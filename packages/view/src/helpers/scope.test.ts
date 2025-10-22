@@ -1,19 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { createScope, runInScope, trackInScope, disposeScope } from './scope';
+import { createScopes } from './scope';
 import { createViewContext } from '../context';
 import { createMockDisposable } from '../test-utils';
 
 describe('Scope Tree', () => {
+  
   describe('disposal', () => {
     it('disposes tracked items when scope is disposed', () => {
       const ctx = createViewContext();
+      const { createScope, runInScope, trackInScope, disposeScope } = createScopes({ ctx });
       const scope = createScope();
       const disposable = createMockDisposable();
 
-      runInScope(ctx, scope, () => {
-        trackInScope(ctx, disposable);
-      });
-
+      runInScope(scope, () => trackInScope(disposable));
       disposeScope(scope);
 
       // tracked item was cleaned up
@@ -21,15 +20,16 @@ describe('Scope Tree', () => {
     });
 
     it('disposes child scopes when parent is disposed', () => {
-      const parent = createScope();
-      const child = createScope(parent);
-
       const parentDisposable = createMockDisposable();
       const childDisposable = createMockDisposable();
 
       const ctx = createViewContext();
-      runInScope(ctx, parent, () => trackInScope(ctx, parentDisposable));
-      runInScope(ctx, child, () => trackInScope(ctx, childDisposable));
+      const { createScope, runInScope, trackInScope, disposeScope } = createScopes({ ctx });
+      const parent = createScope();
+      const child = createScope(parent);
+
+      runInScope(parent, () => trackInScope(parentDisposable));
+      runInScope(child, () => trackInScope(childDisposable));
 
       // Dispose parent
       disposeScope(parent);
@@ -40,6 +40,8 @@ describe('Scope Tree', () => {
     });
 
     it('disposes entire scope tree recursively', () => {
+      const ctx = createViewContext();
+      const { createScope, runInScope, trackInScope, disposeScope } = createScopes({ ctx });
       const root = createScope();
       const child1 = createScope(root);
       const child2 = createScope(root);
@@ -50,11 +52,10 @@ describe('Scope Tree', () => {
       const child2Disposable = createMockDisposable();
       const grandchildDisposable = createMockDisposable();
 
-      const ctx = createViewContext();
-      runInScope(ctx, root, () => trackInScope(ctx, rootDisposable));
-      runInScope(ctx, child1, () => trackInScope(ctx, child1Disposable));
-      runInScope(ctx, child2, () => trackInScope(ctx, child2Disposable));
-      runInScope(ctx, grandchild, () => trackInScope(ctx, grandchildDisposable));
+      runInScope(root, () => trackInScope(rootDisposable));
+      runInScope(child1, () => trackInScope(child1Disposable));
+      runInScope(child2, () => trackInScope(child2Disposable));
+      runInScope(grandchild, () => trackInScope(grandchildDisposable));
 
       // Dispose root
       disposeScope(root);
@@ -68,10 +69,11 @@ describe('Scope Tree', () => {
 
     it('is idempotent - can dispose same scope multiple times', () => {
       const ctx = createViewContext();
+      const { createScope, runInScope, trackInScope, disposeScope } = createScopes({ ctx });
       const scope = createScope();
       const disposable = createMockDisposable();
 
-      runInScope(ctx, scope, () => trackInScope(ctx, disposable));
+      runInScope(scope, () => trackInScope(disposable));
 
       // Dispose multiple times
       disposeScope(scope);
@@ -84,19 +86,14 @@ describe('Scope Tree', () => {
 
     it('prevents tracking after disposal', () => {
       const ctx = createViewContext();
+      const { createScope, runInScope, trackInScope, disposeScope } = createScopes({ ctx });
       const scope = createScope();
       const beforeDispose = createMockDisposable();
       const afterDispose = createMockDisposable();
 
-      runInScope(ctx, scope, () => {
-        trackInScope(ctx, beforeDispose);
-      });
-
+      runInScope(scope, () => trackInScope(beforeDispose));
       disposeScope(scope);
-
-      runInScope(ctx, scope, () => {
-        trackInScope(ctx, afterDispose);
-      });
+      runInScope(scope, () => trackInScope(afterDispose));
 
       // disposed scope rejects new tracking
       expect(beforeDispose.disposed).toBe(true);
@@ -106,6 +103,8 @@ describe('Scope Tree', () => {
 
   describe('scope isolation', () => {
     it('disposes partial tree without affecting parent', () => {
+      const ctx = createViewContext();
+      const { createScope, runInScope, trackInScope, disposeScope } = createScopes({ ctx });
       const appScope = createScope();
       const componentScope = createScope(appScope);
       const nestedScope = createScope(componentScope);
@@ -114,10 +113,9 @@ describe('Scope Tree', () => {
       const componentCleanup = createMockDisposable();
       const nestedCleanup = createMockDisposable();
 
-      const ctx = createViewContext();
-      runInScope(ctx, appScope, () => trackInScope(ctx, appCleanup));
-      runInScope(ctx, componentScope, () => trackInScope(ctx, componentCleanup));
-      runInScope(ctx, nestedScope, () => trackInScope(ctx, nestedCleanup));
+      runInScope(appScope, () => trackInScope(appCleanup));
+      runInScope(componentScope, () => trackInScope(componentCleanup));
+      runInScope(nestedScope, () => trackInScope(nestedCleanup));
 
       // User unmounts a component subtree
       disposeScope(componentScope);
@@ -131,12 +129,15 @@ describe('Scope Tree', () => {
 
       // Parent scope still functional
       const newCleanup = createMockDisposable();
-      runInScope(ctx, appScope, () => trackInScope(ctx, newCleanup));
+      runInScope(appScope, () => trackInScope(newCleanup));
       disposeScope(appScope);
       expect(newCleanup.disposed).toBe(true);
     });
 
     it('isolates sibling scopes from each other', () => {
+      const ctx = createViewContext();
+      const { createScope, runInScope, trackInScope, disposeScope } = createScopes({ ctx });
+
       const parent = createScope();
       const sibling1 = createScope(parent);
       const sibling2 = createScope(parent);
@@ -144,9 +145,8 @@ describe('Scope Tree', () => {
       const cleanup1 = createMockDisposable();
       const cleanup2 = createMockDisposable();
 
-      const ctx = createViewContext();
-      runInScope(ctx, sibling1, () => trackInScope(ctx, cleanup1));
-      runInScope(ctx, sibling2, () => trackInScope(ctx, cleanup2));
+      runInScope(sibling1, () => trackInScope(cleanup1));
+      runInScope(sibling2, () => trackInScope(cleanup2));
 
       // Dispose one sibling
       disposeScope(sibling1);
@@ -160,16 +160,19 @@ describe('Scope Tree', () => {
   describe('no-op behavior', () => {
     it('ignores tracking when no scope is active', () => {
       const ctx = createViewContext();
+      const { trackInScope } = createScopes({ ctx });
       const disposable = createMockDisposable();
 
       // Track without active scope
-      trackInScope(ctx, disposable);
+      trackInScope(disposable);
 
       // safe to call without scope, just no-op
       expect(disposable.disposed).toBe(false);
     });
 
     it('handles disposal of empty scope', () => {
+      const ctx = createViewContext();
+      const { createScope, disposeScope } = createScopes({ ctx });
       const scope = createScope();
 
       // safe to dispose scope with no tracked items

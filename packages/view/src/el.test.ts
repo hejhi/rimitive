@@ -3,8 +3,8 @@ import { createElFactory } from './el';
 import { createTestEnv, getTextContent, createMockRenderer, createSignal } from './test-utils';
 import { createViewContext } from './context';
 import { createProcessChildren } from './helpers/processChildren';
-import { disposeScope, trackInScope } from './helpers/scope';
 import type { ElementRef, NodeRef } from './types';
+import { createScopes } from './helpers/scope';
 
 // Helper to extract element from NodeRef
 const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
@@ -13,20 +13,38 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createViewContext();
   const { renderer } = createMockRenderer();
+  const { trackInScope, ...scopeRest } = createScopes({ ctx });
   const { processChildren } = createProcessChildren({
     effect: effectFn,
-    ctx,
     renderer,
     trackInScope
   });
-  return { ctx, renderer, effect: effectFn, processChildren };
+  return { ctx, renderer, effect: effectFn, processChildren, trackInScope, ...scopeRest };
 }
 
 describe('el primitive', () => {
   describe('static content', () => {
     it('renders static content', () => {
-      const { ctx, renderer, effect, processChildren } = createTestEnv();
-      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
+      const {
+        ctx,
+        renderer,
+        effect,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        effect,
+        renderer,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      }).method;
 
       const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
 
@@ -36,8 +54,26 @@ describe('el primitive', () => {
     });
 
     it('nests elements', () => {
-      const { ctx, renderer, effect, processChildren } = createTestEnv();
-      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
+      const {
+        ctx,
+        renderer,
+        effect,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        effect,
+        renderer,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      }).method;
 
       const child = el(['span', 'nested content']);
       const parent = el(['div', child]); // Pass blueprint - will be instantiated
@@ -55,12 +91,30 @@ describe('el primitive', () => {
   describe('reactive content', () => {
     it('renders reactive text children', () => {
       const { read: text, write: setText, subscribers } = createSignal('initial');
-      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
+      const {
+        ctx,
+        renderer,
+        effect,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
+      const el = createElFactory({
+        ctx,
+        effect,
+        renderer,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      }).method;
 
       const ref = el(['div', text]);
 
@@ -74,12 +128,30 @@ describe('el primitive', () => {
 
     it('updates reactive props', () => {
       const { read: className, write: setClassName, subscribers } = createSignal('foo');
-      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
+      const {
+        ctx,
+        renderer,
+        effect,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
+      const el = createElFactory({
+        ctx,
+        effect,
+        renderer,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      }).method;
 
       const ref = el(['div', { className }]);
 
@@ -93,12 +165,30 @@ describe('el primitive', () => {
 
     it('handles mixed static and reactive content', () => {
       const { read: count, write: setCount, subscribers } = createSignal(0);
-      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
+      const {
+        ctx,
+        renderer,
+        effect,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
+      const el = createElFactory({
+        ctx,
+        effect,
+        renderer,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      }).method;
 
       const ref = el(['div', 'Count: ', count]);
 
@@ -114,12 +204,31 @@ describe('el primitive', () => {
   describe('lifecycle and cleanup', () => {
     it('cleans up effects on disconnect', () => {
       const { read: text, write: setText, subscribers } = createSignal('initial');
-      const { ctx, renderer, effect, processChildren } = createCustomTestEnv((fn: () => void) => {
+      const {
+        ctx,
+        renderer,
+        effect,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        disposeScope,
+        trackInSpecificScope,
+      } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
+      const el = createElFactory({
+        ctx,
+        effect,
+        renderer,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      }).method;
 
       const ref = el(['div', { title: text }]);
 
@@ -147,8 +256,27 @@ describe('el primitive', () => {
     });
 
     it('calls lifecycle cleanup function', () => {
-      const { ctx, renderer, effect, processChildren } = createTestEnv();
-      const el = createElFactory({ ctx, effect, renderer, processChildren }).method;
+      const {
+        ctx,
+        renderer,
+        effect,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+        disposeScope
+      } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        effect,
+        renderer,
+        processChildren,
+        createScope,
+        runInScope,
+        trackInScope,
+        trackInSpecificScope,
+      }).method;
 
       const cleanup = vi.fn();
       const ref = el(['div']);

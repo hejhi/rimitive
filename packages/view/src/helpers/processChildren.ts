@@ -9,16 +9,13 @@
 import type { NodeRef, ElRefSpecChild, Disposable } from '../types';
 import { isElementRef, isFragmentRef, isReactive, isRefSpec } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
-import { ViewContext } from '../context';
-import { trackInScope } from './scope';
 
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
   effect: (fn: () => void | (() => void)) => () => void;
-  ctx: ViewContext;
   renderer: Renderer<TElement, TText>;
-  trackInScope(ctx: ViewContext, disposable: Disposable): void;
+  trackInScope: (disposable: Disposable) => void;
 }) {
-  const { effect, ctx, renderer } = opts;
+  const { effect, renderer, trackInScope } = opts;
 
   const handleChild = (
     element: TElement,
@@ -63,7 +60,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
         });
 
         // Track effect for cleanup when element is removed
-        trackInScope(ctx, { dispose });
+        trackInScope({ dispose });
         renderer.appendChild(element, textNode);
         return null; // Text nodes don't participate in ref node chain
       }

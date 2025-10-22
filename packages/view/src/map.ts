@@ -26,7 +26,7 @@ import type {
   TextNode,
 } from './renderer';
 import type { ViewContext } from './context';
-import { disposeScope, trackInSpecificScope } from './helpers/scope';
+import { CreateScopes } from './helpers/scope';
 
 /**
  * List item node - represents an item in a reactive list
@@ -63,6 +63,8 @@ export type MapOpts<
   signal: <T>(value: T) => Reactive<T>;
   effect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
+  trackInSpecificScope: CreateScopes['trackInSpecificScope'];
+  disposeScope: CreateScopes['disposeScope'];
 };
 
 /**
@@ -106,7 +108,7 @@ export function createMapFactory<
   TElement extends RendererElement = RendererElement,
   TText extends TextNode = TextNode,
 >(opts: MapOpts<TElement, TText>): MapFactory<TElement> {
-  const { ctx, signal, effect, renderer } = opts;
+  const { ctx, signal, effect, renderer, trackInSpecificScope, disposeScope } = opts;
 
   function map<T>(
     itemsSignal: Reactive<T[]>,
@@ -179,7 +181,8 @@ export function createMapFactory<
               renderer,
               oldIndicesBuf,
               newPosBuf,
-              lisBuf
+              lisBuf,
+              disposeScope
             );
           });
 
@@ -285,7 +288,8 @@ function pruneNode<
   ctx: ViewContext,
   container: TElement,
   itemsByKey: Map<string, ListItemNode<TElement, T>>,
-  renderer: Renderer<TElement, TText>
+  renderer: Renderer<TElement, TText>,
+  disposeScope: CreateScopes['disposeScope']
 ): void {
   const element = node.element;
   const scope = ctx.elementScopes.get(element);
@@ -321,7 +325,8 @@ export function reconcileList<
   renderer: Renderer<TElement, TText>,
   oldIndicesBuf: number[],
   newPosBuf: number[],
-  lisBuf: number[]
+  lisBuf: number[],
+  disposeScope: CreateScopes['disposeScope']
 ): void {
   const parentEl = parent.element;
   if (!parentEl) return;
@@ -407,7 +412,7 @@ export function reconcileList<
         // Remove any stale nodes at the insertion point (cleanup as we go)
         while (child.status === STALE) {
           const nextChild = child.next as ListItemNode<TElement, T>;
-          pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+          pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer, disposeScope);
           child = nextChild;
         }
       }
@@ -439,7 +444,7 @@ export function reconcileList<
     const status = child.status;
 
     // Prune any children left that are STALE
-    if (status === STALE) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer);
+    if (status === STALE) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer, disposeScope);
     // Set any CLEAN children to STALE for next reconciliation.
     // There should not be any DIRTY left by now.
     else child.status = STALE;

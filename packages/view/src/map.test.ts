@@ -11,6 +11,7 @@ import {
   type Reactive,
 } from './test-utils';
 import type { FragmentRef, NodeRef } from './types';
+import { createScopes } from './helpers/scope';
 
 // Helper to extract FragmentRef from NodeRef
 const asFragment = <T>(nodeRef: NodeRef<T>): FragmentRef<T> => nodeRef as FragmentRef<T>;
@@ -19,6 +20,7 @@ describe('map primitive', () => {
   describe('list rendering', () => {
     it('displays items in list', () => {
       const ctx = createViewContext();
+      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b', 'c']);
       const signal = <T>(val: T): Reactive<T> => {
@@ -31,7 +33,14 @@ describe('map primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
 
       const listRef = map(
         items,
@@ -83,6 +92,7 @@ describe('map primitive', () => {
   describe('reordering', () => {
     it('preserves elements when reordering', () => {
       const ctx = createViewContext();
+      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b', 'c']);
       const signal = <T>(val: T): Reactive<T> => {
@@ -95,7 +105,14 @@ describe('map primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
 
       const listRef = map(
         items,
@@ -132,6 +149,7 @@ describe('map primitive', () => {
   describe('identity-based tracking', () => {
     it('uses ID for tracking instead of identity', () => {
       const ctx = createViewContext();
+      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
       const { renderer } = createMockRenderer();
 
       const objA = { id: 1, name: 'Alice' };
@@ -149,7 +167,14 @@ describe('map primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
 
       const listRef = map(
         items,
@@ -182,6 +207,8 @@ describe('map primitive', () => {
 
     it('maintains position when list becomes empty then refills with siblings present', () => {
       const ctx = createViewContext();
+      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b']);
       const signal = <T>(val: T): Reactive<T> => {
@@ -194,7 +221,14 @@ describe('map primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
 
       const listRef = map(
         items,
@@ -251,6 +285,8 @@ describe('map primitive', () => {
 
     it('uses custom keyFn for tracking', () => {
       const ctx = createViewContext();
+      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+
       const { renderer } = createMockRenderer();
 
       const { read: items, write: setItems, subscribers } = createSignal([
@@ -267,7 +303,14 @@ describe('map primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
 
       const listRef = map(
         items,
@@ -303,6 +346,8 @@ describe('map primitive', () => {
   describe('complex operations', () => {
     it('handles add + remove + reorder in single update', () => {
       const ctx = createViewContext();
+      const { trackInSpecificScope, disposeScope } = createScopes({ ctx });
+
       const { renderer } = createMockRenderer();
       const { read: items, write: setItems, subscribers } = createSignal(['a', 'b', 'c', 'd']);
       const signal = <T>(val: T): Reactive<T> => {
@@ -315,7 +360,14 @@ describe('map primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const map = createMapFactory({ ctx, signal, effect, renderer }).method;
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
 
       const listRef = map(
         items,

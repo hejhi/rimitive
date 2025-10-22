@@ -4,6 +4,7 @@ import { createViewContext } from './context';
 import type { Renderer } from './renderer';
 import { MockElement, createRefSpec } from './test-utils';
 import { STATUS_FRAGMENT, type RefSpec } from './types';
+import { createScopes, CreateScopes } from './helpers/scope';
 
 // createRefSpec is imported from test-utils
 
@@ -21,7 +22,8 @@ function reconcileListTest<T>(
   newItems: T[],
   renderItem: (item: T) => { refSpec: RefSpec<MockElement>; itemSignal?: ((value: T) => void) & (() => T) },
   keyFn: (item: T) => string | number,
-  renderer: Renderer<MockElement, MockElement>
+  renderer: Renderer<MockElement, MockElement>,
+  disposeScope: CreateScopes['disposeScope']
 ): void {
   // Clear buffers before each use
   testBuffers.oldIndices.length = 0;
@@ -37,7 +39,8 @@ function reconcileListTest<T>(
     renderer,
     testBuffers.oldIndices,
     testBuffers.newPos,
-    testBuffers.lis
+    testBuffers.lis,
+    disposeScope
   );
 }
 
@@ -98,6 +101,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
+    const { disposeScope } = createScopes({ ctx });
 
     const parent: MapState<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
@@ -118,7 +122,8 @@ describe('reconcileList', () => {
         return { refSpec: createRefSpec(el) };
       },
       (item) => item,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // User cares: all items are displayed
@@ -132,6 +137,7 @@ describe('reconcileList', () => {
     const ctx = createViewContext();
     const renderer = createMockRenderer();
     const container = new MockElement('container');
+    const { disposeScope } = createScopes({ ctx });
 
     const parent: MapState<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
@@ -147,7 +153,8 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer,
+  disposeScope);
 
     expect(container.children).toHaveLength(2);
 
@@ -158,7 +165,8 @@ describe('reconcileList', () => {
       ['a', 'b', 'c', 'd'],
       createElement,
       (item) => item,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // User cares: new items added
@@ -177,7 +185,8 @@ describe('reconcileList', () => {
       ['a', 'c', 'd'],
       createElement,
       (item) => item,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // User cares: item removed
@@ -187,6 +196,8 @@ describe('reconcileList', () => {
 
   it('reorders items correctly', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -204,7 +215,8 @@ describe('reconcileList', () => {
     };
 
     // Initial render
-    reconcileListTest(ctx, parent, ['a', 'b', 'c'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b', 'c'], createElement, (item) => item, renderer,
+  disposeScope);
 
     // Reverse order
     reconcileListTest(
@@ -213,7 +225,8 @@ describe('reconcileList', () => {
       ['c', 'b', 'a'],
       createElement,
       (item) => item,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // User cares: order changed
@@ -222,6 +235,8 @@ describe('reconcileList', () => {
 
   it('tracks items by ID', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -249,7 +264,8 @@ describe('reconcileList', () => {
       [objA, objB, objC],
       createElement,
       (item) => item.id, // Key by ID
-      renderer
+      renderer,
+      disposeScope
     );
 
     // Reorder same objects
@@ -259,7 +275,8 @@ describe('reconcileList', () => {
       [objC, objA, objB],
       createElement,
       (item) => item.id, // Key by ID
-      renderer
+      renderer,
+      disposeScope
     );
 
     // User cares: objects recognized by ID
@@ -268,6 +285,8 @@ describe('reconcileList', () => {
 
   it('handles add + remove + reorder in single pass', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -285,7 +304,8 @@ describe('reconcileList', () => {
     };
 
     // Initial: a b c d
-    reconcileListTest(ctx, parent, ['a', 'b', 'c', 'd'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b', 'c', 'd'], createElement, (item) => item, renderer,
+  disposeScope);
 
     // Transform: d e c (removed: a, b; added: e; reordered: d, c)
     reconcileListTest(
@@ -294,7 +314,8 @@ describe('reconcileList', () => {
       ['d', 'e', 'c'],
       createElement,
       (item) => item,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // User cares: final state is correct
@@ -303,6 +324,8 @@ describe('reconcileList', () => {
 
   it('updates itemSignal based on reference equality', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -332,7 +355,8 @@ describe('reconcileList', () => {
         return { refSpec: createRefSpec(el), itemSignal: signal };
       },
       (item) => item.id,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // Update only item A - use new object reference for A, same reference for B
@@ -348,7 +372,8 @@ describe('reconcileList', () => {
         return { refSpec: createRefSpec(el) };
       },
       (item) => item.id,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // User cares: itemSignal uses reference equality
@@ -360,6 +385,8 @@ describe('reconcileList', () => {
 
   it('handles empty to non-empty transition', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -377,11 +404,11 @@ describe('reconcileList', () => {
     };
 
     // Initial: empty list
-    reconcileListTest(ctx, parent, [], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, [], createElement, (item) => item, renderer, disposeScope);
     expect(container.children).toHaveLength(0);
 
     // Add items
-    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer, disposeScope);
 
     // User cares: items added correctly
     expect(container.children).toHaveLength(2);
@@ -390,6 +417,8 @@ describe('reconcileList', () => {
 
   it('handles non-empty to empty transition', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -407,11 +436,11 @@ describe('reconcileList', () => {
     };
 
     // Initial: non-empty list
-    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer, disposeScope);
     expect(container.children).toHaveLength(2);
 
     // Clear all items
-    reconcileListTest(ctx, parent, [], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, [], createElement, (item) => item, renderer, disposeScope);
 
     // User cares: all items removed
     expect(container.children).toHaveLength(0);
@@ -419,6 +448,8 @@ describe('reconcileList', () => {
 
   it('replaces all items when keys do not overlap', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -436,11 +467,11 @@ describe('reconcileList', () => {
     };
 
     // Initial: a, b
-    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['a', 'b'], createElement, (item) => item, renderer, disposeScope);
     const oldElements = [...container.children];
 
     // Replace with completely different items: x, y
-    reconcileListTest(ctx, parent, ['x', 'y'], createElement, (item) => item, renderer);
+    reconcileListTest(ctx, parent, ['x', 'y'], createElement, (item) => item, renderer, disposeScope);
 
     // User cares: old items removed, new items added
     expect(container.children).toHaveLength(2);
@@ -452,6 +483,8 @@ describe('reconcileList', () => {
 
   it('handles duplicate keys by reusing first node', () => {
     const ctx = createViewContext();
+    const { disposeScope } = createScopes({ ctx });
+
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
@@ -481,7 +514,8 @@ describe('reconcileList', () => {
         return { refSpec: createRefSpec(el), itemSignal: signal };
       },
       (item) => item.id,
-      renderer
+      renderer,
+      disposeScope
     );
 
     // Duplicate keys result in reusing the first node

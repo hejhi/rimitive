@@ -10,9 +10,9 @@ import {
   isReactive,
   STATUS_ELEMENT,
 } from './types';
-import { createScope, runInScope, trackInScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
+import { CreateScopes } from './helpers/scope';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -47,6 +47,10 @@ export type ElOpts<
   TText extends TextNode = TextNode,
 > = {
   ctx: ViewContext;
+  createScope: CreateScopes['createScope'];
+  runInScope: CreateScopes['runInScope'];
+  trackInScope: CreateScopes['trackInScope'];
+  trackInSpecificScope: CreateScopes['trackInSpecificScope'];
   effect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
   processChildren: (
@@ -78,10 +82,19 @@ export type ElFactory<TElement extends RendererElement = RendererElement> =
 export function createElFactory<TElement extends RendererElement, TText extends TextNode = TextNode>(
   opts: ElOpts<TElement, TText>
 ): ElFactory<TElement> {
-  const { ctx, effect, renderer, processChildren } = opts;
+  const {
+    ctx,
+    effect,
+    renderer,
+    processChildren,
+    createScope,
+    trackInScope,
+    runInScope,
+    trackInSpecificScope
+  } = opts;
 
   // Create helper with captured dependencies
-  const applyProps = createApplyProps({ effect, ctx, renderer });
+  const applyProps = createApplyProps({ effect, ctx, renderer, trackInScope });
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>
@@ -119,7 +132,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       const scope = createScope();
 
       // Run all reactive setup within this instance's scope
-      runInScope(ctx, scope, () => {
+      runInScope(scope, () => {
         // Apply props
         applyProps(element, props);
 
@@ -185,8 +198,9 @@ function createApplyProps<
   effect: (fn: () => void | (() => void)) => () => void;
   ctx: ViewContext;
   renderer: Renderer<TElement, TText>;
+  trackInScope: CreateScopes['trackInScope']
 }) {
-  const { effect, ctx, renderer } = opts;
+  const { effect, renderer, trackInScope } = opts;
 
   return function applyProps<Tag extends keyof HTMLElementTagNameMap>(
     element: TElement,
@@ -199,7 +213,7 @@ function createApplyProps<
         const reactiveValue = value as unknown as () => unknown;
         const dispose = effect(() => renderer.setAttribute(element, key, reactiveValue()));
         // Track effect for cleanup when element is removed
-        trackInScope(ctx, { dispose });
+        trackInScope({ dispose });
       } else renderer.setAttribute(element, key, value); // Static value
     }
   };

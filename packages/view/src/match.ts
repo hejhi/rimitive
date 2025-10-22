@@ -17,8 +17,8 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback, NodeRef, ElementRef } from './types';
 import { isRefSpec, isElementRef, STATUS_FRAGMENT, resolveNextElement } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-import { disposeScope, trackInSpecificScope } from './helpers/scope';
 import type { ViewContext } from './context';
+import { CreateScopes } from './helpers/scope';
 
 interface MatchState<TElement = ReactiveElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
@@ -35,6 +35,8 @@ export type MatchOpts<TElement extends RendererElement = RendererElement, TText 
   ctx: ViewContext;
   effect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
+  disposeScope: CreateScopes['disposeScope'];
+  trackInSpecificScope: CreateScopes['trackInSpecificScope']
 };
 
 /**
@@ -55,7 +57,7 @@ export type MatchFactory<TElement extends RendererElement = RendererElement> =
 export function createMatchFactory<TElement extends RendererElement = RendererElement, TText extends TextNode = TextNode>(
   opts: MatchOpts<TElement, TText>
 ): MatchFactory<TElement> {
-  const { ctx, effect, renderer } = opts;
+  const { ctx, effect, renderer, disposeScope, trackInSpecificScope } = opts;
 
   function match<T>(
     reactive: Reactive<T>,

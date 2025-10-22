@@ -3,7 +3,7 @@ import { createViewContext } from './context';
 import type { Renderer } from './renderer';
 import type { Reactive, Disposable, RefSpec, LifecycleCallback, NodeRef } from './types';
 import { createProcessChildren } from './helpers/processChildren';
-import { trackInScope } from './helpers/scope';
+import { createScopes } from './helpers/scope';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -224,8 +224,10 @@ export function createTestEnv() {
     return cleanup;
   };
 
+  const { trackInScope, ...scopeRest } = createScopes({ ctx })
+
   // Create helpers
-  const { processChildren, handleChild} = createProcessChildren({ trackInScope, effect, ctx, renderer });
+  const { processChildren, handleChild} = createProcessChildren({ trackInScope, effect, renderer });
 
   return {
     ctx,
@@ -234,5 +236,7 @@ export function createTestEnv() {
     effect,
     handleChild,
     processChildren,
+    trackInScope,
+    ...scopeRest
   };
 }
