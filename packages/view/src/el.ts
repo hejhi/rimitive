@@ -108,15 +108,15 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     const { props, children } = parseSpec(rest);
 
     // Create ref function for registering lifecycle callbacks
-    const ref = ((
+    const refSpec = ((
       lifecycleCallback: LifecycleCallback<TElement>
     ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
-      return ref; // Chainable
+      return refSpec; // Chainable
     }) as RefSpec<TElement>;
 
     // Factory function - creates a new instance each time
-    ref.create = <TExt>(extensions?: TExt): ElementRef<TElement> & TExt => {
+    refSpec.create = <TExt>(extensions?: TExt): ElementRef<TElement> & TExt => {
       // Create the element using renderer
       const element = renderer.createElement(tag);
       // Create object with full shape at once (better for V8 hidden classes)
@@ -156,7 +156,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       return elRef as ElementRef<TElement> & TExt;
     };
 
-    return ref;
+    return refSpec;
   }
 
   return {

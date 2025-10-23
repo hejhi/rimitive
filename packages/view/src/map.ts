@@ -123,14 +123,14 @@ export function createMapFactory<
     const newPosBuf: number[] = [];
     const lisBuf: number[] = [];
 
-    const ref = ((
+    const refSpec = ((
       lifecycleCallback: LifecycleCallback<TElement>
     ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
-      return ref; // Chainable
+      return refSpec; // Chainable
     }) as RefSpec<TElement>;
 
-    ref.create = <TExt>(extensions?: TExt): MapFragRef<TElement> & TExt => {
+    refSpec.create = <TExt>(extensions?: TExt): MapFragRef<TElement> & TExt => {
       const state: MapFragRef<TElement> = {
         status: STATUS_FRAGMENT,
         element: undefined,
@@ -194,7 +194,7 @@ export function createMapFactory<
       return state as MapFragRef<TElement> & TExt;
     };
 
-    return ref;
+    return refSpec;
   }
 
   return {

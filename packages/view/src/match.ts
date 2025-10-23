@@ -65,14 +65,16 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
   ): RefSpec<TElement> {
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
-    const ref = ((
+    const refSpec = ((
       lifecycleCallback: LifecycleCallback<TElement>
     ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
-      return ref; // Chainable
+      return refSpec; // Chainable
     }) as RefSpec<TElement>;
 
-    ref.create = <TExt>(extensions?: TExt): MatchFragRef<TElement> & TExt => {
+    refSpec.create = <TExt>(
+      extensions?: TExt
+    ): MatchFragRef<TElement> & TExt => {
       const fragRef: MatchFragRef<TElement> = {
         status: STATUS_FRAGMENT,
         element: undefined,
@@ -137,7 +139,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
       return fragRef as MatchFragRef<TElement> & TExt;
     };
 
-    return ref;
+    return refSpec;
   }
 
   return {
