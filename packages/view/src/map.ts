@@ -118,17 +118,17 @@ export function createMapFactory<
     let dispose: (() => void) | undefined;
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
-    // Pooled buffers for LIS calculation - reused across reconciliations
-    const oldIndicesBuf: number[] = [];
-    const newPosBuf: number[] = [];
-    const lisBuf: number[] = [];
-
-    const refSpec = ((
+    const refSpec: RefSpec<TElement> = (
       lifecycleCallback: LifecycleCallback<TElement>
     ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
       return refSpec; // Chainable
-    }) as RefSpec<TElement>;
+    };
+
+    // Pooled buffers for LIS calculation - reused across reconciliations
+    const oldIndicesBuf: number[] = [];
+    const newPosBuf: number[] = [];
+    const lisBuf: number[] = [];
 
     refSpec.create = <TExt>(extensions?: TExt): MapFragRef<TElement> & TExt => {
       const state: MapFragRef<TElement> = {

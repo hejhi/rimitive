@@ -65,12 +65,12 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
   ): RefSpec<TElement> {
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
-    const refSpec = ((
+    const refSpec: RefSpec<TElement> = (
       lifecycleCallback: LifecycleCallback<TElement>
     ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
-      return refSpec; // Chainable
-    }) as RefSpec<TElement>;
+      return refSpec;
+    };
 
     refSpec.create = <TExt>(
       extensions?: TExt

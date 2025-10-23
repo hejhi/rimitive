@@ -99,23 +99,18 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>
   ): RefSpec<TElement> {
-    const [tag, ...rest] = spec;
-
-    // Store lifecycle callbacks that will be applied to each instance
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
-
-    // Parse props and children from rest (blueprint data)
-    const { props, children } = parseSpec(rest);
-
-    // Create ref function for registering lifecycle callbacks
-    const refSpec = ((
+    
+    const refSpec: RefSpec<TElement> = (
       lifecycleCallback: LifecycleCallback<TElement>
     ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
-      return refSpec; // Chainable
-    }) as RefSpec<TElement>;
+      return refSpec;
+    };
+    
+    const [tag, ...rest] = spec;
+    const { props, children } = parseSpec(rest);
 
-    // Factory function - creates a new instance each time
     refSpec.create = <TExt>(extensions?: TExt): ElementRef<TElement> & TExt => {
       // Create the element using renderer
       const element = renderer.createElement(tag);
@@ -133,25 +128,16 @@ export function createElFactory<TElement extends RendererElement, TText extends 
 
       // Run all reactive setup within this instance's scope
       runInScope(scope, () => {
-        // Apply props
         applyProps(element, props);
-
-        // Process children: build linked list and attach fragments
         processChildren(elRef, children);
       });
 
-      // Run lifecycle callbacks immediately (no MutationObserver needed)
-      // Cleanup happens via scope disposal when element is removed by reconciler
       for (const callback of lifecycleCallbacks) {
         const cleanup = callback(element);
         if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
       }
 
-      // Lazy scope creation: only store scope if it actually has disposables
-      // This saves memory for static elements with no reactive content
-      if (scope.firstDisposable !== undefined) {
-        ctx.elementScopes.set(element, scope);
-      }
+      if (scope.firstDisposable !== undefined) ctx.elementScopes.set(element, scope);
 
       return elRef as ElementRef<TElement> & TExt;
     };

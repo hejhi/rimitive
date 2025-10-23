@@ -100,17 +100,6 @@ export function isRefSpec<TElement>(value: unknown): value is RefSpec<TElement> 
 }
 
 /**
- * FragmentSpec - manages DOM relationships without a container element
- * Callable function that attaches to parent
- */
-export interface FragmentSpec<TElement = ReactiveElement> {
-  (
-    parent: ElementRef<TElement>,
-    nextSibling?: ElementRef<TElement> | null
-  ): void;
-}
-
-/**
  * A reactive value that can be read as a signal or computed
  */
 export type Reactive<T = unknown> = Readable<T>;
@@ -144,7 +133,6 @@ export type ReactiveElement = object;
 
 /**
  * Valid child types for an element
- * Generic over element type for proper FragmentSpec typing
  */
 export type ElRefSpecChild<TElement = object> =
   | string
@@ -152,8 +140,7 @@ export type ElRefSpecChild<TElement = object> =
   | boolean
   | null
   | RefSpec<TElement>
-  | Reactive<unknown>
-  | FragmentSpec<TElement>;
+  | Reactive<unknown>;
 
 export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
   // Tree structure (from Scope)

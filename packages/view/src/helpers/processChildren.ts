@@ -49,8 +49,6 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
       // The only other functions allowed are reactives
       if (isReactive(child)) {
-        // Reactive value (signal or computed) - check BEFORE FragmentSpec
-        // since reactive values are also functions without .create()
         const textNode = renderer.createTextNode('');
         const dispose = effect(() => {
           const value = child();
