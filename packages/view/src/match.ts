@@ -15,14 +15,14 @@
 
 import type { LatticeExtension } from '@lattice/lattice';
 import type { Reactive, RefSpec, ReactiveElement, FragmentRef, LifecycleCallback, NodeRef, ElementRef } from './types';
-import { isRefSpec, isElementRef, STATUS_FRAGMENT, resolveNextElement } from './types';
+import { isRefSpec, isElementRef, STATUS_FRAGMENT, resolveNextRef } from './types';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import type { LatticeContext } from './context';
 import { CreateScopes } from './helpers/scope';
 
 interface MatchFragRef<TElement = ReactiveElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
-  element?: TElement;
+  element: TElement | null;
   // Current child NodeRef (prevents memory leaks by retaining full reference)
   firstChild?: ElementRef<TElement>;
   lastChild?: ElementRef<TElement>; // Same as firstChild for single-child fragments
@@ -77,7 +77,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
     ): MatchFragRef<TElement> & TExt => {
       const fragRef: MatchFragRef<TElement> = {
         status: STATUS_FRAGMENT,
-        element: undefined,
+        element: null,
         prev: undefined,
         next: undefined,
         firstChild: undefined,
@@ -125,7 +125,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
                 renderer.insertBefore(
                   parentElement,
                   nodeRef.element,
-                  resolveNextElement(fragRef.next as NodeRef<TElement>)
+                  resolveNextRef(fragRef.next as NodeRef<TElement>)?.element ?? null
                 );
               }
             }

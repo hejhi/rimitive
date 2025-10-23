@@ -17,9 +17,8 @@ import type {
   FragmentRef,
   LifecycleCallback,
   NodeRef,
-  ElementRef,
 } from './types';
-import { STATUS_FRAGMENT, resolveNextElement } from './types';
+import { STATUS_FRAGMENT, resolveNextRef } from './types';
 import type {
   Renderer,
   Element as RendererElement,
@@ -48,9 +47,8 @@ export type MapItemExt<T> = {
   status: number; // Reconciliation status bits (DIRTY, CLEAN, STALE) - overrides STATUS_ELEMENT
 };
 
-// ListItemNode is ElementRef + map-specific fields
-// This is what you get back from create<MapItemExt<T>>
-export type ListItemNode<TElement, T = unknown> = Omit<ElementRef<TElement>, 'status'> & MapItemExt<T>;
+
+export type ListItemNode<TElement, T = unknown> = Omit<NodeRef<TElement>, 'status'> & MapItemExt<T>;
 
 /**
  * Options passed to map factory
@@ -94,7 +92,7 @@ export type MapFactory<TElement extends RendererElement = RendererElement> =
  */
 export interface MapFragRef<TElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
-  element?: TElement;
+  element: TElement | null;
 
   // Key-based lookup for O(1) reconciliation during diffing
   // (DOM uses array-based childNodes, we use Map for key lookup)
@@ -133,7 +131,7 @@ export function createMapFactory<
     refSpec.create = <TExt>(extensions?: TExt): MapFragRef<TElement> & TExt => {
       const state: MapFragRef<TElement> = {
         status: STATUS_FRAGMENT,
-        element: undefined,
+        element: null,
         itemsByKey: new Map<string, ListItemNode<TElement, unknown>>(),
         prev: undefined,
         next: undefined,
@@ -288,6 +286,7 @@ function pruneNode<T, TElement extends RendererElement, TText extends TextNode>(
   disposeScope: CreateScopes['disposeScope']
 ): void {
   const element = node.element;
+  if (!element) return;
   const scope = ctx.elementScopes.get(element);
   if (scope) {
     disposeScope(scope);
@@ -377,11 +376,14 @@ export function reconcileList<
 
       appendChild(parent, ref);
       itemsByKey.set(key, ref);
+      const el = ref.element;
+
+      if (!el) return;
       // Insert before next sibling element to maintain fragment position
       renderer.insertBefore(
         parentEl,
-        ref.element,
-        resolveNextElement(parent.next as NodeRef<TElement>)
+        el,
+        resolveNextRef(parent.next)?.element ?? null
       );
     }
 
@@ -431,11 +433,9 @@ export function reconcileList<
         moveChild(parent, node, child);
 
         // Use next sibling element as fallback to maintain fragment position
-        const nextEl = child
-          ? child.element
-          : resolveNextElement(parent.next as NodeRef<TElement> | undefined);
+        const nextEl = child ? child.element : resolveNextRef(parent.next)?.element ?? null;
         const nodeElement = node.element;
-        if (nodeElement !== nextEl)
+        if (nodeElement && nodeElement !== nextEl)
           renderer.insertBefore(parentEl, nodeElement, nextEl);
       }
     }
@@ -482,11 +482,11 @@ function unlinkFromParent<T, TElement>(
   const { prev: prevSibling, next: nextSibling } = node;
 
   // Update next sibling's backward pointer
-  if (nextSibling !== undefined) nextSibling.prev = prevSibling;
+  if (nextSibling != undefined) nextSibling.prev = prevSibling;
   else parent.lastChild = prevSibling;
 
   // Update prev sibling's forward pointer
-  if (prevSibling !== undefined) prevSibling.next = nextSibling;
+  if (prevSibling != undefined) prevSibling.next = nextSibling;
   else parent.firstChild = nextSibling;
 }
 
@@ -500,16 +500,17 @@ function appendChild<T, TElement>(
 ): void {
   // Get current tail for O(1) append
   const prevSibling = parent.lastChild;
+  const typedNode = node as NodeRef<TElement>;
 
   // Wire node into list (unidirectional: parent→child, not child→parent)
-  node.prev = prevSibling;
-  node.next = undefined;
+  typedNode.prev = prevSibling;
+  typedNode.next = undefined;
 
   // Update parent's tail pointer
-  if (prevSibling !== undefined) prevSibling.next = node;
-  else parent.firstChild = node;
+  if (prevSibling != undefined) prevSibling.next = typedNode;
+  else parent.firstChild = typedNode;
 
-  parent.lastChild = node;
+  parent.lastChild = typedNode;
 }
 
 /**
@@ -540,6 +541,8 @@ function moveChild<T, TElement>(
 ): void {
   // Remove from current position
   unlinkFromParent(parent, node);
+  
+  const typedNode = node as NodeRef<TElement>;
 
   // Insert at new position
   if (refSibling === undefined) {
@@ -548,19 +551,19 @@ function moveChild<T, TElement>(
     node.prev = prevSibling;
     node.next = undefined;
 
-    if (prevSibling !== undefined) prevSibling.next = node;
-    else parent.firstChild = node;
+    if (prevSibling != undefined) prevSibling.next = typedNode;
+    else parent.firstChild = typedNode;
 
-    parent.lastChild = node;
+    parent.lastChild = typedNode;
   } else {
     // Move before refSibling
     const prevSibling = refSibling.prev;
     node.prev = prevSibling;
-    node.next = refSibling;
+    node.next = refSibling as NodeRef<TElement>;
 
-    refSibling.prev = node;
+    refSibling.prev = typedNode;
 
-    if (prevSibling !== undefined) prevSibling.next = node;
-    else parent.firstChild = node;
+    if (prevSibling != undefined) prevSibling.next = typedNode;
+    else parent.firstChild = typedNode;
   }
 }

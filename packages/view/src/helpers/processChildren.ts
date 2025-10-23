@@ -94,7 +94,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       if (isFragmentRef(lastChildRef)) lastChildRef.attach(parent, nextRef);
       else nextRef = lastChildRef;
 
-      lastChildRef = lastChildRef.prev as NodeRef<TElement> | undefined;
+      lastChildRef = lastChildRef.prev;
     } while (lastChildRef);
   };
 

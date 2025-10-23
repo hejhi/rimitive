@@ -10,16 +10,16 @@ import type { Readable, ScheduledNode } from '@lattice/signals/types';
 export const STATUS_ELEMENT = 1;
 export const STATUS_FRAGMENT = 2;
 
-export interface BaseRef<TElement> {
+export interface BaseRef<TRef> {
   status: number;
-  prev?: BaseRef<TElement>;
-  next?: BaseRef<TElement>;
+  prev?: TRef;
+  next?: TRef;
 }
 
 /**
  * Element ref node - wraps created elements for sibling tracking
  */
-export interface ElementRef<TElement> extends BaseRef<TElement> {
+export interface ElementRef<TElement> extends BaseRef<NodeRef<TElement>> {
   status: typeof STATUS_ELEMENT;
   element: TElement;
 }
@@ -27,14 +27,15 @@ export interface ElementRef<TElement> extends BaseRef<TElement> {
 /**
  * Fragment ref node - wraps fragments for deferred attachment
  */
-export interface FragmentRef<TElement> extends BaseRef<TElement> {
+export interface FragmentRef<TElement> extends BaseRef<NodeRef<TElement>> {
   status: typeof STATUS_FRAGMENT;
+  element: TElement | null;
   attach: (
     parent: ElementRef<TElement>,
     nextSibling?: ElementRef<TElement> | null
   ) => void;
-  firstChild?: BaseRef<TElement>;
-  lastChild?: BaseRef<TElement>;
+  firstChild?: NodeRef<TElement>;
+  lastChild?: NodeRef<TElement>;
 }
 
 /**
@@ -63,24 +64,24 @@ export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is 
  * @param ref - Starting NodeRef (typically fragment.next)
  * @returns The next DOM element, or null if end of chain
  */
-export function resolveNextElement<TElement>(ref: NodeRef<TElement> | undefined): TElement | null {
+export function resolveNextRef<TElement>(
+  ref: NodeRef<TElement> | undefined
+): NodeRef<TElement> | null {
   let current = ref;
   while (current) {
-    // ElementRef - return element directly
-    if (current.status === STATUS_ELEMENT) return current.element;
+    if (current.status === STATUS_ELEMENT) return current;
 
     // FragmentRef - try to get first child element
     if (current.firstChild) {
       const firstChild = current.firstChild;
 
-      if ('element' in firstChild) return (firstChild as ElementRef<TElement>).element;
-      else if (firstChild.status === STATUS_ELEMENT) return (firstChild as ElementRef<TElement>).element;
+      if (isFragmentRef(firstChild) || isElementRef(firstChild)) return firstChild;
     }
 
-    // Empty fragment - skip to next sibling
-    current = current.next as NodeRef<TElement>;
+    current = current.next; // Empty fragment - skip to next sibling
   }
-  return null; // End of chain
+
+  return null;
 }
 
 /**
