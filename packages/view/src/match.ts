@@ -20,7 +20,7 @@ import type { Renderer, Element as RendererElement, TextNode } from './renderer'
 import type { LatticeContext } from './context';
 import { CreateScopes } from './helpers/scope';
 
-interface MatchState<TElement = ReactiveElement> extends FragmentRef<TElement> {
+interface MatchFragRef<TElement = ReactiveElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
   element?: TElement;
   // Current child NodeRef (prevents memory leaks by retaining full reference)
@@ -72,8 +72,8 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
       return ref; // Chainable
     }) as RefSpec<TElement>;
 
-    ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
-      const state: MatchState<TElement> = {
+    ref.create = <TExt>(extensions?: TExt): MatchFragRef<TElement> & TExt => {
+      const fragRef: MatchFragRef<TElement> = {
         status: STATUS_FRAGMENT,
         element: undefined,
         prev: undefined,
@@ -85,12 +85,12 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
           // Store parent element for reconciliation (extract from parent NodeRef)
           // Parent is always an ElementRef in practice (fragments can't be parents)
           const parentElement = parent.element;
-          state.element = parentElement;
+          fragRef.element = parentElement;
 
           // Store boundary marker if provided (for standalone usage)
           // When created via el(), state.next will be set and takes precedence
-          if (nextSibling && !state.next) {
-            state.next = nextSibling;
+          if (nextSibling && !fragRef.next) {
+            fragRef.next = nextSibling;
           }
 
           // Create effect that swaps elements when reactive value changes
@@ -99,16 +99,16 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
             const elementRef = render(value);
 
             // Remove old child if exists
-            if (state.firstChild) {
-              const oldElement = state.firstChild.element;
+            if (fragRef.firstChild) {
+              const oldElement = fragRef.firstChild.element;
               const oldScope = ctx.elementScopes.get(oldElement);
               if (oldScope) {
                 disposeScope(oldScope);
                 ctx.elementScopes.delete(oldElement);
               }
               renderer.removeChild(parentElement, oldElement);
-              state.firstChild = undefined;
-              state.lastChild = undefined;
+              fragRef.firstChild = undefined;
+              fragRef.lastChild = undefined;
             }
 
             // Create new child if not null/false
@@ -117,10 +117,14 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
               // Match children should be ElementRefs
               if (isElementRef(nodeRef)) {
                 // Store NodeRef to prevent memory leaks
-                state.firstChild = nodeRef;
-                state.lastChild = nodeRef;
+                fragRef.firstChild = nodeRef;
+                fragRef.lastChild = nodeRef;
                 // Insert before next sibling element to maintain stable position
-                renderer.insertBefore(parentElement, nodeRef.element, resolveNextElement(state.next as NodeRef<TElement>));
+                renderer.insertBefore(
+                  parentElement,
+                  nodeRef.element,
+                  resolveNextElement(fragRef.next as NodeRef<TElement>)
+                );
               }
             }
           });
@@ -130,7 +134,7 @@ export function createMatchFactory<TElement extends RendererElement = RendererEl
         },
       };
 
-      return state;
+      return fragRef as MatchFragRef<TElement> & TExt;
     };
 
     return ref;

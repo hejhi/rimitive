@@ -3,7 +3,6 @@ import type {
   LifecycleCallback,
   RefSpec,
   Reactive,
-  NodeRef,
   ElementRef,
   ElRefSpecChild,
 } from './types';
@@ -117,7 +116,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     }) as RefSpec<TElement>;
 
     // Factory function - creates a new instance each time
-    ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
+    ref.create = <TExt>(extensions?: TExt): ElementRef<TElement> & TExt => {
       // Create the element using renderer
       const element = renderer.createElement(tag);
       // Create object with full shape at once (better for V8 hidden classes)
@@ -154,8 +153,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         ctx.elementScopes.set(element, scope);
       }
 
-      // Return just the element (ref nodes were internal implementation detail)
-      return elRef;
+      return elRef as ElementRef<TElement> & TExt;
     };
 
     return ref;

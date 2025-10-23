@@ -92,7 +92,7 @@ export type MapFactory<TElement extends RendererElement = RendererElement> =
  * - lastChild ↔ lastChild
  * - childNodes ↔ itemsByKey (Map is for efficient key lookup, DOM uses array)
  */
-export interface MapState<TElement> extends FragmentRef<TElement> {
+export interface MapFragRef<TElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
   element?: TElement;
 
@@ -130,8 +130,8 @@ export function createMapFactory<
       return ref; // Chainable
     }) as RefSpec<TElement>;
 
-    ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
-      const state: MapState<TElement> = {
+    ref.create = <TExt>(extensions?: TExt): MapFragRef<TElement> & TExt => {
+      const state: MapFragRef<TElement> = {
         status: STATUS_FRAGMENT,
         element: undefined,
         itemsByKey: new Map<string, ListItemNode<TElement, unknown>>(),
@@ -191,7 +191,7 @@ export function createMapFactory<
         },
       };
 
-      return state;
+      return state as MapFragRef<TElement> & TExt;
     };
 
     return ref;
@@ -278,12 +278,8 @@ export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
  * Remove a node and clean up all associated resources
  * Inline helper for pruning unvisited nodes
  */
-function pruneNode<
-  T,
-  TElement extends RendererElement,
-  TText extends TextNode,
->(
-  parent: MapState<TElement>,
+function pruneNode<T, TElement extends RendererElement, TText extends TextNode>(
+  parent: MapFragRef<TElement>,
   node: ListItemNode<TElement, T>,
   ctx: LatticeContext,
   container: TElement,
@@ -315,7 +311,7 @@ export function reconcileList<
   TText extends TextNode = TextNode,
 >(
   ctx: LatticeContext,
-  parent: MapState<TElement>,
+  parent: MapFragRef<TElement>,
   newItems: T[],
   renderItem: (item: T) => {
     refSpec: RefSpec<TElement>;
@@ -337,7 +333,9 @@ export function reconcileList<
   >;
 
   // Pre-allocate nodes buffer to avoid Map lookup in position phase
-  const nodes: ListItemNode<TElement, T>[] = Array(newItems.length) as ListItemNode<TElement, T>[];
+  const nodes: ListItemNode<TElement, T>[] = Array(
+    newItems.length
+  ) as ListItemNode<TElement, T>[];
 
   //  Build phase - create nodes and collect info for LIS
   let count = 0;
@@ -406,13 +404,23 @@ export function reconcileList<
     } else {
       // Node not in LIS - needs repositioning
       // Calculate reference sibling for insertion
-      let child = (prevNode ? prevNode.next : parent.firstChild) as ListItemNode<TElement, T>;
+      let child = (
+        prevNode ? prevNode.next : parent.firstChild
+      ) as ListItemNode<TElement, T>;
 
       if (child) {
         // Remove any stale nodes at the insertion point (cleanup as we go)
         while (child.status === STALE) {
           const nextChild = child.next as ListItemNode<TElement, T>;
-          pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer, disposeScope);
+          pruneNode(
+            parent,
+            child,
+            ctx,
+            parentEl,
+            itemsByKey,
+            renderer,
+            disposeScope
+          );
           child = nextChild;
         }
       }
@@ -427,7 +435,8 @@ export function reconcileList<
           ? child.element
           : resolveNextElement(parent.next as NodeRef<TElement> | undefined);
         const nodeElement = node.element;
-        if (nodeElement !== nextEl) renderer.insertBefore(parentEl, nodeElement, nextEl);
+        if (nodeElement !== nextEl)
+          renderer.insertBefore(parentEl, nodeElement, nextEl);
       }
     }
 
@@ -444,7 +453,16 @@ export function reconcileList<
     const status = child.status;
 
     // Prune any children left that are STALE
-    if (status === STALE) pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer, disposeScope);
+    if (status === STALE)
+      pruneNode(
+        parent,
+        child,
+        ctx,
+        parentEl,
+        itemsByKey,
+        renderer,
+        disposeScope
+      );
     // Set any CLEAN children to STALE for next reconciliation.
     // There should not be any DIRTY left by now.
     else child.status = STALE;
@@ -458,7 +476,7 @@ export function reconcileList<
  * Like DOM removeChild internal logic
  */
 function unlinkFromParent<T, TElement>(
-  parent: MapState<TElement>,
+  parent: MapFragRef<TElement>,
   node: ListItemNode<TElement, T>
 ): void {
   const { prev: prevSibling, next: nextSibling } = node;
@@ -477,7 +495,7 @@ function unlinkFromParent<T, TElement>(
  * Like DOM appendChild
  */
 function appendChild<T, TElement>(
-  parent: MapState<TElement>,
+  parent: MapFragRef<TElement>,
   node: ListItemNode<TElement, T>
 ): void {
   // Get current tail for O(1) append
@@ -499,7 +517,7 @@ function appendChild<T, TElement>(
  * Like DOM removeChild
  */
 function removeChild<T, TElement>(
-  parent: MapState<TElement>,
+  parent: MapFragRef<TElement>,
   node: ListItemNode<TElement, T>
 ): void {
   // Unlink from parent's children list
@@ -516,7 +534,7 @@ function removeChild<T, TElement>(
  * Like moving DOM nodes
  */
 function moveChild<T, TElement>(
-  parent: MapState<TElement>,
+  parent: MapFragRef<TElement>,
   node: ListItemNode<TElement, T>,
   refSibling: ListItemNode<TElement, T> | undefined
 ): void {
@@ -526,7 +544,7 @@ function moveChild<T, TElement>(
   // Insert at new position
   if (refSibling === undefined) {
     // Move to end
-    const prevSibling = parent.lastChild
+    const prevSibling = parent.lastChild;
     node.prev = prevSibling;
     node.next = undefined;
 

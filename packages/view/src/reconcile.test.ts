@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { reconcileList, ListItemNode, MapState } from './map';
+import { reconcileList, ListItemNode, MapFragRef } from './map';
 import { createLatticeContext } from './context';
 import type { Renderer } from './renderer';
 import { MockElement, createRefSpec } from './test-utils';
@@ -19,7 +19,7 @@ const testBuffers = {
 // Helper to wrap reconcileList with buffer management for tests
 function reconcileListTest<T>(
   ctx: ReturnType<typeof createLatticeContext>,
-  parent: MapState<MockElement>,
+  parent: MapFragRef<MockElement>,
   newItems: T[],
   renderItem: (item: T) => { refSpec: RefSpec<MockElement>; itemSignal?: ((value: T) => void) & (() => T) },
   keyFn: (item: T) => string | number,
@@ -104,7 +104,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
     const { disposeScope } = createTestScopes();
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -140,7 +140,7 @@ describe('reconcileList', () => {
     const container = new MockElement('container');
     const { disposeScope } = createTestScopes();
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -202,7 +202,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -241,7 +241,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -291,7 +291,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -330,7 +330,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -391,7 +391,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -423,7 +423,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -454,7 +454,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
@@ -489,7 +489,7 @@ describe('reconcileList', () => {
     const renderer = createMockRenderer();
     const container = new MockElement('container');
 
-    const parent: MapState<MockElement> = {
+    const parent: MapFragRef<MockElement> = {
       status: STATUS_FRAGMENT, prev: undefined, next: undefined, element: container, attach: () => {},
       firstChild: undefined,
       lastChild: undefined,
