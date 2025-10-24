@@ -41,15 +41,16 @@ export function createMapHelper<
   /**
    * User-space map() using closure pattern
    *
-   * Takes a signal of array and a render function
+   * Takes ANY reactive value and a render function
    * Keys come from el() calls, not from a keyFn parameter
    *
    * Usage:
    *   map(items, items => items.map(item => el(['li', item.name], item.id)))
+   *   map(mode, m => [cases[m]()])
    */
   function map<T>(
-    itemsSignal: Reactive<T[]>,
-    render: (items: T[]) => RefSpec<TElement>[]
+    signal: Reactive<T>,
+    render: (value: T) => RefSpec<TElement> | RefSpec<TElement>[]
   ): RefSpec<TElement> {
     // Closure state - persists across effect re-runs
     const state: ReconcileState<TElement> & {
@@ -83,10 +84,13 @@ export function createMapHelper<
           state.parentElement = parent.element;
           state.nextSibling = nextSibling || fragRef.next;
 
-          // Create effect that reconciles when items change
+          // Create effect that reconciles when value changes
           const dispose = effect(() => {
-            const items = itemsSignal();
-            const refSpecs = render(items);
+            const value = signal();
+
+            // Call render and normalize to array
+            const result = render(value);
+            const refSpecs = Array.isArray(result) ? result : [result];
 
             // Clear pooled buffers
             oldIndicesBuf.length = 0;

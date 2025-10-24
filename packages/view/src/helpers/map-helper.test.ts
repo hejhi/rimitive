@@ -1,7 +1,13 @@
 /**
- * Tests for user-space map() helper
+ * User-facing tests for reactive list reconciliation
  *
- * Demonstrates the closure-based pattern with keys from el()
+ * Tests verify observable behavior from the user's perspective:
+ * - Does the DOM reflect the correct content?
+ * - Does the DOM update correctly when data changes?
+ * - Are elements preserved when they should be?
+ *
+ * Tests use the real API (el + map) as users would.
+ * No testing of internal implementation details.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -9,185 +15,844 @@ import { createTestEnv, MockElement, getTextContent } from '../test-utils';
 import { createMapHelper } from './map-helper';
 import { createElFactory } from '../el';
 
-describe('map-helper', () => {
-  it('should render list with keys from el()', () => {
-    const {
-      ctx,
-      renderer,
-      signal,
-      effect,
-      processChildren,
-      createScope,
-      runInScope,
-      trackInScope,
-      trackInSpecificScope,
-      disposeScope,
-    } = createTestEnv();
-
+describe('map() - User-facing behavior', () => {
+  // Helper to set up test environment
+  function setup() {
+    const env = createTestEnv();
     const el = createElFactory({
-      ctx,
-      effect,
-      renderer,
-      processChildren,
-      createScope,
-      runInScope,
-      trackInScope,
-      trackInSpecificScope,
+      ctx: env.ctx,
+      effect: env.effect,
+      renderer: env.renderer,
+      processChildren: env.processChildren,
+      createScope: env.createScope,
+      runInScope: env.runInScope,
+      trackInScope: env.trackInScope,
+      trackInSpecificScope: env.trackInSpecificScope,
     });
 
     const map = createMapHelper({
-      ctx,
-      effect,
-      renderer,
-      disposeScope,
-      trackInSpecificScope,
+      ctx: env.ctx,
+      effect: env.effect,
+      renderer: env.renderer,
+      disposeScope: env.disposeScope,
+      trackInSpecificScope: env.trackInSpecificScope,
     });
 
-    const items = signal([
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
+    return { ...env, el, map };
+  }
 
-    const list = el.method(
-      ['ul',
-        map(items, (items) =>
-          items.map((item) => el.method(['li', item.name], item.id))
-        ),
-      ]
-    );
+  describe('Initial rendering', () => {
+    it('should render a list of items', () => {
+      const { el, map, signal } = setup();
 
-    const ulEl = list.create().element as MockElement;
-    expect(ulEl.children.length).toBe(2);
-    expect((ulEl.children[0] as MockElement).tag).toBe('li');
-    expect((ulEl.children[1] as MockElement).tag).toBe('li');
-    expect(getTextContent(ulEl.children[0] as MockElement)).toBe('Alice');
-    expect(getTextContent(ulEl.children[1] as MockElement)).toBe('Bob');
+      const items = signal([
+        { id: 1, name: 'Apple' },
+        { id: 2, name: 'Banana' },
+        { id: 3, name: 'Cherry' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Apple');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Banana');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('Cherry');
+    });
+
+    it('should render empty list', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal<Array<{ id: number; name: string }>>([]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(0);
+    });
+
+    it('should render single item', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([{ id: 1, name: 'Only' }]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(1);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Only');
+    });
   });
 
-  it('should reconcile when items change', () => {
-    const {
-      ctx,
-      renderer,
-      signal,
-      effect,
-      processChildren,
-      createScope,
-      runInScope,
-      trackInScope,
-      trackInSpecificScope,
-      disposeScope,
-    } = createTestEnv();
+  describe('Adding items', () => {
+    it('should add item to end', () => {
+      const { el, map, signal } = setup();
 
-    const el = createElFactory({
-      ctx,
-      effect,
-      renderer,
-      processChildren,
-      createScope,
-      runInScope,
-      trackInScope,
-      trackInSpecificScope,
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(2);
+
+      // Add item to end
+      items([...items(), { id: 3, name: 'Third' }]);
+
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('Third');
     });
 
-    const map = createMapHelper({
-      ctx,
-      effect,
-      renderer,
-      disposeScope,
-      trackInSpecificScope,
+    it('should add item to beginning', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(2);
+
+      // Add item to beginning
+      items([{ id: 1, name: 'First' }, ...items()]);
+
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('First');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Second');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('Third');
     });
 
-    const items = signal([
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
+    it('should add item to middle', () => {
+      const { el, map, signal } = setup();
 
-    const list = el.method(
-      ['ul',
-        map(items, (items) =>
-          items.map((item) => el.method(['li', item.name], item.id))
-        ),
-      ]
-    );
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 3, name: 'Third' },
+      ]);
 
-    const ulEl = list.create().element as MockElement;
-    expect(ulEl.children.length).toBe(2);
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
 
-    // Add item
-    items([...items(), { id: 3, name: 'Charlie' }]);
-    expect(ulEl.children.length).toBe(3);
-    expect(getTextContent(ulEl.children[2] as MockElement)).toBe('Charlie');
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(2);
 
-    // Remove item (remove middle item)
-    items([items()[0]!, items()[2]!]);
-    expect(ulEl.children.length).toBe(2);
-    expect(getTextContent(ulEl.children[0] as MockElement)).toBe('Alice');
-    expect(getTextContent(ulEl.children[1] as MockElement)).toBe('Charlie');
+      // Add item to middle
+      const current = items();
+      items([current[0]!, { id: 2, name: 'Second' }, current[1]!]);
+
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('First');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Second');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('Third');
+    });
+
+    it('should add multiple items at once', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([{ id: 1, name: 'First' }]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(1);
+
+      // Add multiple items
+      items([
+        ...items(),
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+        { id: 4, name: 'Fourth' },
+      ]);
+
+      expect(ul.children.length).toBe(4);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('First');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Second');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('Third');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('Fourth');
+    });
+
+    it('should populate from empty', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal<Array<{ id: number; name: string }>>([]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(0);
+
+      // Populate from empty
+      items([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+      ]);
+
+      expect(ul.children.length).toBe(2);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('First');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Second');
+    });
   });
 
-  it('should handle reordering with keys', () => {
-    const {
-      ctx,
-      renderer,
-      signal,
-      effect,
-      processChildren,
-      createScope,
-      runInScope,
-      trackInScope,
-      trackInSpecificScope,
-      disposeScope,
-    } = createTestEnv();
+  describe('Removing items', () => {
+    it('should remove item from end', () => {
+      const { el, map, signal } = setup();
 
-    const el = createElFactory({
-      ctx,
-      effect,
-      renderer,
-      processChildren,
-      createScope,
-      runInScope,
-      trackInScope,
-      trackInSpecificScope,
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(3);
+
+      // Remove from end
+      items(items().slice(0, 2));
+
+      expect(ul.children.length).toBe(2);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('First');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Second');
     });
 
-    const map = createMapHelper({
-      ctx,
-      effect,
-      renderer,
-      disposeScope,
-      trackInSpecificScope,
+    it('should remove item from beginning', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(3);
+
+      // Remove from beginning
+      items(items().slice(1));
+
+      expect(ul.children.length).toBe(2);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Second');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Third');
     });
 
-    const items = signal([
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-      { id: 3, name: 'Charlie' },
-    ]);
+    it('should remove item from middle', () => {
+      const { el, map, signal } = setup();
 
-    const list = el.method(
-      ['ul',
-        map(items, (items) =>
-          items.map((item) => el.method(['li', item.name], item.id))
-        ),
-      ]
-    );
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
 
-    const ulEl = list.create().element as MockElement;
-    expect(ulEl.children.length).toBe(3);
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
 
-    // Store original elements to verify they're reused
-    const [aliceEl, bobEl, charlieEl] = ulEl.children as MockElement[];
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(3);
 
-    // Reverse order
-    items([items()[2]!, items()[1]!, items()[0]!]);
+      // Remove middle item
+      const current = items();
+      items([current[0]!, current[2]!]);
 
-    expect(ulEl.children.length).toBe(3);
-    expect(getTextContent(ulEl.children[0] as MockElement)).toBe('Charlie');
-    expect(getTextContent(ulEl.children[1] as MockElement)).toBe('Bob');
-    expect(getTextContent(ulEl.children[2] as MockElement)).toBe('Alice');
-    // Verify elements are reused (same object references)
-    expect(ulEl.children[0]).toBe(charlieEl);
-    expect(ulEl.children[1]).toBe(bobEl);
-    expect(ulEl.children[2]).toBe(aliceEl);
+      expect(ul.children.length).toBe(2);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('First');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Third');
+    });
+
+    it('should remove multiple items at once', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+        { id: 4, name: 'Fourth' },
+        { id: 5, name: 'Fifth' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(5);
+
+      // Remove multiple items
+      const current = items();
+      items([current[0]!, current[4]!]);
+
+      expect(ul.children.length).toBe(2);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('First');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Fifth');
+    });
+
+    it('should clear all items', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(2);
+
+      // Clear all
+      items([]);
+
+      expect(ul.children.length).toBe(0);
+    });
+  });
+
+  describe('Reordering items (LIS algorithm)', () => {
+    it('should reverse list order', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Reverse order
+      items([...items()].reverse());
+
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Third');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Second');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('First');
+    });
+
+    it('should handle swap of two items', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Swap first and third
+      const current = items();
+      items([current[2]!, current[1]!, current[0]!]);
+
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Third');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Second');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('First');
+    });
+
+    it('should handle complex shuffle', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+        { id: 5, name: 'E' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Complex shuffle: [A,B,C,D,E] → [D,B,E,A,C]
+      const current = items();
+      items([current[3]!, current[1]!, current[4]!, current[0]!, current[2]!]);
+
+      expect(ul.children.length).toBe(5);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('D');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('B');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('E');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[4] as MockElement)).toBe('C');
+    });
+
+    it('should handle rotation', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Rotate right: [A,B,C,D] → [D,A,B,C]
+      const current = items();
+      items([current[3]!, current[0]!, current[1]!, current[2]!]);
+
+      expect(ul.children.length).toBe(4);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('D');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('B');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('C');
+    });
+
+    it('should handle LIS at beginning', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+        { id: 5, name: 'E' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // LIS at beginning: [A,B,C,D,E] → [A,B,E,C,D]
+      // LIS: [A,B] (indices 0,1), others move
+      const current = items();
+      items([current[0]!, current[1]!, current[4]!, current[2]!, current[3]!]);
+
+      expect(ul.children.length).toBe(5);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('B');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('E');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('C');
+      expect(getTextContent(ul.children[4] as MockElement)).toBe('D');
+    });
+
+    it('should handle LIS at end', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+        { id: 5, name: 'E' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // LIS at end: [A,B,C,D,E] → [C,A,B,D,E]
+      // LIS: [D,E] (indices 3,4), others move
+      const current = items();
+      items([current[2]!, current[0]!, current[1]!, current[3]!, current[4]!]);
+
+      expect(ul.children.length).toBe(5);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('C');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('B');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('D');
+      expect(getTextContent(ul.children[4] as MockElement)).toBe('E');
+    });
+
+    it('should handle LIS in middle with moves around it', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+        { id: 5, name: 'E' },
+        { id: 6, name: 'F' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // LIS in middle: [A,B,C,D,E,F] → [F,B,C,D,A,E]
+      // LIS: [B,C,D] (indices 1,2,3), A and F move before, E moves after
+      const current = items();
+      items([current[5]!, current[1]!, current[2]!, current[3]!, current[0]!, current[4]!]);
+
+      expect(ul.children.length).toBe(6);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('F');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('B');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('C');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('D');
+      expect(getTextContent(ul.children[4] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[5] as MockElement)).toBe('E');
+    });
+
+    it('should handle multiple non-LIS elements between LIS elements', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+        { id: 5, name: 'E' },
+        { id: 6, name: 'F' },
+        { id: 7, name: 'G' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // LIS: [A,C,E,G] (indices 0,2,4,6)
+      // Non-LIS: [B,D,F] need to move
+      // New order: [A,F,D,C,B,E,G]
+      const current = items();
+      items([current[0]!, current[5]!, current[3]!, current[2]!, current[1]!, current[4]!, current[6]!]);
+
+      expect(ul.children.length).toBe(7);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('F');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('D');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('C');
+      expect(getTextContent(ul.children[4] as MockElement)).toBe('B');
+      expect(getTextContent(ul.children[5] as MockElement)).toBe('E');
+      expect(getTextContent(ul.children[6] as MockElement)).toBe('G');
+    });
+  });
+
+  describe('Mixed operations', () => {
+    it('should handle add + remove + reorder in single update', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Remove B, add E and F, reorder: [A,B,C,D] → [E,D,A,F,C]
+      items([
+        { id: 5, name: 'E' },
+        { id: 4, name: 'D' },
+        { id: 1, name: 'A' },
+        { id: 6, name: 'F' },
+        { id: 3, name: 'C' },
+      ]);
+
+      expect(ul.children.length).toBe(5);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('E');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('D');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[3] as MockElement)).toBe('F');
+      expect(getTextContent(ul.children[4] as MockElement)).toBe('C');
+    });
+
+    it('should handle complete replacement with reorder', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Complete replacement
+      items([
+        { id: 4, name: 'D' },
+        { id: 5, name: 'E' },
+        { id: 6, name: 'F' },
+      ]);
+
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('D');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('E');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('F');
+    });
+
+    it('should handle multiple consecutive updates', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Update 1: Add item
+      items([...items(), { id: 3, name: 'C' }]);
+      expect(ul.children.length).toBe(3);
+
+      // Update 2: Reorder
+      items([items()[2]!, items()[0]!, items()[1]!]);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('C');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('A');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('B');
+
+      // Update 3: Remove item
+      items([items()[0]!, items()[2]!]);
+      expect(ul.children.length).toBe(2);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('C');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('B');
+    });
+  });
+
+  describe('Large lists', () => {
+    it('should handle list of 100 items', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal(
+        Array.from({ length: 100 }, (_, i) => ({ id: i, name: `Item ${i}` }))
+      );
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+      expect(ul.children.length).toBe(100);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Item 0');
+      expect(getTextContent(ul.children[99] as MockElement)).toBe('Item 99');
+
+      // Reverse large list
+      items([...items()].reverse());
+      expect(ul.children.length).toBe(100);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Item 99');
+      expect(getTextContent(ul.children[99] as MockElement)).toBe('Item 0');
+    });
+
+    it('should handle deep reordering in large list', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal(
+        Array.from({ length: 50 }, (_, i) => ({ id: i, name: `Item ${i}` }))
+      );
+
+      const list = el.method(
+        ['ul',
+          map(items, (items) =>
+            items.map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Complex shuffle: move every 5th item to front
+      const current = items();
+      const everyFifth = current.filter((_, i) => i % 5 === 0);
+      const rest = current.filter((_, i) => i % 5 !== 0);
+      items([...everyFifth, ...rest]);
+
+      expect(ul.children.length).toBe(50);
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('Item 0');
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('Item 5');
+      expect(getTextContent(ul.children[2] as MockElement)).toBe('Item 10');
+    });
+  });
+
+  describe('Single element return (match replacement)', () => {
+    it('should handle conditional rendering with keys for state changes', () => {
+      const { el, map, signal } = setup();
+
+      type Mode = 'loading' | 'error' | 'success';
+      const mode = signal<Mode>('loading');
+
+      const view = el.method(
+        ['div',
+          map(mode, (m) => {
+            // Key is required to distinguish different states
+            if (m === 'loading') return el.method(['div', 'Loading...'], 'loading');
+            if (m === 'error') return el.method(['div', 'Error occurred'], 'error');
+            return el.method(['div', 'Success!'], 'success');
+          }),
+        ]
+      );
+
+      const div = view.create().element as MockElement;
+
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Loading...');
+
+      mode('error');
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Error occurred');
+
+      mode('success');
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Success!');
+
+      mode('loading');
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Loading...');
+    });
   });
 });
