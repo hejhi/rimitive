@@ -201,10 +201,9 @@ export function createMapFactory<
   };
 }
 
-// Status bits for reconciliation (like signals CLEAN/DIRTY/STALE)
-const STALE = 0;       // Node from previous cycle, not yet confirmed in newItems
-const DIRTY = 1 << 0;  // Node exists in newItems array, needs positioning
-const CLEAN = 1 << 1;  // Node has been positioned/handled
+// Status bits for reconciliation - simplified 2-state model
+const UNVISITED = 0;  // Node not in current newItems (will be pruned)
+const VISITED = 1;    // Node exists in newItems (keep)
 
 /**
  * Binary search for largest index where arr[tails[i]] < value
@@ -300,8 +299,12 @@ function pruneNode<T, TElement extends RendererElement, TText extends TextNode>(
 
 /**
  * Reconcile list with minimal allocations
- * Reordered loops - position first, then remove
- * Eliminates newKeys allocation by using status bits
+ *
+ * 3-phase algorithm:
+ * 1. Build: Create/update nodes, mark VISITED, collect LIS data
+ * 2. Prune: Remove UNVISITED nodes, reset VISITED → UNVISITED inline
+ * 3. Position: LIS-based repositioning (no status checks)
+ *
  * Buffers are passed in and reused across reconciliations
  */
 export function reconcileList<
@@ -336,7 +339,7 @@ export function reconcileList<
     newItems.length
   ) as ListItemNode<TElement, T>[];
 
-  //  Build phase - create nodes and collect info for LIS
+  // Build phase - create/update nodes and collect LIS info
   let count = 0;
   for (let i = 0; i < newItems.length; i++) {
     const item = newItems[i]!;
@@ -344,15 +347,13 @@ export function reconcileList<
     let ref: ListItemNode<TElement, T> = itemsByKey.get(key)!;
 
     if (ref) {
+      // Existing node - collect for LIS
       oldIndicesBuf[count] = ref.position;
       newPosBuf[count] = i;
       count++;
 
-      // Update position immediately (old position already cached in oldIndicesBuf)
       ref.position = i;
-
-      // Mark existing node as dirty (needs positioning)
-      ref.status = DIRTY;
+      ref.status = VISITED;
 
       // Update data
       if (ref.itemData !== item) {
@@ -360,18 +361,15 @@ export function reconcileList<
         if (ref.itemSignal) ref.itemSignal(item);
       }
     } else {
-      // Create new node with full shape at creation (better for V8 hidden classes)
+      // New node - create and insert
       const rendered = renderItem(item);
 
-      // Create ListItemNode with all fields at once (V8-friendly object shape)
-      // Cast is safe: render() must return ElementRef (checked by reconciler contract),
-      // and we're providing all map-specific fields. prev/next exist as undefined.
       ref = rendered.refSpec.create<MapItemExt<T>>({
         key,
         itemData: item,
         itemSignal: rendered.itemSignal,
         position: i,
-        status: DIRTY, // Mark as dirty (needs positioning)
+        status: VISITED,
       }) as ListItemNode<TElement, T>;
 
       appendChild(parent, ref);
@@ -379,7 +377,6 @@ export function reconcileList<
       const el = ref.element;
 
       if (!el) return;
-      // Insert before next sibling element to maintain fragment position
       renderer.insertBefore(
         parentEl,
         el,
@@ -387,87 +384,49 @@ export function reconcileList<
       );
     }
 
-    // Store node for position phase
     nodes[i] = ref;
   }
 
-  // Transition: Calculate LIS
+  // Prune phase - remove all unvisited nodes before repositioning
+  let child = parent.firstChild as ListItemNode<TElement, T> | undefined;
+  while (child) {
+    const nextChild = child.next as ListItemNode<TElement, T>;
+    if (child.status === UNVISITED) {
+      pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer, disposeScope);
+    } else {
+      // Reset visited nodes inline (avoid second traversal)
+      child.status = UNVISITED;
+    }
+    child = nextChild;
+  }
+
+  // Calculate LIS
   const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
   let lisIdx = 0;
   let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
-  // Positioning phase - reorder nodes based on LIS
+  // Positioning phase - reorder nodes based on LIS (all stale nodes already removed)
   let prevNode: ListItemNode<TElement, T> | undefined;
   for (const node of nodes) {
-    // Check if in LIS
     if (node.position === nextLISPos) {
+      // In LIS - already in correct relative position
       lisIdx++;
       nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     } else {
-      // Node not in LIS - needs repositioning
-      // Calculate reference sibling for insertion
-      let child = (
-        prevNode ? prevNode.next : parent.firstChild
-      ) as ListItemNode<TElement, T>;
+      // Not in LIS - needs repositioning
+      const refSibling = (prevNode ? prevNode.next : parent.firstChild) as ListItemNode<TElement, T>;
 
-      if (child) {
-        // Remove any stale nodes at the insertion point (cleanup as we go)
-        while (child.status === STALE) {
-          const nextChild = child.next as ListItemNode<TElement, T>;
-          pruneNode(
-            parent,
-            child,
-            ctx,
-            parentEl,
-            itemsByKey,
-            renderer,
-            disposeScope
-          );
-          child = nextChild;
+      if (node !== refSibling) {
+        moveChild(parent, node, refSibling);
+
+        const nextEl = refSibling ? refSibling.element : resolveNextRef(parent.next)?.element ?? null;
+        const nodeElement = node.element;
+        if (nodeElement && nodeElement !== nextEl) {
+          renderer.insertBefore(parentEl, nodeElement, nextEl);
         }
       }
-
-      // Move if not in LIS and not already in correct position
-      if (node !== child) {
-        // if child is undefined, we know to append at the end
-        moveChild(parent, node, child);
-
-        // Use next sibling element as fallback to maintain fragment position
-        const nextEl = child ? child.element : resolveNextRef(parent.next)?.element ?? null;
-        const nodeElement = node.element;
-        if (nodeElement && nodeElement !== nextEl)
-          renderer.insertBefore(parentEl, nodeElement, nextEl);
-      }
     }
-
-    // Mark node as clean (handled)--we're repositioning here while pruning inline, so we need to make
-    // sure we don't reposition and prune a node that was repositioned in a previous iteration.
-    node.status = CLEAN;
     prevNode = node;
-  }
-
-  // Cleanup phase - remove any remaining unhandled nodes and reset status
-  let child = parent.firstChild as ListItemNode<TElement, T> | undefined;
-  while (child) {
-    const nextChild = child.next as ListItemNode<TElement, T>;
-    const status = child.status;
-
-    // Prune any children left that are STALE
-    if (status === STALE)
-      pruneNode(
-        parent,
-        child,
-        ctx,
-        parentEl,
-        itemsByKey,
-        renderer,
-        disposeScope
-      );
-    // Set any CLEAN children to STALE for next reconciliation.
-    // There should not be any DIRTY left by now.
-    else child.status = STALE;
-
-    child = nextChild;
   }
 }
 
