@@ -317,7 +317,6 @@ export function reconcileList<
       oldIndicesBuf[count] = ref.position;
       newPosBuf[count] = i;
       count++;
-
       ref.position = i;
       ref.status = VISITED;
 
@@ -357,25 +356,28 @@ export function reconcileList<
   // Prune phase - remove unvisited nodes and reset visited → unvisited
   let child = parent.firstChild as ListItemNode<TElement, T> | undefined;
   while (child) {
-    const nextChild = child.next as ListItemNode<TElement, T>;
+    const next = child.next as ListItemNode<TElement, T>;
 
     if (child.status === UNVISITED) {
-      // Dispose scope if present
-      const cEl = child.element;
-      if (cEl) {
-        const scope = ctx.elementScopes.get(cEl);
+      // Dispose scope and DOM element
+      const el = child.element;
+      if (el) {
+        const scope = ctx.elementScopes.get(el);
         if (scope) {
           disposeScope(scope);
-          ctx.elementScopes.delete(cEl);
+          ctx.elementScopes.delete(el);
         }
-        renderer.removeChild(parentEl, cEl);
+        renderer.removeChild(parentEl, el);
       }
 
-      removeChild(parent, child);
+      // Remove from linked list
+      unlinkFromParent(parent, child);
+      child.prev = undefined;
+      child.next = undefined;
       itemsByKey.delete(child.key);
-    } else child.status = UNVISITED; // Reset for next reconciliation
+    } else child.status = UNVISITED;
 
-    child = nextChild;
+    child = next;
   }
 
   // Calculate LIS
@@ -384,7 +386,7 @@ export function reconcileList<
   let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
   // Positioning phase - reorder nodes based on LIS
-  let prevRef: ListItemNode<TElement, T> | undefined;
+  let prev: ListItemNode<TElement, T> | undefined;
   for (const ref of elRefs) {
     if (ref.position === nextLISPos) {
       // In LIS - already in correct relative position
@@ -392,31 +394,31 @@ export function reconcileList<
       nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     } else {
       // Not in LIS - needs repositioning
-      const sibRef = (
-        prevRef ? prevRef.next : parent.firstChild
-      ) as ListItemNode<TElement, T>;
+      const sib = (prev?.next ?? parent.firstChild) as ListItemNode<TElement, T> | undefined;
 
-      mv: if (ref !== sibRef) {
-        moveChild(parent, ref, sibRef);
+      mv: if (ref !== sib) {
+        unlinkFromParent(parent, ref);
+        insertBefore(parent, ref, sib);
 
-        const rEl = ref.element;
+        const el = ref.element;
 
-        if (!rEl) break mv;
+        if (!el) break mv;
 
-        const nextEl = sibRef
-          ? sibRef.element
-          : (resolveNextRef(parent.next)?.element ?? null);
+        const nextEl = sib?.element
+          ?? resolveNextRef(parent.next)?.element
+          ?? null;
 
-        if (rEl === nextEl) break mv;
-        renderer.insertBefore(parentEl, rEl, nextEl);
+        if (el === nextEl) break mv;
+
+        renderer.insertBefore(parentEl, el, nextEl);
       }
     }
-    prevRef = ref;
+    prev = ref;
   }
 }
 
 /**
- * Unlink a node from parent's children list
+ * Unlink node from parent's children list
  */
 function unlinkFromParent<T, TElement>(
   parent: MapFragRef<TElement>,
@@ -432,47 +434,22 @@ function unlinkFromParent<T, TElement>(
 }
 
 /**
- * Insert node before refSibling (or at end if refSibling is undefined)
+ * Insert node before refSib (or at end if undefined)
  */
 function insertBefore<T, TElement>(
   parent: MapFragRef<TElement>,
   ref: ListItemNode<TElement, T>,
-  refSib?: ListItemNode<TElement, T>
+  next?: ListItemNode<TElement, T>
 ): void {
   const tRef = ref as NodeRef<TElement>;
-  const prevSib = refSib?.prev ?? parent.lastChild;
+  const prev = next?.prev ?? parent.lastChild;
 
-  tRef.prev = prevSib;
-  tRef.next = refSib as NodeRef<TElement> | undefined;
+  tRef.prev = prev;
+  tRef.next = next as NodeRef<TElement> | undefined;
 
-  if (refSib != undefined) refSib.prev = tRef;
+  if (next != undefined) next.prev = tRef;
   else parent.lastChild = tRef;
 
-  if (prevSib != undefined) prevSib.next = tRef;
+  if (prev != undefined) prev.next = tRef;
   else parent.firstChild = tRef;
-}
-
-
-/**
- * Remove a node from the list
- */
-function removeChild<T, TElement>(
-  parent: MapFragRef<TElement>,
-  node: ListItemNode<TElement, T>
-): void {
-  unlinkFromParent(parent, node);
-  node.prev = undefined;
-  node.next = undefined;
-}
-
-/**
- * Move a node to a new position (before refSibling)
- */
-function moveChild<T, TElement>(
-  parent: MapFragRef<TElement>,
-  node: ListItemNode<TElement, T>,
-  refSibling: ListItemNode<TElement, T> | undefined
-): void {
-  unlinkFromParent(parent, node);
-  insertBefore(parent, node, refSibling);
 }
