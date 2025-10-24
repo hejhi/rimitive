@@ -434,15 +434,15 @@ function unlinkFromParent<T, TElement>(
 }
 
 /**
- * Insert node before refSib (or at end if undefined)
+ * Insert ref before refSib (or at end)
  */
 function insertBefore<T, TElement>(
   parent: MapFragRef<TElement>,
   ref: ListItemNode<TElement, T>,
-  next?: ListItemNode<TElement, T>
+  next: ListItemNode<TElement, T> | null = null
 ): void {
   const tRef = ref as NodeRef<TElement>;
-  const prev = next?.prev ?? parent.lastChild;
+  const prev = next ? next.prev : parent.lastChild;
 
   tRef.prev = prev;
   tRef.next = next as NodeRef<TElement> | undefined;
