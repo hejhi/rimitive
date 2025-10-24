@@ -207,7 +207,6 @@ const VISITED = 1;    // Node exists in newItems (keep)
 
 /**
  * Binary search for largest index where arr[tails[i]] < value
- * tails array contains indices into arr
  */
 function binarySearch(
   arr: number[],
@@ -228,7 +227,7 @@ function binarySearch(
   }
 
   return lo;
-};
+}
 
 /**
  * Inline O(n log n) LIS using patience sorting
@@ -263,31 +262,6 @@ export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
   return len;
 };
 
-/**
- * Remove a node and clean up all associated resources
- * Inline helper for pruning unvisited nodes
- */
-function pruneNode<T, TElement extends RendererElement, TText extends TextNode>(
-  parent: MapFragRef<TElement>,
-  node: ListItemNode<TElement, T>,
-  ctx: LatticeContext,
-  container: TElement,
-  itemsByKey: Map<string, ListItemNode<TElement, T>>,
-  renderer: Renderer<TElement, TText>,
-  disposeScope: CreateScopes['disposeScope']
-): void {
-  const element = node.element;
-  if (!element) return;
-  const scope = ctx.elementScopes.get(element);
-  if (scope) {
-    disposeScope(scope);
-    ctx.elementScopes.delete(element);
-  }
-
-  removeChild(parent, node);
-  renderer.removeChild(container, element);
-  itemsByKey.delete(node.key);
-}
 
 /**
  * Reconcile list with minimal allocations
@@ -327,7 +301,7 @@ export function reconcileList<
   >;
 
   // Pre-allocate nodes buffer to avoid Map lookup in position phase
-  const nodes: ListItemNode<TElement, T>[] = Array(
+  const elRefs: ListItemNode<TElement, T>[] = Array(
     newItems.length
   ) as ListItemNode<TElement, T>[];
 
@@ -338,7 +312,7 @@ export function reconcileList<
     const key = keyFn(item) as string;
     let ref: ListItemNode<TElement, T> = itemsByKey.get(key)!;
 
-    if (ref) {
+    build: if (ref) {
       // Existing node - collect for LIS
       oldIndicesBuf[count] = ref.position;
       newPosBuf[count] = i;
@@ -348,10 +322,10 @@ export function reconcileList<
       ref.status = VISITED;
 
       // Update data
-      if (ref.itemData !== item) {
-        ref.itemData = item;
-        if (ref.itemSignal) ref.itemSignal(item);
-      }
+      if (ref.itemData === item) break build;
+
+      ref.itemData = item;
+      if (ref.itemSignal) ref.itemSignal(item);
     } else {
       // New node - create and insert
       const rendered = renderItem(item);
@@ -366,29 +340,41 @@ export function reconcileList<
 
       insertBefore(parent, ref);
       itemsByKey.set(key, ref);
-      const el = ref.element;
+      const rEl = ref.element;
 
-      if (!el) return;
+      if (rEl == undefined) break build;
+
       renderer.insertBefore(
         parentEl,
-        el,
+        rEl,
         resolveNextRef(parent.next)?.element ?? null
       );
     }
 
-    nodes[i] = ref;
+    elRefs[i] = ref;
   }
 
-  // Prune phase - remove all unvisited nodes before repositioning
+  // Prune phase - remove unvisited nodes and reset visited → unvisited
   let child = parent.firstChild as ListItemNode<TElement, T> | undefined;
   while (child) {
     const nextChild = child.next as ListItemNode<TElement, T>;
+
     if (child.status === UNVISITED) {
-      pruneNode(parent, child, ctx, parentEl, itemsByKey, renderer, disposeScope);
-    } else {
-      // Reset visited nodes inline (avoid second traversal)
-      child.status = UNVISITED;
-    }
+      // Dispose scope if present
+      const cEl = child.element;
+      if (cEl) {
+        const scope = ctx.elementScopes.get(cEl);
+        if (scope) {
+          disposeScope(scope);
+          ctx.elementScopes.delete(cEl);
+        }
+        renderer.removeChild(parentEl, cEl);
+      }
+
+      removeChild(parent, child);
+      itemsByKey.delete(child.key);
+    } else child.status = UNVISITED; // Reset for next reconciliation
+
     child = nextChild;
   }
 
@@ -397,28 +383,35 @@ export function reconcileList<
   let lisIdx = 0;
   let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
-  // Positioning phase - reorder nodes based on LIS (all stale nodes already removed)
-  let prevNode: ListItemNode<TElement, T> | undefined;
-  for (const node of nodes) {
-    if (node.position === nextLISPos) {
+  // Positioning phase - reorder nodes based on LIS
+  let prevRef: ListItemNode<TElement, T> | undefined;
+  for (const ref of elRefs) {
+    if (ref.position === nextLISPos) {
       // In LIS - already in correct relative position
       lisIdx++;
       nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
     } else {
       // Not in LIS - needs repositioning
-      const refSibling = (prevNode ? prevNode.next : parent.firstChild) as ListItemNode<TElement, T>;
+      const sibRef = (
+        prevRef ? prevRef.next : parent.firstChild
+      ) as ListItemNode<TElement, T>;
 
-      if (node !== refSibling) {
-        moveChild(parent, node, refSibling);
+      mv: if (ref !== sibRef) {
+        moveChild(parent, ref, sibRef);
 
-        const nextEl = refSibling ? refSibling.element : resolveNextRef(parent.next)?.element ?? null;
-        const nodeElement = node.element;
-        if (nodeElement && nodeElement !== nextEl) {
-          renderer.insertBefore(parentEl, nodeElement, nextEl);
-        }
+        const rEl = ref.element;
+
+        if (!rEl) break mv;
+
+        const nextEl = sibRef
+          ? sibRef.element
+          : (resolveNextRef(parent.next)?.element ?? null);
+
+        if (rEl === nextEl) break mv;
+        renderer.insertBefore(parentEl, rEl, nextEl);
       }
     }
-    prevNode = node;
+    prevRef = ref;
   }
 }
 
@@ -429,47 +422,34 @@ function unlinkFromParent<T, TElement>(
   parent: MapFragRef<TElement>,
   node: ListItemNode<TElement, T>
 ): void {
-  const { prev: prevSibling, next: nextSibling } = node;
+  const { prev, next } = node;
 
-  if (nextSibling != undefined) nextSibling.prev = prevSibling;
-  else parent.lastChild = prevSibling;
+  if (next != undefined) next.prev = prev;
+  else parent.lastChild = prev;
 
-  if (prevSibling != undefined) prevSibling.next = nextSibling;
-  else parent.firstChild = nextSibling;
+  if (prev != undefined) prev.next = next;
+  else parent.firstChild = next;
 }
 
 /**
  * Insert node before refSibling (or at end if refSibling is undefined)
- * Like DOM insertBefore
  */
 function insertBefore<T, TElement>(
   parent: MapFragRef<TElement>,
-  node: ListItemNode<TElement, T>,
-  refSibling?: ListItemNode<TElement, T> | undefined
+  ref: ListItemNode<TElement, T>,
+  refSib?: ListItemNode<TElement, T>
 ): void {
-  const typedNode = node as NodeRef<TElement>;
+  const tRef = ref as NodeRef<TElement>;
+  const prevSib = refSib?.prev ?? parent.lastChild;
 
-  if (refSibling === undefined) {
-    // Insert at end
-    const prevSibling = parent.lastChild;
-    typedNode.prev = prevSibling;
-    typedNode.next = undefined;
+  tRef.prev = prevSib;
+  tRef.next = refSib as NodeRef<TElement> | undefined;
 
-    if (prevSibling != undefined) prevSibling.next = typedNode;
-    else parent.firstChild = typedNode;
+  if (refSib != undefined) refSib.prev = tRef;
+  else parent.lastChild = tRef;
 
-    parent.lastChild = typedNode;
-  } else {
-    // Insert before refSibling
-    const prevSibling = refSibling.prev;
-    typedNode.prev = prevSibling;
-    typedNode.next = refSibling as NodeRef<TElement>;
-
-    refSibling.prev = typedNode;
-
-    if (prevSibling != undefined) prevSibling.next = typedNode;
-    else parent.firstChild = typedNode;
-  }
+  if (prevSib != undefined) prevSib.next = tRef;
+  else parent.firstChild = tRef;
 }
 
 
