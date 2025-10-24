@@ -8,6 +8,7 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createSignalFactory } from '@lattice/signals/signal';
+import { createEffectFactory } from '@lattice/signals/effect';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -231,19 +232,13 @@ export function createTestEnv() {
   // Use real signal
   const signal = signalFactory.method;
 
-  // Simple effect that subscribes to signals (for non-reactive test cases)
-  const signalMap = new Map<Reactive<unknown>, Set<() => void>>();
-  const effect = (fn: () => void) => {
-    const cleanup = () => {
-      signalMap.forEach(subscribers => subscribers.delete(fn));
-    };
-
-    // Subscribe to all signals used during execution
-    signalMap.forEach(subscribers => subscribers.add(fn));
-    fn();
-
-    return cleanup;
-  };
+  // Use real effect from signals
+  const effectFactory = createEffectFactory({
+    ctx: signalsCtx,
+    track: graphEdges.track,
+    dispose: scheduler.dispose,
+  });
+  const effect = effectFactory.method;
 
   const track = graphEdges.track;
   const dispose = scheduler.dispose;

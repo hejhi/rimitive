@@ -76,7 +76,7 @@ export type MapFactory<TElement extends RendererElement = RendererElement> =
     <T>(
       itemsSignal: Reactive<T[]>,
       render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
-      keyFn: (item: T) => string | number
+      keyFn?: (item: T) => string | number
     ) => RefSpec<TElement>
   >;
 
@@ -94,9 +94,12 @@ export interface MapFragRef<TElement> extends FragmentRef<TElement> {
   // Parent element (stored locally for reconciliation since attach only receives element)
   element: TElement | null;
 
-  // Key-based lookup for O(1) reconciliation during diffing
+  // Key-based lookup for O(1) reconciliation during diffing (when keyFn provided)
   // (DOM uses array-based childNodes, we use Map for key lookup)
-  itemsByKey: Map<string, ListItemNode<TElement, unknown>>;
+  itemsByKey?: Map<string, ListItemNode<TElement, unknown>>;
+
+  // Positional array for index-based reconciliation (when no keyFn)
+  itemsByIndex?: ListItemNode<TElement, unknown>[];
 }
 
 /**
@@ -111,7 +114,7 @@ export function createMapFactory<
   function map<T>(
     itemsSignal: Reactive<T[]>,
     render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
-    keyFn: (item: T) => string | number
+    keyFn?: (item: T) => string | number
   ): RefSpec<TElement> {
     let dispose: (() => void) | undefined;
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
@@ -132,7 +135,11 @@ export function createMapFactory<
       const state: MapFragRef<TElement> = {
         status: STATUS_FRAGMENT,
         element: null,
-        itemsByKey: new Map<string, ListItemNode<TElement, unknown>>(),
+        // Initialize storage based on reconciliation mode
+        ...(keyFn
+          ? { itemsByKey: new Map<string, ListItemNode<TElement, unknown>>() }
+          : { itemsByIndex: [] as ListItemNode<TElement, unknown>[] }
+        ),
         prev: undefined,
         next: undefined,
         firstChild: undefined,
@@ -158,30 +165,44 @@ export function createMapFactory<
             newPosBuf.length = 0;
             lisBuf.length = 0;
 
-            // Pass linked list head directly to reconciler (single source of truth)
-            // This eliminates array allocation and prevents sync bugs
-            reconcileList<T, TElement, TText>(
-              ctx,
-              state,
-              currentItems,
-              (itemData: T) => {
-                // Render callback returns RefSpec and itemSignal
-                // Reconciler will call create() with ListItemNode extensions
-                const itemSignal = signal(itemData);
-                const refSpec = render(itemSignal);
+            const renderCallback = (itemData: T) => {
+              // Render callback returns RefSpec and itemSignal
+              // Reconciler will call create() with ListItemNode extensions
+              const itemSignal = signal(itemData);
+              const refSpec = render(itemSignal);
 
-                return {
-                  refSpec, // Return RefSpec, not created NodeRef
-                  itemSignal,
-                };
-              },
-              keyFn,
-              renderer,
-              oldIndicesBuf,
-              newPosBuf,
-              lisBuf,
-              disposeScope
-            );
+              return {
+                refSpec, // Return RefSpec, not created NodeRef
+                itemSignal,
+              };
+            };
+
+            // Dispatch to appropriate reconciliation strategy
+            if (keyFn) {
+              // Key-based reconciliation with LIS
+              reconcileList<T, TElement, TText>(
+                ctx,
+                state,
+                currentItems,
+                renderCallback,
+                keyFn,
+                renderer,
+                oldIndicesBuf,
+                newPosBuf,
+                lisBuf,
+                disposeScope
+              );
+            } else {
+              // Positional reconciliation (simpler, no reordering)
+              reconcilePositional<T, TElement, TText>(
+                ctx,
+                state,
+                currentItems,
+                renderCallback,
+                renderer,
+                disposeScope
+              );
+            }
           });
 
           const parentScope = ctx.elementScopes.get(parent);
@@ -260,11 +281,91 @@ export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
   }
 
   return len;
-};
-
+}
 
 /**
- * Reconcile list with minimal allocations
+ * Reconcile list positionally (without keys)
+ * Simple index-based reconciliation: reuse nodes at same index
+ */
+function reconcilePositional<
+  T,
+  TElement extends RendererElement = RendererElement,
+  TText extends TextNode = TextNode,
+>(
+  ctx: LatticeContext,
+  parent: MapFragRef<TElement>,
+  newItems: T[],
+  renderItem: (item: T) => {
+    refSpec: RefSpec<TElement>;
+    itemSignal?: ((value: T) => void) & (() => T);
+  },
+  renderer: Renderer<TElement, TText>,
+  disposeScope: CreateScopes['disposeScope']
+): void {
+  const parentEl = parent.element;
+  if (!parentEl) return;
+
+  const oldNodes = parent.itemsByIndex ?? [];
+  const maxLen = Math.max(newItems.length, oldNodes.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    if (i < newItems.length && i < oldNodes.length) {
+      // Both exist - update existing node
+      const node = oldNodes[i]!;
+      const item = newItems[i]!;
+
+      if (node.itemData !== item) {
+        node.itemData = item;
+        if (node.itemSignal) node.itemSignal(item);
+      }
+    } else if (i < newItems.length) {
+      // New item - create node
+      const item = newItems[i]!;
+      const rendered = renderItem(item);
+
+      const ref = rendered.refSpec.create<MapItemExt<T>>({
+        key: String(i),
+        itemData: item,
+        itemSignal: rendered.itemSignal,
+        position: i,
+        status: VISITED,
+      }) as ListItemNode<TElement, T>;
+
+      insertBefore(parent, ref);
+      oldNodes[i] = ref;
+
+      if (ref.element) {
+        renderer.insertBefore(
+          parentEl,
+          ref.element,
+          resolveNextRef(parent.next)?.element ?? null
+        );
+      }
+    } else {
+      // Old node - remove
+      const node = oldNodes[i]!;
+
+      if (node.element) {
+        const scope = ctx.elementScopes.get(node.element);
+        if (scope) {
+          disposeScope(scope);
+          ctx.elementScopes.delete(node.element);
+        }
+        renderer.removeChild(parentEl, node.element);
+      }
+
+      unlinkFromParent(parent, node);
+      node.prev = undefined;
+      node.next = undefined;
+    }
+  }
+
+  // Trim array to new length
+  oldNodes.length = newItems.length;
+}
+
+/**
+ * Reconcile list with minimal allocations (key-based)
  *
  * 3-phase algorithm:
  * 1. Build: Create/update nodes, mark VISITED, collect LIS data

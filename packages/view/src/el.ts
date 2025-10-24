@@ -72,7 +72,8 @@ export type ElFactory<TElement extends RendererElement = RendererElement> =
   LatticeExtension<
     'el',
     <Tag extends keyof HTMLElementTagNameMap>(
-      spec: ElRefSpec<Tag, TElement>
+      spec: ElRefSpec<Tag, TElement>,
+      key?: string | number
     ) => RefSpec<TElement>
   >;
 
@@ -97,17 +98,23 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   const applyProps = createApplyProps({ effect, ctx, renderer, trackInScope });
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
-    spec: ElRefSpec<Tag, TElement>
+    spec: ElRefSpec<Tag, TElement>,
+    key?: string | number
   ): RefSpec<TElement> {
     const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
-    
+
     const refSpec: RefSpec<TElement> = (
       lifecycleCallback: LifecycleCallback<TElement>
     ): RefSpec<TElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
       return refSpec;
     };
-    
+
+    // Set the key if provided
+    if (key !== undefined) {
+      refSpec.key = key;
+    }
+
     const [tag, ...rest] = spec;
     const { props, children } = parseSpec(rest);
 

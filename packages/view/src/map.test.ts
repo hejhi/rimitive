@@ -343,6 +343,135 @@ describe('map primitive', () => {
     });
   });
 
+  describe('positional reconciliation (without keyFn)', () => {
+    it('reuses nodes at same index without keyFn', () => {
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
+      const { renderer } = createMockRenderer();
+      const { read: items, write: setItems, subscribers } = createSignal(['a', 'b', 'c']);
+      const signal = <T>(initialVal: T): Reactive<T> & ((val: T) => void) => {
+        let val = initialVal;
+        const s: any = function(newVal?: T) {
+          if (arguments.length > 0) {
+            val = newVal!;
+          }
+          return val;
+        };
+        s.peek = () => val;
+        return s;
+      };
+      const effect = (fn: () => void) => {
+        subscribers.add(fn);
+        fn();
+        return () => subscribers.delete(fn);
+      };
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
+
+      const listRef = map(
+        items,
+        (itemSignal) => {
+          const element = renderer.createElement('li');
+          const text = renderer.createTextNode(itemSignal());
+          renderer.appendChild(element, text);
+          return createRefSpec(element);
+        }
+        // No keyFn - positional reconciliation
+      );
+
+      // Create parent and initialize list
+      const parent = renderer.createElement('ul');
+      asFragment(listRef.create()).attach(wrapElement(parent), null);
+
+      // Verify initial state
+      expect(parent.children).toHaveLength(3);
+      let itemElements = parent.children as MockElement[];
+      expect((itemElements[0]!.children[0] as MockText).content).toBe('a');
+      expect((itemElements[1]!.children[0] as MockText).content).toBe('b');
+      expect((itemElements[2]!.children[0] as MockText).content).toBe('c');
+
+      // Store element references
+      const firstElement = parent.children[0];
+      const secondElement = parent.children[1];
+      const thirdElement = parent.children[2];
+
+      // Reorder (without keyFn, this doesn't preserve identity - just reuses slots)
+      setItems(['c', 'b', 'a']);
+
+      // User cares: same element slots reused (positional, not identity-based)
+      expect(parent.children[0]).toBe(firstElement);
+      expect(parent.children[1]).toBe(secondElement);
+      expect(parent.children[2]).toBe(thirdElement);
+    });
+
+    it('handles length changes without keyFn', () => {
+      const ctx = createLatticeContext();
+      const { trackInSpecificScope, disposeScope } = createTestScopes();
+      const { renderer } = createMockRenderer();
+      const { read: items, write: setItems, subscribers } = createSignal(['a', 'b']);
+      const signal = <T>(initialVal: T): Reactive<T> & ((val: T) => void) => {
+        let val = initialVal;
+        const s: any = function(newVal?: T) {
+          if (arguments.length > 0) {
+            val = newVal!;
+          }
+          return val;
+        };
+        s.peek = () => val;
+        return s;
+      };
+      const effect = (fn: () => void) => {
+        subscribers.add(fn);
+        fn();
+        return () => subscribers.delete(fn);
+      };
+      const map = createMapFactory({
+        ctx,
+        signal,
+        effect,
+        renderer,
+        trackInSpecificScope,
+        disposeScope,
+      }).method;
+
+      const listRef = map(
+        items,
+        (itemSignal) => {
+          const element = renderer.createElement('li');
+          const text = renderer.createTextNode(itemSignal());
+          renderer.appendChild(element, text);
+          return createRefSpec(element);
+        }
+        // No keyFn
+      );
+
+      const parent = renderer.createElement('ul');
+      asFragment(listRef.create()).attach(wrapElement(parent), null);
+
+      const firstElement = parent.children[0];
+
+      // Add items
+      setItems(['a', 'b', 'c', 'd']);
+
+      expect(parent.children).toHaveLength(4);
+      expect(parent.children[0]).toBe(firstElement); // Reused
+      const itemElements = parent.children as MockElement[];
+      expect((itemElements[3]!.children[0] as MockText).content).toBe('d');
+
+      // Remove items
+      setItems(['a']);
+
+      expect(parent.children).toHaveLength(1);
+      expect(parent.children[0]).toBe(firstElement); // Still reused
+    });
+  });
+
   describe('complex operations', () => {
     it('handles add + remove + reorder in single update', () => {
       const ctx = createLatticeContext();
