@@ -44,7 +44,7 @@ export type MapItemExt<T> = {
   position: number; // Current position in list (cached for LIS algorithm)
   itemData: T; // The actual data
   itemSignal?: ((value: T) => void) & (() => T); // Writable signal for reactivity
-  status: number; // Reconciliation status bits (DIRTY, CLEAN, STALE) - overrides STATUS_ELEMENT
+  status: number; // Reconciliation status bits (VISITED, UNVISITED) - overrides STATUS_ELEMENT
 };
 
 
@@ -244,29 +244,21 @@ export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
 
   const tailsBuf: number[] = [];
   const parentBuf: number[] = [];
-
   let len = 0;
-  let depth = 0;
 
   // Forward phase: build tails and parent pointers
-  while (depth < n) {
-    const pos = binarySearch(arr, tailsBuf, len, arr[depth]!);
-
-    parentBuf[depth] = pos > 0 ? tailsBuf[pos - 1]! : -1;
-    tailsBuf[pos] = depth;
-
+  for (let i = 0; i < n; i++) {
+    const pos = binarySearch(arr, tailsBuf, len, arr[i]!);
+    parentBuf[i] = pos > 0 ? tailsBuf[pos - 1]! : -1;
+    tailsBuf[pos] = i;
     if (pos === len) len++;
-    depth++;
   }
 
-  depth = len - 1;
-  let current = tailsBuf[depth]!;
-
   // Backtrack phase: reconstruct LIS using parent chain
-  do {
-    lisBuf[depth] = current;
+  for (let i = len - 1, current = tailsBuf[i]!; i >= 0; i--) {
+    lisBuf[i] = current;
     current = parentBuf[current]!;
-  } while (depth--);
+  }
 
   return len;
 };
@@ -372,7 +364,7 @@ export function reconcileList<
         status: VISITED,
       }) as ListItemNode<TElement, T>;
 
-      appendChild(parent, ref);
+      insertBefore(parent, ref);
       itemsByKey.set(key, ref);
       const el = ref.element;
 
@@ -432,7 +424,6 @@ export function reconcileList<
 
 /**
  * Unlink a node from parent's children list
- * Like DOM removeChild internal logic
  */
 function unlinkFromParent<T, TElement>(
   parent: MapFragRef<TElement>,
@@ -440,89 +431,68 @@ function unlinkFromParent<T, TElement>(
 ): void {
   const { prev: prevSibling, next: nextSibling } = node;
 
-  // Update next sibling's backward pointer
   if (nextSibling != undefined) nextSibling.prev = prevSibling;
   else parent.lastChild = prevSibling;
 
-  // Update prev sibling's forward pointer
   if (prevSibling != undefined) prevSibling.next = nextSibling;
   else parent.firstChild = nextSibling;
 }
 
 /**
- * Append a node to parent's children list
- * Like DOM appendChild
+ * Insert node before refSibling (or at end if refSibling is undefined)
+ * Like DOM insertBefore
  */
-function appendChild<T, TElement>(
-  parent: MapFragRef<TElement>,
-  node: ListItemNode<TElement, T>
-): void {
-  // Get current tail for O(1) append
-  const prevSibling = parent.lastChild;
-  const typedNode = node as NodeRef<TElement>;
-
-  // Wire node into list (unidirectional: parent→child, not child→parent)
-  typedNode.prev = prevSibling;
-  typedNode.next = undefined;
-
-  // Update parent's tail pointer
-  if (prevSibling != undefined) prevSibling.next = typedNode;
-  else parent.firstChild = typedNode;
-
-  parent.lastChild = typedNode;
-}
-
-/**
- * Remove a node from the list
- * Like DOM removeChild
- */
-function removeChild<T, TElement>(
-  parent: MapFragRef<TElement>,
-  node: ListItemNode<TElement, T>
-): void {
-  // Unlink from parent's children list
-  unlinkFromParent(parent, node);
-
-  // Clear node's sibling references
-  node.prev = undefined;
-  node.next = undefined;
-}
-
-/**
- * Move a node to a new position (before refSibling)
- * Optimized operation: remove + insert
- * Like moving DOM nodes
- */
-function moveChild<T, TElement>(
+function insertBefore<T, TElement>(
   parent: MapFragRef<TElement>,
   node: ListItemNode<TElement, T>,
-  refSibling: ListItemNode<TElement, T> | undefined
+  refSibling?: ListItemNode<TElement, T> | undefined
 ): void {
-  // Remove from current position
-  unlinkFromParent(parent, node);
-  
   const typedNode = node as NodeRef<TElement>;
 
-  // Insert at new position
   if (refSibling === undefined) {
-    // Move to end
+    // Insert at end
     const prevSibling = parent.lastChild;
-    node.prev = prevSibling;
-    node.next = undefined;
+    typedNode.prev = prevSibling;
+    typedNode.next = undefined;
 
     if (prevSibling != undefined) prevSibling.next = typedNode;
     else parent.firstChild = typedNode;
 
     parent.lastChild = typedNode;
   } else {
-    // Move before refSibling
+    // Insert before refSibling
     const prevSibling = refSibling.prev;
-    node.prev = prevSibling;
-    node.next = refSibling as NodeRef<TElement>;
+    typedNode.prev = prevSibling;
+    typedNode.next = refSibling as NodeRef<TElement>;
 
     refSibling.prev = typedNode;
 
     if (prevSibling != undefined) prevSibling.next = typedNode;
     else parent.firstChild = typedNode;
   }
+}
+
+
+/**
+ * Remove a node from the list
+ */
+function removeChild<T, TElement>(
+  parent: MapFragRef<TElement>,
+  node: ListItemNode<TElement, T>
+): void {
+  unlinkFromParent(parent, node);
+  node.prev = undefined;
+  node.next = undefined;
+}
+
+/**
+ * Move a node to a new position (before refSibling)
+ */
+function moveChild<T, TElement>(
+  parent: MapFragRef<TElement>,
+  node: ListItemNode<TElement, T>,
+  refSibling: ListItemNode<TElement, T> | undefined
+): void {
+  unlinkFromParent(parent, node);
+  insertBefore(parent, node, refSibling);
 }
