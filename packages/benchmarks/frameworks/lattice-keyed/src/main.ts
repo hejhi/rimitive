@@ -12,9 +12,9 @@ import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createElFactory } from '@lattice/view/el';
 import type { ElementProps } from '@lattice/view/el';
 import { createMapFactory } from '@lattice/view/map';
-import { createViewContext } from '@lattice/view/context';
+import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
-import { on } from '@lattice/view/on';
+import { createOnFactory } from '@lattice/view/on';
 import { ElRefSpecChild, isReactive, type Reactive } from '@lattice/view/types';
 
 type ClassValue = string | Reactive<string> | null | undefined | false;
@@ -60,19 +60,22 @@ function createSignalContext() {
     dispose: scheduler.dispose,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,
+    startBatch: scheduler.startBatch,
+    endBatch: scheduler.endBatch,
   };
 }
 
 const signalCtx = createSignalContext();
-const viewCtx = createViewContext();
+const viewCtx = createLatticeContext();
 const renderer = createDOMRenderer();
 const { createScope, runInScope, trackInScope, trackInSpecificScope, disposeScope } =
-  createScopes({ ctx: viewCtx });
+  createScopes({ ctx: viewCtx, track: signalCtx.track, dispose: signalCtx.dispose });
 
 const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
 const { processChildren } = createProcessChildren({ effect: effectFactory.method, renderer, trackInScope });
+const onFactory = createOnFactory({ startBatch: signalCtx.startBatch, endBatch: signalCtx.endBatch });
 
 const elFactory = createElFactory({
   ctx: viewCtx,
@@ -105,6 +108,7 @@ const api = createApi(
 );
 
 const { signal, el, map, computed } = api;
+const on = onFactory.method;
 
 // ============================================================================
 // Benchmark Data
