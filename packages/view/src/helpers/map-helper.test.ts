@@ -856,4 +856,227 @@ describe('map() - User-facing behavior', () => {
       expect(getTextContent(div.children[0] as MockElement)).toBe('Loading...');
     });
   });
+
+  describe('Element identity preservation', () => {
+    it('should preserve element identity when list content unchanged', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Capture original element references
+      const firstEl = ul.children[0];
+      const secondEl = ul.children[1];
+      const thirdEl = ul.children[2];
+
+      // Update signal with SAME content (same keys)
+      items([
+        { id: 1, name: 'First' },
+        { id: 2, name: 'Second' },
+        { id: 3, name: 'Third' },
+      ]);
+
+      // CRITICAL: Elements should be SAME objects (not recreated)
+      expect(ul.children[0]).toBe(firstEl);
+      expect(ul.children[1]).toBe(secondEl);
+      expect(ul.children[2]).toBe(thirdEl);
+    });
+
+    it('should preserve element identity when items reordered', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      const aEl = ul.children[0];
+      const bEl = ul.children[1];
+      const cEl = ul.children[2];
+
+      // Reverse order
+      items([
+        { id: 3, name: 'C' },
+        { id: 2, name: 'B' },
+        { id: 1, name: 'A' },
+      ]);
+
+      // Elements reused, just reordered
+      expect(ul.children[0]).toBe(cEl);
+      expect(ul.children[1]).toBe(bEl);
+      expect(ul.children[2]).toBe(aEl);
+    });
+
+    it('should preserve unchanged element identity when items added', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 3, name: 'C' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      const aEl = ul.children[0];
+      const cEl = ul.children[1];
+
+      // Add item in middle
+      items([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+      ]);
+
+      // A and C should be same elements
+      expect(ul.children[0]).toBe(aEl);
+      expect(ul.children[2]).toBe(cEl);
+      // B is new
+      expect(ul.children.length).toBe(3);
+      expect(getTextContent(ul.children[1] as MockElement)).toBe('B');
+    });
+
+    it('should preserve unchanged element identity when items removed', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      const aEl = ul.children[0];
+      const cEl = ul.children[2];
+
+      // Remove middle item
+      items([
+        { id: 1, name: 'A' },
+        { id: 3, name: 'C' },
+      ]);
+
+      // A and C should be same elements
+      expect(ul.children.length).toBe(2);
+      expect(ul.children[0]).toBe(aEl);
+      expect(ul.children[1]).toBe(cEl);
+    });
+
+    it('should preserve element identity in complex mixed scenario', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+        { id: 3, name: 'C' },
+        { id: 4, name: 'D' },
+        { id: 5, name: 'E' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Capture references for items that will survive
+      const bEl = ul.children[1]; // B
+      const dEl = ul.children[3]; // D
+
+      // Complex update: remove A & C, keep B & D, add F, reorder
+      items([
+        { id: 6, name: 'F' }, // new
+        { id: 4, name: 'D' }, // reordered, kept
+        { id: 2, name: 'B' }, // reordered, kept
+      ]);
+
+      expect(ul.children.length).toBe(3);
+      // B and D should be same elements, just repositioned
+      expect(ul.children[2]).toBe(bEl);
+      expect(ul.children[1]).toBe(dEl);
+      // F is new
+      expect(getTextContent(ul.children[0] as MockElement)).toBe('F');
+    });
+
+    it('should preserve custom element properties across updates', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+      ]);
+
+      const list = el.method(
+        ['ul',
+          map(() =>
+            items().map((item) =>
+              el.method(['li', item.name], item.id)((element) => {
+                // Simulate attaching custom state during lifecycle
+                (element as any).__customState = `state-${item.id}`;
+              })
+            )
+          ),
+        ]
+      );
+
+      const ul = list.create().element as MockElement;
+
+      // Verify custom state exists
+      expect((ul.children[0] as any).__customState).toBe('state-1');
+      expect((ul.children[1] as any).__customState).toBe('state-2');
+
+      // Reorder items
+      items([
+        { id: 2, name: 'B' },
+        { id: 1, name: 'A' },
+      ]);
+
+      // Custom state should be preserved (elements reused)
+      expect((ul.children[0] as any).__customState).toBe('state-2');
+      expect((ul.children[1] as any).__customState).toBe('state-1');
+    });
+  });
 });
