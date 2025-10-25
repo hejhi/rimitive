@@ -140,9 +140,6 @@ describe('match primitive', () => {
         effect,
         renderer,
         trackInScope,
-        createScope,
-        ctx,
-        disposeScope,
       });
       const el = createElFactory({
         ctx,
@@ -247,9 +244,6 @@ describe('match primitive', () => {
         effect,
         renderer,
         trackInScope,
-        createScope,
-        ctx,
-        disposeScope,
       });
       const el = createElFactory({
         ctx,

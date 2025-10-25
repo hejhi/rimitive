@@ -18,9 +18,6 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     effect: effectFn,
     renderer,
     trackInScope,
-    createScope,
-    ctx,
-    disposeScope,
   });
   return { ctx, renderer, effect: effectFn, processChildren, trackInScope, createScope, disposeScope, trackInSpecificScope, ...scopeRest };
 }

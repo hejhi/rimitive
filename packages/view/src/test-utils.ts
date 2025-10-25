@@ -250,9 +250,6 @@ export function createTestEnv() {
     trackInScope,
     effect,
     renderer,
-    createScope,
-    ctx,
-    disposeScope,
   });
 
   return {

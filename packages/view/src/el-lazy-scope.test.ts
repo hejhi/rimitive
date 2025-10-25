@@ -17,14 +17,11 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     fn();
     return () => {};
   });
-  const { trackInScope, runInScope, trackInSpecificScope, createScope, disposeScope } = createTestScopes()
+  const { trackInScope, runInScope, trackInSpecificScope, createScope } = createTestScopes()
   const { handleChild, processChildren } = createProcessChildren({
     effect,
     renderer,
     trackInScope,
-    createScope,
-    ctx,
-    disposeScope,
   });
 
   return {

@@ -135,6 +135,9 @@ export type ReactiveElement = object;
 
 /**
  * Valid child types for an element
+ *
+ * Note: Bare functions are not supported. For dynamic content, use map() or other
+ * reconciliation helpers that provide efficient updates.
  */
 export type ElRefSpecChild<TElement = object> =
   | string
@@ -142,8 +145,7 @@ export type ElRefSpecChild<TElement = object> =
   | boolean
   | null
   | RefSpec<TElement>
-  | Reactive<unknown>
-  | (() => ElRefSpecChild<TElement> | ElRefSpecChild<TElement>[]); // Bare functions returning any child type(s)
+  | Reactive<unknown>;
 
 export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
   // Tree structure (from Scope)
