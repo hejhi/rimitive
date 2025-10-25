@@ -26,6 +26,14 @@ export type ReconcileNode<TElement> = NodeRef<TElement> & {
 };
 
 /**
+ * Positional item - tracks RefSpec identity for reuse
+ */
+export interface PositionalItem<TElement> {
+  refSpec: RefSpec<TElement>;
+  nodeRef: NodeRef<TElement>;
+}
+
+/**
  * State container for reconciliation (stored in closure)
  */
 export interface ReconcileState<TElement> {
@@ -197,43 +205,45 @@ export function reconcileWithKeys<
 
   // Calculate LIS for minimal moves
   const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
-  let lisIdx = 0;
-  let nextLISPos = lisLen > 0 ? newPosBuf[lisBuf[0]!]! : -1;
 
-  // Position phase - reorder based on LIS
-  // Find the first LIS element to use as initial anchor
-  let anchor: TElement | null = resolveNextElement(nextSibling);
-  if (lisLen > 0) {
-    const firstLISPos = newPosBuf[lisBuf[0]!]!;
-    const firstLISNode = nodes[firstLISPos]!;
-    if (isElementRef(firstLISNode)) {
-      anchor = firstLISNode.element;
-    }
+  // Build set of LIS positions for O(1) lookup
+  const lisPositions = new Set<number>();
+  for (let i = 0; i < lisLen; i++) {
+    lisPositions.add(newPosBuf[lisBuf[i]!]!);
   }
 
-  for (let i = 0; i < nodes.length; i++) {
+  // Position phase - reorder based on LIS
+  // Process in REVERSE order so each element can insert before the already-positioned next element
+  for (let i = nodes.length - 1; i >= 0; i--) {
     const node = nodes[i]!;
 
-    if (node.position === nextLISPos) {
-      // In LIS - already in correct relative position
-      lisIdx++;
-      nextLISPos = lisIdx < lisLen ? newPosBuf[lisBuf[lisIdx]!]! : -1;
-      // Update anchor to next LIS element if available
-      if (lisIdx < lisLen) {
-        const nextLISNodePos = newPosBuf[lisBuf[lisIdx]!]!;
-        const nextLISNode = nodes[nextLISNodePos]!;
-        if (isElementRef(nextLISNode)) {
-          anchor = nextLISNode.element;
-        }
-      } else {
-        anchor = resolveNextElement(nextSibling);
-      }
-    } else {
-      // Not in LIS - needs repositioning before anchor
+    if (!lisPositions.has(node.position)) {
+      // Not in LIS - needs repositioning
+      // Insert before the next element (which has already been positioned since we're going backwards)
       if (isElementRef(node)) {
-        renderer.insertBefore(parentElement, node.element, anchor);
+        const el = node.element;
+
+        // Find insertion point: the element immediately after this one in final order
+        let insertBeforeEl: TElement | null = null;
+
+        if (i + 1 < nodes.length) {
+          // Look for next element in nodes array
+          const nextNode = nodes[i + 1]!;
+          if (isElementRef(nextNode)) {
+            insertBeforeEl = nextNode.element;
+          }
+        }
+
+        // If no next element, insert before boundary marker
+        if (!insertBeforeEl) {
+          insertBeforeEl = resolveNextElement(nextSibling);
+        }
+
+        // Insert the element
+        renderer.insertBefore(parentElement, el, insertBeforeEl);
       }
     }
+    // Elements in LIS don't need to move - they're already in correct relative positions
   }
 
   return nodes;
@@ -242,14 +252,15 @@ export function reconcileWithKeys<
 /**
  * Reconcile RefSpecs positionally (no keys, simpler algorithm)
  *
- * Adapted from map.ts reconcilePositional
+ * Tracks RefSpec identity to avoid unnecessary re-creation.
+ * Only calls create() when RefSpec instance changes or is new.
  */
 export function reconcilePositional<
   TElement extends RendererElement,
   TText extends TextNode
 >(
   refSpecs: RefSpec<TElement>[],
-  state: ReconcileState<TElement> & { itemsByIndex: NodeRef<TElement>[] },
+  state: ReconcileState<TElement> & { itemsByIndex: PositionalItem<TElement>[] },
   ctx: LatticeContext,
   renderer: Renderer<TElement, TText>,
   disposeScope: CreateScopes['disposeScope']
@@ -259,27 +270,22 @@ export function reconcilePositional<
 
   for (let i = 0; i < maxLen; i++) {
     if (i < refSpecs.length && i < itemsByIndex.length) {
-      // Both exist - check if we need to replace
-      const oldNode = itemsByIndex[i]!;
-      const refSpec = refSpecs[i]!;
+      // Both exist - check if RefSpec changed
+      const oldItem = itemsByIndex[i]!;
+      const newRefSpec = refSpecs[i]!;
 
-      // Create new node to compare
-      // Note: In tests with createRefSpec, this returns the same element if unchanged
-      // In real usage, this creates a new element, so we compare elements to detect changes
-      const newNode = refSpec.create();
-
-      // Check if element actually changed by comparing references
-      const oldElement = isElementRef(oldNode) ? oldNode.element : null;
-      const newElement = isElementRef(newNode) ? newNode.element : null;
-
-      if (oldElement === newElement) {
-        // Same element - reuse, no need to update DOM
-        // (This happens when RefSpec wraps same element, like in tests)
+      if (oldItem.refSpec === newRefSpec) {
+        // Same RefSpec instance - reuse nodeRef without calling create()
+        // This is the critical optimization: avoid re-creating DOM elements
         continue;
       }
 
-      // Different element - need to replace
-      if (oldElement) {
+      // Different RefSpec - need to replace element
+      const oldNodeRef = oldItem.nodeRef;
+
+      // Dispose old element
+      if (isElementRef(oldNodeRef)) {
+        const oldElement = oldNodeRef.element;
         const scope = ctx.elementScopes.get(oldElement);
         if (scope) {
           disposeScope(scope);
@@ -288,18 +294,21 @@ export function reconcilePositional<
         renderer.removeChild(parentElement, oldElement);
       }
 
-      // Insert new element
-      itemsByIndex[i] = newNode;
-      if (newElement) {
+      // Create new element from new RefSpec
+      const newNodeRef = newRefSpec.create();
+      itemsByIndex[i] = { refSpec: newRefSpec, nodeRef: newNodeRef };
+
+      // Insert new element into DOM
+      if (isElementRef(newNodeRef)) {
         const nextEl = resolveNextElement(nextSibling);
-        renderer.insertBefore(parentElement, newElement, nextEl);
+        renderer.insertBefore(parentElement, newNodeRef.element, nextEl);
       }
     } else if (i < refSpecs.length) {
       // New item - create node
       const refSpec = refSpecs[i]!;
       const nodeRef = refSpec.create();
 
-      itemsByIndex[i] = nodeRef;
+      itemsByIndex[i] = { refSpec, nodeRef };
 
       if (isElementRef(nodeRef)) {
         const nextEl = resolveNextElement(nextSibling);
@@ -307,20 +316,23 @@ export function reconcilePositional<
       }
     } else {
       // Old node - remove
-      const node = itemsByIndex[i]!;
+      const oldItem = itemsByIndex[i]!;
+      const nodeRef = oldItem.nodeRef;
 
-      if (isElementRef(node)) {
-        const scope = ctx.elementScopes.get(node.element);
+      if (isElementRef(nodeRef)) {
+        const scope = ctx.elementScopes.get(nodeRef.element);
         if (scope) {
           disposeScope(scope);
-          ctx.elementScopes.delete(node.element);
+          ctx.elementScopes.delete(nodeRef.element);
         }
-        renderer.removeChild(parentElement, node.element);
+        renderer.removeChild(parentElement, nodeRef.element);
       }
     }
   }
 
   // Trim array to new length
   itemsByIndex.length = refSpecs.length;
-  return itemsByIndex;
+
+  // Return just the nodeRefs for compatibility
+  return itemsByIndex.map(item => item.nodeRef);
 }

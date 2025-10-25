@@ -110,24 +110,29 @@ export function createMapHelper<
               lisBuf
             );
 
-            // Return cleanup that removes all children when effect disposed
-            return () => {
-              for (const [, node] of state.itemsByKey as Map<string, ReconcileNode<TElement>>) {
-                if (isElementRef(node)) {
-                  const scope = ctx.elementScopes.get(node.element);
-                  if (scope) {
-                    disposeScope(scope);
-                    ctx.elementScopes.delete(node.element);
-                  }
-                  renderer.removeChild(state.parentElement, node.element);
-                }
-              }
-              state.itemsByKey.clear();
-            };
+            // NOTE: No cleanup return here!
+            // itemsByKey must persist across reconciliations for element reuse
+            // Cleanup happens when fragment itself is disposed
           });
 
-          // Store dispose on fragment for direct cleanup
-          fragRef.dispose = dispose;
+          // Store dispose function that cleans up both effect and elements
+          fragRef.dispose = () => {
+            // Dispose the effect
+            dispose();
+
+            // Clean up all tracked elements
+            for (const [, node] of state.itemsByKey as Map<string, ReconcileNode<TElement>>) {
+              if (isElementRef(node)) {
+                const scope = ctx.elementScopes.get(node.element);
+                if (scope) {
+                  disposeScope(scope);
+                  ctx.elementScopes.delete(node.element);
+                }
+                renderer.removeChild(state.parentElement, node.element);
+              }
+            }
+            state.itemsByKey.clear();
+          };
         },
       };
 
