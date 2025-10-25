@@ -19,7 +19,7 @@ import type { LatticeContext } from '../context';
 interface DynamicChildrenFragRef<TElement> extends FragmentRef<TElement> {
   element: TElement | null;
   childrenRefs: NodeRef<TElement>[];
-  scope: RenderScope<TElement>;
+  scope: RenderScope<TElement> | undefined;
 }
 
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
@@ -91,7 +91,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
         prev: undefined,
         next: undefined,
         childrenRefs: [],
-        scope: undefined as any, // Set below
+        scope: undefined, // Set below
         parentRef: undefined, // Set in attach
         attach: (parentRefArg: ElementRef<TElement>, nextSibling?: ElementRef<TElement> | null): void => {
           // 0 allocations - just wire up pointers
@@ -102,6 +102,8 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
           if (nextSibling && !dynamicFragRef.next) {
             dynamicFragRef.next = nextSibling;
           }
+
+          if (!dynamicFragRef.scope) return;
 
           // Wire scope to parent retroactively
           dynamicFragRef.scope.element = parentRefArg.element;
@@ -120,8 +122,8 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
       // Pre-allocate scope with renderFn (runs when signals change)
       const fragScope = createScope(
-        null as any,
-        undefined as any,
+        null as unknown as TElement,
+        undefined,
         () => {
           const parentElement = dynamicFragRef.element;
           if (!parentElement) return; // Not attached yet

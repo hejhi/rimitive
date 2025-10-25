@@ -318,8 +318,8 @@ describe('processChildren - function children', () => {
 
       const view = el.method([
         'ul',
-        map(items, (items) =>
-          items.map((item) => el.method(['li', item.name], item.id))
+        map(() =>
+          items().map((item) => el.method(['li', item.name], item.id))
         ),
       ]);
 
@@ -345,7 +345,8 @@ describe('processChildren - function children', () => {
 
       const view = el.method([
         'div',
-        map(mode, (m) => {
+        map(() => {
+          const m = mode();
           if (m === 'loading') return el.method(['div', 'Loading...'], 'loading');
           if (m === 'error') return el.method(['div', 'Error!'], 'error');
           return el.method(['div', 'Success'], 'success');
@@ -442,8 +443,8 @@ describe('processChildren - function children', () => {
         () => {
           if (mode() === 'list') {
             // Returns FragmentRef from map()
-            return map(items, (items) =>
-              items.map((item) => el.method(['li', item.name], item.id))
+            return map(() =>
+              items().map((item) => el.method(['li', item.name], item.id))
             );
           }
           // Returns ElementRef

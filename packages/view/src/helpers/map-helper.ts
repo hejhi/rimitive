@@ -8,7 +8,7 @@
  * - Unified reconciliation for keyed and non-keyed arrays
  */
 
-import type { Reactive, RefSpec, FragmentRef, ElementRef } from '../types';
+import type { RefSpec, FragmentRef, ElementRef, NodeRef } from '../types';
 import { STATUS_FRAGMENT, isElementRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
@@ -41,25 +41,24 @@ export function createMapHelper<
   /**
    * User-space map() using closure pattern
    *
-   * Takes ANY reactive value and a render function
+   * Takes a render function that returns RefSpec(s) with keys
    * Keys come from el() calls, not from a keyFn parameter
    *
    * Usage:
-   *   map(items, items => items.map(item => el(['li', item.name], item.id)))
-   *   map(mode, m => [cases[m]()])
+   *   map(() => items().map(item => el(['li', item.name], item.id)))
+   *   map(() => [cases[mode()]()])
    */
-  function map<T>(
-    signal: Reactive<T>,
-    render: (value: T) => RefSpec<TElement> | RefSpec<TElement>[]
+  function map(
+    render: () => RefSpec<TElement> | RefSpec<TElement>[]
   ): RefSpec<TElement> {
     // Closure state - persists across effect re-runs
     const state: ReconcileState<TElement> & {
-      itemsByKey: Map<string, any>;
+      itemsByKey: Map<string, unknown>;
       parentElement: TElement;
-      nextSibling?: any;
+      nextSibling?: NodeRef<TElement>;
     } = {
       itemsByKey: new Map(),
-      parentElement: null as any, // Set in attach()
+      parentElement: null as unknown as TElement, // Set in attach()
       nextSibling: undefined,
     };
 
@@ -85,12 +84,10 @@ export function createMapHelper<
           state.parentElement = parent.element;
           state.nextSibling = nextSibling || fragRef.next;
 
-          // Create effect that reconciles when value changes
+          // Create effect that reconciles when render function's signals change
           const dispose = effect(() => {
-            const value = signal();
-
-            // Call render and normalize to array
-            const result = render(value);
+            // Call render - it reads whatever signals it needs
+            const result = render();
             const refSpecs = Array.isArray(result) ? result : [result];
 
             // Clear pooled buffers

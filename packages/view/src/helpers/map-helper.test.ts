@@ -53,8 +53,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -74,8 +74,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -91,8 +91,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -114,8 +114,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -140,8 +140,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -168,8 +168,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -194,8 +194,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -225,8 +225,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -258,8 +258,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -286,8 +286,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -314,8 +314,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -345,8 +345,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -373,8 +373,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -401,8 +401,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -429,8 +429,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -460,8 +460,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -492,8 +492,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -524,8 +524,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -558,8 +558,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -593,8 +593,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -630,8 +630,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -668,8 +668,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -704,8 +704,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -735,8 +735,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -771,8 +771,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -798,8 +798,8 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method(
         ['ul',
-          map(items, (items) =>
-            items.map((item) => el.method(['li', item.name], item.id))
+          map(() =>
+            items().map((item) => el.method(['li', item.name], item.id))
           ),
         ]
       );
@@ -828,7 +828,8 @@ describe('map() - User-facing behavior', () => {
 
       const view = el.method(
         ['div',
-          map(mode, (m) => {
+          map(() => {
+            const m = mode();
             // Key is required to distinguish different states
             if (m === 'loading') return el.method(['div', 'Loading...'], 'loading');
             if (m === 'error') return el.method(['div', 'Error occurred'], 'error');

@@ -56,7 +56,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -96,7 +96,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -139,7 +139,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((num) => el.method(['li', String(num)], num))),
+      map(() => items().map((num) => el.method(['li', String(num)], num))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -177,7 +177,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -215,7 +215,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -251,7 +251,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -284,7 +284,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((num) => el.method(['li', String(num)], num))),
+      map(() => items().map((num) => el.method(['li', String(num)], num))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -318,7 +318,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -353,7 +353,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -390,7 +390,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((num) => el.method(['li', String(num)], num))),
+      map(() => items().map((num) => el.method(['li', String(num)], num))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -445,7 +445,7 @@ describe('reconcileWithKeys - Edge Cases (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((item) => el.method(['li', item.name], item.id))),
+      map(() => items().map((item) => el.method(['li', item.name], item.id))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -465,7 +465,7 @@ describe('reconcileWithKeys - Edge Cases (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((num) => el.method(['li', String(num)], num))),
+      map(() => items().map((num) => el.method(['li', String(num)], num))),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -495,7 +495,7 @@ describe('reconcileWithKeys - Edge Cases (TDD)', () => {
 
     const list = el.method([
       'ul',
-      map(items, (items) => items.map((num) => el.method(['li', String(num)], num))),
+      map(() => items().map((num) => el.method(['li', String(num)], num))),
     ]);
 
     const ul = list.create().element as MockElement;
