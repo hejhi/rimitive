@@ -243,10 +243,18 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { trackInScope, ...scopeRest } = createScopes({ ctx, track, dispose })
+  const { trackInScope, trackInSpecificScope, createScope, disposeScope, ...scopeRest } = createScopes({ ctx, track, dispose })
 
   // Create helpers
-  const { processChildren, handleChild} = createProcessChildren({ trackInScope, effect, renderer });
+  const { processChildren, handleChild} = createProcessChildren({
+    trackInScope,
+    effect,
+    renderer,
+    createScope,
+    ctx,
+    disposeScope,
+    trackInSpecificScope
+  });
 
   return {
     ctx,
@@ -256,6 +264,9 @@ export function createTestEnv() {
     handleChild,
     processChildren,
     trackInScope,
+    trackInSpecificScope,
+    createScope,
+    disposeScope,
     ...scopeRest
   };
 }

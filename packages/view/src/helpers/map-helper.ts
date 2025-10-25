@@ -9,11 +9,11 @@
  */
 
 import type { Reactive, RefSpec, FragmentRef, ElementRef } from '../types';
-import { STATUS_FRAGMENT } from '../types';
+import { STATUS_FRAGMENT, isElementRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
-import { reconcileWithKeys, type ReconcileState } from './reconcile';
+import { reconcileWithKeys, type ReconcileState, type ReconcileNode } from './reconcile';
 
 export interface MapHelperOpts<
   TElement extends RendererElement,
@@ -36,7 +36,7 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, effect, renderer, disposeScope, trackInSpecificScope } = opts;
+  const { ctx, effect, renderer, disposeScope } = opts;
 
   /**
    * User-space map() using closure pattern
@@ -70,14 +70,15 @@ export function createMapHelper<
 
     const refSpec: RefSpec<TElement> = () => refSpec; // Chainable lifecycle
 
-    refSpec.create = <TExt>(extensions?: TExt): FragmentRef<TElement> & TExt => {
-      const fragRef: FragmentRef<TElement> = {
+    refSpec.create = <TExt>(extensions?: TExt): FragmentRef<TElement> & TExt & { dispose?: () => void } => {
+      const fragRef: FragmentRef<TElement> & { dispose?: () => void } = {
         status: STATUS_FRAGMENT,
         element: null,
         prev: undefined,
         next: undefined,
         firstChild: undefined,
         lastChild: undefined,
+        dispose: undefined, // Set in attach
         ...extensions,
         attach: (parent: ElementRef<TElement>, nextSibling?): void => {
           // Store parent and boundary for reconciliation
@@ -108,11 +109,25 @@ export function createMapHelper<
               newPosBuf,
               lisBuf
             );
+
+            // Return cleanup that removes all children when effect disposed
+            return () => {
+              for (const [, node] of state.itemsByKey as Map<string, ReconcileNode<TElement>>) {
+                if (isElementRef(node)) {
+                  const scope = ctx.elementScopes.get(node.element);
+                  if (scope) {
+                    disposeScope(scope);
+                    ctx.elementScopes.delete(node.element);
+                  }
+                  renderer.removeChild(state.parentElement, node.element);
+                }
+              }
+              state.itemsByKey.clear();
+            };
           });
 
-          // Track effect for cleanup when parent is disposed
-          const parentScope = ctx.elementScopes.get(parent.element);
-          if (parentScope) trackInSpecificScope(parentScope, { dispose });
+          // Store dispose on fragment for direct cleanup
+          fragRef.dispose = dispose;
         },
       };
 

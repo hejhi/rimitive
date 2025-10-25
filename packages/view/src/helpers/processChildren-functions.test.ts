@@ -85,7 +85,7 @@ describe('processChildren - function children', () => {
       const mode = signal<'span' | 'div'>('span');
 
       const view = el.method([
-        'container',
+        'div',
         () => {
           const tag = mode();
           return el.method([tag, 'Content']);
@@ -100,6 +100,58 @@ describe('processChildren - function children', () => {
       mode('div');
       expect(container.children.length).toBe(1);
       expect((container.children[0] as MockElement).tag).toBe('div');
+    });
+
+    it('should handle function returning null', () => {
+      const { el, signal } = setup();
+
+      const show = signal(true);
+
+      const view = el.method([
+        'div',
+        () => show() ? el.method(['span', 'Content']) : null,
+      ]);
+
+      const div = view.create().element as MockElement;
+
+      // Initially shows content
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Content');
+
+      // Hide - function returns null
+      show(false);
+      expect(div.children.length).toBe(0);
+
+      // Show again
+      show(true);
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Content');
+    });
+
+    it('should handle function returning false', () => {
+      const { el, signal } = setup();
+
+      const show = signal(true);
+
+      const view = el.method([
+        'div',
+        () => show() ? el.method(['span', 'Content']) : false,
+      ]);
+
+      const div = view.create().element as MockElement;
+
+      // Initially shows content
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Content');
+
+      // Hide - function returns false
+      show(false);
+      expect(div.children.length).toBe(0);
+
+      // Show again
+      show(true);
+      expect(div.children.length).toBe(1);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Content');
     });
   });
 
@@ -163,6 +215,94 @@ describe('processChildren - function children', () => {
 
       items([]);
       expect(ul.children.length).toBe(0);
+    });
+  });
+
+  describe('Function returning primitive values', () => {
+    it('should handle function returning array of strings', () => {
+      const { el, signal } = setup();
+
+      const items = signal(['Apple', 'Banana', 'Cherry']);
+
+      const view = el.method([
+        'div',
+        () => items(), // Returns array of strings directly
+      ]);
+
+      const div = view.create().element as MockElement;
+
+      const text = getTextContent(div);
+      expect(text).toContain('Apple');
+      expect(text).toContain('Banana');
+      expect(text).toContain('Cherry');
+    });
+
+    it('should handle function returning array of numbers', () => {
+      const { el, signal } = setup();
+
+      const numbers = signal([1, 2, 3]);
+
+      const view = el.method([
+        'div',
+        () => numbers(), // Returns array of numbers directly
+      ]);
+
+      const div = view.create().element as MockElement;
+
+      const text = getTextContent(div);
+      expect(text).toContain('1');
+      expect(text).toContain('2');
+      expect(text).toContain('3');
+    });
+
+    it('should update when primitive array changes', () => {
+      const { el, signal } = setup();
+
+      const items = signal(['A', 'B']);
+
+      const view = el.method([
+        'div',
+        () => items(),
+      ]);
+
+      const div = view.create().element as MockElement;
+
+      let text = getTextContent(div);
+      expect(text).toContain('A');
+      expect(text).toContain('B');
+
+      // Update to different values
+      items(['X', 'Y', 'Z']);
+
+      text = getTextContent(div);
+      expect(text).toContain('X');
+      expect(text).toContain('Y');
+      expect(text).toContain('Z');
+      expect(text).not.toContain('A');
+      expect(text).not.toContain('B');
+    });
+
+    it('should handle mixed array of primitives and RefSpecs', () => {
+      const { el, signal } = setup();
+
+      const items = signal(['Text', 'items']);
+
+      const view = el.method([
+        'div',
+        () => [
+          'Count: ',
+          items().length,
+          ' - ',
+          ...items().map((item) => el.method(['strong', item])),
+        ],
+      ]);
+
+      const div = view.create().element as MockElement;
+
+      const text = getTextContent(div);
+      expect(text).toContain('Count: 2');
+      expect(text).toContain('Text');
+      expect(text).toContain('items');
     });
   });
 
@@ -285,6 +425,50 @@ describe('processChildren - function children', () => {
       // Effect should not run after disposal
       count(3);
       expect(effectRunCount).toBe(2); // Still 2, not 3
+    });
+
+    it('should cleanup fragments when switching from fragment to element', () => {
+      const { el, signal, map } = setup();
+
+      type Mode = 'list' | 'text';
+      const mode = signal<Mode>('list');
+      const items = signal([
+        { id: 1, name: 'Item 1' },
+        { id: 2, name: 'Item 2' },
+      ]);
+
+      const view = el.method([
+        'div',
+        () => {
+          if (mode() === 'list') {
+            // Returns FragmentRef from map()
+            return map(items, (items) =>
+              items.map((item) => el.method(['li', item.name], item.id))
+            );
+          }
+          // Returns ElementRef
+          return el.method(['span', 'No list']);
+        },
+      ]);
+
+      const div = view.create().element as MockElement;
+
+      // Initial: map() creates fragment with list items
+      expect(div.children.length).toBe(2);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Item 1');
+
+      // Switch to text mode - should cleanup fragment
+      mode('text');
+
+      expect(div.children.length).toBe(1);
+      expect((div.children[0] as MockElement).tag).toBe('span');
+      expect(getTextContent(div.children[0] as MockElement)).toBe('No list');
+
+      // Switch back to list - should work again
+      mode('list');
+
+      expect(div.children.length).toBe(2);
+      expect(getTextContent(div.children[0] as MockElement)).toBe('Item 1');
     });
   });
 

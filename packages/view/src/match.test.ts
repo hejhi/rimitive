@@ -136,7 +136,15 @@ describe('match primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       };
-      const { processChildren } = createProcessChildren({ effect, renderer, trackInScope });
+      const { processChildren } = createProcessChildren({
+        effect,
+        renderer,
+        trackInScope,
+        createScope,
+        ctx,
+        disposeScope,
+        trackInSpecificScope
+      });
       const el = createElFactory({
         ctx,
         effect,
@@ -236,7 +244,15 @@ describe('match primitive', () => {
       };
       const { createScope, runInScope, trackInScope, trackInSpecificScope, disposeScope } =
         createTestScopes();
-      const { processChildren } = createProcessChildren({ effect, renderer, trackInScope });
+      const { processChildren } = createProcessChildren({
+        effect,
+        renderer,
+        trackInScope,
+        createScope,
+        ctx,
+        disposeScope,
+        trackInSpecificScope
+      });
       const el = createElFactory({
         ctx,
         effect,

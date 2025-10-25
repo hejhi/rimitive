@@ -13,13 +13,17 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
-  const { trackInScope, ...scopeRest } = createTestScopes();
+  const { trackInScope, createScope, disposeScope, trackInSpecificScope, ...scopeRest } = createTestScopes();
   const { processChildren } = createProcessChildren({
     effect: effectFn,
     renderer,
-    trackInScope
+    trackInScope,
+    createScope,
+    ctx,
+    disposeScope,
+    trackInSpecificScope
   });
-  return { ctx, renderer, effect: effectFn, processChildren, trackInScope, ...scopeRest };
+  return { ctx, renderer, effect: effectFn, processChildren, trackInScope, createScope, disposeScope, trackInSpecificScope, ...scopeRest };
 }
 
 describe('el primitive', () => {
