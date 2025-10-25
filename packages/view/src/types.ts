@@ -143,7 +143,7 @@ export type ElRefSpecChild<TElement = object> =
   | null
   | RefSpec<TElement>
   | Reactive<unknown>
-  | (() => RefSpec<TElement> | RefSpec<TElement>[] | null | false); // Bare functions
+  | (() => ElRefSpecChild<TElement> | ElRefSpecChild<TElement>[]); // Bare functions returning any child type(s)
 
 export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
   // Tree structure (from Scope)

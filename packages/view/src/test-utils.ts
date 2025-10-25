@@ -253,7 +253,6 @@ export function createTestEnv() {
     createScope,
     ctx,
     disposeScope,
-    trackInSpecificScope
   });
 
   return {

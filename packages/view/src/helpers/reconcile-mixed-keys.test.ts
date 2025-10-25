@@ -508,7 +508,6 @@ describe('reconcileWithKeys - Mixed keys', () => {
 
       const sectionAEl = parent.children[0];
       const a1El = parent.children[1];
-      const a2El = parent.children[2];
       const sectionBEl = parent.children[3];
 
       // Remove items from section A, keep headers
@@ -599,7 +598,7 @@ describe('reconcileWithKeys - Mixed keys', () => {
     });
 
     it('should handle all items becoming unkeyed', () => {
-      const { parent, createKeyedItem, createUnkeyedItem, reconcile, state } = setup();
+      const { createKeyedItem, createUnkeyedItem, reconcile, state } = setup();
 
       reconcile([
         createKeyedItem('a', 'Apple'),
@@ -630,7 +629,7 @@ describe('reconcileWithKeys - Mixed keys', () => {
     });
 
     it('should handle all items becoming keyed', () => {
-      const { parent, createKeyedItem, createUnkeyedItem, reconcile, state } = setup();
+      const { createKeyedItem, createUnkeyedItem, reconcile, state } = setup();
 
       reconcile([
         createUnkeyedItem('Apple'),

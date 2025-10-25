@@ -25,7 +25,6 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     createScope,
     ctx,
     disposeScope,
-    trackInSpecificScope
   });
 
   return {
