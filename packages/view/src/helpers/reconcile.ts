@@ -149,7 +149,9 @@ export function reconcileWithKeys<
   newPosBuf.length = 0;
   lisBuf.length = 0;
 
-  const nodes: ReconcileNode<TElement>[] = Array(refSpecs.length);
+  const nodes: ReconcileNode<TElement>[] = Array<ReconcileNode<TElement>>(
+    refSpecs.length
+  );
   const newFragments: FragmentRef<TElement>[] = []; // Track new fragments for attach
 
   // Build phase - create/update nodes

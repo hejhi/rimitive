@@ -17,7 +17,7 @@
 import { describe, it, expect } from 'vitest';
 import { createTestEnv, MockElement, getTextContent } from '../test-utils';
 import { createElFactory } from '../el';
-import { createMapHelper } from './map-helper';
+import { createMapHelper } from './map';
 
 describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
   function setup() {
