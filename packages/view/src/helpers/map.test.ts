@@ -1053,8 +1053,7 @@ describe('map() - User-facing behavior', () => {
             items().map((item) =>
               el.method(['li', item.name], item.id)((element) => {
                 // Simulate attaching custom state during lifecycle
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-                (element as any).__customState = `state-${item.id}`;
+                element.__customState = `state-${item.id}`;
               })
             )
           ),
@@ -1064,10 +1063,8 @@ describe('map() - User-facing behavior', () => {
       const ul = list.create().element as MockElement;
 
       // Verify custom state exists
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      expect((ul.children[0] as any).__customState).toBe('state-1');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      expect((ul.children[1] as any).__customState).toBe('state-2');
+      expect((ul.children[0] as MockElement).__customState).toBe('state-1');
+      expect((ul.children[1] as MockElement).__customState).toBe('state-2');
 
       // Reorder items
       items([
@@ -1076,10 +1073,8 @@ describe('map() - User-facing behavior', () => {
       ]);
 
       // Custom state should be preserved (elements reused)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      expect((ul.children[0] as any).__customState).toBe('state-2');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      expect((ul.children[1] as any).__customState).toBe('state-1');
+      expect((ul.children[0] as MockElement).__customState).toBe('state-2');
+      expect((ul.children[1] as MockElement).__customState).toBe('state-1');
     });
   });
 

@@ -27,6 +27,9 @@ export class MockElement {
   connected: boolean = false;
   listeners: Map<string, (...args: unknown[]) => void> = new Map();
 
+  // Custom test data - used to verify element reuse/preservation in tests
+  __customState?: string;
+
   constructor(tag: string) {
     this.id = Math.random().toString(36);
     this.tag = tag;
