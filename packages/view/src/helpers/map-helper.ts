@@ -36,7 +36,7 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, effect, renderer, disposeScope } = opts;
+  const { ctx, effect, renderer, disposeScope, trackInSpecificScope } = opts;
 
   /**
    * User-space map() using closure pattern
@@ -82,6 +82,7 @@ export function createMapHelper<
         attach: (parent: ElementRef<TElement>, nextSibling?): void => {
           // Store parent and boundary for reconciliation
           state.parentElement = parent.element;
+          state.parentRef = parent;
           state.nextSibling = nextSibling || fragRef.next;
 
           // Create effect that reconciles when render function's signals change
@@ -111,6 +112,10 @@ export function createMapHelper<
             // itemsByKey must persist across reconciliations for element reuse
             // Cleanup happens when fragment itself is disposed
           });
+
+          // Track effect in parent scope for disposal and scheduling
+          const parentScope = ctx.elementScopes.get(parent.element);
+          if (parentScope) trackInSpecificScope(parentScope, { dispose });
 
           // Store dispose function that cleans up both effect and elements
           fragRef.dispose = () => {

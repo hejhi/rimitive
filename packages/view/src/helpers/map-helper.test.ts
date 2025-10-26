@@ -1079,4 +1079,71 @@ describe('map() - User-facing behavior', () => {
       expect((ul.children[1] as any).__customState).toBe('state-1');
     });
   });
+
+  describe('Nested maps', () => {
+    it('should handle map inside map with reactive signals', () => {
+      const { el, map, signal } = setup();
+
+      const displayValue = signal('initial');
+
+      // Nested map: outer creates div, inner creates span
+      // Signal passed to inner element (not called) for reactivity
+      const view = el.method([
+        'div',
+        map(() =>
+          el.method([
+            'div',
+            map(() => el.method(['span', displayValue])),
+          ])
+        ),
+      ]);
+
+      const root = view.create().element as MockElement;
+      const innerDiv = root.children[0] as MockElement;
+      const span = innerDiv.children[0] as MockElement;
+
+      // Initial render
+      expect(getTextContent(span)).toBe('initial');
+
+      // Update signal - should update through nested maps
+      displayValue('updated');
+
+      // Verify reactive update works
+      expect(getTextContent(span)).toBe('updated');
+    });
+
+    it('should handle triple nesting with reactive updates', () => {
+      const { el, map, signal } = setup();
+
+      const value = signal('initial');
+
+      // Triple nested map to test deep nesting
+      const view = el.method([
+        'div',
+        map(() =>
+          el.method([
+            'section',
+            map(() =>
+              el.method([
+                'article',
+                map(() => el.method(['span', value])),
+              ])
+            ),
+          ])
+        ),
+      ]);
+
+      const root = view.create().element as MockElement;
+      const section = root.children[0] as MockElement;
+      const article = section.children[0] as MockElement;
+      const span = article.children[0] as MockElement;
+
+      expect(getTextContent(span)).toBe('initial');
+
+      // Update should propagate through all nesting levels
+      value('updated');
+
+      expect(getTextContent(span)).toBe('updated');
+    });
+  });
 });

@@ -6,11 +6,11 @@
  * reactive helpers using the closure pattern.
  */
 
-import type { RefSpec, NodeRef } from '../types';
+import type { RefSpec, NodeRef, ElementRef, FragmentRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
-import { isElementRef } from '../types';
+import { isElementRef, isFragmentRef } from '../types';
 
 // Status bits for reconciliation (separate from STATUS_ELEMENT/STATUS_FRAGMENT)
 const UNVISITED = 0;
@@ -41,6 +41,8 @@ export interface ReconcileState<TElement> {
   itemsByKey: Map<string, ReconcileNode<TElement>>;
   // Parent element reference
   parentElement: TElement;
+  // Parent element ref (needed for fragment attach)
+  parentRef?: ElementRef<TElement>;
   // Next sibling boundary marker
   nextSibling?: NodeRef<TElement>;
 }
@@ -148,6 +150,7 @@ export function reconcileWithKeys<
   lisBuf.length = 0;
 
   const nodes: ReconcileNode<TElement>[] = Array(refSpecs.length);
+  const newFragments: FragmentRef<TElement>[] = []; // Track new fragments for attach
 
   // Build phase - create/update nodes
   let count = 0;
@@ -174,10 +177,13 @@ export function reconcileWithKeys<
       node = nodeRef;
       itemsByKey.set(key, node);
 
-      // Insert into DOM (newly created nodes)
+      // Insert into DOM or collect for attach (newly created nodes)
       if (isElementRef(node)) {
         const nextEl = resolveNextElement(nextSibling);
         renderer.insertBefore(parentElement, node.element, nextEl);
+      } else if (isFragmentRef(node)) {
+        // Fragments need attach() called - collect for later
+        newFragments.push(node);
       }
     }
 
@@ -244,6 +250,24 @@ export function reconcileWithKeys<
       }
     }
     // Elements in LIS don't need to move - they're already in correct relative positions
+  }
+
+  // Attach phase - attach fragments with correct nextSibling (backward pass like processChildren)
+  // Walk nodes in reverse order to determine correct insertion points
+  if (newFragments.length > 0 && state.parentRef) {
+    let nextRef: NodeRef<TElement> | null = nextSibling || null;
+
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const node = nodes[i]!;
+
+      if (isFragmentRef(node) && newFragments.includes(node)) {
+        // New fragment - attach it with correct nextSibling
+        node.attach(state.parentRef, nextRef as ElementRef<TElement> | null);
+      } else if (isElementRef(node)) {
+        // Track last element seen for fragments before it
+        nextRef = node;
+      }
+    }
   }
 
   return nodes;

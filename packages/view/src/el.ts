@@ -133,6 +133,9 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       // Create a RenderScope for this element
       const scope = createScope(element);
 
+      // Register scope temporarily so child fragments can find it during processChildren
+      ctx.elementScopes.set(element, scope);
+
       // Run all reactive setup within this instance's scope
       runInScope(scope, () => {
         applyProps(element, props);
@@ -144,7 +147,10 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
       }
 
-      if (scope.firstDisposable !== undefined) ctx.elementScopes.set(element, scope);
+      // Remove scope from registry if it has no disposables (lazy optimization)
+      if (scope.firstDisposable === undefined) {
+        ctx.elementScopes.delete(element);
+      }
 
       return elRef as ElementRef<TElement> & TExt;
     };
