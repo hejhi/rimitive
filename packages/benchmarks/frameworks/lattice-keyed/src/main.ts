@@ -11,10 +11,12 @@ import { createScopes } from '@lattice/view/helpers/scope';
 import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createElFactory } from '@lattice/view/el';
 import type { ElementProps } from '@lattice/view/el';
-import { createMapFactory } from '@lattice/view/map';
+import { createMapHelper } from '@lattice/view/helpers/map';
 import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createOnFactory } from '@lattice/view/on';
+import { createWithScope, createWithElementScope } from '@lattice/view/helpers/with-scope';
+import { createScopedEffect } from '@lattice/view/helpers/scoped-effect';
 import { ElRefSpecChild, isReactive, type Reactive } from '@lattice/view/types';
 
 type ClassValue = string | Reactive<string> | null | undefined | false;
@@ -68,31 +70,32 @@ function createSignalContext() {
 const signalCtx = createSignalContext();
 const viewCtx = createLatticeContext();
 const renderer = createDOMRenderer();
-const { createScope, runInScope, trackInScope, trackInSpecificScope, disposeScope } =
-  createScopes({ ctx: viewCtx, track: signalCtx.track, dispose: signalCtx.dispose });
+const { createScope, disposeScope } =
+  createScopes({ track: signalCtx.track, dispose: signalCtx.dispose });
 
 const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
-const { processChildren } = createProcessChildren({ effect: effectFactory.method, renderer, trackInScope });
+
+const withScope = createWithScope({ ctx: viewCtx, createScope });
+const withElementScope = createWithElementScope({ ctx: viewCtx });
+const scopedEffect = createScopedEffect({ ctx: viewCtx, baseEffect: effectFactory.method });
+
+const { processChildren } = createProcessChildren({ scopedEffect, renderer });
 const onFactory = createOnFactory({ startBatch: signalCtx.startBatch, endBatch: signalCtx.endBatch });
 
 const elFactory = createElFactory({
   ctx: viewCtx,
-  effect: effectFactory.method,
+  scopedEffect,
   renderer,
-  createScope,
-  runInScope,
-  trackInScope,
-  trackInSpecificScope,
+  withScope,
   processChildren,
 });
-const mapFactory = createMapFactory({
+const map = createMapHelper({
   ctx: viewCtx,
-  signal: signalFactory.method,
-  effect: effectFactory.method,
+  scopedEffect,
+  withElementScope,
   renderer,
-  trackInSpecificScope,
   disposeScope
 });
 
@@ -102,12 +105,11 @@ const api = createApi(
     computed: () => computedFactory,
     effect: () => effectFactory,
     el: () => elFactory,
-    map: () => mapFactory,
   },
   {}
 );
 
-const { signal, el, map, computed } = api;
+const { signal, el, computed } = api;
 const on = onFactory.method;
 
 // ============================================================================
@@ -242,7 +244,7 @@ const clear = () => {
 
 const remove = (id: number) => {
   const d = data();
-  const idx = d.findIndex((item) => item.id === id);
+  const idx = d.findIndex((item: RowData) => item.id === id);
   data([...d.slice(0, idx), ...d.slice(idx + 1)]);
 };
 
@@ -276,7 +278,7 @@ const Button = (
   ]);
 
 const Row = (
-  props: { data: Reactive<RowData> },
+  props: { data: Reactive<RowData>; key: number },
   children: ElRefSpecChild<HTMLElement>[] = []
 ) => {
   const id = props.data().id;
@@ -302,7 +304,7 @@ const Row = (
     ]),
     el(['td', { className: 'col-md-6' }]),
     ...children,
-  ]);
+  ], props.key);
 };
 
 const App = () => {
@@ -349,11 +351,7 @@ const App = () => {
       { className: 'table table-hover table-striped test-data' },
       el([
         'tbody',
-        map(
-          data,
-          (rowData) => Row({ data: rowData }),
-          (row: RowData) => row.id
-        ),
+        map(() => data().map((rowData: RowData) => Row({ data: signal(rowData), key: rowData.id }))),
       ]),
     ]),
     el([

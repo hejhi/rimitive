@@ -34,6 +34,18 @@
       "import": "./dist/helpers/processChildren.js",
       "types": "./dist/helpers/processChildren.d.ts"
     },
+    "./helpers/map": {
+      "import": "./dist/helpers/map.js",
+      "types": "./dist/helpers/map.d.ts"
+    },
+    "./helpers/with-scope": {
+      "import": "./dist/helpers/with-scope.js",
+      "types": "./dist/helpers/with-scope.d.ts"
+    },
+    "./helpers/scoped-effect": {
+      "import": "./dist/helpers/scoped-effect.js",
+      "types": "./dist/helpers/scoped-effect.d.ts"
+    },
     "./on": {
       "import": "./dist/on.js",
       "types": "./dist/on.d.ts"

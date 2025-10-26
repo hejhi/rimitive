@@ -58,13 +58,33 @@ export type ElOpts<
 };
 
 /**
+ * Helper type to resolve the specific element type based on tag
+ * When TElement is exactly `object` or `HTMLElement` (DOM renderer), resolves to specific HTML element type
+ * For other renderers (MockElement, linkedom, etc.), returns TElement
+ *
+ * Uses double-extends trick to check if TElement is EXACTLY object or HTMLElement,
+ * not a subtype with additional properties
+ */
+type ResolveElementType<TElement, Tag extends keyof HTMLElementTagNameMap> =
+  [TElement] extends [object]
+    ? [object] extends [TElement]
+      ? HTMLElementTagNameMap[Tag]
+      : [TElement] extends [HTMLElement]
+        ? [HTMLElement] extends [TElement]
+          ? HTMLElementTagNameMap[Tag]
+          : TElement
+        : TElement
+    : TElement;
+
+/**
  * Factory return type
  * Generic over element type
  *
- * IMPORTANT: When using with HTMLElement, this automatically returns specific HTML element types.
- * Example: ElFactory<HTMLElement> returns HTMLButtonElement for el(['button', ...])
+ * IMPORTANT: When using with object/HTMLElement (DOM renderer), this returns specific HTML element types.
+ * Example: el(['button', ...]) returns RefSpec<HTMLButtonElement>
+ *         el(['a', ...]) returns RefSpec<HTMLAnchorElement>
  *
- * This works because HTMLElement has an index signature that maps to HTMLElementTagNameMap.
+ * For other renderers (linkedom, etc.), it returns RefSpec<TElement>
  */
 export type ElFactory<TElement extends RendererElement = RendererElement> =
   LatticeExtension<
@@ -72,7 +92,7 @@ export type ElFactory<TElement extends RendererElement = RendererElement> =
     <Tag extends keyof HTMLElementTagNameMap>(
       spec: ElRefSpec<Tag, TElement>,
       key?: string | number
-    ) => RefSpec<TElement>
+    ) => RefSpec<ResolveElementType<TElement, Tag>>
   >;
 
 /**
@@ -96,12 +116,13 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>,
     key?: string | number
-  ): RefSpec<TElement> {
-    const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
+  ): RefSpec<ResolveElementType<TElement, Tag>> {
+    type SpecificElement = ResolveElementType<TElement, Tag>;
+    const lifecycleCallbacks: LifecycleCallback<SpecificElement>[] = [];
 
-    const refSpec: RefSpec<TElement> = (
-      lifecycleCallback: LifecycleCallback<TElement>
-    ): RefSpec<TElement> => {
+    const refSpec: RefSpec<SpecificElement> = (
+      lifecycleCallback: LifecycleCallback<SpecificElement>
+    ): RefSpec<SpecificElement> => {
       lifecycleCallbacks.push(lifecycleCallback);
       return refSpec;
     };
@@ -114,11 +135,11 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     const [tag, ...rest] = spec;
     const { props, children } = parseSpec(rest);
 
-    refSpec.create = <TExt>(extensions?: TExt): ElementRef<TElement> & TExt => {
+    refSpec.create = <TExt>(extensions?: TExt): ElementRef<SpecificElement> & TExt => {
       // Create the element using renderer
-      const element = renderer.createElement(tag);
+      const element = renderer.createElement(tag) as SpecificElement;
       // Create object with full shape at once (better for V8 hidden classes)
-      const elRef: ElementRef<TElement> = {
+      const elRef: ElementRef<SpecificElement> = {
         status: STATUS_ELEMENT,
         element,
         prev: undefined,
@@ -127,9 +148,9 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       };
 
       // Create scope and run setup - all orchestration handled by withScope!
-      withScope(element, () => {
-        applyProps(element, props);
-        processChildren(elRef, children);
+      withScope(element as unknown as TElement, () => {
+        applyProps(element as unknown as TElement, props);
+        processChildren(elRef as unknown as ElementRef<TElement>, children);
 
         // Track lifecycle callbacks
         for (const callback of lifecycleCallbacks) {
@@ -138,7 +159,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         }
       });
 
-      return elRef as ElementRef<TElement> & TExt;
+      return elRef as ElementRef<SpecificElement> & TExt;
     };
 
     return refSpec;
