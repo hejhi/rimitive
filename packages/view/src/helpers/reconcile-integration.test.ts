@@ -1,17 +1,13 @@
 /**
- * TDD tests exposing bugs in reconcileWithKeys positioning algorithm
+ * Integration tests for list reconciliation with el + map
  *
- * These tests define CORRECT behavior for LIS-based repositioning:
- * 1. Elements in LIS should remain in place (minimal moves)
- * 2. Non-LIS elements should be inserted relative to PREVIOUS element
- * 3. Insertion order must respect final array order
+ * Tests verify correct list reconciliation behavior through the user-facing API:
+ * - Does the DOM order match the data order after updates?
+ * - Are elements reused when keys match (performance)?
+ * - Do complex reorderings work correctly?
  *
- * Current implementation has broken anchor logic (reconcile.ts:204-236):
- * - Sets global anchor to first LIS element
- * - Doesn't track previous element during iteration
- * - Original algorithm uses `prev?.next ?? parent.firstChild` for correct relative positioning
- *
- * This can cause incorrect DOM order in complex reordering scenarios.
+ * These tests use the full el + map API stack, complementing the lower-level
+ * reconcile.test.ts which tests the reconciliation algorithm directly.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -19,7 +15,7 @@ import { createTestEnv, MockElement, getTextContent } from '../test-utils';
 import { createElFactory } from '../el';
 import { createMapHelper } from './map';
 
-describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
+describe('List reconciliation - Complex reorderings', () => {
   function setup() {
     const env = createTestEnv();
     const el = createElFactory({
@@ -410,7 +406,7 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
   });
 });
 
-describe('reconcileWithKeys - Edge Cases (TDD)', () => {
+describe('List reconciliation - Edge cases', () => {
   function setup() {
     const env = createTestEnv();
     const el = createElFactory({
