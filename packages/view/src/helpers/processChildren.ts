@@ -48,7 +48,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       // The only other functions allowed are reactives
       if (isReactive(child)) {
         const textNode = renderer.createTextNode('');
-        // Auto-tracked in active scope - no manual trackInScope needed!
+        // Auto-tracked in active scope
         scopedEffect(() => {
           const value = child();
           // Convert to string, handling null/undefined and primitives only

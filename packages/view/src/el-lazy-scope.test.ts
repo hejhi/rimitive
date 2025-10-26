@@ -17,7 +17,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     fn();
     return () => {};
   });
-  const { trackInScope, runInScope, createScope } = createTestScopes(ctx)
+  const { createScope } = createTestScopes(ctx)
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -63,9 +63,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     scopedEffect,
     handleChild,
     processChildren,
-    runInScope,
     createScope,
-    trackInScope,
     withScope
   };
 }

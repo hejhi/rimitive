@@ -193,7 +193,7 @@ function createApplyProps<
       const value = val as unknown;
       if (typeof value === 'function' && ('peek' in value || '__type' in value)) {
         const reactiveValue = value as unknown as () => unknown;
-        // Auto-tracked in active scope - no manual trackInScope needed!
+        // Auto-tracked in active scope
         scopedEffect(() => renderer.setAttribute(element, key, reactiveValue()));
       } else renderer.setAttribute(element, key, value); // Static value
     }

@@ -13,7 +13,7 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
-  const { trackInScope, createScope, disposeScope } = createTestScopes(ctx);
+  const { createScope, disposeScope } = createTestScopes(ctx);
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -51,7 +51,7 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     scopedEffect,
     renderer,
   });
-  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, trackInScope, createScope, disposeScope, withScope };
+  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, createScope, disposeScope, withScope };
 }
 
 describe('el primitive', () => {

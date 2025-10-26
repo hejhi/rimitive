@@ -249,21 +249,13 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { trackInSpecificScope, createScope, disposeScope } = createScopes({ track, dispose })
+  const { createScope, disposeScope } = createScopes({ track, dispose })
 
   // Create new scoped helpers
   const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
   const withScope = createWithScope({ ctx, createScope });
   const withElementScope = createWithElementScope({ ctx });
   const onCleanup = createOnCleanup(ctx);
-
-  // Helper for tracking in current active scope
-  const trackInScope = (disposable: { dispose: () => void }) => {
-    const scope = ctx.activeScope;
-    if (scope) {
-      trackInSpecificScope(scope, disposable);
-    }
-  };
 
   // Create helpers
   const { processChildren, handleChild} = createProcessChildren({
@@ -287,8 +279,6 @@ export function createTestEnv() {
     effect,
     handleChild,
     processChildren,
-    trackInScope,
-    trackInSpecificScope,
     createScope,
     disposeScope,
     scopedEffect,

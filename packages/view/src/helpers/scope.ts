@@ -1,4 +1,4 @@
-import type { Disposable, RenderScope, DisposableNode } from '../types';
+import type { RenderScope } from '../types';
 import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -10,11 +10,6 @@ const RENDER_SCOPE_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
 /**
  * Low-level scope primitives used by higher-level helpers.
- *
- * For most use cases, prefer the context-based helpers:
- * - `withScope` (from with-scope.ts) instead of manual createScope + ctx management
- * - `scopedEffect` (from scoped-effect.ts) instead of manual effect + trackInScope
- * - `withElementScope` (from with-scope.ts) instead of manual runInScope
  */
 export type CreateScopes = {
   /**
@@ -26,12 +21,6 @@ export type CreateScopes = {
     parent?: RenderScope<TElement>,
     renderFn?: () => void | (() => void)
   ) => RenderScope<TElement>;
-
-  /**
-   * Track a disposable in a specific scope (not the active scope).
-   * Used for lifecycle callbacks that need explicit scope targeting.
-   */
-  trackInSpecificScope: <TElement = object>(scope: RenderScope<TElement>, disposable: Disposable) => void;
 
   /**
    * Dispose a scope and all its children/disposables.
@@ -115,30 +104,6 @@ export function createScopes({
   };
 
   /**
-   * Track a disposable in a specific scope (not the active scope).
-   *
-   * This is used when you need to explicitly target a scope, such as tracking
-   * lifecycle callbacks. For automatic tracking based on activeScope, use
-   * scopedEffect from scoped-effect.ts instead.
-   *
-   * Uses linked list prepend for O(1) insertion.
-   */
-  const trackInSpecificScope = <TElement = object>(
-    scope: RenderScope<TElement>,
-    disposable: Disposable
-  ): void => {
-    // Only track if scope is not disposed
-    if ((scope.status & STATE_MASK) !== DISPOSED) {
-      // Prepend to linked list (O(1))
-      const node: DisposableNode = {
-        disposable,
-        next: scope.firstDisposable,
-      };
-      scope.firstDisposable = node;
-    }
-  };
-
-  /**
    * Dispose a RenderScope and all its children/disposables
    *
    * This implements a layered disposal strategy that integrates the reactive graph
@@ -183,7 +148,6 @@ export function createScopes({
 
   return {
     createScope,
-    trackInSpecificScope,
     disposeScope,
   };
 }

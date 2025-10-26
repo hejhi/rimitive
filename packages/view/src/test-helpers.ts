@@ -83,8 +83,23 @@ export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeCo
     trackInScope: (disposable: { dispose: () => void }) => {
       const scope = ctx.activeScope;
       if (scope) {
-        scopes.trackInSpecificScope(scope, disposable);
+        const node = {
+          disposable,
+          next: scope.firstDisposable,
+        };
+        scope.firstDisposable = node;
       }
+    },
+    // Track in specific scope (not active scope)
+    trackInSpecificScope: <TElement = object>(
+      scope: RenderScope<TElement>,
+      disposable: { dispose: () => void }
+    ) => {
+      const node = {
+        disposable,
+        next: scope.firstDisposable,
+      };
+      scope.firstDisposable = node;
     },
     // Create render effect (scope with renderFn)
     createRenderEffect: <TElement = object>(

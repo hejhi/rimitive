@@ -5,7 +5,6 @@
  * replacing the imperative pattern of:
  *   1. createScope()
  *   2. ctx.elementScopes.set()
- *   3. runInScope()
  *   4. ctx.elementScopes.delete() if empty
  *
  * With a single call:
@@ -36,24 +35,6 @@ export function createWithScope(opts: WithScopeOpts) {
 
   /**
    * Run code within a new scope attached to an element
-   *
-   * This eliminates the manual orchestration pattern:
-   *
-   * BEFORE:
-   *   const scope = createScope(element);
-   *   ctx.elementScopes.set(element, scope);
-   *   runInScope(scope, () => {
-   *     // setup code
-   *   });
-   *   if (scope.firstDisposable === undefined) {
-   *     ctx.elementScopes.delete(element);
-   *   }
-   *
-   * AFTER:
-   *   withScope(element, () => {
-   *     // setup code
-   *   });
-   *
    * Returns the created scope so callers can access it if needed.
    */
   return function withScope<TElement extends object = object, T = void>(
