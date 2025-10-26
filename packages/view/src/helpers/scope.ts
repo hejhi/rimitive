@@ -1,5 +1,4 @@
-import type { Disposable, RenderScope, DisposableNode, ReactiveElement } from '../types';
-import type { LatticeContext } from '../context';
+import type { Disposable, RenderScope, DisposableNode } from '../types';
 import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -9,29 +8,42 @@ const { CLEAN, CONSUMER, SCHEDULED, DISPOSED, STATE_MASK } = CONSTANTS;
 // Status combination for render scopes (consumer + scheduled + clean)
 const RENDER_SCOPE_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
+/**
+ * Low-level scope primitives used by higher-level helpers.
+ *
+ * For most use cases, prefer the context-based helpers:
+ * - `withScope` (from with-scope.ts) instead of manual createScope + ctx management
+ * - `scopedEffect` (from scoped-effect.ts) instead of manual effect + trackInScope
+ * - `withElementScope` (from with-scope.ts) instead of manual runInScope
+ */
 export type CreateScopes = {
+  /**
+   * Create a new RenderScope.
+   * Used internally by withScope - prefer that for declarative scope management.
+   */
   createScope: <TElement = object>(
     element: TElement,
     parent?: RenderScope<TElement>,
     renderFn?: () => void | (() => void)
   ) => RenderScope<TElement>;
-  createRenderEffect: <TElement = object>(
-    element: TElement,
-    renderFn: () => void | (() => void),
-    parent?: RenderScope<TElement>
-  ) => RenderScope<TElement>;
-  runInScope: <T, TElement = object>(scope: RenderScope<TElement>, fn: () => T) => T;
-  trackInScope: (disposable: Disposable) => void;
+
+  /**
+   * Track a disposable in a specific scope (not the active scope).
+   * Used for lifecycle callbacks that need explicit scope targeting.
+   */
   trackInSpecificScope: <TElement = object>(scope: RenderScope<TElement>, disposable: Disposable) => void;
+
+  /**
+   * Dispose a scope and all its children/disposables.
+   * Used by reconciliation logic when elements are removed.
+   */
   disposeScope: <TElement = object>(scope: RenderScope<TElement>) => void;
 };
 
 export function createScopes({
-  ctx,
   track,
   dispose: disposeNode,
 }: {
-  ctx: LatticeContext;
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
 }): CreateScopes {
@@ -103,54 +115,13 @@ export function createScopes({
   };
 
   /**
-   * Create a RenderScope with a render function for reactive updates
-   * This is a convenience wrapper around createScope that always includes a renderFn
+   * Track a disposable in a specific scope (not the active scope).
    *
-   * Use this when you want a component that automatically re-renders when signals change.
-   * The renderFn will be tracked and any signals it reads will trigger re-renders.
-   */
-  const createRenderEffect = <TElement = object>(
-    element: TElement,
-    renderFn: () => void | (() => void),
-    parent?: RenderScope<TElement>
-  ): RenderScope<TElement> => {
-    return createScope(element, parent, renderFn);
-  };
-
-  /**
-   * Run function within scope context
-   * Sets the active scope for both reactive tracking and lifecycle management
-   */
-  const runInScope = <T, TElement = object>(
-    scope: RenderScope<TElement>,
-    fn: () => T
-  ): T => {
-    const prevScope = ctx.activeScope;
-    // Cast is safe: element type is a phantom type that doesn't affect scope behavior.
-    // The scope participates in the reactive graph regardless of element type.
-    ctx.activeScope = scope as RenderScope<ReactiveElement>;
-    try {
-      return fn();
-    } finally {
-      ctx.activeScope = prevScope;
-    }
-  };
-
-  /**
-   * Track a disposable in the current scope (if any)
-   * Checks ctx.activeScope and delegates to trackInSpecificScope
-   */
-  const trackInScope = (disposable: Disposable): void => {
-    const scope = ctx.activeScope;
-    if (scope) {
-      trackInSpecificScope(scope, disposable);
-    }
-  };
-
-  /**
-   * Track a disposable in a specific scope
-   * Direct scope manipulation for when activeScope isn't set
-   * Uses linked list prepend for O(1) insertion
+   * This is used when you need to explicitly target a scope, such as tracking
+   * lifecycle callbacks. For automatic tracking based on activeScope, use
+   * scopedEffect from scoped-effect.ts instead.
+   *
+   * Uses linked list prepend for O(1) insertion.
    */
   const trackInSpecificScope = <TElement = object>(
     scope: RenderScope<TElement>,
@@ -212,9 +183,6 @@ export function createScopes({
 
   return {
     createScope,
-    createRenderEffect,
-    runInScope,
-    trackInScope,
     trackInSpecificScope,
     disposeScope,
   };

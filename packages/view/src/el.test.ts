@@ -3,7 +3,7 @@ import { createElFactory } from './el';
 import { createTestEnv, getTextContent, createMockRenderer, createSignal } from './test-utils';
 import { createLatticeContext } from './context';
 import { createProcessChildren } from './helpers/processChildren';
-import type { ElementRef, NodeRef } from './types';
+import type { ElementRef, NodeRef, RenderScope } from './types';
 import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
@@ -13,13 +13,45 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
-  const { trackInScope, createScope, disposeScope, trackInSpecificScope, ...scopeRest } = createTestScopes();
+  const { trackInScope, createScope, disposeScope, trackInSpecificScope } = createTestScopes(ctx);
+
+  // Create scopedEffect using the custom effect
+  const scopedEffect = (fn: () => void | (() => void)): () => void => {
+    const dispose = effectFn(fn as () => void);
+    const scope = ctx.activeScope;
+    if (scope) {
+      const node = {
+        disposable: { dispose },
+        next: scope.firstDisposable,
+      };
+      scope.firstDisposable = node;
+    }
+    return dispose;
+  };
+
+  // Create withScope helper
+  const withScope = <T>(element: object, fn: (scope: RenderScope) => T): { result: T; scope: RenderScope } => {
+    const scope = createScope(element);
+    ctx.elementScopes.set(element, scope);
+    const prevScope = ctx.activeScope;
+    ctx.activeScope = scope;
+    let result: T;
+    try {
+      result = fn(scope);
+    } finally {
+      ctx.activeScope = prevScope;
+    }
+    if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
+      ctx.elementScopes.delete(element);
+    }
+    return { result, scope };
+  };
+
   const { processChildren } = createProcessChildren({
-    effect: effectFn,
+    scopedEffect,
     renderer,
-    trackInScope,
   });
-  return { ctx, renderer, effect: effectFn, processChildren, trackInScope, createScope, disposeScope, trackInSpecificScope, ...scopeRest };
+  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, trackInScope, createScope, disposeScope, trackInSpecificScope, withScope };
 }
 
 describe('el primitive', () => {
@@ -28,21 +60,17 @@ describe('el primitive', () => {
       const {
         ctx,
         renderer,
-        effect,
+        scopedEffect,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       } = createTestEnv();
       const el = createElFactory({
         ctx,
-        effect,
+        scopedEffect,
         renderer,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       }).method;
 
@@ -57,21 +85,17 @@ describe('el primitive', () => {
       const {
         ctx,
         renderer,
-        effect,
+        scopedEffect,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
-      } = createTestEnv();
+        } = createTestEnv();
       const el = createElFactory({
         ctx,
-        effect,
+        scopedEffect,
         renderer,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       }).method;
 
@@ -94,11 +118,9 @@ describe('el primitive', () => {
       const {
         ctx,
         renderer,
-        effect,
+        scopedEffect,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -107,12 +129,10 @@ describe('el primitive', () => {
       });
       const el = createElFactory({
         ctx,
-        effect,
+        scopedEffect,
         renderer,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       }).method;
 
@@ -131,11 +151,9 @@ describe('el primitive', () => {
       const {
         ctx,
         renderer,
-        effect,
+        scopedEffect,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -144,12 +162,10 @@ describe('el primitive', () => {
       });
       const el = createElFactory({
         ctx,
-        effect,
+        scopedEffect,
         renderer,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       }).method;
 
@@ -168,11 +184,9 @@ describe('el primitive', () => {
       const {
         ctx,
         renderer,
-        effect,
+        scopedEffect,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -181,39 +195,33 @@ describe('el primitive', () => {
       });
       const el = createElFactory({
         ctx,
-        effect,
+        scopedEffect,
         renderer,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       }).method;
 
       const ref = el(['div', 'Count: ', count]);
 
-      // User cares: mixed content displays correctly
+      // User cares: content combines static and reactive parts
       expect(getTextContent(asElement(ref.create()))).toBe('Count: 0');
 
-      // User cares: only reactive part updates
+      // User cares: reactive part updates
       setCount(5);
       expect(getTextContent(asElement(ref.create()))).toBe('Count: 5');
     });
-  });
 
-  describe('lifecycle and cleanup', () => {
     it('cleans up effects on disconnect', () => {
-      const { read: text, write: setText, subscribers } = createSignal('initial');
+      const { read: text, subscribers } = createSignal('initial');
       const {
         ctx,
         renderer,
-        effect,
+        scopedEffect,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
-        disposeScope,
+        withScope,
         trackInSpecificScope,
+        disposeScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -221,60 +229,46 @@ describe('el primitive', () => {
       });
       const el = createElFactory({
         ctx,
-        effect,
+        scopedEffect,
         renderer,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       }).method;
 
-      const ref = el(['div', { title: text }]);
-
-      // Set up lifecycle
-      ref(() => {});
-
-      // Create instance once
+      const ref = el(['div', text]);
       const element = asElement(ref.create());
 
-      // Verify reactivity works
-      expect(element.props.title).toBe('initial');
+      // Verify initial subscription
+      expect(subscribers.size).toBe(1);
 
-      // Reconciler removes element (disposes scope explicitly)
+      // Simulate element removal (reconciler would call this)
       const scope = ctx.elementScopes.get(element);
       if (scope) {
         disposeScope(scope);
         ctx.elementScopes.delete(element);
       }
 
-      // Update signal after disposal
-      setText('updated');
-
-      // User cares: title doesn't update after cleanup (effect was disposed)
-      expect(element.props.title).toBe('initial');
+      // User cares: effect was cleaned up (no memory leak)
+      expect(subscribers.size).toBe(0);
     });
 
     it('calls lifecycle cleanup function', () => {
       const {
         ctx,
         renderer,
-        effect,
+        scopedEffect,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
-        disposeScope
-      } = createTestEnv();
+        disposeScope,
+        } = createTestEnv();
       const el = createElFactory({
         ctx,
-        effect,
+        scopedEffect,
         renderer,
         processChildren,
-        createScope,
-        runInScope,
-        trackInScope,
+        withScope,
         trackInSpecificScope,
       }).method;
 

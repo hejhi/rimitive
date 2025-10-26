@@ -24,21 +24,19 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
     const env = createTestEnv();
     const el = createElFactory({
       ctx: env.ctx,
-      effect: env.effect,
+      scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       processChildren: env.processChildren,
-      createScope: env.createScope,
-      runInScope: env.runInScope,
-      trackInScope: env.trackInScope,
+      withScope: env.withScope,
       trackInSpecificScope: env.trackInSpecificScope,
     });
 
     const map = createMapHelper({
       ctx: env.ctx,
-      effect: env.effect,
+      scopedEffect: env.scopedEffect,
+      withElementScope: env.withElementScope,
       renderer: env.renderer,
       disposeScope: env.disposeScope,
-      trackInSpecificScope: env.trackInSpecificScope,
     });
 
     return { ...env, el, map };
@@ -418,21 +416,19 @@ describe('reconcileWithKeys - Edge Cases (TDD)', () => {
     const env = createTestEnv();
     const el = createElFactory({
       ctx: env.ctx,
-      effect: env.effect,
+      scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       processChildren: env.processChildren,
-      createScope: env.createScope,
-      runInScope: env.runInScope,
-      trackInScope: env.trackInScope,
+      withScope: env.withScope,
       trackInSpecificScope: env.trackInSpecificScope,
     });
 
     const map = createMapHelper({
       ctx: env.ctx,
-      effect: env.effect,
+      scopedEffect: env.scopedEffect,
+      withElementScope: env.withElementScope,
       renderer: env.renderer,
       disposeScope: env.disposeScope,
-      trackInSpecificScope: env.trackInSpecificScope,
     });
 
     return { ...env, el, map };

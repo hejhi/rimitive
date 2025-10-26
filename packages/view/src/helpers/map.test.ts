@@ -21,21 +21,19 @@ describe('map() - User-facing behavior', () => {
     const env = createTestEnv();
     const el = createElFactory({
       ctx: env.ctx,
-      effect: env.effect,
+      scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       processChildren: env.processChildren,
-      createScope: env.createScope,
-      runInScope: env.runInScope,
-      trackInScope: env.trackInScope,
+      withScope: env.withScope,
       trackInSpecificScope: env.trackInSpecificScope,
     });
 
     const map = createMapHelper({
       ctx: env.ctx,
-      effect: env.effect,
+      scopedEffect: env.scopedEffect,
+      withElementScope: env.withElementScope,
       renderer: env.renderer,
       disposeScope: env.disposeScope,
-      trackInSpecificScope: env.trackInSpecificScope,
     });
 
     return { ...env, el, map };
@@ -1055,6 +1053,7 @@ describe('map() - User-facing behavior', () => {
             items().map((item) =>
               el.method(['li', item.name], item.id)((element) => {
                 // Simulate attaching custom state during lifecycle
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                 (element as any).__customState = `state-${item.id}`;
               })
             )
@@ -1065,7 +1064,9 @@ describe('map() - User-facing behavior', () => {
       const ul = list.create().element as MockElement;
 
       // Verify custom state exists
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       expect((ul.children[0] as any).__customState).toBe('state-1');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       expect((ul.children[1] as any).__customState).toBe('state-2');
 
       // Reorder items
@@ -1075,7 +1076,9 @@ describe('map() - User-facing behavior', () => {
       ]);
 
       // Custom state should be preserved (elements reused)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       expect((ul.children[0] as any).__customState).toBe('state-2');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       expect((ul.children[1] as any).__customState).toBe('state-1');
     });
   });

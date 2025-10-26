@@ -1,9 +1,11 @@
 import { vi } from 'vitest';
 import { createLatticeContext } from './context';
 import type { Renderer } from './renderer';
-import type { Reactive, Disposable, RefSpec, LifecycleCallback, NodeRef } from './types';
+import type { Reactive, Disposable, RefSpec, LifecycleCallback, NodeRef, RenderScope } from './types';
 import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
+import { createScopedEffect } from './helpers/scoped-effect';
+import { createWithScope, createWithElementScope } from './helpers/with-scope';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
@@ -243,14 +245,35 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { trackInScope, trackInSpecificScope, createScope, disposeScope, ...scopeRest } = createScopes({ ctx, track, dispose })
+  const { trackInSpecificScope, createScope, disposeScope } = createScopes({ track, dispose })
+
+  // Create new scoped helpers
+  const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+  const withScope = createWithScope({ ctx, createScope });
+  const withElementScope = createWithElementScope({ ctx });
+
+  // Helper for tracking in current active scope
+  const trackInScope = (disposable: { dispose: () => void }) => {
+    const scope = ctx.activeScope;
+    if (scope) {
+      trackInSpecificScope(scope, disposable);
+    }
+  };
 
   // Create helpers
   const { processChildren, handleChild} = createProcessChildren({
-    trackInScope,
-    effect,
+    scopedEffect,
     renderer,
   });
+
+  // Create render effect helper (scope with renderFn)
+  const createRenderEffect = <TElement = object>(
+    element: TElement,
+    renderFn: () => void | (() => void),
+    parent?: RenderScope<TElement>
+  ) => {
+    return createScope(element, parent, renderFn);
+  };
 
   return {
     ctx,
@@ -263,6 +286,9 @@ export function createTestEnv() {
     trackInSpecificScope,
     createScope,
     disposeScope,
-    ...scopeRest
+    scopedEffect,
+    withScope,
+    withElementScope,
+    createRenderEffect,
   };
 }

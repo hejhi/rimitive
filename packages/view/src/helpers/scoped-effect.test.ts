@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createLatticeContext } from '../context';
 import { createScopedEffect, withElementScope } from './scoped-effect';
-import { createScopes } from './scope';
 import { createTestEnv } from '../test-utils';
+import type { RenderScope } from '../types';
 
 describe('scoped-effect', () => {
   describe('createScopedEffect', () => {
@@ -107,7 +107,7 @@ describe('scoped-effect', () => {
       const scope = env.createScope(element);
       ctx.elementScopes.set(element, scope);
 
-      let capturedScope: any = null;
+      let capturedScope: RenderScope | null = null;
       withElementScope(ctx, element, () => {
         capturedScope = ctx.activeScope;
       });

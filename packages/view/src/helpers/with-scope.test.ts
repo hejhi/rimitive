@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createWithScope, createWithElementScope } from './with-scope';
 import { createTestEnv } from '../test-utils';
+import type { RenderScope } from '../types';
 
 describe('with-scope', () => {
   describe('createWithScope', () => {
@@ -73,7 +74,7 @@ describe('with-scope', () => {
       const withScope = createWithScope({ ctx, createScope });
 
       const element = {};
-      let capturedScope: any = null;
+      let capturedScope: RenderScope | null = null;
 
       withScope(element, (scope) => {
         capturedScope = ctx.activeScope;
@@ -158,7 +159,7 @@ describe('with-scope', () => {
       const scope = env.createScope(element);
       ctx.elementScopes.set(element, scope);
 
-      let capturedScope: any = null;
+      let capturedScope: RenderScope | null = null;
       const result = withElementScope(element, () => {
         capturedScope = ctx.activeScope;
         return 'test';

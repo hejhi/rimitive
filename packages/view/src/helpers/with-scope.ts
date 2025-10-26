@@ -56,16 +56,16 @@ export function createWithScope(opts: WithScopeOpts) {
    *
    * Returns the created scope so callers can access it if needed.
    */
-  return function withScope<TElement = object, T = void>(
+  return function withScope<TElement extends object = object, T = void>(
     element: TElement,
     fn: (scope: RenderScope<TElement>) => T,
-    parent?: RenderScope
+    parent?: RenderScope<TElement>
   ): { result: T; scope: RenderScope<TElement> } {
     // Create scope
     const scope = createScope(element, parent);
 
     // Register so children/effects can find it
-    ctx.elementScopes.set(element, scope);
+    ctx.elementScopes.set(element as object, scope);
 
     // Set as active scope and run code
     const prevScope = ctx.activeScope;
@@ -81,7 +81,7 @@ export function createWithScope(opts: WithScopeOpts) {
     // Clean up registration if no disposables were tracked
     // (Lazy optimization - elements with no reactive props don't need scopes)
     if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
-      ctx.elementScopes.delete(element);
+      ctx.elementScopes.delete(element as object);
     }
 
     return { result, scope };

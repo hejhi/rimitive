@@ -41,8 +41,8 @@ export const createTestScheduler = (): Pick<Scheduler, 'startBatch' | 'endBatch'
 };
 
 // Helper to create scopes with mock dependencies
-export const createTestScopes = () => {
-  const ctx = createLatticeContext();
+export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeContext>) => {
+  const ctx = providedCtx || createLatticeContext();
   const track = <T>(_node: unknown, fn: () => T): T => fn();
 
   // Mock dispose that mimics real scheduler behavior
@@ -63,5 +63,36 @@ export const createTestScopes = () => {
     scope.dependencyTail = undefined;
   };
 
-  return createScopes({ ctx, track, dispose });
+  const scopes = createScopes({ track, dispose });
+
+  // Add helper functions for tests (wrapping low-level primitives)
+  return {
+    ...scopes,
+    ctx,
+    // Run function within scope context
+    runInScope: <T>(scope: RenderScope, fn: () => T): T => {
+      const prevScope = ctx.activeScope;
+      ctx.activeScope = scope;
+      try {
+        return fn();
+      } finally {
+        ctx.activeScope = prevScope;
+      }
+    },
+    // Track in current active scope
+    trackInScope: (disposable: { dispose: () => void }) => {
+      const scope = ctx.activeScope;
+      if (scope) {
+        scopes.trackInSpecificScope(scope, disposable);
+      }
+    },
+    // Create render effect (scope with renderFn)
+    createRenderEffect: <TElement = object>(
+      element: TElement,
+      renderFn: () => void | (() => void),
+      parent?: RenderScope<TElement>
+    ): RenderScope<TElement> => {
+      return scopes.createScope(element, parent, renderFn);
+    },
+  };
 };

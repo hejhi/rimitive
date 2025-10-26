@@ -6,16 +6,15 @@
  * 2. Backward pass: Attach fragment children with correct insertion points
  */
 
-import type { NodeRef, ElementRef, ElRefSpecChild, Disposable } from '../types';
+import type { NodeRef, ElementRef, ElRefSpecChild } from '../types';
 import { isElementRef, isFragmentRef, isReactive, isRefSpec } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
-  effect: (fn: () => void | (() => void)) => () => void;
+  scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
-  trackInScope: (disposable: Disposable) => void;
 }) {
-  const { effect, renderer, trackInScope } = opts;
+  const { scopedEffect, renderer } = opts;
 
   const handleChild = (
     parentRef: ElementRef<TElement>,
@@ -49,7 +48,8 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       // The only other functions allowed are reactives
       if (isReactive(child)) {
         const textNode = renderer.createTextNode('');
-        const dispose = effect(() => {
+        // Auto-tracked in active scope - no manual trackInScope needed!
+        scopedEffect(() => {
           const value = child();
           // Convert to string, handling null/undefined and primitives only
           const stringValue =
@@ -57,8 +57,6 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
           renderer.updateTextNode(textNode, stringValue);
         });
 
-        // Track effect for cleanup when element is removed
-        trackInScope({ dispose });
         renderer.appendChild(element, textNode);
         return null; // Text nodes don't participate in ref node chain
       }

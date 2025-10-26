@@ -3,7 +3,7 @@ import { createElFactory } from './el';
 import { createLatticeContext } from './context';
 import { createMockRenderer, createSignal } from './test-utils';
 import { createProcessChildren } from './helpers/processChildren';
-import type { ElementRef, NodeRef } from './types';
+import type { ElementRef, NodeRef, RenderScope } from './types';
 import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
@@ -17,23 +17,57 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     fn();
     return () => {};
   });
-  const { trackInScope, runInScope, trackInSpecificScope, createScope } = createTestScopes()
+  const { trackInScope, runInScope, trackInSpecificScope, createScope } = createTestScopes(ctx)
+
+  // Create scopedEffect using the custom effect
+  const scopedEffect = (fn: () => void | (() => void)): () => void => {
+    const dispose = effect(fn as () => void);
+    const scope = ctx.activeScope;
+    if (scope) {
+      const node = {
+        disposable: { dispose },
+        next: scope.firstDisposable,
+      };
+      scope.firstDisposable = node;
+    }
+    return dispose;
+  };
+
   const { handleChild, processChildren } = createProcessChildren({
-    effect,
+    scopedEffect,
     renderer,
-    trackInScope,
   });
+
+  // Create withScope helper
+  const withScope = <T>(element: object, fn: (scope: RenderScope) => T): { result: T; scope: RenderScope } => {
+    const scope = createScope(element);
+    ctx.elementScopes.set(element, scope);
+    const prevScope = ctx.activeScope;
+    ctx.activeScope = scope;
+    let result: T;
+    try {
+      result = fn(scope);
+    } finally {
+      ctx.activeScope = prevScope;
+    }
+    if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
+      ctx.elementScopes.delete(element);
+    }
+    return { result, scope };
+  };
 
   return {
     ctx,
     renderer,
     effect,
+    scopedEffect,
     handleChild,
     processChildren,
     runInScope,
     trackInSpecificScope,
     createScope,
-    trackInScope
+    trackInScope,
+    withScope
   };
 }
 
@@ -42,23 +76,19 @@ describe('el primitive - lazy scope creation', () => {
     const {
       ctx,
       renderer,
-      effect,
+      scopedEffect,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope
     } = createTestEnv();
     const el = createElFactory({
       ctx,
-      effect,
+      scopedEffect,
       renderer,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope
-    }).method;
+      }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
     const ref = el(['div', { className: 'static' }, 'Hello']);
@@ -73,12 +103,10 @@ describe('el primitive - lazy scope creation', () => {
     const {
       ctx,
       renderer,
-      effect,
+      scopedEffect,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
@@ -86,14 +114,12 @@ describe('el primitive - lazy scope creation', () => {
     });
     const el = createElFactory({
       ctx,
-      effect,
+      scopedEffect,
       renderer,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
-    }).method;
+      }).method;
 
     // Element with reactive prop
     const ref = el(['div', { title: text }]);
@@ -108,12 +134,10 @@ describe('el primitive - lazy scope creation', () => {
     const {
       ctx,
       renderer,
-      effect,
+      scopedEffect,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
@@ -121,14 +145,12 @@ describe('el primitive - lazy scope creation', () => {
     });
     const el = createElFactory({
       ctx,
-      effect,
+      scopedEffect,
       renderer,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
-    }).method;
+      }).method;
 
     // Element with reactive text child
     const ref = el(['div', text]);
@@ -142,23 +164,19 @@ describe('el primitive - lazy scope creation', () => {
     const {
       ctx,
       renderer,
-      effect,
+      scopedEffect,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
-      effect,
+      scopedEffect,
       renderer,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
-    }).method;
+      }).method;
 
     // Static element with lifecycle callback that returns cleanup
     const ref = el(['div', 'Static content']);
@@ -176,23 +194,19 @@ describe('el primitive - lazy scope creation', () => {
     const {
       ctx,
       renderer,
-      effect,
+      scopedEffect,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
-      effect,
+      scopedEffect,
       renderer,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
-    }).method;
+      }).method;
 
     // Static element with lifecycle callback that returns nothing
     const ref = el(['div', 'Static content']);
@@ -210,23 +224,19 @@ describe('el primitive - lazy scope creation', () => {
     const {
       ctx,
       renderer,
-      effect,
+      scopedEffect,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
-      effect,
+      scopedEffect,
       renderer,
       processChildren,
-      runInScope,
+      withScope,
       trackInSpecificScope,
-      createScope,
-      trackInScope,
-    }).method;
+      }).method;
 
     // Nested static elements
     const child = el(['span', 'Child']);

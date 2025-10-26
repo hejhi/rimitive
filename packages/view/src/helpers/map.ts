@@ -20,10 +20,10 @@ export interface MapHelperOpts<
   TText extends TextNode
 > {
   ctx: LatticeContext;
-  effect: (fn: () => void | (() => void)) => () => void;
+  scopedEffect: (fn: () => void | (() => void)) => () => void;
+  withElementScope: <T>(element: object, fn: () => T) => T;
   renderer: Renderer<TElement, TText>;
   disposeScope: CreateScopes['disposeScope'];
-  trackInSpecificScope: CreateScopes['trackInSpecificScope'];
 }
 
 /**
@@ -36,7 +36,7 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, effect, renderer, disposeScope, trackInSpecificScope } = opts;
+  const { ctx, scopedEffect, withElementScope, renderer, disposeScope } = opts;
 
   /**
    * User-space map() using closure pattern
@@ -85,37 +85,35 @@ export function createMapHelper<
           state.parentRef = parent;
           state.nextSibling = nextSibling || fragRef.next;
 
-          // Create effect that reconciles when render function's signals change
-          const dispose = effect(() => {
-            // Call render - it reads whatever signals it needs
-            const result = render();
-            const refSpecs = Array.isArray(result) ? result : [result];
+          // Create effect within parent's scope - auto-tracked!
+          const dispose = withElementScope(parent.element, () => {
+            return scopedEffect(() => {
+              // Call render - it reads whatever signals it needs
+              const result = render();
+              const refSpecs = Array.isArray(result) ? result : [result];
 
-            // Clear pooled buffers
-            oldIndicesBuf.length = 0;
-            newPosBuf.length = 0;
-            lisBuf.length = 0;
+              // Clear pooled buffers
+              oldIndicesBuf.length = 0;
+              newPosBuf.length = 0;
+              lisBuf.length = 0;
 
-            // Reconcile using keys from RefSpecs
-            reconcileWithKeys(
-              refSpecs,
-              state,
-              ctx,
-              renderer,
-              disposeScope,
-              oldIndicesBuf,
-              newPosBuf,
-              lisBuf
-            );
+              // Reconcile using keys from RefSpecs
+              reconcileWithKeys(
+                refSpecs,
+                state,
+                ctx,
+                renderer,
+                disposeScope,
+                oldIndicesBuf,
+                newPosBuf,
+                lisBuf
+              );
 
-            // NOTE: No cleanup return here!
-            // itemsByKey must persist across reconciliations for element reuse
-            // Cleanup happens when fragment itself is disposed
+              // NOTE: No cleanup return here!
+              // itemsByKey must persist across reconciliations for element reuse
+              // Cleanup happens when fragment itself is disposed
+            });
           });
-
-          // Track effect in parent scope for disposal and scheduling
-          const parentScope = ctx.elementScopes.get(parent.element);
-          if (parentScope) trackInSpecificScope(parentScope, { dispose });
 
           // Store dispose function that cleans up both effect and elements
           fragRef.dispose = () => {

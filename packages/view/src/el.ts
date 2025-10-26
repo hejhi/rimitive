@@ -5,6 +5,7 @@ import type {
   Reactive,
   ElementRef,
   ElRefSpecChild,
+  RenderScope,
 } from './types';
 import {
   isReactive,
@@ -47,11 +48,9 @@ export type ElOpts<
   TText extends TextNode = TextNode,
 > = {
   ctx: LatticeContext;
-  createScope: CreateScopes['createScope'];
-  runInScope: CreateScopes['runInScope'];
-  trackInScope: CreateScopes['trackInScope'];
+  withScope: <T>(element: object, fn: (scope: RenderScope) => T) => { result: T; scope: RenderScope };
   trackInSpecificScope: CreateScopes['trackInSpecificScope'];
-  effect: (fn: () => void | (() => void)) => () => void;
+  scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
   processChildren: (
     parent: ElementRef<TElement>,
@@ -84,18 +83,15 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   opts: ElOpts<TElement, TText>
 ): ElFactory<TElement> {
   const {
-    ctx,
-    effect,
+    scopedEffect,
     renderer,
     processChildren,
-    createScope,
-    trackInScope,
-    runInScope,
+    withScope,
     trackInSpecificScope
   } = opts;
 
   // Create helper with captured dependencies
-  const applyProps = createApplyProps({ effect, ctx, renderer, trackInScope });
+  const applyProps = createApplyProps({ scopedEffect, renderer });
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>,
@@ -130,27 +126,17 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         ...extensions, // Spread extensions to override/add fields
       };
 
-      // Create a RenderScope for this element
-      const scope = createScope(element);
-
-      // Register scope temporarily so child fragments can find it during processChildren
-      ctx.elementScopes.set(element, scope);
-
-      // Run all reactive setup within this instance's scope
-      runInScope(scope, () => {
+      // Create scope and run setup - all orchestration handled by withScope!
+      withScope(element, (scope) => {
         applyProps(element, props);
         processChildren(elRef, children);
+
+        // Track lifecycle callbacks
+        for (const callback of lifecycleCallbacks) {
+          const cleanup = callback(element);
+          if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
+        }
       });
-
-      for (const callback of lifecycleCallbacks) {
-        const cleanup = callback(element);
-        if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
-      }
-
-      // Remove scope from registry if it has no disposables (lazy optimization)
-      if (scope.firstDisposable === undefined) {
-        ctx.elementScopes.delete(element);
-      }
 
       return elRef as ElementRef<TElement> & TExt;
     };
@@ -193,12 +179,10 @@ function createApplyProps<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: {
-  effect: (fn: () => void | (() => void)) => () => void;
-  ctx: LatticeContext;
+  scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
-  trackInScope: CreateScopes['trackInScope']
 }) {
-  const { effect, renderer, trackInScope } = opts;
+  const { scopedEffect, renderer } = opts;
 
   return function applyProps<Tag extends keyof HTMLElementTagNameMap>(
     element: TElement,
@@ -209,9 +193,8 @@ function createApplyProps<
       const value = val as unknown;
       if (typeof value === 'function' && ('peek' in value || '__type' in value)) {
         const reactiveValue = value as unknown as () => unknown;
-        const dispose = effect(() => renderer.setAttribute(element, key, reactiveValue()));
-        // Track effect for cleanup when element is removed
-        trackInScope({ dispose });
+        // Auto-tracked in active scope - no manual trackInScope needed!
+        scopedEffect(() => renderer.setAttribute(element, key, reactiveValue()));
       } else renderer.setAttribute(element, key, value); // Static value
     }
   };

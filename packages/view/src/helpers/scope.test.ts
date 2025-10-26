@@ -178,7 +178,6 @@ describe('Scope Tree', () => {
 
   describe('disposal integration with scheduler', () => {
     it('should call scheduler dispose when disposing scope', () => {
-      const ctx = createLatticeContext();
       const track = <T>(_node: unknown, fn: () => T): T => fn();
       const disposeSpy = vi.fn(<T extends RenderScope>(_node: T, cleanup: (node: T) => void) => {
         const scope = _node;
@@ -198,7 +197,7 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const { createScope, disposeScope } = createScopes({ ctx, track, dispose: disposeSpy });
+      const { createScope, disposeScope } = createScopes({ track, dispose: disposeSpy });
       const element = createMockElement();
       const scope = createScope(element);
 
@@ -244,7 +243,6 @@ describe('Scope Tree', () => {
     });
 
     it('should clear dependencies through scheduler dispose', () => {
-      const ctx = createLatticeContext();
       const track = <T>(_node: unknown, fn: () => T): T => fn();
 
       // Track dispose calls and verify dependency cleanup
@@ -269,7 +267,7 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const { createScope, disposeScope } = createScopes({ ctx, track, dispose });
+      const { createScope, disposeScope } = createScopes({ track, dispose });
       const scope = createScope(createMockElement());
 
       // Simulate dependencies being set (in real usage, this happens during tracking)
@@ -356,7 +354,7 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const { createScope, disposeScope } = createScopes({ ctx, track, dispose });
+      const { createScope, disposeScope } = createScopes({ track, dispose });
       const element = createMockElement();
       const scope = createScope(element);
 
@@ -377,14 +375,13 @@ describe('Scope Tree', () => {
 
     it('should handle disposal order correctly', () => {
       const disposalOrder: string[] = [];
-      const ctx = createLatticeContext();
       const track = <T>(_node: unknown, fn: () => T): T => fn();
       const dispose = <T>(_node: unknown, cleanup: (node: T) => void): void => {
         disposalOrder.push('scheduler-dispose');
         cleanup(_node as T);
       };
 
-      const { createScope, disposeScope, trackInSpecificScope } = createScopes({ ctx, track, dispose });
+      const { createScope, disposeScope, trackInSpecificScope } = createScopes({ track, dispose });
       const parent = createScope(createMockElement());
       const child = createScope(createMockElement(), parent);
 
