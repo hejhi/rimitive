@@ -28,7 +28,6 @@ describe('reconcileWithKeys - Positioning Algorithm (TDD)', () => {
       renderer: env.renderer,
       processChildren: env.processChildren,
       withScope: env.withScope,
-      trackInSpecificScope: env.trackInSpecificScope,
     });
 
     const map = createMapHelper({
@@ -420,7 +419,6 @@ describe('reconcileWithKeys - Edge Cases (TDD)', () => {
       renderer: env.renderer,
       processChildren: env.processChildren,
       withScope: env.withScope,
-      trackInSpecificScope: env.trackInSpecificScope,
     });
 
     const map = createMapHelper({

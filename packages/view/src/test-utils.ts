@@ -6,6 +6,7 @@ import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
 import { createScopedEffect } from './helpers/scoped-effect';
 import { createWithScope, createWithElementScope } from './helpers/with-scope';
+import { createOnCleanup } from './helpers/on-cleanup';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
@@ -254,6 +255,7 @@ export function createTestEnv() {
   const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
   const withScope = createWithScope({ ctx, createScope });
   const withElementScope = createWithElementScope({ ctx });
+  const onCleanup = createOnCleanup(ctx);
 
   // Helper for tracking in current active scope
   const trackInScope = (disposable: { dispose: () => void }) => {
@@ -293,5 +295,6 @@ export function createTestEnv() {
     withScope,
     withElementScope,
     createRenderEffect,
+    onCleanup,
   };
 }

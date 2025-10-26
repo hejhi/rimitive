@@ -13,7 +13,7 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
-  const { trackInScope, createScope, disposeScope, trackInSpecificScope } = createTestScopes(ctx);
+  const { trackInScope, createScope, disposeScope } = createTestScopes(ctx);
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -51,7 +51,7 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     scopedEffect,
     renderer,
   });
-  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, trackInScope, createScope, disposeScope, trackInSpecificScope, withScope };
+  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, trackInScope, createScope, disposeScope, withScope };
 }
 
 describe('el primitive', () => {
@@ -63,7 +63,6 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
-        trackInSpecificScope,
       } = createTestEnv();
       const el = createElFactory({
         ctx,
@@ -71,7 +70,6 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
-        trackInSpecificScope,
       }).method;
 
       const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
@@ -88,7 +86,6 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
-        trackInSpecificScope,
         } = createTestEnv();
       const el = createElFactory({
         ctx,
@@ -96,7 +93,6 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
-        trackInSpecificScope,
       }).method;
 
       const child = el(['span', 'nested content']);
@@ -121,7 +117,6 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
-        trackInSpecificScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -133,7 +128,6 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
-        trackInSpecificScope,
       }).method;
 
       const ref = el(['div', text]);
@@ -154,7 +148,6 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
-        trackInSpecificScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -166,7 +159,6 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
-        trackInSpecificScope,
       }).method;
 
       const ref = el(['div', { className }]);
@@ -187,7 +179,6 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
-        trackInSpecificScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -199,7 +190,6 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
-        trackInSpecificScope,
       }).method;
 
       const ref = el(['div', 'Count: ', count]);
@@ -220,7 +210,6 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
-        trackInSpecificScope,
         disposeScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -233,7 +222,6 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
-        trackInSpecificScope,
       }).method;
 
       const ref = el(['div', text]);
@@ -260,7 +248,6 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
-        trackInSpecificScope,
         disposeScope,
         } = createTestEnv();
       const el = createElFactory({
@@ -269,7 +256,6 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
-        trackInSpecificScope,
       }).method;
 
       const cleanup = vi.fn();

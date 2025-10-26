@@ -13,7 +13,7 @@ import {
 } from './types';
 import type { LatticeContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-import { CreateScopes } from './helpers/scope';
+import { createOnCleanup } from './helpers/on-cleanup';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -49,7 +49,6 @@ export type ElOpts<
 > = {
   ctx: LatticeContext;
   withScope: <T>(element: object, fn: (scope: RenderScope) => T) => { result: T; scope: RenderScope };
-  trackInSpecificScope: CreateScopes['trackInSpecificScope'];
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
   processChildren: (
@@ -83,15 +82,16 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   opts: ElOpts<TElement, TText>
 ): ElFactory<TElement> {
   const {
+    ctx,
     scopedEffect,
     renderer,
     processChildren,
     withScope,
-    trackInSpecificScope
   } = opts;
 
-  // Create helper with captured dependencies
+  // Create helpers with captured dependencies
   const applyProps = createApplyProps({ scopedEffect, renderer });
+  const onCleanup = createOnCleanup(ctx);
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>,
@@ -127,14 +127,14 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       };
 
       // Create scope and run setup - all orchestration handled by withScope!
-      withScope(element, (scope) => {
+      withScope(element, () => {
         applyProps(element, props);
         processChildren(elRef, children);
 
         // Track lifecycle callbacks
         for (const callback of lifecycleCallbacks) {
           const cleanup = callback(element);
-          if (cleanup) trackInSpecificScope(scope, { dispose: cleanup });
+          if (cleanup) onCleanup(cleanup);
         }
       });
 

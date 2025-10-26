@@ -17,7 +17,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     fn();
     return () => {};
   });
-  const { trackInScope, runInScope, trackInSpecificScope, createScope } = createTestScopes(ctx)
+  const { trackInScope, runInScope, createScope } = createTestScopes(ctx)
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -64,7 +64,6 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     handleChild,
     processChildren,
     runInScope,
-    trackInSpecificScope,
     createScope,
     trackInScope,
     withScope
@@ -79,7 +78,6 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
-      trackInSpecificScope,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -87,7 +85,6 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
-      trackInSpecificScope,
       }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
@@ -106,7 +103,6 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
-      trackInSpecificScope,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
@@ -118,7 +114,6 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
-      trackInSpecificScope,
       }).method;
 
     // Element with reactive prop
@@ -137,7 +132,6 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
-      trackInSpecificScope,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
@@ -149,7 +143,6 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
-      trackInSpecificScope,
       }).method;
 
     // Element with reactive text child
@@ -167,7 +160,6 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
-      trackInSpecificScope,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -175,7 +167,6 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
-      trackInSpecificScope,
       }).method;
 
     // Static element with lifecycle callback that returns cleanup
@@ -197,7 +188,6 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
-      trackInSpecificScope,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -205,7 +195,6 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
-      trackInSpecificScope,
       }).method;
 
     // Static element with lifecycle callback that returns nothing
@@ -227,7 +216,6 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
-      trackInSpecificScope,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -235,7 +223,6 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
-      trackInSpecificScope,
       }).method;
 
     // Nested static elements

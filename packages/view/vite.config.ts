@@ -62,8 +62,6 @@ export default defineConfig({
     lib: {
       entry: {
         el: resolve(__dirname, 'src/el.ts'),
-        map: resolve(__dirname, 'src/map.ts'),
-        match: resolve(__dirname, 'src/match.ts'),
         context: resolve(__dirname, 'src/context.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         renderer: resolve(__dirname, 'src/renderer.ts'),
@@ -71,10 +69,14 @@ export default defineConfig({
         'browser-renderer': resolve(__dirname, 'src/browser-renderer.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
+        'helpers/map': resolve(__dirname, 'src/helpers/map.ts'),
         'helpers/processChildren': resolve(
           __dirname,
           'src/helpers/processChildren.ts'
         ),
+        'helpers/on-cleanup': resolve(__dirname, 'src/helpers/on-cleanup.ts'),
+        'helpers/scoped-effect': resolve(__dirname, 'src/helpers/scoped-effect.ts'),
+        'helpers/with-scope': resolve(__dirname, 'src/helpers/with-scope.ts'),
       },
       formats: ['es'],
     },
