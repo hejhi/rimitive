@@ -50,7 +50,7 @@ export interface ReconcileState<TElement> {
 /**
  * Options for creating a reconciler
  */
-export interface ReconcilerOptions<TElement> {
+export interface ReconcilerOptions<T, TElement> extends ReconcileHooks<T, TElement> {
   parentElement: TElement;
   parentRef?: ElementRef<TElement>;
   nextSibling?: NodeRef<TElement>;
@@ -65,15 +65,14 @@ export interface Reconciler<T, TElement> {
    */
   reconcile(
     items: T[],
-    keyFn: (item: T, index: number) => string | number,
-    hooks: ReconcileHooks<T, TElement>
+    keyFn: (item: T, index: number) => string | number
   ): NodeRef<TElement>[];
 
   /**
    * Dispose all remaining items
-   * Calls onRemove for each item still tracked
+   * Calls onRemove hook for each item still tracked
    */
-  dispose(onRemove: (key: string, node: NodeRef<TElement>) => void): void;
+  dispose(): void;
 }
 
 /**
@@ -83,7 +82,7 @@ export interface Reconciler<T, TElement> {
  * for reconciling and disposing items.
  */
 export function createReconciler<T, TElement extends RendererElement>(
-  options: ReconcilerOptions<TElement>
+  options: ReconcilerOptions<T, TElement>
 ): Reconciler<T, TElement> {
   // Internal reconciliation state
   const itemsByKey = new Map<string, ReconcileNode<TElement>>();
@@ -100,8 +99,16 @@ export function createReconciler<T, TElement extends RendererElement>(
     nextSibling: options.nextSibling,
   };
 
+  // Extract hooks from options
+  const hooks: ReconcileHooks<T, TElement> = {
+    onCreate: options.onCreate,
+    onUpdate: options.onUpdate,
+    onMove: options.onMove,
+    onRemove: options.onRemove,
+  };
+
   return {
-    reconcile(items, keyFn, hooks) {
+    reconcile(items, keyFn) {
       return reconcileWithKeys(
         items,
         state,
@@ -113,10 +120,10 @@ export function createReconciler<T, TElement extends RendererElement>(
       );
     },
 
-    dispose(onRemove) {
-      // Call onRemove for all remaining items
+    dispose() {
+      // Call onRemove hook for all remaining items
       for (const [key, node] of itemsByKey) {
-        onRemove(key, node);
+        hooks.onRemove(key, node);
       }
       itemsByKey.clear();
     }

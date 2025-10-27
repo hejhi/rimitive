@@ -76,11 +76,77 @@ export function createMapHelper<
       };
       const itemData = new Map<unknown, ItemEntry>();
 
-      // Create reconciler with internal state management
-      const reconciler = createReconciler<T, TElement>({
+      // Create reconciler with internal state management and hooks
+      const { reconcile, dispose } = createReconciler<T, TElement>({
         parentElement: parent.element,
         parentRef: parent,
         nextSibling: nextSibling || undefined,
+
+        // onCreate: called when new item needs to be created
+        onCreate: untrack(() => (item, key) => {
+          // New item: create signal, call render ONCE, store for future reuse
+          const itemSignal = signal(item);
+
+          // Call render untracked to prevent it from tracking outer reactive state
+          // Components are "cold" - reactivity comes from expressions inside them
+          const refSpec = render(itemSignal);
+          const nodeRef = refSpec.create();
+
+          // Store signal and RefSpec for future updates
+          itemData.set(key, {
+            signal: itemSignal,
+            refSpec,
+          });
+
+          // Insert into DOM
+          if (isElementRef(nodeRef)) {
+            const nextEl =
+              resolveNextRef(nextSibling || undefined)?.element ?? null;
+            renderer.insertBefore(
+              parent.element,
+              nodeRef.element,
+              nextEl
+            );
+          }
+
+          return nodeRef;
+        }),
+
+        // onUpdate: called when existing item's data should be updated
+        onUpdate: (key, item) => {
+          const existing = itemData.get(key);
+          if (existing) existing.signal(item);
+        },
+
+        // onMove: called when item needs repositioning
+        onMove: (_key, node, nextSiblingNode) => {
+          if (!isElementRef(node)) return;
+
+          let nextEl: TElement | null = null;
+
+          if (nextSiblingNode && isElementRef(nextSiblingNode)) {
+            nextEl = nextSiblingNode.element;
+          } else if (!nextSiblingNode) {
+            nextEl = resolveNextRef(nextSibling || undefined)?.element ?? null;
+          }
+
+          renderer.insertBefore(parent.element, node.element, nextEl);
+        },
+
+        // onRemove: called when item is being removed
+        onRemove: (key, node) => {
+          // Clean up itemData
+          itemData.delete(key);
+
+          // Dispose scope and remove from DOM
+          if (!isElementRef(node)) return;
+          const scope = ctx.elementScopes.get(node.element);
+          if (scope) {
+            disposeScope(scope);
+            ctx.elementScopes.delete(node.element);
+          }
+          renderer.removeChild(parent.element, node.element);
+        },
       });
 
       // Create effect within parent's scope - auto-tracked!
@@ -88,78 +154,10 @@ export function createMapHelper<
         return scopedEffect(() => {
           const currentItems = items();
 
-          // Reconcile using hooks-based lifecycle
-          reconciler.reconcile(
+          // Reconcile with just items and key function
+          reconcile(
             currentItems,
-            (item) => keyFn ? keyFn(item) : item as unknown as string | number,
-            {
-              // onCreate: called when new item needs to be created
-              onCreate: untrack(() => (item, key) => {
-                // New item: create signal, call render ONCE, store for future reuse
-                const itemSignal = signal(item);
-
-                // Call render untracked to prevent it from tracking outer reactive state
-                // Components are "cold" - reactivity comes from expressions inside them
-                const refSpec = render(itemSignal);
-                const nodeRef = refSpec.create();
-
-                // Store signal and RefSpec for future updates
-                itemData.set(key, {
-                  signal: itemSignal,
-                  refSpec,
-                });
-
-                // Insert into DOM
-                if (isElementRef(nodeRef)) {
-                  const nextEl =
-                    resolveNextRef(nextSibling || undefined)?.element ?? null;
-                  renderer.insertBefore(
-                    parent.element,
-                    nodeRef.element,
-                    nextEl
-                  );
-                }
-
-                return nodeRef;
-              }),
-
-              // onUpdate: called when existing item's data should be updated
-              onUpdate: (key, item) => {
-                const existing = itemData.get(key);
-                if (existing) existing.signal(item);
-              },
-
-              // onMove: called when item needs repositioning
-              onMove: (_key, node, nextSiblingNode) => {
-                if (!isElementRef(node)) return;
-
-                let nextEl: TElement | null = null;
-
-                if (nextSiblingNode && isElementRef(nextSiblingNode)) {
-                  nextEl = nextSiblingNode.element;
-                } else if (!nextSiblingNode) {
-                  nextEl =
-                    resolveNextRef(nextSibling || undefined)?.element ?? null;
-                }
-
-                renderer.insertBefore(parent.element, node.element, nextEl);
-              },
-
-              // onRemove: called when item is being removed
-              onRemove: (key, node) => {
-                // Clean up itemData
-                itemData.delete(key);
-
-                // Dispose scope and remove from DOM
-                if (!isElementRef(node)) return;
-                const scope = ctx.elementScopes.get(node.element);
-                if (scope) {
-                  disposeScope(scope);
-                  ctx.elementScopes.delete(node.element);
-                }
-                renderer.removeChild(parent.element, node.element);
-              },
-            }
+            (item) => keyFn ? keyFn(item) : item as unknown as string | number
           );
         });
       });
@@ -170,22 +168,8 @@ export function createMapHelper<
         effectDispose();
 
         // Dispose all remaining items via reconciler
-        reconciler.dispose((key, node) => {
-          // Clean up itemData
-          itemData.delete(key);
-
-          // Dispose scope and remove from DOM
-          if (!isElementRef(node)) return;
-
-          const scope = ctx.elementScopes.get(node.element);
-
-          if (scope) {
-            disposeScope(scope);
-            ctx.elementScopes.delete(node.element);
-          }
-
-          renderer.removeChild(parent.element, node.element);
-        });
+        // This calls onRemove hook for each tracked item
+        dispose();
 
         // Clear remaining data
         itemData.clear();
