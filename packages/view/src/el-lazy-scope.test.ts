@@ -87,7 +87,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Static element - no reactive content, no lifecycle callbacks
     const ref = el(['div', { className: 'static' }, 'Hello']);
-    const element = asElement(ref.create());
+    const element = asElement(ref.create())!;
 
     // Should not have a scope (memory optimization)
     expect(ctx.elementScopes.has(element)).toBe(false);
@@ -116,7 +116,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Element with reactive prop
     const ref = el(['div', { title: text }]);
-    const element = asElement(ref.create());
+    const element = asElement(ref.create())!;
 
     // Should have a scope (tracks the effect for reactive title)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -145,7 +145,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Element with reactive text child
     const ref = el(['div', text]);
-    const element = asElement(ref.create());
+    const element = asElement(ref.create())!;
 
     // Should have a scope (tracks the effect for reactive text)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -173,7 +173,7 @@ describe('el primitive - lazy scope creation', () => {
       // cleanup function
     });
 
-    const element = asElement(ref.create());
+    const element = asElement(ref.create())!;
 
     // Should have a scope (tracks the cleanup function)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -201,7 +201,7 @@ describe('el primitive - lazy scope creation', () => {
       // no cleanup
     });
 
-    const element = asElement(ref.create());
+    const element = asElement(ref.create())!;
 
     // Should not have a scope (no cleanup needed)
     expect(ctx.elementScopes.has(element)).toBe(false);
@@ -227,7 +227,7 @@ describe('el primitive - lazy scope creation', () => {
     const child = el(['span', 'Child']);
     const parent = el(['div', child, 'Parent']);
 
-    const parentElement = asElement(parent.create());
+    const parentElement = asElement(parent.create())!;
     const mockParent = parentElement as unknown as { children: object[] };
     const childElement = mockParent.children[0];
 

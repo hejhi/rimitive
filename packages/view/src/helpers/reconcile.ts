@@ -6,11 +6,11 @@
  * reactive helpers using the closure pattern.
  */
 
-import type { RefSpec, NodeRef, ElementRef, FragmentRef } from '../types';
+import type { RefSpec, NodeRef, ElementRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
-import { isElementRef, isFragmentRef } from '../types';
+import { isElementRef } from '../types';
 
 // Status bits for reconciliation (separate from STATUS_ELEMENT/STATUS_FRAGMENT)
 const UNVISITED = 0;
@@ -152,7 +152,6 @@ export function reconcileWithKeys<
   const nodes: ReconcileNode<TElement>[] = Array<ReconcileNode<TElement>>(
     refSpecs.length
   );
-  const newFragments: FragmentRef<TElement>[] = []; // Track new fragments for attach
 
   // Build phase - create/update nodes
   let count = 0;
@@ -170,7 +169,7 @@ export function reconcileWithKeys<
       node.position = i;
       node.reconcileStatus = VISITED;
     } else {
-      // New node - create from RefSpec
+      // New node - create from RefSpec (always ElementRef from el())
       const nodeRef = refSpec.create() as ReconcileNode<TElement>;
       nodeRef.key = key;
       nodeRef.position = i;
@@ -179,13 +178,10 @@ export function reconcileWithKeys<
       node = nodeRef;
       itemsByKey.set(key, node);
 
-      // Insert into DOM or collect for attach (newly created nodes)
+      // Insert into DOM (refSpecs from el() are always ElementRefs)
       if (isElementRef(node)) {
         const nextEl = resolveNextElement(nextSibling);
         renderer.insertBefore(parentElement, node.element, nextEl);
-      } else if (isFragmentRef(node)) {
-        // Fragments need attach() called - collect for later
-        newFragments.push(node);
       }
     }
 
@@ -252,24 +248,6 @@ export function reconcileWithKeys<
       }
     }
     // Elements in LIS don't need to move - they're already in correct relative positions
-  }
-
-  // Attach phase - attach fragments with correct nextSibling (backward pass like processChildren)
-  // Walk nodes in reverse order to determine correct insertion points
-  if (newFragments.length > 0 && state.parentRef) {
-    let nextRef: NodeRef<TElement> | null = nextSibling || null;
-
-    for (let i = nodes.length - 1; i >= 0; i--) {
-      const node = nodes[i]!;
-
-      if (isFragmentRef(node) && newFragments.includes(node)) {
-        // New fragment - attach it with correct nextSibling
-        node.attach(state.parentRef, nextRef as ElementRef<TElement> | null);
-      } else if (isElementRef(node)) {
-        // Track last element seen for fragments before it
-        nextRef = node;
-      }
-    }
   }
 
   return nodes;

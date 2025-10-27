@@ -25,17 +25,15 @@ export interface ElementRef<TElement> extends BaseRef<NodeRef<TElement>> {
 }
 
 /**
- * Fragment ref node - wraps fragments for deferred attachment
+ * Fragment ref node - wraps fragments (no DOM element)
+ * Created by FragmentFactory.create() - users don't construct this directly
  */
 export interface FragmentRef<TElement> extends BaseRef<NodeRef<TElement>> {
   status: typeof STATUS_FRAGMENT;
   element: TElement | null;
-  attach: (
-    parent: ElementRef<TElement>,
-    nextSibling?: ElementRef<TElement> | null
-  ) => void;
   firstChild?: NodeRef<TElement>;
   lastChild?: NodeRef<TElement>;
+  dispose?: () => void;
 }
 
 /**
@@ -145,7 +143,8 @@ export type ElRefSpecChild<TElement = object> =
   | boolean
   | null
   | RefSpec<TElement>
-  | Reactive<unknown>;
+  | Reactive<unknown>
+  | import('./helpers/fragment').FragmentFactory<TElement>;
 
 export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
   // Tree structure (from Scope)
