@@ -115,16 +115,15 @@ export function TodoList(api: LatticeViewAPI) {
     el([
       'div',
       { className: 'todo-list' },
-      map(() =>
-        todoList.filteredTodos().map((todo) =>
+      map(
+        () => todoList.filteredTodos(),
+        (todoSignal) =>
           TodoItem(
             api,
-            api.computed(() => todo),
+            todoSignal,
             (id) => todoList.toggleTodo(id),
-            (id) => todoList.removeTodo(id),
-            todo.id
+            (id) => todoList.removeTodo(id)
           )
-        )
       ),
     ]),
 

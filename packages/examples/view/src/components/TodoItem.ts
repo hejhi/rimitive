@@ -12,11 +12,10 @@ export function TodoItem(
   api: LatticeViewAPI,
   todoSignal: Reactive<Todo>,
   onToggle: (id: number) => void,
-  onRemove: (id: number) => void,
-  key?: string | number
+  onRemove: (id: number) => void
 ) {
   const { el } = api;
-  const todo = todoSignal();
+  const todo = todoSignal();  // Read once to get key
 
   // Create checkbox with event listener
   const checkbox = el([
@@ -51,6 +50,6 @@ export function TodoItem(
       todoText,
       removeBtn,
     ],
-    key
+    todo.id
   );
 }

@@ -18,7 +18,10 @@ import type { DOM } from '@lattice/view/renderers/dom';
  */
 export type MapFactory = LatticeExtension<
   'map',
-  (render: () => RefSpec<DOM> | RefSpec<DOM>[]) => FragmentRef<DOM>
+  <T>(
+    items: () => T[],
+    render: (itemSignal: import('@lattice/view/types').Reactive<T>) => RefSpec<DOM>
+  ) => FragmentRef<DOM>
 >;
 
 /**

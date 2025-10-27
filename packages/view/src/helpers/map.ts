@@ -1,19 +1,19 @@
 /**
- * User-space map() helper using closure pattern
+ * User-space map() helper using stable signal pattern
  *
- * This demonstrates the extensibility pattern from the proposal:
- * - Closure state for reconciliation
- * - Returns FragmentFactory (no attach method needed)
- * - Keys come from el() rather than keyFn parameter
- * - Unified reconciliation for keyed and non-keyed arrays
+ * Key design principles:
+ * - Render callback runs ONCE per key (no orphaned computeds)
+ * - Each item gets a stable signal that map() updates
+ * - Keys extracted from el() calls (no separate keyFn parameter)
+ * - Efficient reconciliation with LIS algorithm
  */
 
-import type { RefSpec, ElementRef, NodeRef, FragmentRef } from '../types';
+import type { RefSpec, ElementRef, NodeRef, FragmentRef, Reactive } from '../types';
 import { isElementRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
-import { reconcileWithKeys, type ReconcileState, type ReconcileNode } from './reconcile';
+import { reconcileWithKeys, type ReconcileState } from './reconcile';
 import { createFragment } from './fragment';
 
 export interface MapHelperOpts<
@@ -21,6 +21,7 @@ export interface MapHelperOpts<
   TText extends TextNode
 > {
   ctx: LatticeContext;
+  signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   withElementScope: <T>(element: object, fn: () => T) => T;
   renderer: Renderer<TElement, TText>;
@@ -37,29 +38,34 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, scopedEffect, withElementScope, renderer, disposeScope } = opts;
+  const { ctx, signal, scopedEffect, withElementScope, renderer, disposeScope } = opts;
 
   /**
-   * User-space map() using closure pattern
+   * User-space map() with stable signals
    *
-   * Takes a render function that returns RefSpec(s) with keys
-   * Keys come from el() calls, not from a keyFn parameter
+   * Each item gets a stable signal that map() manages. Render callback
+   * runs ONCE per key, preventing orphaned computeds.
    *
    * Usage:
-   *   map(() => items().map(item => el(['li', item.name], item.id)))
-   *   map(() => [cases[mode()]()])
+   *   map(
+   *     () => items(),
+   *     (itemSignal) => Component(api, itemSignal, itemSignal().id)
+   *   )
    */
-  function map(
-    render: () => RefSpec<TElement> | RefSpec<TElement>[]
+  function map<T>(
+    items: () => T[],
+    render: (itemSignal: Reactive<T>) => RefSpec<TElement>
   ): FragmentRef<TElement> {
-    // TODO: pass in node to callback too?
     return createFragment((parent: ElementRef<TElement>, nextSibling?: NodeRef<TElement> | null) => {
-      // Closure state - persists across effect re-runs
-      const state: ReconcileState<TElement> & {
-        itemsByKey: Map<string, unknown>;
-        parentElement: TElement;
-        nextSibling?: NodeRef<TElement>;
-      } = {
+      // Store signals and RefSpecs per key (separate from reconciliation)
+      type ItemEntry = {
+        signal: Reactive<T> & ((value: T) => void);
+        refSpec: RefSpec<TElement>;
+      };
+      const itemData = new Map<string, ItemEntry>();
+
+      // Reconciliation state (expected by reconcileWithKeys)
+      const state: ReconcileState<TElement> = {
         itemsByKey: new Map(),
         parentElement: parent.element,
         parentRef: parent,
@@ -74,9 +80,38 @@ export function createMapHelper<
       // Create effect within parent's scope - auto-tracked!
       const effectDispose = withElementScope(parent.element, () => {
         return scopedEffect(() => {
-          // Call render - it reads whatever signals it needs
-          const result = render();
-          const refSpecs = Array.isArray(result) ? result : [result];
+          const currentItems = items();
+          const refSpecs: RefSpec<TElement>[] = [];
+
+          // Build RefSpecs array
+          // For NEW items: create signal and call render
+          // For EXISTING items: update signal, reuse stored RefSpec
+          for (const item of currentItems) {
+            // Create temporary signal to get key from RefSpec
+            const tempSignal = signal(item);
+            const tempRefSpec = render(tempSignal);
+            const key = tempRefSpec.key;
+
+            if (!key) {
+              throw new Error('map() requires RefSpec to have a key. Pass key to el() call.');
+            }
+
+            const keyStr = String(key);
+            const existing = itemData.get(keyStr);
+
+            if (existing) {
+              // Existing item: update signal with new data, reuse RefSpec
+              existing.signal(item);
+              refSpecs.push(existing.refSpec);
+            } else {
+              // New item: store signal and RefSpec for future reuse
+              itemData.set(keyStr, {
+                signal: tempSignal,
+                refSpec: tempRefSpec,
+              });
+              refSpecs.push(tempRefSpec);
+            }
+          }
 
           // Clear pooled buffers
           oldIndicesBuf.length = 0;
@@ -103,7 +138,7 @@ export function createMapHelper<
         effectDispose();
 
         // Clean up all tracked elements
-        for (const [, node] of state.itemsByKey as Map<string, ReconcileNode<TElement>>) {
+        for (const [, node] of state.itemsByKey) {
           if (isElementRef(node)) {
             const scope = ctx.elementScopes.get(node.element);
             if (scope) {
@@ -114,6 +149,7 @@ export function createMapHelper<
           }
         }
         state.itemsByKey.clear();
+        itemData.clear();
       };
     });
   }

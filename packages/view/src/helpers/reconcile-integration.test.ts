@@ -28,6 +28,7 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const map = createMapHelper({
       ctx: env.ctx,
+      signal: env.signal,
       scopedEffect: env.scopedEffect,
       withElementScope: env.withElementScope,
       renderer: env.renderer,
@@ -49,7 +50,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -89,7 +93,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -132,7 +139,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((num) => el.method(['li', String(num)], num))),
+      map(
+        () => items(),
+        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -170,7 +180,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -208,7 +221,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -244,7 +260,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -277,7 +296,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((num) => el.method(['li', String(num)], num))),
+      map(
+        () => items(),
+        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -311,7 +333,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -346,7 +371,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -383,7 +411,10 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((num) => el.method(['li', String(num)], num))),
+      map(
+        () => items(),
+        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -419,6 +450,7 @@ describe('List reconciliation - Edge cases', () => {
 
     const map = createMapHelper({
       ctx: env.ctx,
+      signal: env.signal,
       scopedEffect: env.scopedEffect,
       withElementScope: env.withElementScope,
       renderer: env.renderer,
@@ -435,7 +467,10 @@ describe('List reconciliation - Edge cases', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((item) => el.method(['li', item.name], item.id))),
+      map(
+        () => items(),
+        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -455,7 +490,10 @@ describe('List reconciliation - Edge cases', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((num) => el.method(['li', String(num)], num))),
+      map(
+        () => items(),
+        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+      ),
     ]);
 
     const ul = list.create().element as MockElement;
@@ -485,7 +523,10 @@ describe('List reconciliation - Edge cases', () => {
 
     const list = el.method([
       'ul',
-      map(() => items().map((num) => el.method(['li', String(num)], num))),
+      map(
+        () => items(),
+        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+      ),
     ]);
 
     const ul = list.create().element as MockElement;

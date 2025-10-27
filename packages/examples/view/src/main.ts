@@ -28,7 +28,6 @@ import { createOnFactory } from '@lattice/view/on';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import type { MapFactory } from './types';
-import type { RefSpec, FragmentRef } from '@lattice/view/types';
 
 // ============================================================================
 // Create Lattice API with Signals + View
@@ -58,13 +57,8 @@ const signalCtx = createSignalContext();
 const ctx = createLatticeContext();
 const renderer = createDOMRenderer();
 
-// Create adapter for GlobalContext compatibility
-const latticeCtx = {
-  get consumerScope() { return ctx.activeScope; },
-  set consumerScope(value) { ctx.activeScope = value; },
-  get trackingVersion() { return ctx.trackingVersion; },
-  set trackingVersion(value) { ctx.trackingVersion = value; },
-};
+// Use the signal context for reactivity (consumerScope is for reactive tracking, NOT view lifecycle)
+const latticeCtx = signalCtx.ctx;
 
 // Build signal factories
 const signalFactory = createSignalFactory({
@@ -113,6 +107,7 @@ const elFactory = createElFactory({
 
 const mapHelper = createMapHelper<HTMLElement, Text>({
   ctx,
+  signal: signalFactory.method,
   scopedEffect,
   withElementScope,
   renderer,
@@ -127,7 +122,7 @@ const onFactory = createOnFactory({
 // Create a factory wrapper for map
 const mapFactory: MapFactory = {
   name: 'map',
-  method: mapHelper as (render: () => RefSpec<HTMLElement> | RefSpec<HTMLElement>[]) => FragmentRef<HTMLElement>,
+  method: mapHelper,
 };
 
 // Create the combined API

@@ -29,6 +29,7 @@ describe('map() - User-facing behavior', () => {
 
     const map = createMapHelper({
       ctx: env.ctx,
+      signal: env.signal,
       scopedEffect: env.scopedEffect,
       withElementScope: env.withElementScope,
       renderer: env.renderer,
@@ -48,13 +49,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Cherry' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -69,13 +70,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(0);
@@ -86,13 +87,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'Only' }]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(1);
@@ -109,13 +110,13 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(2);
@@ -135,13 +136,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(2);
@@ -163,13 +164,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(2);
@@ -189,13 +190,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'First' }]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(1);
@@ -220,13 +221,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(0);
@@ -253,13 +254,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(3);
@@ -281,13 +282,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(3);
@@ -309,13 +310,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(3);
@@ -340,13 +341,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'Fifth' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(5);
@@ -368,13 +369,13 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(2);
@@ -396,13 +397,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -424,13 +425,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -455,13 +456,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -487,13 +488,13 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -519,13 +520,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -553,13 +554,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -588,13 +589,13 @@ describe('map() - User-facing behavior', () => {
         { id: 6, name: 'F' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -625,13 +626,13 @@ describe('map() - User-facing behavior', () => {
         { id: 7, name: 'G' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -663,13 +664,13 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -699,13 +700,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -730,13 +731,13 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -763,16 +764,16 @@ describe('map() - User-facing behavior', () => {
       const { el, map, signal } = setup();
 
       const items = signal(
-        Array.from({ length: 100 }, (_, i) => ({ id: i, name: `Item ${i}` }))
+        Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `Item ${i}` }))
       );
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
       expect(ul.children.length).toBe(100);
@@ -790,16 +791,16 @@ describe('map() - User-facing behavior', () => {
       const { el, map, signal } = setup();
 
       const items = signal(
-        Array.from({ length: 50 }, (_, i) => ({ id: i, name: `Item ${i}` }))
+        Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `Item ${i}` }))
       );
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -823,17 +824,19 @@ describe('map() - User-facing behavior', () => {
       type Mode = 'loading' | 'error' | 'success';
       const mode = signal<Mode>('loading');
 
-      const view = el.method(
-        ['div',
-          map(() => {
-            const m = mode();
+      const view = el.method([
+        'div',
+        map(
+          () => [mode()],
+          (modeSignal) => {
+            const m = modeSignal();
             // Key is required to distinguish different states
             if (m === 'loading') return el.method(['div', 'Loading...'], 'loading');
             if (m === 'error') return el.method(['div', 'Error occurred'], 'error');
             return el.method(['div', 'Success!'], 'success');
-          }),
-        ]
-      );
+          }
+        ),
+      ]);
 
       const div = view.create().element as MockElement;
 
@@ -864,13 +867,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -901,13 +904,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -936,13 +939,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -973,13 +976,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -1009,13 +1012,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) => el.method(['li', item.name], item.id))
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -1046,18 +1049,17 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.method(
-        ['ul',
-          map(() =>
-            items().map((item) =>
-              el.method(['li', item.name], item.id)((element) => {
-                // Simulate attaching custom state during lifecycle
-                element.__customState = `state-${item.id}`;
-              })
-            )
-          ),
-        ]
-      );
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) =>
+            el.method(['li', itemSignal().name], itemSignal().id)((element) => {
+              // Simulate attaching custom state during lifecycle
+              element.__customState = `state-${itemSignal().id}`;
+            })
+        ),
+      ]);
 
       const ul = list.create().element as MockElement;
 
@@ -1087,11 +1089,16 @@ describe('map() - User-facing behavior', () => {
       // Signal passed to inner element (not called) for reactivity
       const view = el.method([
         'div',
-        map(() =>
-          el.method([
-            'div',
-            map(() => el.method(['span', displayValue])),
-          ])
+        map(
+          () => [{ id: 1 }],
+          () =>
+            el.method([
+              'div',
+              map(
+                () => [{ id: 1 }],
+                () => el.method(['span', displayValue], 1)
+              ),
+            ], 1)
         ),
       ]);
 
@@ -1117,16 +1124,23 @@ describe('map() - User-facing behavior', () => {
       // Triple nested map to test deep nesting
       const view = el.method([
         'div',
-        map(() =>
-          el.method([
-            'section',
-            map(() =>
-              el.method([
-                'article',
-                map(() => el.method(['span', value])),
-              ])
-            ),
-          ])
+        map(
+          () => [{ id: 1 }],
+          () =>
+            el.method([
+              'section',
+              map(
+                () => [{ id: 1 }],
+                () =>
+                  el.method([
+                    'article',
+                    map(
+                      () => [{ id: 1 }],
+                      () => el.method(['span', value], 1)
+                    ),
+                  ], 1)
+              ),
+            ], 1)
         ),
       ]);
 
