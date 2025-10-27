@@ -142,6 +142,15 @@ export function createMapHelper<
             newPosBuf,
             lisBuf
           );
+
+          // Clean up removed items from itemData to prevent memory leaks
+          // After reconciliation, state.itemsByKey only contains current items
+          for (const [key, entry] of itemData.entries()) {
+            const refSpecKey = entry.refSpec.key;
+            if (refSpecKey !== undefined && !state.itemsByKey.has(String(refSpecKey))) {
+              itemData.delete(key);
+            }
+          }
         });
       });
 
