@@ -14,10 +14,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { reconcileWithKeys, type ReconcileState } from './reconcile';
-import { createTestEnv, MockElement, getTextContent } from '../test-utils';
-import type { RefSpec } from '../types';
+import { createTestEnv, MockElement, MockText, getTextContent } from '../test-utils';
+import type { ElementRef } from '../types';
 
 describe('reconcileWithKeys', () => {
+  type Item = { id: string; text: string };
+
   function setup() {
     const env = createTestEnv();
     const parent = env.renderer.createElement('ul');
@@ -32,51 +34,65 @@ describe('reconcileWithKeys', () => {
     const newPosBuf: number[] = [];
     const lisBuf: number[] = [];
 
-    // Helper to create keyed RefSpec
-    const createItem = (key: string, text: string): RefSpec<MockElement> => {
-      const li = env.renderer.createElement('li');
-      const textNode = env.renderer.createTextNode(text);
-      env.renderer.appendChild(li, textNode);
-
-      const refSpec: RefSpec<MockElement> = () => refSpec;
-      refSpec.key = key;
-      refSpec.create = () => ({
-        status: 1,
-        element: li,
-        prev: undefined,
-        next: undefined,
-      });
-
-      return refSpec;
-    };
-
-    const reconcile = (refSpecs: RefSpec<MockElement>[]) => {
+    const reconcile = (items: Item[]) => {
       reconcileWithKeys(
-        refSpecs,
+        items,
         state,
-        env.ctx,
-        env.renderer,
-        env.disposeScope,
+        (item) => item.id,
+        {
+          onCreate: (item) => {
+            const li = env.renderer.createElement('li');
+            const textNode = env.renderer.createTextNode(item.text);
+            env.renderer.appendChild(li, textNode);
+            env.renderer.insertBefore(parent, li, null);
+
+            return {
+              status: 1,
+              element: li,
+              prev: undefined,
+              next: undefined,
+            };
+          },
+          onUpdate: (_key, item, node) => {
+            // Update text content if needed
+            const li = (node as ElementRef<MockElement>).element;
+            if (li.children[0]) {
+              (li.children[0] as MockText).content = item.text;
+            }
+          },
+          onMove: (_key, node, nextSibling) => {
+            const li = (node as ElementRef<MockElement>).element;
+            const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
+            env.renderer.insertBefore(parent, li, nextEl);
+          },
+          onRemove: (_key, node) => {
+            const li = (node as ElementRef<MockElement>).element;
+            const scope = env.ctx.elementScopes.get(li);
+            if (scope) {
+              env.disposeScope(scope);
+              env.ctx.elementScopes.delete(li);
+            }
+            env.renderer.removeChild(parent, li);
+          },
+        },
         oldIndicesBuf,
         newPosBuf,
         lisBuf
       );
     };
 
-    return { ...env, parent, state, createItem, reconcile };
+    return { ...env, parent, state, reconcile };
   }
 
   describe('Initial rendering', () => {
     it('should insert all elements on first reconcile', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
-      const items = [
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
-      ];
-
-      reconcile(items);
+      reconcile([
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
+      ]);
 
       expect(parent.children.length).toBe(3);
       expect(getTextContent(parent.children[0] as MockElement)).toBe('Apple');
@@ -93,9 +109,9 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle single item', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
-      reconcile([createItem('a', 'Only')]);
+      reconcile([{ id: 'a', text: 'Only' }]);
 
       expect(parent.children.length).toBe(1);
       expect(getTextContent(parent.children[0] as MockElement)).toBe('Only');
@@ -104,13 +120,13 @@ describe('reconcileWithKeys', () => {
 
   describe('Element reuse', () => {
     it('should reuse elements when keys match', () => {
-      const { parent, createItem, reconcile, state } = setup();
+      const { parent, reconcile, state } = setup();
 
       // Initial render
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       // Store element references
@@ -120,9 +136,9 @@ describe('reconcileWithKeys', () => {
 
       // Reconcile with same keys (but new RefSpecs)
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       // Elements should be reused (same references)
@@ -138,13 +154,13 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should reuse elements when keys match after reorder', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       // Initial render
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       const appleEl = parent.children[0];
@@ -153,9 +169,9 @@ describe('reconcileWithKeys', () => {
 
       // Reverse order
       reconcile([
-        createItem('c', 'Cherry'),
-        createItem('b', 'Banana'),
-        createItem('a', 'Apple'),
+        { id: 'c', text: 'Cherry' },
+        { id: 'b', text: 'Banana' },
+        { id: 'a', text: 'Apple' },
       ]);
 
       // Elements reused, just reordered
@@ -167,20 +183,20 @@ describe('reconcileWithKeys', () => {
 
   describe('Adding elements', () => {
     it('should add new element to end', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
       ]);
 
       expect(parent.children.length).toBe(2);
 
       // Add new element
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       expect(parent.children.length).toBe(3);
@@ -188,18 +204,18 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should add new element to beginning', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       // Add to beginning
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       expect(parent.children.length).toBe(3);
@@ -209,18 +225,18 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should add new element to middle', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       // Add to middle
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       expect(parent.children.length).toBe(3);
@@ -232,18 +248,18 @@ describe('reconcileWithKeys', () => {
 
   describe('Removing elements', () => {
     it('should remove element from end', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       // Remove from end
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
       ]);
 
       expect(parent.children.length).toBe(2);
@@ -252,18 +268,18 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should remove element from beginning', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       // Remove from beginning
       reconcile([
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       expect(parent.children.length).toBe(2);
@@ -272,18 +288,18 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should remove element from middle', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       // Remove middle
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('c', 'Cherry'),
+        { id: 'a', text: 'Apple' },
+        { id: 'c', text: 'Cherry' },
       ]);
 
       expect(parent.children.length).toBe(2);
@@ -292,11 +308,11 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should clear all elements', () => {
-      const { parent, createItem, reconcile, state } = setup();
+      const { parent, reconcile, state } = setup();
 
       reconcile([
-        createItem('a', 'Apple'),
-        createItem('b', 'Banana'),
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
       ]);
 
       expect(parent.children.length).toBe(2);
@@ -311,19 +327,19 @@ describe('reconcileWithKeys', () => {
 
   describe('Reordering (LIS algorithm)', () => {
     it('should reverse order', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       // Reverse
       reconcile([
-        createItem('c', 'C'),
-        createItem('b', 'B'),
-        createItem('a', 'A'),
+        { id: 'c', text: 'C' },
+        { id: 'b', text: 'B' },
+        { id: 'a', text: 'A' },
       ]);
 
       expect(parent.children.length).toBe(3);
@@ -333,19 +349,19 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle swap of two elements', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       // Swap first and last
       reconcile([
-        createItem('c', 'C'),
-        createItem('b', 'B'),
-        createItem('a', 'A'),
+        { id: 'c', text: 'C' },
+        { id: 'b', text: 'B' },
+        { id: 'a', text: 'A' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('C');
@@ -354,21 +370,21 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle rotation', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
       ]);
 
       // Rotate right: [A,B,C,D] → [D,A,B,C]
       reconcile([
-        createItem('d', 'D'),
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'd', text: 'D' },
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('D');
@@ -378,23 +394,23 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle complex shuffle', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
-        createItem('e', 'E'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
+        { id: 'e', text: 'E' },
       ]);
 
       // Shuffle: [A,B,C,D,E] → [D,B,E,A,C]
       reconcile([
-        createItem('d', 'D'),
-        createItem('b', 'B'),
-        createItem('e', 'E'),
-        createItem('a', 'A'),
-        createItem('c', 'C'),
+        { id: 'd', text: 'D' },
+        { id: 'b', text: 'B' },
+        { id: 'e', text: 'E' },
+        { id: 'a', text: 'A' },
+        { id: 'c', text: 'C' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('D');
@@ -407,19 +423,19 @@ describe('reconcileWithKeys', () => {
 
   describe('LIS edge cases (anchor-based algorithm)', () => {
     it('should handle empty LIS (all elements need to move)', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       // Complete reversal - empty LIS case
       reconcile([
-        createItem('c', 'C'),
-        createItem('b', 'B'),
-        createItem('a', 'A'),
+        { id: 'c', text: 'C' },
+        { id: 'b', text: 'B' },
+        { id: 'a', text: 'A' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('C');
@@ -428,12 +444,12 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle full LIS (no moves needed)', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       const aEl = parent.children[0];
@@ -442,9 +458,9 @@ describe('reconcileWithKeys', () => {
 
       // Same order - full LIS, no DOM moves
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       // Same elements, same positions (no moves)
@@ -454,19 +470,19 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle single element LIS', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       // LIS: [B] (middle element stays), A and C move
       reconcile([
-        createItem('c', 'C'),
-        createItem('b', 'B'),
-        createItem('a', 'A'),
+        { id: 'c', text: 'C' },
+        { id: 'b', text: 'B' },
+        { id: 'a', text: 'A' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('C');
@@ -475,24 +491,24 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle LIS at beginning with moves after', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
-        createItem('e', 'E'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
+        { id: 'e', text: 'E' },
       ]);
 
       // LIS: [A,B] (beginning stable), rest moves
       // [A,B,C,D,E] → [A,B,E,C,D]
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('e', 'E'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'e', text: 'E' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('A');
@@ -503,24 +519,24 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle LIS at end with moves before', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
-        createItem('e', 'E'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
+        { id: 'e', text: 'E' },
       ]);
 
       // LIS: [D,E] (end stable), rest moves
       // [A,B,C,D,E] → [C,A,B,D,E]
       reconcile([
-        createItem('c', 'C'),
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('d', 'D'),
-        createItem('e', 'E'),
+        { id: 'c', text: 'C' },
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'd', text: 'D' },
+        { id: 'e', text: 'E' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('C');
@@ -531,26 +547,26 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle LIS in middle with moves on both sides', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
-        createItem('e', 'E'),
-        createItem('f', 'F'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
+        { id: 'e', text: 'E' },
+        { id: 'f', text: 'F' },
       ]);
 
       // LIS: [B,C,D] (middle stable), A,E,F move
       // [A,B,C,D,E,F] → [F,B,C,D,A,E]
       reconcile([
-        createItem('f', 'F'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
-        createItem('a', 'A'),
-        createItem('e', 'E'),
+        { id: 'f', text: 'F' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
+        { id: 'a', text: 'A' },
+        { id: 'e', text: 'E' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('F');
@@ -562,29 +578,29 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle multiple non-LIS elements between LIS elements', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
-        createItem('e', 'E'),
-        createItem('f', 'F'),
-        createItem('g', 'G'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
+        { id: 'e', text: 'E' },
+        { id: 'f', text: 'F' },
+        { id: 'g', text: 'G' },
       ]);
 
       // LIS: [A,C,E,G] - sparse LIS
       // Non-LIS: [B,D,F] scattered between
       // [A,B,C,D,E,F,G] → [A,F,D,C,B,E,G]
       reconcile([
-        createItem('a', 'A'),
-        createItem('f', 'F'),
-        createItem('d', 'D'),
-        createItem('c', 'C'),
-        createItem('b', 'B'),
-        createItem('e', 'E'),
-        createItem('g', 'G'),
+        { id: 'a', text: 'A' },
+        { id: 'f', text: 'F' },
+        { id: 'd', text: 'D' },
+        { id: 'c', text: 'C' },
+        { id: 'b', text: 'B' },
+        { id: 'e', text: 'E' },
+        { id: 'g', text: 'G' },
       ]);
 
       expect(getTextContent(parent.children[0] as MockElement)).toBe('A');
@@ -599,23 +615,23 @@ describe('reconcileWithKeys', () => {
 
   describe('Mixed operations', () => {
     it('should handle add + remove + reorder in single update', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
-        createItem('d', 'D'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
+        { id: 'd', text: 'D' },
       ]);
 
       // Remove B, add E and F, reorder
       // [A,B,C,D] → [E,D,A,F,C]
       reconcile([
-        createItem('e', 'E'),
-        createItem('d', 'D'),
-        createItem('a', 'A'),
-        createItem('f', 'F'),
-        createItem('c', 'C'),
+        { id: 'e', text: 'E' },
+        { id: 'd', text: 'D' },
+        { id: 'a', text: 'A' },
+        { id: 'f', text: 'F' },
+        { id: 'c', text: 'C' },
       ]);
 
       expect(parent.children.length).toBe(5);
@@ -627,19 +643,19 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle complete replacement', () => {
-      const { parent, createItem, reconcile, state } = setup();
+      const { parent, reconcile, state } = setup();
 
       reconcile([
-        createItem('a', 'A'),
-        createItem('b', 'B'),
-        createItem('c', 'C'),
+        { id: 'a', text: 'A' },
+        { id: 'b', text: 'B' },
+        { id: 'c', text: 'C' },
       ]);
 
       // Complete replacement
       reconcile([
-        createItem('x', 'X'),
-        createItem('y', 'Y'),
-        createItem('z', 'Z'),
+        { id: 'x', text: 'X' },
+        { id: 'y', text: 'Y' },
+        { id: 'z', text: 'Z' },
       ]);
 
       expect(parent.children.length).toBe(3);
@@ -661,30 +677,57 @@ describe('reconcileWithKeys', () => {
 
   describe('Key fallback behavior', () => {
     it('should use index as key when key is undefined', () => {
-      const { parent, reconcile, renderer } = setup();
+      const { parent, renderer } = setup();
 
-      // Create RefSpecs without explicit keys
-      const createUnkeyedItem = (text: string): RefSpec<MockElement> => {
-        const li = renderer.createElement('li');
-        const textNode = renderer.createTextNode(text);
-        renderer.appendChild(li, textNode);
+      // Create a custom reconcile that uses index when key is missing
+      const state: ReconcileState<MockElement> = {
+        itemsByKey: new Map(),
+        parentElement: parent,
+      };
 
-        const refSpec: RefSpec<MockElement> = () => refSpec;
-        // No key set - should fallback to index
-        refSpec.create = () => ({
-          status: 1,
-          element: li,
-          prev: undefined,
-          next: undefined,
-        });
+      const oldIndicesBuf: number[] = [];
+      const newPosBuf: number[] = [];
+      const lisBuf: number[] = [];
 
-        return refSpec;
+      const reconcile = (items: { text: string }[]) => {
+        reconcileWithKeys(
+          items,
+          state,
+          (_item, index) => String(index), // Use index as key
+          {
+            onCreate: (item) => {
+              const li = renderer.createElement('li');
+              const textNode = renderer.createTextNode(item.text);
+              renderer.appendChild(li, textNode);
+              renderer.insertBefore(parent, li, null);
+
+              return {
+                status: 1,
+                element: li,
+                prev: undefined,
+                next: undefined,
+              };
+            },
+            onMove: (_key, node, nextSibling) => {
+              const li = (node as ElementRef<MockElement>).element;
+              const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
+              renderer.insertBefore(parent, li, nextEl);
+            },
+            onRemove: (_key, node) => {
+              const li = (node as ElementRef<MockElement>).element;
+              renderer.removeChild(parent, li);
+            },
+          },
+          oldIndicesBuf,
+          newPosBuf,
+          lisBuf
+        );
       };
 
       reconcile([
-        createUnkeyedItem('A'),
-        createUnkeyedItem('B'),
-        createUnkeyedItem('C'),
+        { text: 'A' },
+        { text: 'B' },
+        { text: 'C' },
       ]);
 
       expect(parent.children.length).toBe(3);
@@ -692,11 +735,11 @@ describe('reconcileWithKeys', () => {
       expect(getTextContent(parent.children[1] as MockElement)).toBe('B');
       expect(getTextContent(parent.children[2] as MockElement)).toBe('C');
 
-      // Reconcile again - keys are "0", "1", "2"
+      // Reconcile again - should reuse based on index keys
       reconcile([
-        createUnkeyedItem('A'),
-        createUnkeyedItem('B'),
-        createUnkeyedItem('C'),
+        { text: 'A' },
+        { text: 'B' },
+        { text: 'C' },
       ]);
 
       expect(parent.children.length).toBe(3);
@@ -705,11 +748,12 @@ describe('reconcileWithKeys', () => {
 
   describe('Large lists', () => {
     it('should handle 100 items efficiently', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
-      const items = Array.from({ length: 100 }, (_, i) =>
-        createItem(`key${i}`, `Item ${i}`)
-      );
+      const items = Array.from({ length: 100 }, (_, i) => ({
+        id: `key${i}`,
+        text: `Item ${i}`,
+      }));
 
       reconcile(items);
 
@@ -726,11 +770,12 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle complex reordering in large list', () => {
-      const { parent, createItem, reconcile } = setup();
+      const { parent, reconcile } = setup();
 
-      const items = Array.from({ length: 50 }, (_, i) =>
-        createItem(`key${i}`, `Item ${i}`)
-      );
+      const items = Array.from({ length: 50 }, (_, i) => ({
+        id: `key${i}`,
+        text: `Item ${i}`,
+      }));
 
       reconcile(items);
 

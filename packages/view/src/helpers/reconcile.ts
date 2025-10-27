@@ -124,26 +124,52 @@ function resolveNextElement<TElement>(
 }
 
 /**
- * Reconcile RefSpecs with keys using LIS-based algorithm
+ * Lifecycle hooks for reconciliation
+ */
+export interface ReconcileHooks<T, TElement> {
+  /**
+   * Called when a new item needs to be created
+   * Should return the created NodeRef
+   */
+  onCreate: (item: T, key: string) => NodeRef<TElement>;
+
+  /**
+   * Called when an existing item's data should be updated
+   * Should update the item's signal/state but not move DOM
+   */
+  onUpdate?: (key: string, item: T, node: NodeRef<TElement>) => void;
+
+  /**
+   * Called when an item needs to be repositioned in DOM
+   * Should move the element to the new position
+   */
+  onMove: (key: string, node: NodeRef<TElement>, nextSibling: NodeRef<TElement> | null | undefined) => void;
+
+  /**
+   * Called when an item is being removed
+   * Should dispose scopes and remove from DOM
+   */
+  onRemove: (key: string, node: NodeRef<TElement>) => void;
+}
+
+/**
+ * Reconcile items with keys using LIS-based algorithm
  *
- * Adapted from map.ts reconcileList, but works with RefSpec arrays
- * instead of being tied to MapFragRef
+ * Pure algorithm - caller handles all lifecycle via hooks
  */
 export function reconcileWithKeys<
-  TElement extends RendererElement,
-  TText extends TextNode
+  T,
+  TElement extends RendererElement
 >(
-  refSpecs: RefSpec<TElement>[],
+  items: T[],
   state: ReconcileState<TElement>,
-  ctx: LatticeContext,
-  renderer: Renderer<TElement, TText>,
-  disposeScope: CreateScopes['disposeScope'],
+  keyFn: (item: T, index: number) => string | number,
+  hooks: ReconcileHooks<T, TElement>,
   oldIndicesBuf: number[],
   newPosBuf: number[],
-  lisBuf: number[],
-  onItemRemoved?: (key: string) => void
+  lisBuf: number[]
 ): NodeRef<TElement>[] {
-  const { itemsByKey, parentElement, nextSibling } = state;
+  const { itemsByKey } = state;
 
   // Clear pooled buffers
   oldIndicesBuf.length = 0;
@@ -151,39 +177,36 @@ export function reconcileWithKeys<
   lisBuf.length = 0;
 
   const nodes: ReconcileNode<TElement>[] = Array<ReconcileNode<TElement>>(
-    refSpecs.length
+    items.length
   );
 
   // Build phase - create/update nodes
   let count = 0;
-  for (let i = 0; i < refSpecs.length; i++) {
-    const refSpec = refSpecs[i]!;
-    const key = refSpec.key !== undefined ? String(refSpec.key) : String(i);
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!;
+    const key = String(keyFn(item, i));
 
     let node = itemsByKey.get(key);
 
     if (node) {
-      // Existing node - reuse it, don't call create() again
+      // Existing node - update via hook
       oldIndicesBuf[count] = node.position;
       newPosBuf[count] = i;
       count++;
       node.position = i;
       node.reconcileStatus = VISITED;
+
+      // Call update hook if provided
+      if (hooks.onUpdate) hooks.onUpdate(key, item, node);
     } else {
-      // New node - create from RefSpec (always ElementRef from el())
-      const nodeRef = refSpec.create() as ReconcileNode<TElement>;
+      // New node - create via hook
+      const nodeRef = hooks.onCreate(item, key) as ReconcileNode<TElement>;
       nodeRef.key = key;
       nodeRef.position = i;
       nodeRef.reconcileStatus = VISITED;
 
       node = nodeRef;
       itemsByKey.set(key, node);
-
-      // Insert into DOM (refSpecs from el() are always ElementRefs)
-      if (isElementRef(node)) {
-        const nextEl = resolveNextElement(nextSibling);
-        renderer.insertBefore(parentElement, node.element, nextEl);
-      }
     }
 
     nodes[i] = node;
@@ -192,21 +215,8 @@ export function reconcileWithKeys<
   // Prune phase - remove unvisited nodes
   for (const [key, node] of itemsByKey) {
     if (node.reconcileStatus === UNVISITED) {
-      // Dispose scope and remove from DOM
-      if (isElementRef(node)) {
-        const scope = ctx.elementScopes.get(node.element);
-        if (scope) {
-          disposeScope(scope);
-          ctx.elementScopes.delete(node.element);
-        }
-        renderer.removeChild(parentElement, node.element);
-      }
-
-      // Call removal callback before deleting from itemsByKey
-      if (onItemRemoved) {
-        onItemRemoved(key);
-      }
-
+      // Call removal hook
+      hooks.onRemove(key, node);
       itemsByKey.delete(key);
     } else {
       node.reconcileStatus = UNVISITED; // Reset for next reconciliation
@@ -229,29 +239,11 @@ export function reconcileWithKeys<
 
     if (!lisPositions.has(node.position)) {
       // Not in LIS - needs repositioning
-      // Insert before the next element (which has already been positioned since we're going backwards)
-      if (isElementRef(node)) {
-        const el = node.element;
+      // Find next sibling (or null/undefined for end)
+      const nextSibling = i + 1 < nodes.length ? nodes[i + 1]! : undefined;
 
-        // Find insertion point: the element immediately after this one in final order
-        let insertBeforeEl: TElement | null = null;
-
-        if (i + 1 < nodes.length) {
-          // Look for next element in nodes array
-          const nextNode = nodes[i + 1]!;
-          if (isElementRef(nextNode)) {
-            insertBeforeEl = nextNode.element;
-          }
-        }
-
-        // If no next element, insert before boundary marker
-        if (!insertBeforeEl) {
-          insertBeforeEl = resolveNextElement(nextSibling);
-        }
-
-        // Insert the element
-        renderer.insertBefore(parentElement, el, insertBeforeEl);
-      }
+      // Call move hook
+      hooks.onMove(node.key, node, nextSibling);
     }
     // Elements in LIS don't need to move - they're already in correct relative positions
   }

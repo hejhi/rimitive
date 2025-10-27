@@ -9,7 +9,7 @@
  */
 
 import type { RefSpec, ElementRef, NodeRef, FragmentRef, Reactive } from '../types';
-import { isElementRef } from '../types';
+import { isElementRef, resolveNextRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
@@ -93,56 +93,80 @@ export function createMapHelper<
       const effectDispose = withElementScope(parent.element, () => {
         return scopedEffect(() => {
           const currentItems = items();
-          const refSpecs: RefSpec<TElement>[] = [];
 
-          // Build RefSpecs array
-          // For NEW items: create signal and call render
-          // For EXISTING items: update signal, reuse stored RefSpec
-          for (const item of currentItems) {
-            // Determine key: object identity or property value
-            const key = keyFn ? keyFn(item) : item;
-            const existing = itemData.get(key);
-
-            if (existing) {
-              // Existing item: update signal with new data, reuse RefSpec
-              existing.signal(item);
-              refSpecs.push(existing.refSpec);
-            } else {
-              // New item: create signal, call render ONCE, store for future reuse
-              const itemSignal = signal(item);
-
-              // Call render untracked to prevent it from tracking outer reactive state
-              // Components are "cold" - reactivity comes from expressions inside them
-              const refSpec = untrack(() => render(itemSignal));
-
-              // Store the key on the RefSpec for reconciliation
-              refSpec.key = keyFn ? keyFn(item) : (item as unknown as string | number);
-
-              itemData.set(key, {
-                signal: itemSignal,
-                refSpec,
-              });
-              refSpecs.push(refSpec);
-            }
-          }
-
-          // Clear pooled buffers
-          oldIndicesBuf.length = 0;
-          newPosBuf.length = 0;
-          lisBuf.length = 0;
-
-          // Reconcile using keys from RefSpecs
+          // Reconcile using hooks-based lifecycle
           reconcileWithKeys(
-            refSpecs,
+            currentItems,
             state,
-            ctx,
-            renderer,
-            disposeScope,
+            keyFn ? (item) => keyFn(item) : (item) => item as unknown as string | number,
+            {
+              // onCreate: called when new item needs to be created
+              onCreate: untrack(() => (item, key) => {
+                // New item: create signal, call render ONCE, store for future reuse
+                const itemSignal = signal(item);
+
+                // Call render untracked to prevent it from tracking outer reactive state
+                // Components are "cold" - reactivity comes from expressions inside them
+                const refSpec = render(itemSignal);
+                const nodeRef = refSpec.create();
+
+                // Store signal and RefSpec for future updates
+                itemData.set(key, {
+                  signal: itemSignal,
+                  refSpec,
+                });
+
+                // Insert into DOM
+                if (isElementRef(nodeRef)) {
+                  const nextEl = resolveNextRef(state.nextSibling)?.element ?? null;
+                  renderer.insertBefore(parent.element, nodeRef.element, nextEl);
+                }
+
+                return nodeRef;
+              }),
+
+              // onUpdate: called when existing item's data should be updated
+              onUpdate: (key, item) => {
+                const existing = itemData.get(key);
+                if (existing) {
+                  existing.signal(item);
+                }
+              },
+
+              // onMove: called when item needs repositioning
+              onMove: (_key, node, nextSibling) => {
+                if (isElementRef(node)) {
+                  let nextEl: TElement | null = null;
+
+                  if (nextSibling && isElementRef(nextSibling)) {
+                    nextEl = nextSibling.element;
+                  } else if (!nextSibling) {
+                    nextEl = resolveNextRef(state.nextSibling)?.element ?? null;
+                  }
+
+                  renderer.insertBefore(parent.element, node.element, nextEl);
+                }
+              },
+
+              // onRemove: called when item is being removed
+              onRemove: (key, node) => {
+                // Clean up itemData
+                itemData.delete(key);
+
+                // Dispose scope and remove from DOM
+                if (isElementRef(node)) {
+                  const scope = ctx.elementScopes.get(node.element);
+                  if (scope) {
+                    disposeScope(scope);
+                    ctx.elementScopes.delete(node.element);
+                  }
+                  renderer.removeChild(parent.element, node.element);
+                }
+              },
+            },
             oldIndicesBuf,
             newPosBuf,
-            lisBuf,
-            // Clean up itemData when items are removed
-            (key) => itemData.delete(key)
+            lisBuf
           );
         });
       });
