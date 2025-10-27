@@ -26,6 +26,10 @@
       "import": "./dist/subscribe.js",
       "types": "./dist/subscribe.d.ts"
     },
+    "./untrack": {
+      "import": "./dist/untrack.js",
+      "types": "./dist/untrack.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

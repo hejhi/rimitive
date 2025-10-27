@@ -67,6 +67,7 @@ export default defineConfig({
         effect: resolve(__dirname, 'src/effect.ts'),
         batch: resolve(__dirname, 'src/batch.ts'),
         subscribe: resolve(__dirname, 'src/subscribe.ts'),
+        untrack: resolve(__dirname, 'src/untrack.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         context: resolve(__dirname, 'src/context.ts'),
         constants: resolve(__dirname, 'src/constants.ts'),

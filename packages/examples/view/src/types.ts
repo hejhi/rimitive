@@ -20,7 +20,8 @@ export type MapFactory = LatticeExtension<
   'map',
   <T>(
     items: () => T[],
-    render: (itemSignal: import('@lattice/view/types').Reactive<T>) => RefSpec<DOM>
+    render: (itemSignal: import('@lattice/view/types').Reactive<T>) => RefSpec<DOM>,
+    keyFn?: (item: T) => string | number
   ) => FragmentRef<DOM>
 >;
 

@@ -15,7 +15,7 @@ export function TodoItem(
   onRemove: (id: number) => void
 ) {
   const { el } = api;
-  const todo = todoSignal();  // Read once to get key
+  const todo = todoSignal();
 
   // Create checkbox with event listener
   const checkbox = el([
@@ -42,14 +42,11 @@ export function TodoItem(
     api.computed(() => todoSignal().text),
   ]);
 
-  return el(
-    [
-      'div',
-      { className: 'todo-item' },
-      checkbox,
-      todoText,
-      removeBtn,
-    ],
-    todo.id
-  );
+  return el([
+    'div',
+    { className: 'todo-item' },
+    checkbox,
+    todoText,
+    removeBtn,
+  ]);
 }

@@ -12,6 +12,7 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createEffectFactory } from '@lattice/signals/effect';
+import { createBaseContext } from '@lattice/signals/context';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -213,14 +214,8 @@ export function createTestEnv() {
   const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
 
-  // Create adapter for GlobalContext compatibility
-  // signals expects consumerScope but we have activeScope
-  const signalsCtx = {
-    get consumerScope() { return ctx.activeScope; },
-    set consumerScope(value) { ctx.activeScope = value; },
-    get trackingVersion() { return ctx.trackingVersion; },
-    set trackingVersion(value) { ctx.trackingVersion = value; },
-  };
+  // Create proper GlobalContext for signals (separate from view context)
+  const signalsCtx = createBaseContext();
 
   // Use real signals integration for proper reactive updates
   const graphEdges = createGraphEdges({ ctx: signalsCtx });
@@ -274,6 +269,7 @@ export function createTestEnv() {
 
   return {
     ctx,
+    signalCtx: signalsCtx,
     renderer,
     signal,
     effect,

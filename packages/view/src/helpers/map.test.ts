@@ -29,6 +29,7 @@ describe('map() - User-facing behavior', () => {
 
     const map = createMapHelper({
       ctx: env.ctx,
+      signalCtx: env.signalCtx,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       withElementScope: env.withElementScope,
@@ -53,7 +54,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -74,7 +76,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -91,7 +94,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -114,7 +118,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -140,7 +145,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -168,7 +174,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -194,7 +201,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -225,7 +233,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -258,7 +267,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -286,7 +296,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -314,7 +325,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -345,7 +357,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -373,7 +386,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -401,7 +415,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -429,7 +444,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -460,7 +476,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -492,7 +509,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -524,7 +542,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -558,7 +577,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -593,7 +613,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -630,7 +651,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -668,7 +690,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -704,7 +727,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -735,7 +759,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -771,7 +796,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -798,7 +824,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -871,7 +898,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -908,7 +936,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -943,7 +972,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -980,7 +1010,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -1016,7 +1047,8 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+          (itemSignal) => el.method(['li', itemSignal().name]),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -1054,10 +1086,11 @@ describe('map() - User-facing behavior', () => {
         map(
           () => items(),
           (itemSignal) =>
-            el.method(['li', itemSignal().name], itemSignal().id)((element) => {
+            el.method(['li', itemSignal().name])((element) => {
               // Simulate attaching custom state during lifecycle
               element.__customState = `state-${itemSignal().id}`;
-            })
+            }),
+          item => item.id  // Key function
         ),
       ]);
 
@@ -1155,6 +1188,46 @@ describe('map() - User-facing behavior', () => {
       value('updated');
 
       expect(getTextContent(span)).toBe('updated');
+    });
+  });
+
+  describe('Untracked render()', () => {
+    it('should not track outer reactive state in render callback', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([{ id: 1, name: 'Item 1' }]);
+      const outerState = signal('outer');
+      let renderCount = 0;
+
+      // Create list where render() accidentally reads outerState
+      const list = el.method([
+        'ul',
+        map(
+          () => items(),
+          (itemSignal) => {
+            renderCount++;
+            // This read should NOT become a dependency of map's effect
+            // because render() is called untracked
+            outerState(); // Read but don't track
+            return el.method(['li', itemSignal().name]);
+          },
+          item => item.id
+        ),
+      ]);
+
+      list.create();
+      expect(renderCount).toBe(1);  // Initial render
+
+      // Change outerState - should NOT trigger map reconciliation
+      outerState('changed');
+      expect(renderCount).toBe(1);  // Still 1 - not re-rendered
+
+      // Change items - SHOULD trigger map reconciliation for new items only
+      items([
+        { id: 1, name: 'Item 1' },
+        { id: 2, name: 'Item 2' },
+      ]);
+      expect(renderCount).toBe(2);  // Re-rendered once for new item
     });
   });
 });

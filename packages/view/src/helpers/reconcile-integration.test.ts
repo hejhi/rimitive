@@ -28,6 +28,7 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const map = createMapHelper({
       ctx: env.ctx,
+      signalCtx: env.signalCtx,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       withElementScope: env.withElementScope,
@@ -52,7 +53,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -95,7 +97,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -141,7 +144,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+        (numSignal) => el.method(['li', String(numSignal())]),
+        num => num  // Key function (number itself)
       ),
     ]);
 
@@ -182,7 +186,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -223,7 +228,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -262,7 +268,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -298,7 +305,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+        (numSignal) => el.method(['li', String(numSignal())]),
+        num => num  // Key function (number itself)
       ),
     ]);
 
@@ -335,7 +343,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -373,7 +382,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -413,7 +423,8 @@ describe('List reconciliation - Complex reorderings', () => {
       'ul',
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+        (numSignal) => el.method(['li', String(numSignal())]),
+        num => num  // Key function (number itself)
       ),
     ]);
 
@@ -450,6 +461,7 @@ describe('List reconciliation - Edge cases', () => {
 
     const map = createMapHelper({
       ctx: env.ctx,
+      signalCtx: env.signalCtx,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       withElementScope: env.withElementScope,
@@ -469,7 +481,8 @@ describe('List reconciliation - Edge cases', () => {
       'ul',
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name], itemSignal().id)
+        (itemSignal) => el.method(['li', itemSignal().name]),
+        item => item.id  // Key function
       ),
     ]);
 
@@ -492,7 +505,8 @@ describe('List reconciliation - Edge cases', () => {
       'ul',
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+        (numSignal) => el.method(['li', String(numSignal())]),
+        num => num  // Key function (number itself)
       ),
     ]);
 
@@ -525,7 +539,8 @@ describe('List reconciliation - Edge cases', () => {
       'ul',
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())], numSignal())
+        (numSignal) => el.method(['li', String(numSignal())]),
+        num => num  // Key function (number itself)
       ),
     ]);
 

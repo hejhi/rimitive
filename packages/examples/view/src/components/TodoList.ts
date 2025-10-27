@@ -123,7 +123,8 @@ export function TodoList(api: LatticeViewAPI) {
             todoSignal,
             (id) => todoList.toggleTodo(id),
             (id) => todoList.removeTodo(id)
-          )
+          ),
+        todo => todo.id  // Key function for immutable updates
       ),
     ]),
 

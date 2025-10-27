@@ -90,7 +90,7 @@ describe('Untrack - Pausing Dependency Tracking', () => {
   describe('Partial Untracking', () => {
     it('should track some signals but not others', () => {
       const tracked = signal(0);
-      const untracked = signal(0);
+      const untrack = signal(0);
       let computeCount = 0;
 
       const c = computed(() => {
@@ -99,7 +99,7 @@ describe('Untrack - Pausing Dependency Tracking', () => {
 
         const currentConsumer = getCurrentConsumer();
         setCurrentConsumer(null);
-        const untrackedValue = untracked();
+        const untrackedValue = untrack();
         setCurrentConsumer(currentConsumer);
 
         return trackedValue + untrackedValue;
@@ -109,7 +109,7 @@ describe('Untrack - Pausing Dependency Tracking', () => {
       expect(computeCount).toBe(1);
 
       // Changing untracked signal should not trigger recomputation
-      untracked(5);
+      untrack(5);
       expect(c()).toBe(0); // Still returns 0 + 0 since it recomputed without tracking untracked
       expect(computeCount).toBe(1);
 

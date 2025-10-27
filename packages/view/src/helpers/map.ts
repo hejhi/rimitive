@@ -15,12 +15,15 @@ import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
 import { reconcileWithKeys, type ReconcileState } from './reconcile';
 import { createFragment } from './fragment';
+import type { GlobalContext } from '@lattice/signals/context';
+import { createUntracked } from '@lattice/signals/untrack';
 
 export interface MapHelperOpts<
   TElement extends RendererElement,
   TText extends TextNode
 > {
   ctx: LatticeContext;
+  signalCtx: GlobalContext;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   withElementScope: <T>(element: object, fn: () => T) => T;
@@ -38,23 +41,32 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, signal, scopedEffect, withElementScope, renderer, disposeScope } = opts;
+  const { ctx, signalCtx, signal, scopedEffect, withElementScope, renderer, disposeScope } = opts;
+
+  // Create untracked helper to prevent render() from tracking outer reactive state
+  const untrack = createUntracked({ ctx: signalCtx });
 
   /**
    * User-space map() with stable signals
    *
    * Each item gets a stable signal that map() manages. Render callback
-   * runs ONCE per key, preventing orphaned computeds.
+   * runs ONCE per unique item, preventing orphaned computeds.
+   *
+   * Supports two keying strategies:
+   * 1. Reference-based (default): Uses object identity as key (like Solid.js)
+   * 2. Property-based (with keyFn): Uses a property value as key (like React)
    *
    * Usage:
-   *   map(
-   *     () => items(),
-   *     (itemSignal) => Component(api, itemSignal, itemSignal().id)
-   *   )
+   *   // Reference-based (mutable patterns)
+   *   map(() => items(), (itemSignal) => Component(api, itemSignal))
+   *
+   *   // Property-based (immutable patterns)
+   *   map(() => items(), (itemSignal) => Component(api, itemSignal), item => item.id)
    */
   function map<T>(
     items: () => T[],
-    render: (itemSignal: Reactive<T>) => RefSpec<TElement>
+    render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
+    keyFn?: (item: T) => string | number
   ): FragmentRef<TElement> {
     return createFragment((parent: ElementRef<TElement>, nextSibling?: NodeRef<TElement> | null) => {
       // Store signals and RefSpecs per key (separate from reconciliation)
@@ -62,7 +74,7 @@ export function createMapHelper<
         signal: Reactive<T> & ((value: T) => void);
         refSpec: RefSpec<TElement>;
       };
-      const itemData = new Map<string, ItemEntry>();
+      const itemData = new Map<unknown, ItemEntry>();
 
       // Reconciliation state (expected by reconcileWithKeys)
       const state: ReconcileState<TElement> = {
@@ -87,29 +99,30 @@ export function createMapHelper<
           // For NEW items: create signal and call render
           // For EXISTING items: update signal, reuse stored RefSpec
           for (const item of currentItems) {
-            // Create temporary signal to get key from RefSpec
-            const tempSignal = signal(item);
-            const tempRefSpec = render(tempSignal);
-            const key = tempRefSpec.key;
-
-            if (!key) {
-              throw new Error('map() requires RefSpec to have a key. Pass key to el() call.');
-            }
-
-            const keyStr = String(key);
-            const existing = itemData.get(keyStr);
+            // Determine key: object identity or property value
+            const key = keyFn ? keyFn(item) : item;
+            const existing = itemData.get(key);
 
             if (existing) {
               // Existing item: update signal with new data, reuse RefSpec
               existing.signal(item);
               refSpecs.push(existing.refSpec);
             } else {
-              // New item: store signal and RefSpec for future reuse
-              itemData.set(keyStr, {
-                signal: tempSignal,
-                refSpec: tempRefSpec,
+              // New item: create signal, call render ONCE, store for future reuse
+              const itemSignal = signal(item);
+
+              // Call render untracked to prevent it from tracking outer reactive state
+              // Components are "cold" - reactivity comes from expressions inside them
+              const refSpec = untrack(() => render(itemSignal));
+
+              // Store the key on the RefSpec for reconciliation
+              refSpec.key = keyFn ? keyFn(item) : (item as unknown as string | number);
+
+              itemData.set(key, {
+                signal: itemSignal,
+                refSpec,
               });
-              refSpecs.push(tempRefSpec);
+              refSpecs.push(refSpec);
             }
           }
 

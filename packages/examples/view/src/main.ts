@@ -107,6 +107,7 @@ const elFactory = createElFactory({
 
 const mapHelper = createMapHelper<HTMLElement, Text>({
   ctx,
+  signalCtx: latticeCtx,
   signal: signalFactory.method,
   scopedEffect,
   withElementScope,
