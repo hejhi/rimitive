@@ -17,12 +17,18 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createElFactory } from '@lattice/view/el';
-import { createMapFactory } from '@lattice/view/map';
-import { createMatchFactory } from '@lattice/view/match';
-import { createViewContext } from '@lattice/view/context';
+import { createMapHelper } from '@lattice/view/helpers/map';
+import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import { createProcessChildren } from '@lattice/view/helpers/processChildren';
+import { createScopes } from '@lattice/view/helpers/scope';
+import { createScopedEffect } from '@lattice/view/helpers/scoped-effect';
+import { createWithScope, createWithElementScope } from '@lattice/view/helpers/with-scope';
+import { createOnFactory } from '@lattice/view/on';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
+import type { MapFactory } from './types';
+import type { RefSpec, FragmentRef } from '@lattice/view/types';
 
 // ============================================================================
 // Create Lattice API with Signals + View
@@ -49,30 +55,80 @@ function createSignalContext() {
 
 // Create contexts
 const signalCtx = createSignalContext();
-const viewCtx = createViewContext();
+const ctx = createLatticeContext();
 const renderer = createDOMRenderer();
 
-// Build signal factories
-const signalFactory = createSignalFactory(signalCtx);
-const computedFactory = createComputedFactory(signalCtx);
-const effectFactory = createEffectFactory(signalCtx);
+// Create adapter for GlobalContext compatibility
+const latticeCtx = {
+  get consumerScope() { return ctx.activeScope; },
+  set consumerScope(value) { ctx.activeScope = value; },
+  get trackingVersion() { return ctx.trackingVersion; },
+  set trackingVersion(value) { ctx.trackingVersion = value; },
+};
 
-const effectFn = effectFactory.method;
-const signalFn = signalFactory.method;
+// Build signal factories
+const signalFactory = createSignalFactory({
+  ctx: latticeCtx,
+  trackDependency: signalCtx.trackDependency,
+  propagate: signalCtx.propagate,
+});
+const computedFactory = createComputedFactory({
+  ctx: latticeCtx,
+  trackDependency: signalCtx.trackDependency,
+  track: signalCtx.track,
+  pullUpdates: signalCtx.pullUpdates,
+  shallowPropagate: signalCtx.shallowPropagate,
+});
+const effectFactory = createEffectFactory({
+  ctx: latticeCtx,
+  track: signalCtx.track,
+  dispose: signalCtx.dispose,
+});
+
+const effect = effectFactory.method;
+
+// Build view helpers
+const { createScope, disposeScope } = createScopes({
+  track: signalCtx.track,
+  dispose: signalCtx.dispose,
+});
+
+const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+const withScope = createWithScope({ ctx, createScope });
+const withElementScope = createWithElementScope({ ctx });
+
+const { processChildren } = createProcessChildren({
+  scopedEffect,
+  renderer,
+});
 
 // Build view factories
-const elFactory = createElFactory({ ctx: viewCtx, effect: effectFn, renderer });
-const mapFactory = createMapFactory({
-  ctx: viewCtx,
-  signal: signalFn,
-  effect: effectFn,
+const elFactory = createElFactory({
+  ctx,
+  scopedEffect,
   renderer,
+  processChildren,
+  withScope,
 });
-const matchFactory = createMatchFactory({
-  ctx: viewCtx,
-  effect: effectFn,
+
+const mapHelper = createMapHelper<HTMLElement, Text>({
+  ctx,
+  scopedEffect,
+  withElementScope,
   renderer,
+  disposeScope,
 });
+
+const onFactory = createOnFactory({
+  startBatch: () => 0, // No-op for simple example
+  endBatch: () => 0,
+});
+
+// Create a factory wrapper for map
+const mapFactory: MapFactory = {
+  name: 'map',
+  method: mapHelper as (render: () => RefSpec<HTMLElement> | RefSpec<HTMLElement>[]) => FragmentRef<HTMLElement>,
+};
 
 // Create the combined API
 const api = createApi(
@@ -81,8 +137,8 @@ const api = createApi(
     computed: () => computedFactory,
     effect: () => effectFactory,
     el: () => elFactory,
+    on: () => onFactory,
     map: () => mapFactory,
-    match: () => matchFactory,
   },
   {} // No shared context needed
 );
@@ -98,8 +154,10 @@ if (app) {
   const todoList = TodoList(api);
 
   // Instantiate blueprints and append to DOM
-  app.appendChild(counter.create());
-  app.appendChild(todoList.create());
+  const counterEl = counter.create().element;
+  const todoListEl = todoList.create().element;
+  if (counterEl) app.appendChild(counterEl);
+  if (todoListEl) app.appendChild(todoListEl);
 
   // Trigger lifecycle callbacks (for DOM connection observers)
   counter((el) => {

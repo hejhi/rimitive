@@ -31,6 +31,7 @@ type ReactiveProps<T> = {
 export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> =
   ReactiveProps<HTMLElementTagNameMap[Tag]> & {
     style?: Partial<CSSStyleDeclaration>;
+    status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
   };
 
 /**
