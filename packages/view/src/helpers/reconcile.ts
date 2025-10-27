@@ -140,7 +140,8 @@ export function reconcileWithKeys<
   disposeScope: CreateScopes['disposeScope'],
   oldIndicesBuf: number[],
   newPosBuf: number[],
-  lisBuf: number[]
+  lisBuf: number[],
+  onItemRemoved?: (key: string) => void
 ): NodeRef<TElement>[] {
   const { itemsByKey, parentElement, nextSibling } = state;
 
@@ -199,6 +200,11 @@ export function reconcileWithKeys<
           ctx.elementScopes.delete(node.element);
         }
         renderer.removeChild(parentElement, node.element);
+      }
+
+      // Call removal callback before deleting from itemsByKey
+      if (onItemRemoved) {
+        onItemRemoved(key);
       }
 
       itemsByKey.delete(key);
