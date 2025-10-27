@@ -75,8 +75,8 @@ describe('el primitive', () => {
       const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
 
       // User cares: content is rendered
-      expect(getTextContent(asElement(ref.create())!)).toBe('Hello World');
-      expect(asElement(ref.create())!.props.className).toBe('container');
+      expect(getTextContent(asElement(ref.create()))).toBe('Hello World');
+      expect(asElement(ref.create()).props.className).toBe('container');
     });
 
     it('nests elements', () => {
@@ -99,7 +99,7 @@ describe('el primitive', () => {
       const parent = el(['div', child]); // Pass blueprint - will be instantiated
 
       // Create parent instance (which instantiates child)
-      const parentElement = asElement(parent.create())!;
+      const parentElement = asElement(parent.create());
 
       // User cares: nested content is accessible
       expect(getTextContent(parentElement)).toBe('nested content');
@@ -133,11 +133,11 @@ describe('el primitive', () => {
       const ref = el(['div', text]);
 
       // User cares: initial content is displayed
-      expect(getTextContent(asElement(ref.create())!)).toBe('initial');
+      expect(getTextContent(asElement(ref.create()))).toBe('initial');
 
       // User cares: content updates when signal changes
       setText('updated');
-      expect(getTextContent(asElement(ref.create())!)).toBe('updated');
+      expect(getTextContent(asElement(ref.create()))).toBe('updated');
     });
 
     it('updates reactive props', () => {
@@ -164,11 +164,11 @@ describe('el primitive', () => {
       const ref = el(['div', { className }]);
 
       // User cares: initial prop value is set
-      expect(asElement(ref.create())!.props.className).toBe('foo');
+      expect(asElement(ref.create()).props.className).toBe('foo');
 
       // User cares: prop updates when signal changes
       setClassName('bar');
-      expect(asElement(ref.create())!.props.className).toBe('bar');
+      expect(asElement(ref.create()).props.className).toBe('bar');
     });
 
     it('handles mixed static and reactive content', () => {
@@ -195,11 +195,11 @@ describe('el primitive', () => {
       const ref = el(['div', 'Count: ', count]);
 
       // User cares: content combines static and reactive parts
-      expect(getTextContent(asElement(ref.create())!)).toBe('Count: 0');
+      expect(getTextContent(asElement(ref.create()))).toBe('Count: 0');
 
       // User cares: reactive part updates
       setCount(5);
-      expect(getTextContent(asElement(ref.create())!)).toBe('Count: 5');
+      expect(getTextContent(asElement(ref.create()))).toBe('Count: 5');
     });
 
     it('cleans up effects on disconnect', () => {
@@ -225,7 +225,7 @@ describe('el primitive', () => {
       }).method;
 
       const ref = el(['div', text]);
-      const element = asElement(ref.create())!;
+      const element = asElement(ref.create());
 
       // Verify initial subscription
       expect(subscribers.size).toBe(1);
@@ -265,7 +265,7 @@ describe('el primitive', () => {
       ref(() => cleanup);
 
       // Create instance - lifecycle callback runs immediately
-      const element = asElement(ref.create())!;
+      const element = asElement(ref.create());
 
       // Reconciler removes element (disposes scope explicitly)
       const scope = ctx.elementScopes.get(element);

@@ -2,14 +2,13 @@
  * Process children into linked list and attach fragments
  *
  * Two-pass algorithm:
- * 1. Forward pass: Build intrusive linked list, append element children (skip fragment factories)
- * 2. Backward pass: Initialize fragment factories with correct insertion points
+ * 1. Forward pass: Build intrusive linked list, append element children (skip fragments)
+ * 2. Backward pass: Attach fragments with correct insertion points
  */
 
-import type { NodeRef, ElementRef, ElRefSpecChild } from '../types';
-import { isElementRef, isReactive, isRefSpec } from '../types';
+import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef } from '../types';
+import { isElementRef, isFragmentRef, isReactive, isRefSpec } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
-import { isFragmentFactory } from './fragment';
 
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
@@ -46,11 +45,6 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
         return childRef;
       }
 
-      // Fragment factory - skip in forward pass, handle in backward pass
-      if (isFragmentFactory<TElement>(child)) {
-        return null;
-      }
-
       // The only other functions allowed are reactives
       if (isReactive(child)) {
         const textNode = renderer.createTextNode('');
@@ -66,6 +60,11 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
         renderer.appendChild(element, textNode);
         return null; // Text nodes don't participate in ref node chain
       }
+    }
+
+    // Fragment ref - return it for backward pass handling
+    if (childType === 'object' && child !== null && isFragmentRef<TElement>(child as NodeRef<TElement>)) {
+      return child as FragmentRef<TElement>;
     }
 
     return null; // Default case
@@ -94,20 +93,18 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       lastChildRef = refNode;
     }
 
-    // Backward pass: initialize fragment factories with correct insertion points
+    // Backward pass: attach fragments with correct insertion points
     let nextRef: NodeRef<TElement> | null = null;
 
     for (let i = children.length - 1; i >= 0; i--) {
-      const child = children[i]!;
+      const nodeRef = childNodes.get(i);
 
-      // Fragment factory - call create() with parent and nextSibling
-      if (isFragmentFactory<TElement>(child)) {
-        child.create(parent, nextRef);
-        // FragmentRef is now initialized and attached to DOM
+      // Fragment ref - call attach with parent and nextSibling
+      if (nodeRef && isFragmentRef(nodeRef)) {
+        nodeRef.attach(parent, nextRef);
       }
 
-      // Update insertion point for next factory
-      const nodeRef = childNodes.get(i);
+      // Update insertion point for next fragment
       if (nodeRef && isElementRef(nodeRef)) {
         nextRef = nodeRef;
       }

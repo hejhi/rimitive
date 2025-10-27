@@ -10,6 +10,7 @@ import type {
 import {
   isReactive,
   STATUS_ELEMENT,
+  STATUS_FRAGMENT,
 } from './types';
 import type { LatticeContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
@@ -128,9 +129,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     };
 
     // Set the key if provided
-    if (key !== undefined) {
-      refSpec.key = key;
-    }
+    if (key !== undefined) refSpec.key = key;
 
     const [tag, ...rest] = spec;
     const { props, children } = parseSpec(rest);
@@ -184,10 +183,18 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap, TElement>(
   const children: ElRefSpecChild<TElement>[] = [];
   
   for (const item of rest) {
-    // It's props
-    if (isPlainObject(item) && !isReactive(item)) Object.assign(props, item);
-    // It's a child - not a plain object props, so must be RefSpecChild
-    else children.push(item);
+    // Check if it's a FragmentRef (has status: STATUS_FRAGMENT)
+    if (isPlainObject(item) && 'status' in item && item.status === STATUS_FRAGMENT) {
+      children.push(item as ElRefSpecChild<TElement>);
+    }
+    // It's props (plain object that's not reactive and not a ref)
+    else if (isPlainObject(item) && !isReactive(item)) {
+      Object.assign(props, item);
+    }
+    // It's a child (string, number, RefSpec, Reactive)
+    else {
+      children.push(item);
+    }
   }
 
   return { props, children };

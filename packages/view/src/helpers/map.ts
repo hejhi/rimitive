@@ -8,13 +8,13 @@
  * - Unified reconciliation for keyed and non-keyed arrays
  */
 
-import type { RefSpec, ElementRef, NodeRef } from '../types';
+import type { RefSpec, ElementRef, NodeRef, FragmentRef } from '../types';
 import { isElementRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
 import { reconcileWithKeys, type ReconcileState, type ReconcileNode } from './reconcile';
-import { createFragment, type FragmentFactory } from './fragment';
+import { createFragment } from './fragment';
 
 export interface MapHelperOpts<
   TElement extends RendererElement,
@@ -51,7 +51,8 @@ export function createMapHelper<
    */
   function map(
     render: () => RefSpec<TElement> | RefSpec<TElement>[]
-  ): FragmentFactory<TElement> {
+  ): FragmentRef<TElement> {
+    // TODO: pass in node to callback too?
     return createFragment((parent: ElementRef<TElement>, nextSibling?: NodeRef<TElement> | null) => {
       // Closure state - persists across effect re-runs
       const state: ReconcileState<TElement> & {
