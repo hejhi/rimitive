@@ -48,6 +48,82 @@ export interface ReconcileState<TElement> {
 }
 
 /**
+ * Options for creating a reconciler
+ */
+export interface ReconcilerOptions<TElement> {
+  parentElement: TElement;
+  parentRef?: ElementRef<TElement>;
+  nextSibling?: NodeRef<TElement>;
+}
+
+/**
+ * Reconciler interface - manages reconciliation state internally
+ */
+export interface Reconciler<T, TElement> {
+  /**
+   * Reconcile items with the current state
+   */
+  reconcile(
+    items: T[],
+    keyFn: (item: T, index: number) => string | number,
+    hooks: ReconcileHooks<T, TElement>
+  ): NodeRef<TElement>[];
+
+  /**
+   * Dispose all remaining items
+   * Calls onRemove for each item still tracked
+   */
+  dispose(onRemove: (key: string, node: NodeRef<TElement>) => void): void;
+}
+
+/**
+ * Create a reconciler that manages itemsByKey internally
+ *
+ * This encapsulates reconciliation state and provides a clean API
+ * for reconciling and disposing items.
+ */
+export function createReconciler<T, TElement extends RendererElement>(
+  options: ReconcilerOptions<TElement>
+): Reconciler<T, TElement> {
+  // Internal reconciliation state
+  const itemsByKey = new Map<string, ReconcileNode<TElement>>();
+
+  // Pooled buffers for LIS calculation
+  const oldIndicesBuf: number[] = [];
+  const newPosBuf: number[] = [];
+  const lisBuf: number[] = [];
+
+  const state: ReconcileState<TElement> = {
+    itemsByKey,
+    parentElement: options.parentElement,
+    parentRef: options.parentRef,
+    nextSibling: options.nextSibling,
+  };
+
+  return {
+    reconcile(items, keyFn, hooks) {
+      return reconcileWithKeys(
+        items,
+        state,
+        keyFn,
+        hooks,
+        oldIndicesBuf,
+        newPosBuf,
+        lisBuf
+      );
+    },
+
+    dispose(onRemove) {
+      // Call onRemove for all remaining items
+      for (const [key, node] of itemsByKey) {
+        onRemove(key, node);
+      }
+      itemsByKey.clear();
+    }
+  };
+}
+
+/**
  * Binary search for LIS algorithm
  */
 function binarySearch(

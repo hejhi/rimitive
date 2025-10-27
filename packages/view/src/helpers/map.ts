@@ -13,7 +13,7 @@ import { isElementRef, resolveNextRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
-import { reconcileWithKeys, type ReconcileState } from './reconcile';
+import { createReconciler } from './reconcile';
 import { createFragment } from './fragment';
 import type { GlobalContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
@@ -76,18 +76,12 @@ export function createMapHelper<
       };
       const itemData = new Map<unknown, ItemEntry>();
 
-      // Reconciliation state (expected by reconcileWithKeys)
-      const state: ReconcileState<TElement> = {
-        itemsByKey: new Map(),
+      // Create reconciler with internal state management
+      const reconciler = createReconciler<T, TElement>({
         parentElement: parent.element,
         parentRef: parent,
         nextSibling: nextSibling || undefined,
-      };
-
-      // Pooled buffers for LIS calculation
-      const oldIndicesBuf: number[] = [];
-      const newPosBuf: number[] = [];
-      const lisBuf: number[] = [];
+      });
 
       // Create effect within parent's scope - auto-tracked!
       const effectDispose = withElementScope(parent.element, () => {
@@ -95,10 +89,9 @@ export function createMapHelper<
           const currentItems = items();
 
           // Reconcile using hooks-based lifecycle
-          reconcileWithKeys(
+          reconciler.reconcile(
             currentItems,
-            state,
-            keyFn ? (item) => keyFn(item) : (item) => item as unknown as string | number,
+            (item) => keyFn ? keyFn(item) : item as unknown as string | number,
             {
               // onCreate: called when new item needs to be created
               onCreate: untrack(() => (item, key) => {
@@ -118,8 +111,13 @@ export function createMapHelper<
 
                 // Insert into DOM
                 if (isElementRef(nodeRef)) {
-                  const nextEl = resolveNextRef(state.nextSibling)?.element ?? null;
-                  renderer.insertBefore(parent.element, nodeRef.element, nextEl);
+                  const nextEl =
+                    resolveNextRef(nextSibling || undefined)?.element ?? null;
+                  renderer.insertBefore(
+                    parent.element,
+                    nodeRef.element,
+                    nextEl
+                  );
                 }
 
                 return nodeRef;
@@ -128,24 +126,23 @@ export function createMapHelper<
               // onUpdate: called when existing item's data should be updated
               onUpdate: (key, item) => {
                 const existing = itemData.get(key);
-                if (existing) {
-                  existing.signal(item);
-                }
+                if (existing) existing.signal(item);
               },
 
               // onMove: called when item needs repositioning
-              onMove: (_key, node, nextSibling) => {
-                if (isElementRef(node)) {
-                  let nextEl: TElement | null = null;
+              onMove: (_key, node, nextSiblingNode) => {
+                if (!isElementRef(node)) return;
 
-                  if (nextSibling && isElementRef(nextSibling)) {
-                    nextEl = nextSibling.element;
-                  } else if (!nextSibling) {
-                    nextEl = resolveNextRef(state.nextSibling)?.element ?? null;
-                  }
+                let nextEl: TElement | null = null;
 
-                  renderer.insertBefore(parent.element, node.element, nextEl);
+                if (nextSiblingNode && isElementRef(nextSiblingNode)) {
+                  nextEl = nextSiblingNode.element;
+                } else if (!nextSiblingNode) {
+                  nextEl =
+                    resolveNextRef(nextSibling || undefined)?.element ?? null;
                 }
+
+                renderer.insertBefore(parent.element, node.element, nextEl);
               },
 
               // onRemove: called when item is being removed
@@ -154,19 +151,15 @@ export function createMapHelper<
                 itemData.delete(key);
 
                 // Dispose scope and remove from DOM
-                if (isElementRef(node)) {
-                  const scope = ctx.elementScopes.get(node.element);
-                  if (scope) {
-                    disposeScope(scope);
-                    ctx.elementScopes.delete(node.element);
-                  }
-                  renderer.removeChild(parent.element, node.element);
+                if (!isElementRef(node)) return;
+                const scope = ctx.elementScopes.get(node.element);
+                if (scope) {
+                  disposeScope(scope);
+                  ctx.elementScopes.delete(node.element);
                 }
+                renderer.removeChild(parent.element, node.element);
               },
-            },
-            oldIndicesBuf,
-            newPosBuf,
-            lisBuf
+            }
           );
         });
       });
@@ -176,18 +169,25 @@ export function createMapHelper<
         // Dispose the effect
         effectDispose();
 
-        // Clean up all tracked elements
-        for (const [, node] of state.itemsByKey) {
-          if (isElementRef(node)) {
-            const scope = ctx.elementScopes.get(node.element);
-            if (scope) {
-              disposeScope(scope);
-              ctx.elementScopes.delete(node.element);
-            }
-            renderer.removeChild(state.parentElement, node.element);
+        // Dispose all remaining items via reconciler
+        reconciler.dispose((key, node) => {
+          // Clean up itemData
+          itemData.delete(key);
+
+          // Dispose scope and remove from DOM
+          if (!isElementRef(node)) return;
+
+          const scope = ctx.elementScopes.get(node.element);
+
+          if (scope) {
+            disposeScope(scope);
+            ctx.elementScopes.delete(node.element);
           }
-        }
-        state.itemsByKey.clear();
+
+          renderer.removeChild(parent.element, node.element);
+        });
+
+        // Clear remaining data
         itemData.clear();
       };
     });
