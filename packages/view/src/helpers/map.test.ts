@@ -34,6 +34,7 @@ describe('map() - User-facing behavior', () => {
       scopedEffect: env.scopedEffect,
       withElementScope: env.withElementScope,
       renderer: env.renderer,
+      createScope: env.createScope,
       disposeScope: env.disposeScope,
     });
 

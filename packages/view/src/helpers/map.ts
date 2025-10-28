@@ -8,7 +8,7 @@
  * - Efficient reconciliation with LIS algorithm
  */
 
-import type { RefSpec, ElementRef, NodeRef, FragmentRef, Reactive } from '../types';
+import type { RefSpec, ElementRef, NodeRef, FragmentRef, Reactive, RenderScope } from '../types';
 import { isElementRef, resolveNextRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
@@ -28,6 +28,7 @@ export interface MapHelperOpts<
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   withElementScope: <T>(element: object, fn: () => T) => T;
   renderer: Renderer<TElement, TText>;
+  createScope: CreateScopes['createScope'];
   disposeScope: CreateScopes['disposeScope'];
 }
 
@@ -41,7 +42,7 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, signalCtx, signal, scopedEffect, withElementScope, renderer, disposeScope } = opts;
+  const { ctx, signalCtx, signal, scopedEffect, withElementScope, renderer, createScope, disposeScope } = opts;
 
   // Create untracked helper to prevent render() from tracking outer reactive state
   const untrack = createUntracked({ ctx: signalCtx });
@@ -69,10 +70,11 @@ export function createMapHelper<
     keyFn?: (item: T) => string | number
   ): FragmentRef<TElement> {
     return createFragment((parent: ElementRef<TElement>, nextSibling?: NodeRef<TElement> | null) => {
-      // Store signals and RefSpecs per key (separate from reconciliation)
+      // Store signals, RefSpecs, and scopes per key (separate from reconciliation)
       type ItemEntry = {
         signal: Reactive<T> & ((value: T) => void);
         refSpec: RefSpec<TElement>;
+        scope: RenderScope;
       };
       const itemData = new Map<unknown, ItemEntry>();
 
@@ -87,23 +89,32 @@ export function createMapHelper<
           // New item: create signal, call render ONCE, store for future reuse
           const itemSignal = signal(item);
 
-          // Call render within parent's scope so any computeds/effects created
+          // Create a dedicated scope for this row's disposables
+          // This ensures each row's computeds/effects are tracked independently
+          const rowScope = createScope(parent.element);
+
+          // Call render with row's scope active so any computeds/effects created
           // during component initialization are tracked for disposal
           let refSpec: RefSpec<TElement>;
           let nodeRef: NodeRef<TElement>;
 
-          withElementScope(parent.element, () => {
+          const prevScope = ctx.activeScope;
+          ctx.activeScope = rowScope;
+          try {
             // Render is still "cold" (untracked) but now has activeScope set
             // This ensures computeds/effects created during render are tracked for disposal
             // while preventing the render function itself from tracking dependencies
             refSpec = render(itemSignal);
             nodeRef = refSpec.create();
-          });
+          } finally {
+            ctx.activeScope = prevScope;
+          }
 
-          // Store signal and RefSpec for future updates
+          // Store signal, RefSpec, and scope for future updates/cleanup
           itemData.set(key, {
             signal: itemSignal,
-            refSpec: refSpec!,
+            refSpec,
+            scope: rowScope,
           });
 
           // Insert into DOM
@@ -143,14 +154,20 @@ export function createMapHelper<
 
         // onRemove: called when item is being removed
         onRemove: (key, node) => {
+          // Dispose the row's dedicated scope (cleans up computeds/effects)
+          const entry = itemData.get(key);
+          if (entry?.scope) {
+            disposeScope(entry.scope);
+          }
+
           // Clean up itemData
           itemData.delete(key);
 
-          // Dispose scope and remove from DOM
+          // Dispose element scope and remove from DOM
           if (!isElementRef(node)) return;
-          const scope = ctx.elementScopes.get(node.element);
-          if (scope) {
-            disposeScope(scope);
+          const elementScope = ctx.elementScopes.get(node.element);
+          if (elementScope) {
+            disposeScope(elementScope);
             ctx.elementScopes.delete(node.element);
           }
           renderer.removeChild(parent.element, node.element);
