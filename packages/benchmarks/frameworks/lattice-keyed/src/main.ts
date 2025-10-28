@@ -74,7 +74,7 @@ const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
 
-const { createScope, disposeScope, withScope, withElementScope, scopedEffect } =
+const { createScope, disposeScope, withScope, scopedEffect } =
   createScopes({
     ctx: viewCtx,
     track: signalCtx.track,
@@ -95,7 +95,6 @@ const elFactory = createElFactory({
 const map = createMapHelper({
   ctx: viewCtx,
   scopedEffect,
-  withElementScope,
   renderer,
   createScope,
   disposeScope,

@@ -40,15 +40,6 @@ export type CreateScopes = {
   ) => { result: T; scope: RenderScope<TElement> };
 
   /**
-   * Run code within an existing element's scope context.
-   * Useful for attaching to parent scope without creating a new one.
-   */
-  withElementScope: <T>(
-    element: object,
-    fn: () => T
-  ) => T;
-
-  /**
    * Create a scope-aware effect that auto-tracks itself in activeScope.
    */
   scopedEffect: (fn: () => void | (() => void)) => () => void;
@@ -214,29 +205,6 @@ export function createScopes({
   }
 
   /**
-   * Run code within an existing element's scope context
-   * Useful for fragments/map that want to attach to parent scope without creating their own.
-   */
-  function withElementScope<T>(
-    element: object,
-    fn: () => T
-  ): T {
-    const scope = ctx.elementScopes.get(element);
-    if (!scope) {
-      // No scope exists - just run the function
-      return fn();
-    }
-
-    const prevScope = ctx.activeScope;
-    ctx.activeScope = scope;
-    try {
-      return fn();
-    } finally {
-      ctx.activeScope = prevScope;
-    }
-  }
-
-  /**
    * Create a scope-aware effect that automatically tracks itself in activeScope
    */
   function scopedEffect(fn: () => void | (() => void)): () => void {
@@ -261,7 +229,6 @@ export function createScopes({
     createScope,
     disposeScope,
     withScope,
-    withElementScope,
     scopedEffect,
   };
 }

@@ -32,7 +32,6 @@ describe('map() - User-facing behavior', () => {
       signalCtx: env.signalCtx,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
-      withElementScope: env.withElementScope,
       renderer: env.renderer,
       createScope: env.createScope,
       disposeScope: env.disposeScope,

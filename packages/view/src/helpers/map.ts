@@ -26,7 +26,6 @@ export interface MapHelperOpts<
   signalCtx: GlobalContext;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
-  withElementScope: <T>(element: object, fn: () => T) => T;
   renderer: Renderer<TElement, TText>;
   createScope: CreateScopes['createScope'];
   disposeScope: CreateScopes['disposeScope'];
@@ -42,7 +41,7 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, signalCtx, signal, scopedEffect, withElementScope, renderer, createScope, disposeScope } = opts;
+  const { ctx, signalCtx, signal, scopedEffect, renderer, createScope, disposeScope } = opts;
 
   // Create untracked helper to prevent render() from tracking outer reactive state
   const untrack = createUntracked({ ctx: signalCtx });
@@ -169,16 +168,14 @@ export function createMapHelper<
       });
 
       // Create effect within parent's scope - auto-tracked!
-      const effectDispose = withElementScope(parent.element, () => {
-        return scopedEffect(() => {
-          const currentItems = items();
+      const effectDispose = scopedEffect(() => {
+        const currentItems = items();
 
-          // Reconcile with just items and key function
-          reconcile(
-            currentItems,
-            (item) => keyFn ? keyFn(item) : item as unknown as string | number
-          );
-        });
+        // Reconcile with just items and key function
+        reconcile(
+          currentItems,
+          (item) => keyFn ? keyFn(item) : item as unknown as string | number
+        );
       });
 
       // Return cleanup function

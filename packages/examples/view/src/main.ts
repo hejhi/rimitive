@@ -89,7 +89,6 @@ const { createScope, disposeScope } = createScopes({
 
 const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
 const withScope = createWithScope({ ctx, createScope });
-const withElementScope = createWithElementScope({ ctx });
 
 const { processChildren } = createProcessChildren({
   scopedEffect,
@@ -110,7 +109,6 @@ const mapHelper = createMapHelper<HTMLElement, Text>({
   signalCtx: latticeCtx,
   signal: signalFactory.method,
   scopedEffect,
-  withElementScope,
   renderer,
   disposeScope,
 });

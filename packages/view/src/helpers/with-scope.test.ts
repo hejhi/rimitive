@@ -137,59 +137,6 @@ describe('with-scope', () => {
     });
   });
 
-  describe('createWithElementScope', () => {
-    it('should run code in existing element scope', () => {
-      const env = createTestEnv();
-      const { ctx, withElementScope } = env;
-
-      const element = {};
-      const scope = env.createScope(element);
-      ctx.elementScopes.set(element, scope);
-
-      let capturedScope: RenderScope | null = null;
-      const result = withElementScope(element, () => {
-        capturedScope = ctx.activeScope;
-        return 'test';
-      });
-
-      expect(capturedScope).toBe(scope);
-      expect(result).toBe('test');
-    });
-
-    it('should just run code if no scope exists', () => {
-      const env = createTestEnv();
-      const { ctx, withElementScope } = env;
-
-      const element = {};
-
-      let didRun = false;
-      withElementScope(element, () => {
-        didRun = true;
-        expect(ctx.activeScope).toBeNull();
-      });
-
-      expect(didRun).toBe(true);
-    });
-
-    it('should restore previous activeScope', () => {
-      const env = createTestEnv();
-      const { ctx, withElementScope } = env;
-
-      const prevScope = env.createScope({});
-      ctx.activeScope = prevScope;
-
-      const element = {};
-      const scope = env.createScope(element);
-      ctx.elementScopes.set(element, scope);
-
-      withElementScope(element, () => {
-        expect(ctx.activeScope).toBe(scope);
-      });
-
-      expect(ctx.activeScope).toBe(prevScope);
-    });
-  });
-
   describe('integration: withScope + auto-tracking', () => {
     it('should enable automatic disposal tracking pattern', () => {
       const env = createTestEnv();
