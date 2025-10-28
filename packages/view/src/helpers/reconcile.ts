@@ -224,6 +224,9 @@ export function createReconciler<T, TElement extends RendererElement>(
         } else node.reconcileStatus = UNVISITED; // Reset for next reconciliation
       }
 
+      // Skip LIS calculation if no count
+      if (count === 0) return nodes;
+
       // Calculate LIS for minimal moves
       const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
 
