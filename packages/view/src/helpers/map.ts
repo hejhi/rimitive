@@ -130,7 +130,7 @@ export function createMapHelper<
         // Reconcile with just items and key function
         reconcile(
           items(),
-          (item) => keyFn ? keyFn(item) : item as unknown as string | number
+          (item) => keyFn ? keyFn(item) : item as string | number
         );
       });
 
