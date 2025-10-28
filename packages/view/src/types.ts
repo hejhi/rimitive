@@ -144,8 +144,7 @@ export type ElRefSpecChild<TElement = object> =
   | FragmentRef<TElement>;
 
 export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
-  // Tree structure (from Scope)
-  parent: RenderScope<TElement> | undefined;
+  // Tree structure (from Scope) - intrusive singly-linked tree
   firstChild: RenderScope<TElement> | undefined;
   nextSibling: RenderScope<TElement> | undefined;
 

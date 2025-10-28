@@ -96,7 +96,6 @@ export function createScopes({
       },
 
       // Tree structure (from Scope)
-      parent,
       firstChild: undefined,
       nextSibling: undefined,
 

@@ -133,7 +133,8 @@ describe('with-scope', () => {
       const { scope: childScope } = withScope(childElement, () => {});
       ctx.activeScope = null;
 
-      expect(childScope.parent).toBe(parentScope);
+      // Verify child is linked into parent's child list
+      expect(parentScope.firstChild).toBe(childScope);
     });
   });
 
