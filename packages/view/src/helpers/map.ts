@@ -87,29 +87,37 @@ export function createMapHelper<
           // New item: create signal, call render ONCE, store for future reuse
           const itemSignal = signal(item);
 
-          // Call render untracked to prevent it from tracking outer reactive state
-          // Components are "cold" - reactivity comes from expressions inside them
-          const refSpec = render(itemSignal);
-          const nodeRef = refSpec.create();
+          // Call render within parent's scope so any computeds/effects created
+          // during component initialization are tracked for disposal
+          let refSpec: RefSpec<TElement>;
+          let nodeRef: NodeRef<TElement>;
+
+          withElementScope(parent.element, () => {
+            // Render is still "cold" (untracked) but now has activeScope set
+            // This ensures computeds/effects created during render are tracked for disposal
+            // while preventing the render function itself from tracking dependencies
+            refSpec = render(itemSignal);
+            nodeRef = refSpec.create();
+          });
 
           // Store signal and RefSpec for future updates
           itemData.set(key, {
             signal: itemSignal,
-            refSpec,
+            refSpec: refSpec!,
           });
 
           // Insert into DOM
-          if (isElementRef(nodeRef)) {
+          if (isElementRef(nodeRef!)) {
             const nextEl =
               resolveNextRef(nextSibling || undefined)?.element ?? null;
             renderer.insertBefore(
               parent.element,
-              nodeRef.element,
+              nodeRef!.element,
               nextEl
             );
           }
 
-          return nodeRef;
+          return nodeRef!;
         }),
 
         // onUpdate: called when existing item's data should be updated
