@@ -32,11 +32,11 @@ export type CreateScopes = {
   /**
    * Run code within a new scope attached to an element.
    * Handles full lifecycle: creation, registration, activation, and cleanup.
+   * Automatically uses ctx.activeScope as parent for hierarchy.
    */
   withScope: <TElement extends object = object, T = void>(
     element: TElement,
-    fn: (scope: RenderScope<TElement>) => T,
-    parent?: RenderScope<TElement>
+    fn: (scope: RenderScope<TElement>) => T
   ) => { result: T; scope: RenderScope<TElement> };
 
   /**
@@ -178,21 +178,24 @@ export function createScopes({
   /**
    * Run code within a new scope attached to an element
    * Returns the created scope so callers can access it if needed.
+   * Automatically uses ctx.activeScope as parent for hierarchy.
    */
   function withScope<TElement extends object = object, T = void>(
     element: TElement,
-    fn: (scope: RenderScope<TElement>) => T,
-    parent?: RenderScope<TElement>
+    fn: (scope: RenderScope<TElement>) => T
   ): { result: T; scope: RenderScope<TElement> } {
+    // Use activeScope as parent for automatic hierarchy
+    const parentScope = (ctx.activeScope || undefined) as RenderScope<TElement> | undefined;
+
     // Create scope
-    const scope = createScope(element, parent);
+    const scope = createScope(element, parentScope);
 
     // Register so children/effects can find it
-    ctx.elementScopes.set(element as object, scope);
+    ctx.elementScopes.set(element, scope);
 
     // Set as active scope and run code
     const prevScope = ctx.activeScope;
-    ctx.activeScope = scope as RenderScope;
+    ctx.activeScope = scope;
 
     let result: T;
     try {
@@ -204,7 +207,7 @@ export function createScopes({
     // Clean up registration if no disposables were tracked
     // (Lazy optimization - elements with no reactive props don't need scopes)
     if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
-      ctx.elementScopes.delete(element as object);
+      ctx.elementScopes.delete(element);
     }
 
     return { result, scope };

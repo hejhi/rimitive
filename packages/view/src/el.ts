@@ -148,8 +148,8 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       };
 
       // Create scope and run setup - all orchestration handled by withScope!
-      withScope(element as unknown as TElement, () => {
-        applyProps(element as unknown as TElement, props);
+      withScope(element, () => {
+        applyProps(element as TElement, props);
         processChildren(elRef as unknown as ElementRef<TElement>, children);
 
         // Track lifecycle callbacks

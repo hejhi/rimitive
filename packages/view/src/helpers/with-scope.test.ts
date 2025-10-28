@@ -119,20 +119,19 @@ describe('with-scope', () => {
       expect(ctx.activeScope).toBe(null);
     });
 
-    it('should pass parent scope to createScope', () => {
+    it('should use activeScope as parent for automatic hierarchy', () => {
       const env = createTestEnv();
-      const { withScope } = env;
+      const { ctx, withScope } = env;
 
       const parentElement = {};
       const parentScope = env.createScope(parentElement);
 
       const childElement = {};
 
-      const { scope: childScope } = withScope(
-        childElement,
-        () => {},
-        parentScope
-      );
+      // Set as activeScope - withScope should use it as parent
+      ctx.activeScope = parentScope;
+      const { scope: childScope } = withScope(childElement, () => {});
+      ctx.activeScope = null;
 
       expect(childScope.parent).toBe(parentScope);
     });

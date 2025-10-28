@@ -154,22 +154,16 @@ export function createMapHelper<
 
         // onRemove: called when item is being removed
         onRemove: (key, node) => {
-          // Dispose the row's dedicated scope (cleans up computeds/effects)
+          // Dispose the row's scope (automatically disposes child element scope via hierarchy)
           const entry = itemData.get(key);
-          if (entry?.scope) {
-            disposeScope(entry.scope);
-          }
+          if (entry) disposeScope(entry.scope);
 
           // Clean up itemData
           itemData.delete(key);
 
-          // Dispose element scope and remove from DOM
+          // Remove from DOM and clean up element scope registration
           if (!isElementRef(node)) return;
-          const elementScope = ctx.elementScopes.get(node.element);
-          if (elementScope) {
-            disposeScope(elementScope);
-            ctx.elementScopes.delete(node.element);
-          }
+          ctx.elementScopes.delete(node.element);
           renderer.removeChild(parent.element, node.element);
         },
       });
