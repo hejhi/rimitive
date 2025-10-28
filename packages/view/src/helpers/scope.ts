@@ -43,6 +43,12 @@ export type CreateScopes = {
    * Create a scope-aware effect that auto-tracks itself in activeScope.
    */
   scopedEffect: (fn: () => void | (() => void)) => () => void;
+
+  /**
+   * Register a cleanup function to run when the current scope is disposed.
+   * Must be called within a scope context (e.g., inside withScope or element setup).
+   */
+  onCleanup: (cleanup: () => void) => void;
 };
 
 export function createScopes({
@@ -216,11 +222,24 @@ export function createScopes({
     return dispose;
   }
 
+  /**
+   * Register a cleanup function to run when the current scope is disposed.
+   * Must be called within a scope context (e.g., inside withScope or element setup).
+   */
+  function onCleanup(cleanup: () => void): void {
+    const scope = ctx.activeScope;
+    if (!scope) return;
+
+    // Track cleanup directly in active scope
+    scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
+  }
+
   return {
     createScope,
     disposeScope,
     withScope,
     scopedEffect,
+    onCleanup,
   };
 }
 

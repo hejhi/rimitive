@@ -5,7 +5,6 @@ import type {
   Reactive,
   ElementRef,
   ElRefSpecChild,
-  RenderScope,
 } from './types';
 import {
   isReactive,
@@ -14,7 +13,7 @@ import {
 } from './types';
 import type { LatticeContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
-import { createOnCleanup } from './helpers/on-cleanup';
+import type { CreateScopes } from './helpers/scope';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -50,8 +49,9 @@ export type ElOpts<
   TText extends TextNode = TextNode,
 > = {
   ctx: LatticeContext;
-  withScope: <T>(element: object, fn: (scope: RenderScope) => T) => { result: T; scope: RenderScope };
-  scopedEffect: (fn: () => void | (() => void)) => () => void;
+  withScope: CreateScopes['withScope'];
+  scopedEffect: CreateScopes['scopedEffect'];
+  onCleanup: CreateScopes['onCleanup'];
   renderer: Renderer<TElement, TText>;
   processChildren: (
     parent: ElementRef<TElement>,
@@ -103,16 +103,15 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   opts: ElOpts<TElement, TText>
 ): ElFactory<TElement> {
   const {
-    ctx,
     scopedEffect,
     renderer,
     processChildren,
     withScope,
+    onCleanup,
   } = opts;
 
   // Create helpers with captured dependencies
   const applyProps = createApplyProps({ scopedEffect, renderer });
-  const onCleanup = createOnCleanup(ctx);
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>

@@ -38,8 +38,18 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     renderer,
   });
 
+  // Create onCleanup helper
+  const onCleanup = (cleanup: () => void): void => {
+    const scope = ctx.activeScope;
+    if (!scope) return;
+    scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
+  };
+
   // Create withScope helper
-  const withScope = <T>(element: object, fn: (scope: RenderScope) => T): { result: T; scope: RenderScope } => {
+  const withScope = <TElement extends object = object, T = void>(
+    element: TElement,
+    fn: (scope: RenderScope<TElement>) => T
+  ): { result: T; scope: RenderScope<TElement> } => {
     const scope = createScope(element);
     ctx.elementScopes.set(element, scope);
     const prevScope = ctx.activeScope;
@@ -64,7 +74,8 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     handleChild,
     processChildren,
     createScope,
-    withScope
+    withScope,
+    onCleanup
   };
 }
 
@@ -76,6 +87,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
+      onCleanup,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -83,6 +95,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
+      onCleanup,
       }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
@@ -101,6 +114,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
+      onCleanup,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
@@ -112,6 +126,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
+      onCleanup,
       }).method;
 
     // Element with reactive prop
@@ -130,6 +145,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
+      onCleanup,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
@@ -141,6 +157,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
+      onCleanup,
       }).method;
 
     // Element with reactive text child
@@ -158,6 +175,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
+      onCleanup,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -165,6 +183,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
+      onCleanup,
       }).method;
 
     // Static element with lifecycle callback that returns cleanup
@@ -186,6 +205,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
+      onCleanup,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -193,6 +213,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
+      onCleanup,
       }).method;
 
     // Static element with lifecycle callback that returns nothing
@@ -214,6 +235,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       withScope,
+      onCleanup,
     } = createTestEnv();
     const el = createElFactory({
       ctx,
@@ -221,6 +243,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       withScope,
+      onCleanup,
       }).method;
 
     // Nested static elements

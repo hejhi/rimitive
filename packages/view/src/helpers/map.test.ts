@@ -25,6 +25,7 @@ describe('map() - User-facing behavior', () => {
       renderer: env.renderer,
       processChildren: env.processChildren,
       withScope: env.withScope,
+      onCleanup: env.onCleanup,
     });
 
     const map = createMapHelper({

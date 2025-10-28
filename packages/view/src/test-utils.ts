@@ -4,7 +4,6 @@ import type { Renderer } from './renderer';
 import type { Reactive, RefSpec, LifecycleCallback, NodeRef, RenderScope } from './types';
 import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
-import { createOnCleanup } from './helpers/on-cleanup';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
@@ -240,13 +239,12 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { createScope, disposeScope, withScope, scopedEffect } = createScopes({
+  const { createScope, disposeScope, withScope, scopedEffect, onCleanup } = createScopes({
     ctx,
     track,
     dispose,
     baseEffect: effect
   });
-  const onCleanup = createOnCleanup(ctx);
 
   // Create helpers
   const { processChildren, handleChild} = createProcessChildren({

@@ -24,6 +24,7 @@ describe('List reconciliation - Complex reorderings', () => {
       renderer: env.renderer,
       processChildren: env.processChildren,
       withScope: env.withScope,
+      onCleanup: env.onCleanup,
     });
 
     const map = createMapHelper({
@@ -457,6 +458,7 @@ describe('List reconciliation - Edge cases', () => {
       renderer: env.renderer,
       processChildren: env.processChildren,
       withScope: env.withScope,
+      onCleanup: env.onCleanup,
     });
 
     const map = createMapHelper({

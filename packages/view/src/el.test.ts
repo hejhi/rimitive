@@ -29,8 +29,18 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     return dispose;
   };
 
+  // Create onCleanup helper
+  const onCleanup = (cleanup: () => void): void => {
+    const scope = ctx.activeScope;
+    if (!scope) return;
+    scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
+  };
+
   // Create withScope helper
-  const withScope = <T>(element: object, fn: (scope: RenderScope) => T): { result: T; scope: RenderScope } => {
+  const withScope = <TElement extends object = object, T = void>(
+    element: TElement,
+    fn: (scope: RenderScope<TElement>) => T
+  ): { result: T; scope: RenderScope<TElement> } => {
     const scope = createScope(element);
     ctx.elementScopes.set(element, scope);
     const prevScope = ctx.activeScope;
@@ -51,7 +61,7 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     scopedEffect,
     renderer,
   });
-  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, createScope, disposeScope, withScope };
+  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, createScope, disposeScope, withScope, onCleanup };
 }
 
 describe('el primitive', () => {
@@ -63,6 +73,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
+        onCleanup,
       } = createTestEnv();
       const el = createElFactory({
         ctx,
@@ -70,6 +81,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
+        onCleanup,
       }).method;
 
       const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
@@ -86,6 +98,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
+        onCleanup,
         } = createTestEnv();
       const el = createElFactory({
         ctx,
@@ -93,6 +106,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
+        onCleanup,
       }).method;
 
       const child = el(['span', 'nested content']);
@@ -117,6 +131,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
+        onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -128,6 +143,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
+        onCleanup,
       }).method;
 
       const ref = el(['div', text]);
@@ -148,6 +164,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
+        onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -159,6 +176,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
+        onCleanup,
       }).method;
 
       const ref = el(['div', { className }]);
@@ -179,6 +197,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         withScope,
+        onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -190,6 +209,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
+        onCleanup,
       }).method;
 
       const ref = el(['div', 'Count: ', count]);
@@ -211,6 +231,7 @@ describe('el primitive', () => {
         processChildren,
         withScope,
         disposeScope,
+        onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
@@ -222,6 +243,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
+        onCleanup,
       }).method;
 
       const ref = el(['div', text]);
@@ -249,6 +271,7 @@ describe('el primitive', () => {
         processChildren,
         withScope,
         disposeScope,
+        onCleanup,
         } = createTestEnv();
       const el = createElFactory({
         ctx,
@@ -256,6 +279,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         withScope,
+        onCleanup,
       }).method;
 
       const cleanup = vi.fn();
