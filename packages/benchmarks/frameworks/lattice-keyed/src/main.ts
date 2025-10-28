@@ -96,7 +96,9 @@ const map = createMapHelper({
   scopedEffect,
   withElementScope,
   renderer,
-  disposeScope
+  disposeScope,
+  signalCtx: signalCtx.ctx,
+  signal: signalFactory.method,
 });
 
 const api = createApi(
@@ -351,7 +353,11 @@ const App = () => {
       { className: 'table table-hover table-striped test-data' },
       el([
         'tbody',
-        map(() => data().map((rowData: RowData) => Row({ data: signal(rowData), key: rowData.id }))),
+        map(
+          () => data(),
+          (rowDataSignal) => Row({ data: rowDataSignal, key: rowDataSignal().id }),
+          (rowData) => rowData.id
+        ),
       ]),
     ]),
     el([
