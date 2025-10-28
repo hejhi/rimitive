@@ -93,7 +93,6 @@ export interface RefSpec<TElement = ReactiveElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement>; // Register lifecycle callback (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
   create<TExt = Record<string, unknown>>(extensions?: TExt): NodeRef<TElement> & TExt;
-  key?: string | number;
 }
 
 /**

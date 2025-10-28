@@ -281,7 +281,7 @@ const Button = (
   ]);
 
 const Row = (
-  props: { data: Reactive<RowData>; key: number },
+  props: { data: Reactive<RowData> },
   children: ElRefSpecChild<HTMLElement>[] = []
 ) => {
   const id = props.data().id;
@@ -307,7 +307,7 @@ const Row = (
     ]),
     el(['td', { className: 'col-md-6' }]),
     ...children,
-  ], props.key);
+  ]);
 };
 
 const App = () => {
@@ -356,7 +356,7 @@ const App = () => {
         'tbody',
         map(
           () => data(),
-          (rowDataSignal) => Row({ data: rowDataSignal, key: rowDataSignal().id }),
+          (rowDataSignal) => Row({ data: rowDataSignal }),
           (rowData) => rowData.id
         ),
       ]),

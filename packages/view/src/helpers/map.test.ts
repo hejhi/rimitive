@@ -857,10 +857,9 @@ describe('map() - User-facing behavior', () => {
           () => [mode()],
           (modeSignal) => {
             const m = modeSignal();
-            // Key is required to distinguish different states
-            if (m === 'loading') return el.method(['div', 'Loading...'], 'loading');
-            if (m === 'error') return el.method(['div', 'Error occurred'], 'error');
-            return el.method(['div', 'Success!'], 'success');
+            if (m === 'loading') return el.method(['div', 'Loading...']);
+            if (m === 'error') return el.method(['div', 'Error occurred']);
+            return el.method(['div', 'Success!']);
           }
         ),
       ]);
@@ -1129,9 +1128,9 @@ describe('map() - User-facing behavior', () => {
               'div',
               map(
                 () => [{ id: 1 }],
-                () => el.method(['span', displayValue], 1)
+                () => el.method(['span', displayValue])
               ),
-            ], 1)
+            ])
         ),
       ]);
 
@@ -1169,11 +1168,11 @@ describe('map() - User-facing behavior', () => {
                     'article',
                     map(
                       () => [{ id: 1 }],
-                      () => el.method(['span', value], 1)
+                      () => el.method(['span', value])
                     ),
-                  ], 1)
+                  ])
               ),
-            ], 1)
+            ])
         ),
       ]);
 
