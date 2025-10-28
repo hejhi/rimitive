@@ -663,6 +663,7 @@ describe('reconcileWithKeys', () => {
             next: undefined,
           };
         },
+        onUpdate() {},
         onMove: (_key: string, node, nextSibling) => {
           const li = (node as ElementRef<MockElement>).element;
           const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;

@@ -63,47 +63,29 @@ export function createMapHelper<
         parentRef: parent,
         nextSibling: nextSibling || undefined,
 
-        // onCreate: called when new item needs to be created
         onCreate: untrack(() => (item, key) => {
-          // New item: create signal, call render ONCE, store for future reuse
           const itemSignal = signal(item);
-
-          // Create a dedicated scope for this row's disposables
-          // This ensures each row's computeds/effects are tracked independently
           const scope = createScope(parent.element);
-
-          // Call render with row's scope active so any computeds/effects created
-          // during component initialization are tracked for disposal
-          let refSpec: RefSpec<TElement>;
-          let nodeRef: NodeRef<TElement>;
-
           const prevScope = ctx.activeScope;
+
           ctx.activeScope = scope;
+
           try {
-            // Render is still "cold" (untracked) but now has activeScope set
-            // This ensures computeds/effects created during render are tracked for disposal
-            // while preventing the render function itself from tracking dependencies
-            refSpec = render(itemSignal);
-            nodeRef = refSpec.create();
+            const elRef: ElementRef<TElement> = render(itemSignal).create();
+            itemData.set(key, { scope, signal: itemSignal });
+
+            renderer.insertBefore(
+              parent.element,
+              elRef.element,
+              resolveNextRef(nextSibling || undefined)?.element ?? null
+            );
+            return elRef;
+          } catch (e) {
+            disposeScope(scope); // Dispose scope if render failed
+            throw e;
           } finally {
             ctx.activeScope = prevScope;
           }
-
-          // Store signal, RefSpec, and scope for future updates/cleanup
-          itemData.set(key, { scope, signal: itemSignal });
-
-          // Insert into DOM
-          if (isElementRef(nodeRef!)) {
-            const nextEl =
-              resolveNextRef(nextSibling || undefined)?.element ?? null;
-            renderer.insertBefore(
-              parent.element,
-              nodeRef.element,
-              nextEl
-            );
-          }
-
-          return nodeRef!;
         }),
 
         // onUpdate: called when existing item's data should be updated
@@ -145,11 +127,9 @@ export function createMapHelper<
 
       // Create effect within parent's scope - auto-tracked!
       const effectDispose = scopedEffect(() => {
-        const currentItems = items();
-
         // Reconcile with just items and key function
         reconcile(
-          currentItems,
+          items(),
           (item) => keyFn ? keyFn(item) : item as unknown as string | number
         );
       });
