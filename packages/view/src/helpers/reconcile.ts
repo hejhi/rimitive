@@ -44,7 +44,7 @@ export interface ReconcileHooks<T, TElement> {
    * Called when an existing item's data should be updated
    * Should update the item's signal/state but not move DOM
    */
-  onUpdate?: (key: string, item: T, node: NodeRef<TElement>) => void;
+  onUpdate: (key: string, item: T, node: NodeRef<TElement>) => void;
 
   /**
    * Called when an item needs to be repositioned in DOM
@@ -163,12 +163,7 @@ export function createReconciler<T, TElement extends RendererElement>(
     const lisBuf: number[] = [];
 
     // Extract hooks from options
-    const hooks: ReconcileHooks<T, TElement> = {
-      onCreate: options.onCreate,
-      onUpdate: options.onUpdate,
-      onMove: options.onMove,
-      onRemove: options.onRemove,
-    };
+    const { onCreate, onUpdate, onMove, onRemove }: ReconcileHooks<T, TElement> = options;
 
     /**
      * Reconcile items with keys using LIS-based algorithm
@@ -184,16 +179,16 @@ export function createReconciler<T, TElement extends RendererElement>(
       newPosBuf.length = 0;
       lisBuf.length = 0;
 
-      const nodes: ReconcileNode<TElement>[] = Array<ReconcileNode<TElement>>(
-        items.length
-      );
+      const itemsLen = items.length;
+
+      const nodes: ReconcileNode<TElement>[] =
+        Array<ReconcileNode<TElement>>(itemsLen);
 
       // Build phase - create/update nodes
       let count = 0;
-      for (let i = 0; i < items.length; i++) {
+      for (let i = 0; i < itemsLen; i++) {
         const item = items[i]!;
         const key = String(keyFn(item, i));
-
         let node = itemsByKey.get(key);
 
         if (node) {
@@ -205,10 +200,10 @@ export function createReconciler<T, TElement extends RendererElement>(
           node.reconcileStatus = VISITED;
 
           // Call update hook if provided
-          if (hooks.onUpdate) hooks.onUpdate(key, item, node);
+          onUpdate(key, item, node);
         } else {
           // New node - create via hook
-          const nodeRef = hooks.onCreate(item, key) as ReconcileNode<TElement>;
+          const nodeRef = onCreate(item, key) as ReconcileNode<TElement>;
           nodeRef.key = key;
           nodeRef.position = i;
           nodeRef.reconcileStatus = VISITED;
@@ -224,11 +219,9 @@ export function createReconciler<T, TElement extends RendererElement>(
       for (const [key, node] of itemsByKey) {
         if (node.reconcileStatus === UNVISITED) {
           // Call removal hook
-          hooks.onRemove(key, node);
+          onRemove(key, node);
           itemsByKey.delete(key);
-        } else {
-          node.reconcileStatus = UNVISITED; // Reset for next reconciliation
-        }
+        } else node.reconcileStatus = UNVISITED; // Reset for next reconciliation
       }
 
       // Calculate LIS for minimal moves
@@ -240,18 +233,20 @@ export function createReconciler<T, TElement extends RendererElement>(
         lisPositions.add(newPosBuf[lisBuf[i]!]!);
       }
 
+      const nodeLen = nodes.length;
+
       // Position phase - reorder based on LIS
       // Process in REVERSE order so each element can insert before the already-positioned next element
-      for (let i = nodes.length - 1; i >= 0; i--) {
+      for (let i = nodeLen - 1; i >= 0; i--) {
         const node = nodes[i]!;
 
         if (!lisPositions.has(node.position)) {
           // Not in LIS - needs repositioning
           // Find next sibling (or null/undefined for end)
-          const nextSibling = i + 1 < nodes.length ? nodes[i + 1]! : undefined;
+          const nextSibling = i + 1 < nodeLen ? nodes[i + 1]! : undefined;
 
           // Call move hook
-          hooks.onMove(node.key, node, nextSibling);
+          onMove(node.key, node, nextSibling);
         }
         // Elements in LIS don't need to move - they're already in correct relative positions
       }
@@ -259,10 +254,10 @@ export function createReconciler<T, TElement extends RendererElement>(
       return nodes;
     }
 
-    function dispose() {
+    const dispose = () => {
       // Call onRemove hook for all remaining items
       for (const [key, node] of itemsByKey) {
-        hooks.onRemove(key, node);
+        onRemove(key, node);
       }
       itemsByKey.clear();
     }
