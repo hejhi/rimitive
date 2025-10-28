@@ -22,8 +22,6 @@ import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createScopes } from '@lattice/view/helpers/scope';
-import { createScopedEffect } from '@lattice/view/helpers/scoped-effect';
-import { createWithScope, createWithElementScope } from '@lattice/view/helpers/with-scope';
 import { createOnFactory } from '@lattice/view/on';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
@@ -82,13 +80,12 @@ const effectFactory = createEffectFactory({
 const effect = effectFactory.method;
 
 // Build view helpers
-const { createScope, disposeScope } = createScopes({
+const { createScope, disposeScope, scopedEffect, withScope, onCleanup } = createScopes({
+  ctx,
   track: signalCtx.track,
   dispose: signalCtx.dispose,
+  baseEffect: effect,
 });
-
-const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
-const withScope = createWithScope({ ctx, createScope });
 
 const { processChildren } = createProcessChildren({
   scopedEffect,
@@ -102,6 +99,7 @@ const elFactory = createElFactory({
   renderer,
   processChildren,
   withScope,
+  onCleanup,
 });
 
 const mapHelper = createMapHelper<HTMLElement, Text>({
@@ -110,6 +108,7 @@ const mapHelper = createMapHelper<HTMLElement, Text>({
   signal: signalFactory.method,
   scopedEffect,
   renderer,
+  createScope,
   disposeScope,
 });
 
