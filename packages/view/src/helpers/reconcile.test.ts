@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { reconcileWithKeys, type ReconcileState } from './reconcile';
+import { createReconciler } from './reconcile';
 import { createTestEnv, MockElement, MockText, getTextContent } from '../test-utils';
 import type { ElementRef } from '../types';
 
@@ -24,64 +24,50 @@ describe('reconcileWithKeys', () => {
     const env = createTestEnv();
     const parent = env.renderer.createElement('ul');
 
-    const state: ReconcileState<MockElement> = {
-      itemsByKey: new Map(),
+    // Create reconciler instance with hooks
+    const reconciler = createReconciler<Item, MockElement>({
       parentElement: parent,
-    };
+      onCreate: (item: Item) => {
+        const li = env.renderer.createElement('li');
+        const textNode = env.renderer.createTextNode(item.text);
+        env.renderer.appendChild(li, textNode);
+        env.renderer.insertBefore(parent, li, null);
 
-    // Pooled buffers for LIS
-    const oldIndicesBuf: number[] = [];
-    const newPosBuf: number[] = [];
-    const lisBuf: number[] = [];
+        return {
+          status: 1,
+          element: li,
+          prev: undefined,
+          next: undefined,
+        };
+      },
+      onUpdate: (_key: string, item: Item, node) => {
+        // Update text content if needed
+        const li = (node as ElementRef<MockElement>).element;
+        if (li.children[0]) {
+          (li.children[0] as MockText).content = item.text;
+        }
+      },
+      onMove: (_key: string, node, nextSibling) => {
+        const li = (node as ElementRef<MockElement>).element;
+        const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
+        env.renderer.insertBefore(parent, li, nextEl);
+      },
+      onRemove: (_key: string, node) => {
+        const li = (node as ElementRef<MockElement>).element;
+        const scope = env.ctx.elementScopes.get(li);
+        if (scope) {
+          env.disposeScope(scope);
+          env.ctx.elementScopes.delete(li);
+        }
+        env.renderer.removeChild(parent, li);
+      },
+    });
 
     const reconcile = (items: Item[]) => {
-      reconcileWithKeys(
-        items,
-        state,
-        (item) => item.id,
-        {
-          onCreate: (item) => {
-            const li = env.renderer.createElement('li');
-            const textNode = env.renderer.createTextNode(item.text);
-            env.renderer.appendChild(li, textNode);
-            env.renderer.insertBefore(parent, li, null);
-
-            return {
-              status: 1,
-              element: li,
-              prev: undefined,
-              next: undefined,
-            };
-          },
-          onUpdate: (_key, item, node) => {
-            // Update text content if needed
-            const li = (node as ElementRef<MockElement>).element;
-            if (li.children[0]) {
-              (li.children[0] as MockText).content = item.text;
-            }
-          },
-          onMove: (_key, node, nextSibling) => {
-            const li = (node as ElementRef<MockElement>).element;
-            const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
-            env.renderer.insertBefore(parent, li, nextEl);
-          },
-          onRemove: (_key, node) => {
-            const li = (node as ElementRef<MockElement>).element;
-            const scope = env.ctx.elementScopes.get(li);
-            if (scope) {
-              env.disposeScope(scope);
-              env.ctx.elementScopes.delete(li);
-            }
-            env.renderer.removeChild(parent, li);
-          },
-        },
-        oldIndicesBuf,
-        newPosBuf,
-        lisBuf
-      );
+      reconciler.reconcile(items, (item) => item.id);
     };
 
-    return { ...env, parent, state, reconcile };
+    return { ...env, parent, reconciler, reconcile };
   }
 
   describe('Initial rendering', () => {
@@ -120,7 +106,7 @@ describe('reconcileWithKeys', () => {
 
   describe('Element reuse', () => {
     it('should reuse elements when keys match', () => {
-      const { parent, reconcile, state } = setup();
+      const { parent, reconcile } = setup();
 
       // Initial render
       reconcile([
@@ -145,12 +131,6 @@ describe('reconcileWithKeys', () => {
       expect(parent.children[0]).toBe(appleEl);
       expect(parent.children[1]).toBe(bananaEl);
       expect(parent.children[2]).toBe(cherryEl);
-
-      // State should still track all items
-      expect(state.itemsByKey.size).toBe(3);
-      expect(state.itemsByKey.has('a')).toBe(true);
-      expect(state.itemsByKey.has('b')).toBe(true);
-      expect(state.itemsByKey.has('c')).toBe(true);
     });
 
     it('should reuse elements when keys match after reorder', () => {
@@ -308,7 +288,7 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should clear all elements', () => {
-      const { parent, reconcile, state } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
         { id: 'a', text: 'Apple' },
@@ -321,7 +301,6 @@ describe('reconcileWithKeys', () => {
       reconcile([]);
 
       expect(parent.children.length).toBe(0);
-      expect(state.itemsByKey.size).toBe(0);
     });
   });
 
@@ -643,7 +622,7 @@ describe('reconcileWithKeys', () => {
     });
 
     it('should handle complete replacement', () => {
-      const { parent, reconcile, state } = setup();
+      const { parent, reconcile } = setup();
 
       reconcile([
         { id: 'a', text: 'A' },
@@ -662,66 +641,43 @@ describe('reconcileWithKeys', () => {
       expect(getTextContent(parent.children[0] as MockElement)).toBe('X');
       expect(getTextContent(parent.children[1] as MockElement)).toBe('Y');
       expect(getTextContent(parent.children[2] as MockElement)).toBe('Z');
-
-      // Old keys should be gone
-      expect(state.itemsByKey.has('a')).toBe(false);
-      expect(state.itemsByKey.has('b')).toBe(false);
-      expect(state.itemsByKey.has('c')).toBe(false);
-
-      // New keys present
-      expect(state.itemsByKey.has('x')).toBe(true);
-      expect(state.itemsByKey.has('y')).toBe(true);
-      expect(state.itemsByKey.has('z')).toBe(true);
     });
   });
 
   describe('Key fallback behavior', () => {
     it('should use index as key when key is undefined', () => {
-      const { parent, renderer } = setup();
+      const env = createTestEnv();
+      const parent = env.renderer.createElement('ul');
 
-      // Create a custom reconcile that uses index when key is missing
-      const state: ReconcileState<MockElement> = {
-        itemsByKey: new Map(),
+      // Create reconciler that uses index as key
+      const reconciler = createReconciler<{ text: string }, MockElement>({
         parentElement: parent,
-      };
+        onCreate: (item: { text: string }) => {
+          const li = env.renderer.createElement('li');
+          const textNode = env.renderer.createTextNode(item.text);
+          env.renderer.appendChild(li, textNode);
+          env.renderer.insertBefore(parent, li, null);
 
-      const oldIndicesBuf: number[] = [];
-      const newPosBuf: number[] = [];
-      const lisBuf: number[] = [];
+          return {
+            status: 1,
+            element: li,
+            prev: undefined,
+            next: undefined,
+          };
+        },
+        onMove: (_key: string, node, nextSibling) => {
+          const li = (node as ElementRef<MockElement>).element;
+          const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
+          env.renderer.insertBefore(parent, li, nextEl);
+        },
+        onRemove: (_key: string, node) => {
+          const li = (node as ElementRef<MockElement>).element;
+          env.renderer.removeChild(parent, li);
+        },
+      });
 
       const reconcile = (items: { text: string }[]) => {
-        reconcileWithKeys(
-          items,
-          state,
-          (_item, index) => String(index), // Use index as key
-          {
-            onCreate: (item) => {
-              const li = renderer.createElement('li');
-              const textNode = renderer.createTextNode(item.text);
-              renderer.appendChild(li, textNode);
-              renderer.insertBefore(parent, li, null);
-
-              return {
-                status: 1,
-                element: li,
-                prev: undefined,
-                next: undefined,
-              };
-            },
-            onMove: (_key, node, nextSibling) => {
-              const li = (node as ElementRef<MockElement>).element;
-              const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
-              renderer.insertBefore(parent, li, nextEl);
-            },
-            onRemove: (_key, node) => {
-              const li = (node as ElementRef<MockElement>).element;
-              renderer.removeChild(parent, li);
-            },
-          },
-          oldIndicesBuf,
-          newPosBuf,
-          lisBuf
-        );
+        reconciler.reconcile(items, (_item, index) => String(index)); // Use index as key
       };
 
       reconcile([
