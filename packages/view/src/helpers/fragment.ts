@@ -15,10 +15,8 @@ export function createFragment<TElement>(
   const fragRef: FragmentRef<TElement> = {
     status: STATUS_FRAGMENT,
     element: null,
-    prev: undefined,
     next: undefined,
     firstChild: undefined,
-    lastChild: undefined,
     attach: (
       parent: ElementRef<TElement>,
       nextSibling?: NodeRef<TElement> | null

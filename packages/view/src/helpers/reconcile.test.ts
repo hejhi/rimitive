@@ -36,7 +36,6 @@ describe('reconcileWithKeys', () => {
         return {
           status: 1,
           element: li,
-          prev: undefined,
           next: undefined,
         };
       },
@@ -661,7 +660,6 @@ describe('reconcileWithKeys', () => {
           return {
             status: 1,
             element: li,
-            prev: undefined,
             next: undefined,
           };
         },

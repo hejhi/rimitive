@@ -88,7 +88,6 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
       if (lastChildRef) {
         lastChildRef.next = refNode;
-        refNode.prev = lastChildRef;
       }
       lastChildRef = refNode;
     }

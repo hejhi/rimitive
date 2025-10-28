@@ -171,7 +171,6 @@ export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
     return {
       status: 1 as const, // STATUS_ELEMENT
       element,
-      prev: undefined,
       next: undefined,
       ...extensions, // Spread extensions to override/add fields
     } as NodeRef<TElement> & TExt;
@@ -187,7 +186,6 @@ export function wrapElement<TElement>(element: TElement) {
   return {
     status: 1 as const, // STATUS_ELEMENT
     element,
-    prev: undefined,
     next: undefined,
   };
 }

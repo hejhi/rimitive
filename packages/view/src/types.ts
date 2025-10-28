@@ -12,7 +12,6 @@ export const STATUS_FRAGMENT = 2;
 
 export interface BaseRef<TRef> {
   status: number;
-  prev?: TRef;
   next?: TRef;
 }
 
@@ -32,7 +31,6 @@ export interface FragmentRef<TElement> extends BaseRef<NodeRef<TElement>> {
   status: typeof STATUS_FRAGMENT;
   element: TElement | null;
   firstChild?: NodeRef<TElement>;
-  lastChild?: NodeRef<TElement>;
   dispose?: () => void;
   attach: (
     parent: ElementRef<TElement>,

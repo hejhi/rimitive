@@ -137,7 +137,6 @@ export function createElFactory<TElement extends RendererElement, TText extends 
       const elRef: ElementRef<SpecificElement> = {
         status: STATUS_ELEMENT,
         element,
-        prev: undefined,
         next: undefined,
         ...extensions, // Spread extensions to override/add fields
       };
