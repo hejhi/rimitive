@@ -15,8 +15,7 @@ import { createMapHelper } from '@lattice/view/helpers/map';
 import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createOnFactory } from '@lattice/view/on';
-import { createWithScope, createWithElementScope } from '@lattice/view/helpers/with-scope';
-import { createScopedEffect } from '@lattice/view/helpers/scoped-effect';
+// All scope helpers consolidated in scope.ts
 import { ElRefSpecChild, isReactive, type Reactive } from '@lattice/view/types';
 
 type ClassValue = string | Reactive<string> | null | undefined | false;
@@ -70,16 +69,18 @@ function createSignalContext() {
 const signalCtx = createSignalContext();
 const viewCtx = createLatticeContext();
 const renderer = createDOMRenderer();
-const { createScope, disposeScope } =
-  createScopes({ track: signalCtx.track, dispose: signalCtx.dispose });
 
 const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
 
-const withScope = createWithScope({ ctx: viewCtx, createScope });
-const withElementScope = createWithElementScope({ ctx: viewCtx });
-const scopedEffect = createScopedEffect({ ctx: viewCtx, baseEffect: effectFactory.method });
+const { disposeScope, withScope, withElementScope, scopedEffect } =
+  createScopes({
+    ctx: viewCtx,
+    track: signalCtx.track,
+    dispose: signalCtx.dispose,
+    baseEffect: effectFactory.method,
+  });
 
 const { processChildren } = createProcessChildren({ scopedEffect, renderer });
 const onFactory = createOnFactory({ startBatch: signalCtx.startBatch, endBatch: signalCtx.endBatch });
@@ -94,6 +95,7 @@ const elFactory = createElFactory({
 const map = createMapHelper({
   ctx: viewCtx,
   scopedEffect,
+  withScope,
   withElementScope,
   renderer,
   disposeScope,

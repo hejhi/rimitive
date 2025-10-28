@@ -2,6 +2,7 @@
  * Shared test helpers for creating scopes with mock dependencies
  */
 
+import { vi } from 'vitest';
 import { createScopes } from './helpers/scope';
 import { createLatticeContext } from './context';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
@@ -63,7 +64,12 @@ export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeCo
     scope.dependencyTail = undefined;
   };
 
-  const scopes = createScopes({ track, dispose });
+  const baseEffect = vi.fn((fn: () => void | (() => void)) => {
+    fn();
+    return () => {};
+  });
+
+  const scopes = createScopes({ ctx, track, dispose, baseEffect });
 
   // Add helper functions for tests (wrapping low-level primitives)
   return {

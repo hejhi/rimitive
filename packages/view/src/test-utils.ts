@@ -4,8 +4,6 @@ import type { Renderer } from './renderer';
 import type { Reactive, Disposable, RefSpec, LifecycleCallback, NodeRef, RenderScope } from './types';
 import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
-import { createScopedEffect } from './helpers/scoped-effect';
-import { createWithScope, createWithElementScope } from './helpers/with-scope';
 import { createOnCleanup } from './helpers/on-cleanup';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -244,12 +242,12 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { createScope, disposeScope } = createScopes({ track, dispose })
-
-  // Create new scoped helpers
-  const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
-  const withScope = createWithScope({ ctx, createScope });
-  const withElementScope = createWithElementScope({ ctx });
+  const { createScope, disposeScope, withScope, withElementScope, scopedEffect } = createScopes({
+    ctx,
+    track,
+    dispose,
+    baseEffect: effect
+  });
   const onCleanup = createOnCleanup(ctx);
 
   // Create helpers

@@ -112,7 +112,7 @@ export function createMapHelper<
               resolveNextRef(nextSibling || undefined)?.element ?? null;
             renderer.insertBefore(
               parent.element,
-              nodeRef!.element,
+              nodeRef.element,
               nextEl
             );
           }

@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { createLatticeContext } from '../context';
-import { createScopedEffect, withElementScope } from './scoped-effect';
 import { createTestEnv } from '../test-utils';
 import type { RenderScope } from '../types';
 
@@ -8,8 +6,7 @@ describe('scoped-effect', () => {
   describe('createScopedEffect', () => {
     it('should auto-track effects in active scope', () => {
       const env = createTestEnv();
-      const { ctx, effect } = env;
-      const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+      const { ctx, scopedEffect } = env;
 
       // Create a scope and set it as active
       const scope = env.createScope({});
@@ -30,8 +27,7 @@ describe('scoped-effect', () => {
 
     it('should not track when no active scope', () => {
       const env = createTestEnv();
-      const { ctx, effect } = env;
-      const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+      const { ctx, scopedEffect } = env;
 
       ctx.activeScope = null;
 
@@ -47,8 +43,7 @@ describe('scoped-effect', () => {
 
     it('should dispose when scope is disposed', () => {
       const env = createTestEnv();
-      const { ctx, effect, signal, disposeScope } = env;
-      const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+      const { ctx, signal, disposeScope, scopedEffect } = env;
 
       const count = signal(0);
       const scope = env.createScope({});
@@ -76,8 +71,7 @@ describe('scoped-effect', () => {
 
     it('should track multiple effects in same scope', () => {
       const env = createTestEnv();
-      const { ctx, effect } = env;
-      const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+      const { ctx, scopedEffect } = env;
 
       const scope = env.createScope({});
       ctx.activeScope = scope;
@@ -101,14 +95,14 @@ describe('scoped-effect', () => {
   describe('withElementScope', () => {
     it('should run code in element scope if it exists', () => {
       const env = createTestEnv();
-      const { ctx } = env;
+      const { ctx, withElementScope } = env;
 
       const element = {};
       const scope = env.createScope(element);
       ctx.elementScopes.set(element, scope);
 
       let capturedScope: RenderScope | null = null;
-      withElementScope(ctx, element, () => {
+      withElementScope(element, () => {
         capturedScope = ctx.activeScope;
       });
 
@@ -116,11 +110,13 @@ describe('scoped-effect', () => {
     });
 
     it('should just run code if no scope exists', () => {
-      const ctx = createLatticeContext();
+      const env = createTestEnv();
+      const { withElementScope } = env;
+
       const element = {};
 
       let didRun = false;
-      const result = withElementScope(ctx, element, () => {
+      const result = withElementScope(element, () => {
         didRun = true;
         return 42;
       });
@@ -131,7 +127,7 @@ describe('scoped-effect', () => {
 
     it('should restore previous scope after running', () => {
       const env = createTestEnv();
-      const { ctx } = env;
+      const { ctx, withElementScope } = env;
 
       const element1 = {};
       const scope1 = env.createScope(element1);
@@ -145,7 +141,7 @@ describe('scoped-effect', () => {
       ctx.activeScope = scope1;
 
       // Run in scope2
-      withElementScope(ctx, element2, () => {
+      withElementScope(element2, () => {
         expect(ctx.activeScope).toBe(scope2);
       });
 
@@ -157,8 +153,7 @@ describe('scoped-effect', () => {
   describe('integration: scopedEffect + withElementScope', () => {
     it('should auto-track effect in element scope', () => {
       const env = createTestEnv();
-      const { ctx, effect, signal } = env;
-      const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+      const { ctx, signal, scopedEffect, withElementScope } = env;
 
       const element = {};
       const scope = env.createScope(element);
@@ -167,7 +162,7 @@ describe('scoped-effect', () => {
       const count = signal(0);
       let runCount = 0;
 
-      withElementScope(ctx, element, () => {
+      withElementScope(element, () => {
         scopedEffect(() => {
           count(); // Read signal
           runCount++;
@@ -193,8 +188,7 @@ describe('scoped-effect', () => {
 
     it('should handle nested element scopes', () => {
       const env = createTestEnv();
-      const { ctx, effect, signal } = env;
-      const scopedEffect = createScopedEffect({ ctx, baseEffect: effect });
+      const { ctx, signal, scopedEffect, withElementScope } = env;
 
       const parentElement = {};
       const parentScope = env.createScope(parentElement);
@@ -209,7 +203,7 @@ describe('scoped-effect', () => {
       let childRunCount = 0;
 
       // Create effect in parent scope
-      withElementScope(ctx, parentElement, () => {
+      withElementScope(parentElement, () => {
         scopedEffect(() => {
           count();
           parentRunCount++;
@@ -217,7 +211,7 @@ describe('scoped-effect', () => {
       });
 
       // Create effect in child scope
-      withElementScope(ctx, childElement, () => {
+      withElementScope(childElement, () => {
         scopedEffect(() => {
           count();
           childRunCount++;

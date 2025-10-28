@@ -75,8 +75,6 @@ export default defineConfig({
           'src/helpers/processChildren.ts'
         ),
         'helpers/on-cleanup': resolve(__dirname, 'src/helpers/on-cleanup.ts'),
-        'helpers/scoped-effect': resolve(__dirname, 'src/helpers/scoped-effect.ts'),
-        'helpers/with-scope': resolve(__dirname, 'src/helpers/with-scope.ts'),
       },
       formats: ['es'],
     },

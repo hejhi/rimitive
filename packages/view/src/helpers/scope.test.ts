@@ -197,7 +197,9 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const { createScope, disposeScope } = createScopes({ track, dispose: disposeSpy });
+      const ctx = createLatticeContext();
+      const baseEffect = vi.fn(() => () => {});
+      const { createScope, disposeScope } = createScopes({ ctx, track, dispose: disposeSpy, baseEffect });
       const element = createMockElement();
       const scope = createScope(element);
 
@@ -267,7 +269,9 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const { createScope, disposeScope } = createScopes({ track, dispose });
+      const ctx = createLatticeContext();
+      const baseEffect = vi.fn(() => () => {});
+      const { createScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
       const scope = createScope(createMockElement());
 
       // Simulate dependencies being set (in real usage, this happens during tracking)
@@ -354,7 +358,8 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const { createScope, disposeScope } = createScopes({ track, dispose });
+      const baseEffect = vi.fn(() => () => {});
+      const { createScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
       const element = createMockElement();
       const scope = createScope(element);
 
@@ -381,7 +386,9 @@ describe('Scope Tree', () => {
         cleanup(_node as T);
       };
 
-      const { createScope, disposeScope } = createScopes({ track, dispose });
+      const ctx = createLatticeContext();
+      const baseEffect = vi.fn(() => () => {});
+      const { createScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
       const parent = createScope(createMockElement());
       const child = createScope(createMockElement(), parent);
 

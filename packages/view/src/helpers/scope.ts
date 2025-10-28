@@ -1,4 +1,5 @@
 import type { RenderScope } from '../types';
+import type { LatticeContext } from '../context';
 import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -27,14 +28,42 @@ export type CreateScopes = {
    * Used by reconciliation logic when elements are removed.
    */
   disposeScope: <TElement = object>(scope: RenderScope<TElement>) => void;
+
+  /**
+   * Run code within a new scope attached to an element.
+   * Handles full lifecycle: creation, registration, activation, and cleanup.
+   */
+  withScope: <TElement extends object = object, T = void>(
+    element: TElement,
+    fn: (scope: RenderScope<TElement>) => T,
+    parent?: RenderScope<TElement>
+  ) => { result: T; scope: RenderScope<TElement> };
+
+  /**
+   * Run code within an existing element's scope context.
+   * Useful for attaching to parent scope without creating a new one.
+   */
+  withElementScope: <T>(
+    element: object,
+    fn: () => T
+  ) => T;
+
+  /**
+   * Create a scope-aware effect that auto-tracks itself in activeScope.
+   */
+  scopedEffect: (fn: () => void | (() => void)) => () => void;
 };
 
 export function createScopes({
+  ctx,
   track,
   dispose: disposeNode,
+  baseEffect,
 }: {
+  ctx: LatticeContext;
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
+  baseEffect: (fn: () => void | (() => void)) => () => void;
 }): CreateScopes {
   /**
    * Create a new RenderScope instance
@@ -146,9 +175,91 @@ export function createScopes({
     scope.firstDisposable = undefined;
   };
 
+  /**
+   * Run code within a new scope attached to an element
+   * Returns the created scope so callers can access it if needed.
+   */
+  function withScope<TElement extends object = object, T = void>(
+    element: TElement,
+    fn: (scope: RenderScope<TElement>) => T,
+    parent?: RenderScope<TElement>
+  ): { result: T; scope: RenderScope<TElement> } {
+    // Create scope
+    const scope = createScope(element, parent);
+
+    // Register so children/effects can find it
+    ctx.elementScopes.set(element as object, scope);
+
+    // Set as active scope and run code
+    const prevScope = ctx.activeScope;
+    ctx.activeScope = scope as RenderScope;
+
+    let result: T;
+    try {
+      result = fn(scope);
+    } finally {
+      ctx.activeScope = prevScope;
+    }
+
+    // Clean up registration if no disposables were tracked
+    // (Lazy optimization - elements with no reactive props don't need scopes)
+    if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
+      ctx.elementScopes.delete(element as object);
+    }
+
+    return { result, scope };
+  }
+
+  /**
+   * Run code within an existing element's scope context
+   * Useful for fragments/map that want to attach to parent scope without creating their own.
+   */
+  function withElementScope<T>(
+    element: object,
+    fn: () => T
+  ): T {
+    const scope = ctx.elementScopes.get(element);
+    if (!scope) {
+      // No scope exists - just run the function
+      return fn();
+    }
+
+    const prevScope = ctx.activeScope;
+    ctx.activeScope = scope;
+    try {
+      return fn();
+    } finally {
+      ctx.activeScope = prevScope;
+    }
+  }
+
+  /**
+   * Create a scope-aware effect that automatically tracks itself in activeScope
+   */
+  function scopedEffect(fn: () => void | (() => void)): () => void {
+    // Create the underlying effect
+    const dispose = baseEffect(fn);
+
+    // Auto-track in current scope if one is active
+    const scope = ctx.activeScope;
+    if (scope) {
+      // Track the dispose function in the current scope
+      const node = {
+        disposable: { dispose },
+        next: scope.firstDisposable,
+      };
+      scope.firstDisposable = node;
+    }
+
+    return dispose;
+  }
+
   return {
     createScope,
     disposeScope,
+    withScope,
+    withElementScope,
+    scopedEffect,
   };
 }
 

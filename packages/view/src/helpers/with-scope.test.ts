@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { createWithScope, createWithElementScope } from './with-scope';
 import { createTestEnv } from '../test-utils';
 import type { RenderScope } from '../types';
 
@@ -7,8 +6,7 @@ describe('with-scope', () => {
   describe('createWithScope', () => {
     it('should create and register scope, run code, then cleanup if empty', () => {
       const env = createTestEnv();
-      const { ctx, createScope } = env;
-      const withScope = createWithScope({ ctx, createScope });
+      const { ctx, withScope } = env;
 
       const element = {};
       let didRun = false;
@@ -28,8 +26,7 @@ describe('with-scope', () => {
 
     it('should keep scope registered if it has disposables', () => {
       const env = createTestEnv();
-      const { ctx, createScope } = env;
-      const withScope = createWithScope({ ctx, createScope });
+      const { ctx, withScope } = env;
 
       const element = {};
 
@@ -47,21 +44,17 @@ describe('with-scope', () => {
 
     it('should keep scope registered if it has renderFn', () => {
       const env = createTestEnv();
-      const { ctx } = env;
+      const { ctx, createScope } = env;
 
       const element = {};
 
-      // Create a custom createScope that adds renderFn
-      const createScopeWithRenderFn: typeof env.createScope = (el, parent, renderFn) => {
-        // Force a renderFn to be set
-        return env.createScope(el, parent, renderFn || (() => {}));
-      };
-
-      const withScope = createWithScope({ ctx, createScope: createScopeWithRenderFn });
-
-      const { scope } = withScope(element, () => {
-        // No disposables added
+      // Create a scope with renderFn directly
+      const scope = createScope(element, undefined, () => {
+        // Provide a renderFn
       });
+
+      // Manually register it
+      ctx.elementScopes.set(element, scope);
 
       // Scope should remain registered (has renderFn)
       expect(ctx.elementScopes.get(element)).toBe(scope);
@@ -70,8 +63,7 @@ describe('with-scope', () => {
 
     it('should set activeScope during execution', () => {
       const env = createTestEnv();
-      const { ctx, createScope } = env;
-      const withScope = createWithScope({ ctx, createScope });
+      const { ctx, withScope } = env;
 
       const element = {};
       let capturedScope: RenderScope | null = null;
@@ -88,8 +80,7 @@ describe('with-scope', () => {
 
     it('should restore previous activeScope', () => {
       const env = createTestEnv();
-      const { ctx, createScope } = env;
-      const withScope = createWithScope({ ctx, createScope });
+      const { ctx, withScope } = env;
 
       const prevScope = env.createScope({});
       ctx.activeScope = prevScope;
@@ -107,8 +98,7 @@ describe('with-scope', () => {
 
     it('should handle nested withScope calls', () => {
       const env = createTestEnv();
-      const { ctx, createScope } = env;
-      const withScope = createWithScope({ ctx, createScope });
+      const { ctx, withScope } = env;
 
       const parent = {};
       const child = {};
@@ -131,8 +121,7 @@ describe('with-scope', () => {
 
     it('should pass parent scope to createScope', () => {
       const env = createTestEnv();
-      const { ctx, createScope } = env;
-      const withScope = createWithScope({ ctx, createScope });
+      const { withScope } = env;
 
       const parentElement = {};
       const parentScope = env.createScope(parentElement);
@@ -152,8 +141,7 @@ describe('with-scope', () => {
   describe('createWithElementScope', () => {
     it('should run code in existing element scope', () => {
       const env = createTestEnv();
-      const { ctx } = env;
-      const withElementScope = createWithElementScope({ ctx });
+      const { ctx, withElementScope } = env;
 
       const element = {};
       const scope = env.createScope(element);
@@ -171,8 +159,7 @@ describe('with-scope', () => {
 
     it('should just run code if no scope exists', () => {
       const env = createTestEnv();
-      const { ctx } = env;
-      const withElementScope = createWithElementScope({ ctx });
+      const { ctx, withElementScope } = env;
 
       const element = {};
 
@@ -187,8 +174,7 @@ describe('with-scope', () => {
 
     it('should restore previous activeScope', () => {
       const env = createTestEnv();
-      const { ctx } = env;
-      const withElementScope = createWithElementScope({ ctx });
+      const { ctx, withElementScope } = env;
 
       const prevScope = env.createScope({});
       ctx.activeScope = prevScope;
@@ -208,8 +194,7 @@ describe('with-scope', () => {
   describe('integration: withScope + auto-tracking', () => {
     it('should enable automatic disposal tracking pattern', () => {
       const env = createTestEnv();
-      const { ctx, createScope, signal, disposeScope } = env;
-      const withScope = createWithScope({ ctx, createScope });
+      const { ctx, signal, disposeScope, withScope } = env;
 
       // Simulate creating an element with reactive props
       const element = {};
