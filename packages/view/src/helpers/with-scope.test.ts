@@ -33,7 +33,7 @@ describe('with-scope', () => {
       const { scope } = withScope(element, (scope) => {
         // Add a disposable manually
         scope.firstDisposable = {
-          disposable: { dispose: () => {} },
+          dispose: () => {},
           next: undefined,
         };
       });
@@ -158,7 +158,7 @@ describe('with-scope', () => {
         // Manually track (scopedEffect would do this automatically)
         if (ctx.activeScope) {
           ctx.activeScope.firstDisposable = {
-            disposable: { dispose },
+            dispose,
             next: ctx.activeScope.firstDisposable,
           };
         }

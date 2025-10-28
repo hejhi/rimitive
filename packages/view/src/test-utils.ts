@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { createLatticeContext } from './context';
 import type { Renderer } from './renderer';
-import type { Reactive, Disposable, RefSpec, LifecycleCallback, NodeRef, RenderScope } from './types';
+import type { Reactive, RefSpec, LifecycleCallback, NodeRef, RenderScope } from './types';
 import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
 import { createOnCleanup } from './helpers/on-cleanup';
@@ -139,7 +139,7 @@ export function createSignal<T>(initialValue: T) {
 /**
  * Creates a mock disposable for testing cleanup
  */
-export function createMockDisposable(): Disposable & { disposed: boolean } {
+export function createMockDisposable(): { dispose: () => void; disposed: boolean } {
   const mock = {
     disposed: false,
     dispose: vi.fn(() => {

@@ -298,7 +298,7 @@ describe('Scope Tree', () => {
 
       // Child has disposable that should still be cleaned up
       child.firstDisposable = {
-        disposable: childDisposable,
+        dispose: childDisposable.dispose,
         next: undefined,
       };
 
@@ -400,7 +400,7 @@ describe('Scope Tree', () => {
 
       // Add tracked disposable (manually since using raw createScopes)
       parent.firstDisposable = {
-        disposable: { dispose: () => disposalOrder.push('disposable-dispose') },
+        dispose: () => disposalOrder.push('disposable-dispose'),
         next: undefined,
       };
 

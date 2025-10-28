@@ -16,17 +16,6 @@ export interface UntrackedOpts {
 
 /**
  * Create an untracked helper
- *
- * @example
- * ```ts
- * const untracked = createUntracked({ ctx });
- *
- * effect(() => {
- *   const a = signalA();  // Tracked
- *   const b = untrack(() => signalB());  // NOT tracked
- *   console.log(a, b);
- * });
- * ```
  */
 export function createUntracked(opts: UntrackedOpts) {
   const { ctx } = opts;

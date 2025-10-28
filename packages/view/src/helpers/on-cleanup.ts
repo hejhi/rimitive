@@ -23,7 +23,7 @@ export function createOnCleanup(ctx: LatticeContext) {
 
     // Track cleanup directly in active scope
     scope.firstDisposable = {
-      disposable: { dispose: cleanup },
+      dispose: cleanup,
       next: scope.firstDisposable,
     };
   };

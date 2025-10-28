@@ -25,7 +25,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     const scope = ctx.activeScope;
     if (scope) {
       const node = {
-        disposable: { dispose },
+        dispose,
         next: scope.firstDisposable,
       };
       scope.firstDisposable = node;

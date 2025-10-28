@@ -77,20 +77,22 @@ export function createScopes({
       // Flush method - re-runs render function with reactive tracking
       // When signals change, scheduler marks this scope DIRTY and queues for flush
       flush(): void {
-        if (scope.renderFn) {
-          // Clear previous cleanup
-          if (scope.cleanup) {
-            scope.cleanup();
-            scope.cleanup = undefined;
-          }
-          // Re-run render with dependency tracking
-          // track() establishes edges from signals to this scope
-          const result = track(scope, scope.renderFn);
-          // Store cleanup function if returned
-          if (typeof result === 'function') {
-            scope.cleanup = result;
-          }
+        if (scope.renderFn === undefined) return;
+
+        const { cleanup } = scope;
+
+        // Clear previous cleanup
+        if (cleanup) {
+          cleanup();
+          scope.cleanup = undefined;
         }
+
+        // Re-run render with dependency tracking
+        // track() establishes edges from signals to this scope
+        const result = track(scope, scope.renderFn);
+
+        // Store cleanup function if returned
+        if (typeof result === 'function') scope.cleanup = result;
       },
 
       // Tree structure (from Scope)
@@ -116,9 +118,7 @@ export function createScopes({
     }
 
     // Initial flush if renderFn provided - establishes initial dependencies
-    if (renderFn) {
-      scope.flush();
-    }
+    if (renderFn) scope.flush();
 
     return scope;
   };
@@ -154,10 +154,7 @@ export function createScopes({
     // Dispose all tracked disposables (lifecycle tracking)
     let node = scope.firstDisposable;
     while (node) {
-      const disposable = node.disposable;
-      if (disposable && typeof disposable.dispose === 'function') {
-        disposable.dispose();
-      }
+      node.dispose();
       node = node.next;
     }
 
@@ -213,14 +210,9 @@ export function createScopes({
 
     // Auto-track in current scope if one is active
     const scope = ctx.activeScope;
-    if (scope) {
-      // Track the dispose function in the current scope
-      const node = {
-        disposable: { dispose },
-        next: scope.firstDisposable,
-      };
-      scope.firstDisposable = node;
-    }
+
+    // Track the dispose function in the current scope
+    if (scope) scope.firstDisposable = { dispose, next: scope.firstDisposable };
 
     return dispose;
   }

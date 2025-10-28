@@ -18,7 +18,7 @@ describe('onCleanup', () => {
 
     // Should be tracked in scope
     expect(scope.firstDisposable).toBeDefined();
-    expect(scope.firstDisposable?.disposable).toEqual({ dispose: cleanup });
+    expect(scope.firstDisposable?.dispose).toBe(cleanup);
 
     // Dispose scope
     disposeScope(scope);
@@ -60,9 +60,9 @@ describe('onCleanup', () => {
     onCleanup(cleanup3);
 
     // Should be tracked in LIFO order (linked list prepend)
-    expect(scope.firstDisposable?.disposable).toEqual({ dispose: cleanup3 });
-    expect(scope.firstDisposable?.next?.disposable).toEqual({ dispose: cleanup2 });
-    expect(scope.firstDisposable?.next?.next?.disposable).toEqual({ dispose: cleanup1 });
+    expect(scope.firstDisposable?.dispose).toBe(cleanup3);
+    expect(scope.firstDisposable?.next?.dispose).toBe(cleanup2);
+    expect(scope.firstDisposable?.next?.next?.dispose).toBe(cleanup1);
 
     // Dispose scope
     disposeScope(scope);

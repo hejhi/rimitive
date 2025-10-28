@@ -117,13 +117,6 @@ export function isReactive(value: unknown): value is Reactive {
 }
 
 /**
- * Something that can be disposed
- */
-export interface Disposable {
-  dispose(): void;
-}
-
-/**
  * Lifecycle callback for element connection/disconnection
  */
 export type LifecycleCallback<TElement = object> = (element: TElement) => void | (() => void);
@@ -168,11 +161,11 @@ export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
 }
 
 /**
- * Wrapper for disposables to form linked list
+ * Linked list node for tracking dispose functions
  * Used by RenderScope to track cleanup functions
  */
 export interface DisposableNode {
-  disposable: Disposable;
+  dispose: () => void;
   next: DisposableNode | undefined;
 }
 

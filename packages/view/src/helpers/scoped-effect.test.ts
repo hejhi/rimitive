@@ -21,7 +21,7 @@ describe('scoped-effect', () => {
 
       // Dispose function should be tracked in scope
       expect(scope.firstDisposable).toBeDefined();
-      expect(scope.firstDisposable?.disposable).toEqual({ dispose });
+      expect(scope.firstDisposable?.dispose).toBe(dispose);
     });
 
     it('should not track when no active scope', () => {
@@ -85,9 +85,9 @@ describe('scoped-effect', () => {
       expect(scope.firstDisposable?.next?.next).toBeDefined();
 
       // First in linked list is last added (LIFO)
-      expect(scope.firstDisposable?.disposable).toEqual({ dispose: dispose3 });
-      expect(scope.firstDisposable?.next?.disposable).toEqual({ dispose: dispose2 });
-      expect(scope.firstDisposable?.next?.next?.disposable).toEqual({ dispose: dispose1 });
+      expect(scope.firstDisposable?.dispose).toBe(dispose3);
+      expect(scope.firstDisposable?.next?.dispose).toBe(dispose2);
+      expect(scope.firstDisposable?.next?.next?.dispose).toBe(dispose1);
     });
   });
 });

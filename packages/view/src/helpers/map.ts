@@ -42,27 +42,8 @@ export function createMapHelper<
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
   const { ctx, signalCtx, signal, scopedEffect, renderer, createScope, disposeScope } = opts;
-
-  // Create untracked helper to prevent render() from tracking outer reactive state
   const untrack = createUntracked({ ctx: signalCtx });
 
-  /**
-   * User-space map() with stable signals
-   *
-   * Each item gets a stable signal that map() manages. Render callback
-   * runs ONCE per unique item, preventing orphaned computeds.
-   *
-   * Supports two keying strategies:
-   * 1. Reference-based (default): Uses object identity as key (like Solid.js)
-   * 2. Property-based (with keyFn): Uses a property value as key (like React)
-   *
-   * Usage:
-   *   // Reference-based (mutable patterns)
-   *   map(() => items(), (itemSignal) => Component(api, itemSignal))
-   *
-   *   // Property-based (immutable patterns)
-   *   map(() => items(), (itemSignal) => Component(api, itemSignal), item => item.id)
-   */
   function map<T>(
     items: () => T[],
     render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
@@ -72,7 +53,6 @@ export function createMapHelper<
       // Store signals, RefSpecs, and scopes per key (separate from reconciliation)
       type ItemEntry = {
         signal: Reactive<T> & ((value: T) => void);
-        refSpec: RefSpec<TElement>;
         scope: RenderScope;
       };
       const itemData = new Map<unknown, ItemEntry>();
@@ -90,7 +70,7 @@ export function createMapHelper<
 
           // Create a dedicated scope for this row's disposables
           // This ensures each row's computeds/effects are tracked independently
-          const rowScope = createScope(parent.element);
+          const scope = createScope(parent.element);
 
           // Call render with row's scope active so any computeds/effects created
           // during component initialization are tracked for disposal
@@ -98,7 +78,7 @@ export function createMapHelper<
           let nodeRef: NodeRef<TElement>;
 
           const prevScope = ctx.activeScope;
-          ctx.activeScope = rowScope;
+          ctx.activeScope = scope;
           try {
             // Render is still "cold" (untracked) but now has activeScope set
             // This ensures computeds/effects created during render are tracked for disposal
@@ -110,11 +90,7 @@ export function createMapHelper<
           }
 
           // Store signal, RefSpec, and scope for future updates/cleanup
-          itemData.set(key, {
-            signal: itemSignal,
-            refSpec,
-            scope: rowScope,
-          });
+          itemData.set(key, { scope, signal: itemSignal });
 
           // Insert into DOM
           if (isElementRef(nodeRef!)) {

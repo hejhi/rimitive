@@ -90,7 +90,7 @@ export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeCo
       const scope = ctx.activeScope;
       if (scope) {
         const node = {
-          disposable,
+          dispose: disposable.dispose,
           next: scope.firstDisposable,
         };
         scope.firstDisposable = node;
@@ -102,7 +102,7 @@ export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeCo
       disposable: { dispose: () => void }
     ) => {
       const node = {
-        disposable,
+        dispose: disposable.dispose,
         next: scope.firstDisposable,
       };
       scope.firstDisposable = node;
