@@ -17,7 +17,6 @@ const VISITED = 1;
  * Node state for reconciliation - extends NodeRef with reconciliation metadata
  */
 export type ReconcileNode<TElement> = NodeRef<TElement> & {
-  key: string;
   position: number;
   reconcileStatus: typeof UNVISITED | typeof VISITED; // Separate from status field
 };
@@ -50,7 +49,7 @@ export interface ReconcileHooks<T, TElement> {
    * Called when an item needs to be repositioned in DOM
    * Should move the element to the new position
    */
-  onMove: (key: string, node: NodeRef<TElement>, nextSibling: NodeRef<TElement> | null | undefined) => void;
+  onMove: (node: NodeRef<TElement>, nextSibling: NodeRef<TElement> | null | undefined) => void;
 
   /**
    * Called when an item is being removed
@@ -204,7 +203,6 @@ export function createReconciler<T, TElement extends RendererElement>(
         } else {
           // New node - create via hook
           const nodeRef = onCreate(item, key) as ReconcileNode<TElement>;
-          nodeRef.key = key;
           nodeRef.position = i;
           nodeRef.reconcileStatus = VISITED;
 
@@ -249,7 +247,7 @@ export function createReconciler<T, TElement extends RendererElement>(
           const nextSibling = i + 1 < nodeLen ? nodes[i + 1]! : undefined;
 
           // Call move hook
-          onMove(node.key, node, nextSibling);
+          onMove(node, nextSibling);
         }
         // Elements in LIS don't need to move - they're already in correct relative positions
       }

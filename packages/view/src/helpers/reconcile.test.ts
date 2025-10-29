@@ -46,7 +46,7 @@ describe('reconcileWithKeys', () => {
           (li.children[0] as MockText).content = item.text;
         }
       },
-      onMove: (_key: string, node, nextSibling) => {
+      onMove: (node, nextSibling) => {
         const li = (node as ElementRef<MockElement>).element;
         const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
         env.renderer.insertBefore(parent, li, nextEl);
@@ -664,7 +664,7 @@ describe('reconcileWithKeys', () => {
           };
         },
         onUpdate() {},
-        onMove: (_key: string, node, nextSibling) => {
+        onMove: (node, nextSibling) => {
           const li = (node as ElementRef<MockElement>).element;
           const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
           env.renderer.insertBefore(parent, li, nextEl);

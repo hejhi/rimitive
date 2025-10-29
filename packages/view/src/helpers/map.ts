@@ -95,7 +95,7 @@ export function createMapHelper<
         },
 
         // onMove: called when item needs repositioning
-        onMove: (_key, node, nextSiblingNode) => {
+        onMove: (node, nextSiblingNode) => {
           if (!isElementRef(node)) return;
 
           let nextEl: TElement | null = null;
