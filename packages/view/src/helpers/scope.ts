@@ -33,10 +33,14 @@ export type CreateScopes = {
    * Run code within a new scope attached to an element.
    * Handles full lifecycle: creation, registration, activation, and cleanup.
    * Automatically uses ctx.activeScope as parent for hierarchy.
+   *
+   * @param forceCreate - If true, always creates a new scope even if one exists for the element.
+   *                      Useful for cases like map() where multiple scopes share the same parent element.
    */
   withScope: <TElement extends object = object, T = void>(
     element: TElement,
-    fn: (scope: RenderScope<TElement>) => T
+    fn: (scope: RenderScope<TElement>) => T,
+    forceCreate?: boolean
   ) => { result: T; scope: RenderScope<TElement> };
 
   /**
@@ -169,22 +173,29 @@ export function createScopes({
   };
 
   /**
-   * Run code within a new scope attached to an element
-   * Returns the created scope so callers can access it if needed.
-   * Automatically uses ctx.activeScope as parent for hierarchy.
+   * Run code within the scope attached to an element
+   * If a scope already exists for the element, reuses it (idempotent).
+   * Otherwise creates a new scope, using ctx.activeScope as parent for hierarchy.
+   * Returns the scope so callers can access it if needed.
+   *
+   * @param forceCreate - If true, always creates a new scope even if one exists for the element.
+   *                      Useful for cases like map() where multiple scopes share the same parent element.
    */
   const withScope = <TElement extends object = object, T = void>(
     element: TElement,
-    fn: (scope: RenderScope<TElement>) => T
+    fn: (scope: RenderScope<TElement>) => T,
   ): { result: T; scope: RenderScope<TElement> } => {
-    // Use activeScope as parent for automatic hierarchy
-    const parentScope = (ctx.activeScope || undefined) as RenderScope<TElement> | undefined;
+    // Try to get existing scope first (idempotent), unless forceCreate is true
+    let scope = (ctx.elementScopes.get(element) as RenderScope<TElement> | undefined);
 
-    // Create scope
-    const scope = createScope(element, parentScope);
+    if (!scope) {
+      // Use activeScope as parent for automatic hierarchy
+      const parentScope = (ctx.activeScope || undefined) as RenderScope<TElement> | undefined;
 
-    // Register so children/effects can find it
-    ctx.elementScopes.set(element, scope);
+      // Create new scope
+      scope = createScope(element, parentScope);
+      ctx.elementScopes.set(element, scope);
+    }
 
     // Set as active scope and run code
     const prevScope = ctx.activeScope;
@@ -193,14 +204,12 @@ export function createScopes({
     let result: T;
     try {
       result = fn(scope);
+    } catch (e) {
+      ctx.elementScopes.delete(element);
+      disposeScope(scope); // Clean up any disposables that were registered before error
+      throw e;
     } finally {
       ctx.activeScope = prevScope;
-    }
-
-    // Clean up registration if no disposables were tracked
-    // (Lazy optimization - elements with no reactive props don't need scopes)
-    if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
-      ctx.elementScopes.delete(element);
     }
 
     return { result, scope };

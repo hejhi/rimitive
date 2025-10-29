@@ -27,7 +27,6 @@ export interface MapHelperOpts<
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
-  createScope: CreateScopes['createScope'];
   disposeScope: CreateScopes['disposeScope'];
 }
 
@@ -41,7 +40,7 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>) {
-  const { ctx, signalCtx, signal, scopedEffect, renderer, createScope, disposeScope } = opts;
+  const { ctx, signalCtx, signal, scopedEffect, renderer, disposeScope } = opts;
   const untrack = createUntracked({ ctx: signalCtx });
 
   function map<T>(
@@ -66,27 +65,25 @@ export function createMapHelper<
 
         onCreate: untrack(() => (item, key) => {
           const itemSignal = signal(item);
-          const scope = createScope(parentEl);
-          const prevScope = ctx.activeScope;
 
-          ctx.activeScope = scope;
+          // Render the item - this creates an element with its own scope
+          const elRef = render(itemSignal).create() as ElementRef<TElement>;
 
-          try {
-            const elRef: ElementRef<TElement> = render(itemSignal).create();
-            itemData.set(key, { scope, signal: itemSignal });
-
-            renderer.insertBefore(
-              parentEl,
-              elRef.element,
-              resolveNextRef(nextSibling)?.element ?? null
-            );
-            return elRef;
-          } catch (e) {
-            disposeScope(scope); // Dispose scope if render failed
-            throw e;
-          } finally {
-            ctx.activeScope = prevScope;
+          // Get the scope that was created for this element
+          const scope = ctx.elementScopes.get(elRef.element);
+          if (!scope) {
+            throw new Error('map: expected rendered element to have a registered scope');
           }
+
+          itemData.set(key, { scope, signal: itemSignal });
+
+          renderer.insertBefore(
+            parentEl,
+            elRef.element,
+            resolveNextRef(nextSibling)?.element ?? null
+          );
+
+          return elRef;
         }),
 
         // onUpdate: called when existing item's data should be updated

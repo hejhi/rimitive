@@ -33,7 +33,6 @@ describe('List reconciliation - Complex reorderings', () => {
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
-      createScope: env.createScope,
       disposeScope: env.disposeScope,
     });
 
@@ -467,7 +466,6 @@ describe('List reconciliation - Edge cases', () => {
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
-      createScope: env.createScope,
       disposeScope: env.disposeScope,
     });
 

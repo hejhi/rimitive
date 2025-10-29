@@ -4,7 +4,7 @@ import type { RenderScope } from '../types';
 
 describe('with-scope', () => {
   describe('createWithScope', () => {
-    it('should create and register scope, run code, then cleanup if empty', () => {
+    it('should create and register scope, run code, and keep scope registered', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
@@ -20,8 +20,8 @@ describe('with-scope', () => {
       expect(result).toBe(42);
       expect(scope).toBeDefined();
 
-      // Scope should be cleaned up since no disposables
-      expect(ctx.elementScopes.get(element)).toBeUndefined();
+      // Scope should remain registered (idempotent behavior)
+      expect(ctx.elementScopes.get(element)).toBe(scope);
     });
 
     it('should keep scope registered if it has disposables', () => {
@@ -135,6 +135,76 @@ describe('with-scope', () => {
 
       // Verify child is linked into parent's child list
       expect(parentScope.firstChild).toBe(childScope);
+    });
+
+    it('should be idempotent - reuse scope if called again with same element', () => {
+      const env = createTestEnv();
+      const { ctx, withScope } = env;
+
+      const element = {};
+      let firstCallCount = 0;
+      let secondCallCount = 0;
+
+      // First call creates scope
+      const { scope: scope1 } = withScope(element, () => {
+        firstCallCount++;
+        return 'first';
+      });
+
+      // Second call should reuse the same scope
+      const { scope: scope2 } = withScope(element, () => {
+        secondCallCount++;
+        return 'second';
+      });
+
+      expect(scope1).toBe(scope2); // Same scope instance
+      expect(firstCallCount).toBe(1);
+      expect(secondCallCount).toBe(1);
+      expect(ctx.elementScopes.get(element)).toBe(scope1);
+    });
+
+    it('should create new scope when forceCreate is true', () => {
+      const env = createTestEnv();
+      const { ctx, withScope } = env;
+
+      const element = {};
+
+      // First call creates scope
+      const { scope: scope1 } = withScope(element, () => 'first');
+
+      // Second call with forceCreate should create new scope
+      const { scope: scope2 } = withScope(element, () => 'second', true);
+
+      expect(scope1).not.toBe(scope2); // Different scope instances
+
+      // With forceCreate, scope is NOT registered in elementScopes
+      expect(ctx.elementScopes.get(element)).toBe(scope1); // Still points to first scope
+    });
+
+    it('should allow multiple forced scopes for same element (map use case)', () => {
+      const env = createTestEnv();
+      const { withScope } = env;
+
+      const parentElement = {};
+      const scopes: RenderScope[] = [];
+
+      // Simulate map creating multiple items with same parent
+      for (let i = 0; i < 3; i++) {
+        withScope(
+          parentElement,
+          (scope) => {
+            scopes.push(scope);
+            return i;
+          },
+          true // forceCreate
+        );
+      }
+
+      // All scopes should be unique
+      expect(scopes.length).toBe(3);
+      expect(scopes[0]).not.toBe(scopes[1]);
+      expect(scopes[1]).not.toBe(scopes[2]);
+      expect(scopes[0]).not.toBe(scopes[2]);
     });
   });
 

@@ -80,7 +80,7 @@ const effectFactory = createEffectFactory({
 const effect = effectFactory.method;
 
 // Build view helpers
-const { createScope, disposeScope, scopedEffect, withScope, onCleanup } = createScopes({
+const { disposeScope, scopedEffect, withScope, onCleanup } = createScopes({
   ctx,
   track: signalCtx.track,
   dispose: signalCtx.dispose,
@@ -108,7 +108,6 @@ const mapHelper = createMapHelper<HTMLElement, Text>({
   signal: signalFactory.method,
   scopedEffect,
   renderer,
-  createScope,
   disposeScope,
 });
 
