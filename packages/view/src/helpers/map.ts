@@ -49,24 +49,19 @@ export function createMapHelper<
     keyFn?: (item: T) => string | number
   ): FragmentRef<TElement> {
     return createFragment((parent: ElementRef<TElement>, nextSibling?: NodeRef<TElement> | null) => {
-      // Store signals per key (separate from reconciliation)
-      const itemData = new Map<unknown, Reactive<T> & ((value: T) => void)>();
       const parentEl = parent.element;
 
       // Create reconciler with internal state management and hooks
-      const { reconcile, dispose } = createReconciler<T, TElement>({
+      const { reconcile, dispose } = createReconciler<T, TElement, (value: T) => void>({
         parentElement: parentEl,
         parentRef: parent,
         nextSibling: nextSibling ?? undefined,
 
-        onCreate: untrack(() => (item, key) => {
+        onCreate: untrack(() => (item) => {
           const itemSignal = signal(item);
 
           // Render the item - this creates an element with its own scope
           const elRef = render(itemSignal).create() as ElementRef<TElement>;
-
-          // Store the signal for updates
-          itemData.set(key, itemSignal);
 
           renderer.insertBefore(
             parentEl,
@@ -74,13 +69,13 @@ export function createMapHelper<
             resolveNextRef(nextSibling)?.element ?? null
           );
 
-          return elRef;
+          // Attach the signal to the node ref for updates
+          return Object.assign(elRef, { data: itemSignal });
         }),
 
         // onUpdate: called when existing item's data should be updated
-        onUpdate: (key, item) => {
-          const signal = itemData.get(key);
-          if (signal) signal(item);
+        onUpdate: (_key, item, node) => {
+          node.data(item);
         },
 
         // onMove: called when item needs repositioning
@@ -99,10 +94,7 @@ export function createMapHelper<
         },
 
         // onRemove: called when item is being removed
-        onRemove: (key, node) => {
-          // Clean up signal
-          itemData.delete(key);
-
+        onRemove: (_key, node) => {
           // Remove from DOM and clean up element scope
           if (!isElementRef(node)) return;
 
@@ -131,9 +123,6 @@ export function createMapHelper<
         // Dispose all remaining items via reconciler
         // This calls onRemove hook for each tracked item
         dispose();
-
-        // Clear remaining data
-        itemData.clear();
       };
     });
   }

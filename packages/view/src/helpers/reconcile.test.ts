@@ -25,7 +25,7 @@ describe('reconcileWithKeys', () => {
     const parent = env.renderer.createElement('ul');
 
     // Create reconciler instance with hooks
-    const reconciler = createReconciler<Item, MockElement>({
+    const reconciler = createReconciler<Item, MockElement, () => void>({
       parentElement: parent,
       onCreate: (item: Item) => {
         const li = env.renderer.createElement('li');
@@ -649,7 +649,7 @@ describe('reconcileWithKeys', () => {
       const parent = env.renderer.createElement('ul');
 
       // Create reconciler that uses index as key
-      const reconciler = createReconciler<{ text: string }, MockElement>({
+      const reconciler = createReconciler<{ text: string }, MockElement, () => void>({
         parentElement: parent,
         onCreate: (item: { text: string }) => {
           const li = env.renderer.createElement('li');

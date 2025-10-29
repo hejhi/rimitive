@@ -16,9 +16,10 @@ const VISITED = 1;
 /**
  * Node state for reconciliation - extends NodeRef with reconciliation metadata
  */
-export type ReconcileNode<TElement> = NodeRef<TElement> & {
+export type ReconcileNode<TElement, TData> = NodeRef<TElement> & {
   position: number;
   reconcileStatus: typeof UNVISITED | typeof VISITED; // Separate from status field
+  data: TData
 };
 
 /**
@@ -32,7 +33,7 @@ export interface PositionalItem<TElement> {
 /**
  * Lifecycle hooks for reconciliation
  */
-export interface ReconcileHooks<T, TElement> {
+export interface ReconcileHooks<T, TElement, TData> {
   /**
    * Called when a new item needs to be created
    * Should return the created NodeRef
@@ -43,13 +44,20 @@ export interface ReconcileHooks<T, TElement> {
    * Called when an existing item's data should be updated
    * Should update the item's signal/state but not move DOM
    */
-  onUpdate: (key: string, item: T, node: NodeRef<TElement>) => void;
+  onUpdate: (
+    key: string,
+    item: T,
+    node: ReconcileNode<TElement, TData>
+  ) => void;
 
   /**
    * Called when an item needs to be repositioned in DOM
    * Should move the element to the new position
    */
-  onMove: (node: NodeRef<TElement>, nextSibling: NodeRef<TElement> | null | undefined) => void;
+  onMove: (
+    node: NodeRef<TElement>,
+    nextSibling: NodeRef<TElement> | null | undefined
+  ) => void;
 
   /**
    * Called when an item is being removed
@@ -61,7 +69,7 @@ export interface ReconcileHooks<T, TElement> {
 /**
  * Options for creating a reconciler
  */
-export interface ReconcilerOptions<T, TElement> extends ReconcileHooks<T, TElement> {
+export interface ReconcilerOptions<T, TElement, TData> extends ReconcileHooks<T, TElement, TData> {
   parentElement: TElement;
   parentRef?: ElementRef<TElement>;
   nextSibling?: NodeRef<TElement>;
@@ -150,11 +158,11 @@ export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
  * This encapsulates reconciliation state and provides a clean API
  * for reconciling and disposing items.
  */
-export function createReconciler<T, TElement extends RendererElement>(
-  options: ReconcilerOptions<T, TElement>
+export function createReconciler<T, TElement extends RendererElement, TData>(
+  options: ReconcilerOptions<T, TElement, TData>
 ): Reconciler<T, TElement> {
     // Internal reconciliation state
-    const itemsByKey = new Map<string, ReconcileNode<TElement>>();
+    const itemsByKey = new Map<string, ReconcileNode<TElement, TData>>();
 
     // Pooled buffers for LIS calculation
     const oldIndicesBuf: number[] = [];
@@ -162,7 +170,7 @@ export function createReconciler<T, TElement extends RendererElement>(
     const lisBuf: number[] = [];
 
     // Extract hooks from options
-    const { onCreate, onUpdate, onMove, onRemove }: ReconcileHooks<T, TElement> = options;
+    const { onCreate, onUpdate, onMove, onRemove }: ReconcileHooks<T, TElement, TData> = options;
 
     /**
      * Reconcile items with keys using LIS-based algorithm
@@ -180,8 +188,8 @@ export function createReconciler<T, TElement extends RendererElement>(
 
       const itemsLen = items.length;
 
-      const nodes: ReconcileNode<TElement>[] =
-        Array<ReconcileNode<TElement>>(itemsLen);
+      const nodes: ReconcileNode<TElement, TData>[] =
+        Array<ReconcileNode<TElement, TData>>(itemsLen);
 
       // Build phase - create/update nodes
       let count = 0;
@@ -203,7 +211,7 @@ export function createReconciler<T, TElement extends RendererElement>(
           onUpdate(key, item, node);
         } else {
           // New node - create via hook
-          const nodeRef = onCreate(item, key) as ReconcileNode<TElement>;
+          const nodeRef = onCreate(item, key) as ReconcileNode<TElement, TData>;
           nodeRef.position = i;
           nodeRef.reconcileStatus = VISITED;
 
