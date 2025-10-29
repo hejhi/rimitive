@@ -185,7 +185,8 @@ export function createReconciler<T, TElement extends RendererElement>(
 
       // Build phase - create/update nodes
       let count = 0;
-      for (let i = 0; i < itemsLen; i++) {
+      let i = 0;
+      for (i = 0; i < itemsLen; i++) {
         const item = items[i]!;
         const key = String(keyFn(item, i));
         let node = itemsByKey.get(key);
@@ -230,7 +231,7 @@ export function createReconciler<T, TElement extends RendererElement>(
 
       // Build set of LIS positions for O(1) lookup
       const lisPositions = new Set<number>();
-      for (let i = 0; i < lisLen; i++) {
+      for (i = 0; i < lisLen; i++) {
         lisPositions.add(newPosBuf[lisBuf[i]!]!);
       }
 
@@ -238,13 +239,14 @@ export function createReconciler<T, TElement extends RendererElement>(
 
       // Position phase - reorder based on LIS
       // Process in REVERSE order so each element can insert before the already-positioned next element
-      for (let i = nodeLen - 1; i >= 0; i--) {
+      for (i = nodeLen - 1; i >= 0; i--) {
         const node = nodes[i]!;
 
         if (!lisPositions.has(node.position)) {
+          const newPos = i + 1;
           // Not in LIS - needs repositioning
           // Find next sibling (or null/undefined for end)
-          const nextSibling = i + 1 < nodeLen ? nodes[i + 1]! : undefined;
+          const nextSibling = newPos < nodeLen ? nodes[newPos] : undefined;
 
           // Call move hook
           onMove(node, nextSibling);
