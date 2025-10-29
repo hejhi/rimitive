@@ -8,7 +8,7 @@
  * - Efficient reconciliation with LIS algorithm
  */
 
-import type { RefSpec, ElementRef, NodeRef, FragmentRef, Reactive, RenderScope } from '../types';
+import type { RefSpec, ElementRef, NodeRef, FragmentRef, Reactive } from '../types';
 import { isElementRef, resolveNextRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
@@ -49,12 +49,8 @@ export function createMapHelper<
     keyFn?: (item: T) => string | number
   ): FragmentRef<TElement> {
     return createFragment((parent: ElementRef<TElement>, nextSibling?: NodeRef<TElement> | null) => {
-      // Store signals, RefSpecs, and scopes per key (separate from reconciliation)
-      type ItemEntry = {
-        signal: Reactive<T> & ((value: T) => void);
-        scope: RenderScope;
-      };
-      const itemData = new Map<unknown, ItemEntry>();
+      // Store signals per key (separate from reconciliation)
+      const itemData = new Map<unknown, Reactive<T> & ((value: T) => void)>();
       const parentEl = parent.element;
 
       // Create reconciler with internal state management and hooks
@@ -69,13 +65,8 @@ export function createMapHelper<
           // Render the item - this creates an element with its own scope
           const elRef = render(itemSignal).create() as ElementRef<TElement>;
 
-          // Get the scope that was created for this element
-          const scope = ctx.elementScopes.get(elRef.element);
-          if (!scope) {
-            throw new Error('map: expected rendered element to have a registered scope');
-          }
-
-          itemData.set(key, { scope, signal: itemSignal });
+          // Store the signal for updates
+          itemData.set(key, itemSignal);
 
           renderer.insertBefore(
             parentEl,
@@ -88,8 +79,8 @@ export function createMapHelper<
 
         // onUpdate: called when existing item's data should be updated
         onUpdate: (key, item) => {
-          const existing = itemData.get(key);
-          if (existing) existing.signal(item);
+          const signal = itemData.get(key);
+          if (signal) signal(item);
         },
 
         // onMove: called when item needs repositioning
@@ -109,15 +100,15 @@ export function createMapHelper<
 
         // onRemove: called when item is being removed
         onRemove: (key, node) => {
-          // Dispose the row's scope (automatically disposes child element scope via hierarchy)
-          const entry = itemData.get(key);
-          if (entry) disposeScope(entry.scope);
-
-          // Clean up itemData
+          // Clean up signal
           itemData.delete(key);
 
-          // Remove from DOM and clean up element scope registration
+          // Remove from DOM and clean up element scope
           if (!isElementRef(node)) return;
+
+          const scope = ctx.elementScopes.get(node.element);
+          if (scope) disposeScope(scope);
+
           ctx.elementScopes.delete(node.element);
           renderer.removeChild(parentEl, node.element);
         },

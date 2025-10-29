@@ -162,50 +162,6 @@ describe('with-scope', () => {
       expect(secondCallCount).toBe(1);
       expect(ctx.elementScopes.get(element)).toBe(scope1);
     });
-
-    it('should create new scope when forceCreate is true', () => {
-      const env = createTestEnv();
-      const { ctx, withScope } = env;
-
-      const element = {};
-
-      // First call creates scope
-      const { scope: scope1 } = withScope(element, () => 'first');
-
-      // Second call with forceCreate should create new scope
-      const { scope: scope2 } = withScope(element, () => 'second', true);
-
-      expect(scope1).not.toBe(scope2); // Different scope instances
-
-      // With forceCreate, scope is NOT registered in elementScopes
-      expect(ctx.elementScopes.get(element)).toBe(scope1); // Still points to first scope
-    });
-
-    it('should allow multiple forced scopes for same element (map use case)', () => {
-      const env = createTestEnv();
-      const { withScope } = env;
-
-      const parentElement = {};
-      const scopes: RenderScope[] = [];
-
-      // Simulate map creating multiple items with same parent
-      for (let i = 0; i < 3; i++) {
-        withScope(
-          parentElement,
-          (scope) => {
-            scopes.push(scope);
-            return i;
-          },
-          true // forceCreate
-        );
-      }
-
-      // All scopes should be unique
-      expect(scopes.length).toBe(3);
-      expect(scopes[0]).not.toBe(scopes[1]);
-      expect(scopes[1]).not.toBe(scopes[2]);
-      expect(scopes[0]).not.toBe(scopes[2]);
-    });
   });
 
   describe('integration: withScope + auto-tracking', () => {

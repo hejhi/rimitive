@@ -30,17 +30,14 @@ export type CreateScopes = {
   disposeScope: <TElement = object>(scope: RenderScope<TElement>) => void;
 
   /**
-   * Run code within a new scope attached to an element.
+   * Run code within a scope attached to an element.
+   * If a scope already exists for the element, reuses it (idempotent).
+   * Otherwise creates a new scope, using ctx.activeScope as parent for hierarchy.
    * Handles full lifecycle: creation, registration, activation, and cleanup.
-   * Automatically uses ctx.activeScope as parent for hierarchy.
-   *
-   * @param forceCreate - If true, always creates a new scope even if one exists for the element.
-   *                      Useful for cases like map() where multiple scopes share the same parent element.
    */
   withScope: <TElement extends object = object, T = void>(
     element: TElement,
-    fn: (scope: RenderScope<TElement>) => T,
-    forceCreate?: boolean
+    fn: (scope: RenderScope<TElement>) => T
   ) => { result: T; scope: RenderScope<TElement> };
 
   /**
@@ -177,16 +174,13 @@ export function createScopes({
    * If a scope already exists for the element, reuses it (idempotent).
    * Otherwise creates a new scope, using ctx.activeScope as parent for hierarchy.
    * Returns the scope so callers can access it if needed.
-   *
-   * @param forceCreate - If true, always creates a new scope even if one exists for the element.
-   *                      Useful for cases like map() where multiple scopes share the same parent element.
    */
   const withScope = <TElement extends object = object, T = void>(
     element: TElement,
-    fn: (scope: RenderScope<TElement>) => T,
+    fn: (scope: RenderScope<TElement>) => T
   ): { result: T; scope: RenderScope<TElement> } => {
-    // Try to get existing scope first (idempotent), unless forceCreate is true
-    let scope = (ctx.elementScopes.get(element) as RenderScope<TElement> | undefined);
+    // Try to get existing scope first (idempotent)
+    let scope = ctx.elementScopes.get(element) as RenderScope<TElement> | undefined;
 
     if (!scope) {
       // Use activeScope as parent for automatic hierarchy
