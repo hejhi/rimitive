@@ -173,10 +173,10 @@ export function createScopes({
    * Returns the created scope so callers can access it if needed.
    * Automatically uses ctx.activeScope as parent for hierarchy.
    */
-  function withScope<TElement extends object = object, T = void>(
+  const withScope = <TElement extends object = object, T = void>(
     element: TElement,
     fn: (scope: RenderScope<TElement>) => T
-  ): { result: T; scope: RenderScope<TElement> } {
+  ): { result: T; scope: RenderScope<TElement> } => {
     // Use activeScope as parent for automatic hierarchy
     const parentScope = (ctx.activeScope || undefined) as RenderScope<TElement> | undefined;
 
@@ -209,7 +209,7 @@ export function createScopes({
   /**
    * Create a scope-aware effect that automatically tracks itself in activeScope
    */
-  function scopedEffect(fn: () => void | (() => void)): () => void {
+  const scopedEffect = (fn: () => void | (() => void)): () => void => {
     // Create the underlying effect
     const dispose = baseEffect(fn);
 
@@ -226,7 +226,7 @@ export function createScopes({
    * Register a cleanup function to run when the current scope is disposed.
    * Must be called within a scope context (e.g., inside withScope or element setup).
    */
-  function onCleanup(cleanup: () => void): void {
+  const onCleanup = (cleanup: () => void): void => {
     const scope = ctx.activeScope;
     if (!scope) return;
 
