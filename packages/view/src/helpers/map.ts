@@ -8,7 +8,7 @@
  * - Efficient reconciliation with LIS algorithm
  */
 
-import type { RefSpec, NodeRef, FragmentRef, Reactive } from '../types';
+import type { RefSpec, FragmentRef, Reactive, ElementRef } from '../types';
 import { isElementRef, resolveNextRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
@@ -30,7 +30,7 @@ export interface MapHelperOpts<
   disposeScope: CreateScopes['disposeScope'];
 }
 
-type RecNode<T, TElement> = NodeRef<TElement> & ReconcileNode<(value: T) => void>;
+type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => void>;
 
 /**
  * Create a map helper with injected dependencies
@@ -72,7 +72,7 @@ export function createMapHelper<
 
           renderer.insertBefore(
             parentEl,
-            elRef.element!,
+            elRef.element,
             resolveNextRef(nextSibling)?.element ?? null
           );
 
