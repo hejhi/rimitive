@@ -56,16 +56,17 @@ export function createMapHelper<
         scope: RenderScope;
       };
       const itemData = new Map<unknown, ItemEntry>();
+      const parentEl = parent.element;
 
       // Create reconciler with internal state management and hooks
       const { reconcile, dispose } = createReconciler<T, TElement>({
-        parentElement: parent.element,
+        parentElement: parentEl,
         parentRef: parent,
-        nextSibling: nextSibling || undefined,
+        nextSibling: nextSibling ?? undefined,
 
         onCreate: untrack(() => (item, key) => {
           const itemSignal = signal(item);
-          const scope = createScope(parent.element);
+          const scope = createScope(parentEl);
           const prevScope = ctx.activeScope;
 
           ctx.activeScope = scope;
@@ -75,9 +76,9 @@ export function createMapHelper<
             itemData.set(key, { scope, signal: itemSignal });
 
             renderer.insertBefore(
-              parent.element,
+              parentEl,
               elRef.element,
-              resolveNextRef(nextSibling || undefined)?.element ?? null
+              resolveNextRef(nextSibling)?.element ?? null
             );
             return elRef;
           } catch (e) {
@@ -103,10 +104,10 @@ export function createMapHelper<
           if (nextSiblingNode && isElementRef(nextSiblingNode)) {
             nextEl = nextSiblingNode.element;
           } else if (!nextSiblingNode) {
-            nextEl = resolveNextRef(nextSibling || undefined)?.element ?? null;
+            nextEl = resolveNextRef(nextSibling)?.element ?? null;
           }
 
-          renderer.insertBefore(parent.element, node.element, nextEl);
+          renderer.insertBefore(parentEl, node.element, nextEl);
         },
 
         // onRemove: called when item is being removed
@@ -121,7 +122,7 @@ export function createMapHelper<
           // Remove from DOM and clean up element scope registration
           if (!isElementRef(node)) return;
           ctx.elementScopes.delete(node.element);
-          renderer.removeChild(parent.element, node.element);
+          renderer.removeChild(parentEl, node.element);
         },
       });
 

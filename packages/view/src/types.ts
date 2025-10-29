@@ -65,7 +65,7 @@ export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is 
  * @returns The next DOM element, or null if end of chain
  */
 export function resolveNextRef<TElement>(
-  ref: NodeRef<TElement> | undefined
+  ref: NodeRef<TElement> | undefined | null
 ): NodeRef<TElement> | null {
   let current = ref;
   while (current) {
