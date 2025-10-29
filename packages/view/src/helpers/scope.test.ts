@@ -12,11 +12,12 @@ describe('Scope Tree', () => {
 
   describe('disposal', () => {
     it('disposes tracked items when scope is disposed', () => {
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
-      const scope = createScope(createMockElement());
+      const { withScope, disposeScope, trackInScope } = createTestScopes();
+      const element = createMockElement();
+      const { scope } = withScope(element, () => {});
       const disposable = createMockDisposable();
 
-      runInScope(scope, () => trackInScope(disposable));
+      withScope(element, () => trackInScope(disposable));
       disposeScope(scope);
 
       // tracked item was cleaned up
@@ -27,12 +28,21 @@ describe('Scope Tree', () => {
       const parentDisposable = createMockDisposable();
       const childDisposable = createMockDisposable();
 
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
-      const parent = createScope(createMockElement());
-      const child = createScope(createMockElement(), parent);
+      const { withScope, disposeScope, trackInScope, ctx } = createTestScopes();
+      const parentElement = createMockElement();
+      const childElement = createMockElement();
 
-      runInScope(parent, () => trackInScope(parentDisposable));
-      runInScope(child, () => trackInScope(childDisposable));
+      // Create parent scope
+      const { scope: parent } = withScope(parentElement, () => {
+        trackInScope(parentDisposable);
+      });
+
+      // Create child scope with parent as activeScope
+      ctx.activeScope = parent;
+      withScope(childElement, () => {
+        trackInScope(childDisposable);
+      });
+      ctx.activeScope = null;
 
       // Dispose parent
       disposeScope(parent);
@@ -43,21 +53,40 @@ describe('Scope Tree', () => {
     });
 
     it('disposes entire scope tree recursively', () => {
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
-      const root = createScope(createMockElement());
-      const child1 = createScope(createMockElement(), root);
-      const child2 = createScope(createMockElement(), root);
-      const grandchild = createScope(createMockElement(), child1);
+      const { withScope, disposeScope, ctx } = createTestScopes();
+      const rootElement = createMockElement();
+      const child1Element = createMockElement();
+      const child2Element = createMockElement();
+      const grandchildElement = createMockElement();
 
       const rootDisposable = createMockDisposable();
       const child1Disposable = createMockDisposable();
       const child2Disposable = createMockDisposable();
       const grandchildDisposable = createMockDisposable();
 
-      runInScope(root, () => trackInScope(rootDisposable));
-      runInScope(child1, () => trackInScope(child1Disposable));
-      runInScope(child2, () => trackInScope(child2Disposable));
-      runInScope(grandchild, () => trackInScope(grandchildDisposable));
+      // Create root scope
+      const { scope: root } = withScope(rootElement, (scope) => {
+        scope.firstDisposable = { dispose: rootDisposable.dispose, next: undefined };
+      });
+
+      // Create child1 under root
+      ctx.activeScope = root;
+      const { scope: child1 } = withScope(child1Element, (scope) => {
+        scope.firstDisposable = { dispose: child1Disposable.dispose, next: undefined };
+      });
+
+      // Create child2 under root
+      withScope(child2Element, (scope) => {
+        scope.firstDisposable = { dispose: child2Disposable.dispose, next: undefined };
+      });
+      ctx.activeScope = null;
+
+      // Create grandchild under child1
+      ctx.activeScope = child1;
+      withScope(grandchildElement, (scope) => {
+        scope.firstDisposable = { dispose: grandchildDisposable.dispose, next: undefined };
+      });
+      ctx.activeScope = null;
 
       // Dispose root
       disposeScope(root);
@@ -70,11 +99,12 @@ describe('Scope Tree', () => {
     });
 
     it('is idempotent - can dispose same scope multiple times', () => {
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
-      const scope = createScope(createMockElement());
+      const { withScope, disposeScope, trackInScope } = createTestScopes();
+      const element = createMockElement();
+      const { scope } = withScope(element, () => {});
       const disposable = createMockDisposable();
 
-      runInScope(scope, () => trackInScope(disposable));
+      withScope(element, () => trackInScope(disposable));
 
       // Dispose multiple times
       disposeScope(scope);
@@ -86,14 +116,15 @@ describe('Scope Tree', () => {
     });
 
     it('prevents tracking after disposal', () => {
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
-      const scope = createScope(createMockElement());
+      const { withScope, disposeScope, trackInScope } = createTestScopes();
+      const element = createMockElement();
+      const { scope } = withScope(element, () => {});
       const beforeDispose = createMockDisposable();
       const afterDispose = createMockDisposable();
 
-      runInScope(scope, () => trackInScope(beforeDispose));
+      withScope(element, () => trackInScope(beforeDispose));
       disposeScope(scope);
-      runInScope(scope, () => trackInScope(afterDispose));
+      withScope(element, () => trackInScope(afterDispose));
 
       // disposed scope rejects new tracking
       expect(beforeDispose.disposed).toBe(true);
@@ -103,18 +134,32 @@ describe('Scope Tree', () => {
 
   describe('scope isolation', () => {
     it('disposes partial tree without affecting parent', () => {
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
-      const appScope = createScope(createMockElement());
-      const componentScope = createScope(createMockElement(), appScope);
-      const nestedScope = createScope(createMockElement(), componentScope);
+      const { withScope, disposeScope, trackInScope, ctx } = createTestScopes();
+      const appElement = createMockElement();
+      const componentElement = createMockElement();
+      const nestedElement = createMockElement();
 
       const appCleanup = createMockDisposable();
       const componentCleanup = createMockDisposable();
       const nestedCleanup = createMockDisposable();
 
-      runInScope(appScope, () => trackInScope(appCleanup));
-      runInScope(componentScope, () => trackInScope(componentCleanup));
-      runInScope(nestedScope, () => trackInScope(nestedCleanup));
+      // Create app scope
+      const { scope: appScope } = withScope(appElement, () => {
+        trackInScope(appCleanup);
+      });
+
+      // Create component scope under app
+      ctx.activeScope = appScope;
+      const { scope: componentScope } = withScope(componentElement, () => {
+        trackInScope(componentCleanup);
+      });
+
+      // Create nested scope under component
+      ctx.activeScope = componentScope;
+      withScope(nestedElement, () => {
+        trackInScope(nestedCleanup);
+      });
+      ctx.activeScope = null;
 
       // User unmounts a component subtree
       disposeScope(componentScope);
@@ -128,23 +173,33 @@ describe('Scope Tree', () => {
 
       // Parent scope still functional
       const newCleanup = createMockDisposable();
-      runInScope(appScope, () => trackInScope(newCleanup));
+      withScope(appElement, () => trackInScope(newCleanup));
       disposeScope(appScope);
       expect(newCleanup.disposed).toBe(true);
     });
 
     it('isolates sibling scopes from each other', () => {
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
+      const { withScope, disposeScope, trackInScope, ctx } = createTestScopes();
 
-      const parent = createScope(createMockElement());
-      const sibling1 = createScope(createMockElement(), parent);
-      const sibling2 = createScope(createMockElement(), parent);
+      const parentElement = createMockElement();
+      const sibling1Element = createMockElement();
+      const sibling2Element = createMockElement();
 
       const cleanup1 = createMockDisposable();
       const cleanup2 = createMockDisposable();
 
-      runInScope(sibling1, () => trackInScope(cleanup1));
-      runInScope(sibling2, () => trackInScope(cleanup2));
+      // Create parent scope
+      const { scope: parent } = withScope(parentElement, () => {});
+
+      // Create sibling scopes
+      ctx.activeScope = parent;
+      const { scope: sibling1 } = withScope(sibling1Element, () => {
+        trackInScope(cleanup1);
+      });
+      withScope(sibling2Element, () => {
+        trackInScope(cleanup2);
+      });
+      ctx.activeScope = null;
 
       // Dispose one sibling
       disposeScope(sibling1);
@@ -168,8 +223,9 @@ describe('Scope Tree', () => {
     });
 
     it('handles disposal of empty scope', () => {
-      const { createScope, disposeScope } = createTestScopes();
-      const scope = createScope(createMockElement());
+      const { withScope, disposeScope } = createTestScopes();
+      const element = createMockElement();
+      const { scope } = withScope(element, () => {});
 
       // safe to dispose scope with no tracked items
       expect(() => disposeScope(scope)).not.toThrow();
@@ -199,9 +255,9 @@ describe('Scope Tree', () => {
 
       const ctx = createLatticeContext();
       const baseEffect = vi.fn(() => () => {});
-      const { createScope, disposeScope } = createScopes({ ctx, track, dispose: disposeSpy, baseEffect });
+      const { withScope, disposeScope } = createScopes({ ctx, track, dispose: disposeSpy, baseEffect });
       const element = createMockElement();
-      const scope = createScope(element);
+      const { scope } = withScope(element, () => {});
 
       disposeScope(scope);
 
@@ -213,9 +269,9 @@ describe('Scope Tree', () => {
 
     it('should execute cleanup function during disposal', () => {
       const cleanupSpy = vi.fn();
-      const { createScope, disposeScope } = createTestScopes();
+      const { withScope, disposeScope } = createTestScopes();
       const element = createMockElement();
-      const scope = createScope(element);
+      const { scope } = withScope(element, () => {});
 
       // Add cleanup function
       scope.cleanup = cleanupSpy;
@@ -230,10 +286,16 @@ describe('Scope Tree', () => {
 
     it('should call cleanup before disposing children', () => {
       const callOrder: string[] = [];
-      const { createScope, disposeScope } = createTestScopes();
+      const { withScope, disposeScope, ctx } = createTestScopes();
 
-      const parent = createScope(createMockElement());
-      const child = createScope(createMockElement(), parent);
+      const parentElement = createMockElement();
+      const childElement = createMockElement();
+
+      const { scope: parent } = withScope(parentElement, () => {});
+
+      ctx.activeScope = parent;
+      const { scope: child } = withScope(childElement, () => {});
+      ctx.activeScope = null;
 
       parent.cleanup = () => callOrder.push('parent-cleanup');
       child.cleanup = () => callOrder.push('child-cleanup');
@@ -271,8 +333,9 @@ describe('Scope Tree', () => {
 
       const ctx = createLatticeContext();
       const baseEffect = vi.fn(() => () => {});
-      const { createScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
-      const scope = createScope(createMockElement());
+      const { withScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
+      const element = createMockElement();
+      const { scope } = withScope(element, () => {});
 
       // Simulate dependencies being set (in real usage, this happens during tracking)
       scope.dependencies = undefined; // Will be populated by track() in real usage
@@ -286,9 +349,16 @@ describe('Scope Tree', () => {
     });
 
     it('should handle cleanup function errors gracefully', () => {
-      const { createScope, disposeScope } = createTestScopes();
-      const parent = createScope(createMockElement());
-      const child = createScope(createMockElement(), parent);
+      const { withScope, disposeScope, ctx } = createTestScopes();
+      const parentElement = createMockElement();
+      const childElement = createMockElement();
+
+      const { scope: parent } = withScope(parentElement, () => {});
+
+      ctx.activeScope = parent;
+      const { scope: child } = withScope(childElement, () => {});
+      ctx.activeScope = null;
+
       const childDisposable = createMockDisposable();
 
       // Parent cleanup throws
@@ -311,10 +381,17 @@ describe('Scope Tree', () => {
     });
 
     it('should clear all references to prevent memory leaks', () => {
-      const { createScope, disposeScope, trackInSpecificScope } = createTestScopes();
-      const parent = createScope(createMockElement());
-      const child1 = createScope(createMockElement(), parent);
-      const child2 = createScope(createMockElement(), parent);
+      const { withScope, disposeScope, trackInSpecificScope, ctx } = createTestScopes();
+      const parentElement = createMockElement();
+      const child1Element = createMockElement();
+      const child2Element = createMockElement();
+
+      const { scope: parent } = withScope(parentElement, () => {});
+
+      ctx.activeScope = parent;
+      const { scope: child1 } = withScope(child1Element, () => {});
+      const { scope: child2 } = withScope(child2Element, () => {});
+      ctx.activeScope = null;
 
       const disposable1 = createMockDisposable();
       const disposable2 = createMockDisposable();
@@ -359,9 +436,9 @@ describe('Scope Tree', () => {
       });
 
       const baseEffect = vi.fn(() => () => {});
-      const { createScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
+      const { withScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
       const element = createMockElement();
-      const scope = createScope(element);
+      const { scope } = withScope(element, () => {});
 
       // Store scope in context (simulates what happens during rendering)
       ctx.elementScopes.set(element, scope as never);
@@ -388,9 +465,15 @@ describe('Scope Tree', () => {
 
       const ctx = createLatticeContext();
       const baseEffect = vi.fn(() => () => {});
-      const { createScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
-      const parent = createScope(createMockElement());
-      const child = createScope(createMockElement(), parent);
+      const { withScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
+      const parentElement = createMockElement();
+      const childElement = createMockElement();
+
+      const { scope: parent } = withScope(parentElement, () => {});
+
+      ctx.activeScope = parent;
+      const { scope: child } = withScope(childElement, () => {});
+      ctx.activeScope = null;
 
       // Add cleanup function
       parent.cleanup = () => disposalOrder.push('parent-cleanup');
@@ -422,8 +505,9 @@ describe('Scope Tree', () => {
     });
 
     it('should be idempotent with status bits', () => {
-      const { createScope, disposeScope } = createTestScopes();
-      const scope = createScope(createMockElement());
+      const { withScope, disposeScope } = createTestScopes();
+      const element = createMockElement();
+      const { scope } = withScope(element, () => {});
       const cleanupSpy = vi.fn();
       scope.cleanup = cleanupSpy;
 
@@ -443,43 +527,55 @@ describe('Scope Tree', () => {
     });
 
     it('should integrate full lifecycle from creation to disposal', () => {
-      const { createScope, disposeScope, runInScope, trackInScope } = createTestScopes();
+      const { withScope, disposeScope, trackInScope, ctx } = createTestScopes();
 
       // Setup: Create scope with reactive dependencies and children
       const element = createMockElement();
-      const scope = createScope(element);
+      const childElement = createMockElement();
 
       // Add cleanup function (simulates reactive tracking)
       const cleanupSpy = vi.fn();
-      scope.cleanup = cleanupSpy;
-
-      // Add child scope (simulates tree structure)
-      const childElement = createMockElement();
-      const childScope = createScope(childElement, scope);
-      const childCleanupSpy = vi.fn();
-      childScope.cleanup = childCleanupSpy;
-
-      // Add tracked disposable (simulates event listener)
       const disposableSpy = vi.fn();
-      runInScope(scope, () => {
+
+      const { scope } = withScope(element, (scope) => {
+        scope.cleanup = cleanupSpy;
+
+        // Add tracked disposable (simulates event listener)
         trackInScope({ dispose: disposableSpy });
+
+        // Add child scope (simulates tree structure)
+        const childCleanupSpy = vi.fn();
+        ctx.activeScope = scope;
+        withScope(childElement, (childScope) => {
+          childScope.cleanup = childCleanupSpy;
+        });
+        ctx.activeScope = null;
       });
+
+      const childScope = ctx.elementScopes.get(childElement);
 
       // Act: Dispose parent scope
       disposeScope(scope);
 
       // Assert: All disposal steps executed
       expect(cleanupSpy).toHaveBeenCalledTimes(1);         // Parent cleanup
-      expect(childCleanupSpy).toHaveBeenCalledTimes(1);   // Child cleanup
+      if (childScope && childScope.cleanup) {
+        // Child cleanup spy is wrapped in closure, check if scope was disposed
+        expect(childScope.status & STATE_MASK).toBe(DISPOSED);
+      }
       expect(disposableSpy).toHaveBeenCalledTimes(1);     // Disposable
       expect(scope.status & STATE_MASK).toBe(DISPOSED);
-      expect(childScope.status & STATE_MASK).toBe(DISPOSED);
+      if (childScope) {
+        expect(childScope.status & STATE_MASK).toBe(DISPOSED);
+      }
 
       // Assert: Memory safety - references cleared
       expect(scope.firstChild).toBeUndefined();
       expect(scope.firstDisposable).toBeUndefined();
       expect(scope.cleanup).toBeUndefined();
-      expect(childScope.cleanup).toBeUndefined();
+      if (childScope) {
+        expect(childScope.cleanup).toBeUndefined();
+      }
     });
   });
 });

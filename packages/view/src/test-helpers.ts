@@ -107,13 +107,5 @@ export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeCo
       };
       scope.firstDisposable = node;
     },
-    // Create render effect (scope with renderFn)
-    createRenderEffect: <TElement = object>(
-      element: TElement,
-      renderFn: () => void | (() => void),
-      parent?: RenderScope<TElement>
-    ): RenderScope<TElement> => {
-      return scopes.createScope(element, parent, renderFn);
-    },
   };
 };

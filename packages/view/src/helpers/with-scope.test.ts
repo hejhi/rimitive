@@ -44,17 +44,17 @@ describe('with-scope', () => {
 
     it('should keep scope registered if it has renderFn', () => {
       const env = createTestEnv();
-      const { ctx, createScope } = env;
+      const { ctx, withScope } = env;
 
       const element = {};
 
-      // Create a scope with renderFn directly
-      const scope = createScope(element, undefined, () => {
-        // Provide a renderFn
+      // Create a scope and manually add renderFn to test this internal behavior
+      const { scope } = withScope(element, (scope) => {
+        // Manually add renderFn to test internal behavior
+        scope.renderFn = () => {
+          // Provide a renderFn
+        };
       });
-
-      // Manually register it
-      ctx.elementScopes.set(element, scope);
 
       // Scope should remain registered (has renderFn)
       expect(ctx.elementScopes.get(element)).toBe(scope);
@@ -82,7 +82,8 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const prevScope = env.createScope({});
+      const prevElement = {};
+      const { scope: prevScope } = withScope(prevElement, () => {});
       ctx.activeScope = prevScope;
 
       const element = {};
@@ -124,7 +125,7 @@ describe('with-scope', () => {
       const { ctx, withScope } = env;
 
       const parentElement = {};
-      const parentScope = env.createScope(parentElement);
+      const { scope: parentScope } = withScope(parentElement, () => {});
 
       const childElement = {};
 

@@ -10,19 +10,9 @@ const { CLEAN, CONSUMER, SCHEDULED, DISPOSED, STATE_MASK } = CONSTANTS;
 const RENDER_SCOPE_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
 /**
- * Low-level scope primitives used by higher-level helpers.
+ * Public scope API for managing element lifecycles and cleanup.
  */
 export type CreateScopes = {
-  /**
-   * Create a new RenderScope.
-   * Used internally by withScope - prefer that for declarative scope management.
-   */
-  createScope: <TElement = object>(
-    element: TElement,
-    parent?: RenderScope<TElement>,
-    renderFn?: () => void | (() => void)
-  ) => RenderScope<TElement>;
-
   /**
    * Dispose a scope and all its children/disposables.
    * Used by reconciliation logic when elements are removed.
@@ -238,7 +228,6 @@ export function createScopes({
   }
 
   return {
-    createScope,
     disposeScope,
     withScope,
     scopedEffect,

@@ -5,10 +5,11 @@ describe('scoped-effect', () => {
   describe('createScopedEffect', () => {
     it('should auto-track effects in active scope', () => {
       const env = createTestEnv();
-      const { ctx, scopedEffect } = env;
+      const { ctx, scopedEffect, withScope } = env;
 
       // Create a scope and set it as active
-      const scope = env.createScope({});
+      const element = {};
+      const { scope } = withScope(element, () => {});
       ctx.activeScope = scope;
 
       let runCount = 0;
@@ -42,10 +43,11 @@ describe('scoped-effect', () => {
 
     it('should dispose when scope is disposed', () => {
       const env = createTestEnv();
-      const { ctx, signal, disposeScope, scopedEffect } = env;
+      const { ctx, signal, disposeScope, scopedEffect, withScope } = env;
 
       const count = signal(0);
-      const scope = env.createScope({});
+      const element = {};
+      const { scope } = withScope(element, () => {});
       ctx.activeScope = scope;
 
       let runCount = 0;
@@ -70,9 +72,10 @@ describe('scoped-effect', () => {
 
     it('should track multiple effects in same scope', () => {
       const env = createTestEnv();
-      const { ctx, scopedEffect } = env;
+      const { ctx, scopedEffect, withScope } = env;
 
-      const scope = env.createScope({});
+      const element = {};
+      const { scope } = withScope(element, () => {});
       ctx.activeScope = scope;
 
       const dispose1 = scopedEffect(() => {});

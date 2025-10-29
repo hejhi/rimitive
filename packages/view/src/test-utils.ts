@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { createLatticeContext } from './context';
 import type { Renderer } from './renderer';
-import type { Reactive, RefSpec, LifecycleCallback, NodeRef, RenderScope } from './types';
+import type { Reactive, RefSpec, LifecycleCallback, NodeRef } from './types';
 import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
@@ -239,7 +239,7 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { createScope, disposeScope, withScope, scopedEffect, onCleanup } = createScopes({
+  const { disposeScope, withScope, scopedEffect, onCleanup } = createScopes({
     ctx,
     track,
     dispose,
@@ -252,15 +252,6 @@ export function createTestEnv() {
     renderer,
   });
 
-  // Create render effect helper (scope with renderFn)
-  const createRenderEffect = <TElement = object>(
-    element: TElement,
-    renderFn: () => void | (() => void),
-    parent?: RenderScope<TElement>
-  ) => {
-    return createScope(element, parent, renderFn);
-  };
-
   return {
     ctx,
     signalCtx: signalsCtx,
@@ -269,11 +260,9 @@ export function createTestEnv() {
     effect,
     handleChild,
     processChildren,
-    createScope,
     disposeScope,
     scopedEffect,
     withScope,
-    createRenderEffect,
     onCleanup,
   };
 }

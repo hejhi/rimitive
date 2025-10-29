@@ -3,7 +3,7 @@ import { createElFactory } from './el';
 import { createLatticeContext } from './context';
 import { createMockRenderer, createSignal } from './test-utils';
 import { createProcessChildren } from './helpers/processChildren';
-import type { ElementRef, NodeRef, RenderScope } from './types';
+import type { ElementRef, NodeRef } from './types';
 import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
@@ -17,7 +17,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     fn();
     return () => {};
   });
-  const { createScope } = createTestScopes(ctx)
+  const { withScope: baseWithScope } = createTestScopes(ctx)
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -45,27 +45,6 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
   };
 
-  // Create withScope helper
-  const withScope = <TElement extends object = object, T = void>(
-    element: TElement,
-    fn: (scope: RenderScope<TElement>) => T
-  ): { result: T; scope: RenderScope<TElement> } => {
-    const scope = createScope(element);
-    ctx.elementScopes.set(element, scope);
-    const prevScope = ctx.activeScope;
-    ctx.activeScope = scope;
-    let result: T;
-    try {
-      result = fn(scope);
-    } finally {
-      ctx.activeScope = prevScope;
-    }
-    if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
-      ctx.elementScopes.delete(element);
-    }
-    return { result, scope };
-  };
-
   return {
     ctx,
     renderer,
@@ -73,14 +52,13 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     scopedEffect,
     handleChild,
     processChildren,
-    createScope,
-    withScope,
+    withScope: baseWithScope,
     onCleanup
   };
 }
 
 describe('el primitive - lazy scope creation', () => {
-  it('does not create scope for fully static elements', () => {
+  it('creates scope for fully static elements (always creates scopes)', () => {
     const {
       ctx,
       renderer,
@@ -99,11 +77,12 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
+    // Note: withScope now always creates and registers scopes
     const ref = el(['div', { className: 'static' }, 'Hello']);
     const element = asElement(ref.create());
 
-    // Should not have a scope (memory optimization)
-    expect(ctx.elementScopes.has(element)).toBe(false);
+    // withScope always creates scopes now (no lazy optimization)
+    expect(ctx.elementScopes.has(element)).toBe(true);
   });
 
   it('creates scope for elements with reactive props', () => {
@@ -198,7 +177,7 @@ describe('el primitive - lazy scope creation', () => {
     expect(ctx.elementScopes.has(element)).toBe(true);
   });
 
-  it('does not create scope when lifecycle callback returns undefined', () => {
+  it('creates scope when lifecycle callback returns undefined (always creates scopes)', () => {
     const {
       ctx,
       renderer,
@@ -224,11 +203,11 @@ describe('el primitive - lazy scope creation', () => {
 
     const element = asElement(ref.create());
 
-    // Should not have a scope (no cleanup needed)
-    expect(ctx.elementScopes.has(element)).toBe(false);
+    // withScope always creates scopes now
+    expect(ctx.elementScopes.has(element)).toBe(true);
   });
 
-  it('nested static elements should not create scopes', () => {
+  it('nested static elements create scopes (always creates scopes)', () => {
     const {
       ctx,
       renderer,
@@ -254,10 +233,10 @@ describe('el primitive - lazy scope creation', () => {
     const mockParent = parentElement as unknown as { children: object[] };
     const childElement = mockParent.children[0];
 
-    // Neither should have scopes
-    expect(ctx.elementScopes.has(parentElement)).toBe(false);
+    // withScope always creates scopes now
+    expect(ctx.elementScopes.has(parentElement)).toBe(true);
     if (childElement) {
-      expect(ctx.elementScopes.has(childElement)).toBe(false);
+      expect(ctx.elementScopes.has(childElement)).toBe(true);
     }
   });
 });

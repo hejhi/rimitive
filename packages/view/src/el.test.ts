@@ -3,7 +3,7 @@ import { createElFactory } from './el';
 import { createTestEnv, getTextContent, createMockRenderer, createSignal } from './test-utils';
 import { createLatticeContext } from './context';
 import { createProcessChildren } from './helpers/processChildren';
-import type { ElementRef, NodeRef, RenderScope } from './types';
+import type { ElementRef, NodeRef } from './types';
 import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
@@ -13,7 +13,7 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createLatticeContext();
   const { renderer } = createMockRenderer();
-  const { createScope, disposeScope } = createTestScopes(ctx);
+  const { withScope: baseWithScope, disposeScope } = createTestScopes(ctx);
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -36,32 +36,11 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
   };
 
-  // Create withScope helper
-  const withScope = <TElement extends object = object, T = void>(
-    element: TElement,
-    fn: (scope: RenderScope<TElement>) => T
-  ): { result: T; scope: RenderScope<TElement> } => {
-    const scope = createScope(element);
-    ctx.elementScopes.set(element, scope);
-    const prevScope = ctx.activeScope;
-    ctx.activeScope = scope;
-    let result: T;
-    try {
-      result = fn(scope);
-    } finally {
-      ctx.activeScope = prevScope;
-    }
-    if (scope.firstDisposable === undefined && scope.renderFn === undefined) {
-      ctx.elementScopes.delete(element);
-    }
-    return { result, scope };
-  };
-
   const { processChildren } = createProcessChildren({
     scopedEffect,
     renderer,
   });
-  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, createScope, disposeScope, withScope, onCleanup };
+  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, disposeScope, withScope: baseWithScope, onCleanup };
 }
 
 describe('el primitive', () => {
