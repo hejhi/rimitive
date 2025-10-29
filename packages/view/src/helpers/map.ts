@@ -8,12 +8,12 @@
  * - Efficient reconciliation with LIS algorithm
  */
 
-import type { RefSpec, ElementRef, NodeRef, FragmentRef, Reactive } from '../types';
+import type { RefSpec, NodeRef, FragmentRef, Reactive } from '../types';
 import { isElementRef, resolveNextRef } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
-import { createReconciler } from './reconcile';
+import { createReconciler, ReconcileNode } from './reconcile';
 import { createFragment } from './fragment';
 import type { GlobalContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
@@ -29,6 +29,8 @@ export interface MapHelperOpts<
   renderer: Renderer<TElement, TText>;
   disposeScope: CreateScopes['disposeScope'];
 }
+
+type RecNode<T, TElement> = NodeRef<TElement> & ReconcileNode<(value: T) => void>;
 
 /**
  * Create a map helper with injected dependencies
@@ -48,29 +50,36 @@ export function createMapHelper<
     render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
     keyFn?: (item: T) => string | number
   ): FragmentRef<TElement> {
-    return createFragment((parent: ElementRef<TElement>, nextSibling?: NodeRef<TElement> | null) => {
+    return createFragment((parent, nextSibling) => {
       const parentEl = parent.element;
+      const nextSib = nextSibling as RecNode<T, TElement> | null | undefined;
 
       // Create reconciler with internal state management and hooks
-      const { reconcile, dispose } = createReconciler<T, TElement, (value: T) => void>({
+      const { reconcile, dispose } = createReconciler<
+        T,
+        TElement,
+        RecNode<T, TElement>
+      >({
         parentElement: parentEl,
         parentRef: parent,
-        nextSibling: nextSibling ?? undefined,
+        nextSibling: nextSib ?? undefined,
 
         onCreate: untrack(() => (item) => {
           const itemSignal = signal(item);
 
           // Render the item - this creates an element with its own scope
-          const elRef = render(itemSignal).create() as ElementRef<TElement>;
+          const elRef = render(itemSignal).create() as RecNode<T, TElement>;
 
           renderer.insertBefore(
             parentEl,
-            elRef.element,
+            elRef.element!,
             resolveNextRef(nextSibling)?.element ?? null
           );
 
+          elRef.data = itemSignal;
+
           // Attach the signal to the node ref for updates
-          return Object.assign(elRef, { data: itemSignal });
+          return elRef;
         }),
 
         // onUpdate: called when existing item's data should be updated

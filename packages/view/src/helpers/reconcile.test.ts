@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createReconciler } from './reconcile';
+import { createReconciler, ReconcileNode } from './reconcile';
 import { createTestEnv, MockElement, MockText, getTextContent } from '../test-utils';
 import type { ElementRef } from '../types';
 
@@ -25,7 +25,7 @@ describe('reconcileWithKeys', () => {
     const parent = env.renderer.createElement('ul');
 
     // Create reconciler instance with hooks
-    const reconciler = createReconciler<Item, MockElement, () => void>({
+    const reconciler = createReconciler<Item, MockElement, ElementRef<MockElement> & ReconcileNode>({
       parentElement: parent,
       onCreate: (item: Item) => {
         const li = env.renderer.createElement('li');
@@ -37,7 +37,7 @@ describe('reconcileWithKeys', () => {
           status: 1,
           element: li,
           next: undefined,
-        };
+        } as ElementRef<MockElement> & ReconcileNode;
       },
       onUpdate: (_key: string, item: Item, node) => {
         // Update text content if needed
@@ -649,7 +649,7 @@ describe('reconcileWithKeys', () => {
       const parent = env.renderer.createElement('ul');
 
       // Create reconciler that uses index as key
-      const reconciler = createReconciler<{ text: string }, MockElement, () => void>({
+      const reconciler = createReconciler<{ text: string }, MockElement, ElementRef<MockElement> & ReconcileNode>({
         parentElement: parent,
         onCreate: (item: { text: string }) => {
           const li = env.renderer.createElement('li');
@@ -661,7 +661,7 @@ describe('reconcileWithKeys', () => {
             status: 1,
             element: li,
             next: undefined,
-          };
+          } as ElementRef<MockElement> & ReconcileNode;
         },
         onUpdate() {},
         onMove: (node, nextSibling) => {
