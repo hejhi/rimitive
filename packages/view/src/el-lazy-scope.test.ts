@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createElFactory } from './el';
 import { createLatticeContext } from './context';
-import { createMockRenderer, createSignal } from './test-utils';
+import { createMockRenderer, createSignal, MockElement } from './test-utils';
 import { createProcessChildren } from './helpers/processChildren';
-import type { ElementRef, NodeRef } from './types';
+import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
@@ -11,13 +11,13 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 
 // Helper to create test environment
 function createTestEnv(effectFn?: (fn: () => void) => () => void) {
-  const ctx = createLatticeContext();
+  const ctx = createLatticeContext<MockElement>();
   const { renderer } = createMockRenderer();
   const effect = effectFn || ((fn: () => void) => {
     fn();
     return () => {};
   });
-  const { withScope: baseWithScope } = createTestScopes(ctx)
+  const { withScope: baseWithScope } = createTestScopes<MockElement>(ctx)
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -79,7 +79,7 @@ describe('el primitive - lazy scope creation', () => {
     // Static element - no reactive content, no lifecycle callbacks
     // Note: withScope now always creates and registers scopes
     const ref = el(['div', { className: 'static' }, 'Hello']);
-    const element = asElement(ref.create());
+    const element = asElement(ref.create()) as unknown as MockElement;
 
     // withScope always creates scopes now (no lazy optimization)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -110,7 +110,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Element with reactive prop
     const ref = el(['div', { title: text }]);
-    const element = asElement(ref.create());
+    const element = asElement(ref.create()) as unknown as MockElement;
 
     // Should have a scope (tracks the effect for reactive title)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -141,7 +141,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Element with reactive text child
     const ref = el(['div', text]);
-    const element = asElement(ref.create());
+    const element = asElement(ref.create()) as unknown as MockElement;
 
     // Should have a scope (tracks the effect for reactive text)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -171,7 +171,7 @@ describe('el primitive - lazy scope creation', () => {
       // cleanup function
     });
 
-    const element = asElement(ref.create());
+    const element = asElement(ref.create()) as unknown as MockElement;
 
     // Should have a scope (tracks the cleanup function)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -201,7 +201,7 @@ describe('el primitive - lazy scope creation', () => {
       // no cleanup
     });
 
-    const element = asElement(ref.create());
+    const element = asElement(ref.create()) as unknown as MockElement;
 
     // withScope always creates scopes now
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -226,12 +226,11 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Nested static elements
-    const child = el(['span', 'Child']);
+    const child = el(['span', 'Child']) as unknown as RefSpec<MockElement>;
     const parent = el(['div', child, 'Parent']);
 
-    const parentElement = asElement(parent.create());
-    const mockParent = parentElement as unknown as { children: object[] };
-    const childElement = mockParent.children[0];
+    const parentElement = asElement(parent.create()) as unknown as MockElement;
+    const childElement = parentElement.children[0] as MockElement;
 
     // withScope always creates scopes now
     expect(ctx.elementScopes.has(parentElement)).toBe(true);

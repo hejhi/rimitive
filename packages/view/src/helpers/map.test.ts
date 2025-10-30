@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { createTestEnv, MockElement, getTextContent } from '../test-utils';
 import { createMapHelper } from './map';
 import { createElFactory } from '../el';
+import type { RefSpec } from '../types';
 
 describe('map() - User-facing behavior', () => {
   // Helper to set up test environment
@@ -54,12 +55,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       expect(ul.children.length).toBe(3);
       expect(getTextContent(ul.children[0] as MockElement)).toBe('Apple');
@@ -76,12 +77,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(0);
     });
 
@@ -94,12 +95,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(1);
       expect(getTextContent(ul.children[0] as MockElement)).toBe('Only');
     });
@@ -118,12 +119,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
 
       // Add item to end
@@ -145,12 +146,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
 
       // Add item to beginning
@@ -174,12 +175,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
 
       // Add item to middle
@@ -201,12 +202,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(1);
 
       // Add multiple items
@@ -233,12 +234,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(0);
 
       // Populate from empty
@@ -267,12 +268,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(3);
 
       // Remove from end
@@ -296,12 +297,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(3);
 
       // Remove from beginning
@@ -325,12 +326,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(3);
 
       // Remove middle item
@@ -357,12 +358,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(5);
 
       // Remove multiple items
@@ -386,12 +387,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
 
       // Clear all
@@ -415,12 +416,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Reverse order
       items([...items()].reverse());
@@ -444,12 +445,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Swap first and third
       const current = items();
@@ -476,12 +477,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Complex shuffle: [A,B,C,D,E] → [D,B,E,A,C]
       const current = items();
@@ -509,12 +510,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Rotate right: [A,B,C,D] → [D,A,B,C]
       const current = items();
@@ -542,12 +543,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // LIS at beginning: [A,B,C,D,E] → [A,B,E,C,D]
       // LIS: [A,B] (indices 0,1), others move
@@ -577,12 +578,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // LIS at end: [A,B,C,D,E] → [C,A,B,D,E]
       // LIS: [D,E] (indices 3,4), others move
@@ -613,12 +614,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // LIS in middle: [A,B,C,D,E,F] → [F,B,C,D,A,E]
       // LIS: [B,C,D] (indices 1,2,3), A and F move before, E moves after
@@ -651,12 +652,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // LIS: [A,C,E,G] (indices 0,2,4,6)
       // Non-LIS: [B,D,F] need to move
@@ -690,12 +691,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Remove B, add E and F, reorder: [A,B,C,D] → [E,D,A,F,C]
       items([
@@ -727,12 +728,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Complete replacement
       items([
@@ -759,12 +760,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Update 1: Add item
       items([...items(), { id: 3, name: 'C' }]);
@@ -796,12 +797,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(100);
       expect(getTextContent(ul.children[0] as MockElement)).toBe('Item 0');
       expect(getTextContent(ul.children[99] as MockElement)).toBe('Item 99');
@@ -824,12 +825,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Complex shuffle: move every 5th item to front
       const current = items();
@@ -857,14 +858,14 @@ describe('map() - User-facing behavior', () => {
           () => [mode()],
           (modeSignal) => {
             const m = modeSignal();
-            if (m === 'loading') return el.method(['div', 'Loading...']);
-            if (m === 'error') return el.method(['div', 'Error occurred']);
-            return el.method(['div', 'Success!']);
+            if (m === 'loading') return el.method(['div', 'Loading...']) as unknown as RefSpec<MockElement>;
+            if (m === 'error') return el.method(['div', 'Error occurred']) as unknown as RefSpec<MockElement>;
+            return el.method(['div', 'Success!']) as unknown as RefSpec<MockElement>;
           }
         ),
       ]);
 
-      const div = view.create().element as MockElement;
+      const div = view.create().element as unknown as MockElement;
 
       expect(div.children.length).toBe(1);
       expect(getTextContent(div.children[0] as MockElement)).toBe('Loading...');
@@ -897,12 +898,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Capture original element references
       const firstEl = ul.children[0];
@@ -935,12 +936,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       const aEl = ul.children[0];
       const bEl = ul.children[1];
@@ -971,12 +972,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       const aEl = ul.children[0];
       const cEl = ul.children[1];
@@ -1009,12 +1010,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       const aEl = ul.children[0];
       const cEl = ul.children[2];
@@ -1046,12 +1047,12 @@ describe('map() - User-facing behavior', () => {
         'ul',
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]),
+          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Capture references for items that will survive
       const bEl = ul.children[1]; // B
@@ -1087,13 +1088,13 @@ describe('map() - User-facing behavior', () => {
           (itemSignal) =>
             el.method(['li', itemSignal().name])((element) => {
               // Simulate attaching custom state during lifecycle
-              element.__customState = `state-${itemSignal().id}`;
-            }),
+              (element as unknown as MockElement).__customState = `state-${itemSignal().id}`;
+            }) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
         ),
       ]);
 
-      const ul = list.create().element as MockElement;
+      const ul = list.create().element as unknown as MockElement;
 
       // Verify custom state exists
       expect((ul.children[0] as MockElement).__customState).toBe('state-1');
@@ -1128,13 +1129,13 @@ describe('map() - User-facing behavior', () => {
               'div',
               map(
                 () => [{ id: 1 }],
-                () => el.method(['span', displayValue])
+                () => el.method(['span', displayValue]) as unknown as RefSpec<MockElement>
               ),
-            ])
+            ]) as unknown as RefSpec<MockElement>
         ),
       ]);
 
-      const root = view.create().element as MockElement;
+      const root = view.create().element as unknown as MockElement;
       const innerDiv = root.children[0] as MockElement;
       const span = innerDiv.children[0] as MockElement;
 
@@ -1168,15 +1169,15 @@ describe('map() - User-facing behavior', () => {
                     'article',
                     map(
                       () => [{ id: 1 }],
-                      () => el.method(['span', value])
+                      () => el.method(['span', value]) as unknown as RefSpec<MockElement>
                     ),
-                  ])
+                  ]) as unknown as RefSpec<MockElement>
               ),
-            ])
+            ]) as unknown as RefSpec<MockElement>
         ),
       ]);
 
-      const root = view.create().element as MockElement;
+      const root = view.create().element as unknown as MockElement;
       const section = root.children[0] as MockElement;
       const article = section.children[0] as MockElement;
       const span = article.children[0] as MockElement;
@@ -1208,7 +1209,7 @@ describe('map() - User-facing behavior', () => {
             // This read should NOT become a dependency of map's effect
             // because render() is called untracked
             outerState(); // Read but don't track
-            return el.method(['li', itemSignal().name]);
+            return el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>;
           },
           item => item.id
         ),

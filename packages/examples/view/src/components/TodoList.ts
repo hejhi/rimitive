@@ -36,11 +36,11 @@ export function TodoList(api: LatticeViewAPI) {
       placeholder: 'What needs to be done?',
       value: inputValue,
     },
-  ])((input: HTMLInputElement) => {
+  ])((input) => {
     const cleanup1 = api.on(input, 'input', (e) =>
       inputValue((e.target as HTMLInputElement).value)
     );
-    const cleanup2 = api.on(input, 'keydown', (e: KeyboardEvent) => {
+    const cleanup2 = api.on(input, 'keydown', (e) => {
       if (e.key === 'Enter') handleAdd();
     });
     return () => {
@@ -50,7 +50,7 @@ export function TodoList(api: LatticeViewAPI) {
   });
 
   // Create "Add Todo" button
-  const addBtn = el(['button', {}, 'Add Todo'])((btn: HTMLButtonElement) =>
+  const addBtn = el(['button', {}, 'Add Todo'])((btn) =>
     api.on(btn, 'click', handleAdd)
   );
 
@@ -63,7 +63,7 @@ export function TodoList(api: LatticeViewAPI) {
       ),
     },
     'All',
-  ])((btn: HTMLButtonElement) => api.on(btn, 'click', () => todoList.setFilter('all')));
+  ])((btn) => api.on(btn, 'click', () => todoList.setFilter('all')));
 
   const activeBtn = el([
     'button',
@@ -73,7 +73,7 @@ export function TodoList(api: LatticeViewAPI) {
       ),
     },
     'Active',
-  ])((btn: HTMLButtonElement) => api.on(btn, 'click', () => todoList.setFilter('active')));
+  ])((btn) => api.on(btn, 'click', () => todoList.setFilter('active')));
 
   const completedBtn = el([
     'button',
@@ -83,10 +83,10 @@ export function TodoList(api: LatticeViewAPI) {
       ),
     },
     'Completed',
-  ])((btn: HTMLButtonElement) => api.on(btn, 'click', () => todoList.setFilter('completed')));
+  ])((btn) => api.on(btn, 'click', () => todoList.setFilter('completed')));
 
   // Create "Clear Completed" button
-  const clearBtn = el(['button', 'Clear Completed'])((btn: HTMLButtonElement) =>
+  const clearBtn = el(['button', 'Clear Completed'])((btn) =>
     api.on(btn, 'click', () => todoList.clearCompleted())
   );
 

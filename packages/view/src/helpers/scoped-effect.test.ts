@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTestEnv } from '../test-utils';
+import { createTestEnv, MockElement } from '../test-utils';
 
 describe('scoped-effect', () => {
   describe('createScopedEffect', () => {
@@ -8,7 +8,7 @@ describe('scoped-effect', () => {
       const { ctx, scopedEffect, withScope } = env;
 
       // Create a scope and set it as active
-      const element = {};
+      const element = new MockElement('div');
       const { scope } = withScope(element, () => {});
       ctx.activeScope = scope;
 
@@ -46,7 +46,7 @@ describe('scoped-effect', () => {
       const { ctx, signal, disposeScope, scopedEffect, withScope } = env;
 
       const count = signal(0);
-      const element = {};
+      const element = new MockElement('div');
       const { scope } = withScope(element, () => {});
       ctx.activeScope = scope;
 
@@ -74,7 +74,7 @@ describe('scoped-effect', () => {
       const env = createTestEnv();
       const { ctx, scopedEffect, withScope } = env;
 
-      const element = {};
+      const element = new MockElement('div');
       const { scope } = withScope(element, () => {});
       ctx.activeScope = scope;
 

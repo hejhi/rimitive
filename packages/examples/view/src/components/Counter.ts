@@ -15,15 +15,15 @@ export function Counter(api: LatticeViewAPI, initialCount = 0) {
   const counter = createCounter(api, initialCount);
 
   // Create buttons with event listeners
-  const decrementBtn = el(['button', '- Decrement'])((btn: HTMLButtonElement) => {
+  const decrementBtn = el(['button', '- Decrement'])((btn) => {
     return api.on(btn, 'click', () => counter.decrement());
   });
 
-  const incrementBtn = el(['button', '+ Increment'])((btn: HTMLButtonElement) => {
+  const incrementBtn = el(['button', '+ Increment'])((btn) => {
     return api.on(btn, 'click', () => counter.increment());
   });
 
-  const resetBtn = el(['button', 'Reset'])((btn: HTMLButtonElement) => {
+  const resetBtn = el(['button', 'Reset'])((btn) => {
     return api.on(btn, 'click', () => counter.reset());
   });
 

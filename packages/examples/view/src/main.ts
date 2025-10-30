@@ -52,7 +52,7 @@ function createSignalContext() {
 
 // Create contexts
 const signalCtx = createSignalContext();
-const ctx = createLatticeContext();
+const ctx = createLatticeContext<HTMLElement>();
 const renderer = createDOMRenderer();
 
 // Use the signal context for reactivity (consumerScope is for reactive tracking, NOT view lifecycle)
@@ -80,20 +80,20 @@ const effectFactory = createEffectFactory({
 const effect = effectFactory.method;
 
 // Build view helpers
-const { disposeScope, scopedEffect, withScope, onCleanup } = createScopes({
+const { disposeScope, scopedEffect, withScope, onCleanup } = createScopes<HTMLElement>({
   ctx,
   track: signalCtx.track,
   dispose: signalCtx.dispose,
   baseEffect: effect,
 });
 
-const { processChildren } = createProcessChildren({
+const { processChildren } = createProcessChildren<HTMLElement, Text>({
   scopedEffect,
   renderer,
 });
 
 // Build view factories
-const elFactory = createElFactory({
+const elFactory = createElFactory<HTMLElement, Text>({
   ctx,
   scopedEffect,
   renderer,

@@ -206,7 +206,7 @@ export function getTextContent(element: MockElement | MockText): string {
  * Creates a complete test environment with context, renderer, and reactive primitives
  */
 export function createTestEnv() {
-  const ctx = createLatticeContext();
+  const ctx = createLatticeContext<MockElement>();
   const { renderer } = createMockRenderer();
 
   // Create proper GlobalContext for signals (separate from view context)
@@ -239,7 +239,7 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { disposeScope, withScope, scopedEffect, onCleanup } = createScopes({
+  const { disposeScope, withScope, scopedEffect, onCleanup } = createScopes<MockElement>({
     ctx,
     track,
     dispose,

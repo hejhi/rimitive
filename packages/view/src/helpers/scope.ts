@@ -42,27 +42,29 @@ export type CreateScopes = {
   onCleanup: (cleanup: () => void) => void;
 };
 
-export function createScopes({
+export function createScopes<TElement extends object>({
   ctx,
   track,
   dispose: disposeNode,
   baseEffect,
 }: {
-  ctx: LatticeContext;
+  ctx: LatticeContext<TElement>;
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
   baseEffect: (fn: () => void | (() => void)) => () => void;
 }): CreateScopes {
+  // Cast ctx to handle any object type at runtime
+  const anyCtx = ctx as unknown as LatticeContext<object>;
   /**
    * Create a new RenderScope instance
    * Combines reactive graph node (ScheduledNode) with tree structure (Scope)
    */
-  const createScope = <TElement = object>(
-    element: TElement,
-    parent?: RenderScope<TElement>,
+  const createScope = <TElem = TElement>(
+    element: TElem,
+    parent?: RenderScope<TElem>,
     renderFn?: () => void | (() => void)
-  ): RenderScope<TElement> => {
-    const scope: RenderScope<TElement> = {
+  ): RenderScope<TElem> => {
+    const scope: RenderScope<TElem> = {
       // Reactive graph fields (from ScheduledNode -> ConsumerNode -> ReactiveNode)
       __type: 'render-scope',
       status: RENDER_SCOPE_CLEAN,
@@ -165,35 +167,35 @@ export function createScopes({
    * Otherwise creates a new scope, using ctx.activeScope as parent for hierarchy.
    * Returns the scope so callers can access it if needed.
    */
-  const withScope = <TElement extends object = object, T = void>(
-    element: TElement,
-    fn: (scope: RenderScope<TElement>) => T
-  ): { result: T; scope: RenderScope<TElement> } => {
+  const withScope = <TElem extends object = object, T = void>(
+    element: TElem,
+    fn: (scope: RenderScope<TElem>) => T
+  ): { result: T; scope: RenderScope<TElem> } => {
     // Try to get existing scope first (idempotent)
-    let scope = ctx.elementScopes.get(element) as RenderScope<TElement> | undefined;
+    let scope = anyCtx.elementScopes.get(element) as RenderScope<TElem> | undefined;
 
     if (!scope) {
       // Use activeScope as parent for automatic hierarchy
-      const parentScope = (ctx.activeScope || undefined) as RenderScope<TElement> | undefined;
+      const parentScope = (anyCtx.activeScope || undefined) as RenderScope<TElem> | undefined;
 
       // Create new scope
       scope = createScope(element, parentScope);
-      ctx.elementScopes.set(element, scope);
+      anyCtx.elementScopes.set(element, scope);
     }
 
     // Set as active scope and run code
-    const prevScope = ctx.activeScope;
-    ctx.activeScope = scope;
+    const prevScope = anyCtx.activeScope;
+    anyCtx.activeScope = scope as RenderScope<object>;
 
     let result: T;
     try {
       result = fn(scope);
     } catch (e) {
-      ctx.elementScopes.delete(element);
+      anyCtx.elementScopes.delete(element);
       disposeScope(scope); // Clean up any disposables that were registered before error
       throw e;
     } finally {
-      ctx.activeScope = prevScope;
+      anyCtx.activeScope = prevScope;
     }
 
     return { result, scope };
@@ -207,7 +209,7 @@ export function createScopes({
     const dispose = baseEffect(fn);
 
     // Auto-track in current scope if one is active
-    const scope = ctx.activeScope;
+    const scope = anyCtx.activeScope;
 
     // Track the dispose function in the current scope
     if (scope) scope.firstDisposable = { dispose, next: scope.firstDisposable };
@@ -220,7 +222,7 @@ export function createScopes({
    * Must be called within a scope context (e.g., inside withScope or element setup).
    */
   const onCleanup = (cleanup: () => void): void => {
-    const scope = ctx.activeScope;
+    const scope = anyCtx.activeScope;
     if (!scope) return;
 
     // Track cleanup directly in active scope

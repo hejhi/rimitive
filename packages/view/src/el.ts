@@ -48,7 +48,7 @@ export type ElOpts<
   TElement extends RendererElement = RendererElement,
   TText extends TextNode = TextNode,
 > = {
-  ctx: LatticeContext;
+  ctx: LatticeContext<TElement>;
   withScope: CreateScopes['withScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
@@ -60,40 +60,16 @@ export type ElOpts<
 };
 
 /**
- * Helper type to resolve the specific element type based on tag
- * When TElement is exactly `object` or `HTMLElement` (DOM renderer), resolves to specific HTML element type
- * For other renderers (MockElement, linkedom, etc.), returns TElement
- *
- * Uses double-extends trick to check if TElement is EXACTLY object or HTMLElement,
- * not a subtype with additional properties
+ * Factory return type - always returns tag-specific HTML element types
+ * el(['button']) → RefSpec<HTMLButtonElement>
+ * el(['input']) → RefSpec<HTMLInputElement>
  */
-type ResolveElementType<TElement, Tag extends keyof HTMLElementTagNameMap> =
-  [TElement] extends [object]
-    ? [object] extends [TElement]
-      ? HTMLElementTagNameMap[Tag]
-      : [TElement] extends [HTMLElement]
-        ? [HTMLElement] extends [TElement]
-          ? HTMLElementTagNameMap[Tag]
-          : TElement
-        : TElement
-    : TElement;
-
-/**
- * Factory return type
- * Generic over element type
- *
- * IMPORTANT: When using with object/HTMLElement (DOM renderer), this returns specific HTML element types.
- * Example: el(['button', ...]) returns RefSpec<HTMLButtonElement>
- *         el(['a', ...]) returns RefSpec<HTMLAnchorElement>
- *
- * For other renderers (linkedom, etc.), it returns RefSpec<TElement>
- */
-export type ElFactory<TElement extends RendererElement = RendererElement> =
+export type ElFactory<TElement extends RendererElement> =
   LatticeExtension<
     'el',
     <Tag extends keyof HTMLElementTagNameMap>(
       spec: ElRefSpec<Tag, TElement>
-    ) => RefSpec<ResolveElementType<TElement, Tag>>
+    ) => RefSpec<HTMLElementTagNameMap[Tag]>
   >;
 
 /**
@@ -115,13 +91,13 @@ export function createElFactory<TElement extends RendererElement, TText extends 
 
   function el<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>
-  ): RefSpec<ResolveElementType<TElement, Tag>> {
-    type SpecificElement = ResolveElementType<TElement, Tag>;
-    const lifecycleCallbacks: LifecycleCallback<SpecificElement>[] = [];
+  ): RefSpec<HTMLElementTagNameMap[Tag]> {
+    type El = HTMLElementTagNameMap[Tag];
+    const lifecycleCallbacks: LifecycleCallback<El>[] = [];
 
-    const refSpec: RefSpec<SpecificElement> = (
-      lifecycleCallback: LifecycleCallback<SpecificElement>
-    ): RefSpec<SpecificElement> => {
+    const refSpec: RefSpec<El> = (
+      lifecycleCallback: LifecycleCallback<El>
+    ): RefSpec<El> => {
       lifecycleCallbacks.push(lifecycleCallback);
       return refSpec;
     };
@@ -129,30 +105,26 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     const [tag, ...rest] = spec;
     const { props, children } = parseSpec(rest);
 
-    refSpec.create = <TExt>(extensions?: TExt): ElementRef<SpecificElement> & TExt => {
-      // Create the element using renderer
-      const element = renderer.createElement(tag) as SpecificElement;
-      // Create object with full shape at once (better for V8 hidden classes)
-      const elRef: ElementRef<SpecificElement> = {
+    refSpec.create = <TExt>(extensions?: TExt): ElementRef<El> & TExt => {
+      const element = renderer.createElement(tag) as unknown as El;
+      const elRef: ElementRef<El> = {
         status: STATUS_ELEMENT,
         element,
         next: undefined,
-        ...extensions, // Spread extensions to override/add fields
+        ...extensions,
       };
 
-      // Create scope and run setup - all orchestration handled by withScope!
       withScope(element, () => {
-        applyProps(element as TElement, props);
+        applyProps(element as unknown as TElement, props);
         processChildren(elRef as unknown as ElementRef<TElement>, children);
 
-        // Track lifecycle callbacks
         for (const callback of lifecycleCallbacks) {
           const cleanup = callback(element);
           if (cleanup) onCleanup(cleanup);
         }
       });
 
-      return elRef as ElementRef<SpecificElement> & TExt;
+      return elRef as ElementRef<El> & TExt;
     };
 
     return refSpec;

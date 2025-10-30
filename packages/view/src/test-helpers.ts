@@ -4,7 +4,7 @@
 
 import { vi } from 'vitest';
 import { createScopes } from './helpers/scope';
-import { createLatticeContext } from './context';
+import { createLatticeContext, type LatticeContext } from './context';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import type { RenderScope } from './types';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -12,7 +12,8 @@ import { CONSTANTS } from '@lattice/signals/constants';
 const { DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } = CONSTANTS;
 
 // Mock element for testing
-export const createMockElement = () => ({ __mock: true });
+export type MockTestElement = { __mock: boolean };
+export const createMockElement = (): MockTestElement => ({ __mock: true });
 
 /**
  * Create a mock scheduler for testing with batching support
@@ -42,13 +43,13 @@ export const createTestScheduler = (): Pick<Scheduler, 'startBatch' | 'endBatch'
 };
 
 // Helper to create scopes with mock dependencies
-export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeContext>) => {
-  const ctx = providedCtx || createLatticeContext();
+export const createTestScopes = <TElement extends object = MockTestElement>(providedCtx?: LatticeContext<TElement>) => {
+  const ctx = providedCtx || createLatticeContext<TElement>();
   const track = <T>(_node: unknown, fn: () => T): T => fn();
 
   // Mock dispose that mimics real scheduler behavior
   const dispose = <T>(_node: unknown, cleanup: (node: T) => void): void => {
-    const scope = _node as RenderScope;
+    const scope = _node as RenderScope<HTMLElement>;
 
     // Check if already disposed (idempotent)
     if ((scope.status & STATE_MASK) === DISPOSED) return;
@@ -69,14 +70,14 @@ export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeCo
     return () => {};
   });
 
-  const scopes = createScopes({ ctx, track, dispose, baseEffect });
+  const scopes = createScopes<TElement>({ ctx, track, dispose, baseEffect });
 
   // Add helper functions for tests (wrapping low-level primitives)
   return {
     ...scopes,
     ctx,
     // Run function within scope context
-    runInScope: <T>(scope: RenderScope, fn: () => T): T => {
+    runInScope: <T>(scope: RenderScope<TElement>, fn: () => T): T => {
       const prevScope = ctx.activeScope;
       ctx.activeScope = scope;
       try {
@@ -97,7 +98,7 @@ export const createTestScopes = (providedCtx?: ReturnType<typeof createLatticeCo
       }
     },
     // Track in specific scope (not active scope)
-    trackInSpecificScope: <TElement = object>(
+    trackInSpecificScope: (
       scope: RenderScope<TElement>,
       disposable: { dispose: () => void }
     ) => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMockDisposable } from '../test-utils';
-import { createTestScopes, createMockElement } from '../test-helpers';
+import { createTestScopes, createMockElement, MockTestElement } from '../test-helpers';
 import { createLatticeContext } from '../context';
 import { createScopes } from './scope';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -235,7 +235,7 @@ describe('Scope Tree', () => {
   describe('disposal integration with scheduler', () => {
     it('should call scheduler dispose when disposing scope', () => {
       const track = <T>(_node: unknown, fn: () => T): T => fn();
-      const disposeSpy = vi.fn(<T extends RenderScope>(_node: T, cleanup: (node: T) => void) => {
+      const disposeSpy = vi.fn(<T extends RenderScope<HTMLElement>>(_node: T, cleanup: (node: T) => void) => {
         const scope = _node;
 
         // Check if already disposed (idempotent)
@@ -253,9 +253,9 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const ctx = createLatticeContext();
+      const ctx = createLatticeContext<MockTestElement>();
       const baseEffect = vi.fn(() => () => {});
-      const { withScope, disposeScope } = createScopes({ ctx, track, dispose: disposeSpy, baseEffect });
+      const { withScope, disposeScope } = createScopes<MockTestElement>({ ctx, track, dispose: disposeSpy, baseEffect });
       const element = createMockElement();
       const { scope } = withScope(element, () => {});
 
@@ -310,8 +310,8 @@ describe('Scope Tree', () => {
       const track = <T>(_node: unknown, fn: () => T): T => fn();
 
       // Track dispose calls and verify dependency cleanup
-      const disposedNodes: RenderScope[] = [];
-      const dispose = vi.fn(<T extends RenderScope>(node: T, cleanup: (n: T) => void) => {
+      const disposedNodes: RenderScope<HTMLElement>[] = [];
+      const dispose = vi.fn(<T extends RenderScope<HTMLElement>>(node: T, cleanup: (n: T) => void) => {
         disposedNodes.push(node);
 
         const scope = node;
@@ -331,9 +331,9 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const ctx = createLatticeContext();
+      const ctx = createLatticeContext<MockTestElement>();
       const baseEffect = vi.fn(() => () => {});
-      const { withScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
+      const { withScope, disposeScope } = createScopes<MockTestElement>({ ctx, track, dispose, baseEffect });
       const element = createMockElement();
       const { scope } = withScope(element, () => {});
 
@@ -415,9 +415,9 @@ describe('Scope Tree', () => {
     });
 
     it('should integrate with element removal from context', () => {
-      const ctx = createLatticeContext();
+      const ctx = createLatticeContext<MockTestElement>();
       const track = <T>(_node: unknown, fn: () => T): T => fn();
-      const dispose = vi.fn(<T extends RenderScope>(node: T, cleanup: (n: T) => void): void => {
+      const dispose = vi.fn(<T extends RenderScope<HTMLElement>>(node: T, cleanup: (n: T) => void): void => {
         const scope = node;
 
         // Check if already disposed (idempotent)
@@ -436,7 +436,7 @@ describe('Scope Tree', () => {
       });
 
       const baseEffect = vi.fn(() => () => {});
-      const { withScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
+      const { withScope, disposeScope } = createScopes<MockTestElement>({ ctx, track, dispose, baseEffect });
       const element = createMockElement();
       const { scope } = withScope(element, () => {});
 
@@ -463,9 +463,9 @@ describe('Scope Tree', () => {
         cleanup(_node as T);
       };
 
-      const ctx = createLatticeContext();
+      const ctx = createLatticeContext<MockTestElement>();
       const baseEffect = vi.fn(() => () => {});
-      const { withScope, disposeScope } = createScopes({ ctx, track, dispose, baseEffect });
+      const { withScope, disposeScope } = createScopes<MockTestElement>({ ctx, track, dispose, baseEffect });
       const parentElement = createMockElement();
       const childElement = createMockElement();
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTestEnv } from '../test-utils';
+import { createTestEnv, MockElement } from '../test-utils';
 import type { RenderScope } from '../types';
 
 describe('with-scope', () => {
@@ -8,7 +8,7 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const element = {};
+      const element = new MockElement('div');
       let didRun = false;
 
       const { result, scope } = withScope(element, () => {
@@ -28,7 +28,7 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const element = {};
+      const element = new MockElement('div');
 
       const { scope } = withScope(element, (scope) => {
         // Add a disposable manually
@@ -46,7 +46,7 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const element = {};
+      const element = new MockElement('div');
 
       // Create a scope and manually add renderFn to test this internal behavior
       const { scope } = withScope(element, (scope) => {
@@ -65,8 +65,8 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const element = {};
-      let capturedScope: RenderScope | null = null;
+      const element = new MockElement('div');
+      let capturedScope: RenderScope<object> | null = null;
 
       withScope(element, (scope) => {
         capturedScope = ctx.activeScope;
@@ -82,11 +82,11 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const prevElement = {};
+      const prevElement = new MockElement('span');
       const { scope: prevScope } = withScope(prevElement, () => {});
       ctx.activeScope = prevScope;
 
-      const element = {};
+      const element = new MockElement('div');
 
       withScope(element, (scope) => {
         expect(ctx.activeScope).toBe(scope);
@@ -101,8 +101,8 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const parent = {};
-      const child = {};
+      const parent = new MockElement('div');
+      const child = new MockElement('span');
 
       withScope(parent, (parentScope) => {
         expect(ctx.activeScope).toBe(parentScope);
@@ -124,10 +124,10 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const parentElement = {};
+      const parentElement = new MockElement('div');
       const { scope: parentScope } = withScope(parentElement, () => {});
 
-      const childElement = {};
+      const childElement = new MockElement('span');
 
       // Set as activeScope - withScope should use it as parent
       ctx.activeScope = parentScope;
@@ -142,7 +142,7 @@ describe('with-scope', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
-      const element = {};
+      const element = new MockElement('div');
       let firstCallCount = 0;
       let secondCallCount = 0;
 
@@ -171,7 +171,7 @@ describe('with-scope', () => {
       const { ctx, signal, disposeScope, withScope } = env;
 
       // Simulate creating an element with reactive props
-      const element = {};
+      const element = new MockElement('div');
       const count = signal(0);
       let runCount = 0;
 

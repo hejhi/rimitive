@@ -22,7 +22,7 @@ export interface MapHelperOpts<
   TElement extends RendererElement,
   TText extends TextNode
 > {
-  ctx: LatticeContext;
+  ctx: LatticeContext<TElement>;
   signalCtx: GlobalContext;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;

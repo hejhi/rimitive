@@ -25,11 +25,11 @@ export function TodoItem(
       checked: api.computed(() => todoSignal().completed),
     },
   ]);
-  checkbox((el: HTMLInputElement) => api.on(el, 'change', () => onToggle(todo.id)));
+  checkbox((el) => api.on(el, 'change', () => onToggle(todo.id)));
 
   // Create remove button with event listener
   const removeBtn = el(['button', { className: 'todo-remove' }, 'x']);
-  removeBtn((el: HTMLButtonElement) => api.on(el, 'click', () => onRemove(todo.id)));
+  removeBtn((el) => api.on(el, 'click', () => onRemove(todo.id)));
 
   // Conditionally render completed vs active todo text using computed
   const todoText = el([

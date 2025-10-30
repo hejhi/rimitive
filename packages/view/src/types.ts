@@ -87,7 +87,7 @@ export function resolveNextRef<TElement>(
 /**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  */
-export interface RefSpec<TElement = ReactiveElement> {
+export interface RefSpec<TElement> {
   (lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement>; // Register lifecycle callback (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
   create<TExt = Record<string, unknown>>(extensions?: TExt): NodeRef<TElement> & TExt;
@@ -116,14 +116,7 @@ export function isReactive(value: unknown): value is Reactive {
 /**
  * Lifecycle callback for element connection/disconnection
  */
-export type LifecycleCallback<TElement = object> = (element: TElement) => void | (() => void);
-
-/**
- * Base element type for reactive elements
- * This is intentionally minimal - just an object that can be used as WeakMap keys
- * The actual element type is determined by the renderer
- */
-export type ReactiveElement = object;
+export type LifecycleCallback<TElement> = (element: TElement) => void | (() => void);
 
 /**
  * Valid child types for an element
@@ -131,7 +124,7 @@ export type ReactiveElement = object;
  * Note: Bare functions are not supported. For dynamic content, use map() or other
  * reconciliation helpers that provide efficient updates.
  */
-export type ElRefSpecChild<TElement = object> =
+export type ElRefSpecChild<TElement> =
   | string
   | number
   | boolean
@@ -140,7 +133,7 @@ export type ElRefSpecChild<TElement = object> =
   | Reactive<unknown>
   | FragmentRef<TElement>;
 
-export interface RenderScope<TElement = ReactiveElement> extends ScheduledNode {
+export interface RenderScope<TElement> extends ScheduledNode {
   // Tree structure (from Scope) - intrusive singly-linked tree
   firstChild: RenderScope<TElement> | undefined;
   nextSibling: RenderScope<TElement> | undefined;

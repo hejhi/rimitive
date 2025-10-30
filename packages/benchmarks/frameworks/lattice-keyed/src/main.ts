@@ -67,7 +67,7 @@ function createSignalContext() {
 }
 
 const signalCtx = createSignalContext();
-const viewCtx = createLatticeContext();
+const viewCtx = createLatticeContext<HTMLElement>();
 const renderer = createDOMRenderer();
 
 const signalFactory = createSignalFactory(signalCtx);
@@ -75,17 +75,17 @@ const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
 
 const { disposeScope, withScope, scopedEffect, onCleanup } =
-  createScopes({
+  createScopes<HTMLElement>({
     ctx: viewCtx,
     track: signalCtx.track,
     dispose: signalCtx.dispose,
     baseEffect: effectFactory.method,
   });
 
-const { processChildren } = createProcessChildren({ scopedEffect, renderer });
+const { processChildren } = createProcessChildren<HTMLElement, Text>({ scopedEffect, renderer });
 const onFactory = createOnFactory({ startBatch: signalCtx.startBatch, endBatch: signalCtx.endBatch });
 
-const elFactory = createElFactory({
+const elFactory = createElFactory<HTMLElement, Text>({
   ctx: viewCtx,
   scopedEffect,
   renderer,
@@ -93,7 +93,7 @@ const elFactory = createElFactory({
   onCleanup,
   processChildren,
 });
-const map = createMapHelper({
+const map = createMapHelper<HTMLElement, Text>({
   ctx: viewCtx,
   scopedEffect,
   renderer,
