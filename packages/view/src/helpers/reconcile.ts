@@ -225,26 +225,25 @@ export function createReconciler<
     // Calculate LIS for minimal moves
     const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
 
-    // Build set of LIS positions for O(1) lookup
-    const lisPositions = new Set<number>();
-    for (i = 0; i < lisLen; i++) {
-      lisPositions.add(newPosBuf[lisBuf[i]!]!);
-    }
-
     const nodeLen = nodes.length;
 
     // Position phase - reorder based on LIS
     // Process in REVERSE order so each element can insert before the already-positioned next element
+    // Use incremental index tracking instead of Set for zero-allocation LIS checking
+    let lisIdx = lisLen - 1; // Start from end since we're processing in reverse
     for (i = nodeLen - 1; i >= 0; i--) {
       const node = nodes[i]!;
 
-      if (!lisPositions.has(node.position)) {
-        const newPos = i + 1;
-        // Not in LIS - needs repositioning
-        // Find next sibling (or null/undefined for end)
-        const nextSibling = newPos < nodeLen ? nodes[newPos] : undefined;
+      // Check if current position matches LIS position (incremental, zero-allocation)
+      const isInLIS = lisIdx >= 0 && node.position === newPosBuf[lisBuf[lisIdx]!]!;
 
-        // Call move hook
+      if (isInLIS) {
+        // In LIS - already in correct position, decrement LIS index
+        lisIdx--;
+      } else {
+        // Not in LIS - needs repositioning
+        const newPos = i + 1;
+        const nextSibling = newPos < nodeLen ? nodes[newPos] : undefined;
         onMove(node, nextSibling);
       }
       // Elements in LIS don't need to move - they're already in correct relative positions
