@@ -1,5 +1,5 @@
 import type { ElementRef, NodeRef, FragmentRef } from '../types';
-import { STATUS_FRAGMENT } from '../types';
+import { STATUS_FRAGMENT, STATUS_ELEMENT, isFragmentRef, isElementRef } from '../types';
 
 export type FragmentInitFn<TElement> = (
   parent: ElementRef<TElement>,
@@ -32,4 +32,31 @@ export function createFragment<TElement>(
   };
 
   return fragRef;
+}
+
+/**
+ * Resolve the next DOM element from a NodeRef chain.
+ * Walks the `next` chain to find the first actual element, skipping empty fragments.
+ *
+ * @param ref - Starting NodeRef (typically fragment.next)
+ * @returns The next DOM element, or null if end of chain
+ */
+export function resolveNextRef<TElement>(
+  ref: NodeRef<TElement> | undefined | null
+): NodeRef<TElement> | null {
+  let current = ref;
+  while (current) {
+    if (current.status === STATUS_ELEMENT) return current;
+
+    // FragmentRef - try to get first child element
+    if (current.firstChild) {
+      const firstChild = current.firstChild;
+
+      if (isFragmentRef(firstChild) || isElementRef(firstChild)) return firstChild;
+    }
+
+    current = current.next; // Empty fragment - skip to next sibling
+  }
+
+  return null;
 }

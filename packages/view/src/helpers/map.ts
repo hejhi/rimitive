@@ -9,7 +9,8 @@
  */
 
 import type { RefSpec, FragmentRef, Reactive, ElementRef } from '../types';
-import { isElementRef, resolveNextRef } from '../types';
+import { isElementRef } from '../types';
+import { resolveNextRef } from './fragment';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 import type { LatticeContext } from '../context';
 import type { CreateScopes } from './scope';
