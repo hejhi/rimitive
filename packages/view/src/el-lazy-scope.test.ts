@@ -77,12 +77,12 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
-    // Note: withScope now always creates and registers scopes
+    // Note: withScope only registers scopes if they have disposables (performance optimization)
     const ref = el(['div', { className: 'static' }, 'Hello']);
     const element = asElement(ref.create()) as unknown as MockElement;
 
-    // withScope always creates scopes now (no lazy optimization)
-    expect(ctx.elementScopes.has(element)).toBe(true);
+    // No scope registered for static elements (no disposables)
+    expect(ctx.elementScopes.has(element)).toBe(false);
   });
 
   it('creates scope for elements with reactive props', () => {
@@ -177,7 +177,7 @@ describe('el primitive - lazy scope creation', () => {
     expect(ctx.elementScopes.has(element)).toBe(true);
   });
 
-  it('creates scope when lifecycle callback returns undefined (always creates scopes)', () => {
+  it('does not register scope when lifecycle callback returns undefined (no disposables)', () => {
     const {
       ctx,
       renderer,
@@ -203,11 +203,11 @@ describe('el primitive - lazy scope creation', () => {
 
     const element = asElement(ref.create()) as unknown as MockElement;
 
-    // withScope always creates scopes now
-    expect(ctx.elementScopes.has(element)).toBe(true);
+    // No scope registered (callback returns undefined, no disposables)
+    expect(ctx.elementScopes.has(element)).toBe(false);
   });
 
-  it('nested static elements create scopes (always creates scopes)', () => {
+  it('nested static elements do not register scopes (no disposables)', () => {
     const {
       ctx,
       renderer,
@@ -232,10 +232,10 @@ describe('el primitive - lazy scope creation', () => {
     const parentElement = asElement(parent.create()) as unknown as MockElement;
     const childElement = parentElement.children[0] as MockElement;
 
-    // withScope always creates scopes now
-    expect(ctx.elementScopes.has(parentElement)).toBe(true);
+    // No scopes registered (static elements with no disposables)
+    expect(ctx.elementScopes.has(parentElement)).toBe(false);
     if (childElement) {
-      expect(ctx.elementScopes.has(childElement)).toBe(true);
+      expect(ctx.elementScopes.has(childElement)).toBe(false);
     }
   });
 });

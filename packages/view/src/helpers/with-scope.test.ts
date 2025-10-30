@@ -4,7 +4,7 @@ import type { RenderScope } from '../types';
 
 describe('with-scope', () => {
   describe('createWithScope', () => {
-    it('should create and register scope, run code, and keep scope registered', () => {
+    it('should create scope, run code, but NOT register if no disposables', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
@@ -20,8 +20,8 @@ describe('with-scope', () => {
       expect(result).toBe(42);
       expect(scope).toBeDefined();
 
-      // Scope should remain registered (idempotent behavior)
-      expect(ctx.elementScopes.get(element)).toBe(scope);
+      // Scope should NOT be registered (performance optimization - no disposables)
+      expect(ctx.elementScopes.get(element)).toBeUndefined();
     });
 
     it('should keep scope registered if it has disposables', () => {
@@ -138,7 +138,7 @@ describe('with-scope', () => {
       expect(parentScope.firstChild).toBe(childScope);
     });
 
-    it('should be idempotent - reuse scope if called again with same element', () => {
+    it('should be idempotent - reuse scope if called again with same element (when registered)', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
 
@@ -146,13 +146,18 @@ describe('with-scope', () => {
       let firstCallCount = 0;
       let secondCallCount = 0;
 
-      // First call creates scope
-      const { scope: scope1 } = withScope(element, () => {
+      // First call creates scope with disposable (so it gets registered)
+      const { scope: scope1 } = withScope(element, (scope) => {
         firstCallCount++;
+        // Add disposable so scope gets registered
+        scope.firstDisposable = {
+          dispose: () => {},
+          next: undefined,
+        };
         return 'first';
       });
 
-      // Second call should reuse the same scope
+      // Second call should reuse the same scope (because it was registered)
       const { scope: scope2 } = withScope(element, () => {
         secondCallCount++;
         return 'second';

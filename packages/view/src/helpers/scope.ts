@@ -173,14 +173,15 @@ export function createScopes<TElement extends object>({
   ): { result: T; scope: RenderScope<TElem> } => {
     // Try to get existing scope first (idempotent)
     let scope = anyCtx.elementScopes.get(element) as RenderScope<TElem> | undefined;
+    let isNewScope = false;
 
     if (!scope) {
       // Use activeScope as parent for automatic hierarchy
       const parentScope = (anyCtx.activeScope || undefined) as RenderScope<TElem> | undefined;
 
-      // Create new scope
+      // Create new scope (but don't register yet - wait to see if it has disposables)
       scope = createScope(element, parentScope);
-      anyCtx.elementScopes.set(element, scope);
+      isNewScope = true;
     }
 
     // Set as active scope and run code
@@ -191,11 +192,20 @@ export function createScopes<TElement extends object>({
     try {
       result = fn(scope);
     } catch (e) {
-      anyCtx.elementScopes.delete(element);
+      // Only delete if we registered it
+      if (scope.firstDisposable !== undefined) {
+        anyCtx.elementScopes.delete(element);
+      }
       disposeScope(scope); // Clean up any disposables that were registered before error
       throw e;
     } finally {
       anyCtx.activeScope = prevScope;
+    }
+
+    // CRITICAL: Only register scopes with disposables or renderFn (performance optimization)
+    // This prevents unnecessary WeakMap entries for static elements
+    if (isNewScope && (scope.firstDisposable !== undefined || scope.renderFn !== undefined)) {
+      anyCtx.elementScopes.set(element, scope);
     }
 
     return { result, scope };

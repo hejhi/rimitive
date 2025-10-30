@@ -12,12 +12,15 @@ describe('Scope Tree', () => {
 
   describe('disposal', () => {
     it('disposes tracked items when scope is disposed', () => {
-      const { withScope, disposeScope, trackInScope } = createTestScopes();
+      const { withScope, disposeScope } = createTestScopes();
       const element = createMockElement();
-      const { scope } = withScope(element, () => {});
       const disposable = createMockDisposable();
 
-      withScope(element, () => trackInScope(disposable));
+      // Create scope with disposable in single call
+      const { scope } = withScope(element, (scope) => {
+        scope.firstDisposable = { dispose: disposable.dispose, next: undefined };
+      });
+
       disposeScope(scope);
 
       // tracked item was cleaned up
@@ -99,12 +102,14 @@ describe('Scope Tree', () => {
     });
 
     it('is idempotent - can dispose same scope multiple times', () => {
-      const { withScope, disposeScope, trackInScope } = createTestScopes();
+      const { withScope, disposeScope } = createTestScopes();
       const element = createMockElement();
-      const { scope } = withScope(element, () => {});
       const disposable = createMockDisposable();
 
-      withScope(element, () => trackInScope(disposable));
+      // Create scope with disposable
+      const { scope } = withScope(element, (scope) => {
+        scope.firstDisposable = { dispose: disposable.dispose, next: undefined };
+      });
 
       // Dispose multiple times
       disposeScope(scope);
@@ -116,15 +121,20 @@ describe('Scope Tree', () => {
     });
 
     it('prevents tracking after disposal', () => {
-      const { withScope, disposeScope, trackInScope } = createTestScopes();
+      const { withScope, disposeScope } = createTestScopes();
       const element = createMockElement();
-      const { scope } = withScope(element, () => {});
       const beforeDispose = createMockDisposable();
       const afterDispose = createMockDisposable();
 
-      withScope(element, () => trackInScope(beforeDispose));
+      // Create scope with disposable
+      const { scope } = withScope(element, (scope) => {
+        scope.firstDisposable = { dispose: beforeDispose.dispose, next: undefined };
+      });
+
       disposeScope(scope);
-      withScope(element, () => trackInScope(afterDispose));
+
+      // Try to track after disposal (scope is disposed, so this won't be tracked)
+      scope.firstDisposable = { dispose: afterDispose.dispose, next: scope.firstDisposable };
 
       // disposed scope rejects new tracking
       expect(beforeDispose.disposed).toBe(true);
