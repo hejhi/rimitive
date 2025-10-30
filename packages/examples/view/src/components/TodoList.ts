@@ -116,7 +116,7 @@ export function TodoList(api: LatticeViewAPI) {
       'div',
       { className: 'todo-list' },
       map(
-        () => todoList.filteredTodos(),
+        todoList.filteredTodos,
         (todoSignal) =>
           TodoItem(
             api,
@@ -124,7 +124,7 @@ export function TodoList(api: LatticeViewAPI) {
             (id) => todoList.toggleTodo(id),
             (id) => todoList.removeTodo(id)
           ),
-        todo => todo.id  // Key function for immutable updates
+        (todo) => todo.id // Key function for immutable updates
       ),
     ]),
 
