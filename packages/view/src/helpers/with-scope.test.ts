@@ -42,27 +42,6 @@ describe('with-scope', () => {
       expect(ctx.elementScopes.get(element)).toBe(scope);
     });
 
-    it('should keep scope registered if it has renderFn', () => {
-      const env = createTestEnv();
-      const { ctx, withScope } = env;
-
-      const element = new MockElement('div');
-
-      // Create a scope and manually add renderFn to test this internal behavior
-      const { scope } = withScope(element, (scope) => {
-        // Manually add renderFn to test internal behavior
-        scope.renderFn = () => {
-          // Provide a renderFn
-        };
-      });
-
-      if (!scope) throw new Error('Expected scope to be created');
-
-      // Scope should remain registered (has renderFn)
-      expect(ctx.elementScopes.get(element)).toBe(scope);
-      expect(scope.renderFn).toBeDefined();
-    });
-
     it('should set activeScope during execution', () => {
       const env = createTestEnv();
       const { ctx, withScope } = env;
