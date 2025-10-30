@@ -74,7 +74,7 @@ const signalFactory = createSignalFactory(signalCtx);
 const computedFactory = createComputedFactory(signalCtx);
 const effectFactory = createEffectFactory(signalCtx);
 
-const { disposeScope, withScope, scopedEffect, onCleanup } =
+const { disposeScope, scopedEffect, onCleanup, createElementScope } =
   createScopes<HTMLElement>({
     ctx: viewCtx,
     track: signalCtx.track,
@@ -89,7 +89,7 @@ const elFactory = createElFactory<HTMLElement, Text>({
   ctx: viewCtx,
   scopedEffect,
   renderer,
-  withScope,
+  createElementScope,
   onCleanup,
   processChildren,
 });

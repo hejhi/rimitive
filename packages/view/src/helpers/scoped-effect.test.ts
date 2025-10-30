@@ -9,7 +9,13 @@ describe('scoped-effect', () => {
 
       // Create a scope and set it as active
       const element = new MockElement('div');
-      const { scope } = withScope(element, () => {});
+      // Add a disposable so scope is kept
+      const { scope } = withScope(element, (scope) => {
+        scope.firstDisposable = { dispose: () => {}, next: undefined };
+      });
+
+      if (!scope) throw new Error('Expected scope to be created');
+
       ctx.activeScope = scope;
 
       let runCount = 0;
@@ -20,7 +26,7 @@ describe('scoped-effect', () => {
       // Effect should have run once
       expect(runCount).toBe(1);
 
-      // Dispose function should be tracked in scope
+      // Dispose function should be tracked in scope (it's second in the list now)
       expect(scope.firstDisposable).toBeDefined();
       expect(scope.firstDisposable?.dispose).toBe(dispose);
     });
@@ -47,7 +53,13 @@ describe('scoped-effect', () => {
 
       const count = signal(0);
       const element = new MockElement('div');
-      const { scope } = withScope(element, () => {});
+      // Add a disposable so scope is kept
+      const { scope } = withScope(element, (scope) => {
+        scope.firstDisposable = { dispose: () => {}, next: undefined };
+      });
+
+      if (!scope) throw new Error('Expected scope to be created');
+
       ctx.activeScope = scope;
 
       let runCount = 0;
@@ -75,17 +87,24 @@ describe('scoped-effect', () => {
       const { ctx, scopedEffect, withScope } = env;
 
       const element = new MockElement('div');
-      const { scope } = withScope(element, () => {});
+      // Add a disposable so scope is kept
+      const { scope } = withScope(element, (scope) => {
+        scope.firstDisposable = { dispose: () => {}, next: undefined };
+      });
+
+      if (!scope) throw new Error('Expected scope to be created');
+
       ctx.activeScope = scope;
 
       const dispose1 = scopedEffect(() => {});
       const dispose2 = scopedEffect(() => {});
       const dispose3 = scopedEffect(() => {});
 
-      // All three should be tracked
+      // All three should be tracked (plus the initial dummy disposable makes 4 total)
       expect(scope.firstDisposable).toBeDefined();
       expect(scope.firstDisposable?.next).toBeDefined();
       expect(scope.firstDisposable?.next?.next).toBeDefined();
+      expect(scope.firstDisposable?.next?.next?.next).toBeDefined();
 
       // First in linked list is last added (LIFO)
       expect(scope.firstDisposable?.dispose).toBe(dispose3);

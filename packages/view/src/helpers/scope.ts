@@ -28,7 +28,17 @@ export type CreateScopes = {
   withScope: <TElement extends object = object, T = void>(
     element: TElement,
     fn: (scope: RenderScope<TElement>) => T
-  ) => { result: T; scope: RenderScope<TElement> };
+  ) => { result: T; scope: RenderScope<TElement> | null };
+
+  /**
+   * Fast path for element creation - skips idempotency checks.
+   * Use this when you know the element is brand new (e.g., in el.create()).
+   * Performance optimized: no WeakMap lookup, no return value allocation, no try/catch.
+   */
+  createElementScope: <TElement extends object = object>(
+    element: TElement,
+    fn: () => void
+  ) => RenderScope<TElement> | null;
 
   /**
    * Create a scope-aware effect that auto-tracks itself in activeScope.
@@ -61,7 +71,7 @@ export function createScopes<TElement extends object>({
    */
   const createScope = <TElem = TElement>(
     element: TElem,
-    parent?: RenderScope<TElem>,
+    parent?: RenderScope<TElem> | null,
     renderFn?: () => void | (() => void)
   ): RenderScope<TElem> => {
     const scope: RenderScope<TElem> = {
@@ -162,31 +172,67 @@ export function createScopes<TElement extends object>({
   };
 
   /**
+   * Fast path for element creation - skips idempotency checks
+   * Use this when you know the element is brand new (e.g., in el.create())
+   *
+   * Performance optimizations vs withScope:
+   * - No WeakMap.get() lookup (elements are always new)
+   * - No object allocation for return value
+   * - No try/catch overhead
+   * - Returns null and unlinks scope if no disposables (avoids tree traversal overhead)
+   */
+  const createElementScope = <TElem extends object = object>(
+    element: TElem,
+    fn: () => void
+  ): RenderScope<TElem> | null => {
+    // Use activeScope as parent for automatic hierarchy
+    const parentScope = anyCtx.activeScope;
+    const scope = createScope<TElem>(element, parentScope as RenderScope<TElem> | null | undefined);
+    const prevScope = anyCtx.activeScope;
+    anyCtx.activeScope = scope;
+
+    fn();
+
+    anyCtx.activeScope = prevScope;
+
+    // CRITICAL: Only keep scope if it has disposables/renderFn
+    // Otherwise unlink from parent tree to avoid traversal overhead
+    if (scope.firstDisposable !== undefined || scope.renderFn !== undefined) {
+      anyCtx.elementScopes.set(element, scope);
+      return scope;
+    }
+
+    // No disposables - unlink from parent to avoid tree traversal overhead
+    if (parentScope && parentScope.firstChild === scope) {
+      parentScope.firstChild = scope.nextSibling;
+    }
+
+    return null;
+  };
+
+  /**
    * Run code within the scope attached to an element
    * If a scope already exists for the element, reuses it (idempotent).
    * Otherwise creates a new scope, using ctx.activeScope as parent for hierarchy.
-   * Returns the scope so callers can access it if needed.
+   * Returns null in scope field if no disposables/renderFn (scope is unlinked and discarded).
    */
   const withScope = <TElem extends object = object, T = void>(
     element: TElem,
     fn: (scope: RenderScope<TElem>) => T
-  ): { result: T; scope: RenderScope<TElem> } => {
+  ): { result: T; scope: RenderScope<TElem> | null } => {
     // Try to get existing scope first (idempotent)
     let scope = anyCtx.elementScopes.get(element) as RenderScope<TElem> | undefined;
     let isNewScope = false;
+    let parentScope: RenderScope<object> | null = null;
 
     if (!scope) {
-      // Use activeScope as parent for automatic hierarchy
-      const parentScope = (anyCtx.activeScope || undefined) as RenderScope<TElem> | undefined;
-
-      // Create new scope (but don't register yet - wait to see if it has disposables)
-      scope = createScope(element, parentScope);
+      parentScope = anyCtx.activeScope;
+      scope = createScope(element, parentScope as RenderScope<TElem> | undefined);
       isNewScope = true;
     }
 
-    // Set as active scope and run code
     const prevScope = anyCtx.activeScope;
-    anyCtx.activeScope = scope as RenderScope<object>;
+    anyCtx.activeScope = scope;
 
     let result: T;
     try {
@@ -202,13 +248,18 @@ export function createScopes<TElement extends object>({
       anyCtx.activeScope = prevScope;
     }
 
-    // CRITICAL: Only register scopes with disposables or renderFn (performance optimization)
-    // This prevents unnecessary WeakMap entries for static elements
+    // CRITICAL: Only keep scope if it has disposables/renderFn
     if (isNewScope && (scope.firstDisposable !== undefined || scope.renderFn !== undefined)) {
       anyCtx.elementScopes.set(element, scope);
+      return { result, scope };
     }
 
-    return { result, scope };
+    // No disposables - unlink from parent tree and return null
+    if (isNewScope && parentScope && parentScope.firstChild === scope) {
+      parentScope.firstChild = scope.nextSibling;
+    }
+
+    return { result, scope: isNewScope ? null : scope };
   }
 
   /**
@@ -242,6 +293,7 @@ export function createScopes<TElement extends object>({
   return {
     disposeScope,
     withScope,
+    createElementScope,
     scopedEffect,
     onCleanup,
   };

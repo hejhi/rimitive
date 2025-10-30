@@ -49,7 +49,7 @@ export type ElOpts<
   TText extends TextNode = TextNode,
 > = {
   ctx: LatticeContext<TElement>;
-  withScope: CreateScopes['withScope'];
+  createElementScope: CreateScopes['createElementScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
   renderer: Renderer<TElement, TText>;
@@ -82,7 +82,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     scopedEffect,
     renderer,
     processChildren,
-    withScope,
+    createElementScope,
     onCleanup,
   } = opts;
 
@@ -114,7 +114,7 @@ export function createElFactory<TElement extends RendererElement, TText extends 
         ...extensions,
       };
 
-      withScope(element, () => {
+      createElementScope(element, () => {
         applyProps(element as unknown as TElement, props);
         processChildren(elRef as unknown as ElementRef<TElement>, children);
 

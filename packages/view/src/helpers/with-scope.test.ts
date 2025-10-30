@@ -56,6 +56,8 @@ describe('with-scope', () => {
         };
       });
 
+      if (!scope) throw new Error('Expected scope to be created');
+
       // Scope should remain registered (has renderFn)
       expect(ctx.elementScopes.get(element)).toBe(scope);
       expect(scope.renderFn).toBeDefined();
@@ -125,14 +127,23 @@ describe('with-scope', () => {
       const { ctx, withScope } = env;
 
       const parentElement = new MockElement('div');
-      const { scope: parentScope } = withScope(parentElement, () => {});
+      // Add a disposable so parent scope is kept
+      const { scope: parentScope } = withScope(parentElement, (scope) => {
+        scope.firstDisposable = { dispose: () => {}, next: undefined };
+      });
 
       const childElement = new MockElement('span');
 
       // Set as activeScope - withScope should use it as parent
       ctx.activeScope = parentScope;
-      const { scope: childScope } = withScope(childElement, () => {});
+      // Add a disposable so child scope is kept
+      const { scope: childScope } = withScope(childElement, (scope) => {
+        scope.firstDisposable = { dispose: () => {}, next: undefined };
+      });
       ctx.activeScope = null;
+
+      if (!parentScope) throw new Error('Expected parent scope to be created');
+      if (!childScope) throw new Error('Expected child scope to be created');
 
       // Verify child is linked into parent's child list
       expect(parentScope.firstChild).toBe(childScope);
@@ -196,6 +207,8 @@ describe('with-scope', () => {
           };
         }
       });
+
+      if (!scope) throw new Error('Expected scope to be created');
 
       expect(runCount).toBe(1);
       expect(ctx.elementScopes.get(element)).toBe(scope);

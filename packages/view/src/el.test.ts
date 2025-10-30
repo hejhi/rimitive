@@ -13,7 +13,7 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createLatticeContext<MockElement>();
   const { renderer } = createMockRenderer();
-  const { withScope: baseWithScope, disposeScope } = createTestScopes<MockElement>(ctx);
+  const { createElementScope, disposeScope } = createTestScopes<MockElement>(ctx);
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -40,7 +40,7 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     scopedEffect,
     renderer,
   });
-  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, disposeScope, withScope: baseWithScope, onCleanup };
+  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, disposeScope, createElementScope, onCleanup };
 }
 
 describe('el primitive', () => {
@@ -51,7 +51,7 @@ describe('el primitive', () => {
         renderer,
         scopedEffect,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       } = createTestEnv();
       const el = createElFactory({
@@ -59,7 +59,7 @@ describe('el primitive', () => {
         scopedEffect,
         renderer,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       }).method;
 
@@ -77,7 +77,7 @@ describe('el primitive', () => {
         renderer,
         scopedEffect,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
         } = createTestEnv();
       const el = createElFactory({
@@ -85,7 +85,7 @@ describe('el primitive', () => {
         scopedEffect,
         renderer,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       }).method;
 
@@ -110,7 +110,7 @@ describe('el primitive', () => {
         renderer,
         scopedEffect,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -122,7 +122,7 @@ describe('el primitive', () => {
         scopedEffect,
         renderer,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       }).method;
 
@@ -144,7 +144,7 @@ describe('el primitive', () => {
         renderer,
         scopedEffect,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -156,7 +156,7 @@ describe('el primitive', () => {
         scopedEffect,
         renderer,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       }).method;
 
@@ -178,7 +178,7 @@ describe('el primitive', () => {
         renderer,
         scopedEffect,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -190,7 +190,7 @@ describe('el primitive', () => {
         scopedEffect,
         renderer,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       }).method;
 
@@ -212,7 +212,7 @@ describe('el primitive', () => {
         renderer,
         scopedEffect,
         processChildren,
-        withScope,
+        createElementScope,
         disposeScope,
         onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
@@ -225,7 +225,7 @@ describe('el primitive', () => {
         scopedEffect,
         renderer,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       }).method;
 
@@ -252,7 +252,7 @@ describe('el primitive', () => {
         renderer,
         scopedEffect,
         processChildren,
-        withScope,
+        createElementScope,
         disposeScope,
         onCleanup,
         } = createTestEnv();
@@ -261,7 +261,7 @@ describe('el primitive', () => {
         scopedEffect,
         renderer,
         processChildren,
-        withScope,
+        createElementScope,
         onCleanup,
       }).method;
 

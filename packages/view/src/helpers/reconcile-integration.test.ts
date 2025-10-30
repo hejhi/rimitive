@@ -24,7 +24,7 @@ describe('List reconciliation - Complex reorderings', () => {
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       processChildren: env.processChildren,
-      withScope: env.withScope,
+      createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
@@ -457,7 +457,7 @@ describe('List reconciliation - Edge cases', () => {
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       processChildren: env.processChildren,
-      withScope: env.withScope,
+      createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 

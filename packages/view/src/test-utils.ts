@@ -239,7 +239,7 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { disposeScope, withScope, scopedEffect, onCleanup } = createScopes<MockElement>({
+  const { disposeScope, createElementScope, withScope, scopedEffect, onCleanup } = createScopes<MockElement>({
     ctx,
     track,
     dispose,
@@ -262,6 +262,7 @@ export function createTestEnv() {
     processChildren,
     disposeScope,
     scopedEffect,
+    createElementScope,
     withScope,
     onCleanup,
   };
