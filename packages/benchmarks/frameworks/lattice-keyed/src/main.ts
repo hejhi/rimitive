@@ -354,8 +354,8 @@ const App = () => {
       { className: 'table table-hover table-striped test-data' },
       el([
         'tbody',
-        map(
-          () => data(),
+        map<RowData>(
+          data,
           (rowDataSignal) => Row({ data: rowDataSignal }),
           (rowData) => rowData.id
         ),
