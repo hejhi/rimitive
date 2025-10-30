@@ -21,6 +21,7 @@ These are **headless components** - pure logic with no UI concerns. They can be:
 See `src/components/`:
 - `Counter.ts` - Uses `el()` for reactive elements
 - `TodoList.ts` - Uses `el()` and `map()` for reactive lists
+- `ConditionalExample.ts` - Uses `el()` with conditional rendering (reactive specs)
 
 The view primitives provide:
 - **No virtual DOM** - direct DOM manipulation
@@ -75,6 +76,35 @@ map(
 - Efficiently reconciles list changes (add, remove, reorder)
 - Identity-based tracking (no keys required, but can provide key fn)
 - Each item gets its own signal for fine-grained updates
+
+### Conditional Rendering - Reactive Specs
+
+```typescript
+// Toggle visibility by returning null
+el(
+  computed(() => {
+    if (!showMessage()) return null;
+    return ['div', { className: 'message' }, 'Hello!'];
+  })
+)
+
+// Switch between different element types
+el(
+  computed(() => {
+    if (isEditMode()) {
+      return ['input', { type: 'text', value: editText }];
+    } else {
+      return ['span', {}, editText];
+    }
+  })
+)
+```
+
+- Pass a `Reactive<ElRefSpec | null>` instead of a static spec
+- Element is recreated when the reactive spec changes
+- Return `null` to render nothing (empty fragment)
+- Efficiently swaps between different element types
+- Automatic cleanup of old elements and their effects
 
 ### Lifecycle Management
 
