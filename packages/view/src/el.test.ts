@@ -285,4 +285,247 @@ describe('el primitive', () => {
       expect(cleanup).toHaveBeenCalled();
     });
   });
+
+  describe('reactive element specs', () => {
+    it('creates element from reactive spec', () => {
+      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        scopedEffect,
+        renderer,
+        processChildren,
+        createElementScope,
+        onCleanup,
+      }).method;
+
+      const reactiveSpec = signal<['div', string] | null>(['div', 'Hello']);
+      const fragmentRef = el(reactiveSpec);
+
+      expect(fragmentRef.status).toBe(2); // STATUS_FRAGMENT
+
+      // Create a mock parent
+      const parent = renderer.createElement('div');
+      const parentRef = { status: 1 as const, element: parent, next: undefined };
+
+      // Attach the fragment
+      fragmentRef.attach(parentRef, null);
+
+      // Should have created an element
+      expect(fragmentRef.firstChild).toBeDefined();
+      if (fragmentRef.firstChild && 'element' in fragmentRef.firstChild) {
+        expect((fragmentRef.firstChild.element as MockElement).tag).toBe('div');
+      }
+    });
+
+    it('toggles between element and null', () => {
+      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        scopedEffect,
+        renderer,
+        processChildren,
+        createElementScope,
+        onCleanup,
+      }).method;
+
+      const spec = signal<['div', string] | null>(['div', 'Hello']);
+
+      const fragmentRef = el(spec);
+      const parent = renderer.createElement('div');
+      const parentRef = { status: 1 as const, element: parent, next: undefined };
+
+      // Attach fragment
+      fragmentRef.attach(parentRef, null);
+
+      // Should have element
+      expect(fragmentRef.firstChild).toBeDefined();
+      const firstChild = fragmentRef.firstChild;
+      expect(firstChild).toBeDefined();
+      expect('element' in firstChild!).toBe(true);
+      const firstElement = (firstChild as ElementRef<MockElement>).element;
+      expect(firstElement).toBeDefined();
+      expect(parent.children).toContain(firstElement);
+
+      // Toggle to null
+      spec(null);
+
+      // Element should be removed
+      expect(fragmentRef.firstChild).toBeUndefined();
+      expect(parent.children).not.toContain(firstElement);
+
+      // Toggle back to element
+      spec(['div', 'World']);
+
+      // Should have new element
+      expect(fragmentRef.firstChild).toBeDefined();
+      const secondChild = fragmentRef.firstChild;
+      expect(secondChild).toBeDefined();
+      expect('element' in secondChild!).toBe(true);
+      const secondElement = (secondChild as ElementRef<MockElement>).element;
+      expect(secondElement).toBeDefined();
+      expect(parent.children).toContain(secondElement);
+      expect(secondElement).not.toBe(firstElement); // Different element instance
+    });
+
+    it('swaps between different element types', () => {
+      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        scopedEffect,
+        renderer,
+        processChildren,
+        createElementScope,
+        onCleanup,
+      }).method;
+
+      const spec = signal<['div', string] | ['span', string]>(['div', 'Hello']);
+
+      const fragmentRef = el(spec);
+      const parent = renderer.createElement('div');
+      const parentRef = { status: 1 as const, element: parent, next: undefined };
+
+      fragmentRef.attach(parentRef, null);
+
+      // Should start with div
+      expect(fragmentRef.firstChild).toBeDefined();
+      const divChild = fragmentRef.firstChild as ElementRef<MockElement>;
+      expect(divChild.element.tag).toBe('div');
+      const divElement = divChild.element;
+
+      // Swap to span
+      spec(['span', 'World']);
+
+      // Should now be span
+      expect(fragmentRef.firstChild).toBeDefined();
+      const spanChild = fragmentRef.firstChild as ElementRef<MockElement>;
+      expect(spanChild.element.tag).toBe('span');
+      const spanElement = spanChild.element;
+
+      // Old element should be removed
+      expect(parent.children).not.toContain(divElement);
+      // New element should be present
+      expect(parent.children).toContain(spanElement);
+    });
+
+    it('cleans up scope when element is removed', () => {
+      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        scopedEffect,
+        renderer,
+        processChildren,
+        createElementScope,
+        onCleanup,
+      }).method;
+
+      // Create a spec with reactive content to ensure scope is created
+      const text = signal('Hello');
+      const spec = signal<['div', typeof text] | null>(['div', text]);
+
+      const fragmentRef = el(spec);
+      const parent = renderer.createElement('div');
+      const parentRef = { status: 1 as const, element: parent, next: undefined };
+
+      fragmentRef.attach(parentRef, null);
+
+      expect(fragmentRef.firstChild).toBeDefined();
+      const elementRef = fragmentRef.firstChild as ElementRef<MockElement>;
+      const element = elementRef.element;
+
+      // Element should exist
+      expect(element).toBeDefined();
+      expect(parent.children).toContain(element);
+
+      // Toggle to null
+      spec(null);
+
+      // Element should be removed from DOM
+      expect(parent.children).not.toContain(element);
+      // If there was a scope, it should be cleaned up
+      expect(ctx.elementScopes.get(element)).toBeUndefined();
+    });
+
+    it('handles initial null spec', () => {
+      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        scopedEffect,
+        renderer,
+        processChildren,
+        createElementScope,
+        onCleanup,
+      }).method;
+
+      const spec = signal<['div', string] | null>(null);
+
+      const fragmentRef = el(spec);
+      const parent = renderer.createElement('div');
+      const parentRef = { status: 1 as const, element: parent, next: undefined };
+
+      fragmentRef.attach(parentRef, null);
+
+      // Should have no element initially
+      expect(fragmentRef.firstChild).toBeUndefined();
+      expect(parent.children.length).toBe(0);
+
+      // Toggle to element
+      spec(['div', 'Hello']);
+
+      // Should now have element
+      expect(fragmentRef.firstChild).toBeDefined();
+      expect(parent.children.length).toBe(1);
+    });
+
+    it('maintains position in DOM when toggling', () => {
+      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const el = createElFactory({
+        ctx,
+        scopedEffect,
+        renderer,
+        processChildren,
+        createElementScope,
+        onCleanup,
+      }).method;
+
+      const spec = signal<['span', string] | null>(['span', 'Middle']);
+
+      const fragmentRef = el(spec);
+      const parent = renderer.createElement('div');
+      const parentRef = { status: 1 as const, element: parent, next: undefined };
+
+      // Create sibling elements
+      const before = renderer.createElement('div');
+      const after = renderer.createElement('div');
+      const beforeText = renderer.createTextNode('Before');
+      const afterText = renderer.createTextNode('After');
+      renderer.appendChild(before, beforeText);
+      renderer.appendChild(after, afterText);
+      renderer.appendChild(parent, before);
+      renderer.appendChild(parent, after);
+
+      // Attach fragment between siblings
+      fragmentRef.attach(parentRef, null);
+      expect(fragmentRef.firstChild).toBeDefined();
+      const middleElement = (fragmentRef.firstChild as ElementRef<MockElement>).element;
+
+      // Insert before 'after'
+      renderer.removeChild(parent, middleElement);
+      renderer.insertBefore(parent, middleElement, after);
+
+      // Check order
+      expect(parent.children).toEqual([before, middleElement, after]);
+
+      // Toggle to null
+      spec(null);
+      expect(parent.children).toEqual([before, after]);
+
+      // Toggle back
+      spec(['span', 'Middle Again']);
+      expect(fragmentRef.firstChild).toBeDefined();
+      const newMiddle = (fragmentRef.firstChild as ElementRef<MockElement>).element;
+
+      // Should be inserted in same position (before 'after')
+      expect(parent.children[parent.children.length - 1]).toBe(newMiddle);
+    });
+  });
 });

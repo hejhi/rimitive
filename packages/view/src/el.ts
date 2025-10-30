@@ -5,6 +5,7 @@ import type {
   Reactive,
   ElementRef,
   ElRefSpecChild,
+  FragmentRef,
 } from './types';
 import {
   isReactive,
@@ -14,6 +15,7 @@ import {
 import type { LatticeContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode } from './renderer';
 import type { CreateScopes } from './helpers/scope';
+import { createFragment } from './helpers/fragment';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -60,17 +62,23 @@ export type ElOpts<
 };
 
 /**
- * Factory return type - always returns tag-specific HTML element types
+ * Factory return type - supports both static and reactive specs
  * el(['button']) → RefSpec<HTMLButtonElement>
- * el(['input']) → RefSpec<HTMLInputElement>
+ * el(computed(() => ['button'])) → FragmentRef<TElement>
  */
-export type ElFactory<TElement extends RendererElement> =
-  LatticeExtension<
-    'el',
+export type ElFactory<TElement extends RendererElement> = LatticeExtension<
+  'el',
+  {
+    // Static spec overload
     <Tag extends keyof HTMLElementTagNameMap>(
       spec: ElRefSpec<Tag, TElement>
-    ) => RefSpec<HTMLElementTagNameMap[Tag]>
-  >;
+    ): RefSpec<HTMLElementTagNameMap[Tag]>;
+    // Reactive spec overload
+    <Tag extends keyof HTMLElementTagNameMap>(
+      spec: Reactive<ElRefSpec<Tag, TElement> | null>
+    ): FragmentRef<TElement>;
+  }
+>;
 
 /**
  * Create the el primitive factory
@@ -89,7 +97,26 @@ export function createElFactory<TElement extends RendererElement, TText extends 
   // Create helpers with captured dependencies
   const applyProps = createApplyProps({ scopedEffect, renderer });
 
+  // Function overloads for proper type inference
   function el<Tag extends keyof HTMLElementTagNameMap>(
+    spec: ElRefSpec<Tag, TElement>
+  ): RefSpec<HTMLElementTagNameMap[Tag]>;
+  function el<Tag extends keyof HTMLElementTagNameMap>(
+    spec: Reactive<ElRefSpec<Tag, TElement> | null>
+  ): FragmentRef<TElement>;
+  function el<Tag extends keyof HTMLElementTagNameMap>(
+    spec: ElRefSpec<Tag, TElement> | Reactive<ElRefSpec<Tag, TElement> | null>
+  ): RefSpec<HTMLElementTagNameMap[Tag]> | FragmentRef<TElement> {
+    // Check if spec itself is reactive
+    if (isReactive(spec)) {
+      return createReactiveElement(spec);
+    }
+
+    // Static spec path - existing logic
+    return createStaticElement(spec);
+  }
+
+  function createStaticElement<Tag extends keyof HTMLElementTagNameMap>(
     spec: ElRefSpec<Tag, TElement>
   ): RefSpec<HTMLElementTagNameMap[Tag]> {
     type El = HTMLElementTagNameMap[Tag];
@@ -128,6 +155,48 @@ export function createElFactory<TElement extends RendererElement, TText extends 
     };
 
     return refSpec;
+  }
+
+  function createReactiveElement<Tag extends keyof HTMLElementTagNameMap>(
+    specReactive: Reactive<ElRefSpec<Tag, TElement> | null>
+  ): FragmentRef<TElement> {
+    const fragRef = createFragment<TElement>((parent, nextSibling) => {
+      let currentElementRef: ElementRef<TElement> | undefined;
+
+      const dispose = scopedEffect(() => {
+        const newSpec = specReactive();
+
+        // Clean up old element if it exists
+        if (currentElementRef) {
+          const scope = opts.ctx.elementScopes.get(currentElementRef.element);
+          if (scope) {
+            opts.ctx.elementScopes.delete(currentElementRef.element);
+            // Dispose scope will clean up all effects/subscriptions
+            scope.cleanup?.();
+          }
+          renderer.removeChild(parent.element, currentElementRef.element);
+          currentElementRef = undefined;
+        }
+
+        if (newSpec === null) {
+          // Empty fragment - no DOM nodes
+          fragRef.firstChild = undefined;
+        } else {
+          // Create new element from spec
+          const refSpec = createStaticElement(newSpec);
+          currentElementRef = refSpec.create() as unknown as ElementRef<TElement>;
+          fragRef.firstChild = currentElementRef;
+
+          // Insert at correct position
+          const nextEl = nextSibling?.element ?? null;
+          renderer.insertBefore(parent.element, currentElementRef.element, nextEl);
+        }
+      });
+
+      return dispose;
+    });
+
+    return fragRef;
   }
 
   return {

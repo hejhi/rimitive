@@ -253,7 +253,7 @@ export function createTestEnv() {
     fn: (scope: import('./types').RenderScope<MockElement>) => T
   ): { result: T; scope: import('./types').RenderScope<MockElement> | null } => {
     // Try to get existing scope first (idempotent)
-    let scope = ctx.elementScopes.get(element) as import('./types').RenderScope<MockElement> | undefined;
+    let scope = ctx.elementScopes.get(element);
     let isNewScope = false;
     let parentScope: import('./types').RenderScope<MockElement> | null = null;
 
