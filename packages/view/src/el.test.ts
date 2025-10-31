@@ -52,6 +52,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       } = createTestEnv();
       const el = createElFactory({
@@ -60,6 +61,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -78,6 +80,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
         } = createTestEnv();
       const el = createElFactory({
@@ -86,6 +89,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -111,6 +115,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -123,6 +128,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -145,6 +151,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -157,6 +164,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -179,6 +187,7 @@ describe('el primitive', () => {
         scopedEffect,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
@@ -191,6 +200,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -226,6 +236,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -262,6 +273,7 @@ describe('el primitive', () => {
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -288,13 +300,14 @@ describe('el primitive', () => {
 
   describe('reactive element specs', () => {
     it('creates element from reactive spec', () => {
-      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
       const el = createElFactory({
         ctx,
         scopedEffect,
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -318,13 +331,14 @@ describe('el primitive', () => {
     });
 
     it('toggles between element and null', () => {
-      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
       const el = createElFactory({
         ctx,
         scopedEffect,
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -368,13 +382,14 @@ describe('el primitive', () => {
     });
 
     it('swaps between different element types', () => {
-      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
       const el = createElFactory({
         ctx,
         scopedEffect,
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -408,13 +423,14 @@ describe('el primitive', () => {
     });
 
     it('cleans up scope when element is removed', () => {
-      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
       const el = createElFactory({
         ctx,
         scopedEffect,
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -446,13 +462,14 @@ describe('el primitive', () => {
     });
 
     it('handles initial null spec', () => {
-      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
       const el = createElFactory({
         ctx,
         scopedEffect,
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 
@@ -477,13 +494,14 @@ describe('el primitive', () => {
     });
 
     it('maintains position in DOM when toggling', () => {
-      const { renderer, ctx, createElementScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
       const el = createElFactory({
         ctx,
         scopedEffect,
         renderer,
         processChildren,
         createElementScope,
+        disposeScope,
         onCleanup,
       }).method;
 

@@ -16,13 +16,13 @@ import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createOnFactory } from '@lattice/view/on';
 // All scope helpers consolidated in scope.ts
-import { ElRefSpecChild, isReactive, type Reactive } from '@lattice/view/types';
+import { ElRefSpecChild, type Reactive } from '@lattice/view/types';
 
 type ClassValue = string | Reactive<string> | null | undefined | false;
 
 function cn(...classes: ClassValue[]): string | Reactive<string> {
-  // Check if any are reactive
-  const hasReactive = classes.some((c) => c && isReactive(c));
+  // Check if any are reactive (reactive values are functions)
+  const hasReactive = classes.some((c) => c && typeof c === 'function');
 
   if (hasReactive) {
     // Create a computed that evaluates all classes
@@ -30,7 +30,7 @@ function cn(...classes: ClassValue[]): string | Reactive<string> {
       return classes
         .map((c) => {
           if (!c) return '';
-          return isReactive(c) ? c() : c;
+          return typeof c === 'function' ? c() : c;
         })
         .filter(Boolean)
         .join(' ');
@@ -90,6 +90,7 @@ const elFactory = createElFactory<HTMLElement, Text>({
   scopedEffect,
   renderer,
   createElementScope,
+  disposeScope,
   onCleanup,
   processChildren,
 });
@@ -182,7 +183,7 @@ function _random(max: number): number {
 
 interface RowData {
   id: number;
-  label: Reactive<string>;
+  label: ReturnType<typeof signal<string>>;
 }
 
 function buildData(count: number): RowData[] {
@@ -225,9 +226,8 @@ const update = () => {
   for (let i = 0; i < d.length; i += 10) {
     const row = d[i];
     if (!row) continue;
-    const labelSignal = row.label as (value?: string) => string | void;
-    const currentLabel = labelSignal();
-    labelSignal(currentLabel + ' !!!');
+    const currentLabel = row.label();
+    row.label(currentLabel + ' !!!');
   }
 };
 

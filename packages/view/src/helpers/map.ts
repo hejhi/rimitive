@@ -111,7 +111,6 @@ export function createMapHelper<
           const scope = ctx.elementScopes.get(node.element);
           if (scope) disposeScope(scope);
 
-          ctx.elementScopes.delete(node.element);
           renderer.removeChild(parentEl, node.element);
         },
       });

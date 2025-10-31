@@ -7,7 +7,7 @@
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef } from '../types';
-import { isElementRef, isFragmentRef, isReactive, isRefSpec } from '../types';
+import { isElementRef, isFragmentRef, STATUS_REF_SPEC } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
@@ -35,31 +35,26 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
     }
 
     if (childType === 'function') {
-      // Element ref (from el()) - instantiate blueprint
-      if (isRefSpec<TElement>(child)) {
-        const childRef = child.create();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+      const fn = child as Function & { status?: number };
 
-        // Append element if this is an ElementRef
+      // RefSpec - our primitive
+      if (fn.status === STATUS_REF_SPEC) {
+        const childRef = (child as import('../types').RefSpec<TElement>).create();
         if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
-
         return childRef;
       }
 
-      // The only other functions allowed are reactives
-      if (isReactive(child)) {
-        const textNode = renderer.createTextNode('');
-        // Auto-tracked in active scope
-        scopedEffect(() => {
-          const value = child();
-          // Convert to string, handling null/undefined and primitives only
-          const stringValue =
-            value == null ? '' : String(value as string | number | boolean);
-          renderer.updateTextNode(textNode, stringValue);
-        });
-
-        renderer.appendChild(element, textNode);
-        return null; // Text nodes don't participate in ref node chain
-      }
+      // Any other function - wrap in scopedEffect (auto-tracks if reactive)
+      const textNode = renderer.createTextNode('');
+      scopedEffect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-function-type, @typescript-eslint/no-unsafe-call
+        const value = (child as Function)();
+        const stringValue = value == null ? '' : String(value as string | number | boolean);
+        renderer.updateTextNode(textNode, stringValue);
+      });
+      renderer.appendChild(element, textNode);
+      return null;
     }
 
     // Fragment ref - return it for backward pass handling

@@ -100,6 +100,7 @@ const elFactory = createElFactory<HTMLElement, Text>({
   renderer,
   processChildren,
   createElementScope,
+  disposeScope,
   onCleanup,
 });
 

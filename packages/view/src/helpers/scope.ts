@@ -61,7 +61,9 @@ export function createScopes<TElement extends object>({
    * This implements a layered disposal strategy that integrates the reactive graph
    * (signals) with the view tree structure.
    */
-  const disposeScope = <TElement = object>(scope: RenderScope<TElement>): void => {
+  const disposeScope = <TElement = object>(
+    scope: RenderScope<TElement>
+  ): void => {
     // Already disposed (idempotent)
     if ((scope.status & STATE_MASK) === DISPOSED) return;
 
@@ -93,6 +95,9 @@ export function createScopes<TElement extends object>({
     // Clear references
     scope.firstChild = undefined;
     scope.firstDisposable = undefined;
+
+    // Remove from elementScopes map (centralized cleanup)
+    anyCtx.elementScopes.delete(scope.element as object);
   };
 
   /**
@@ -158,7 +163,9 @@ export function createScopes<TElement extends object>({
 
     // Attach to parent's child list
     if (parentScope) {
-      scope.nextSibling = parentScope.firstChild as RenderScope<TElem> | undefined;
+      scope.nextSibling = parentScope.firstChild as
+        | RenderScope<TElem>
+        | undefined;
       parentScope.firstChild = scope as RenderScope<object>;
     }
 
@@ -187,7 +194,7 @@ export function createScopes<TElement extends object>({
   /**
    * Create a scope-aware effect that automatically tracks itself in activeScope
    */
-  const scopedEffect = (fn: () => void | (() => void)): () => void => {
+  const scopedEffect = (fn: () => void | (() => void)): (() => void) => {
     // Create the underlying effect
     const dispose = baseEffect(fn);
 
@@ -198,7 +205,7 @@ export function createScopes<TElement extends object>({
     if (scope) scope.firstDisposable = { dispose, next: scope.firstDisposable };
 
     return dispose;
-  }
+  };
 
   /**
    * Register a cleanup function to run when the current scope is disposed.
@@ -210,7 +217,7 @@ export function createScopes<TElement extends object>({
 
     // Track cleanup directly in active scope
     scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
-  }
+  };
 
   return {
     disposeScope,
@@ -219,5 +226,3 @@ export function createScopes<TElement extends object>({
     onCleanup,
   };
 }
-
-

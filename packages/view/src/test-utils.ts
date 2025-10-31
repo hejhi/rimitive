@@ -160,6 +160,8 @@ export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
     return ref;
   }) as RefSpec<TElement>;
 
+  ref.status = 3; // STATUS_REF_SPEC
+
   // Factory method - for tests, return element wrapped in NodeRef with extensions
   ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
     // In tests, we create the element once and reuse it

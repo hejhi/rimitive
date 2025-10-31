@@ -182,6 +182,7 @@ describe('listener', () => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
+      ref.status = 3;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }
@@ -222,6 +223,7 @@ describe('listener', () => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
+      ref.status = 3;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }
@@ -257,6 +259,7 @@ describe('listener', () => {
         else cleanup2 = result;
         return ref;
       };
+      ref.status = 3;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }
@@ -297,6 +300,7 @@ describe('listener', () => {
         callback(el);
         return ref;
       };
+      ref.status = 3;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }

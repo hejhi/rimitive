@@ -9,6 +9,7 @@ import type { Readable, ScheduledNode } from '@lattice/signals/types';
  */
 export const STATUS_ELEMENT = 1;
 export const STATUS_FRAGMENT = 2;
+export const STATUS_REF_SPEC = 3;
 
 export interface BaseRef<TRef> {
   status: number;
@@ -61,30 +62,16 @@ export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is 
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  */
 export interface RefSpec<TElement> {
+  status: number;
   (lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement>; // Register lifecycle callback (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
   create<TExt = Record<string, unknown>>(extensions?: TExt): NodeRef<TElement> & TExt;
 }
 
 /**
- * Check if value is a ref spec
- */
-export function isRefSpec<TElement>(value: unknown): value is RefSpec<TElement> {
-  return typeof value === 'function' && 'create' in value;
-}
-
-/**
  * A reactive value that can be read as a signal or computed
  */
 export type Reactive<T = unknown> = Readable<T>;
-
-/**
- * Check if a value is reactive (signal or computed)
- */
-export function isReactive(value: unknown): value is Reactive {
-  return typeof value === 'function' &&
-    ('peek' in value || '__type' in value);
-}
 
 /**
  * Lifecycle callback for element connection/disconnection

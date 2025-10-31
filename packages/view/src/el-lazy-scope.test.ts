@@ -17,7 +17,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     fn();
     return () => {};
   });
-  const { createElementScope } = createTestScopes<MockElement>(ctx)
+  const { createElementScope, disposeScope } = createTestScopes<MockElement>(ctx)
 
   // Create scopedEffect using the custom effect
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -53,6 +53,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     handleChild,
     processChildren,
     createElementScope,
+    disposeScope,
     onCleanup
   };
 }
@@ -65,6 +66,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
     } = createTestEnv();
     const el = createElFactory({
@@ -73,6 +75,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
       }).method;
 
@@ -93,6 +96,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
@@ -105,6 +109,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
       }).method;
 
@@ -124,6 +129,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
@@ -136,6 +142,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
       }).method;
 
@@ -154,6 +161,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
     } = createTestEnv();
     const el = createElFactory({
@@ -162,6 +170,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
       }).method;
 
@@ -184,6 +193,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
     } = createTestEnv();
     const el = createElFactory({
@@ -192,6 +202,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
       }).method;
 
@@ -214,6 +225,7 @@ describe('el primitive - lazy scope creation', () => {
       scopedEffect,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
     } = createTestEnv();
     const el = createElFactory({
@@ -222,6 +234,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       processChildren,
       createElementScope,
+      disposeScope,
       onCleanup,
       }).method;
 
