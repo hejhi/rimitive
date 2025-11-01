@@ -153,13 +153,17 @@ export function createElFactory<
         }
 
         // Create new element from spec
-        const elementRef =
-          createStaticElement(newSpec).create<ElementRef<TElement>>();
+        const elementRef = createStaticElement(newSpec)
+          .create<ElementRef<TElement>>();
+
         fragRef.firstChild = elementRef;
 
         // Insert at correct position
-        const nextEl = nextSibling?.element ?? null;
-        renderer.insertBefore(parent.element, elementRef.element, nextEl);
+        renderer.insertBefore(
+          parent.element,
+          elementRef.element,
+          nextSibling?.element ?? null
+        );
 
         // Return cleanup - runs automatically before next effect execution
         return () => {
@@ -185,10 +189,7 @@ export function createElFactory<
     return createStaticElement(spec);
   }
 
-  return {
-    name: 'el',
-    method: el,
-  };
+  return { name: 'el', method: el };
 }
 
 /**
@@ -239,14 +240,17 @@ function createApplyProps<
   ): void => {
     for (const [key, val] of Object.entries(props)) {
       // Handle reactive values - cast to unknown first to avoid complex union
-      if (typeof val === 'function') {
-        // Auto-tracked in active scope
-        scopedEffect(() =>
-          renderer.setAttribute(element, key, (val as () => unknown)())
-        );
+      if (typeof val !== 'function') {
+        renderer.setAttribute(element, key, val);
         continue;
       }
-      renderer.setAttribute(element, key, val); // Static value
+
+      // Auto-tracked in active scope
+      scopedEffect(() => renderer.setAttribute(
+        element,
+        key,
+        (val as () => unknown)()
+      ));
     }
   };
 }
