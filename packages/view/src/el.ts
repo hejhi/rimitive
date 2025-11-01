@@ -229,16 +229,14 @@ function parseSpec<Tag extends keyof HTMLElementTagNameMap, TElement>(
 function createApplyProps<
   TElement extends RendererElement,
   TText extends TextNode
->(opts: {
+>({ scopedEffect, renderer }: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
 }) {
-  const { scopedEffect, renderer } = opts;
-
-  return function applyProps<Tag extends keyof HTMLElementTagNameMap>(
+  return <Tag extends keyof HTMLElementTagNameMap>(
     element: TElement,
     props: ElementProps<Tag>
-  ): void {
+  ): void => {
     for (const [key, val] of Object.entries(props)) {
       // Handle reactive values - cast to unknown first to avoid complex union
       if (typeof val === 'function') {
@@ -246,7 +244,9 @@ function createApplyProps<
         scopedEffect(() =>
           renderer.setAttribute(element, key, (val as () => unknown)())
         );
-      } else renderer.setAttribute(element, key, val); // Static value
+        continue;
+      }
+      renderer.setAttribute(element, key, val); // Static value
     }
   };
 }
