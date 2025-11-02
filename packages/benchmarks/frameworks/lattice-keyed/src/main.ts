@@ -288,24 +288,21 @@ const App = () => {
           el([
             'div',
             { className: 'row' },
-            Button('run', 'Create 1,000 rows')((btn) =>
-              on(btn, 'click', run)
-            ),
-            Button('runlots', 'Create 10,000 rows')((btn) =>
-              on(btn, 'click', runLots)
-            ),
-            Button('add', 'Append 1,000 rows')((btn) =>
-              on(btn, 'click', add)
-            ),
-            Button('update', 'Update every 10th row')((btn) =>
-              on(btn, 'click', update)
-            ),
-            Button('clear', 'Clear')((btn) =>
-              on(btn, 'click', clear)
-            ),
-            Button('swaprows', 'Swap Rows')((btn) =>
-              on(btn, 'click', swapRows)
-            ),
+            Button('run', 'Create 1,000 rows')((btn) => on(btn, 'click', run)),
+            Button(
+              'runlots',
+              'Create 10,000 rows'
+            )((btn) => on(btn, 'click', runLots)),
+            Button('add', 'Append 1,000 rows')((btn) => on(btn, 'click', add)),
+            Button(
+              'update',
+              'Update every 10th row'
+            )((btn) => on(btn, 'click', update)),
+            Button('clear', 'Clear')((btn) => on(btn, 'click', clear)),
+            Button(
+              'swaprows',
+              'Swap Rows'
+            )((btn) => on(btn, 'click', swapRows)),
           ]),
         ]),
       ]),
@@ -313,14 +310,7 @@ const App = () => {
     el([
       'table',
       { className: 'table table-hover table-striped test-data' },
-      el([
-        'tbody',
-        map<RowData>(
-          data,
-          (rowDataSignal) => Row(rowDataSignal),
-          (rowData) => rowData.id
-        ),
-      ]),
+      el(['tbody', map<RowData>(data, Row, (rowData) => rowData.id)]),
     ]),
     el([
       'span',
