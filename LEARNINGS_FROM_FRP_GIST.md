@@ -563,7 +563,20 @@ Curry `map()` as well:
 
 ```ts
 const itemDiv = el('div', { className: 'item' }) (
-  map(todos) ((todo) => itemDiv(todo.text))
+  map(todos, /** optional key fn */) ((todo) => itemDiv(todo.text))
 );
+```
 
+Curry `on()` as well, taking the element as the last child instead of the first:
+
+```ts
+const onClick = on<HTMLButtonElement>('click', (e) => ...)
+const itemDiv = el('div', { className: 'item' })()(onClick);
+
+// or a one-off, no explicit typing needed:
+const itemDiv = el('div', { className: 'item' })()(
+  on('click', (e) => ...),
+  // TODO: should el's lifecycle allow multiple params passed?
+  on('mouseover', (e) => ...)
+);
 ```

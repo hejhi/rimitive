@@ -48,10 +48,9 @@ export function createMapHelper<
 
   function map<T>(
     items: () => T[],
-    render: (itemSignal: Reactive<T>) => RefSpec<TElement>,
     keyFn?: (item: T) => string | number
-  ): FragmentRef<TElement> {
-    return createFragment((parent, nextSibling) => {
+  ): (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => FragmentRef<TElement> {
+    return (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => createFragment((parent, nextSibling) => {
       const parentEl = parent.element;
       const nextSib = nextSibling as RecNode<T, TElement> | null | undefined;
 
