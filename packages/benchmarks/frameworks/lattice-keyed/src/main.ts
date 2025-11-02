@@ -10,36 +10,12 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createScopes } from '@lattice/view/helpers/scope';
 import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createElFactory } from '@lattice/view/el';
-import type { ElementProps } from '@lattice/view/el';
 import { createMapHelper } from '@lattice/view/helpers/map';
 import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createOnFactory } from '@lattice/view/on';
 // All scope helpers consolidated in scope.ts
 import { ElRefSpecChild, type Reactive } from '@lattice/view/types';
-
-type ClassValue = string | Reactive<string> | null | undefined | false;
-
-function cn(...classes: ClassValue[]): string | Reactive<string> {
-  // Check if any are reactive (reactive values are functions)
-  const hasReactive = classes.some((c) => c && typeof c === 'function');
-
-  if (hasReactive) {
-    // Create a computed that evaluates all classes
-    return computed(() => {
-      return classes
-        .map((c) => {
-          if (!c) return '';
-          return typeof c === 'function' ? c() : c;
-        })
-        .filter(Boolean)
-        .join(' ');
-    });
-  }
-
-  // All static - just join
-  return classes.filter((c) => c && typeof c === 'string').join(' ');
-}
 
 // ============================================================================
 // Create Lattice API
@@ -209,17 +185,11 @@ function buildData(count: number): RowData[] {
 const data = signal<RowData[]>([]);
 const selected = signal<number | null>(null);
 
-const run = () => {
-  data(buildData(1000));
-};
+const run = () => data(buildData(1000));
 
-const runLots = () => {
-  data(buildData(10000));
-};
+const runLots = () => data(buildData(10000));
 
-const add = () => {
-  data(data().concat(buildData(1000)));
-};
+const add = () => data(data().concat(buildData(1000)));
 
 const update = () => {
   const d = data();
@@ -241,9 +211,7 @@ const swapRows = () => {
   }
 };
 
-const clear = () => {
-  data([]);
-};
+const clear = () => data([]);
 
 const remove = (id: number) => {
   const d = data();
@@ -260,32 +228,25 @@ const select = (id: number) => {
 // ============================================================================
 
 const Button = (
-  props: ElementProps<'button'> & { id: string },
-  children: ElRefSpecChild<HTMLElement>[] = []
+  id: string,
+  label: string
 ) =>
   el([
     'button',
     {
-      className: cn(
-        'btn',
-        'btn-primary',
-        'btn-block',
-        'col-sm-6',
-        'smallpad',
-        props.className
-      ),
+      className: 'btn btn-primary btn-block col-sm-6 smallpad',
       type: 'button',
-      ...props,
+      id
     },
-    ...children,
+    label,
   ]);
 
 const Row = (
-  props: { data: Reactive<RowData> },
+  data: Reactive<RowData>,
   children: ElRefSpecChild<HTMLElement>[] = []
 ) => {
-  const id = props.data().id;
-  const label = props.data().label;
+  const id = data().id;
+  const label = data().label;
   const rowClass = computed(() => (selected() === id ? 'danger' : ''));
 
   return el([
@@ -327,22 +288,22 @@ const App = () => {
           el([
             'div',
             { className: 'row' },
-            Button({ id: 'run' }, ['Create 1,000 rows'])((btn) =>
+            Button('run', 'Create 1,000 rows')((btn) =>
               on(btn, 'click', run)
             ),
-            Button({ id: 'runlots' }, ['Create 10,000 rows'])((btn) =>
+            Button('runlots', 'Create 10,000 rows')((btn) =>
               on(btn, 'click', runLots)
             ),
-            Button({ id: 'add' }, ['Append 1,000 rows'])((btn) =>
+            Button('add', 'Append 1,000 rows')((btn) =>
               on(btn, 'click', add)
             ),
-            Button({ id: 'update' }, ['Update every 10th row'])((btn) =>
+            Button('update', 'Update every 10th row')((btn) =>
               on(btn, 'click', update)
             ),
-            Button({ id: 'clear' }, ['Clear'])((btn) =>
+            Button('clear', 'Clear')((btn) =>
               on(btn, 'click', clear)
             ),
-            Button({ id: 'swaprows' }, ['Swap Rows'])((btn) =>
+            Button('swaprows', 'Swap Rows')((btn) =>
               on(btn, 'click', swapRows)
             ),
           ]),
@@ -356,7 +317,7 @@ const App = () => {
         'tbody',
         map<RowData>(
           data,
-          (rowDataSignal) => Row({ data: rowDataSignal }),
+          (rowDataSignal) => Row(rowDataSignal),
           (rowData) => rowData.id
         ),
       ]),
