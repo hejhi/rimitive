@@ -114,3 +114,41 @@ export function lazy<TElement>(
     return cached(element);
   };
 }
+
+/**
+ * Curry combinator - creates functions that can be partially applied
+ *
+ * @example
+ * // Event listener that can be curried
+ * const on = curry((event: string, handler: Function, el: HTMLElement) => {
+ *   el.addEventListener(event, handler);
+ *   return () => el.removeEventListener(event, handler);
+ * });
+ *
+ * @example
+ * // Map helper with currying
+ * const map = curry((items: T[], render: Function, keyFn: Function) => {
+ *   // ... implementation
+ * });
+ */
+export function curry<TFn extends (...args: never[]) => unknown>(
+  fn: TFn,
+  arity?: number
+): (...args: unknown[]) => unknown {
+  const fnArity = arity ?? fn.length;
+  const oneLeft = fnArity - 1;
+
+  return function curried(...args: unknown[]): unknown {
+    const aLen = args.length;
+
+    // All arguments provided - direct call
+    if (aLen >= fnArity) return fn(...(args as Parameters<TFn>));
+
+    // One argument short - return function waiting for last arg
+    if (aLen === oneLeft)
+      return (last: unknown) => fn(...([...args, last] as Parameters<TFn>));
+
+    // Multiple arguments missing - return curried function
+    return (...nextArgs: unknown[]) => curried(...args, ...nextArgs);
+  };
+}

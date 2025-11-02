@@ -310,7 +310,7 @@ const App = () => {
     el([
       'table',
       { className: 'table table-hover table-striped test-data' },
-      el(['tbody', map<RowData>(data, Row, (rowData) => rowData.id)]),
+      el(['tbody', map(data, Row, (rowData) => rowData.id)]),
     ]),
     el([
       'span',

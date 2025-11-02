@@ -65,7 +65,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const ref = el(['div', { className: 'container' }, 'Hello ', 'World']);
+      const ref = el('div', { className: 'container' })('Hello ', 'World');
 
       // User cares: content is rendered
       const element = asElement(ref.create()) as unknown as MockElement;
@@ -93,8 +93,8 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const child = el(['span', 'nested content']) as unknown as RefSpec<MockElement>;
-      const parent = el(['div', child]); // Pass blueprint - will be instantiated
+      const child = el('span')('nested content') as unknown as RefSpec<MockElement>;
+      const parent = el('div')(child); // Pass blueprint - will be instantiated
 
       // Create parent instance (which instantiates child)
       const parentElement = asElement(parent.create()) as unknown as MockElement;
@@ -132,7 +132,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const ref = el(['div', text]);
+      const ref = el('div')(text);
 
       // User cares: initial content is displayed
       const element = asElement(ref.create()) as unknown as MockElement;
@@ -168,7 +168,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const ref = el(['div', { className }]);
+      const ref = el('div', { className })();
 
       // User cares: initial prop value is set
       const element = asElement(ref.create()) as unknown as MockElement;
@@ -204,7 +204,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const ref = el(['div', 'Count: ', count]);
+      const ref = el('div')('Count: ', count);
 
       // User cares: content combines static and reactive parts
       const element = asElement(ref.create()) as unknown as MockElement;
@@ -240,7 +240,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const ref = el(['div', text]);
+      const ref = el('div')(text);
       const element = asElement(ref.create()) as unknown as MockElement;
 
       // Verify initial subscription
@@ -278,10 +278,7 @@ describe('el primitive', () => {
       }).method;
 
       const cleanup = vi.fn();
-      const ref = el(['div']);
-
-      // Register lifecycle callback that returns cleanup
-      ref(() => cleanup);
+      const ref = el('div')()(() => cleanup);
 
       // Create instance - lifecycle callback runs immediately
       const element = asElement(ref.create()) as unknown as MockElement;
@@ -311,7 +308,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const reactiveSpec = signal<['div', string] | null>(['div', 'Hello']);
+      const reactiveSpec = signal<{ tag: 'div'; children: string[] } | null>({ tag: 'div', children: ['Hello'] });
       const fragmentRef = el(reactiveSpec);
 
       expect(fragmentRef.status).toBe(2); // STATUS_FRAGMENT
@@ -342,7 +339,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const spec = signal<['div', string] | null>(['div', 'Hello']);
+      const spec = signal<{ tag: 'div'; children: string[] } | null>({ tag: 'div', children: ['Hello'] });
 
       const fragmentRef = el(spec);
       const parent = renderer.createElement('div');
@@ -368,7 +365,7 @@ describe('el primitive', () => {
       expect(parent.children).not.toContain(firstElement);
 
       // Toggle back to element
-      spec(['div', 'World']);
+      spec({ tag: 'div', children: ['World'] });
 
       // Should have new element
       expect(fragmentRef.firstChild).toBeDefined();
@@ -393,7 +390,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const spec = signal<['div', string] | ['span', string]>(['div', 'Hello']);
+      const spec = signal<{ tag: 'div' | 'span'; children: string[] }>({ tag: 'div', children: ['Hello'] });
 
       const fragmentRef = el(spec);
       const parent = renderer.createElement('div');
@@ -408,7 +405,7 @@ describe('el primitive', () => {
       const divElement = divChild.element;
 
       // Swap to span
-      spec(['span', 'World']);
+      spec({ tag: 'span', children: ['World'] });
 
       // Should now be span
       expect(fragmentRef.firstChild).toBeDefined();
@@ -436,7 +433,7 @@ describe('el primitive', () => {
 
       // Create a spec with reactive content to ensure scope is created
       const text = signal('Hello');
-      const spec = signal<['div', typeof text] | null>(['div', text]);
+      const spec = signal<{ tag: 'div'; children: (typeof text)[] } | null>({ tag: 'div', children: [text] });
 
       const fragmentRef = el(spec);
       const parent = renderer.createElement('div');
@@ -473,7 +470,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const spec = signal<['div', string] | null>(null);
+      const spec = signal<{ tag: 'div'; children: string[] } | null>(null);
 
       const fragmentRef = el(spec);
       const parent = renderer.createElement('div');
@@ -486,7 +483,7 @@ describe('el primitive', () => {
       expect(parent.children.length).toBe(0);
 
       // Toggle to element
-      spec(['div', 'Hello']);
+      spec({ tag: 'div', children: ['Hello'] });
 
       // Should now have element
       expect(fragmentRef.firstChild).toBeDefined();
@@ -505,7 +502,7 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const spec = signal<['span', string] | null>(['span', 'Middle']);
+      const spec = signal<{ tag: 'span'; children: string[] } | null>({ tag: 'span', children: ['Middle'] });
 
       const fragmentRef = el(spec);
       const parent = renderer.createElement('div');
@@ -538,7 +535,7 @@ describe('el primitive', () => {
       expect(parent.children).toEqual([before, after]);
 
       // Toggle back
-      spec(['span', 'Middle Again']);
+      spec({ tag: 'span', children: ['Middle Again'] });
       expect(fragmentRef.firstChild).toBeDefined();
       const newMiddle = (fragmentRef.firstChild as ElementRef<MockElement>).element;
 

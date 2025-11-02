@@ -51,14 +51,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 4, name: 'D' },
     ]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -95,14 +94,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 5, name: 'E' },
     ]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -142,14 +140,13 @@ describe('List reconciliation - Complex reorderings', () => {
     // Initial: [1, 2, 3, 4, 5]
     const items = signal([1, 2, 3, 4, 5]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())]) as unknown as RefSpec<MockElement>,
+        (numSignal) => el.method('li')(String(numSignal())) as unknown as RefSpec<MockElement>,
         num => num  // Key function (number itself)
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -184,14 +181,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -226,14 +222,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -266,14 +261,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -303,14 +297,13 @@ describe('List reconciliation - Complex reorderings', () => {
     // Initial: [1, 2, 3, 4, 5, 6]
     const items = signal([1, 2, 3, 4, 5, 6]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())]) as unknown as RefSpec<MockElement>,
+        (numSignal) => el.method('li')(String(numSignal())) as unknown as RefSpec<MockElement>,
         num => num  // Key function (number itself)
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -341,14 +334,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 6, name: 'F' },
     ]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -380,14 +372,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -421,14 +412,13 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const items = signal([1, 2, 3, 4]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())]) as unknown as RefSpec<MockElement>,
+        (numSignal) => el.method('li')(String(numSignal())) as unknown as RefSpec<MockElement>,
         num => num  // Key function (number itself)
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 
@@ -480,14 +470,13 @@ describe('List reconciliation - Edge cases', () => {
 
     const items = signal([{ id: 1, name: 'A' }]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+        (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
         item => item.id  // Key function
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
     const elem = ul.children[0];
@@ -504,14 +493,13 @@ describe('List reconciliation - Edge cases', () => {
 
     const items = signal([1, 2, 3, 4, 5]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())]) as unknown as RefSpec<MockElement>,
+        (numSignal) => el.method('li')(String(numSignal())) as unknown as RefSpec<MockElement>,
         num => num  // Key function (number itself)
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
     const elements = [
@@ -538,14 +526,13 @@ describe('List reconciliation - Edge cases', () => {
 
     const items = signal([1, 2, 3, 4]);
 
-    const list = el.method([
-      'ul',
+    const list = el.method('ul')(
       map(
         () => items(),
-        (numSignal) => el.method(['li', String(numSignal())]) as unknown as RefSpec<MockElement>,
+        (numSignal) => el.method('li')(String(numSignal())) as unknown as RefSpec<MockElement>,
         num => num  // Key function (number itself)
-      ),
-    ]);
+      )
+    );
 
     const ul = list.create().element as unknown as MockElement;
 

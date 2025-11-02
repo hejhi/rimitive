@@ -52,14 +52,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Cherry' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -74,14 +73,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(0);
@@ -92,14 +90,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'Only' }]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(1);
@@ -116,14 +113,13 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
@@ -143,14 +139,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
@@ -172,14 +167,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
@@ -199,14 +193,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'First' }]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(1);
@@ -231,14 +224,13 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(0);
@@ -265,14 +257,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(3);
@@ -294,14 +285,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(3);
@@ -323,14 +313,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(3);
@@ -355,14 +344,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'Fifth' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(5);
@@ -384,14 +372,13 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(2);
@@ -413,14 +400,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -442,14 +428,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -474,14 +459,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -507,14 +491,13 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -540,14 +523,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -575,14 +557,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -611,14 +592,13 @@ describe('map() - User-facing behavior', () => {
         { id: 6, name: 'F' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -649,14 +629,13 @@ describe('map() - User-facing behavior', () => {
         { id: 7, name: 'G' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -688,14 +667,13 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -725,14 +703,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -757,14 +734,13 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -794,14 +770,13 @@ describe('map() - User-facing behavior', () => {
         Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `Item ${i}` }))
       );
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
       expect(ul.children.length).toBe(100);
@@ -822,14 +797,13 @@ describe('map() - User-facing behavior', () => {
         Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `Item ${i}` }))
       );
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -853,18 +827,17 @@ describe('map() - User-facing behavior', () => {
       type Mode = 'loading' | 'error' | 'success';
       const mode = signal<Mode>('loading');
 
-      const view = el.method([
-        'div',
+      const view = el.method('div')(
         map(
           () => [mode()],
           (modeSignal) => {
             const m = modeSignal();
-            if (m === 'loading') return el.method(['div', 'Loading...']) as unknown as RefSpec<MockElement>;
-            if (m === 'error') return el.method(['div', 'Error occurred']) as unknown as RefSpec<MockElement>;
-            return el.method(['div', 'Success!']) as unknown as RefSpec<MockElement>;
+            if (m === 'loading') return el.method('div')('Loading...') as unknown as RefSpec<MockElement>;
+            if (m === 'error') return el.method('div')('Error occurred') as unknown as RefSpec<MockElement>;
+            return el.method('div')('Success!') as unknown as RefSpec<MockElement>;
           }
-        ),
-      ]);
+        )
+      );
 
       const div = view.create().element as unknown as MockElement;
 
@@ -895,14 +868,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -933,14 +905,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -969,14 +940,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -1007,14 +977,13 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -1044,14 +1013,13 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
-          (itemSignal) => el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>,
+          (itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -1082,18 +1050,17 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
           (itemSignal) =>
-            el.method(['li', itemSignal().name])((element) => {
+            el.method('li')(itemSignal().name)(((element) => {
               // Simulate attaching custom state during lifecycle
               (element as unknown as MockElement).__customState = `state-${itemSignal().id}`;
-            }) as unknown as RefSpec<MockElement>,
+            })) as unknown as RefSpec<MockElement>,
           item => item.id  // Key function
-        ),
-      ]);
+        )
+      );
 
       const ul = list.create().element as unknown as MockElement;
 
@@ -1121,20 +1088,18 @@ describe('map() - User-facing behavior', () => {
 
       // Nested map: outer creates div, inner creates span
       // Signal passed to inner element (not called) for reactivity
-      const view = el.method([
-        'div',
+      const view = el.method('div')(
         map(
           () => [{ id: 1 }],
           () =>
-            el.method([
-              'div',
+            el.method('div')(
               map(
                 () => [{ id: 1 }],
-                () => el.method(['span', displayValue]) as unknown as RefSpec<MockElement>
-              ),
-            ]) as unknown as RefSpec<MockElement>
-        ),
-      ]);
+                () => el.method('span')(displayValue) as unknown as RefSpec<MockElement>
+              )
+            ) as unknown as RefSpec<MockElement>
+        )
+      );
 
       const root = view.create().element as unknown as MockElement;
       const innerDiv = root.children[0] as MockElement;
@@ -1156,27 +1121,24 @@ describe('map() - User-facing behavior', () => {
       const value = signal('initial');
 
       // Triple nested map to test deep nesting
-      const view = el.method([
-        'div',
+      const view = el.method('div')(
         map(
           () => [{ id: 1 }],
           () =>
-            el.method([
-              'section',
+            el.method('section')(
               map(
                 () => [{ id: 1 }],
                 () =>
-                  el.method([
-                    'article',
+                  el.method('article')(
                     map(
                       () => [{ id: 1 }],
-                      () => el.method(['span', value]) as unknown as RefSpec<MockElement>
-                    ),
-                  ]) as unknown as RefSpec<MockElement>
-              ),
-            ]) as unknown as RefSpec<MockElement>
-        ),
-      ]);
+                      () => el.method('span')(value) as unknown as RefSpec<MockElement>
+                    )
+                  ) as unknown as RefSpec<MockElement>
+              )
+            ) as unknown as RefSpec<MockElement>
+        )
+      );
 
       const root = view.create().element as unknown as MockElement;
       const section = root.children[0] as MockElement;
@@ -1201,8 +1163,7 @@ describe('map() - User-facing behavior', () => {
       let renderCount = 0;
 
       // Create list where render() accidentally reads outerState
-      const list = el.method([
-        'ul',
+      const list = el.method('ul')(
         map(
           () => items(),
           (itemSignal) => {
@@ -1210,11 +1171,11 @@ describe('map() - User-facing behavior', () => {
             // This read should NOT become a dependency of map's effect
             // because render() is called untracked
             outerState(); // Read but don't track
-            return el.method(['li', itemSignal().name]) as unknown as RefSpec<MockElement>;
+            return el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>;
           },
           item => item.id
-        ),
-      ]);
+        )
+      );
 
       list.create();
       expect(renderCount).toBe(1);  // Initial render

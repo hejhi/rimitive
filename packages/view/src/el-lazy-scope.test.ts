@@ -81,7 +81,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Static element - no reactive content, no lifecycle callbacks
     // Note: withScope only registers scopes if they have disposables (performance optimization)
-    const ref = el(['div', { className: 'static' }, 'Hello']);
+    const ref = el('div', { className: 'static' })('Hello');
     const element = asElement(ref.create()) as unknown as MockElement;
 
     // No scope registered for static elements (no disposables)
@@ -114,7 +114,7 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Element with reactive prop
-    const ref = el(['div', { title: text }]);
+    const ref = el('div', { title: text })();
     const element = asElement(ref.create()) as unknown as MockElement;
 
     // Should have a scope (tracks the effect for reactive title)
@@ -147,7 +147,7 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Element with reactive text child
-    const ref = el(['div', text]);
+    const ref = el('div')(text);
     const element = asElement(ref.create()) as unknown as MockElement;
 
     // Should have a scope (tracks the effect for reactive text)
@@ -175,8 +175,7 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Static element with lifecycle callback that returns cleanup
-    const ref = el(['div', 'Static content']);
-    ref(() => () => {
+    const ref = el('div')('Static content')(() => () => {
       // cleanup function
     });
 
@@ -207,8 +206,7 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Static element with lifecycle callback that returns nothing
-    const ref = el(['div', 'Static content']);
-    ref(() => {
+    const ref = el('div')('Static content')(() => {
       // no cleanup
     });
 
@@ -239,8 +237,8 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Nested static elements
-    const child = el(['span', 'Child']) as unknown as RefSpec<MockElement>;
-    const parent = el(['div', child, 'Parent']);
+    const child = el('span')('Child') as unknown as RefSpec<MockElement>;
+    const parent = el('div')(child, 'Parent');
 
     const parentElement = asElement(parent.create()) as unknown as MockElement;
     const childElement = parentElement.children[0] as MockElement;
