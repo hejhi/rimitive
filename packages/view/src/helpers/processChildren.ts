@@ -6,7 +6,7 @@
  * 2. Backward pass: Attach fragments with correct insertion points
  */
 
-import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef } from '../types';
+import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec } from '../types';
 import { isElementRef, isFragmentRef, STATUS_REF_SPEC } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
@@ -40,7 +40,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
       // RefSpec - our primitive
       if (fn.status === STATUS_REF_SPEC) {
-        const childRef = (child as import('../types').RefSpec<TElement>).create();
+        const childRef = (child as RefSpec<TElement>).create();
         if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
         return childRef;
       }

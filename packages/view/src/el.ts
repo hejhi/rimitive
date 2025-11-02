@@ -135,8 +135,8 @@ export function createElFactory<
   ): RefSpec<El> => {
     const lifecycleCallbacks: LifecycleCallback<El>[] = [];
 
-    const refSpec: RefSpec<El> = (callback: LifecycleCallback<El>) => {
-      lifecycleCallbacks.push(callback);
+    const refSpec: RefSpec<El> = (...callbacks: LifecycleCallback<El>[]) => {
+      lifecycleCallbacks.push(...callbacks);
       return refSpec;
     };
 

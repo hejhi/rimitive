@@ -11,7 +11,7 @@ describe('on', () => {
     const element = document.createElement('button');
     const handler = vi.fn();
 
-    const unsub = on(element, 'click', handler);
+    const unsub = on('click', handler)(element);
 
     element.click();
     expect(handler).toHaveBeenCalledTimes(1);
@@ -30,7 +30,7 @@ describe('on', () => {
     const input = document.createElement('input');
     const handler = vi.fn();
 
-    on(input, 'input', handler);
+    on('input', handler)(input);
 
     const event = new Event('input');
     input.dispatchEvent(event);
@@ -45,7 +45,7 @@ describe('on', () => {
     const element = document.createElement('div');
     const handler = vi.fn();
 
-    const unsub = on(element, 'click', handler, { once: true });
+    const unsub = on('click', handler, { once: true })(element);
 
     element.click();
     expect(handler).toHaveBeenCalledTimes(1);
@@ -64,8 +64,8 @@ describe('on', () => {
     const handler1 = vi.fn();
     const handler2 = vi.fn();
 
-    const unsub1 = on(element, 'click', handler1);
-    const unsub2 = on(element, 'click', handler2);
+    const unsub1 = on('click', handler1)(element);
+    const unsub2 = on('click', handler2)(element);
 
     element.click();
     expect(handler1).toHaveBeenCalledTimes(1);
@@ -86,7 +86,7 @@ describe('on', () => {
     const element = document.createElement('button');
     const handler = vi.fn();
 
-    const unsub = on(element, 'click', handler);
+    const unsub = on('click', handler)(element);
 
     unsub();
     unsub(); // Should not throw
@@ -107,7 +107,7 @@ describe('on', () => {
       batchDepthDuringHandler = scheduler.batchDepth;
     };
 
-    on(element, 'click', handler);
+    on('click', handler)(element);
 
     expect(scheduler.batchDepth).toBe(0); // Before click
 
@@ -126,7 +126,7 @@ describe('on', () => {
       throw new Error('Handler error');
     };
 
-    on(element, 'click', handler);
+    on('click', handler)(element);
 
     expect(scheduler.batchDepth).toBe(0);
 
@@ -155,8 +155,8 @@ describe('on', () => {
       handler2BatchDepth = scheduler.batchDepth;
     };
 
-    on(button1, 'click', handler1);
-    on(button2, 'click', handler2);
+    on('click', handler1)(button1);
+    on('click', handler2)(button2);
 
     button1.dispatchEvent(new Event('click', { bubbles: false }));
 

@@ -63,7 +63,7 @@ export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is 
  */
 export interface RefSpec<TElement> {
   status: number;
-  (lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement>; // Register lifecycle callback (chainable)
+  (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
   create<TExt = Record<string, unknown>>(extensions?: TExt): NodeRef<TElement> & TExt;
 }

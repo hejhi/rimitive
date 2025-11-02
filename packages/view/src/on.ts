@@ -19,16 +19,17 @@ export type OnOpts = {
 };
 
 /**
- * Factory return type for on function
+ * Factory return type for on function - curried version
+ * First call: on(event, handler, options?) returns a lifecycle callback
+ * The lifecycle callback accepts an element and returns cleanup
  */
 export type OnFactory = LatticeExtension<
   'on',
   <K extends keyof HTMLElementEventMap>(
-    element: HTMLElement,
     event: K,
     handler: (event: HTMLElementEventMap[K]) => void,
     options?: boolean | AddEventListenerOptions
-  ) => () => void
+  ) => (element: HTMLElement) => () => void
 >;
 
 /**
@@ -80,20 +81,20 @@ export function withBatch<TArgs extends unknown[], TReturn>(
  */
 export function createOnFactory({ startBatch, endBatch }: OnOpts): OnFactory {
   /**
-   * Attach an event listener to an element with automatic type inference and batching
-   * Returns unsubscribe function to remove the listener
+   * Curried event listener attachment with automatic batching
    */
   function on<K extends keyof HTMLElementEventMap>(
-    element: HTMLElement,
     event: K,
     handler: (event: HTMLElementEventMap[K]) => void,
     options?: boolean | AddEventListenerOptions
-  ): () => void {
-    // Wrap handler with batching for automatic performance optimization
-    const batchedHandler = withBatch({ startBatch, endBatch }, handler);
+  ): (element: HTMLElement) => () => void {
+    return (element: HTMLElement) => {
+      // Wrap handler with batching for automatic performance optimization
+      const batchedHandler = withBatch({ startBatch, endBatch }, handler);
 
-    element.addEventListener(event, batchedHandler as EventListener, options);
-    return () => element.removeEventListener(event, batchedHandler as EventListener, options);
+      element.addEventListener(event, batchedHandler as EventListener, options);
+      return () => element.removeEventListener(event, batchedHandler as EventListener, options);
+    };
   }
 
   return {
@@ -119,33 +120,9 @@ export type ListenerFactory = LatticeExtension<
 
 /**
  * Create the listener helper factory
- *
- * @example
- * ```ts
- * const listenerFactory = createListenerFactory({ startBatch, endBatch });
- * const listener = listenerFactory.method;
- *
- * const input = listener(
- *   el(['input', { type: 'text' }]),
- *   (on) => {
- *     on('input', (e) => {
- *       inputValue((e.target as HTMLInputElement).value);
- *     });
- *     on('keydown', (e) => {
- *       if (e.key === 'Enter') handleSubmit();
- *     });
- *   }
- * );
- * // Can still add more lifecycle callbacks:
- * input((el) => console.log('connected!'));
- * ```
+
  */
 export function createListenerFactory({ startBatch, endBatch }: OnOpts): ListenerFactory {
-  /**
-   * Helper to attach multiple event listeners with a single cleanup
-   * Provides an `on` function scoped to the element with automatic batching
-   * Returns the RefSpec to allow chaining lifecycle callbacks
-   */
   function listener<TElement extends HTMLElement>(
     elementRef: RefSpec<TElement>,
     setup: (on: <K extends keyof HTMLElementEventMap>(
