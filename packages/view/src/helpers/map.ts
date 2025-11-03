@@ -145,5 +145,5 @@ export function createMapHelper<
     });
   }
 
-  return { name: 'map', method: map } as MapFactory<TElement>;
+  return { name: 'map', method: map };
 }
