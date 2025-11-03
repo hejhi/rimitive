@@ -39,7 +39,7 @@ describe('reconcileWithKeys', () => {
           next: undefined,
         } as ElementRef<MockElement> & ReconcileNode;
       },
-      onUpdate: (_key: string, item: Item, node) => {
+      onUpdate: (item: Item, node) => {
         // Update text content if needed
         const li = (node as ElementRef<MockElement>).element;
         if (li.children[0]) {
@@ -51,7 +51,7 @@ describe('reconcileWithKeys', () => {
         const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
         env.renderer.insertBefore(parent, li, nextEl);
       },
-      onRemove: (_key: string, node) => {
+      onRemove: (node) => {
         const li = (node as ElementRef<MockElement>).element;
         const scope = env.ctx.elementScopes.get(li);
         if (scope) {
@@ -669,7 +669,7 @@ describe('reconcileWithKeys', () => {
           const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
           env.renderer.insertBefore(parent, li, nextEl);
         },
-        onRemove: (_key: string, node) => {
+        onRemove: (node) => {
           const li = (node as ElementRef<MockElement>).element;
           env.renderer.removeChild(parent, li);
         },

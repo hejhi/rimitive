@@ -21,7 +21,7 @@ import type { RefSpec, LifecycleCallback } from './types';
  * pipe(identity, onClick(handler)) // Same as just onClick(handler)
  */
 export const identity = <TElement>(): LifecycleCallback<TElement> =>
-  (_element: TElement) => {};
+  () => {};
 
 /**
  * Sequential composition: seq(f, g)(x) = compose(f(x), g(x))

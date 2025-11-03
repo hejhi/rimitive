@@ -30,7 +30,7 @@ describe('map() - User-facing behavior', () => {
       onCleanup: env.onCleanup,
     });
 
-    const map = createMapHelper({
+    const mapFactory = createMapHelper({
       ctx: env.ctx,
       signalCtx: env.signalCtx,
       signal: env.signal,
@@ -39,7 +39,7 @@ describe('map() - User-facing behavior', () => {
       disposeScope: env.disposeScope,
     });
 
-    return { ...env, el, map };
+    return { ...env, el, map: mapFactory.method };
   }
 
   describe('Initial rendering', () => {

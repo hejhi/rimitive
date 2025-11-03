@@ -15,31 +15,27 @@ export function Counter(api: LatticeViewAPI, initialCount = 0) {
   const counter = createCounter(api, initialCount);
 
   // Create buttons with event listeners
-  const decrementBtn = el(['button', '- Decrement'])((btn) => {
-    return api.on(btn, 'click', () => counter.decrement());
-  });
+  const decrementBtn = el('button')('- Decrement')(
+    api.on('click', () => counter.decrement())
+  );
 
-  const incrementBtn = el(['button', '+ Increment'])((btn) => {
-    return api.on(btn, 'click', () => counter.increment());
-  });
+  const incrementBtn = el('button')('+ Increment')(
+    api.on('click', () => counter.increment())
+  );
 
-  const resetBtn = el(['button', 'Reset'])((btn) => {
-    return api.on(btn, 'click', () => counter.reset());
-  });
+  const resetBtn = el('button')('Reset')(
+    api.on('click', () => counter.reset())
+  );
 
   // Create UI using el() primitive
-  return el([
-    'div',
-    { className: 'example' },
-    el(['h2', 'Counter Example']),
-    el(['p', 'Demonstrates reactive text updates and event handlers.']),
-    el([
-      'div',
-      { className: 'counter-display' },
+  return el('div', { className: 'example' })(
+    el('h2')('Counter Example')(),
+    el('p')('Demonstrates reactive text updates and event handlers.')(),
+    el('div', { className: 'counter-display' })(
       api.computed(
         () => `Count: ${counter.count()} (doubled: ${counter.doubled()})`
-      ),
-    ]),
-    el(['div', decrementBtn, incrementBtn, resetBtn]),
-  ]);
+      )
+    )(),
+    el('div')(decrementBtn, incrementBtn, resetBtn)()
+  )();
 }

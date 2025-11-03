@@ -15,6 +15,13 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
   renderer: Renderer<TElement, TText>;
 }) {
   const { scopedEffect, renderer } = opts;
+  const createTextEffect =
+    (child: () => string | number, text: TText) =>
+    () => {
+      const value = child();
+      const stringValue = value == null ? '' : String(value);
+      renderer.updateTextNode(text, stringValue);
+    };
 
   const handleChild = (
     parentRef: ElementRef<TElement>,
@@ -24,8 +31,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
     const childType = typeof child;
 
     // Skip null/undefined/false
-    if (child == null || child === false || childType === 'boolean')
-      return null;
+    if (child == null || childType === 'boolean') return null;
 
     // Static primitive (string, number)
     if (childType === 'string' || childType === 'number') {
@@ -35,32 +41,28 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
     }
 
     if (childType === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-      const fn = child as Function & { status?: number };
+      const fn = child as RefSpec<TElement>;
 
       // RefSpec - our primitive
       if (fn.status === STATUS_REF_SPEC) {
-        const childRef = (child as RefSpec<TElement>).create();
+        const childRef = fn.create();
         if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
         return childRef;
       }
 
       // Any other function - wrap in scopedEffect (auto-tracks if reactive)
       const textNode = renderer.createTextNode('');
-      scopedEffect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-function-type, @typescript-eslint/no-unsafe-call
-        const value = (child as Function)();
-        const stringValue = value == null ? '' : String(value as string | number | boolean);
-        renderer.updateTextNode(textNode, stringValue);
-      });
+      scopedEffect(createTextEffect(child as () => string, textNode));
       renderer.appendChild(element, textNode);
       return null;
     }
 
     // Fragment ref - return it for backward pass handling
-    if (childType === 'object' && child !== null && isFragmentRef<TElement>(child as NodeRef<TElement>)) {
-      return child as FragmentRef<TElement>;
-    }
+    if (
+      childType === 'object' &&
+      child !== null &&
+      isFragmentRef<TElement>(child as NodeRef<TElement>)
+    ) return child as FragmentRef<TElement>;
 
     return null; // Default case
   }
@@ -81,9 +83,8 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
       childNodes.set(i, refNode);
 
-      if (lastChildRef) {
-        lastChildRef.next = refNode;
-      }
+      if (lastChildRef) lastChildRef.next = refNode;
+
       lastChildRef = refNode;
     }
 
@@ -94,14 +95,10 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       const nodeRef = childNodes.get(i);
 
       // Fragment ref - call attach with parent and nextSibling
-      if (nodeRef && isFragmentRef(nodeRef)) {
-        nodeRef.attach(parent, nextRef);
-      }
+      if (nodeRef && isFragmentRef(nodeRef)) nodeRef.attach(parent, nextRef);
 
       // Update insertion point for next fragment
-      if (nodeRef && isElementRef(nodeRef)) {
-        nextRef = nodeRef;
-      }
+      if (nodeRef && isElementRef(nodeRef)) { nextRef = nodeRef };
     }
   };
 

@@ -94,25 +94,6 @@ export type ElFactory<TElement extends RendererElement> = LatticeExtension<
 >;
 
 /**
- * Apply props to element (with reactivity)
- */
-function applyProps<TElement extends RendererElement, Tag extends keyof HTMLElementTagNameMap>(
-  element: TElement,
-  props: ElementProps<Tag>,
-  scopedEffect: (fn: () => void | (() => void)) => () => void,
-  renderer: Renderer<TElement, any>
-): void {
-  for (const [key, val] of Object.entries(props)) {
-    if (typeof val !== 'function') {
-      renderer.setAttribute(element, key, val);
-      continue;
-    }
-
-    scopedEffect(() => renderer.setAttribute(element, key, (val as () => unknown)()));
-  }
-}
-
-/**
  * Create the el primitive factory
  */
 export function createElFactory<
@@ -150,6 +131,12 @@ export function createElFactory<
     return refSpec;
   };
 
+  const createAttrEffect = <TEl extends TElement>(
+    element: TEl,
+    key: string,
+    getter: () => unknown
+  ) => () => renderer.setAttribute(element, key, getter());
+
   const createStaticElement = <Tag extends keyof HTMLElementTagNameMap>(
     tag: Tag,
     props: ElementProps<Tag>,
@@ -166,7 +153,19 @@ export function createElFactory<
       };
 
       createElementScope(element, () => {
-        applyProps(element as unknown as TElement, props, scopedEffect, renderer);
+        for (const [key, val] of Object.entries(props)) {
+          if (typeof val !== 'function') {
+            renderer.setAttribute(element as unknown as TElement, key, val);
+            continue;
+          }
+          scopedEffect(
+            createAttrEffect(
+              element as unknown as TElement,
+              key,
+              val as () => unknown
+            )
+          );
+        }
         processChildren(elRef as unknown as ElementRef<TElement>, children);
 
         // Execute lifecycle callbacks within scope
@@ -233,12 +232,16 @@ export function createElFactory<
   ): ChildrenApplicator<Tag, TElement> | FragmentRef<TElement> {
     // Handle reactive case
     if (typeof tagOrReactive === 'function') {
-      return createReactiveElement(tagOrReactive as Reactive<ReactiveElSpec<Tag, TElement>>);
+      return createReactiveElement(tagOrReactive);
     }
 
     // Return children applicator which returns RefSpec directly
     return (...children: ElRefSpecChild<TElement>[]) => {
-      return createStaticElement(tagOrReactive, props ?? {} as ElementProps<Tag>, children);
+      return createStaticElement(
+        tagOrReactive,
+        props ?? ({} as ElementProps<Tag>),
+        children
+      );
     };
   }
 

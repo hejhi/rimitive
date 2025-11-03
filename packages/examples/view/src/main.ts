@@ -26,7 +26,6 @@ import { createOnFactory } from '@lattice/view/on';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
-import type { MapFactory } from './types';
 
 // ============================================================================
 // Create Lattice API with Signals + View
@@ -104,7 +103,7 @@ const elFactory = createElFactory<HTMLElement, Text>({
   onCleanup,
 });
 
-const mapHelper = createMapHelper<HTMLElement, Text>({
+const mapFactory = createMapHelper<HTMLElement, Text>({
   ctx,
   signalCtx: latticeCtx,
   signal: signalFactory.method,
@@ -117,12 +116,6 @@ const onFactory = createOnFactory({
   startBatch: () => 0, // No-op for simple example
   endBatch: () => 0,
 });
-
-// Create a factory wrapper for map
-const mapFactory: MapFactory = {
-  name: 'map',
-  method: mapHelper,
-};
 
 // Create the combined API
 const api = createApi(

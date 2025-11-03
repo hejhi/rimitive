@@ -29,7 +29,7 @@ describe('List reconciliation - Complex reorderings', () => {
       onCleanup: env.onCleanup,
     });
 
-    const map = createMapHelper({
+    const mapFactory = createMapHelper({
       ctx: env.ctx,
       signalCtx: env.signalCtx,
       signal: env.signal,
@@ -38,7 +38,7 @@ describe('List reconciliation - Complex reorderings', () => {
       disposeScope: env.disposeScope,
     });
 
-    return { ...env, el, map };
+    return { ...env, el, map: mapFactory.method };
   }
 
   it('should maintain correct order after reverse', () => {
@@ -443,7 +443,7 @@ describe('List reconciliation - Edge cases', () => {
       onCleanup: env.onCleanup,
     });
 
-    const map = createMapHelper({
+    const mapFactory = createMapHelper({
       ctx: env.ctx,
       signalCtx: env.signalCtx,
       signal: env.signal,
@@ -452,7 +452,7 @@ describe('List reconciliation - Edge cases', () => {
       disposeScope: env.disposeScope,
     });
 
-    return { ...env, el, map };
+    return { ...env, el, map: mapFactory.method };
   }
 
   it('should handle single element (no LIS needed)', () => {

@@ -36,7 +36,7 @@ export interface ReconcileHooks<T, TNode extends ReconcileNode> {
    * Called when an existing item's data should be updated
    * Should update the item's signal/state but not move DOM
    */
-  onUpdate: (key: string, item: T, node: TNode) => void;
+  onUpdate: (item: T, node: TNode) => void;
 
   /**
    * Called when an item needs to be repositioned in DOM
@@ -48,7 +48,7 @@ export interface ReconcileHooks<T, TNode extends ReconcileNode> {
    * Called when an item is being removed
    * Should dispose scopes and remove from DOM
    */
-  onRemove: (key: string, node: TNode) => void;
+  onRemove: (node: TNode) => void;
 }
 
 /**
@@ -196,7 +196,7 @@ export function createReconciler<
         node.reconcileStatus = VISITED;
 
         // Call update hook if provided
-        onUpdate(key, item, node);
+        onUpdate(item, node);
       } else {
         // New node - create via hook
         const nodeRef = onCreate(item, key);
@@ -214,7 +214,7 @@ export function createReconciler<
     for (const [key, node] of itemsByKey) {
       if (node.reconcileStatus === UNVISITED) {
         // Call removal hook
-        onRemove(key, node);
+        onRemove(node);
         itemsByKey.delete(key);
       } else node.reconcileStatus = UNVISITED; // Reset for next reconciliation
     }
@@ -254,8 +254,8 @@ export function createReconciler<
 
   const dispose = () => {
     // Call onRemove hook for all remaining items
-    for (const [key, node] of itemsByKey) {
-      onRemove(key, node);
+    for (const [, node] of itemsByKey) {
+      onRemove(node);
     }
     itemsByKey.clear();
   };

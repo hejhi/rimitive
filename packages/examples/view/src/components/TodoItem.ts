@@ -18,35 +18,30 @@ export function TodoItem(
   const todo = todoSignal();
 
   // Create checkbox with event listener
-  const checkbox = el([
+  const checkbox = el(
     'input',
     {
       type: 'checkbox',
       checked: api.computed(() => todoSignal().completed),
     },
-  ]);
-  checkbox((el) => api.on(el, 'change', () => onToggle(todo.id)));
+  )()(
+      api.on('change', () => onToggle(todo.id))
+    );
 
   // Create remove button with event listener
-  const removeBtn = el(['button', { className: 'todo-remove' }, 'x']);
-  removeBtn((el) => api.on(el, 'click', () => onRemove(todo.id)));
+  const removeBtn = el('button', { className: 'todo-remove' })('x') (
+    api.on('click', () => onRemove(todo.id))
+  );
 
   // Conditionally render completed vs active todo text using computed
-  const todoText = el([
+  const todoText = el(
     'span',
     {
-      className: api.computed(() =>
-        todoSignal().completed ? 'todo-text completed' : 'todo-text'
-      ),
-    },
-    api.computed(() => todoSignal().text),
-  ]);
+      className: api.computed(() => todoSignal().completed ? 'todo-text completed' : 'todo-text'),
+    }
+  )(
+    api.computed(() => todoSignal().text)
+  );
 
-  return el([
-    'div',
-    { className: 'todo-item' },
-    checkbox,
-    todoText,
-    removeBtn,
-  ]);
+  return el('div', { className: 'todo-item' })(checkbox, todoText, removeBtn);
 }

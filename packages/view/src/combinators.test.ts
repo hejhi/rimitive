@@ -49,10 +49,10 @@ describe('identity', () => {
 describe('seq', () => {
   it('should run both callbacks in sequence', () => {
     const calls: string[] = [];
-    const first: LifecycleCallback<HTMLElement> = (_el) => {
+    const first: LifecycleCallback<HTMLElement> = () => {
       calls.push('first');
     };
-    const second: LifecycleCallback<HTMLElement> = (_el) => {
+    const second: LifecycleCallback<HTMLElement> = () => {
       calls.push('second');
     };
 

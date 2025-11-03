@@ -70,7 +70,7 @@ const elFactory = createElFactory<HTMLElement, Text>({
   onCleanup,
   processChildren,
 });
-const map = createMapHelper<HTMLElement, Text>({
+const mapFactory = createMapHelper<HTMLElement, Text>({
   ctx: viewCtx,
   scopedEffect,
   renderer,
@@ -85,11 +85,12 @@ const api = createApi(
     computed: () => computedFactory,
     effect: () => effectFactory,
     el: () => elFactory,
+    map: () => mapFactory,
   },
   {}
 );
 
-const { signal, el, computed } = api;
+const { signal, el, computed, map } = api;
 const on = onFactory.method;
 
 // ============================================================================
@@ -231,15 +232,11 @@ const Button = (
   id: string,
   label: string
 ) =>
-  el([
-    'button',
-    {
-      className: 'btn btn-primary btn-block col-sm-6 smallpad',
-      type: 'button',
-      id
-    },
-    label,
-  ]);
+  el('button', {
+    className: 'btn btn-primary btn-block col-sm-6 smallpad',
+    type: 'button',
+    id
+  })(label)();
 
 const Row = (
   data: Reactive<RowData>,
@@ -249,77 +246,48 @@ const Row = (
   const label = data().label;
   const rowClass = computed(() => (selected() === id ? 'danger' : ''));
 
-  return el([
-    'tr',
-    { className: rowClass },
-    el(['td', { className: 'col-md-1' }, String(id)]),
-    el([
-      'td',
-      { className: 'col-md-4' },
-      el(['a', label])((a) => on(a, 'click', () => select(id))),
-    ]),
-    el([
-      'td',
-      { className: 'col-md-1' },
-      el([
-        'a',
-        el(['span', { className: 'glyphicon glyphicon-remove', ariaHidden: 'true' }]),
-      ])((a) => on(a, 'click', () => remove(id))),
-    ]),
-    el(['td', { className: 'col-md-6' }]),
-    ...children,
-  ]);
+  return el('tr', { className: rowClass })(
+    el('td', { className: 'col-md-1' })(String(id))(),
+    el('td', { className: 'col-md-4' })(
+      el('a')(label)(on('click', () => select(id)))
+    )(),
+    el('td', { className: 'col-md-1' })(
+      el('a')(
+        el('span', { className: 'glyphicon glyphicon-remove', ariaHidden: 'true' })()
+      )(on('click', () => remove(id)))
+    )(),
+    el('td', { className: 'col-md-6' })(),
+    ...children
+  )();
 };
 
 const App = () => {
-  return el([
-    'div',
-    { className: 'container' },
-    el([
-      'div',
-      { className: 'jumbotron' },
-      el([
-        'div',
-        { className: 'row' },
-        el(['div', { className: 'col-md-6' }, el(['h1', 'Lattice-keyed'])]),
-        el([
-          'div',
-          { className: 'col-md-6' },
-          el([
-            'div',
-            { className: 'row' },
-            Button('run', 'Create 1,000 rows')((btn) => on(btn, 'click', run)),
-            Button(
-              'runlots',
-              'Create 10,000 rows'
-            )((btn) => on(btn, 'click', runLots)),
-            Button('add', 'Append 1,000 rows')((btn) => on(btn, 'click', add)),
-            Button(
-              'update',
-              'Update every 10th row'
-            )((btn) => on(btn, 'click', update)),
-            Button('clear', 'Clear')((btn) => on(btn, 'click', clear)),
-            Button(
-              'swaprows',
-              'Swap Rows'
-            )((btn) => on(btn, 'click', swapRows)),
-          ]),
-        ]),
-      ]),
-    ]),
-    el([
-      'table',
-      { className: 'table table-hover table-striped test-data' },
-      el(['tbody', map(data, Row, (rowData) => rowData.id)]),
-    ]),
-    el([
-      'span',
-      {
-        className: 'preloadicon glyphicon glyphicon-remove',
-        ariaHidden: 'true',
-      },
-    ]),
-  ]);
+  return el('div', { className: 'container' })(
+    el('div', { className: 'jumbotron' })(
+      el('div', { className: 'row' })(
+        el('div', { className: 'col-md-6' })(
+          el('h1')('Lattice-keyed')()
+        )(),
+        el('div', { className: 'col-md-6' })(
+          el('div', { className: 'row' })(
+            Button('run', 'Create 1,000 rows')(on('click', run)),
+            Button('runlots', 'Create 10,000 rows')(on('click', runLots)),
+            Button('add', 'Append 1,000 rows')(on('click', add)),
+            Button('update', 'Update every 10th row')(on('click', update)),
+            Button('clear', 'Clear')(on('click', clear)),
+            Button('swaprows', 'Swap Rows')(on('click', swapRows))
+          )()
+        )()
+      )()
+    )(),
+    el('table', { className: 'table table-hover table-striped test-data' })(
+      el('tbody')(map(data, (rowData: RowData) => rowData.id)(Row))()
+    )(),
+    el('span', {
+      className: 'preloadicon glyphicon glyphicon-remove',
+      ariaHidden: 'true'
+    })()
+  )();
 };
 
 // ============================================================================

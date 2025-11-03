@@ -8,6 +8,7 @@
  * - Efficient reconciliation with LIS algorithm
  */
 
+import type { LatticeExtension } from '@lattice/lattice';
 import type { RefSpec, FragmentRef, Reactive, ElementRef } from '../types';
 import { isElementRef } from '../types';
 import { resolveNextRef } from './fragment';
@@ -18,6 +19,17 @@ import { createReconciler, ReconcileNode } from './reconcile';
 import { createFragment } from './fragment';
 import type { GlobalContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
+
+/**
+ * Map factory type - curried for element builder pattern
+ */
+export type MapFactory<TElement extends RendererElement> = LatticeExtension<
+  'map',
+  <T>(
+    items: () => T[],
+    keyFn?: (item: T) => string | number
+  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => FragmentRef<TElement>
+>;
 
 export interface MapHelperOpts<
   TElement extends RendererElement,
@@ -83,12 +95,10 @@ export function createMapHelper<
         }),
 
         // onUpdate: called when existing item's data should be updated
-        onUpdate: (_key, item, node) => {
-          node.data(item);
-        },
+        onUpdate(item, node) { node.data(item) },
 
         // onMove: called when item needs repositioning
-        onMove: (node, nextSiblingNode) => {
+        onMove(node, nextSiblingNode) {
           if (!isElementRef(node)) return;
 
           let nextEl: TElement | null = null;
@@ -103,7 +113,7 @@ export function createMapHelper<
         },
 
         // onRemove: called when item is being removed
-        onRemove: (_key, node) => {
+        onRemove(node) {
           // Remove from DOM and clean up element scope
           if (!isElementRef(node)) return;
 
@@ -135,5 +145,5 @@ export function createMapHelper<
     });
   }
 
-  return map;
+  return { name: 'map', method: map } as MapFactory<TElement>;
 }
