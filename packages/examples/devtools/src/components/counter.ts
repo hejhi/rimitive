@@ -8,12 +8,12 @@
 import type { Writable, Readable } from '@lattice/signals/types';
 
 export interface CounterAPI {
-  count(): number;
-  doubled(): number;
-  isEven(): boolean;
-  increment(): void;
-  decrement(): void;
-  set(value: number): void;
+  count: () => number;
+  doubled: () => number;
+  isEven: () => boolean;
+  increment: () => void;
+  decrement: () => void;
+  set: (value: number) => void;
 }
 
 export function createCounter(api: {
@@ -26,9 +26,9 @@ export function createCounter(api: {
 
   return {
     // Getters
-    count: () => count(),
-    doubled: () => doubled(),
-    isEven: () => isEven(),
+    count,
+    doubled,
+    isEven,
 
     // Actions
     increment: () => count(count() + 1),

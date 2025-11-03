@@ -11,9 +11,9 @@ import type { Todo } from './todo-list';
 export type FilterType = 'all' | 'active' | 'completed';
 
 export interface FilterAPI {
-  currentFilter(): FilterType;
-  setFilter(filter: FilterType): void;
-  filterTodos(todos: Todo[]): Todo[];
+  currentFilter: () => FilterType;
+  setFilter: (filter: FilterType) => void;
+  filterTodos: (todos: Todo[]) => Todo[];
 }
 
 export function createFilter(api: {

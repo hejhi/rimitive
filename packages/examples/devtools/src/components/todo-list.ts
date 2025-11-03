@@ -14,12 +14,12 @@ export interface Todo {
 }
 
 export interface TodoListAPI {
-  todos(): Todo[];
-  allCompleted(): boolean;
-  activeCount(): number;
-  addTodo(text: string): void;
-  toggleTodo(id: number): void;
-  toggleAll(): void;
+  todos: () => Todo[];
+  allCompleted: () => boolean;
+  activeCount: () => number;
+  addTodo: (text: string) => void;
+  toggleTodo: (id: number) => void;
+  toggleAll: () => void;
 }
 
 export function createTodoList(
