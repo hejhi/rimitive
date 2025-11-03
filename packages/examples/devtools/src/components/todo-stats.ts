@@ -11,29 +11,26 @@ import type { Readable } from '@lattice/signals/types';
 import type { TodoListAPI, Todo } from './todo-list';
 
 export interface TodoStatsAPI {
-  total(): number;
-  active(): number;
-  completed(): number;
-  completionRate(): number;
+  total: () => number;
+  active: () => number;
+  completed: () => number;
+  completionRate: () => number;
 }
 
 /**
  * Create a stats component that depends on an existing TodoList
  */
 export function createTodoStats(
-  api: {
-    computed: <T>(compute: () => T) => Readable<T>;
-  },
-  todoList: TodoListAPI
+  computed: <T>(compute: () => T) => Readable<T>,
+  { todos, activeCount }: Pick<TodoListAPI, 'todos' | 'activeCount'>
 ): TodoStatsAPI {
   // These computed values depend on the injected todoList
-  const total = api.computed(() => todoList.todos().length);
-  const active = api.computed(() => todoList.activeCount());
-  const completed = api.computed(() => {
-    const todos = todoList.todos();
-    return todos.filter((todo: Todo) => todo.completed).length;
+  const total = computed(() => todos().length);
+  const active = computed(() => activeCount());
+  const completed = computed(() => {
+    return todos().filter((todo: Todo) => todo.completed).length;
   });
-  const completionRate = api.computed(() => {
+  const completionRate = computed(() => {
     const t = total();
     return t === 0 ? 0 : (completed() / t) * 100;
   });

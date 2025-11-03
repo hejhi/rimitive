@@ -70,12 +70,9 @@ export type ChildrenApplicator<Tag extends keyof HTMLElementTagNameMap, TElement
 /**
  * Factory return type - curried element builder
  *
- * @example
- * // Basic usage
- * el('div', { className: 'container' })(child1, child2)()
- *
- * // With lifecycle
- * el('button', { onClick: handler })('Click me')((el) => console.log('mounted'))
+ * Element construction is separated into two phases:
+ * 1. Structure phase: el(tag, props)(children) - Pure, returns RefSpec blueprint
+ * 2. Behavior phase: refSpec(lifecycle) - Imperative, attaches side effects
  */
 export type ElFactory<TElement extends RendererElement> = LatticeExtension<
   'el',

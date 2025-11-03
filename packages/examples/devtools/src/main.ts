@@ -17,18 +17,27 @@ import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { instrumentSignal } from '@lattice/signals/devtools/signal';
 import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { devtoolsProvider, createInstrumentation, createApi } from '@lattice/lattice';
 
+// View imports
+import { createElFactory } from '@lattice/view/el';
+import { createMapHelper } from '@lattice/view/helpers/map';
+import { createLatticeContext } from '@lattice/view/context';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import { createProcessChildren } from '@lattice/view/helpers/processChildren';
+import { createScopes } from '@lattice/view/helpers/scope';
+import { createOnFactory } from '@lattice/view/on';
+
 // Import our portable components
 import { createCounter } from './components/counter';
 import { createTodoList, type Todo } from './components/todo-list';
-import { createFilter, type FilterType } from './components/filter';
+import { createFilter } from './components/filter';
 import { createTodoStats } from './components/todo-stats';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 
 function createContext() {
   const ctx = createBaseContext();
@@ -56,141 +65,247 @@ function createContext() {
   };
 }
 
+// Create contexts
+const signalCtx = createContext();
+const viewCtx = createLatticeContext<HTMLElement>();
+const renderer = createDOMRenderer();
+
 // Create signal API instance
-const signalAPI = createApi(
+const { computed, effect, signal, batch } = createApi(
   {
     signal: (opts: SignalOpts) => createSignalFactory({ ...opts, instrument: instrumentSignal }),
     computed: (opts: ComputedOpts) => createComputedFactory({ ...opts, instrument: instrumentComputed }),
     effect: (opts: EffectOpts) => createEffectFactory({ ...opts, instrument: instrumentEffect }),
     batch: (opts: BatchOpts) => createBatchFactory({ ...opts, instrument: instrumentBatch }),
   },
-  createContext()
+  signalCtx
 );
 
-// Extract primitives for convenience
-const effect = signalAPI.effect as (fn: () => void | (() => void)) => () => void;
-const batch = signalAPI.batch as <T>(fn: () => T) => T;
+// Create view primitives
+const { disposeScope, scopedEffect, createElementScope, onCleanup } = createScopes<HTMLElement>({
+  ctx: viewCtx,
+  track: signalCtx.track,
+  dispose: signalCtx.dispose,
+  baseEffect: effect,
+});
+
+const { processChildren } = createProcessChildren<HTMLElement, Text>({
+  scopedEffect,
+  renderer,
+});
+
+const elFactory = createElFactory<HTMLElement, Text>({
+  ctx: viewCtx,
+  scopedEffect,
+  renderer,
+  processChildren,
+  createElementScope,
+  disposeScope,
+  onCleanup,
+});
+
+const mapHelper = createMapHelper<HTMLElement, Text>({
+  ctx: viewCtx,
+  signalCtx: signalCtx.ctx,
+  signal: signal,
+  scopedEffect,
+  renderer,
+  disposeScope,
+});
+
+const onFactory = createOnFactory({
+  startBatch: signalCtx.startBatch,
+  endBatch: signalCtx.endBatch,
+});
+
+const el = elFactory.method;
+const map = mapHelper.method;
+const on = onFactory.method;
 
 // ============================================================================
 // Create Components
 // ============================================================================
-// These components are framework-agnostic and can be tested independently
 
-const counter = createCounter(signalAPI);
+const counter = createCounter({ signal, computed });
+const todoList = createTodoList(
+  { signal, computed },
+  [
+    { id: 1, text: 'Learn Lattice', completed: false },
+    { id: 2, text: 'Build an app', completed: false },
+  ]
+);
+const filter = createFilter({ signal, computed });
 
-const todoList = createTodoList(signalAPI, [
-  { id: 1, text: 'Learn Lattice', completed: false },
-  { id: 2, text: 'Build an app', completed: false },
-]);
-
-const filter = createFilter(signalAPI);
+const { todos, addTodo, toggleTodo, activeCount } = todoList;
+const { filterTodos, setFilter } = filter;
+const { set: setCounter, count, doubled, isEven } = counter;
 
 // ============================================================================
 // Component Composition
 // ============================================================================
-// Demonstrates two composition patterns:
 
-// 1. Functional composition - combine outputs
-const filteredTodos = signalAPI.computed(() =>
-  filter.filterTodos(todoList.todos())
-);
-
-// 2. Dependency injection - stats depends on todoList
-const todoStats = createTodoStats(signalAPI, todoList);
+const filteredTodos = computed(() => filterTodos(todos()));
+const todoStats = createTodoStats(computed, { todos, activeCount });
 
 // ============================================================================
-// UI Adapter Functions
+// View Components
 // ============================================================================
-// These functions adapt component APIs to the DOM event handlers
 
-function batchedUpdates() {
-  batch(() => {
-    counter.set(10);
-    todoList.addTodo('Batched todo 1');
-    todoList.addTodo('Batched todo 2');
-    todoList.toggleTodo(1);
-  });
+function CounterView() {
+  const incrementBtn = el('button')('Increment')(
+    on('click', () => setCounter(count() + 1))
+  );
+  const decrementBtn = el('button')('Decrement')(
+    on('click', () => setCounter(count() - 1))
+  );
+  const resetBtn = el('button')('Reset')(
+    on('click', () => setCounter(0))
+  );
+
+  return el('section', { className: 'counter-section' })(
+    el('h2')('Counter Example')(),
+    el('div', { className: 'counter-display' })(
+      el('p')(computed(() => `Count: ${count()}`))(),
+      el('p')(computed(() => `Doubled: ${doubled()}`))(),
+      el('p')(computed(() => `Is Even: ${isEven() ? 'Yes' : 'No'}`))()
+    )(),
+    el('div', { className: 'counter-controls' })(
+      incrementBtn,
+      decrementBtn,
+      resetBtn
+    )()
+  )();
 }
 
-function addTodoFromInput() {
-  const input = document.getElementById('todoInput') as HTMLInputElement;
-  if (input && input.value.trim()) {
-    todoList.addTodo(input.value.trim());
-    input.value = '';
-  }
+function TodoItemView(todoSignal: () => Todo) {
+  const checkbox = el('input', {
+    type: 'checkbox',
+    checked: computed(() => todoSignal().completed)
+  })()(
+    on('change', () => toggleTodo(todoSignal().id))
+  );
+
+  return el('li', {
+    className: computed(() => todoSignal().completed ? 'todo-item completed' : 'todo-item')
+  })(
+    checkbox,
+    el('span')(computed(() => todoSignal().text))()
+  )();
 }
 
-function setFilter(filterType: FilterType) {
-  document.querySelectorAll('.filter').forEach((b) => b.classList.remove('active'));
-  document.querySelector(`[data-filter="${filterType}"]`)?.classList.add('active');
-  filter.setFilter(filterType);
-}
+function TodoListView() {
+  const inputValue = signal('');
 
-// ============================================================================
-// UI Rendering
-// ============================================================================
-// This effect runs whenever any reactive dependency changes
+  const handleAddTodo = () => {
+    const text = inputValue();
+    if (text.trim()) {
+      addTodo(text.trim());
+      inputValue('');
+    }
+  };
 
-function updateUI() {
-  // Update counter display
-  const countEl = document.getElementById('count');
-  const doubledEl = document.getElementById('doubled');
-  const isEvenEl = document.getElementById('isEven');
+  // Create input and attach events
+  const todoInput = el('input', {
+    type: 'text',
+    placeholder: 'What needs to be done?',
+    value: inputValue
+  })()(
+    on('input', (e: Event) => inputValue((e.target as HTMLInputElement).value)),
+    on('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') handleAddTodo();
+    })
+  );
 
-  if (countEl) countEl.textContent = counter.count().toString();
-  if (doubledEl) doubledEl.textContent = counter.doubled().toString();
-  if (isEvenEl) isEvenEl.textContent = counter.isEven() ? 'Yes' : 'No';
+  const addBtn = el('button')('Add Todo')(
+    on('click', handleAddTodo)
+  );
 
-  // Update todo list display
-  const activeTodoCountEl = document.getElementById('activeTodoCount');
-  if (activeTodoCountEl) {
-    activeTodoCountEl.textContent = todoList.activeCount().toString();
-  }
+  // Filter buttons
+  const allBtn = el('button', {
+    className: computed(() => filter.currentFilter() === 'all' ? 'filter active' : 'filter')
+  })('All')(
+    on('click', () => setFilter('all'))
+  );
+  const activeBtn = el('button', {
+    className: computed(() => filter.currentFilter() === 'active' ? 'filter active' : 'filter')
+  })('Active')(
+    on('click', () => setFilter('active'))
+  );
+  const completedBtn = el('button', {
+    className: computed(() => filter.currentFilter() === 'completed' ? 'filter active' : 'filter')
+  })('Completed')(
+    on('click', () => setFilter('completed'))
+  );
 
-  const todoListEl = document.getElementById('todoList');
-  if (todoListEl) {
-    todoListEl.innerHTML = filteredTodos()
-      .map(
-        (todo: Todo) => `
-        <li class="todo-item ${todo.completed ? 'completed' : ''}">
-          <input type="checkbox" ${todo.completed ? 'checked' : ''}
-                 onchange="window.todoList.toggleTodo(${todo.id})">
-          <span>${todo.text}</span>
-        </li>
-      `
+  return el('section', { className: 'todo-section' })(
+    el('h2')('Todo List Example')(),
+
+    // Input section
+    el('div', { className: 'todo-input' })(todoInput, addBtn)(),
+
+    // Filter buttons
+    el('div', { className: 'filter-buttons' })(
+      allBtn,
+      activeBtn,
+      completedBtn
+    )(),
+
+    // Todo list
+    el('ul', { id: 'todoList' })(
+      map(filteredTodos, (todo) => todo.id)((todo) => TodoItemView(todo))
+    )(),
+
+    // Stats
+    el('div', { id: 'todoStats' })(
+      el('strong')('Stats:')(),
+      el('br')()(),
+      computed(
+        () =>
+          `Total: ${todoStats.total()} | ` +
+          `Active: ${todoStats.active()} | ` +
+          `Completed: ${todoStats.completed()} | ` +
+          `Completion: ${todoStats.completionRate().toFixed(1)}%`
       )
-      .join('');
-  }
-
-  // Update stats display (demonstrates composed component)
-  const statsEl = document.getElementById('todoStats');
-  if (statsEl) {
-    statsEl.innerHTML = `
-      <strong>Stats (from composed component):</strong><br>
-      Total: ${todoStats.total()} |
-      Active: ${todoStats.active()} |
-      Completed: ${todoStats.completed()} |
-      Completion: ${todoStats.completionRate().toFixed(1)}%
-    `;
-  }
+    )()
+  )();
 }
 
-// Set up reactive UI updates
-effect(updateUI);
+function BatchedUpdateSection() {
+  const handleBatchedUpdates = () => {
+    batch(() => {
+      setCounter(10);
+      addTodo('Batched todo 1');
+      addTodo('Batched todo 2');
+      toggleTodo(1);
+    });
+  };
+
+  const batchBtn = el('button')('Run Batched Updates')(
+    on('click', handleBatchedUpdates)
+  );
+
+  return el('section', { className: 'batched-section' })(
+    el('h2')('Batched Updates Example')(),
+    el('p')('This button demonstrates batched updates - multiple state changes in one render')(),
+    batchBtn
+  )();
+}
 
 // ============================================================================
-// Export to Window for DOM Event Handlers
+// Mount App
 // ============================================================================
-// In a real app, you'd use a framework's event binding instead
 
-Object.assign(window, {
-  // Expose components directly - demonstrates clear API boundaries
-  counter,
-  todoList,
-  filter,
+const app = document.getElementById('app');
+if (app) {
+  const appView = el('div', { className: 'app' })(
+    el('h1')('Lattice DevTools Example')(),
+    CounterView(),
+    TodoListView(),
+    BatchedUpdateSection()
+  )();
 
-  // Expose adapter functions
-  setFilter,
-  addTodoFromInput,
-  batchedUpdates,
-});
+  const element = appView.create().element;
+  if (element) {
+    app.appendChild(element);
+  }
+}

@@ -26,6 +26,7 @@ import { createOnFactory } from '@lattice/view/on';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
+import type { LatticeViewAPI } from './types';
 
 // ============================================================================
 // Create Lattice API with Signals + View
@@ -118,7 +119,7 @@ const onFactory = createOnFactory({
 });
 
 // Create the combined API
-const api = createApi(
+const api: LatticeViewAPI = createApi(
   {
     signal: () => signalFactory,
     computed: () => computedFactory,

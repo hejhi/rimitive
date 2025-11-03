@@ -1,40 +1,40 @@
 /**
  * Counter UI Component
  *
- * Uses @lattice/view primitives (el) to create a reactive UI
- * Uses the headless counter behavior for logic
+ * Demonstrates separation of pure structure from imperative behavior:
+ * - Phase 1 (Pure): Define structure with el(tag, props)(children)
+ * - Phase 2 (Imperative): Attach behavior via RefSpec chaining
+ * - Phase 3 (Instantiation): Call .create() to build DOM
  */
 
 import type { LatticeViewAPI } from '../types';
 import { createCounter } from '../behaviors/counter';
 
 export function Counter(api: LatticeViewAPI, initialCount = 0) {
-  const { el } = api;
+  const { el, on, computed } = api;
 
-  // Create headless behavior
-  const counter = createCounter(api, initialCount);
-
-  // Create buttons with event listeners
-  const decrementBtn = el('button')('- Decrement')(
-    api.on('click', () => counter.decrement())
+  const { decrement, increment, reset, count, doubled } = createCounter(
+    api,
+    initialCount
   );
+  const decrementBtn = el('button')('- Decrement');
+  const incrementBtn = el('button')('+ Increment');
+  const resetBtn = el('button')('Reset');
 
-  const incrementBtn = el('button')('+ Increment')(
-    api.on('click', () => counter.increment())
-  );
+  // ============================================================================
+  // IMPERATIVE: Behavior attachment (side effects via RefSpec chaining)
+  // Note: api.on() returns a lifecycle callback, so we pass it directly
+  // ============================================================================
 
-  const resetBtn = el('button')('Reset')(
-    api.on('click', () => counter.reset())
-  );
+  decrementBtn(on('click', decrement));
+  incrementBtn(on('click', increment));
+  resetBtn(on('click', reset));
 
-  // Create UI using el() primitive
   return el('div', { className: 'example' })(
     el('h2')('Counter Example')(),
     el('p')('Demonstrates reactive text updates and event handlers.')(),
     el('div', { className: 'counter-display' })(
-      api.computed(
-        () => `Count: ${counter.count()} (doubled: ${counter.doubled()})`
-      )
+      computed(() => `Count: ${count()} (doubled: ${doubled()})`)
     )(),
     el('div')(decrementBtn, incrementBtn, resetBtn)()
   )();

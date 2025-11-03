@@ -23,11 +23,11 @@ export interface TodoListAPI {
   filter: Reactive<FilterType>;
   activeCount: Reactive<number>;
   completedCount: Reactive<number>;
-  addTodo(text: string): void;
-  toggleTodo(id: number): void;
-  removeTodo(id: number): void;
-  setFilter(filter: FilterType): void;
-  clearCompleted(): void;
+  addTodo: (text: string) => void;
+  toggleTodo: (id: number) => void;
+  removeTodo: (id: number) => void;
+  setFilter: (filter: FilterType) => void;
+  clearCompleted: () => void;
 }
 
 export function createTodoList(api: LatticeViewAPI): TodoListAPI {

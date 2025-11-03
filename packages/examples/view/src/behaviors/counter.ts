@@ -12,9 +12,9 @@ import type { Reactive } from '@lattice/view/types';
 export interface CounterAPI {
   count: Reactive<number>;
   doubled: Reactive<number>;
-  increment(): void;
-  decrement(): void;
-  reset(): void;
+  increment: () => void;
+  decrement: () => void;
+  reset: () => void;
 }
 
 export function createCounter(api: LatticeViewAPI, initialCount = 0): CounterAPI {

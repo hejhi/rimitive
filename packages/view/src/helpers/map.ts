@@ -54,7 +54,7 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => v
 export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
->(opts: MapHelperOpts<TElement, TText>) {
+>(opts: MapHelperOpts<TElement, TText>): MapFactory<TElement> {
   const { ctx, signalCtx, signal, scopedEffect, renderer, disposeScope } = opts;
   const untrack = createUntracked({ ctx: signalCtx });
 
