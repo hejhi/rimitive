@@ -1,70 +1,17 @@
 /**
  * Modal Design System Component
  *
- * Demonstrates the encapsulated signal context pattern.
- * Each Modal instance has its own SignalProvider, completely isolated
- * from other modals and the rest of the app.
+ * Demonstrates isolated component state using the parent SignalProvider.
+ * Each Modal instance has its own signal instances (isolated state),
+ * but shares the reactive infrastructure (shared graph).
  *
- * This is similar to how Chakra UI components manage their internal state.
+ * This is similar to how React's useState works - each component instance
+ * gets its own state, but all use the same React reconciliation system.
  */
 
-import React, { ReactNode } from 'react';
-import { SignalProvider, useComponent, useSubscribe } from '@lattice/react';
-import { createApi } from '@lattice/lattice';
-import { createSignalFactory, SignalOpts } from '@lattice/signals/signal';
-import { ComputedOpts, createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory, EffectOpts } from '@lattice/signals/effect';
-import { BatchOpts, createBatchFactory } from '@lattice/signals/batch';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { instrumentSignal } from '@lattice/signals/devtools/signal';
-import { instrumentComputed } from '@lattice/signals/devtools/computed';
-import { instrumentEffect } from '@lattice/signals/devtools/effect';
-import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
+import { ReactNode } from 'react';
+import { useComponent, useSubscribe } from '@lattice/react';
 import { createModal } from '../components/modal';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-
-// Helper to create a signal API for a component instance
-function createComponentSignalAPI() {
-  const ctx = createBaseContext();
-  const { trackDependency, detachAll, track } = createGraphEdges({ ctx });
-  const { withVisitor } = createGraphTraversal();
-  const { withPropagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
-  const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
-
-  const instrumentation = createInstrumentation({
-    enabled: true,
-    providers: [devtoolsProvider({ debug: false })],
-  });
-
-  return createApi(
-    {
-      signal: (opts: SignalOpts) =>
-        createSignalFactory({ ...opts, instrument: instrumentSignal }),
-      computed: (opts: ComputedOpts) =>
-        createComputedFactory({ ...opts, instrument: instrumentComputed }),
-      effect: (opts: EffectOpts) =>
-        createEffectFactory({ ...opts, instrument: instrumentEffect }),
-      batch: (opts: BatchOpts) =>
-        createBatchFactory({ ...opts, instrument: instrumentBatch }),
-    },
-    {
-      ctx,
-      trackDependency,
-      propagate: withPropagate(withVisitor),
-      track,
-      dispose,
-      pullUpdates,
-      shallowPropagate,
-      startBatch,
-      endBatch,
-      instrumentation,
-    }
-  );
-}
 
 export interface ModalProps {
   title: string;
@@ -73,7 +20,11 @@ export interface ModalProps {
 }
 
 /**
- * Modal Component - Each instance has its own signal context
+ * Modal Component - Isolated state, shared infrastructure
+ *
+ * Each Modal instance creates its own signal instance via useComponent,
+ * giving it isolated state. But all Modals share the parent SignalProvider's
+ * reactive graph infrastructure (GlobalContext, scheduler, propagation).
  *
  * Usage:
  * ```tsx
@@ -83,20 +34,8 @@ export interface ModalProps {
  * ```
  */
 export function Modal({ title, children, trigger }: ModalProps) {
-  // Each Modal creates its own SignalProvider!
-  const api = React.useMemo(() => createComponentSignalAPI(), []);
-
-  return (
-    <SignalProvider api={api}>
-      <ModalContent title={title} trigger={trigger}>
-        {children}
-      </ModalContent>
-    </SignalProvider>
-  );
-}
-
-// Internal component that uses the encapsulated signal context
-function ModalContent({ title, children, trigger }: ModalProps) {
+  // useComponent gets API from parent SignalProvider
+  // Each call creates a new signal instance (isolated state)
   const modal = useComponent(createModal);
   const isOpen = useSubscribe(modal.isOpen);
 

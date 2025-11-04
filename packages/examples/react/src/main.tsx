@@ -368,21 +368,21 @@ function FineGrainedReactivityDemo() {
 }
 
 /**
- * Example 5: Design System Pattern - Encapsulated State
- * Each Modal has its own SignalProvider, completely isolated
+ * Example 5: Design System Pattern - Isolated State
+ * Each Modal has its own signal instance, but shares the reactive infrastructure
  */
 function DesignSystemDemo() {
   return (
     <div className="example-section">
-      <h2>Design System Pattern - Encapsulated State</h2>
+      <h2>Design System Pattern - Isolated State</h2>
       <p>
-        Each <code>Modal</code> component has its own <code>SignalProvider</code>,
-        similar to how Chakra UI components manage internal state.
+        Each <code>Modal</code> component has its own signal instance,
+        similar to how React's <code>useState</code> gives each component isolated state.
       </p>
 
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
         <Modal title="User Settings">
-          <p>This modal has its own isolated signal context.</p>
+          <p>This modal has its own isolated state (signal instance).</p>
           <p>Opening/closing this modal doesn't affect other modals.</p>
           <div style={{ marginTop: '1rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem' }}>
@@ -396,7 +396,7 @@ function DesignSystemDemo() {
 
         <Modal title="Confirmation">
           <p>This is a completely separate modal instance.</p>
-          <p>It has its own signal context, totally isolated from the first modal.</p>
+          <p>It has its own signal instance, totally isolated from the first modal.</p>
           <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
             <button style={{ flex: 1 }}>Cancel</button>
             <button style={{ flex: 1, background: '#dc3545' }}>Delete</button>
@@ -407,18 +407,21 @@ function DesignSystemDemo() {
           <h3 style={{ marginTop: 0 }}>How to use Lattice</h3>
           <p>This modal demonstrates how design system components can:</p>
           <ul>
-            <li>Have their own encapsulated state</li>
+            <li>Have their own encapsulated state (separate signal instances)</li>
             <li>Work independently from other instances</li>
+            <li>Share the reactive infrastructure (one reactive graph)</li>
             <li>Still integrate with DevTools for debugging</li>
           </ul>
         </Modal>
       </div>
 
       <div style={{ marginTop: '1rem', padding: '1rem', background: '#e7f3ff', borderRadius: '4px' }}>
-        <strong>Key Pattern:</strong> Each <code>{'<Modal>'}</code> creates its own{' '}
-        <code>{'<SignalProvider>'}</code> internally, giving it isolated reactive state.
-        This is perfect for reusable design system components that need to manage their
-        own state without polluting the global context.
+        <strong>Key Pattern:</strong> Each <code>{'<Modal>'}</code> creates its own
+        signal instance via <code>useComponent(createModal)</code>, giving it isolated state.
+        All modals share the parent's reactive infrastructure (GlobalContext, scheduler).
+        This is like React's <code>useState</code> - each component gets isolated state,
+        but all use the same React reconciliation system. Perfect for reusable design
+        system components!
       </div>
     </div>
   );
@@ -440,12 +443,12 @@ function App() {
         This example demonstrates multiple component patterns:
         <ul>
           <li>
-            <strong>Shared Context:</strong> <code>createCounter</code> and <code>createTodoList</code>
-            use the global SignalProvider
+            <strong>Shared Infrastructure:</strong> All components use the same SignalProvider
+            (one reactive graph, one scheduler, one GlobalContext)
           </li>
           <li>
-            <strong>Encapsulated State:</strong> <code>Modal</code> components have their own
-            isolated SignalProviders
+            <strong>Isolated State:</strong> Each component instance (<code>Counter</code>, <code>Modal</code>, etc.)
+            gets its own signal instances, like React's <code>useState</code>
           </li>
           <li>
             <strong>Framework Agnostic:</strong> All behaviors work in React, Vue, Svelte, or vanilla JS
