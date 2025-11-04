@@ -82,7 +82,7 @@ describe('el primitive - lazy scope creation', () => {
     // Static element - no reactive content, no lifecycle callbacks
     // Note: withScope only registers scopes if they have disposables (performance optimization)
     const ref = el('div', { className: 'static' })('Hello');
-    const element = asElement(ref.create()) as unknown as MockElement;
+    const element: MockElement = asElement(ref.create());
 
     // No scope registered for static elements (no disposables)
     expect(ctx.elementScopes.has(element)).toBe(false);
@@ -115,7 +115,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Element with reactive prop
     const ref = el('div', { title: text })();
-    const element = asElement(ref.create()) as unknown as MockElement;
+    const element: MockElement = asElement(ref.create());
 
     // Should have a scope (tracks the effect for reactive title)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -148,7 +148,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Element with reactive text child
     const ref = el('div')(text);
-    const element = asElement(ref.create()) as unknown as MockElement;
+    const element: MockElement = asElement(ref.create());
 
     // Should have a scope (tracks the effect for reactive text)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -179,7 +179,7 @@ describe('el primitive - lazy scope creation', () => {
       // cleanup function
     });
 
-    const element = asElement(ref.create()) as unknown as MockElement;
+    const element: MockElement = asElement(ref.create());
 
     // Should have a scope (tracks the cleanup function)
     expect(ctx.elementScopes.has(element)).toBe(true);
@@ -210,7 +210,7 @@ describe('el primitive - lazy scope creation', () => {
       // no cleanup
     });
 
-    const element = asElement(ref.create()) as unknown as MockElement;
+    const element: MockElement = asElement(ref.create());
 
     // No scope registered (callback returns undefined, no disposables)
     expect(ctx.elementScopes.has(element)).toBe(false);
@@ -240,7 +240,7 @@ describe('el primitive - lazy scope creation', () => {
     const child = el('span')('Child') as unknown as RefSpec<MockElement>;
     const parent = el('div')(child, 'Parent');
 
-    const parentElement = asElement(parent.create()) as unknown as MockElement;
+    const parentElement: MockElement = asElement(parent.create());
     const childElement = parentElement.children[0] as MockElement;
 
     // No scopes registered (static elements with no disposables)

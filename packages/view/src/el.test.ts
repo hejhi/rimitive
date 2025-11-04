@@ -68,7 +68,7 @@ describe('el primitive', () => {
       const ref = el('div', { className: 'container' })('Hello ', 'World');
 
       // User cares: content is rendered
-      const element = asElement(ref.create()) as unknown as MockElement;
+      const element: MockElement = asElement(ref.create());
       expect(getTextContent(element)).toBe('Hello World');
       expect(element.props.className).toBe('container');
     });
@@ -97,7 +97,7 @@ describe('el primitive', () => {
       const parent = el('div')(child); // Pass blueprint - will be instantiated
 
       // Create parent instance (which instantiates child)
-      const parentElement = asElement(parent.create()) as unknown as MockElement;
+      const parentElement: MockElement = asElement(parent.create());
 
       // User cares: nested content is accessible
       expect(getTextContent(parentElement)).toBe('nested content');
@@ -135,7 +135,7 @@ describe('el primitive', () => {
       const ref = el('div')(text);
 
       // User cares: initial content is displayed
-      const element = asElement(ref.create()) as unknown as MockElement;
+      const element: MockElement = asElement(ref.create());
       expect(getTextContent(element)).toBe('initial');
 
       // User cares: content updates when signal changes
@@ -171,7 +171,7 @@ describe('el primitive', () => {
       const ref = el('div', { className })();
 
       // User cares: initial prop value is set
-      const element = asElement(ref.create()) as unknown as MockElement;
+      const element: MockElement = asElement(ref.create());
       expect(element.props.className).toBe('foo');
 
       // User cares: prop updates when signal changes
@@ -207,7 +207,7 @@ describe('el primitive', () => {
       const ref = el('div')('Count: ', count);
 
       // User cares: content combines static and reactive parts
-      const element = asElement(ref.create()) as unknown as MockElement;
+      const element: MockElement = asElement(ref.create());
       expect(getTextContent(element)).toBe('Count: 0');
 
       // User cares: reactive part updates
@@ -241,7 +241,7 @@ describe('el primitive', () => {
       }).method;
 
       const ref = el('div')(text);
-      const element = asElement(ref.create()) as unknown as MockElement;
+      const element: MockElement = asElement(ref.create());
 
       // Verify initial subscription
       expect(subscribers.size).toBe(1);
@@ -281,7 +281,7 @@ describe('el primitive', () => {
       const ref = el('div')()(() => cleanup);
 
       // Create instance - lifecycle callback runs immediately
-      const element = asElement(ref.create()) as unknown as MockElement;
+      const element: MockElement = asElement(ref.create());
 
       // Reconciler removes element (disposes scope explicitly)
       const scope = ctx.elementScopes.get(element);

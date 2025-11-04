@@ -18,6 +18,10 @@
       "import": "./dist/el.js",
       "types": "./dist/el.d.ts"
     },
+    "./component": {
+      "import": "./dist/component.js",
+      "types": "./dist/component.d.ts"
+    },
     "./context": {
       "import": "./dist/context.js",
       "types": "./dist/context.d.ts"

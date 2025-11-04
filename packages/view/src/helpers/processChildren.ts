@@ -25,7 +25,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
   const handleChild = (
     parentRef: ElementRef<TElement>,
-    child: ElRefSpecChild<TElement>
+    child: ElRefSpecChild
   ): NodeRef<TElement> | null => {
     const element = parentRef.element;
     const childType = typeof child;
@@ -69,7 +69,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
   const processChildren = (
     parent: ElementRef<TElement>,
-    children: ElRefSpecChild<TElement>[]
+    children: ElRefSpecChild[]
   ): void => {
     // Map to track which child produced which NodeRef
     const childNodes = new Map<number, NodeRef<TElement>>();

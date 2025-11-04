@@ -3,6 +3,8 @@
  */
 
 import type { Readable, ScheduledNode } from '@lattice/signals/types';
+import type { LazyComponent } from './component';
+import type { Element as RendererElement } from './renderer';
 
 /**
  * Status bits for node ref type discrimination
@@ -11,15 +13,15 @@ export const STATUS_ELEMENT = 1;
 export const STATUS_FRAGMENT = 2;
 export const STATUS_REF_SPEC = 3;
 
-export interface BaseRef<TRef> {
+export interface BaseRef {
   status: number;
-  next?: TRef;
+  next?: BaseRef;
 }
 
 /**
  * Element ref node - wraps created elements for sibling tracking
  */
-export interface ElementRef<TElement> extends BaseRef<NodeRef<TElement>> {
+export interface ElementRef<TElement> extends BaseRef {
   status: typeof STATUS_ELEMENT;
   element: TElement;
 }
@@ -28,15 +30,17 @@ export interface ElementRef<TElement> extends BaseRef<NodeRef<TElement>> {
  * Fragment ref node - wraps fragments (no DOM element)
  * Created by createFragment() - users don't construct this directly
  */
-export interface FragmentRef<TElement> extends BaseRef<NodeRef<TElement>> {
+export interface FragmentRef<TElement> extends BaseRef {
   status: typeof STATUS_FRAGMENT;
   element: TElement | null;
-  firstChild?: NodeRef<TElement>;
+  firstChild?: BaseRef;
   dispose?: () => void;
-  attach: (
-    parent: ElementRef<TElement>,
-    nextSibling?: NodeRef<TElement> | null
-  ) => FragmentRef<TElement>;
+  // Bivariant function property with widened parameters for variance
+  // Parameters use 'unknown' to allow FragmentRef<T> to be assignable to FragmentRef<unknown>
+  // This is safe because at runtime all element types are compatible
+  attach: {
+    (parent: ElementRef<unknown>, nextSibling?: NodeRef<unknown> | null): FragmentRef<TElement>;
+  };
 }
 
 /**
@@ -83,15 +87,20 @@ export type LifecycleCallback<TElement> = (element: TElement) => void | (() => v
  *
  * Note: Bare functions are not supported. For dynamic content, use map() or other
  * reconciliation helpers that provide efficient updates.
+ *
+ * The TElement parameter is kept for API consistency, but child RefSpecs/FragmentRefs/LazyComponents
+ * use `unknown` since any element can be a child of any other element at runtime. Using `unknown`
+ * (the top type) allows proper variance - any RefSpec<T> is assignable to RefSpec<unknown>.
  */
-export type ElRefSpecChild<TElement> =
+export type ElRefSpecChild =
   | string
   | number
   | boolean
   | null
-  | RefSpec<TElement>
+  | RefSpec<unknown>
   | Reactive<unknown>
-  | FragmentRef<TElement>;
+  | FragmentRef<unknown>
+  | LazyComponent<unknown[], unknown, RendererElement>;
 
 export interface RenderScope<TElement> extends ScheduledNode {
   // Tree structure (from Scope) - intrusive singly-linked tree

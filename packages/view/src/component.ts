@@ -51,28 +51,30 @@ export interface ComputedFunction<T> {
 
 /**
  * Type for the el method with both overloads
+ * Generic over TElement to match the element type used by the renderer
  */
-export interface ElMethod {
+export interface ElMethod<TElement extends RendererElement> {
   // Static element builder
   <Tag extends keyof HTMLElementTagNameMap>(
     tag: Tag,
     props?: Record<string, unknown>
-  ): (...children: ElRefSpecChild<HTMLElementTagNameMap[Tag]>[]) => RefSpec<HTMLElementTagNameMap[Tag]>;
+  ): (...children: ElRefSpecChild[]) => RefSpec<HTMLElementTagNameMap[Tag]>;
 
   // Reactive element builder
   <Tag extends keyof HTMLElementTagNameMap>(
-    reactive: Reactive<ReactiveElSpec<Tag, RendererElement>>
-  ): FragmentRef<RendererElement>;
+    reactive: Reactive<ReactiveElSpec<Tag>>
+  ): FragmentRef<TElement>;
 }
 
 /**
  * Minimal API shape needed for lazy components
+ * Generic over TElement to match the element type used by the renderer (e.g., HTMLElement for DOM)
  */
-export interface LatticeViewAPI {
+export interface LatticeViewAPI<TElement extends RendererElement = RendererElement> {
   signal: <T>(value: T) => SignalFunction<T>;
   computed: <T>(compute: () => T) => ComputedFunction<T>;
   effect: (fn: () => void | (() => void)) => () => void;
-  el: ElMethod;
+  el: ElMethod<TElement>;
   on: <K extends keyof HTMLElementEventMap>(
     event: K,
     handler: (event: HTMLElementEventMap[K]) => void,
@@ -81,7 +83,7 @@ export interface LatticeViewAPI {
   map: <T>(
     items: () => T[],
     keyFn?: (item: T) => string | number
-  ) => (render: (itemSignal: Reactive<T>) => RefSpec<unknown>) => FragmentRef<RendererElement>;
+  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => FragmentRef<TElement>;
 }
 
 /**
@@ -93,9 +95,9 @@ const LAZY_COMPONENT = Symbol('lattice.lazyComponent');
  * A lazy component that will be instantiated when API is provided
  * Implements RefSpec interface so it can be used anywhere RefSpec is expected
  */
-export interface LazyComponent<TArgs extends unknown[], TElement> extends RefSpec<TElement> {
+export interface LazyComponent<TArgs extends unknown[], TElement, TRendererElement extends RendererElement = RendererElement> extends RefSpec<TElement> {
   [LAZY_COMPONENT]: true;
-  factory: (api: LatticeViewAPI) => (...args: TArgs) => RefSpec<TElement>;
+  factory: (api: LatticeViewAPI<TRendererElement>) => (...args: TArgs) => RefSpec<TElement>;
   args: TArgs;
   _callbacks?: Array<(el: TElement) => void | (() => void)>;
 }
@@ -134,11 +136,11 @@ export interface LazyComponent<TArgs extends unknown[], TElement> extends RefSpe
  * const dom = app.create({ api });
  * ```
  */
-export function create<TArgs extends unknown[], TElement>(
-  factory: (api: LatticeViewAPI) => (...args: TArgs) => RefSpec<TElement>
+export function create<TArgs extends unknown[], TElement, TRendererElement extends RendererElement = RendererElement>(
+  factory: (api: LatticeViewAPI<TRendererElement>) => (...args: TArgs) => RefSpec<TElement>
 ) {
-  return (...args: TArgs): LazyComponent<TArgs, TElement> => {
-    const lazy: LazyComponent<TArgs, TElement> = Object.assign(
+  return (...args: TArgs): LazyComponent<TArgs, TElement, TRendererElement> => {
+    const lazy: LazyComponent<TArgs, TElement, TRendererElement> = Object.assign(
       (...callbacks: Array<(el: TElement) => void | (() => void)>) => {
         // Forward lifecycle callbacks
         lazy._callbacks = lazy._callbacks || [];
@@ -152,7 +154,7 @@ export function create<TArgs extends unknown[], TElement>(
         status: STATUS_REF_SPEC,
         _callbacks: [] as Array<(el: TElement) => void | (() => void)>,
         create: <TExt>(optionsOrExtensions?: unknown): NodeRef<TElement> & TExt => {
-          const options = optionsOrExtensions as { api?: LatticeViewAPI; extensions?: TExt };
+          const options = optionsOrExtensions as { api?: LatticeViewAPI<TRendererElement>; extensions?: TExt };
           const api = options?.api;
           if (!api) {
             throw new Error(
@@ -188,7 +190,7 @@ export function create<TArgs extends unknown[], TElement>(
  * @param value - Value to check
  * @returns True if value is a lazy component
  */
-export function isLazyComponent(value: unknown): value is LazyComponent<unknown[], unknown> {
+export function isLazyComponent(value: unknown): value is LazyComponent<unknown[], unknown, RendererElement> {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -205,9 +207,9 @@ export function isLazyComponent(value: unknown): value is LazyComponent<unknown[
  * @param api - The API to provide to the component
  * @returns A RefSpec that can be instantiated normally
  */
-export function instantiateLazyComponent<TElement extends RendererElement>(
-  lazy: LazyComponent<unknown[], TElement>,
-  api: LatticeViewAPI
+export function instantiateLazyComponent<TElement extends RendererElement, TRendererElement extends RendererElement = RendererElement>(
+  lazy: LazyComponent<unknown[], TElement, TRendererElement>,
+  api: LatticeViewAPI<TRendererElement>
 ): RefSpec<TElement> {
   const component = lazy.factory(api);
   return component(...lazy.args);

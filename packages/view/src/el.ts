@@ -34,10 +34,10 @@ export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLEle
 /**
  * Reactive element specification type
  */
-export type ReactiveElSpec<Tag extends keyof HTMLElementTagNameMap, TElement> = {
+export type ReactiveElSpec<Tag extends keyof HTMLElementTagNameMap> = {
   tag: Tag;
   props?: ElementProps<Tag>;
-  children?: ElRefSpecChild<TElement>[];
+  children?: ElRefSpecChild[];
 } | null;
 
 /**
@@ -55,7 +55,7 @@ export type ElOpts<
   renderer: Renderer<TElement, TText>;
   processChildren: (
     parent: ElementRef<TElement>,
-    children: ElRefSpecChild<TElement>[]
+    children: ElRefSpecChild[]
   ) => void;
 };
 
@@ -63,8 +63,8 @@ export type ElOpts<
  * Children applicator - returned from el(tag, props)
  * Returns RefSpec which is itself callable for chaining lifecycle callbacks
  */
-export type ChildrenApplicator<Tag extends keyof HTMLElementTagNameMap, TElement> = (
-  ...children: ElRefSpecChild<TElement>[]
+export type ChildrenApplicator<Tag extends keyof HTMLElementTagNameMap> = (
+  ...children: ElRefSpecChild[]
 ) => RefSpec<HTMLElementTagNameMap[Tag]>;
 
 /**
@@ -81,11 +81,11 @@ export type ElFactory<TElement extends RendererElement> = LatticeExtension<
     <Tag extends keyof HTMLElementTagNameMap>(
       tag: Tag,
       props?: ElementProps<Tag>
-    ): ChildrenApplicator<Tag, TElement>;
+    ): ChildrenApplicator<Tag>;
 
     // Reactive element builder
     <Tag extends keyof HTMLElementTagNameMap>(
-      reactive: Reactive<ReactiveElSpec<Tag, TElement>>
+      reactive: Reactive<ReactiveElSpec<Tag>>
     ): FragmentRef<TElement>;
   }
 >;
@@ -137,7 +137,7 @@ export function createElFactory<
   const createStaticElement = <Tag extends keyof HTMLElementTagNameMap>(
     tag: Tag,
     props: ElementProps<Tag>,
-    children: ElRefSpecChild<TElement>[]
+    children: ElRefSpecChild[]
   ): RefSpec<HTMLElementTagNameMap[Tag]> => {
     type El = HTMLElementTagNameMap[Tag];
 
@@ -177,7 +177,7 @@ export function createElFactory<
   };
 
   const createReactiveElement = <Tag extends keyof HTMLElementTagNameMap>(
-    specReactive: Reactive<ReactiveElSpec<Tag, TElement>>
+    specReactive: Reactive<ReactiveElSpec<Tag>>
   ): FragmentRef<TElement> => {
     return createFragment((parent, nextSibling, fragRef) => {
       return scopedEffect(() => {
@@ -219,21 +219,21 @@ export function createElFactory<
   function el<Tag extends keyof HTMLElementTagNameMap>(
     tag: Tag,
     props?: ElementProps<Tag>
-  ): ChildrenApplicator<Tag, TElement>;
+  ): ChildrenApplicator<Tag>;
   function el<Tag extends keyof HTMLElementTagNameMap>(
-    reactive: Reactive<ReactiveElSpec<Tag, TElement>>
+    reactive: Reactive<ReactiveElSpec<Tag>>
   ): FragmentRef<TElement>;
   function el<Tag extends keyof HTMLElementTagNameMap>(
-    tagOrReactive: Tag | Reactive<ReactiveElSpec<Tag, TElement>>,
+    tagOrReactive: Tag | Reactive<ReactiveElSpec<Tag>>,
     props?: ElementProps<Tag>
-  ): ChildrenApplicator<Tag, TElement> | FragmentRef<TElement> {
+  ): ChildrenApplicator<Tag> | FragmentRef<TElement> {
     // Handle reactive case
     if (typeof tagOrReactive === 'function') {
       return createReactiveElement(tagOrReactive);
     }
 
     // Return children applicator which returns RefSpec directly
-    return (...children: ElRefSpecChild<TElement>[]) => {
+    return (...children: ElRefSpecChild[]) => {
       return createStaticElement(
         tagOrReactive,
         props ?? ({} as ElementProps<Tag>),

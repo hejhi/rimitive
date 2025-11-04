@@ -1,16 +1,14 @@
 /**
  * Counter UI Component
  *
- * Demonstrates separation of pure structure from imperative behavior:
- * - Phase 1 (Pure): Define structure with el(tag, props)(children)
- * - Phase 2 (Imperative): Attach behavior via RefSpec chaining
- * - Phase 3 (Instantiation): Call .create() to build DOM
+ * Uses the create() pattern - no API parameter needed!
+ * The API is provided automatically when .create({ api }) is called at the root.
  */
 
-import type { LatticeViewAPI } from '../types';
+import { create } from '@lattice/view/component';
 import { createCounter } from '../behaviors/counter';
 
-export function Counter(api: LatticeViewAPI, initialCount = 0) {
+export const Counter = create((api) => (initialCount: number = 0) => {
   const { el, on, computed } = api;
 
   const { decrement, increment, reset, count, doubled } = createCounter(
@@ -21,11 +19,7 @@ export function Counter(api: LatticeViewAPI, initialCount = 0) {
   const incrementBtn = el('button')('+ Increment');
   const resetBtn = el('button')('Reset');
 
-  // ============================================================================
-  // IMPERATIVE: Behavior attachment (side effects via RefSpec chaining)
-  // Note: api.on() returns a lifecycle callback, so we pass it directly
-  // ============================================================================
-
+  // Attach behavior via RefSpec chaining
   decrementBtn(on('click', decrement));
   incrementBtn(on('click', increment));
   resetBtn(on('click', reset));
@@ -38,4 +32,4 @@ export function Counter(api: LatticeViewAPI, initialCount = 0) {
     )(),
     el('div')(decrementBtn, incrementBtn, resetBtn)()
   )();
-}
+});

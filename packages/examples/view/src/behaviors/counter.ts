@@ -6,7 +6,7 @@
  * Can be used with any renderer (view, React, Vue, Svelte, etc.)
  */
 
-import type { LatticeViewAPI } from '../types';
+import type { LatticeViewAPI } from '@lattice/view/component';
 import type { Reactive } from '@lattice/view/types';
 
 export interface CounterAPI {

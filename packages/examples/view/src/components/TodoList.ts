@@ -5,11 +5,11 @@
  * Uses the headless todo-list behavior for logic
  */
 
-import type { LatticeViewAPI } from '../types';
+import { create } from '@lattice/view/component';
 import { createTodoList } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';
 
-export function TodoList(api: LatticeViewAPI) {
+export const TodoList = create((api) => () => {
   const { el, map, signal } = api;
 
   // Create headless behavior
@@ -122,4 +122,4 @@ export function TodoList(api: LatticeViewAPI) {
       clearBtn,
     ),
   );
-}
+});

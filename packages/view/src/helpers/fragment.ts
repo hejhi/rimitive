@@ -19,11 +19,11 @@ export function createFragment<TElement>(
     next: undefined,
     firstChild: undefined,
     attach: (
-      parent: ElementRef<TElement>,
-      nextSibling: NodeRef<TElement> | null = null
+      parent: ElementRef<unknown>,
+      nextSibling: NodeRef<unknown> | null = null
     ) => {
-      // Call user's initialization logic
-      const dispose = init(parent, nextSibling, fragRef);
+      // Call user's initialization logic - cast to TElement as all elements are compatible at runtime
+      const dispose = init(parent as ElementRef<TElement>, nextSibling as NodeRef<TElement> | null, fragRef);
 
       // Store dispose if provided
       if (dispose) fragRef.dispose = dispose;
@@ -51,12 +51,12 @@ export function resolveNextRef<TElement>(
 
     // FragmentRef - try to get first child element
     if (current.firstChild) {
-      const firstChild = current.firstChild;
+      const firstChild = current.firstChild as NodeRef<TElement>;
 
       if (isFragmentRef(firstChild) || isElementRef(firstChild)) return firstChild;
     }
 
-    current = current.next; // Empty fragment - skip to next sibling
+    current = current.next as NodeRef<TElement> | null | undefined; // Empty fragment - skip to next sibling
   }
 
   return null;

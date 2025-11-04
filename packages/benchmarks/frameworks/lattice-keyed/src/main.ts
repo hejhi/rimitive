@@ -240,7 +240,7 @@ const Button = (
 
 const Row = (
   data: Reactive<RowData>,
-  children: ElRefSpecChild<HTMLElement>[] = []
+  children: ElRefSpecChild[] = []
 ) => {
   const id = data().id;
   const label = data().label;
@@ -265,9 +265,7 @@ const App = () => {
   return el('div', { className: 'container' })(
     el('div', { className: 'jumbotron' })(
       el('div', { className: 'row' })(
-        el('div', { className: 'col-md-6' })(
-          el('h1')('Lattice-keyed')()
-        )(),
+        el('div', { className: 'col-md-6' })(el('h1')('Lattice-keyed')())(),
         el('div', { className: 'col-md-6' })(
           el('div', { className: 'row' })(
             Button('run', 'Create 1,000 rows')(on('click', run)),
@@ -281,11 +279,11 @@ const App = () => {
       )()
     )(),
     el('table', { className: 'table table-hover table-striped test-data' })(
-      el('tbody')(map(data, (rowData: RowData) => rowData.id)(Row))()
+      el('tbody')(map<RowData>(data, (rowData) => rowData.id)(Row))()
     )(),
     el('span', {
       className: 'preloadicon glyphicon glyphicon-remove',
-      ariaHidden: 'true'
+      ariaHidden: 'true',
     })()
   )();
 };

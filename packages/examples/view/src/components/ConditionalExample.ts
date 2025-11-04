@@ -7,9 +7,9 @@
  * 3. Dynamic element properties based on state
  */
 
-import type { LatticeViewAPI } from '../types';
+import { create } from '@lattice/view/component';
 
-export function ConditionalExample(api: LatticeViewAPI) {
+export const ConditionalExample = create((api) => () => {
   const { el, signal, computed } = api;
 
   // State for various conditional examples
@@ -140,4 +140,4 @@ export function ConditionalExample(api: LatticeViewAPI) {
       cycleTypeBtn
     )()
   )();
-}
+});

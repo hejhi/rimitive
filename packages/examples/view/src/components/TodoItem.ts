@@ -4,7 +4,7 @@
  * Renders a single todo item with checkbox, text, and remove button
  */
 
-import type { LatticeViewAPI } from '../types';
+import type { LatticeViewAPI } from '@lattice/view/component';
 import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
 
