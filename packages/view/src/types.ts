@@ -67,11 +67,14 @@ export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is 
  * Extends Instantiatable to provide uniform context injection pattern
  */
 export interface RefSpec<TElement> extends Instantiatable<NodeRef<TElement>, unknown> {
-  status: number;
+  status: typeof STATUS_REF_SPEC;
   (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
   // api parameter is optional - only needed for components created with create()
-  create<TExt = Record<string, unknown>>(api?: unknown, extensions?: TExt): NodeRef<TElement> & TExt;
+  create<TExt = Record<string, unknown>>(
+    api?: unknown,
+    extensions?: TExt
+  ): NodeRef<TElement> & TExt;
 }
 
 /**

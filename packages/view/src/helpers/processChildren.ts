@@ -6,7 +6,7 @@
  * 2. Backward pass: Attach fragments with correct insertion points
  */
 
-import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec } from '../types';
+import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
 import { isElementRef, isFragmentRef, STATUS_FRAGMENT, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
@@ -45,9 +45,9 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       (childType === 'function' || childType === 'object') &&
       'status' in (child as object)
     ) {
-      const spec = child as RefSpec<TElement>;
+      const spec = child as RefSpec<TElement> | FragmentRef<TElement> | SealedSpec<TElement>;
 
-      if (spec.status === STATUS_FRAGMENT) return child as FragmentRef<TElement>;
+      if (spec.status === STATUS_FRAGMENT) return spec;
 
       // RefSpec or SealedSpec - both have .create() method
       if (
