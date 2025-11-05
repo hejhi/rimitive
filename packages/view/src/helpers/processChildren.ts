@@ -7,7 +7,7 @@
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec } from '../types';
-import { isElementRef, isFragmentRef, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
+import { isElementRef, isFragmentRef, STATUS_FRAGMENT, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
@@ -47,6 +47,8 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
     ) {
       const spec = child as RefSpec<TElement>;
 
+      if (spec.status === STATUS_FRAGMENT) return child as FragmentRef<TElement>;
+
       // RefSpec or SealedSpec - both have .create() method
       if (
         spec.status === STATUS_REF_SPEC ||
@@ -55,11 +57,6 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
         const childRef = spec.create(api);
         if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
         return childRef;
-      }
-
-      // FragmentRef - return it for backward pass handling
-      if (childType === 'object' && isFragmentRef<TElement>(child as NodeRef<TElement>)) {
-        return child as FragmentRef<TElement>;
       }
     }
 
