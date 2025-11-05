@@ -148,4 +148,4 @@ const App = create(({ el }) => () => {
 // ============================================================================
 
 const app = document.getElementById('app')!;
-app.appendChild(App().create(api).element as HTMLElement);
+app.appendChild(App().create(api).element!);

@@ -26,7 +26,6 @@
 
 import { create as baseCreate } from '@lattice/lattice';
 import type { RefSpec, Reactive, FragmentRef, ElRefSpecChild, NodeRef } from './types';
-import { STATUS_REF_SPEC } from './types';
 import type { ReactiveElSpec } from './el';
 import type { Element as RendererElement } from './renderer';
 
@@ -88,10 +87,10 @@ export interface LatticeViewAPI<TElement extends RendererElement = RendererEleme
  * Create a component that receives API at instantiation time
  *
  * Components defined with create() don't need the API passed as a parameter.
- * Instead, they receive it automatically when api.create() is called.
+ * Instead, they receive it when .create(api) is called, which returns a NodeRef.
  *
  * @param factory - Function that receives API and returns a component function
- * @returns A function that takes component arguments and returns a RefSpec
+ * @returns A function that takes component arguments and returns an Instantiatable
  *
  * @example
  * ```typescript
@@ -106,49 +105,31 @@ export interface LatticeViewAPI<TElement extends RendererElement = RendererEleme
  *   )();
  * });
  *
- * // Use component - no API needed during composition
- * const counter = Counter(10);
+ * // Compose without API
+ * const counterSpec = Counter(10);
  *
- * // Instantiate with API
- * const api = createLatticeViewAPI();
- * const dom = api.create(counter);
+ * // Instantiate with API - returns NodeRef directly
+ * const nodeRef = counterSpec.create(api);
+ * app.appendChild(nodeRef.element);
  * ```
  */
 export function create<TArgs extends unknown[], TElement, TRendererElement extends RendererElement = RendererElement>(
   factory: (api: LatticeViewAPI<TRendererElement>) => (...args: TArgs) => RefSpec<TElement>
 ) {
-  return (...args: TArgs): RefSpec<TElement> => {
-    const lifecycleCallbacks: Array<(el: TElement) => void | (() => void)> = [];
-
-    // Create the base instantiatable using the generic pattern
+  return (...args: TArgs) => {
+    // Use lattice create for API injection
     const baseInstantiatable = baseCreate(factory)(...args);
 
-    // Wrap it with RefSpec interface (lifecycle callbacks + status)
-    const refSpec: RefSpec<TElement> = (...callbacks) => {
-      lifecycleCallbacks.push(...callbacks);
-      return refSpec;
-    };
+    // Return an Instantiatable that wraps the RefSpec's create
+    return {
+      create(api: LatticeViewAPI<TRendererElement>): NodeRef<TElement> {
+        // Step 1: Inject API to get RefSpec
+        const refSpec = baseInstantiatable.create(api);
 
-    refSpec.status = STATUS_REF_SPEC;
-
-    refSpec.create = <TExt>(api?: unknown, extensions?: TExt): NodeRef<TElement> & TExt => {
-      if (!api) {
-        throw new Error('create() requires api parameter for components');
+        // Step 2: Call RefSpec's create, passing API for nested components
+        return refSpec.create(api);
       }
-
-      // Use the base instantiatable's create to get the spec
-      const spec = baseInstantiatable.create(api as LatticeViewAPI<TRendererElement>);
-
-      // Apply stored lifecycle callbacks
-      for (const cb of lifecycleCallbacks) {
-        spec(cb);
-      }
-
-      // Create with the api
-      return spec.create(api, extensions);
     };
-
-    return refSpec;
   };
 }
 
