@@ -10,10 +10,13 @@ import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedS
 import { isElementRef, isFragmentRef, STATUS_FRAGMENT, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
+
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
 }) {
+  type ViewChild = RefSpec<TElement> | FragmentRef<TElement> | SealedSpec<TElement>;
+
   const { scopedEffect, renderer } = opts;
   const createTextEffect =
     (child: () => string | number, text: TText) =>
@@ -43,9 +46,9 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
     if (
       (childType === 'function' || childType === 'object') &&
-      'status' in (child as object)
+      'status' in (child as ViewChild)
     ) {
-      const spec = child as RefSpec<TElement> | FragmentRef<TElement> | SealedSpec<TElement>;
+      const spec = child as ViewChild;
 
       if (spec.status === STATUS_FRAGMENT) return spec;
 
@@ -55,7 +58,8 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
         spec.status === STATUS_SEALED_SPEC
       ) {
         const childRef = spec.create(api);
-        if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
+        if (isElementRef(childRef))
+          renderer.appendChild(element, childRef.element);
         return childRef;
       }
     }
