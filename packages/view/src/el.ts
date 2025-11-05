@@ -55,7 +55,8 @@ export type ElOpts<
   renderer: Renderer<TElement, TText>;
   processChildren: (
     parent: ElementRef<TElement>,
-    children: ElRefSpecChild[]
+    children: ElRefSpecChild[],
+    api?: unknown
   ) => void;
 };
 
@@ -109,7 +110,7 @@ export function createElFactory<
    * Helper to create a RefSpec with lifecycle callback chaining
    */
   const createRefSpec = <El extends HTMLElement>(
-    createElement: (callbacks: LifecycleCallback<El>[]) => ElementRef<El>
+    createElement: (callbacks: LifecycleCallback<El>[], api?: unknown) => ElementRef<El>
   ): RefSpec<El> => {
     const lifecycleCallbacks: LifecycleCallback<El>[] = [];
 
@@ -120,8 +121,13 @@ export function createElFactory<
 
     refSpec.status = STATUS_REF_SPEC;
 
-    refSpec.create = <TExt>(extensions?: TExt): ElementRef<El> & TExt => {
-      const elRef = createElement(lifecycleCallbacks);
+    refSpec.create = <TExt>(optionsOrExtensions?: TExt | { api?: unknown; extensions?: TExt }): ElementRef<El> & TExt => {
+      // Extract API if provided in options format
+      const options = optionsOrExtensions as { api?: unknown; extensions?: TExt };
+      const api = options?.api;
+      const extensions = options?.extensions || (typeof optionsOrExtensions === 'object' && !options?.api ? optionsOrExtensions : undefined);
+
+      const elRef = createElement(lifecycleCallbacks, api);
       return { ...elRef, ...extensions } as ElementRef<El> & TExt;
     };
 
@@ -141,7 +147,7 @@ export function createElFactory<
   ): RefSpec<HTMLElementTagNameMap[Tag]> => {
     type El = HTMLElementTagNameMap[Tag];
 
-    return createRefSpec<El>((lifecycleCallbacks) => {
+    return createRefSpec<El>((lifecycleCallbacks, api) => {
       const element = renderer.createElement(tag) as unknown as El;
       const elRef: ElementRef<El> = {
         status: STATUS_ELEMENT,
@@ -163,7 +169,7 @@ export function createElFactory<
             )
           );
         }
-        processChildren(elRef as unknown as ElementRef<TElement>, children);
+        processChildren(elRef as unknown as ElementRef<TElement>, children, api);
 
         // Execute lifecycle callbacks within scope
         for (const callback of lifecycleCallbacks) {
