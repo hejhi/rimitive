@@ -6,6 +6,7 @@
  * Can be used with any renderer (view, React, Vue, Svelte, etc.)
  */
 
+import { create } from '@lattice/lattice';
 import type { LatticeViewAPI } from '@lattice/view/component';
 import type { Reactive } from '@lattice/view/types';
 
@@ -17,7 +18,7 @@ export interface CounterAPI {
   reset: () => void;
 }
 
-export function createCounter(api: LatticeViewAPI, initialCount = 0): CounterAPI {
+export const createCounter = create((api: LatticeViewAPI) => (initialCount: number = 0): CounterAPI => {
   const count = api.signal(initialCount);
   const doubled = api.computed(() => count() * 2);
 
@@ -31,4 +32,4 @@ export function createCounter(api: LatticeViewAPI, initialCount = 0): CounterAPI
     decrement: () => count(count() - 1),
     reset: () => count(initialCount),
   };
-}
+});

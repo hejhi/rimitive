@@ -6,6 +6,7 @@
  * Can be used with any renderer (view, React, Vue, Svelte, etc.)
  */
 
+import { create } from '@lattice/lattice';
 import type { LatticeViewAPI } from '@lattice/view/component';
 import type { Reactive } from '@lattice/view/types';
 
@@ -30,7 +31,7 @@ export interface TodoListAPI {
   clearCompleted: () => void;
 }
 
-export function createTodoList(api: LatticeViewAPI): TodoListAPI {
+export const createTodoList = create((api: LatticeViewAPI) => (): TodoListAPI => {
   let nextId = 1;
   const todos = api.signal<Todo[]>([]);
   const filter = api.signal<FilterType>('all');
@@ -90,4 +91,4 @@ export function createTodoList(api: LatticeViewAPI): TodoListAPI {
       todos(todos().filter((todo: Todo) => !todo.completed));
     },
   };
-}
+});

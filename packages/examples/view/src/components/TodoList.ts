@@ -13,7 +13,7 @@ export const TodoList = create((api) => () => {
   const { el, map, signal } = api;
 
   // Create headless behavior
-  const todoList = createTodoList(api);
+  const todoList = createTodoList().create(api);
 
   // Local UI state (input value)
   const inputValue = signal('');

@@ -24,6 +24,7 @@
  * ```
  */
 
+import { create as baseCreate } from '@lattice/lattice';
 import type { RefSpec, Reactive, FragmentRef, ElRefSpecChild, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
 import type { ReactiveElSpec } from './el';
@@ -119,6 +120,10 @@ export function create<TArgs extends unknown[], TElement, TRendererElement exten
   return (...args: TArgs): RefSpec<TElement> => {
     const lifecycleCallbacks: Array<(el: TElement) => void | (() => void)> = [];
 
+    // Create the base instantiatable using the generic pattern
+    const baseInstantiatable = baseCreate(factory)(...args);
+
+    // Wrap it with RefSpec interface (lifecycle callbacks + status)
     const refSpec: RefSpec<TElement> = (...callbacks) => {
       lifecycleCallbacks.push(...callbacks);
       return refSpec;
@@ -130,8 +135,9 @@ export function create<TArgs extends unknown[], TElement, TRendererElement exten
       if (!api) {
         throw new Error('create() requires api parameter for components');
       }
-      const component = factory(api as LatticeViewAPI<TRendererElement>);
-      const spec = component(...args);
+
+      // Use the base instantiatable's create to get the spec
+      const spec = baseInstantiatable.create(api as LatticeViewAPI<TRendererElement>);
 
       // Apply stored lifecycle callbacks
       for (const cb of lifecycleCallbacks) {
@@ -146,5 +152,3 @@ export function create<TArgs extends unknown[], TElement, TRendererElement exten
   };
 }
 
-export { createCreateFactory } from './create';
-export type { CreateFactory, CreateOpts } from './create';

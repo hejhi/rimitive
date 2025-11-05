@@ -3,6 +3,7 @@
  */
 
 import type { Readable, ScheduledNode } from '@lattice/signals/types';
+import type { Instantiatable } from '@lattice/lattice';
 
 /**
  * Status bits for node ref type discrimination
@@ -62,8 +63,9 @@ export function isFragmentRef<TElement>(nodeRef: NodeRef<TElement>): nodeRef is 
 
 /**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
+ * Extends Instantiatable to provide uniform context injection pattern
  */
-export interface RefSpec<TElement> {
+export interface RefSpec<TElement> extends Instantiatable<NodeRef<TElement>, unknown> {
   status: number;
   (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions

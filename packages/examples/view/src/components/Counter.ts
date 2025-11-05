@@ -11,10 +11,7 @@ import { createCounter } from '../behaviors/counter';
 export const Counter = create((api) => (initialCount: number = 0) => {
   const { el, on, computed } = api;
 
-  const { decrement, increment, reset, count, doubled } = createCounter(
-    api,
-    initialCount
-  );
+  const { decrement, increment, reset, count, doubled } = createCounter(initialCount).create(api);
   const decrementBtn = el('button')('- Decrement');
   const incrementBtn = el('button')('+ Increment');
   const resetBtn = el('button')('Reset');
