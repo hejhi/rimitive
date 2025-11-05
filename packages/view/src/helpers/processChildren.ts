@@ -7,7 +7,7 @@
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec } from '../types';
-import { isElementRef, isFragmentRef, STATUS_REF_SPEC } from '../types';
+import { isElementRef, isFragmentRef, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
 export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
@@ -41,29 +41,35 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       return null; // Text nodes don't participate in ref node chain
     }
 
-    if (childType === 'function') {
-      const fn = child as RefSpec<TElement>;
+    if (
+      (childType === 'function' || childType === 'object') &&
+      'status' in (child as object)
+    ) {
+      const spec = child as RefSpec<TElement>;
 
-      // RefSpec or Instantiatable - both have .create() method
-      if (fn.status === STATUS_REF_SPEC) {
-        const childRef = fn.create(api);
+      // RefSpec or SealedSpec - both have .create() method
+      if (
+        spec.status === STATUS_REF_SPEC ||
+        spec.status === STATUS_SEALED_SPEC
+      ) {
+        const childRef = spec.create(api);
         if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
         return childRef;
       }
 
-      // Any other function - wrap in scopedEffect (auto-tracks if reactive)
+      // FragmentRef - return it for backward pass handling
+      if (childType === 'object' && isFragmentRef<TElement>(child as NodeRef<TElement>)) {
+        return child as FragmentRef<TElement>;
+      }
+    }
+
+    // Bare function (reactive computed or effect) - wrap in scopedEffect
+    if (childType === 'function') {
       const textNode = renderer.createTextNode('');
       scopedEffect(createTextEffect(child as () => string, textNode));
       renderer.appendChild(element, textNode);
       return null;
     }
-
-    // Fragment ref - return it for backward pass handling
-    if (
-      childType === 'object' &&
-      child !== null &&
-      isFragmentRef<TElement>(child as NodeRef<TElement>)
-    ) return child as FragmentRef<TElement>;
 
     return null; // Default case
   }

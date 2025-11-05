@@ -25,7 +25,7 @@
  */
 
 import { create as baseCreate } from '@lattice/lattice';
-import type { RefSpec, Reactive, FragmentRef, ElRefSpecChild, NodeRef } from './types';
+import { type RefSpec, type SealedSpec, type Reactive, type FragmentRef, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
 import type { ReactiveElSpec } from './el';
 import type { Element as RendererElement } from './renderer';
 
@@ -116,12 +116,13 @@ export interface LatticeViewAPI<TElement extends RendererElement = RendererEleme
 export function create<TArgs extends unknown[], TElement, TRendererElement extends RendererElement = RendererElement>(
   factory: (api: LatticeViewAPI<TRendererElement>) => (...args: TArgs) => RefSpec<TElement>
 ) {
-  return (...args: TArgs) => {
+  return (...args: TArgs): SealedSpec<TElement> => {
     // Use lattice create for API injection
     const baseInstantiatable = baseCreate(factory)(...args);
 
-    // Return an Instantiatable that wraps the RefSpec's create
+    // Return a SealedSpec that wraps the RefSpec's create
     return {
+      status: STATUS_SEALED_SPEC,
       create(api: LatticeViewAPI<TRendererElement>): NodeRef<TElement> {
         // Step 1: Inject API to get RefSpec
         const refSpec = baseInstantiatable.create(api);
