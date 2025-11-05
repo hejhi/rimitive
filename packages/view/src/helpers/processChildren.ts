@@ -7,7 +7,7 @@
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
-import { isElementRef, isFragmentRef, STATUS_FRAGMENT, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
+import { isElementRef, isFragmentRef, STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
 
@@ -58,8 +58,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
         spec.status === STATUS_SEALED_SPEC
       ) {
         const childRef = spec.create(api);
-        if (isElementRef(childRef))
-          renderer.appendChild(element, childRef.element);
+        if (childRef.status === STATUS_ELEMENT) renderer.appendChild(element, childRef.element);
         return childRef;
       }
     }
