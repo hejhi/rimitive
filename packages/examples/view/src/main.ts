@@ -23,10 +23,12 @@ import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createScopes } from '@lattice/view/helpers/scope';
 import { createOnFactory } from '@lattice/view/on';
+import { createCreateFactory } from '@lattice/view/create';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
 import type { LatticeViewAPI } from '@lattice/view/component';
+import type { RefSpec, NodeRef } from '@lattice/view/types';
 
 // ============================================================================
 // Create Lattice API with Signals + View
@@ -118,8 +120,11 @@ const onFactory = createOnFactory({
   endBatch: () => 0,
 });
 
-// Create the combined API
-const api: LatticeViewAPI<HTMLElement> = createApi(
+// Create the combined API with self-reference for create extension
+type FullAPI = LatticeViewAPI<HTMLElement> & { create: <T extends RefSpec<HTMLElement>>(spec: T) => NodeRef<HTMLElement> };
+
+// First create without create extension
+let api = createApi(
   {
     signal: () => signalFactory,
     computed: () => computedFactory,
@@ -128,8 +133,22 @@ const api: LatticeViewAPI<HTMLElement> = createApi(
     on: () => onFactory,
     map: () => mapFactory,
   },
+  {}
+) as unknown as FullAPI; // Cast to allow self-reference
+
+// Then recreate with create extension that references the api
+api = createApi(
+  {
+    signal: () => signalFactory,
+    computed: () => computedFactory,
+    effect: () => effectFactory,
+    el: () => elFactory,
+    on: () => onFactory,
+    map: () => mapFactory,
+    create: () => createCreateFactory({ api }), // Now api exists!
+  },
   {} // No shared context needed
-);
+) as unknown as FullAPI;
 
 // ============================================================================
 // Mount the App
@@ -148,5 +167,5 @@ const appSpec = el('div', { className: 'app' })(
 )();
 
 // Instantiate with API - flows down automatically to all components
-const appRef = appSpec.create({ api });
+const appRef = api.create(appSpec);
 app.appendChild(appRef.element as HTMLElement);

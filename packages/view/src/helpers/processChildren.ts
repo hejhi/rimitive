@@ -25,8 +25,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
   const handleChild = (
     parentRef: ElementRef<TElement>,
-    child: ElRefSpecChild,
-    api?: unknown
+    child: ElRefSpecChild
   ): NodeRef<TElement> | null => {
     const element = parentRef.element;
     const childType = typeof child;
@@ -44,9 +43,9 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
     if (childType === 'function') {
       const fn = child as RefSpec<TElement>;
 
-      // RefSpec - our primitive (includes lazy components)
+      // RefSpec - our primitive
       if (fn.status === STATUS_REF_SPEC) {
-        const childRef = fn.create({ api });
+        const childRef = fn.create();
         if (isElementRef(childRef)) renderer.appendChild(element, childRef.element);
         return childRef;
       }
@@ -70,8 +69,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
   const processChildren = (
     parent: ElementRef<TElement>,
-    children: ElRefSpecChild[],
-    api?: unknown
+    children: ElRefSpecChild[]
   ): void => {
     // Map to track which child produced which NodeRef
     const childNodes = new Map<number, NodeRef<TElement>>();
@@ -79,7 +77,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
     // Forward pass: build intrusive linked list (skip fragment factories)
     for (let i = 0; i < children.length; i++) {
-      const refNode = handleChild(parent, children[i]!, api);
+      const refNode = handleChild(parent, children[i]!);
 
       if (!refNode) continue;
 

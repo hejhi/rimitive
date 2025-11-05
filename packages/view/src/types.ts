@@ -3,8 +3,6 @@
  */
 
 import type { Readable, ScheduledNode } from '@lattice/signals/types';
-import type { LazyComponent } from './component';
-import type { Element as RendererElement } from './renderer';
 
 /**
  * Status bits for node ref type discrimination
@@ -69,7 +67,8 @@ export interface RefSpec<TElement> {
   status: number;
   (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
-  create<TExt = Record<string, unknown>>(extensions?: TExt): NodeRef<TElement> & TExt;
+  // api parameter is optional - only needed for components created with create()
+  create<TExt = Record<string, unknown>>(api?: unknown, extensions?: TExt): NodeRef<TElement> & TExt;
 }
 
 /**
@@ -88,7 +87,7 @@ export type LifecycleCallback<TElement> = (element: TElement) => void | (() => v
  * Note: Bare functions are not supported. For dynamic content, use map() or other
  * reconciliation helpers that provide efficient updates.
  *
- * The TElement parameter is kept for API consistency, but child RefSpecs/FragmentRefs/LazyComponents
+ * The TElement parameter is kept for API consistency, but child RefSpecs/FragmentRefs
  * use `unknown` since any element can be a child of any other element at runtime. Using `unknown`
  * (the top type) allows proper variance - any RefSpec<T> is assignable to RefSpec<unknown>.
  */
@@ -99,8 +98,7 @@ export type ElRefSpecChild =
   | null
   | RefSpec<unknown>
   | Reactive<unknown>
-  | FragmentRef<unknown>
-  | LazyComponent<unknown[], unknown, RendererElement>;
+  | FragmentRef<unknown>;
 
 export interface RenderScope<TElement> extends ScheduledNode {
   // Tree structure (from Scope) - intrusive singly-linked tree

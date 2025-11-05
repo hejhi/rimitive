@@ -22,6 +22,10 @@
       "import": "./dist/component.js",
       "types": "./dist/component.d.ts"
     },
+    "./create": {
+      "import": "./dist/create.js",
+      "types": "./dist/create.d.ts"
+    },
     "./context": {
       "import": "./dist/context.js",
       "types": "./dist/context.d.ts"
