@@ -46,7 +46,7 @@ export interface FragmentRef<TElement> extends BaseRef {
   // Parameters use 'unknown' to allow FragmentRef<T> to be assignable to FragmentRef<unknown>
   // This is safe because at runtime all element types are compatible
   attach: {
-    (parent: ElementRef<unknown>, nextSibling?: NodeRef<unknown> | null): FragmentRef<TElement>;
+    (parent: ElementRef<unknown>, nextSibling?: NodeRef<unknown> | null, api?: unknown): FragmentRef<TElement>;
   };
 }
 

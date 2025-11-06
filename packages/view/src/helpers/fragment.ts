@@ -4,7 +4,8 @@ import { STATUS_FRAGMENT, STATUS_ELEMENT, isFragmentRef, isElementRef } from '..
 export type FragmentInitFn<TElement> = (
   parent: ElementRef<TElement>,
   nextSibling: NodeRef<TElement> | null,
-  fragmentRef: FragmentRef<TElement>
+  fragmentRef: FragmentRef<TElement>,
+  api?: unknown
 ) => (() => void) | void;
 
 /**
@@ -20,10 +21,16 @@ export function createFragment<TElement>(
     firstChild: undefined,
     attach: (
       parent: ElementRef<unknown>,
-      nextSibling: NodeRef<unknown> | null = null
+      nextSibling: NodeRef<unknown> | null = null,
+      api?: unknown
     ) => {
       // Call user's initialization logic - cast to TElement as all elements are compatible at runtime
-      const dispose = init(parent as ElementRef<TElement>, nextSibling as NodeRef<TElement> | null, fragRef);
+      const dispose = init(
+        parent as ElementRef<TElement>,
+        nextSibling as NodeRef<TElement> | null,
+        fragRef,
+        api
+      );
 
       // Store dispose if provided
       if (dispose) fragRef.dispose = dispose;

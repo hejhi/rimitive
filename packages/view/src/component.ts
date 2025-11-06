@@ -80,7 +80,7 @@ export interface LatticeViewAPI<TElement extends RendererElement = RendererEleme
   map: <T>(
     items: () => T[],
     keyFn?: (item: T) => string | number
-  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => FragmentRef<TElement>;
+  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TElement> | SealedSpec<TElement>) => FragmentRef<TElement>;
 }
 
 /**

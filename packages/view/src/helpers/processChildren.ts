@@ -7,7 +7,7 @@
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
-import { isElementRef, isFragmentRef, STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
 
@@ -98,12 +98,14 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
 
     for (let i = children.length - 1; i >= 0; i--) {
       const nodeRef = childNodes.get(i);
+      if (!nodeRef) continue;
+      const status = nodeRef.status;
 
-      // Fragment ref - call attach with parent and nextSibling
-      if (nodeRef && isFragmentRef(nodeRef)) nodeRef.attach(parent, nextRef);
+      // Fragment ref - call attach with parent, nextSibling, and api for SealedSpec support
+      if (status === STATUS_FRAGMENT) nodeRef.attach(parent, nextRef, api);
 
       // Update insertion point for next fragment
-      if (nodeRef && isElementRef(nodeRef)) { nextRef = nodeRef };
+      if (status === STATUS_ELEMENT) { nextRef = nodeRef };
     }
   };
 

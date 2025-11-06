@@ -5,15 +5,13 @@
  * Uses the headless todo-list behavior for logic
  */
 
-import { create } from '@lattice/view/component';
+import { create, type LatticeViewAPI } from '@lattice/view/component';
 import { createTodoList } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';
 
-export const TodoList = create((api) => () => {
-  const { el, map, signal } = api;
-
+export const TodoList = create(({ el, map, signal, computed, effect, on }: LatticeViewAPI<HTMLElement>) => () => {
   // Create headless behavior
-  const todoList = createTodoList().create(api);
+  const todoList = createTodoList().create({ computed, effect, signal });
 
   // Local UI state (input value)
   const inputValue = signal('');
@@ -37,46 +35,46 @@ export const TodoList = create((api) => () => {
       value: inputValue,
     },
   )()(
-    api.on('input', (e) =>
+    on('input', (e) =>
       inputValue((e.target as HTMLInputElement).value)
     ),
-    api.on('keydown', (e) => {
+    on('keydown', (e) => {
       if (e.key === 'Enter') handleAdd();
     }),
   );
 
   // Create "Add Todo" button
-  const addBtn = el('button', {})('Add Todo')(api.on('click', handleAdd))
+  const addBtn = el('button', {})('Add Todo')(on('click', handleAdd))
 
   // Create filter buttons
   const allBtn = el(
     'button',
     {
-      className: api.computed(() =>
+      className: computed(() =>
         todoList.filter() === 'all' ? 'active' : ''
       ),
     },
-  )('All')(api.on('click', () => todoList.setFilter('all')));
+  )('All')(on('click', () => todoList.setFilter('all')));
 
   const activeBtn = el(
     'button',
     {
-      className: api.computed(() =>
+      className: computed(() =>
         todoList.filter() === 'active' ? 'active' : ''
       ),
     },
-  )('Active')(api.on('click', () => todoList.setFilter('active')));
+  )('Active')(on('click', () => todoList.setFilter('active')));
 
   const completedBtn = el(
     'button',
     {
-      className: api.computed(() =>
+      className: computed(() =>
         todoList.filter() === 'completed' ? 'active' : ''
       ),
     },
-  )('Completed')(api.on('click', () => todoList.setFilter('completed')));
+  )('Completed')(on('click', () => todoList.setFilter('completed')));
 
-  const clearBtn = el('button')('Clear Completed')(api.on('click', () => todoList.clearCompleted()));
+  const clearBtn = el('button')('Clear Completed')(on('click', () => todoList.clearCompleted()));
 
   return el(
     'div',
@@ -105,7 +103,6 @@ export const TodoList = create((api) => () => {
       )(
         (todoSignal) =>
           TodoItem(
-            api,
             todoSignal,
             (id) => todoList.toggleTodo(id),
             (id) => todoList.removeTodo(id)
@@ -115,7 +112,7 @@ export const TodoList = create((api) => () => {
 
     // Stats
     el('div', { className: 'todo-stats' })(
-      api.computed(
+      computed(
         () =>
           `Active: ${todoList.activeCount()} | Completed: ${todoList.completedCount()} | `
       ),

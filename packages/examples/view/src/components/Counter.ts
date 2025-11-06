@@ -10,16 +10,10 @@ import { createCounter } from '../behaviors/counter';
 
 export const Counter = create((api) => (initialCount: number = 0) => {
   const { el, on, computed } = api;
-
   const { decrement, increment, reset, count, doubled } = createCounter(initialCount).create(api);
-  const decrementBtn = el('button')('- Decrement');
-  const incrementBtn = el('button')('+ Increment');
-  const resetBtn = el('button')('Reset');
-
-  // Attach behavior via RefSpec chaining
-  decrementBtn(on('click', decrement));
-  incrementBtn(on('click', increment));
-  resetBtn(on('click', reset));
+  const decrementBtn = el('button')('- Decrement')(on('click', decrement));
+  const incrementBtn = el('button')('+ Increment')(on('click', increment));
+  const resetBtn = el('button')('Reset')(on('click', reset));
 
   return el('div', { className: 'example' })(
     el('h2')('Counter Example')(),

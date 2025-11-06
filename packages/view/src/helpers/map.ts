@@ -9,7 +9,7 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
-import type { RefSpec, FragmentRef, Reactive, ElementRef } from '../types';
+import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from '../types';
 import { isElementRef } from '../types';
 import { resolveNextRef } from './fragment';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
@@ -28,7 +28,7 @@ export type MapFactory<TElement extends RendererElement> = LatticeExtension<
   <T>(
     items: () => T[],
     keyFn?: (item: T) => string | number
-  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => FragmentRef<TElement>
+  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TElement> | SealedSpec<TElement>) => FragmentRef<TElement>
 >;
 
 export interface MapHelperOpts<
@@ -61,8 +61,8 @@ export function createMapHelper<
   function map<T>(
     items: () => T[],
     keyFn?: (item: T) => string | number
-  ): (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => FragmentRef<TElement> {
-    return (render: (itemSignal: Reactive<T>) => RefSpec<TElement>) => createFragment((parent, nextSibling) => {
+  ): (render: (itemSignal: Reactive<T>) => RefSpec<TElement> | SealedSpec<TElement>) => FragmentRef<TElement> {
+    return (render: (itemSignal: Reactive<T>) => RefSpec<TElement> | SealedSpec<TElement>) => createFragment((parent, nextSibling, api) => {
       const parentEl = parent.element;
       const nextSib = nextSibling as RecNode<T, TElement> | null | undefined;
 
@@ -80,7 +80,8 @@ export function createMapHelper<
           const itemSignal = signal(item);
 
           // Render the item - this creates an element with its own scope
-          const elRef = render(itemSignal).create() as RecNode<T, TElement>;
+          // Pass api for SealedSpec components created with create()
+          const elRef = render(itemSignal).create(api) as RecNode<T, TElement>;
 
           renderer.insertBefore(
             parentEl,
