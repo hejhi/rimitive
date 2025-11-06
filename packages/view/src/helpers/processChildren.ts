@@ -53,6 +53,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       if (spec.status === STATUS_FRAGMENT) return spec;
 
       // RefSpec or SealedSpec - both have .create() method
+      // TODO: composite bit mask for status like ref and sealed?
       if (
         spec.status === STATUS_REF_SPEC ||
         spec.status === STATUS_SEALED_SPEC
