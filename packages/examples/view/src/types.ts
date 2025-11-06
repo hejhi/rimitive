@@ -1,22 +1,36 @@
 /**
  * Type definitions for the Lattice API with Signals + View
  *
- * Parameterize view factories with DOM type for proper HTML element typing
+ * Includes minimal interfaces for framework-agnostic behaviors
  */
-
-import type { ExtensionsToContext } from '@lattice/lattice';
-import type { SignalFactory } from '@lattice/signals/signal';
-import type { ComputedFactory } from '@lattice/signals/computed';
-import type { EffectFactory } from '@lattice/signals/effect';
-import type { ElFactory } from '@lattice/view/el';
-import type { OnFactory } from '@lattice/view/on';
-import type { MapFactory } from '@lattice/view/helpers/map';
-import type { DOM } from '@lattice/view/renderers/dom';
 
 /**
- * Combined Lattice API with signals and DOM view primitives
- * Parameterize view factories with DOM type - works for any renderer!
+ * Signal function with both getter and setter
  */
-export type LatticeViewAPI = ExtensionsToContext<
-  [SignalFactory, ComputedFactory, EffectFactory, ElFactory<DOM>, OnFactory, MapFactory<DOM>]
->;
+export interface SignalFunction<T> {
+  (): T;                    // Read operation
+  (value: T): void;         // Write operation
+  peek(): T;                // Non-tracking read
+}
+
+/**
+ * Computed function (read-only)
+ */
+export interface ComputedFunction<T> {
+  (): T;                    // Read operation
+  peek(): T;                // Non-tracking read
+}
+
+/**
+ * Minimal signals API for headless behaviors
+ *
+ * Behaviors that only need reactive primitives should depend on this interface,
+ * not on LatticeViewAPI. This makes them reusable with any signals implementation
+ * (Lattice, Solid, Preact Signals, etc.)
+ * ```
+ */
+export interface SignalsAPI {
+  signal: <T>(value: T) => SignalFunction<T>;
+  computed: <T>(fn: () => T) => ComputedFunction<T>;
+  effect: (fn: () => void | (() => void)) => () => void;
+}

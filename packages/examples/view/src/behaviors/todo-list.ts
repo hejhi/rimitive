@@ -3,12 +3,11 @@
  *
  * Component Pattern (see COMPONENT_PATTERN.md)
  * This is a headless component - pure logic with no UI concerns.
- * Can be used with any renderer (view, React, Vue, Svelte, etc.)
+ * Can be used with any signals implementation (Lattice, Solid, Preact Signals, etc.)
  */
 
 import { create } from '@lattice/lattice';
-import type { LatticeViewAPI } from '@lattice/view/component';
-import type { Reactive } from '@lattice/view/types';
+import type { SignalsAPI, SignalFunction, ComputedFunction } from '../types';
 
 export interface Todo {
   id: number;
@@ -19,11 +18,11 @@ export interface Todo {
 export type FilterType = 'all' | 'active' | 'completed';
 
 export interface TodoListAPI {
-  todos: Reactive<Todo[]>;
-  filteredTodos: Reactive<Todo[]>;
-  filter: Reactive<FilterType>;
-  activeCount: Reactive<number>;
-  completedCount: Reactive<number>;
+  todos: SignalFunction<Todo[]>;
+  filteredTodos: ComputedFunction<Todo[]>;
+  filter: SignalFunction<FilterType>;
+  activeCount: ComputedFunction<number>;
+  completedCount: ComputedFunction<number>;
   addTodo: (text: string) => void;
   toggleTodo: (id: number) => void;
   removeTodo: (id: number) => void;
@@ -31,7 +30,7 @@ export interface TodoListAPI {
   clearCompleted: () => void;
 }
 
-export const createTodoList = create((api: LatticeViewAPI) => (): TodoListAPI => {
+export const createTodoList = create((api: SignalsAPI) => (): TodoListAPI => {
   let nextId = 1;
   const todos = api.signal<Todo[]>([]);
   const filter = api.signal<FilterType>('all');
