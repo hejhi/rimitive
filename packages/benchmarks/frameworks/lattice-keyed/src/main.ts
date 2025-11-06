@@ -1,12 +1,5 @@
 import { createContext } from '@lattice/lattice';
-import { Signal } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Effect } from '@lattice/signals/effect';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { signalsCore } from '@lattice/signals/presets/core';
 import { createScopes } from '@lattice/view/helpers/scope';
 import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createElFactory } from '@lattice/view/el';
@@ -17,45 +10,24 @@ import { createOnFactory } from '@lattice/view/on';
 // All scope helpers consolidated in scope.ts
 import { ElRefSpecChild, type Reactive } from '@lattice/view/types';
 
-// ============================================================================
-// Create Lattice API
-// ============================================================================
+// Create signals with preset
+const { extensions, helpers } = signalsCore();
+const { ctx: signalCtx, track, dispose, startBatch, endBatch } = helpers;
 
-function createSignalContext() {
-  const ctx = createBaseContext();
-  const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
-  const { withVisitor } = createGraphTraversal();
-  const _scheduler = createScheduler({ detachAll });
-  const { withPropagate, ...scheduler } = _scheduler;
-  const pullPropagator = createPullPropagator({ track });
-
-  return {
-    ctx,
-    trackDependency,
-    propagate: withPropagate(withVisitor),
-    track,
-    dispose: scheduler.dispose,
-    pullUpdates: pullPropagator.pullUpdates,
-    shallowPropagate: pullPropagator.shallowPropagate,
-    startBatch: scheduler.startBatch,
-    endBatch: scheduler.endBatch,
-  };
-}
-
-const signalCtx = createSignalContext();
+// Wire up view layer
 const viewCtx = createLatticeContext<HTMLElement>();
 const renderer = createDOMRenderer();
 
-const signalFactory = Signal().create(signalCtx);
-const computedFactory = Computed().create(signalCtx);
-const effectFactory = Effect().create(signalCtx);
+// Create signal API first to get effect primitive
+const signalApi = createContext(...extensions);
+const { signal, computed, effect: baseEffect } = signalApi;
 
 const { disposeScope, scopedEffect, onCleanup, createElementScope } =
   createScopes<HTMLElement>({
     ctx: viewCtx,
-    track: signalCtx.track,
-    dispose: signalCtx.dispose,
-    baseEffect: effectFactory.method,
+    track,
+    dispose,
+    baseEffect,
   });
 
 const { processChildren } = createProcessChildren<HTMLElement, Text>({ scopedEffect, renderer });
@@ -74,21 +46,19 @@ const mapFactory = createMapHelper<HTMLElement, Text>({
   scopedEffect,
   renderer,
   disposeScope,
-  signalCtx: signalCtx.ctx,
-  signal: signalFactory.method,
+  signalCtx,
+  signal,
 });
-const onFactory = createOnFactory({ startBatch: signalCtx.startBatch, endBatch: signalCtx.endBatch });
+const onFactory = createOnFactory({ startBatch, endBatch });
 
 const api = createContext(
-  signalFactory,
-  computedFactory,
-  effectFactory,
+  ...extensions,
   elFactory,
   mapFactory,
   onFactory
 );
 
-const { signal, el, computed, map, on } = api;
+const { el, map, on } = api;
 
 // ============================================================================
 // Benchmark Data

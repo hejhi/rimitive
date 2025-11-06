@@ -127,6 +127,8 @@ export interface CreateContextOptions {
 
 /**
  * Create a lattice context from a set of extensions
+ *
+ * Accepts extensions or arrays of extensions, automatically flattening nested arrays.
  */
 export function createContext<E extends readonly LatticeExtension<string, unknown>[]>(
   ...extensions: E
@@ -139,15 +141,18 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
   ...args: [CreateContextOptions, ...E] | E
 ): ExtensionsToContext<E> {
   // Parse arguments - first arg might be options
-  let extensions: E;
+  let rawExtensions: E;
   let options: CreateContextOptions | undefined;
-  
+
   if (args.length > 0 && args[0] && typeof args[0] === 'object' && 'instrumentation' in args[0]) {
     options = args[0];
-    extensions = args.slice(1) as unknown as E;
+    rawExtensions = args.slice(1) as unknown as E;
   } else {
-    extensions = args as E;
+    rawExtensions = args as E;
   }
+
+  // Flatten any arrays of extensions
+  const extensions = rawExtensions.flat(1) as unknown as E;
 
   // Check for duplicate extension names
   const names = new Set<string>();
