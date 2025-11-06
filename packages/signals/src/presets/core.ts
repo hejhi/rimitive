@@ -10,7 +10,7 @@ import { Effect } from '../effect';
 import { Batch } from '../batch';
 import { Subscribe } from '../subscribe';
 import { createBaseContext } from '../context';
-import { createGraphEdges } from '../helpers/graph-edges';
+import { createGraphEdges, Dependency } from '../helpers/graph-edges';
 import { createGraphTraversal } from '../helpers/graph-traversal';
 import { createScheduler } from '../helpers/scheduler';
 import { createPullPropagator } from '../helpers/pull-propagator';
@@ -35,7 +35,7 @@ export interface SignalsCoreResult {
     endBatch: ReturnType<typeof createScheduler>['endBatch'];
     pullUpdates: ReturnType<typeof createPullPropagator>['pullUpdates'];
     shallowPropagate: ReturnType<typeof createPullPropagator>['shallowPropagate'];
-    propagate: (subscribers: any) => void;
+    propagate: (subscribers: Dependency) => void;
   };
 }
 
