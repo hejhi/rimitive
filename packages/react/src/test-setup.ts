@@ -4,10 +4,10 @@ import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { createApi } from '@lattice/lattice';
-import { Signal, SignalOpts } from '@lattice/signals/signal';
-import { Computed, ComputedOpts } from '@lattice/signals/computed';
-import { Effect, EffectOpts } from '@lattice/signals/effect';
-import { Batch, BatchOpts } from '@lattice/signals/batch';
+import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
+import { Effect } from '@lattice/signals/effect';
+import { Batch } from '@lattice/signals/batch';
 import { SignalProvider } from './signals/context';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
@@ -35,30 +35,30 @@ export function createContext() {
   };
 }
 
-// Define the factories type for consistent usage
-const testFactories = {
-  signal: (opts: SignalOpts) => Signal().create(opts),
-  computed: (opts: ComputedOpts) => Computed().create(opts),
-  effect: (opts: EffectOpts) => Effect().create(opts),
-  batch: (opts: BatchOpts) => Batch().create(opts),
+// Define the components for consistent usage
+const testComponents = {
+  signal: Signal(),
+  computed: Computed(),
+  effect: Effect(),
+  batch: Batch(),
 } as const;
 
-// Type alias for the API created with our standard factories
+// Type alias for the API created with our standard components
 type TestSignalAPI = ReturnType<
-  typeof createApi<typeof testFactories, ReturnType<typeof createContext>>
+  typeof createApi<typeof testComponents, ReturnType<typeof createContext>>
 >;
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
   // Create a fresh signal API for each test
-  const api = createApi(testFactories, createContext());
+  const api = createApi(testComponents, createContext());
 
   return render(createElement(SignalProvider, { api, children: ui }));
 }
 
 // Also export api creation for tests that need direct access
 export function createTestSignalAPI(): TestSignalAPI {
-  return createApi(testFactories, createContext());
+  return createApi(testComponents, createContext());
 }
 
 // Clean up after each test to prevent memory leaks

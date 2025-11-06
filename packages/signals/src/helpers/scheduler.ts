@@ -172,5 +172,3 @@ export function createScheduler({
     flush,
   };
 }
-
-// const propagate = withPropagate((visit) => withVisitor(visit))

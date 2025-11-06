@@ -10,41 +10,17 @@ import { Effect } from '../effect';
 import { Batch } from '../batch';
 import { Subscribe } from '../subscribe';
 import { createBaseContext } from '../context';
-import { createGraphEdges, Dependency } from '../helpers/graph-edges';
+import { createGraphEdges } from '../helpers/graph-edges';
 import { createGraphTraversal } from '../helpers/graph-traversal';
 import { createScheduler } from '../helpers/scheduler';
 import { createPullPropagator } from '../helpers/pull-propagator';
-
-export interface SignalsCoreResult {
-  /** Array of pre-configured signal extensions */
-  extensions: [
-    ReturnType<ReturnType<typeof Signal>['create']>,
-    ReturnType<ReturnType<typeof Computed>['create']>,
-    ReturnType<ReturnType<typeof Effect>['create']>,
-    ReturnType<ReturnType<typeof Batch>['create']>,
-    ReturnType<ReturnType<typeof Subscribe>['create']>,
-  ];
-  /** Internal helpers exposed for advanced usage (e.g., view layer wiring) */
-  helpers: {
-    ctx: ReturnType<typeof createBaseContext>;
-    track: ReturnType<typeof createGraphEdges>['track'];
-    trackDependency: ReturnType<typeof createGraphEdges>['trackDependency'];
-    detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
-    dispose: ReturnType<typeof createScheduler>['dispose'];
-    startBatch: ReturnType<typeof createScheduler>['startBatch'];
-    endBatch: ReturnType<typeof createScheduler>['endBatch'];
-    pullUpdates: ReturnType<typeof createPullPropagator>['pullUpdates'];
-    shallowPropagate: ReturnType<typeof createPullPropagator>['shallowPropagate'];
-    propagate: (subscribers: Dependency) => void;
-  };
-}
+import { createApi } from '@lattice/lattice';
 
 /**
  * Core signals preset - returns array of pre-configured extensions + helpers
  * This is the main API for creating a complete signals context.
  */
-export function signalsCore(): SignalsCoreResult {
-  // Wire up all the helpers
+export function signalsCore() {
   const ctx = createBaseContext();
   const graphEdges = createGraphEdges({ ctx });
   const { withVisitor } = createGraphTraversal();
@@ -52,24 +28,21 @@ export function signalsCore(): SignalsCoreResult {
   const { withPropagate, ...scheduler} = _scheduler;
   const pullPropagator = createPullPropagator({ track: graphEdges.track });
 
-  const helpers = {
-    ctx,
-    ...graphEdges,
-    propagate: withPropagate(withVisitor),
-    ...pullPropagator,
-    ...scheduler
-  };
-
-  // Return extensions + helpers for advanced usage
-  return {
-    extensions: [
-      Signal().create(helpers),
-      Computed().create(helpers),
-      Effect().create(helpers),
-      Batch().create(helpers),
-      Subscribe().create(helpers),
-    ],
-    helpers,
-  };
+  return createApi(
+    {
+      signal: Signal(),
+      computed: Computed(),
+      effect: Effect(),
+      batch: Batch(),
+      subscribe: Subscribe()
+    },
+    {
+      ctx,
+      ...graphEdges,
+      propagate: withPropagate(withVisitor),
+      ...pullPropagator,
+      ...scheduler
+    }
+  );
 }
 

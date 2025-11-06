@@ -55,12 +55,12 @@ interface SignalNode<T> extends ProducerNode {
 // Export the factory return type for better type inference
 export type SignalFactory = LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>;
 
-export const Signal = create((opts: SignalOpts) => (): SignalFactory => {
-  const {
+export const Signal = create(({
     trackDependency,
     propagate,
     ctx,
-  } = opts;
+    instrument
+  }: SignalOpts) => (): SignalFactory => {
 
   function createSignal<T>(initialValue: T): SignalFunction<T> {
     const node: SignalNode<T> = {
@@ -104,7 +104,7 @@ export const Signal = create((opts: SignalOpts) => (): SignalFactory => {
   const extension: SignalFactory = {
     name: 'signal',
     method: createSignal,
-    ...(opts.instrument && { instrument: opts.instrument }),
+    ...(instrument && { instrument }),
   };
 
   return extension;
