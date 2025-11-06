@@ -59,7 +59,6 @@ const { disposeScope, scopedEffect, onCleanup, createElementScope } =
   });
 
 const { processChildren } = createProcessChildren<HTMLElement, Text>({ scopedEffect, renderer });
-const onFactory = createOnFactory({ startBatch: signalCtx.startBatch, endBatch: signalCtx.endBatch });
 
 const elFactory = createElFactory<HTMLElement, Text>({
   ctx: viewCtx,
@@ -78,17 +77,18 @@ const mapFactory = createMapHelper<HTMLElement, Text>({
   signalCtx: signalCtx.ctx,
   signal: signalFactory.method,
 });
+const onFactory = createOnFactory({ startBatch: signalCtx.startBatch, endBatch: signalCtx.endBatch });
 
-const ctx = createContext(
+const api = createContext(
   signalFactory,
   computedFactory,
   effectFactory,
   elFactory,
-  mapFactory
+  mapFactory,
+  onFactory
 );
 
-const { signal, el, computed, map } = ctx;
-const on = onFactory.method;
+const { signal, el, computed, map, on } = api;
 
 // ============================================================================
 // Benchmark Data
