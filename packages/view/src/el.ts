@@ -180,7 +180,7 @@ export function createElFactory<
   const createReactiveElement = <Tag extends keyof HTMLElementTagNameMap>(
     specReactive: Reactive<ReactiveElSpec<Tag>>
   ): FragmentRef<TElement> => {
-    return createFragment((parent, nextSibling, fragRef) => {
+    const fragRef = createFragment<TElement>((parent, nextSibling) => {
       return scopedEffect(() => {
         const spec = specReactive();
 
@@ -214,6 +214,8 @@ export function createElFactory<
         };
       });
     });
+
+    return fragRef;
   };
 
   // Overloaded implementation
