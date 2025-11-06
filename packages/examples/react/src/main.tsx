@@ -12,10 +12,10 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SignalProvider, useComponent, useSubscribe } from '@lattice/react';
 import { createApi } from '@lattice/lattice';
-import { createSignalFactory, SignalOpts } from '@lattice/signals/signal';
-import { createComputedFactory, ComputedOpts } from '@lattice/signals/computed';
-import { createEffectFactory, EffectOpts } from '@lattice/signals/effect';
-import { createBatchFactory, BatchOpts } from '@lattice/signals/batch';
+import { Signal, SignalOpts } from '@lattice/signals/signal';
+import { Computed, ComputedOpts } from '@lattice/signals/computed';
+import { Effect, EffectOpts } from '@lattice/signals/effect';
+import { Batch, BatchOpts } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -68,13 +68,13 @@ function createContext() {
 const signalAPI = createApi(
   {
     signal: (opts: SignalOpts) =>
-      createSignalFactory({ ...opts, instrument: instrumentSignal }),
+      Signal().create({ ...opts, instrument: instrumentSignal }),
     computed: (opts: ComputedOpts) =>
-      createComputedFactory({ ...opts, instrument: instrumentComputed }),
+      Computed().create({ ...opts, instrument: instrumentComputed }),
     effect: (opts: EffectOpts) =>
-      createEffectFactory({ ...opts, instrument: instrumentEffect }),
+      Effect().create({ ...opts, instrument: instrumentEffect }),
     batch: (opts: BatchOpts) =>
-      createBatchFactory({ ...opts, instrument: instrumentBatch }),
+      Batch().create({ ...opts, instrument: instrumentBatch }),
   },
   createContext()
 );

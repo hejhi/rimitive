@@ -1,4 +1,5 @@
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import { create } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import type { ScheduledNode } from './types';
 import { GraphEdges } from './helpers/graph-edges';
@@ -38,9 +39,7 @@ interface EffectNode extends ScheduledNode {
   cleanup?: void | (() => void);
 }
 
-export function createEffectFactory(
-  opts: EffectOpts
-): EffectFactory {
+export const Effect = create((opts: EffectOpts) => (): EffectFactory => {
   const {
     dispose: disposeNode,
     track,
@@ -80,4 +79,4 @@ export function createEffectFactory(
   };
 
   return extension;
-}
+});

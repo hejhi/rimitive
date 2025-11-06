@@ -5,11 +5,11 @@ import type { SignalFunction } from './signal';
 // Effect now returns () => void directly
 import type { ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
-import { createSignalFactory } from './signal';
-import { createSubscribeFactory, SubscribeCallback } from './subscribe';
-import { createComputedFactory } from './computed';
-import { createEffectFactory } from './effect';
-import { createBatchFactory } from './batch';
+import { Signal } from './signal';
+import { Subscribe, SubscribeCallback } from './subscribe';
+import { Computed } from './computed';
+import { Effect } from './effect';
+import { Batch } from './batch';
 import { createContext as createLattice } from '@lattice/lattice';
 import { createBaseContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
@@ -40,13 +40,20 @@ export function createTestInstance() {
   const opts = createDefaultContext();
   const { ctx, propagate, startBatch, endBatch } = opts;
 
+  // Create extensions
+  const signalExt = Signal().create({ ...opts, propagate });
+  const computedExt = Computed().create(opts);
+  const effectExt = Effect().create(opts);
+  const batchExt = Batch().create({ ...opts, startBatch, endBatch });
+  const subscribeExt = Subscribe().create(opts);
+
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory({ ...opts, propagate }),
-    createComputedFactory(opts),
-    createEffectFactory(opts),
-    createBatchFactory({ ...opts, startBatch, endBatch }),
-    createSubscribeFactory(opts)
+    signalExt,
+    computedExt,
+    effectExt,
+    batchExt,
+    subscribeExt
   );
 
   // Reset function for test cleanup

@@ -14,6 +14,7 @@
 
 import type { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
+import { create } from '@lattice/lattice';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
 import { Scheduler } from './helpers/scheduler';
@@ -29,12 +30,10 @@ export type SubscribeOpts = {
 export type SubscribeCallback<T> = (value: T) => void;
 export type UnsubscribeFunction = () => void;
 
-export function createSubscribeFactory(
-  opts: SubscribeOpts
-): LatticeExtension<
+export const Subscribe = create((opts: SubscribeOpts) => (): LatticeExtension<
   'subscribe',
   <T>(source: () => T, callback: SubscribeCallback<T>) => UnsubscribeFunction
-> {
+> => {
   const {
     track,
     detachAll,
@@ -79,4 +78,4 @@ export function createSubscribeFactory(
     name: 'subscribe',
     method: subscribe
   };
-}
+});

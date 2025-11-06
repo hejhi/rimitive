@@ -1,7 +1,7 @@
-import { createApi } from '@lattice/lattice';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
+import { createContext } from '@lattice/lattice';
+import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
+import { Effect } from '@lattice/signals/effect';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -46,9 +46,9 @@ const signalCtx = createSignalContext();
 const viewCtx = createLatticeContext<HTMLElement>();
 const renderer = createDOMRenderer();
 
-const signalFactory = createSignalFactory(signalCtx);
-const computedFactory = createComputedFactory(signalCtx);
-const effectFactory = createEffectFactory(signalCtx);
+const signalFactory = Signal().create(signalCtx);
+const computedFactory = Computed().create(signalCtx);
+const effectFactory = Effect().create(signalCtx);
 
 const { disposeScope, scopedEffect, onCleanup, createElementScope } =
   createScopes<HTMLElement>({
@@ -79,18 +79,15 @@ const mapFactory = createMapHelper<HTMLElement, Text>({
   signal: signalFactory.method,
 });
 
-const api = createApi(
-  {
-    signal: () => signalFactory,
-    computed: () => computedFactory,
-    effect: () => effectFactory,
-    el: () => elFactory,
-    map: () => mapFactory,
-  },
-  {}
+const ctx = createContext(
+  signalFactory,
+  computedFactory,
+  effectFactory,
+  elFactory,
+  mapFactory
 );
 
-const { signal, el, computed, map } = api;
+const { signal, el, computed, map } = ctx;
 const on = onFactory.method;
 
 // ============================================================================

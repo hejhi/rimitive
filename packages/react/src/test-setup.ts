@@ -4,10 +4,10 @@ import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { createApi } from '@lattice/lattice';
-import { createSignalFactory, SignalOpts } from '@lattice/signals/signal';
-import { createComputedFactory, ComputedOpts } from '@lattice/signals/computed';
-import { createEffectFactory, EffectOpts } from '@lattice/signals/effect';
-import { createBatchFactory, BatchOpts } from '@lattice/signals/batch';
+import { Signal, SignalOpts } from '@lattice/signals/signal';
+import { Computed, ComputedOpts } from '@lattice/signals/computed';
+import { Effect, EffectOpts } from '@lattice/signals/effect';
+import { Batch, BatchOpts } from '@lattice/signals/batch';
 import { SignalProvider } from './signals/context';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
@@ -37,10 +37,10 @@ export function createContext() {
 
 // Define the factories type for consistent usage
 const testFactories = {
-  signal: (opts: SignalOpts) => createSignalFactory(opts),
-  computed: (opts: ComputedOpts) => createComputedFactory(opts),
-  effect: (opts: EffectOpts) => createEffectFactory(opts),
-  batch: (opts: BatchOpts) => createBatchFactory(opts),
+  signal: (opts: SignalOpts) => Signal().create(opts),
+  computed: (opts: ComputedOpts) => Computed().create(opts),
+  effect: (opts: EffectOpts) => Effect().create(opts),
+  batch: (opts: BatchOpts) => Batch().create(opts),
 } as const;
 
 // Type alias for the API created with our standard factories

@@ -7,6 +7,7 @@
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import { create } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
@@ -52,14 +53,15 @@ const COMPUTED_DIRTY = COMPUTED | DIRTY;
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
 
-export function createComputedFactory({
-  ctx,
-  trackDependency,
-  pullUpdates,
-  track,
-  shallowPropagate,
-  instrument
-}: ComputedOpts): ComputedFactory {
+export const Computed = create((opts: ComputedOpts) => (): ComputedFactory => {
+  const {
+    ctx,
+    trackDependency,
+    pullUpdates,
+    track,
+    shallowPropagate,
+    instrument
+  } = opts;
 
   // Shared computed function - uses `this` binding
   function computedImpl<T>(this: ComputedNode<T>): T {
@@ -131,4 +133,4 @@ export function createComputedFactory({
     method: createComputed,
     ...(instrument && { instrument }),
   };
-}
+});

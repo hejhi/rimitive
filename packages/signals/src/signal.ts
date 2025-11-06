@@ -15,6 +15,7 @@
  */
 import type { ProducerNode, Dependency } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import { create } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
@@ -54,9 +55,7 @@ interface SignalNode<T> extends ProducerNode {
 // Export the factory return type for better type inference
 export type SignalFactory = LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>;
 
-export function createSignalFactory(
-  opts: SignalOpts
-): SignalFactory {
+export const Signal = create((opts: SignalOpts) => (): SignalFactory => {
   const {
     trackDependency,
     propagate,
@@ -109,4 +108,4 @@ export function createSignalFactory(
   };
 
   return extension;
-}
+});

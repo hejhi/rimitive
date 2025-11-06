@@ -9,10 +9,10 @@
  * ```
  */
 
-import { createApi } from '@lattice/lattice';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
+import { createContext } from '@lattice/lattice';
+import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
+import { Effect } from '@lattice/signals/effect';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -84,13 +84,13 @@ export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLEl
   const renderer = createDOMRenderer();
 
   // Build signal factories
-  const signalFactory = createSignalFactory({
+  const signalFactory = Signal().create({
     ctx: signalCtx.ctx,
     trackDependency: signalCtx.trackDependency,
     propagate: signalCtx.propagate,
   });
 
-  const computedFactory = createComputedFactory({
+  const computedFactory = Computed().create({
     ctx: signalCtx.ctx,
     trackDependency: signalCtx.trackDependency,
     track: signalCtx.track,
@@ -98,7 +98,7 @@ export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLEl
     shallowPropagate: signalCtx.shallowPropagate,
   });
 
-  const effectFactory = createEffectFactory({
+  const effectFactory = Effect().create({
     ctx: signalCtx.ctx,
     track: signalCtx.track,
     dispose: signalCtx.dispose,
@@ -153,17 +153,14 @@ export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLEl
   });
 
   // Compose into unified API
-  const api: LatticeViewAPI<HTMLElement> = createApi(
-    {
-      signal: () => signalFactory,
-      computed: () => computedFactory,
-      effect: () => effectFactory,
-      el: () => elFactory,
-      on: () => onFactory,
-      map: () => mapFactory,
-    },
-    {}
-  );
+  const api: LatticeViewAPI<HTMLElement> = createContext(
+    signalFactory,
+    computedFactory,
+    effectFactory,
+    elFactory,
+    onFactory,
+    mapFactory
+  ) as LatticeViewAPI<HTMLElement>;
 
   return api;
 }

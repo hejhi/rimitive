@@ -9,10 +9,10 @@
  * Each component is framework-agnostic and can be tested in isolation.
  */
 
-import { createSignalFactory, SignalOpts } from '@lattice/signals/signal';
-import { createComputedFactory, ComputedOpts } from '@lattice/signals/computed';
-import { createEffectFactory, EffectOpts } from '@lattice/signals/effect';
-import { createBatchFactory, BatchOpts } from '@lattice/signals/batch';
+import { Signal, SignalOpts } from '@lattice/signals/signal';
+import { Computed, ComputedOpts } from '@lattice/signals/computed';
+import { Effect, EffectOpts } from '@lattice/signals/effect';
+import { Batch, BatchOpts } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -73,10 +73,10 @@ const renderer = createDOMRenderer();
 // Create signal API instance
 const { computed, effect, signal, batch } = createApi(
   {
-    signal: (opts: SignalOpts) => createSignalFactory({ ...opts, instrument: instrumentSignal }),
-    computed: (opts: ComputedOpts) => createComputedFactory({ ...opts, instrument: instrumentComputed }),
-    effect: (opts: EffectOpts) => createEffectFactory({ ...opts, instrument: instrumentEffect }),
-    batch: (opts: BatchOpts) => createBatchFactory({ ...opts, instrument: instrumentBatch }),
+    signal: (opts: SignalOpts) => Signal().create({ ...opts, instrument: instrumentSignal }),
+    computed: (opts: ComputedOpts) => Computed().create({ ...opts, instrument: instrumentComputed }),
+    effect: (opts: EffectOpts) => Effect().create({ ...opts, instrument: instrumentEffect }),
+    batch: (opts: BatchOpts) => Batch().create({ ...opts, instrument: instrumentBatch }),
   },
   signalCtx
 );

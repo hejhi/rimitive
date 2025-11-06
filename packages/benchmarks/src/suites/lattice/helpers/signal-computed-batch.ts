@@ -1,12 +1,12 @@
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createBatchFactory } from '@lattice/signals/batch';
+import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
+import { Batch } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createApi as createLatticeApi } from '@lattice/lattice';
+import { createContext as createLatticeContext } from '@lattice/lattice';
 
 export const createApi = () => {
   const ctx = createBaseContext();
@@ -15,21 +15,20 @@ export const createApi = () => {
   const { withVisitor } = createGraphTraversal();
   const { startBatch, endBatch, withPropagate } = createScheduler({ detachAll });
 
-  return createLatticeApi(
-    {
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      batch: createBatchFactory,
-    },
-    {
-      ctx,
-      trackDependency,
-      propagate: withPropagate(withVisitor),
-      pullUpdates,
-      startBatch,
-      endBatch,
-      track,
-      shallowPropagate,
-    }
+  const opts = {
+    ctx,
+    trackDependency,
+    propagate: withPropagate(withVisitor),
+    pullUpdates,
+    startBatch,
+    endBatch,
+    track,
+    shallowPropagate,
+  };
+
+  return createLatticeContext(
+    Signal().create(opts),
+    Computed().create(opts),
+    Batch().create(opts)
   );
 }

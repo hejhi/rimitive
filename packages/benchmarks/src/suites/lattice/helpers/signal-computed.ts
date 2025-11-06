@@ -1,10 +1,10 @@
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
+import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createApi as createLatticeApi } from '@lattice/lattice';
+import { createContext as createLatticeContext } from '@lattice/lattice';
 
 export const createApi = () => {
   const ctx = createBaseContext();
@@ -12,18 +12,17 @@ export const createApi = () => {
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
   const { propagate } = createGraphTraversal();
 
-  return createLatticeApi(
-    {
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-    },
-    {
-      ctx,
-      trackDependency,
-      propagate,
-      pullUpdates,
-      track,
-      shallowPropagate,
-    }
+  const opts = {
+    ctx,
+    trackDependency,
+    propagate,
+    pullUpdates,
+    track,
+    shallowPropagate,
+  };
+
+  return createLatticeContext(
+    Signal().create(opts),
+    Computed().create(opts)
   );
 }

@@ -8,8 +8,8 @@ import { createScopes } from './helpers/scope';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createEffectFactory } from '@lattice/signals/effect';
+import { Signal } from '@lattice/signals/signal';
+import { Effect } from '@lattice/signals/effect';
 import { createBaseContext } from '@lattice/signals/context';
 
 // Re-export types for convenience
@@ -222,7 +222,7 @@ export function createTestEnv() {
   const propagate = scheduler.withPropagate(withVisitor);
 
   // Create real signal factory
-  const signalFactory = createSignalFactory({
+  const signalFactory = Signal().create({
     ctx: signalsCtx,
     trackDependency: graphEdges.trackDependency,
     propagate,
@@ -232,7 +232,7 @@ export function createTestEnv() {
   const signal = signalFactory.method;
 
   // Use real effect from signals
-  const effectFactory = createEffectFactory({
+  const effectFactory = Effect().create({
     ctx: signalsCtx,
     track: graphEdges.track,
     dispose: scheduler.dispose,
