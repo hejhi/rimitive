@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createOnFactory, createListenerFactory } from './on';
 import { createTestScheduler } from './test-helpers';
-import { RefSpec } from './types';
+import { RefSpec, STATUS_REF_SPEC } from './types';
 
 describe('on', () => {
   it('should attach event listener and return unsubscribe function', () => {
@@ -182,7 +182,7 @@ describe('listener', () => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
-      ref.status = 3;
+      ref.status = STATUS_REF_SPEC;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }
@@ -223,7 +223,7 @@ describe('listener', () => {
         cleanup = callback(el) as (() => void) | undefined;
         return ref;
       };
-      ref.status = 3;
+      ref.status = STATUS_REF_SPEC;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }
@@ -259,7 +259,7 @@ describe('listener', () => {
         else cleanup2 = result;
         return ref;
       };
-      ref.status = 3;
+      ref.status = STATUS_REF_SPEC;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }
@@ -300,7 +300,7 @@ describe('listener', () => {
         callback(el);
         return ref;
       };
-      ref.status = 3;
+      ref.status = STATUS_REF_SPEC;
       ref.create = () => ({ status: 1, element: el, next: undefined });
       return ref;
     }

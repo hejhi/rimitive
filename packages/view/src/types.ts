@@ -7,11 +7,18 @@ import type { Instantiatable } from '@lattice/lattice';
 
 /**
  * Status bits for node ref type discrimination
+ * Using powers of 2 for bitwise operations
  */
-export const STATUS_ELEMENT = 1;
-export const STATUS_FRAGMENT = 2;
-export const STATUS_REF_SPEC = 3;
-export const STATUS_SEALED_SPEC = 4;
+export const STATUS_ELEMENT = 1;      // 0001
+export const STATUS_FRAGMENT = 2;     // 0010
+export const STATUS_REF_SPEC = 4;     // 0100
+export const STATUS_SEALED_SPEC = 8;  // 1000
+
+/**
+ * Composite bit masks for checking types
+ */
+export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT;     // 0011 (3)
+export const STATUS_SPEC_MASK = STATUS_REF_SPEC | STATUS_SEALED_SPEC; // 1100 (12)
 
 export interface BaseRef {
   status: number;

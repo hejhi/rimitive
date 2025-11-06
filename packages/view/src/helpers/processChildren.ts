@@ -7,7 +7,7 @@
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
-import { isElementRef, isFragmentRef, STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC, STATUS_SEALED_SPEC } from '../types';
+import { isElementRef, isFragmentRef, STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
 
 
@@ -53,11 +53,7 @@ export function createProcessChildren<TElement extends RendererElement, TText ex
       if (spec.status === STATUS_FRAGMENT) return spec;
 
       // RefSpec or SealedSpec - both have .create() method
-      // TODO: composite bit mask for status like ref and sealed?
-      if (
-        spec.status === STATUS_REF_SPEC ||
-        spec.status === STATUS_SEALED_SPEC
-      ) {
+      if (spec.status & STATUS_SPEC_MASK) {
         const childRef = spec.create(api);
         if (childRef.status === STATUS_ELEMENT) renderer.appendChild(element, childRef.element);
         return childRef;
