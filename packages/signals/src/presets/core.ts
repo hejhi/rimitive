@@ -54,15 +54,10 @@ export function signalsCore(): SignalsCoreResult {
 
   const helpers = {
     ctx,
-    trackDependency: graphEdges.trackDependency,
-    track: graphEdges.track,
-    detachAll: graphEdges.detachAll,
+    ...graphEdges,
     propagate: withPropagate(withVisitor),
-    pullUpdates: pullPropagator.pullUpdates,
-    shallowPropagate: pullPropagator.shallowPropagate,
-    dispose: scheduler.dispose,
-    startBatch: scheduler.startBatch,
-    endBatch: scheduler.endBatch,
+    ...pullPropagator,
+    ...scheduler
   };
 
   // Return extensions + helpers for advanced usage
