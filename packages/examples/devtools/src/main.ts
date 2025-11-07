@@ -22,13 +22,13 @@ import { instrumentSignal } from '@lattice/signals/devtools/signal';
 import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
+import { devtoolsProvider, createInstrumentation, createContext as createLatticeContext } from '@lattice/lattice';
 
 // View imports
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/helpers/map';
 import { On } from '@lattice/view/on';
-import { createLatticeContext } from '@lattice/view/context';
+import { createLatticeContext as createViewContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createScopes } from '@lattice/view/helpers/scope';
@@ -68,18 +68,21 @@ function createContext() {
 
 // Create contexts
 const signalCtx = createContext();
-const viewCtx = createLatticeContext<HTMLElement>();
+const viewCtx = createViewContext<HTMLElement>();
 const renderer = createDOMRenderer();
 
-// Manually create extensions with custom instrumentation
-// Each extension needs its own instrument function passed to .create()
-const signalsApi = {
-  signal: Signal().create({ ...signalCtx, instrument: instrumentSignal }).method,
-  computed: Computed().create({ ...signalCtx, instrument: instrumentComputed }).method,
-  effect: Effect().create({ ...signalCtx, instrument: instrumentEffect }).method,
-  batch: Batch().create({ ...signalCtx, instrument: instrumentBatch }).method,
-  dispose: () => {}, // No-op for manual setup
-};
+// Create signal extensions with instrumentation
+const signalExtensions = [
+  Signal().create({ ...signalCtx, instrument: instrumentSignal }),
+  Computed().create({ ...signalCtx, instrument: instrumentComputed }),
+  Effect().create({ ...signalCtx, instrument: instrumentEffect }),
+  Batch().create({ ...signalCtx, instrument: instrumentBatch }),
+];
+
+const signalsApi = createLatticeContext(
+  { instrumentation: signalCtx.instrumentation },
+  ...signalExtensions
+);
 
 const { computed, effect, signal, batch } = signalsApi;
 
@@ -112,11 +115,16 @@ const viewContext = {
 };
 
 // Create view extensions with instrumentation
-const viewApi = {
-  el: El().create({ ...viewContext, instrument: instrumentEl }).method,
-  map: Map().create({ ...viewContext, instrument: instrumentMap }).method,
-  on: On().create({ ...viewContext, instrument: instrumentOn }).method,
-};
+const viewExtensions = [
+  El().create({ ...viewContext, instrument: instrumentEl }),
+  Map().create({ ...viewContext, instrument: instrumentMap }),
+  On().create({ ...viewContext, instrument: instrumentOn }),
+];
+
+const viewApi = createLatticeContext(
+  { instrumentation: signalCtx.instrumentation },
+  ...viewExtensions
+);
 
 const { el, map, on } = viewApi;
 
