@@ -36,9 +36,9 @@ export function createTodoStats(
   });
 
   return {
-    total: () => total(),
-    active: () => active(),
-    completed: () => completed(),
-    completionRate: () => completionRate(),
+    total,
+    active,
+    completed,
+    completionRate,
   };
 }

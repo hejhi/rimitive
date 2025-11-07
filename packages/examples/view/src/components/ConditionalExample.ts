@@ -1,12 +1,3 @@
-/**
- * Conditional Element Example
- *
- * Demonstrates conditional el logic:
- * 1. Toggling element visibility (null vs element)
- * 2. Switching between different element types
- * 3. Dynamic element properties based on state
- */
-
 import { create } from '@lattice/view/component';
 
 export const ConditionalExample = create(
@@ -119,36 +110,36 @@ export const ConditionalExample = create(
       );
 
       return el('div', { className: 'example conditional-example' })(
-        el('h2')('Conditional Element Example')(),
+        el('h2')('Conditional Element Example'),
         el('p')(
           'Demonstrates reactive conditional rendering with el(computed(() => spec | null)).'
-        )(),
+        ),
 
         // Example 1: Toggle visibility
         el('div', { className: 'example-section' })(
-          el('h3')('Example 1: Toggle Visibility')(),
+          el('h3')('Example 1: Toggle Visibility'),
           el('p')(
             'Element can be shown/hidden by returning null from the computed spec.'
-          )(),
+          ),
           toggleBtn,
           conditionalMessage
-        )(),
+        ),
 
         // Example 2: Switch element types
         el('div', { className: 'example-section' })(
-          el('h3')('Example 2: Switch Element Types')(),
-          el('p')('Switch between <input> and <span> based on edit mode.')(),
+          el('h3')('Example 2: Switch Element Types'),
+          el('p')('Switch between <input> and <span> based on edit mode.'),
           editableText,
           editToggleBtn
-        )(),
+        ),
 
         // Example 3: Dynamic styling
         el('div', { className: 'example-section' })(
-          el('h3')('Example 3: Dynamic Styling')(),
-          el('p')('Element properties and styles change based on state.')(),
+          el('h3')('Example 3: Dynamic Styling'),
+          el('p')('Element properties and styles change based on state.'),
           dynamicButton,
           cycleTypeBtn
-        )()
-      )();
+        )
+      );
     }
 );

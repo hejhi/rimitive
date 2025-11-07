@@ -33,9 +33,9 @@ export const Counter = create(
       return el('section', { className: 'counter-section' })(
         el('h2')('Counter Example'),
         el('div', { className: 'counter-display' })(
-          el('p', {})(computed(() => `Count: ${count()}`)),
-          el('p', {})(computed(() => `Doubled: ${doubled()}`)),
-          el('p', {})(computed(() => `Is Even: ${isEven() ? 'Yes' : 'No'}`))
+          el('p')(computed(() => `Count: ${count()}`)),
+          el('p')(computed(() => `Doubled: ${doubled()}`)),
+          el('p')(computed(() => `Is Even: ${isEven() ? 'Yes' : 'No'}`))
         ),
         el('div', { className: 'counter-controls' })(
           incrementBtn,

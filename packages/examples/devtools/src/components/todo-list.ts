@@ -42,12 +42,12 @@ export function createTodoList(
 
   return {
     // Getters
-    todos: () => todos(),
-    allCompleted: () => allCompleted(),
-    activeCount: () => activeCount(),
+    todos,
+    allCompleted,
+    activeCount,
 
     // Actions
-    addTodo(text: string) {
+    addTodo: (text: string) => {
       const newTodo: Todo = {
         id: Date.now(),
         text,
@@ -56,7 +56,7 @@ export function createTodoList(
       todos([...todos(), newTodo]);
     },
 
-    toggleTodo(id: number) {
+    toggleTodo: (id: number) => {
       todos(
         todos().map((todo: Todo) =>
           todo.id === id ? { ...todo, completed: !todo.completed } : todo
@@ -64,7 +64,7 @@ export function createTodoList(
       );
     },
 
-    toggleAll() {
+    toggleAll: () => {
       const shouldComplete = !allCompleted();
       todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
     },

@@ -12,16 +12,16 @@ export interface AppStateAPI {
   // User state
   userName: SignalFunction<string>;
   userEmail: SignalFunction<string>;
-  setUserName(name: string): void;
-  setUserEmail(email: string): void;
+  setUserName: (name: string) => void;
+  setUserEmail: (email: string) => void;
 
   // Theme state
   theme: SignalFunction<'light' | 'dark'>;
-  toggleTheme(): void;
+  toggleTheme: () => void;
 
   // Counter state
   clickCount: SignalFunction<number>;
-  incrementClicks(): void;
+  incrementClicks: () => void;
 }
 
 export function createAppState(api: {

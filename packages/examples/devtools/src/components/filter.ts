@@ -24,15 +24,13 @@ export function createFilter(api: {
 
   return {
     // Getters
-    currentFilter: () => currentFilter(),
+    currentFilter,
 
     // Actions
-    setFilter(filter: FilterType) {
-      currentFilter(filter);
-    },
+    setFilter: currentFilter,
 
     // Utility - filter any todo list
-    filterTodos(todos: Todo[]): Todo[] {
+    filterTodos: (todos: Todo[]): Todo[] => {
       const filter = currentFilter();
       if (filter === 'active') return todos.filter((t) => !t.completed);
       if (filter === 'completed') return todos.filter((t) => t.completed);

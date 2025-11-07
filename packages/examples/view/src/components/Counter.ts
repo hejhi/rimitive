@@ -1,10 +1,3 @@
-/**
- * Counter UI Component
- *
- * Uses the create() pattern - no API parameter needed!
- * The API is provided automatically when .create({ api }) is called at the root.
- */
-
 import { create } from '@lattice/view/component';
 import { createCounter } from '../behaviors/counter';
 
@@ -16,11 +9,11 @@ export const Counter = create((api) => (initialCount: number = 0) => {
   const resetBtn = el('button')('Reset')(on('click', reset));
 
   return el('div', { className: 'example' })(
-    el('h2')('Counter Example')(),
-    el('p')('Demonstrates reactive text updates and event handlers.')(),
+    el('h2')('Counter Example'),
+    el('p')('Demonstrates reactive text updates and event handlers.'),
     el('div', { className: 'counter-display' })(
       computed(() => `Count: ${count()} (doubled: ${doubled()})`)
-    )(),
-    el('div')(decrementBtn, incrementBtn, resetBtn)()
-  )();
+    ),
+    el('div')(decrementBtn, incrementBtn, resetBtn)
+  );
 });
