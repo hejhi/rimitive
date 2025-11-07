@@ -11,11 +11,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SignalProvider, useComponent, useSubscribe } from '@lattice/react';
-import { createApi } from '@lattice/lattice';
-import { Signal, SignalOpts } from '@lattice/signals/signal';
-import { Computed, ComputedOpts } from '@lattice/signals/computed';
-import { Effect, EffectOpts } from '@lattice/signals/effect';
-import { Batch, BatchOpts } from '@lattice/signals/batch';
+import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
+import { Effect } from '@lattice/signals/effect';
+import { Batch } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -64,20 +63,16 @@ function createContext() {
   };
 }
 
-// Create signal API instance with instrumentation
-const signalAPI = createApi(
-  {
-    signal: (opts: SignalOpts) =>
-      Signal().create({ ...opts, instrument: instrumentSignal }),
-    computed: (opts: ComputedOpts) =>
-      Computed().create({ ...opts, instrument: instrumentComputed }),
-    effect: (opts: EffectOpts) =>
-      Effect().create({ ...opts, instrument: instrumentEffect }),
-    batch: (opts: BatchOpts) =>
-      Batch().create({ ...opts, instrument: instrumentBatch }),
-  },
-  createContext()
-);
+// Manually create extensions with custom instrumentation
+// Each extension needs its own instrument function passed to .create()
+const ctx = createContext();
+const signalAPI = {
+  signal: Signal().create({ ...ctx, instrument: instrumentSignal }).method,
+  computed: Computed().create({ ...ctx, instrument: instrumentComputed }).method,
+  effect: Effect().create({ ...ctx, instrument: instrumentEffect }).method,
+  batch: Batch().create({ ...ctx, instrument: instrumentBatch }).method,
+  dispose: () => {}, // No-op for manual setup
+};
 
 /**
  * Example 1: Step Counter

@@ -164,57 +164,6 @@ User clicks → startBatch()
 Result: 1 re-render per click ✨
 ```
 
-### `listener(refSpec, setup)` - Multiple event listeners
-
-Helper for attaching multiple event listeners with a single cleanup.
-
-```ts
-listener(
-  elementRef,                    // RefSpec<TElement>
-  (on) => {                      // Setup function
-    on('input', handler1);
-    on('keydown', handler2);
-  }
-)
-```
-
-**Features:**
-- Scoped `on` function for the element
-- All handlers automatically batched
-- Single cleanup for all listeners
-- Chainable with other lifecycle callbacks
-
-**Example:**
-```ts
-import { createListenerFactory } from '@lattice/view/on';
-
-const listenerFactory = createListenerFactory({ startBatch, endBatch });
-const listener = listenerFactory.method;
-
-const inputValue = signal('');
-const lastKey = signal('');
-
-const input = listener(
-  el(['input', { type: 'text' }]),
-  (on) => {
-    on('input', (e) => {
-      // All updates batched together
-      inputValue((e.target as HTMLInputElement).value);
-      lastKey('input');
-    });
-
-    on('keydown', (e) => {
-      lastKey(e.key);
-    });
-  }
-);
-
-// Can still chain other lifecycle callbacks
-input((el) => {
-  console.log('Input element connected!');
-});
-```
-
 ## How It Works
 
 ### Component Functions Run Once

@@ -9,6 +9,7 @@
  */
 
 import type { LatticeExtension } from '@lattice/lattice';
+import { create } from '@lattice/lattice';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from '../types';
 import { isElementRef } from '../types';
 import { resolveNextRef } from './fragment';
@@ -148,3 +149,12 @@ export function createMapHelper<
 
   return { name: 'map', method: map };
 }
+
+/**
+ * Map primitive - instantiatable extension using the create pattern
+ * Similar to Signal() in signals preset
+ */
+export const Map = create(<
+  TElement extends RendererElement = HTMLElement,
+  TText extends TextNode = Text
+>(opts: MapHelperOpts<TElement, TText>) => () => createMapHelper(opts));

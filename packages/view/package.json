@@ -61,6 +61,10 @@
     "./browser-renderer": {
       "import": "./dist/browser-renderer.js",
       "types": "./dist/browser-renderer.d.ts"
+    },
+    "./presets/core": {
+      "import": "./dist/presets/core.js",
+      "types": "./dist/presets/core.d.ts"
     }
   },
   "files": [

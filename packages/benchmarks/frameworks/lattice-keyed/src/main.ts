@@ -1,68 +1,12 @@
-import { createApi as createLatticeApi, createContext } from '@lattice/lattice';
-import { createScopes } from '@lattice/view/helpers/scope';
-import { createProcessChildren } from '@lattice/view/helpers/processChildren';
-import { createElFactory } from '@lattice/view/el';
-import { createMapHelper } from '@lattice/view/helpers/map';
+import { createApi } from '@lattice/view/presets/core';
 import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
-import { createOnFactory } from '@lattice/view/on';
 import { ElRefSpecChild, type Reactive } from '@lattice/view/types';
-import { createCoreCtx, extensions } from '@lattice/signals/presets/core';
-
-/**
- * Virtually the same as signalsCore, but hooks into some internal helpers
- */
-export function createApi() {
-  const coreCtx = createCoreCtx();
-  const signalsApi = createLatticeApi(extensions, coreCtx);
-
-  const { disposeScope, scopedEffect, onCleanup, createElementScope } =
-    createScopes<HTMLElement>({
-      ctx: viewCtx,
-      track: coreCtx.track,
-      dispose: coreCtx.dispose,
-      baseEffect: signalsApi.effect,
-    });
-
-  const { processChildren } = createProcessChildren<HTMLElement, Text>({
-    scopedEffect,
-    renderer,
-  });
-
-  const elFactory = createElFactory<HTMLElement, Text>({
-    ctx: viewCtx,
-    scopedEffect,
-    renderer,
-    createElementScope,
-    disposeScope,
-    onCleanup,
-    processChildren,
-  });
-
-  const mapFactory = createMapHelper<HTMLElement, Text>({
-    ctx: viewCtx,
-    scopedEffect,
-    renderer,
-    disposeScope,
-    signalCtx: coreCtx.ctx,
-    signal: signalsApi.signal,
-  });
-
-  const onFactory = createOnFactory({
-    startBatch: coreCtx.startBatch,
-    endBatch: coreCtx.endBatch,
-  });
-
-  return {
-    ...signalsApi,
-    ...createContext(elFactory, mapFactory, onFactory),
-  };
-}
 
 // Wire up view layer
 const viewCtx = createLatticeContext<HTMLElement>();
 const renderer = createDOMRenderer();
-const api = createApi();
+const api = createApi({ viewCtx, renderer });
 const { el, map, on, signal, computed } = api;
 
 // ============================================================================

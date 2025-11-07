@@ -1,4 +1,5 @@
 import type { LatticeExtension } from '@lattice/lattice';
+import { create } from '@lattice/lattice';
 import type {
   LifecycleCallback,
   RefSpec,
@@ -247,3 +248,12 @@ export function createElFactory<
 
   return { name: 'el', method: el };
 }
+
+/**
+ * El primitive - instantiatable extension using the create pattern
+ * Similar to Signal() in signals preset
+ */
+export const El = create(<
+  TElement extends RendererElement = HTMLElement,
+  TText extends TextNode = Text
+>(opts: ElOpts<TElement, TText>) => () => createElFactory(opts));

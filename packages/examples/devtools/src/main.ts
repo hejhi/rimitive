@@ -9,10 +9,10 @@
  * Each component is framework-agnostic and can be tested in isolation.
  */
 
-import { Signal, SignalOpts } from '@lattice/signals/signal';
-import { Computed, ComputedOpts } from '@lattice/signals/computed';
-import { Effect, EffectOpts } from '@lattice/signals/effect';
-import { Batch, BatchOpts } from '@lattice/signals/batch';
+import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
+import { Effect } from '@lattice/signals/effect';
+import { Batch } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -22,16 +22,16 @@ import { instrumentSignal } from '@lattice/signals/devtools/signal';
 import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import { devtoolsProvider, createInstrumentation, createApi } from '@lattice/lattice';
+import { devtoolsProvider, createInstrumentation, createApi as createLatticeApi } from '@lattice/lattice';
 
 // View imports
-import { createElFactory } from '@lattice/view/el';
-import { createMapHelper } from '@lattice/view/helpers/map';
+import { El } from '@lattice/view/el';
+import { Map } from '@lattice/view/helpers/map';
+import { On } from '@lattice/view/on';
 import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createProcessChildren } from '@lattice/view/helpers/processChildren';
 import { createScopes } from '@lattice/view/helpers/scope';
-import { createOnFactory } from '@lattice/view/on';
 
 // Import our portable components
 import { createCounter } from './components/counter';
@@ -70,16 +70,17 @@ const signalCtx = createContext();
 const viewCtx = createLatticeContext<HTMLElement>();
 const renderer = createDOMRenderer();
 
-// Create signal API instance
-const { computed, effect, signal, batch } = createApi(
-  {
-    signal: (opts: SignalOpts) => Signal().create({ ...opts, instrument: instrumentSignal }),
-    computed: (opts: ComputedOpts) => Computed().create({ ...opts, instrument: instrumentComputed }),
-    effect: (opts: EffectOpts) => Effect().create({ ...opts, instrument: instrumentEffect }),
-    batch: (opts: BatchOpts) => Batch().create({ ...opts, instrument: instrumentBatch }),
-  },
-  signalCtx
-);
+// Manually create extensions with custom instrumentation
+// Each extension needs its own instrument function passed to .create()
+const signalsApi = {
+  signal: Signal().create({ ...signalCtx, instrument: instrumentSignal }).method,
+  computed: Computed().create({ ...signalCtx, instrument: instrumentComputed }).method,
+  effect: Effect().create({ ...signalCtx, instrument: instrumentEffect }).method,
+  batch: Batch().create({ ...signalCtx, instrument: instrumentBatch }).method,
+  dispose: () => {}, // No-op for manual setup
+};
+
+const { computed, effect, signal, batch } = signalsApi;
 
 // Create view primitives
 const { disposeScope, scopedEffect, createElementScope, onCleanup } = createScopes<HTMLElement>({
@@ -94,7 +95,15 @@ const { processChildren } = createProcessChildren<HTMLElement, Text>({
   renderer,
 });
 
-const elFactory = createElFactory<HTMLElement, Text>({
+// Create view extensions
+const viewExtensions = {
+  el: El(),
+  map: Map(),
+  on: On(),
+};
+
+// Create view API with context
+const viewApi = createLatticeApi(viewExtensions, {
   ctx: viewCtx,
   scopedEffect,
   renderer,
@@ -102,25 +111,13 @@ const elFactory = createElFactory<HTMLElement, Text>({
   createElementScope,
   disposeScope,
   onCleanup,
-});
-
-const mapHelper = createMapHelper<HTMLElement, Text>({
-  ctx: viewCtx,
   signalCtx: signalCtx.ctx,
   signal: signal,
-  scopedEffect,
-  renderer,
-  disposeScope,
-});
-
-const onFactory = createOnFactory({
   startBatch: signalCtx.startBatch,
   endBatch: signalCtx.endBatch,
 });
 
-const el = elFactory.method;
-const map = mapHelper.method;
-const on = onFactory.method;
+const { el, map, on } = viewApi;
 
 // ============================================================================
 // Create Components
