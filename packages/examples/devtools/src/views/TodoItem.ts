@@ -1,0 +1,32 @@
+/**
+ * TodoItem View Component
+ *
+ * Renders an individual todo item with checkbox and completion styling.
+ * Uses the create() pattern.
+ */
+
+import { create } from '@lattice/view/component';
+import type { RefSpec } from '@lattice/view/types';
+import type { Todo } from '../components/todo-list';
+
+export const TodoItem = create(
+  ({ el, on, computed }) =>
+    (
+      todoSignal: () => Todo,
+      toggleTodo: (id: number) => void
+    ): RefSpec<HTMLElement> => {
+      const checkbox = el('input', {
+        type: 'checkbox',
+        checked: computed(() => todoSignal().completed)
+      })()(
+        on('change', () => toggleTodo(todoSignal().id))
+      );
+
+      return el('li', {
+        className: computed(() => todoSignal().completed ? 'todo-item completed' : 'todo-item')
+      })(
+        checkbox,
+        el('span')(computed(() => todoSignal().text))
+      );
+    }
+);
