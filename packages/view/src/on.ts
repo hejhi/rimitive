@@ -6,7 +6,7 @@
  * only one re-render happens instead of multiple.
  */
 
-import type { LatticeExtension } from '@lattice/lattice';
+import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 
@@ -16,6 +16,11 @@ import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 export type OnOpts = {
   startBatch: Scheduler['startBatch'];
   endBatch: Scheduler['endBatch'];
+  instrument?: (
+    method: OnFactory['method'],
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ) => OnFactory['method'];
 };
 
 /**
@@ -53,7 +58,7 @@ export function withBatch<TArgs extends unknown[], TReturn>(
 /**
  * Create the on primitive factory
  */
-export function createOnFactory({ startBatch, endBatch }: OnOpts): OnFactory {
+export function createOnFactory({ startBatch, endBatch, instrument }: OnOpts): OnFactory {
   /**
    * Curried event listener attachment with automatic batching
    */
@@ -71,10 +76,13 @@ export function createOnFactory({ startBatch, endBatch }: OnOpts): OnFactory {
     };
   }
 
-  return {
+  const extension: OnFactory = {
     name: 'on',
     method: on,
+    ...(instrument && { instrument }),
   };
+
+  return extension;
 }
 
 /**

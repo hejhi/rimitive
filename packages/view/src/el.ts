@@ -1,4 +1,4 @@
-import type { LatticeExtension } from '@lattice/lattice';
+import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type {
   LifecycleCallback,
@@ -59,6 +59,11 @@ export type ElOpts<
     children: ElRefSpecChild[],
     api?: unknown
   ) => void;
+  instrument?: (
+    method: ElFactory<TElement>['method'],
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ) => ElFactory<TElement>['method'];
 };
 
 /**
@@ -106,6 +111,7 @@ export function createElFactory<
   createElementScope,
   disposeScope,
   onCleanup,
+  instrument,
 }: ElOpts<TElement, TText>): ElFactory<TElement> {
   /**
    * Helper to create a RefSpec with lifecycle callback chaining
@@ -246,7 +252,13 @@ export function createElFactory<
     };
   }
 
-  return { name: 'el', method: el };
+  const extension: ElFactory<TElement> = {
+    name: 'el',
+    method: el,
+    ...(instrument && { instrument }),
+  };
+
+  return extension;
 }
 
 /**

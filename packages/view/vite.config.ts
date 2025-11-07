@@ -78,6 +78,7 @@ export default defineConfig({
           'src/helpers/processChildren.ts'
         ),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
+        'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),
       },
       formats: ['es'],
     },

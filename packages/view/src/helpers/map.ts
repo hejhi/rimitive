@@ -8,7 +8,7 @@
  * - Efficient reconciliation with LIS algorithm
  */
 
-import type { LatticeExtension } from '@lattice/lattice';
+import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from '../types';
 import { isElementRef } from '../types';
@@ -42,6 +42,11 @@ export interface MapHelperOpts<
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TElement, TText>;
   disposeScope: CreateScopes['disposeScope'];
+  instrument?: (
+    method: MapFactory<TElement>['method'],
+    instrumentation: InstrumentationContext,
+    context: ExtensionContext
+  ) => MapFactory<TElement>['method'];
 }
 
 type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => void>;
@@ -56,7 +61,7 @@ export function createMapHelper<
   TElement extends RendererElement,
   TText extends TextNode
 >(opts: MapHelperOpts<TElement, TText>): MapFactory<TElement> {
-  const { ctx, signalCtx, signal, scopedEffect, renderer, disposeScope } = opts;
+  const { ctx, signalCtx, signal, scopedEffect, renderer, disposeScope, instrument } = opts;
   const untrack = createUntracked({ ctx: signalCtx });
 
   function map<T>(
@@ -147,7 +152,13 @@ export function createMapHelper<
     });
   }
 
-  return { name: 'map', method: map };
+  const extension: MapFactory<TElement> = {
+    name: 'map',
+    method: map,
+    ...(instrument && { instrument }),
+  };
+
+  return extension;
 }
 
 /**
