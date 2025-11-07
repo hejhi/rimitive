@@ -14,34 +14,46 @@
         background: #f5f5f5;
       }
       
-      .container {
+      .app {
         background: white;
         padding: 2rem;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        max-width: 800px;
+        margin: 0 auto;
       }
-      
+
       h1 {
         color: #333;
         margin-bottom: 1rem;
       }
-      
-      .section {
+
+      .counter-section,
+      .todo-section,
+      .batched-section {
         margin-bottom: 2rem;
         padding: 1.5rem;
         background: #f9f9f9;
         border-radius: 4px;
       }
-      
-      .section h2 {
+
+      .counter-section h2,
+      .todo-section h2,
+      .batched-section h2 {
         margin-top: 0;
         color: #555;
       }
-      
-      .counter {
+
+      .counter-display {
         display: flex;
         align-items: center;
         gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .counter-controls {
+        display: flex;
+        gap: 0.5rem;
         margin-bottom: 1rem;
       }
       
@@ -140,49 +152,12 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>Lattice DevTools Example</h1>
-      
-      <div class="info">
-        <strong>Instructions:</strong> Open Chrome DevTools and navigate to the "Lattice" tab to see reactive state updates in real-time.
-      </div>
-      
-      <div class="section">
-        <h2>Counter Component</h2>
-        <div class="counter">
-          <button onclick="window.counter.decrement()">-</button>
-          <div class="value" id="count">0</div>
-          <button onclick="window.counter.increment()">+</button>
-          <button onclick="window.counter.set(0)">Reset</button>
-        </div>
-        <p>Doubled value (computed): <span class="computed-value" id="doubled">0</span></p>
-        <p>Is even (computed): <span class="computed-value" id="isEven">true</span></p>
-      </div>
-      
-      <div class="section">
-        <h2>TodoList Component + Filter Component</h2>
-        <div class="todo-input">
-          <input type="text" id="todoInput" placeholder="Add a new todo..." />
-          <button onclick="window.addTodoFromInput()">Add</button>
-        </div>
-
-        <div class="filter-buttons">
-          <button class="filter active" data-filter="all" onclick="window.setFilter('all')">All</button>
-          <button class="filter" data-filter="active" onclick="window.setFilter('active')">Active</button>
-          <button class="filter" data-filter="completed" onclick="window.setFilter('completed')">Completed</button>
-        </div>
-
-        <ul class="todo-list" id="todoList"></ul>
-
-        <p>Active todos (computed): <span class="computed-value" id="activeTodoCount">0</span></p>
-
-        <div id="todoStats" style="background: #e7f3ff; padding: 0.75rem; border-radius: 4px; margin: 1rem 0; font-size: 14px;"></div>
-
-        <button onclick="window.todoList.toggleAll()">Toggle All</button>
-        <button onclick="window.batchedUpdates()">Batch Updates Demo</button>
-      </div>
+    <div class="info" style="background: #e7f3ff; padding: 1rem; border-radius: 4px; margin: 2rem auto; max-width: 800px;">
+      <strong>Instructions:</strong> Open Chrome DevTools and navigate to the "Lattice" tab to see reactive state updates in real-time.
     </div>
-    
+
+    <div id="app"></div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

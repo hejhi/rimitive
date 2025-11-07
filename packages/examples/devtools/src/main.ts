@@ -22,7 +22,7 @@ import { instrumentSignal } from '@lattice/signals/devtools/signal';
 import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import { devtoolsProvider, createInstrumentation, createContext as createExtensionContext } from '@lattice/lattice';
+import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
 
 // View imports
 import { El } from '@lattice/view/el';
@@ -73,18 +73,13 @@ const renderer = createDOMRenderer();
 
 // Manually create extensions with custom instrumentation
 // Each extension needs its own instrument function passed to .create()
-const signalExtensions = [
-  Signal().create({ ...signalCtx, instrument: instrumentSignal }),
-  Computed().create({ ...signalCtx, instrument: instrumentComputed }),
-  Effect().create({ ...signalCtx, instrument: instrumentEffect }),
-  Batch().create({ ...signalCtx, instrument: instrumentBatch }),
-];
-
-// Create context with instrumentation to apply the instrument wrappers
-const signalsApi = createExtensionContext(
-  { instrumentation: signalCtx.instrumentation },
-  ...signalExtensions
-);
+const signalsApi = {
+  signal: Signal().create({ ...signalCtx, instrument: instrumentSignal }).method,
+  computed: Computed().create({ ...signalCtx, instrument: instrumentComputed }).method,
+  effect: Effect().create({ ...signalCtx, instrument: instrumentEffect }).method,
+  batch: Batch().create({ ...signalCtx, instrument: instrumentBatch }).method,
+  dispose: () => {}, // No-op for manual setup
+};
 
 const { computed, effect, signal, batch } = signalsApi;
 
@@ -117,17 +112,11 @@ const viewContext = {
 };
 
 // Create view extensions with instrumentation
-const viewExtensions = [
-  El().create({ ...viewContext, instrument: instrumentEl }),
-  Map().create({ ...viewContext, instrument: instrumentMap }),
-  On().create({ ...viewContext, instrument: instrumentOn }),
-];
-
-// Create context with instrumentation to apply the instrument wrappers
-const viewApi = createExtensionContext(
-  { instrumentation: signalCtx.instrumentation },
-  ...viewExtensions
-);
+const viewApi = {
+  el: El().create({ ...viewContext, instrument: instrumentEl }).method,
+  map: Map().create({ ...viewContext, instrument: instrumentMap }).method,
+  on: On().create({ ...viewContext, instrument: instrumentOn }).method,
+};
 
 const { el, map, on } = viewApi;
 
