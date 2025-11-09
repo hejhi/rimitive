@@ -4,7 +4,7 @@
 
 import { vi } from 'vitest';
 import { createScopes } from './helpers/scope';
-import { createLatticeContext, type LatticeContext } from './context';
+import { createBaseContext, type LatticeContext } from './context';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import type { RenderScope } from './types';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -44,7 +44,7 @@ export const createTestScheduler = (): Pick<Scheduler, 'startBatch' | 'endBatch'
 
 // Helper to create scopes with mock dependencies
 export const createTestScopes = <TElement extends object = MockTestElement>(providedCtx?: LatticeContext<TElement>) => {
-  const ctx = providedCtx || createLatticeContext<TElement>();
+  const ctx = providedCtx || createBaseContext<TElement>();
   const track = <T>(_node: unknown, fn: () => T): T => fn();
 
   // Mock dispose that mimics real scheduler behavior

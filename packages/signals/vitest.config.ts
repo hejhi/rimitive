@@ -1,5 +1,4 @@
 import { defineConfig } from 'vitest/config';
-import { VitestReporter } from 'tdd-guard-vitest';
 
 export default defineConfig({
   test: {
@@ -17,9 +16,6 @@ export default defineConfig({
         singleThread: true,
       },
     },
-    reporters: [
-      'default',
-      new VitestReporter
-    ]
+    reporters: ['default']
   },
 });

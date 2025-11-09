@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createOnFactory } from './on';
+import { On } from './on';
 import { createTestScheduler } from './test-helpers';
 
 describe('on', () => {
   it('should attach event listener and return unsubscribe function', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const element = document.createElement('button');
     const handler = vi.fn();
@@ -24,7 +24,7 @@ describe('on', () => {
 
   it('should pass correct event type to handler', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const input = document.createElement('input');
     const handler = vi.fn();
@@ -39,7 +39,7 @@ describe('on', () => {
 
   it('should support event listener options', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const element = document.createElement('div');
     const handler = vi.fn();
@@ -57,7 +57,7 @@ describe('on', () => {
 
   it('should handle multiple listeners on same element', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const element = document.createElement('button');
     const handler1 = vi.fn();
@@ -80,7 +80,7 @@ describe('on', () => {
 
   it('should be safe to call unsubscribe multiple times', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const element = document.createElement('button');
     const handler = vi.fn();
@@ -97,7 +97,7 @@ describe('on', () => {
 
   it('should wrap handler with batching', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const element = document.createElement('button');
     let batchDepthDuringHandler = -1;
@@ -118,7 +118,7 @@ describe('on', () => {
 
   it('should always call endBatch even if handler throws', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const element = document.createElement('button');
     const handler = () => {
@@ -136,7 +136,7 @@ describe('on', () => {
 
   it('should support nested batching with multiple handlers', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = createOnFactory(scheduler);
+    const { method: on } = On().create(scheduler);
 
     const button1 = document.createElement('button');
     const button2 = document.createElement('button');

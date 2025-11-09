@@ -11,16 +11,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestEnv, MockElement, getTextContent } from '../test-utils';
-import { createMapHelper } from './map';
-import { createElFactory } from '../el';
+import { createTestEnv, MockElement, MockText, getTextContent } from '../test-utils';
+import { Map } from './map';
+import { El } from '../el';
 import type { RefSpec } from '../types';
 
 describe('map() - User-facing behavior', () => {
   // Helper to set up test environment
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx: env.ctx,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -30,7 +30,7 @@ describe('map() - User-facing behavior', () => {
       onCleanup: env.onCleanup,
     });
 
-    const mapFactory = createMapHelper({
+    const mapFactory = Map<MockElement, MockText>().create({
       ctx: env.ctx,
       signalCtx: env.signalCtx,
       signal: env.signal,

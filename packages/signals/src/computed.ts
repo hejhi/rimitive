@@ -25,6 +25,9 @@ export type ComputedOpts = {
   pullUpdates: PullPropagator['pullUpdates'];
   track: GraphEdges['track'];
   shallowPropagate: (sub: Dependency) => void;
+};
+
+export type ComputedProps = {
   instrument?: (
     method: <T>(compute: () => T) => ComputedFunction<T>,
     instrumentation: InstrumentationContext,
@@ -53,15 +56,14 @@ const COMPUTED_DIRTY = COMPUTED | DIRTY;
 // Export the factory return type for better type inference
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
 
-export const Computed = create((opts: ComputedOpts) => (): ComputedFactory => {
-  const {
+export const Computed = create(({
     ctx,
     trackDependency,
     pullUpdates,
     track,
     shallowPropagate,
-    instrument
-  } = opts;
+  }: ComputedOpts) => (props?: ComputedProps): ComputedFactory => {
+  const { instrument } = props ?? {};
 
   // Shared computed function - uses `this` binding
   function computedImpl<T>(this: ComputedNode<T>): T {

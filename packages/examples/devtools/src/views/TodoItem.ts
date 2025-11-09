@@ -7,7 +7,7 @@
 
 import { create } from '@lattice/view/component';
 import type { RefSpec } from '@lattice/view/types';
-import type { Todo } from '../components/todo-list';
+import type { Todo } from '../behaviors/todo-list';
 
 export const TodoItem = create(
   ({ el, on, computed }) =>

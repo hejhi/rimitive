@@ -13,36 +13,38 @@ export type BatchOpts = {
   ctx: GlobalContext;
   startBatch: Scheduler['startBatch'];
   endBatch: Scheduler['endBatch'];
+}
+
+export type BatchProps = {
   instrument?: (
     method: <T>(fn: () => T) => T,
     instrumentation: InstrumentationContext,
     context: ExtensionContext
   ) => <T>(fn: () => T) => T;
-}
+}; 
 
 // BatchFactory uses SignalContext which includes all helpers
-export const Batch = create((opts: BatchOpts) => (): BatchFactory => {
-  const {
-    startBatch,
-    endBatch,
-    instrument,
-  } = opts;
+export const Batch = create(
+  ({ startBatch, endBatch }: BatchOpts) =>
+    (props?: BatchProps): BatchFactory => {
+      const { instrument } = props ?? {};
 
-  // Signal writes propagate immediately during batch.
-  // We only defer effect execution to batch end.
-  const batch = function batch<T>(fn: () => T): T {
-    startBatch();
+      // Signal writes propagate immediately during batch.
+      // We only defer effect execution to batch end.
+      const batch = function batch<T>(fn: () => T): T {
+        startBatch();
 
-    try {
-      return fn();
-    } finally {
-      endBatch(); // endBatch automatically flushes when depth reaches 0
+        try {
+          return fn();
+        } finally {
+          endBatch(); // endBatch automatically flushes when depth reaches 0
+        }
+      };
+
+      return {
+        name: 'batch',
+        method: batch,
+        ...(instrument && { instrument }),
+      };
     }
-  };
-
-  return {
-    name: 'batch',
-    method: batch,
-    ...(instrument && { instrument }),
-  };
-});
+);

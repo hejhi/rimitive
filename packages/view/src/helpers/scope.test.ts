@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMockDisposable } from '../test-utils';
 import { createTestScopes, createMockElement, MockTestElement } from '../test-helpers';
-import { createLatticeContext } from '../context';
+import { createBaseContext } from '../context';
 import { createScopes, type CreateScopes } from './scope';
 import { CONSTANTS } from '@lattice/signals/constants';
 import type { RenderScope } from '../types';
@@ -11,7 +11,7 @@ const { DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } = CONSTANTS;
 // Helper to add withScope to CreateScopes result for tests that need custom mocks
 function addWithScope<TElement extends object>(
   scopes: CreateScopes,
-  ctx: ReturnType<typeof createLatticeContext<TElement>>,
+  ctx: ReturnType<typeof createBaseContext<TElement>>,
   track: <T>(_node: unknown, fn: () => T) => T
 ) {
   const withScope = <TElem extends TElement = TElement, T = void>(
@@ -19,7 +19,9 @@ function addWithScope<TElement extends object>(
     fn: (scope: RenderScope<TElem>) => T
   ): { result: T; scope: RenderScope<TElem> | null } => {
     // Try to get existing scope first (idempotent)
-    let scope = ctx.elementScopes.get(element) as RenderScope<TElem> | undefined;
+    let scope = ctx.elementScopes.get(element) as
+      | RenderScope<TElem>
+      | undefined;
     let isNewScope = false;
     let parentScope: RenderScope<TElement> | null = null;
 
@@ -55,7 +57,9 @@ function addWithScope<TElement extends object>(
 
       // Attach to parent's child list
       if (parentScope) {
-        scope.nextSibling = parentScope.firstChild as RenderScope<TElem> | undefined;
+        scope.nextSibling = parentScope.firstChild as
+          | RenderScope<TElem>
+          | undefined;
         parentScope.firstChild = scope as RenderScope<TElement>;
       }
 
@@ -80,14 +84,19 @@ function addWithScope<TElement extends object>(
     }
 
     // CRITICAL: Only keep scope if it has disposables/renderFn
-    if (isNewScope && (scope.firstDisposable !== undefined || scope.renderFn !== undefined)) {
+    if (
+      isNewScope &&
+      (scope.firstDisposable !== undefined || scope.renderFn !== undefined)
+    ) {
       ctx.elementScopes.set(element, scope);
       return { result, scope };
     }
 
     // No disposables - unlink from parent tree and return null
     if (isNewScope && parentScope && parentScope.firstChild === scope) {
-      parentScope.firstChild = scope.nextSibling as RenderScope<TElement> | undefined;
+      parentScope.firstChild = scope.nextSibling as
+        | RenderScope<TElement>
+        | undefined;
     }
 
     return { result, scope: isNewScope ? null : scope };
@@ -376,7 +385,7 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const ctx = createLatticeContext<MockTestElement>();
+      const ctx = createBaseContext<MockTestElement>();
       const baseEffect = vi.fn(() => () => {});
       const { withScope, disposeScope } = addWithScope(
         createScopes<MockTestElement>({ ctx, track, dispose: disposeSpy, baseEffect }),
@@ -478,7 +487,7 @@ describe('Scope Tree', () => {
         scope.dependencyTail = undefined;
       });
 
-      const ctx = createLatticeContext<MockTestElement>();
+      const ctx = createBaseContext<MockTestElement>();
       const baseEffect = vi.fn(() => () => {});
       const { withScope, disposeScope } = addWithScope(
         createScopes<MockTestElement>({ ctx, track, dispose, baseEffect }),
@@ -596,7 +605,7 @@ describe('Scope Tree', () => {
     });
 
     it('should integrate with element removal from context', () => {
-      const ctx = createLatticeContext<MockTestElement>();
+      const ctx = createBaseContext<MockTestElement>();
       const track = <T>(_node: unknown, fn: () => T): T => fn();
       const dispose = vi.fn(<T extends RenderScope<HTMLElement>>(node: T, cleanup: (n: T) => void): void => {
         const scope = node;
@@ -653,7 +662,7 @@ describe('Scope Tree', () => {
         cleanup(_node as T);
       };
 
-      const ctx = createLatticeContext<MockTestElement>();
+      const ctx = createBaseContext<MockTestElement>();
       const baseEffect = vi.fn(() => () => {});
       const { withScope, disposeScope } = addWithScope(
         createScopes<MockTestElement>({ ctx, track, dispose, baseEffect }),

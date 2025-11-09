@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { createElFactory } from './el';
-import { createLatticeContext } from './context';
-import { createMockRenderer, createSignal, MockElement } from './test-utils';
+import { El } from './el';
+import { createBaseContext } from './context';
+import { createMockRenderer, createSignal, MockElement, MockText } from './test-utils';
 import { createProcessChildren } from './helpers/processChildren';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
@@ -11,7 +11,7 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 
 // Helper to create test environment
 function createTestEnv(effectFn?: (fn: () => void) => () => void) {
-  const ctx = createLatticeContext<MockElement>();
+  const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
   const effect = effectFn || ((fn: () => void) => {
     fn();
@@ -69,7 +69,7 @@ describe('el primitive - lazy scope creation', () => {
       disposeScope,
       onCleanup,
     } = createTestEnv();
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx,
       scopedEffect,
       renderer,
@@ -103,7 +103,7 @@ describe('el primitive - lazy scope creation', () => {
       fn();
       return () => subscribers.delete(fn);
     });
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx,
       scopedEffect,
       renderer,
@@ -136,7 +136,7 @@ describe('el primitive - lazy scope creation', () => {
       fn();
       return () => subscribers.delete(fn);
     });
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx,
       scopedEffect,
       renderer,
@@ -164,7 +164,7 @@ describe('el primitive - lazy scope creation', () => {
       disposeScope,
       onCleanup,
     } = createTestEnv();
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx,
       scopedEffect,
       renderer,
@@ -195,7 +195,7 @@ describe('el primitive - lazy scope creation', () => {
       disposeScope,
       onCleanup,
     } = createTestEnv();
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx,
       scopedEffect,
       renderer,
@@ -226,7 +226,7 @@ describe('el primitive - lazy scope creation', () => {
       disposeScope,
       onCleanup,
     } = createTestEnv();
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx,
       scopedEffect,
       renderer,

@@ -1,33 +1,31 @@
 /**
- * Filter Component
+ * Filter Behavior - Framework Agnostic
  *
  * Provides filtering functionality for a todo list.
- * Demonstrates composition - this component works with any todo list.
+ * Demonstrates composition - this behavior works with any todo list.
  */
 
-import type { Writable, Readable } from '@lattice/signals/types';
+import { create } from '@lattice/lattice';
+import type { SignalsAPI, SignalFunction } from '../types';
 import type { Todo } from './todo-list';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
 export interface FilterAPI {
-  currentFilter: () => FilterType;
+  currentFilter: SignalFunction<FilterType>;
   setFilter: (filter: FilterType) => void;
   filterTodos: (todos: Todo[]) => Todo[];
 }
 
-export function createFilter(api: {
-  signal: <T>(value: T) => Writable<T>;
-  computed: <T>(compute: () => T) => Readable<T>;
-}): FilterAPI {
+export const Filter = create((api: SignalsAPI) => (): FilterAPI => {
   const currentFilter = api.signal<FilterType>('all');
 
   return {
-    // Getters
+    // Reactive state - expose signal directly
     currentFilter,
 
     // Actions
-    setFilter: currentFilter,
+    setFilter: (filter: FilterType) => currentFilter(filter),
 
     // Utility - filter any todo list
     filterTodos: (todos: Todo[]): Todo[] => {
@@ -37,4 +35,4 @@ export function createFilter(api: {
       return todos;
     },
   };
-}
+});

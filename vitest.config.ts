@@ -1,6 +1,4 @@
 import { defineConfig } from 'vitest/config';
-import { VitestReporter } from 'tdd-guard-vitest';
-import path from 'path';
 
 export default defineConfig({
   test: {
@@ -20,6 +18,6 @@ export default defineConfig({
       './packages/lattice/vitest.config.ts',
       './packages/signals/vitest.config.ts',
     ],
-    reporters: ['default', new VitestReporter(path.resolve(__dirname))],
+    reporters: ['default'],
   },
 });

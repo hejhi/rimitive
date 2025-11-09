@@ -1,67 +1,55 @@
 /**
  * Lattice DevTools Example
  *
- * Demonstrates the component pattern with Lattice:
+ * Demonstrates the behavior pattern with Lattice:
  * - Counter: Simple reactive state with derived values
  * - TodoList: Managing collections of items
  * - Filter: Composing behaviors together
  *
- * Each component is framework-agnostic and can be tested in isolation.
+ * Each behavior is framework-agnostic and can be tested in isolation.
  */
 
 import { create } from '@lattice/view/component';
 
 // Import API modules
-import { signal, computed, batch } from './api/signals';
 import { mount } from './api/view';
 
-// Import headless components
-import { createCounter } from './components/counter';
-import { createTodoList } from './components/todo-list';
-import { createFilter } from './components/filter';
-import { createTodoStats } from './components/todo-stats';
+// Import headless behaviors
+import { Counter } from './behaviors/counter';
+import { TodoList } from './behaviors/todo-list';
+import { Filter } from './behaviors/filter';
+import { TodoStats } from './behaviors/todo-stats';
 
 // Import view components
-import { Counter } from './views/Counter';
-import { TodoList } from './views/TodoList';
-import { BatchedUpdates } from './views/BatchedUpdates';
-
-// ============================================================================
-// Create Headless Components
-// ============================================================================
-
-const counter = createCounter({ signal, computed });
-const todoList = createTodoList(
-  { signal, computed },
-  [
-    { id: 1, text: 'Learn Lattice', completed: false },
-    { id: 2, text: 'Build an app', completed: false },
-  ]
-);
-const filter = createFilter({ signal, computed });
-
-const { set: setCounter } = counter;
-const { addTodo, toggleTodo } = todoList;
-
-// ============================================================================
-// Component Composition
-// ============================================================================
-
-const filteredTodos = computed(() => filter.filterTodos(todoList.todos()));
-const todoStats = createTodoStats(computed, { todos: todoList.todos, activeCount: todoList.activeCount });
+import { Counter as CounterView } from './views/Counter';
+import { TodoList as TodoListView } from './views/TodoList';
+import { BatchedUpdates as BatchedUpdatesView } from './views/BatchedUpdates';
 
 // ============================================================================
 // Main App Component using create() pattern
 // ============================================================================
 
 const App = create((api) => () => {
-  const { el } = api;
+  const { el, computed, batch } = api;
+  const counter = Counter(0).create(api);
+  const todoList = TodoList([
+    { id: 1, text: 'Learn Lattice', completed: false },
+    { id: 2, text: 'Build an app', completed: false },
+  ]).create(api);
+  const filter = Filter().create(api);
+  const { set: setCounter } = counter;
+  const { addTodo, toggleTodo } = todoList;
+  const filteredTodos = computed(() => filter.filterTodos(todoList.todos()));
+  const todoStats = TodoStats({
+    todos: todoList.todos,
+    activeCount: todoList.activeCount,
+  }).create(api);
 
   return el('div', { className: 'app' })(
-    el('h1')('Lattice DevTools Example')(),
-    Counter(counter),
-    TodoList(todoList, filter, filteredTodos, todoStats),
-    BatchedUpdates({
+    el('h1')('Lattice DevTools Example'),
+    CounterView(counter),
+    TodoListView(todoList, filter, filteredTodos, todoStats),
+    BatchedUpdatesView({
       onBatchedUpdate: () => {
         batch(() => {
           setCounter(10);
@@ -71,7 +59,7 @@ const App = create((api) => () => {
         });
       },
     })
-  )();
+  );
 });
 
 // ============================================================================

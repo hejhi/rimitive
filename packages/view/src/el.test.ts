@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createElFactory } from './el';
-import { createTestEnv, getTextContent, createMockRenderer, createSignal, MockElement } from './test-utils';
-import { createLatticeContext } from './context';
+import { El } from './el';
+import { createTestEnv, getTextContent, createMockRenderer, createSignal, MockElement, MockText } from './test-utils';
+import { createBaseContext } from './context';
 import { createProcessChildren } from './helpers/processChildren';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
@@ -11,7 +11,7 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 
 // Helper to create test environment for tests that need custom effect
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
-  const ctx = createLatticeContext<MockElement>();
+  const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
   const { createElementScope, disposeScope } = createTestScopes<MockElement>(ctx);
 
@@ -55,7 +55,7 @@ describe('el primitive', () => {
         disposeScope,
         onCleanup,
       } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -83,7 +83,7 @@ describe('el primitive', () => {
         disposeScope,
         onCleanup,
         } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -122,7 +122,7 @@ describe('el primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -158,7 +158,7 @@ describe('el primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -194,7 +194,7 @@ describe('el primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -230,7 +230,7 @@ describe('el primitive', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -267,7 +267,7 @@ describe('el primitive', () => {
         disposeScope,
         onCleanup,
         } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -298,7 +298,7 @@ describe('el primitive', () => {
   describe('reactive element specs', () => {
     it('creates element from reactive spec', () => {
       const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -329,7 +329,7 @@ describe('el primitive', () => {
 
     it('toggles between element and null', () => {
       const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -380,7 +380,7 @@ describe('el primitive', () => {
 
     it('swaps between different element types', () => {
       const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -421,7 +421,7 @@ describe('el primitive', () => {
 
     it('cleans up scope when element is removed', () => {
       const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -460,7 +460,7 @@ describe('el primitive', () => {
 
     it('handles initial null spec', () => {
       const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
@@ -492,7 +492,7 @@ describe('el primitive', () => {
 
     it('maintains position in DOM when toggling', () => {
       const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
-      const el = createElFactory({
+      const el = El<MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,

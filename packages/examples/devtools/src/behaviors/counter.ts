@@ -1,38 +1,36 @@
 /**
- * Counter Component
+ * Counter Behavior - Framework Agnostic
  *
  * A simple counter with derived values for doubled and isEven.
  * Demonstrates basic signal usage and computed values.
  */
 
-import type { Writable, Readable } from '@lattice/signals/types';
+import { create } from '@lattice/lattice';
+import type { SignalsAPI, SignalFunction, ComputedFunction } from '../types';
 
 export interface CounterAPI {
-  count: () => number;
-  doubled: () => number;
-  isEven: () => boolean;
+  count: SignalFunction<number>;
+  doubled: ComputedFunction<number>;
+  isEven: ComputedFunction<boolean>;
   increment: () => void;
   decrement: () => void;
   set: (value: number) => void;
 }
 
-export function createCounter(api: {
-  signal: <T>(value: T) => Writable<T>;
-  computed: <T>(compute: () => T) => Readable<T>;
-}): CounterAPI {
-  const count = api.signal(0);
+export const Counter = create((api: SignalsAPI) => (initialCount: number = 0): CounterAPI => {
+  const count = api.signal(initialCount);
   const doubled = api.computed(() => count() * 2);
   const isEven = api.computed(() => count() % 2 === 0);
 
   return {
-    // Getters
+    // Reactive state - expose signals directly
     count,
     doubled,
     isEven,
 
-    // Actions
+    // Actions - update state
     increment: () => count(count() + 1),
     decrement: () => count(count() - 1),
     set: (value: number) => count(value),
   };
-}
+});

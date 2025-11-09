@@ -59,6 +59,9 @@ export type ElOpts<
     children: ElRefSpecChild[],
     api?: unknown
   ) => void;
+  };
+
+export type ElProps<TElement extends RendererElement = RendererElement> = {
   instrument?: (
     method: ElFactory<TElement>['method'],
     instrumentation: InstrumentationContext,
@@ -98,174 +101,185 @@ export type ElFactory<TElement extends RendererElement> = LatticeExtension<
 >;
 
 /**
- * Create the el primitive factory
- */
-export function createElFactory<
-  TElement extends RendererElement,
-  TText extends TextNode = TextNode,
->({
-  ctx,
-  scopedEffect,
-  renderer,
-  processChildren,
-  createElementScope,
-  disposeScope,
-  onCleanup,
-  instrument,
-}: ElOpts<TElement, TText>): ElFactory<TElement> {
-  /**
-   * Helper to create a RefSpec with lifecycle callback chaining
-   */
-  const createRefSpec = <El extends HTMLElement>(
-    createElement: (callbacks: LifecycleCallback<El>[], api?: unknown) => ElementRef<El>
-  ): RefSpec<El> => {
-    const lifecycleCallbacks: LifecycleCallback<El>[] = [];
-
-    const refSpec: RefSpec<El> = (...callbacks: LifecycleCallback<El>[]) => {
-      lifecycleCallbacks.push(...callbacks);
-      return refSpec;
-    };
-
-    refSpec.status = STATUS_REF_SPEC;
-
-    refSpec.create = <TExt>(api?: unknown, extensions?: TExt): ElementRef<El> & TExt => {
-      const elRef = createElement(lifecycleCallbacks, api);
-      return { ...elRef, ...extensions } as ElementRef<El> & TExt;
-    };
-
-    return refSpec;
-  };
-
-  const createAttrEffect = <TEl extends TElement>(
-    element: TEl,
-    key: string,
-    getter: () => unknown
-  ) => () => renderer.setAttribute(element, key, getter());
-
-  const createStaticElement = <Tag extends keyof HTMLElementTagNameMap>(
-    tag: Tag,
-    props: ElementProps<Tag>,
-    children: ElRefSpecChild[]
-  ): RefSpec<HTMLElementTagNameMap[Tag]> => {
-    type El = HTMLElementTagNameMap[Tag];
-
-    return createRefSpec<El>((lifecycleCallbacks, api) => {
-      const element = renderer.createElement(tag) as unknown as El;
-      const elRef: ElementRef<El> = {
-        status: STATUS_ELEMENT,
-        element,
-        next: undefined,
-      };
-
-      createElementScope(element, () => {
-        for (const [key, val] of Object.entries(props)) {
-          if (typeof val !== 'function') {
-            renderer.setAttribute(element as unknown as TElement, key, val);
-            continue;
-          }
-          scopedEffect(
-            createAttrEffect(
-              element as unknown as TElement,
-              key,
-              val as () => unknown
-            )
-          );
-        }
-        processChildren(elRef as unknown as ElementRef<TElement>, children, api);
-
-        // Execute lifecycle callbacks within scope
-        for (const callback of lifecycleCallbacks) {
-          const cleanup = callback(element);
-          if (cleanup) onCleanup(cleanup);
-        }
-      });
-
-      return elRef;
-    });
-  };
-
-  const createReactiveElement = <Tag extends keyof HTMLElementTagNameMap>(
-    specReactive: Reactive<ReactiveElSpec<Tag>>
-  ): FragmentRef<TElement> => {
-    const fragRef = createFragment<TElement>((parent, nextSibling) => {
-      return scopedEffect(() => {
-        const spec = specReactive();
-
-        // Empty fragment - no DOM nodes
-        if (spec === null) {
-          fragRef.firstChild = undefined;
-          return; // No cleanup needed
-        }
-
-        // Create new element from spec
-        const elementRef = createStaticElement(
-          spec.tag,
-          spec.props || {},
-          spec.children || []
-        ).create<ElementRef<TElement>>();
-
-        fragRef.firstChild = elementRef;
-
-        // Insert at correct position
-        renderer.insertBefore(
-          parent.element,
-          elementRef.element,
-          nextSibling?.element ?? null
-        );
-
-        // Return cleanup - runs automatically before next effect execution
-        return () => {
-          const scope = ctx.elementScopes.get(elementRef.element);
-          if (scope) disposeScope(scope);
-          renderer.removeChild(parent.element, elementRef.element);
-        };
-      });
-    });
-
-    return fragRef;
-  };
-
-  // Overloaded implementation
-  function el<Tag extends keyof HTMLElementTagNameMap>(
-    tag: Tag,
-    props?: ElementProps<Tag>
-  ): ChildrenApplicator<Tag>;
-  function el<Tag extends keyof HTMLElementTagNameMap>(
-    reactive: Reactive<ReactiveElSpec<Tag>>
-  ): FragmentRef<TElement>;
-  function el<Tag extends keyof HTMLElementTagNameMap>(
-    tagOrReactive: Tag | Reactive<ReactiveElSpec<Tag>>,
-    props?: ElementProps<Tag>
-  ): ChildrenApplicator<Tag> | FragmentRef<TElement> {
-    // Handle reactive case
-    if (typeof tagOrReactive === 'function') {
-      return createReactiveElement(tagOrReactive);
-    }
-
-    // Return children applicator which returns RefSpec directly
-    return (...children: ElRefSpecChild[]) => {
-      return createStaticElement(
-        tagOrReactive,
-        props ?? ({} as ElementProps<Tag>),
-        children
-      );
-    };
-  }
-
-  const extension: ElFactory<TElement> = {
-    name: 'el',
-    method: el,
-    ...(instrument && { instrument }),
-  };
-
-  return extension;
-}
-
-/**
  * El primitive - instantiatable extension using the create pattern
  * Similar to Signal() in signals preset
  */
-export const El = create(<
-  TElement extends RendererElement = HTMLElement,
-  TText extends TextNode = Text
->(opts: ElOpts<TElement, TText>) => () => createElFactory(opts));
+export const El = create(
+  <
+    TElement extends RendererElement = HTMLElement,
+    TText extends TextNode = Text,
+  >({
+    ctx,
+    scopedEffect,
+    renderer,
+    processChildren,
+    createElementScope,
+    disposeScope,
+    onCleanup,
+  }: ElOpts<TElement, TText>) =>
+    (props?: ElProps<TElement>) => {
+      const { instrument } = props ?? {};
+
+      /**
+       * Helper to create a RefSpec with lifecycle callback chaining
+       */
+      const createRefSpec = <El extends HTMLElement>(
+        createElement: (
+          callbacks: LifecycleCallback<El>[],
+          api?: unknown
+        ) => ElementRef<El>
+      ): RefSpec<El> => {
+        const lifecycleCallbacks: LifecycleCallback<El>[] = [];
+
+        const refSpec: RefSpec<El> = (
+          ...callbacks: LifecycleCallback<El>[]
+        ) => {
+          lifecycleCallbacks.push(...callbacks);
+          return refSpec;
+        };
+
+        refSpec.status = STATUS_REF_SPEC;
+
+        refSpec.create = <TExt>(
+          api?: unknown,
+          extensions?: TExt
+        ): ElementRef<El> & TExt => {
+          const elRef = createElement(lifecycleCallbacks, api);
+          return { ...elRef, ...extensions } as ElementRef<El> & TExt;
+        };
+
+        return refSpec;
+      };
+
+      const createAttrEffect =
+        <TEl extends TElement>(
+          element: TEl,
+          key: string,
+          getter: () => unknown
+        ) =>
+        () =>
+          renderer.setAttribute(element, key, getter());
+
+      const createStaticElement = <Tag extends keyof HTMLElementTagNameMap>(
+        tag: Tag,
+        props: ElementProps<Tag>,
+        children: ElRefSpecChild[]
+      ): RefSpec<HTMLElementTagNameMap[Tag]> => {
+        type El = HTMLElementTagNameMap[Tag];
+
+        return createRefSpec<El>((lifecycleCallbacks, api) => {
+          const element = renderer.createElement(tag) as unknown as El;
+          const elRef: ElementRef<El> = {
+            status: STATUS_ELEMENT,
+            element,
+            next: undefined,
+          };
+
+          createElementScope(element, () => {
+            for (const [key, val] of Object.entries(props)) {
+              if (typeof val !== 'function') {
+                renderer.setAttribute(element as unknown as TElement, key, val);
+                continue;
+              }
+              scopedEffect(
+                createAttrEffect(
+                  element as unknown as TElement,
+                  key,
+                  val as () => unknown
+                )
+              );
+            }
+            processChildren(
+              elRef as unknown as ElementRef<TElement>,
+              children,
+              api
+            );
+
+            // Execute lifecycle callbacks within scope
+            for (const callback of lifecycleCallbacks) {
+              const cleanup = callback(element);
+              if (cleanup) onCleanup(cleanup);
+            }
+          });
+
+          return elRef;
+        });
+      };
+
+      const createReactiveElement = <Tag extends keyof HTMLElementTagNameMap>(
+        specReactive: Reactive<ReactiveElSpec<Tag>>
+      ): FragmentRef<TElement> => {
+        const fragRef = createFragment<TElement>((parent, nextSibling) => {
+          return scopedEffect(() => {
+            const spec = specReactive();
+
+            // Empty fragment - no DOM nodes
+            if (spec === null) {
+              fragRef.firstChild = undefined;
+              return; // No cleanup needed
+            }
+
+            // Create new element from spec
+            const elementRef = createStaticElement(
+              spec.tag,
+              spec.props || {},
+              spec.children || []
+            ).create<ElementRef<TElement>>();
+
+            fragRef.firstChild = elementRef;
+
+            // Insert at correct position
+            renderer.insertBefore(
+              parent.element,
+              elementRef.element,
+              nextSibling?.element ?? null
+            );
+
+            // Return cleanup - runs automatically before next effect execution
+            return () => {
+              const scope = ctx.elementScopes.get(elementRef.element);
+              if (scope) disposeScope(scope);
+              renderer.removeChild(parent.element, elementRef.element);
+            };
+          });
+        });
+
+        return fragRef;
+      };
+
+      // Overloaded implementation
+      function el<Tag extends keyof HTMLElementTagNameMap>(
+        tag: Tag,
+        props?: ElementProps<Tag>
+      ): ChildrenApplicator<Tag>;
+      function el<Tag extends keyof HTMLElementTagNameMap>(
+        reactive: Reactive<ReactiveElSpec<Tag>>
+      ): FragmentRef<TElement>;
+      function el<Tag extends keyof HTMLElementTagNameMap>(
+        tagOrReactive: Tag | Reactive<ReactiveElSpec<Tag>>,
+        props?: ElementProps<Tag>
+      ): ChildrenApplicator<Tag> | FragmentRef<TElement> {
+        // Handle reactive case
+        if (typeof tagOrReactive === 'function') {
+          return createReactiveElement(tagOrReactive);
+        }
+
+        // Return children applicator which returns RefSpec directly
+        return (...children: ElRefSpecChild[]) => {
+          return createStaticElement(
+            tagOrReactive,
+            props ?? ({} as ElementProps<Tag>),
+            children
+          );
+        };
+      }
+
+      const extension: ElFactory<TElement> = {
+        name: 'el',
+        method: el,
+        ...(instrument && { instrument }),
+      };
+
+      return extension;
+    }
+);

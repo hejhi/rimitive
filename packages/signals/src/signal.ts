@@ -36,6 +36,9 @@ export type SignalOpts = {
   ctx: GlobalContext;
   trackDependency: GraphEdges['trackDependency'];
   propagate: (subscribers: Dependency) => void;
+};
+
+export type SignalProps = {
   instrument?: (
     method: <T>(value: T) => SignalFunction<T>,
     instrumentation: InstrumentationContext,
@@ -59,8 +62,8 @@ export const Signal = create(({
     trackDependency,
     propagate,
     ctx,
-    instrument
-  }: SignalOpts) => (): SignalFactory => {
+}: SignalOpts) => (props?: SignalProps): SignalFactory => {
+  const { instrument } = props ?? {};
 
   function createSignal<T>(initialValue: T): SignalFunction<T> {
     const node: SignalNode<T> = {

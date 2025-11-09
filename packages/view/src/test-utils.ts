@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { createLatticeContext } from './context';
+import { createBaseContext } from './context';
 import type { Renderer } from './renderer';
 import type { Reactive, RefSpec, LifecycleCallback, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
@@ -10,7 +10,7 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { Signal } from '@lattice/signals/signal';
 import { Effect } from '@lattice/signals/effect';
-import { createBaseContext } from '@lattice/signals/context';
+import { createBaseContext as createSignalContext } from '@lattice/signals/context';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -209,11 +209,11 @@ export function getTextContent(element: MockElement | MockText): string {
  * Creates a complete test environment with context, renderer, and reactive primitives
  */
 export function createTestEnv() {
-  const ctx = createLatticeContext<MockElement>();
+  const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
 
   // Create proper GlobalContext for signals (separate from view context)
-  const signalsCtx = createBaseContext();
+  const signalsCtx = createSignalContext();
 
   // Use real signals integration for proper reactive updates
   const graphEdges = createGraphEdges({ ctx: signalsCtx });

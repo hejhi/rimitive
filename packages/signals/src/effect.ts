@@ -15,6 +15,9 @@ export type EffectOpts = {
   ctx: GlobalContext;
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
+};
+
+export type EffectProps = {
   instrument?: (
     method: (fn: () => void | (() => void)) => () => void,
     instrumentation: InstrumentationContext,
@@ -39,44 +42,44 @@ interface EffectNode extends ScheduledNode {
   cleanup?: void | (() => void);
 }
 
-export const Effect = create((opts: EffectOpts) => (): EffectFactory => {
-  const {
-    dispose: disposeNode,
-    track,
-  } = opts;
+export const Effect = create(
+  ({ dispose: disposeNode, track }: EffectOpts) =>
+    (props?: EffectProps): EffectFactory => {
+      const { instrument } = props ?? {};
 
-  function createEffect(run: () => void | (() => void)): () => void {
-    const node: EffectNode = {
-      __type: 'effect' as const,
-      status: EFFECT_CLEAN,
-      dependencies:  undefined,
-      dependencyTail:  undefined,
-      nextScheduled: undefined,
-      trackingVersion: 0,
-      cleanup: undefined,
-      flush(): void {
-        if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+      function createEffect(run: () => void | (() => void)): () => void {
+        const node: EffectNode = {
+          __type: 'effect' as const,
+          status: EFFECT_CLEAN,
+          dependencies: undefined,
+          dependencyTail: undefined,
+          nextScheduled: undefined,
+          trackingVersion: 0,
+          cleanup: undefined,
+          flush(): void {
+            if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+            node.cleanup = track(node, run);
+          },
+        };
+
+        // Run a single time on creation
         node.cleanup = track(node, run);
+
+        // Return dispose function
+        return () => {
+          disposeNode(node, () => {
+            if (node.cleanup === undefined) return;
+            node.cleanup = node.cleanup();
+          });
+        };
       }
-    };
 
-    // Run a single time on creation
-    node.cleanup = track(node, run);
+      const extension: EffectFactory = {
+        name: 'effect',
+        method: createEffect,
+        ...(instrument && { instrument }),
+      };
 
-    // Return dispose function
-    return () => {
-      disposeNode(node, () => {
-        if (node.cleanup === undefined) return;
-        node.cleanup = node.cleanup();
-      });
-    };
-  }
-
-  const extension: EffectFactory = {
-    name: 'effect',
-    method: createEffect,
-    ...(opts.instrument && { instrument: opts.instrument }),
-  };
-
-  return extension;
-});
+      return extension;
+    }
+);

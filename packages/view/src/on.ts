@@ -16,6 +16,9 @@ import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 export type OnOpts = {
   startBatch: Scheduler['startBatch'];
   endBatch: Scheduler['endBatch'];
+};
+
+export type OnProps = {
   instrument?: (
     method: OnFactory['method'],
     instrumentation: InstrumentationContext,
@@ -56,9 +59,12 @@ export function withBatch<TArgs extends unknown[], TReturn>(
 }
 
 /**
- * Create the on primitive factory
+ * On primitive - instantiatable extension using the create pattern
+ * Similar to Signal() in signals preset
  */
-export function createOnFactory({ startBatch, endBatch, instrument }: OnOpts): OnFactory {
+export const On = create(({ startBatch, endBatch }: OnOpts) => (props?: OnProps) => {
+  const { instrument } = props ?? {};
+
   /**
    * Curried event listener attachment with automatic batching
    */
@@ -72,7 +78,12 @@ export function createOnFactory({ startBatch, endBatch, instrument }: OnOpts): O
       const batchedHandler = withBatch({ startBatch, endBatch }, handler);
 
       element.addEventListener(event, batchedHandler as EventListener, options);
-      return () => element.removeEventListener(event, batchedHandler as EventListener, options);
+      return () =>
+        element.removeEventListener(
+          event,
+          batchedHandler as EventListener,
+          options
+        );
     };
   }
 
@@ -83,10 +94,4 @@ export function createOnFactory({ startBatch, endBatch, instrument }: OnOpts): O
   };
 
   return extension;
-}
-
-/**
- * On primitive - instantiatable extension using the create pattern
- * Similar to Signal() in signals preset
- */
-export const On = create((opts: OnOpts) => () => createOnFactory(opts));
+});

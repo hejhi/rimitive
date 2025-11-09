@@ -1,12 +1,12 @@
 import { createApi } from '@lattice/view/presets/core';
-import { createLatticeContext } from '@lattice/view/context';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { ElRefSpecChild, type Reactive } from '@lattice/view/types';
+import { createCoreCtx, extensions } from '@lattice/signals/presets/core';
 
 // Wire up view layer
-const viewCtx = createLatticeContext<HTMLElement>();
 const renderer = createDOMRenderer();
-const api = createApi({ viewCtx, renderer });
+const signalsCtx = createCoreCtx();
+const api = createApi({ signalsCtx, signalsExtensions: extensions, renderer });
 const { el, map, on, signal, computed } = api;
 
 // ============================================================================

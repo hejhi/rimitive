@@ -9,12 +9,15 @@ import { Computed } from '../computed';
 import { Effect } from '../effect';
 import { Batch } from '../batch';
 import { Subscribe } from '../subscribe';
-import { createBaseContext } from '../context';
-import { createGraphEdges } from '../helpers/graph-edges';
-import { createGraphTraversal } from '../helpers/graph-traversal';
-import { createScheduler } from '../helpers/scheduler';
-import { createPullPropagator } from '../helpers/pull-propagator';
-import { createApi as createLatticeApi } from '@lattice/lattice';
+import { createPushPullSchedule } from '../helpers';
+import { createApi } from '@lattice/lattice';
+
+// Re-export types so they're part of the public API
+export type { SubscribeFactory, SubscribeFunction, SubscribeCallback } from '../subscribe';
+export type { SignalFactory } from '../signal';
+export type { ComputedFactory } from '../computed';
+export type { EffectFactory } from '../effect';
+export type { BatchFactory } from '../batch';
 
 export const extensions = {
   signal: Signal(),
@@ -24,28 +27,9 @@ export const extensions = {
   subscribe: Subscribe(),
 };
 
-export function createCoreCtx() {
-  const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
-  const { withVisitor } = createGraphTraversal();
-  const _scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const { withPropagate, ...scheduler } = _scheduler;
-  const pullPropagator = createPullPropagator({ track: graphEdges.track });
-
+export function create(ext = extensions, deps = createPushPullSchedule()) {
   return {
-    ctx,
-    ...graphEdges,
-    propagate: withPropagate(withVisitor),
-    ...pullPropagator,
-    ...scheduler,
+    extensions: createApi({ ...extensions, ...ext }, deps),
+    deps,
   };
 }
-
-/**
- * Core signals preset - returns array of pre-configured extensions + helpers
- * This is the main API for creating a complete signals context.
- */
-export function createApi() {
-  return createLatticeApi(extensions, createCoreCtx());
-}
-

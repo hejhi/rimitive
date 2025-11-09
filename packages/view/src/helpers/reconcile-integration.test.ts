@@ -11,15 +11,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestEnv, MockElement, getTextContent } from '../test-utils';
-import { createElFactory } from '../el';
-import { createMapHelper } from './map';
+import { createTestEnv, MockElement, MockText, getTextContent } from '../test-utils';
+import { El } from '../el';
+import { Map } from './map';
 import type { RefSpec } from '../types';
 
 describe('List reconciliation - Complex reorderings', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx: env.ctx,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -29,7 +29,7 @@ describe('List reconciliation - Complex reorderings', () => {
       onCleanup: env.onCleanup,
     });
 
-    const mapFactory = createMapHelper({
+    const mapFactory = Map<MockElement, MockText>().create({
       ctx: env.ctx,
       signalCtx: env.signalCtx,
       signal: env.signal,
@@ -433,7 +433,7 @@ describe('List reconciliation - Complex reorderings', () => {
 describe('List reconciliation - Edge cases', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory({
+    const el = El<MockElement, MockText>().create({
       ctx: env.ctx,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -443,7 +443,7 @@ describe('List reconciliation - Edge cases', () => {
       onCleanup: env.onCleanup,
     });
 
-    const mapFactory = createMapHelper({
+    const mapFactory = Map<MockElement, MockText>().create({
       ctx: env.ctx,
       signalCtx: env.signalCtx,
       signal: env.signal,

@@ -1,11 +1,12 @@
 /**
- * TodoList Component
+ * TodoList Behavior - Framework Agnostic
  *
  * Manages a list of todos with add, toggle, and toggleAll functionality.
  * Demonstrates working with arrays in signals and computed values.
  */
 
-import type { Writable, Readable } from '@lattice/signals/types';
+import { create } from '@lattice/lattice';
+import type { SignalsAPI, SignalFunction, ComputedFunction } from '../types';
 
 export interface Todo {
   id: number;
@@ -14,21 +15,15 @@ export interface Todo {
 }
 
 export interface TodoListAPI {
-  todos: () => Todo[];
-  allCompleted: () => boolean;
-  activeCount: () => number;
+  todos: SignalFunction<Todo[]>;
+  allCompleted: ComputedFunction<boolean>;
+  activeCount: ComputedFunction<number>;
   addTodo: (text: string) => void;
   toggleTodo: (id: number) => void;
   toggleAll: () => void;
 }
 
-export function createTodoList(
-  api: {
-    signal: <T>(value: T) => Writable<T>;
-    computed: <T>(compute: () => T) => Readable<T>;
-  },
-  initialTodos: Todo[] = []
-): TodoListAPI {
+export const TodoList = create((api: SignalsAPI) => (initialTodos: Todo[] = []): TodoListAPI => {
   const todos = api.signal<Todo[]>(initialTodos);
 
   const allCompleted = api.computed(() => {
@@ -41,12 +36,12 @@ export function createTodoList(
   });
 
   return {
-    // Getters
+    // Reactive state - expose signals directly
     todos,
     allCompleted,
     activeCount,
 
-    // Actions
+    // Actions - update state
     addTodo: (text: string) => {
       const newTodo: Todo = {
         id: Date.now(),
@@ -69,4 +64,4 @@ export function createTodoList(
       todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
     },
   };
-}
+});
