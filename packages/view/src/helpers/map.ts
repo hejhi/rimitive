@@ -62,8 +62,8 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => v
  */
 export const Map = create(
   <
-    TElement extends RendererElement = HTMLElement,
-    TText extends TextNode = Text,
+    TElement extends RendererElement,
+    TText extends TextNode,
   >({
     ctx,
     signalCtx,

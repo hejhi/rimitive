@@ -6,7 +6,6 @@
  */
 
 import { create } from '@lattice/view/component';
-import type { RefSpec } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
 
 export const TodoItem = create(
@@ -14,7 +13,7 @@ export const TodoItem = create(
     (
       todoSignal: () => Todo,
       toggleTodo: (id: number) => void
-    ): RefSpec<HTMLElement> => {
+    ) => {
       const checkbox = el('input', {
         type: 'checkbox',
         checked: computed(() => todoSignal().completed)

@@ -12,8 +12,8 @@ import { EffectFactory } from '@lattice/signals/effect';
 import { createPushSchedule } from '@lattice/signals/helpers';
 
 export function createSpec<
-  TElement extends RendererElement = HTMLElement,
-  TText extends TextNode = Text,
+  TElement extends RendererElement,
+  TText extends TextNode,
   >(
     renderer: Renderer<TElement, TText>,
     reactives: {

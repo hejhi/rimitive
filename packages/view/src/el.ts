@@ -106,8 +106,8 @@ export type ElFactory<TElement extends RendererElement> = LatticeExtension<
  */
 export const El = create(
   <
-    TElement extends RendererElement = HTMLElement,
-    TText extends TextNode = Text,
+    TElement extends RendererElement,
+    TText extends TextNode,
   >({
     ctx,
     scopedEffect,

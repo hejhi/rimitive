@@ -15,8 +15,8 @@ export const extensions = {
 };
 
 export function create<
-  TElement extends RendererElement = HTMLElement,
-  TText extends TextNode = Text,
+  TElement extends RendererElement,
+  TText extends TextNode,
 >(
   renderer: Renderer<TElement, TText>,
   ext = extensions,

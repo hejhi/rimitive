@@ -47,6 +47,19 @@ export interface ComputedFunction<T> {
 }
 
 /**
+ * Makes each property in T accept either the value or a Reactive<value>
+ */
+type ReactiveProps<T> = {
+  [K in keyof T]?: T[K] | Reactive<T[K]>;
+};
+
+export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> =
+  ReactiveProps<HTMLElementTagNameMap[Tag]> & {
+    style?: Partial<CSSStyleDeclaration>;
+    status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
+  };
+
+/**
  * Type for the el method with both overloads
  * Generic over TElement to match the element type used by the renderer
  */
@@ -54,7 +67,7 @@ export interface ElMethod<TElement extends RendererElement> {
   // Static element builder
   <Tag extends keyof HTMLElementTagNameMap>(
     tag: Tag,
-    props?: Record<string, unknown>
+    props?: ElementProps<Tag>
   ): (...children: ElRefSpecChild[]) => RefSpec<HTMLElementTagNameMap[Tag]>;
 
   // Reactive element builder
