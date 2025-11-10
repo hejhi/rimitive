@@ -1,4 +1,4 @@
-import { create } from '@lattice/view/component';
+import { create } from '../create';
 import { createCounter } from '../behaviors/counter';
 
 export const Counter = create((api) => (initialCount: number = 0) => {

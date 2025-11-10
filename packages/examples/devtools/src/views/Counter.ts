@@ -4,7 +4,7 @@
  * Uses the create() pattern - the API is provided automatically when .create({ api }) is called.
  */
 
-import { create } from '@lattice/view/component';
+import { create } from '../create';
 import type { RefSpec } from '@lattice/view/types';
 
 interface CounterInstance {

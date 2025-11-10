@@ -4,12 +4,12 @@
  * Renders a single todo item with checkbox, text, and remove button
  */
 
-import { create, type LatticeViewAPI } from '@lattice/view/component';
 import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
+import { create } from '../create';
 
 export const TodoItem = create(
-  ({ el, on, computed }: LatticeViewAPI<HTMLElement>) =>
+  ({ el, on, computed }) =>
     (
       todoSignal: Reactive<Todo>,
       onToggle: (id: number) => void,

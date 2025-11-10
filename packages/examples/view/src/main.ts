@@ -1,10 +1,10 @@
 import { mount } from '@lattice/view/dom';
-import { create, type LatticeViewAPI } from '@lattice/view/component';
+import { create } from './create';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
 
-const App = create(({ el }: LatticeViewAPI<HTMLElement>) => () => {
+const App = create(({ el }) => () => {
   return el('div', { className: 'app' })(
     Counter(10),
     ConditionalExample(),

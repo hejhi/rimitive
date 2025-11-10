@@ -5,7 +5,7 @@
  * Uses the create() pattern.
  */
 
-import { create } from '@lattice/view/component';
+import { create } from '../create';
 import type { Todo } from '../behaviors/todo-list';
 
 export const TodoItem = create(

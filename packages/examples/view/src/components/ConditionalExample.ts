@@ -1,4 +1,4 @@
-import { create } from '@lattice/view/component';
+import { create } from '../create';
 
 export const ConditionalExample = create(
   ({ el, signal, computed, on, effect }) =>

@@ -5,7 +5,7 @@
  * Uses the create() pattern.
  */
 
-import { create } from '@lattice/view/component';
+import { create } from '../create';
 import type { RefSpec } from '@lattice/view/types';
 
 interface BatchedUpdateHandlers {

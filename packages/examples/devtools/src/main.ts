@@ -9,7 +9,7 @@
  * Each behavior is framework-agnostic and can be tested in isolation.
  */
 
-import { create } from '@lattice/view/component';
+import { create } from './create';
 
 // Import API modules
 import { mount } from './api/view';

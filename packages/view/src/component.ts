@@ -27,7 +27,7 @@
 import { create as baseCreate } from '@lattice/lattice';
 import { type RefSpec, type SealedSpec, type Reactive, type FragmentRef, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
 import type { ReactiveElSpec, ElementProps as ElElementProps } from './el';
-import type { Element as RendererElement, RendererConfig } from './renderer';
+import type { Element as RendererElement, RendererConfig, Renderer } from './renderer';
 
 /**
  * Signal function with both getter and setter
@@ -147,6 +147,55 @@ export function create<
         return refSpec.create(api);
       }
     };
+  };
+}
+
+/**
+ * Create a renderer-specific component factory
+ *
+ * This helper infers types from your renderer instance, allowing you to write
+ * components without manually specifying configuration types.
+ *
+ * @template R - The renderer type (TConfig and TElement are inferred)
+ * @param renderer - Your renderer instance (e.g., from createDOMRenderer())
+ *
+ * @returns A `create` function with the API type pre-bound to your renderer
+ *
+ * @example
+ * ```typescript
+ * import { createRenderer } from '@lattice/view/component';
+ * import { createDOMRenderer } from '@lattice/view/renderers/dom';
+ *
+ * // Create a renderer instance
+ * const renderer = createDOMRenderer();
+ *
+ * // Create a component factory - types inferred from renderer!
+ * export const create = createRenderer(renderer);
+ *
+ * // Now components don't need any type annotations
+ * export const Counter = create(
+ *   ({ el, signal, on }) => // <- fully typed for DOM!
+ *     (initialCount = 0) => {
+ *       const count = signal(initialCount);
+ *       return el('div')(
+ *         el('button')('+')(on('click', () => count(count() + 1)))(),
+ *         el('span')(count),
+ *         el('button')('-')(on('click', () => count(count() - 1)))()
+ *       );
+ *     }
+ * );
+ * ```
+ */
+export function createRenderer<R extends Renderer<any, any, any>>(
+  _renderer: R
+) {
+  type TConfig = R extends Renderer<infer C, any, any> ? C : never;
+  type TElement = R extends Renderer<any, infer E, any> ? E : never;
+
+  return function <TArgs extends unknown[], TElementResult>(
+    factory: (api: LatticeViewAPI<TConfig, TElement>) => (...args: TArgs) => RefSpec<TElementResult>
+  ): (...args: TArgs) => SealedSpec<TElementResult> {
+    return create<TArgs, TElementResult, TConfig, TElement>(factory);
   };
 }
 
