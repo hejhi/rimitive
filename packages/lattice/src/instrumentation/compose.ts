@@ -76,15 +76,43 @@ export function composeProviders(
 
 /**
  * Create an instrumentation context from configuration
+ *
+ * Type overloads provide precise return types based on config:
+ * - When enabled is false → undefined
+ * - When enabled is true and providers non-empty → InstrumentationContext
+ * - Otherwise → InstrumentationContext | undefined
  */
-export function createInstrumentation(config: InstrumentationConfig): InstrumentationContext | undefined {
-  if (!isEnabled(config)) {
-    return undefined;
+
+// Overload: enabled is explicitly false → always returns undefined
+export function createInstrumentation(
+  config: InstrumentationConfig & { enabled: false }
+): undefined;
+
+// Overload: enabled is true and providers guaranteed non-empty → always returns InstrumentationContext
+export function createInstrumentation(
+  config: Omit<InstrumentationConfig, 'enabled' | 'providers'> & {
+    enabled: true;
+    providers: [InstrumentationProvider, ...InstrumentationProvider[]];
   }
-  
-  if (config.providers.length === 0) {
-    return undefined;
+): InstrumentationContext;
+
+// Overload: enabled omitted (defaults to true) and providers guaranteed non-empty → always returns InstrumentationContext
+export function createInstrumentation(
+  config: Omit<InstrumentationConfig, 'providers'> & {
+    providers: [InstrumentationProvider, ...InstrumentationProvider[]];
   }
-  
+): InstrumentationContext;
+
+// General case: may return undefined
+export function createInstrumentation(
+  config: InstrumentationConfig
+): InstrumentationContext | undefined;
+
+// Implementation
+export function createInstrumentation(
+  config: InstrumentationConfig
+): InstrumentationContext | undefined {
+  if (!isEnabled(config)) return undefined;
+
   return composeProviders(config.providers);
 }

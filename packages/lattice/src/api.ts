@@ -10,7 +10,7 @@
  * 3. Maintain type safety across component -> extension -> API
  */
 
-import { createContext, type LatticeExtension } from './extension';
+import { createContext, CreateContextOptions, type LatticeExtension } from './extension';
 import { type Instantiatable } from './component';
 
 // Internal type for type-level operations
@@ -22,34 +22,15 @@ type ExtractContextRequirements<T extends Record<string, InstantiableExtension>>
 
 /**
  * Create an API from a set of Instantiable components and shared context
- *
- * @example
- * ```ts
- * const Signal = create((ctx: { count: number }) => () => ({
- *   name: 'signal',
- *   method: () => ctx.count++
- * }));
- *
- * const Reset = create((ctx: { count: number }) => () => ({
- *   name: 'reset',
- *   method: () => ctx.count = 0
- * }));
- *
- * const components = {
- *   signal: Signal(),
- *   reset: Reset()
- * };
- *
- * const api = createApi(components, { count: 0 });
- * api.signal(); // 1
- * api.reset();  // 0
- * ```
  */
 export function createApi<
   T extends Record<string, InstantiableExtension>,
   TCtx extends ExtractContextRequirements<T>,
->(components: T, ctx: TCtx) {
-  return createContext(...Object.values(components).map((component) =>
-    component.create(ctx as never)
-  ) as ReturnType<T[keyof T]['create']>[]);
+  >(extensions: T, ctx: TCtx, options?: CreateContextOptions) {
+  const mappedComponents = Object.values(extensions).map((ext) =>
+    ext.create(ctx)
+  ) as ReturnType<T[keyof T]['create']>[];
+
+  if (options) return createContext(options, ...mappedComponents);
+  return createContext(...mappedComponents);
 }

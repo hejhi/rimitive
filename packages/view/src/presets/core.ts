@@ -1,7 +1,7 @@
 import { El } from '../el';
 import { Map } from '../helpers/map';
 import { On } from '../on';
-import { createApi as createlatticeApi } from '@lattice/lattice';
+import { CreateContextOptions, createApi as createlatticeApi } from '@lattice/lattice';
 import { createSpec } from '../helpers';
 import type {
   Renderer,
@@ -48,11 +48,13 @@ export function createApi<
 >(
   renderer: Renderer<TConfig, TElement, TText>,
   ext = extensions,
-  deps = createReactives()
+  deps = createReactives(),
+  opts?: CreateContextOptions
 ) {
   const extensionsApi = createlatticeApi(
     { ...extensions, ...ext },
-    createSpec(renderer, deps)
+    createSpec(renderer, deps),
+    opts
   );
 
   // Create a renderer-specific component factory
