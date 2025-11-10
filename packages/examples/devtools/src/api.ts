@@ -20,7 +20,7 @@ import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { instrumentSubscribe } from '@lattice/signals/devtools/subscribe';
 import { instrumentEl, instrumentMap, instrumentOn } from '@lattice/view/devtools';
-import { create as createReactives } from '@lattice/signals/presets/core';
+import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
 import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
 import { createPushPullSchedule } from '@lattice/signals/helpers';
 
@@ -36,7 +36,7 @@ export const { create, deps, extensions, mount } = createApi(
     map: Map({ instrument: instrumentMap }),
     on: On({ instrument: instrumentOn }),
   },
-  createReactives(
+  createReactiveApi(
     {
       signal: Signal({ instrument: instrumentSignal }),
       computed: Computed({ instrument: instrumentComputed }),

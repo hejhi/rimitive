@@ -1,7 +1,7 @@
 import { El } from '../el';
 import { Map } from '../helpers/map';
 import { On } from '../on';
-import { CreateContextOptions, createApi as createlatticeApi } from '@lattice/lattice';
+import { CreateContextOptions, createApi as createLatticeApi } from '@lattice/lattice';
 import { createSpec } from '../helpers';
 import type {
   Renderer,
@@ -9,7 +9,7 @@ import type {
   Element as RendererElement,
   TextNode,
 } from '../renderer';
-import { create as createReactives } from '@lattice/signals/presets/core';
+import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
 import { create as baseCreate, type LatticeViewAPI } from '../component';
 import type { RefSpec, SealedSpec, NodeRef } from '../types';
 
@@ -48,19 +48,24 @@ export function createApi<
 >(
   renderer: Renderer<TConfig, TElement, TText>,
   ext = extensions,
-  deps = createReactives(),
+  reactiveApi = createReactiveApi(),
   opts?: CreateContextOptions
 ) {
-  const extensionsApi = createlatticeApi(
+  const extensionsApi = createLatticeApi(
     { ...extensions, ...ext },
-    createSpec(renderer, deps),
+    createSpec(renderer, reactiveApi),
     opts
   );
 
   // Create a renderer-specific component factory
   // This automatically provides type information based on the renderer
-  const create: ComponentFactory<TConfig, TElement> = <TArgs extends unknown[], TElementResult>(
-    factory: (api: LatticeViewAPI<TConfig, TElement>) => (...args: TArgs) => RefSpec<TElementResult>
+  const create: ComponentFactory<TConfig, TElement> = <
+    TArgs extends unknown[],
+    TElementResult,
+  >(
+    factory: (
+      api: LatticeViewAPI<TConfig, TElement>
+    ) => (...args: TArgs) => RefSpec<TElementResult>
   ): ((...args: TArgs) => SealedSpec<TElementResult>) => {
     return baseCreate<TArgs, TElementResult, TConfig, TElement>(factory);
   };
@@ -73,7 +78,7 @@ export function createApi<
 
   return {
     extensions: extensionsApi,
-    deps,
+    deps: reactiveApi,
     create,
     mount,
   };

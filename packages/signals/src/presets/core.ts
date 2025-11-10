@@ -10,7 +10,10 @@ import { Effect } from '../effect';
 import { Batch } from '../batch';
 import { Subscribe } from '../subscribe';
 import { createPushPullSchedule } from '../helpers';
-import { createApi, CreateContextOptions } from '@lattice/lattice';
+import {
+  createApi as createLatticeApi,
+  CreateContextOptions,
+} from '@lattice/lattice';
 
 // Re-export types so they're part of the public API
 export type { SubscribeFactory, SubscribeFunction, SubscribeCallback } from '../subscribe';
@@ -27,13 +30,13 @@ export const extensions = {
   subscribe: Subscribe(),
 };
 
-export function create(
+export function createApi(
   ext = extensions,
   deps = createPushPullSchedule(),
   opts?: CreateContextOptions
 ) {
   return {
-    extensions: createApi({ ...extensions, ...ext }, deps, opts),
+    extensions: createLatticeApi({ ...extensions, ...ext }, deps, opts),
     deps,
   };
 }
