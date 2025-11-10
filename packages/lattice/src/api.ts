@@ -18,7 +18,7 @@ type InstantiableExtension = Instantiatable<LatticeExtension<string, unknown>, u
 
 // Helper to extract context requirements from instantiables
 // Uses UnionToIntersection to combine all context requirements
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
 type ExtractContextRequirements<T extends Record<string, InstantiableExtension>> =
   UnionToIntersection<T[keyof T] extends Instantiatable<unknown, infer C> ? C : never>;
