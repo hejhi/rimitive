@@ -54,11 +54,14 @@ export function createApi<
   TText extends TextNode,
 >(
   renderer: Renderer<TConfig, TElement, TText>,
-  ext = extensions,
+  ext = {
+    el: El<TConfig, TElement, TText>(),
+    map: Map<TConfig, TElement, TText>(),
+    on: On(),
+  },
   signalsApi = createReactiveApi(),
   opts?: CreateContextOptions
 ) {
-
   // Create a renderer-specific component factory
   // This automatically provides type information based on the renderer
   const create: ComponentFactory<TConfig, TElement> = <
@@ -79,7 +82,7 @@ export function createApi<
       { ...extensions, ...ext },
       createSpec(renderer, signalsApi),
       opts
-    )
+    ),
   };
 
   // Convenience method for mounting components with the bound extensions

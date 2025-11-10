@@ -25,7 +25,7 @@ export function createSpec<
     ctx = createBaseContext<TElement>()
 ) {
   const { api, deps } = signals;
-  const { ctx: signalCtx, track, dispose } = deps;
+  const { ctx: signalCtx, track, dispose, ...restDeps } = deps;
   const { signal, effect } = api;
   const scopes = createScopes<TElement>({
     ctx,
@@ -48,5 +48,7 @@ export function createSpec<
     processChildren,
     ...scopes,
     signal,
+    // Pass back user-provided deps in case they provide other reactives with context
+    ...restDeps
   };
 }
