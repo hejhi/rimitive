@@ -29,7 +29,7 @@ const instrumentation = createInstrumentation({
   enabled: true,
 });
 
-export const { create, deps, extensions, mount } = createApi(
+export const { create, api, mount } = createApi(
   createDOMRenderer(),
   {
     el: El({ instrument: instrumentEl }),

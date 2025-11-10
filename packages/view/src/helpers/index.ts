@@ -18,19 +18,20 @@ export function createSpec<
   TText extends TextNode,
   >(
     renderer: Renderer<TConfig, TElement, TText>,
-    reactives: {
-      extensions: ExtensionsToContext<(SignalFactory | EffectFactory)[]>,
+    signals: {
+      api: ExtensionsToContext<(SignalFactory | EffectFactory)[]>,
       deps: ReturnType<typeof createPushSchedule>
     },
     ctx = createBaseContext<TElement>()
 ) {
-  const { extensions, deps } = reactives;
-  const { ctx: signalCtx, track, dispose, ...depsRest } = deps;
+  const { api, deps } = signals;
+  const { ctx: signalCtx, track, dispose } = deps;
+  const { signal, effect } = api;
   const scopes = createScopes<TElement>({
     ctx,
     track,
     dispose,
-    baseEffect: extensions.effect,
+    baseEffect: effect,
   });
 
   const { processChildren } = createProcessChildren<TConfig, TElement, TText>({
@@ -46,7 +47,6 @@ export function createSpec<
     renderer,
     processChildren,
     ...scopes,
-    ...extensions,
-    ...depsRest,
+    signal,
   };
 }

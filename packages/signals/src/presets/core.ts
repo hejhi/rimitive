@@ -37,8 +37,7 @@ export function createApi(
 ) {
   const allExtensions = { ...extensions, ...ext };
   return {
-    extensions: createLatticeApi(allExtensions, deps, opts),
-    rawExtensions: allExtensions,
+    api: createLatticeApi(allExtensions, deps, opts),
     deps,
   };
 }

@@ -23,7 +23,14 @@ export {
 export type { ElFactory } from '../el';
 export type { MapFactory } from '../helpers/map';
 export type { OnFactory } from '../on';
-export type { RefSpec, SealedSpec, NodeRef, ElementRef, FragmentRef } from '../types';
+export type {
+  RefSpec,
+  SealedSpec,
+  NodeRef,
+  ElementRef,
+  FragmentRef,
+  Reactive,
+} from '../types';
 
 export const extensions = {
   el: El(),
@@ -48,14 +55,9 @@ export function createApi<
 >(
   renderer: Renderer<TConfig, TElement, TText>,
   ext = extensions,
-  reactiveApi = createReactiveApi(),
+  signalsApi = createReactiveApi(),
   opts?: CreateContextOptions
 ) {
-  const extensionsApi = createLatticeApi(
-    { ...extensions, ...ext },
-    createSpec(renderer, reactiveApi),
-    opts
-  );
 
   // Create a renderer-specific component factory
   // This automatically provides type information based on the renderer
@@ -70,18 +72,24 @@ export function createApi<
     return baseCreate<TArgs, TElementResult, TConfig, TElement>(factory);
   };
 
-  // Merge reactive and view extensions into single context
-  const mergedExtensions = { ...reactiveApi.extensions, ...extensionsApi };
+  // Merge signals and view apis
+  const api = {
+    ...signalsApi.api,
+    ...createLatticeApi(
+      { ...extensions, ...ext },
+      createSpec(renderer, signalsApi),
+      opts
+    )
+  };
 
   // Convenience method for mounting components with the bound extensions
   // This eliminates the need to manually call .create(extensions)
   const mount = <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> => {
-    return spec.create(mergedExtensions);
+    return spec.create(api);
   };
 
   return {
-    extensions: mergedExtensions,
-    deps: reactiveApi,
+    api,
     create,
     mount,
   };
