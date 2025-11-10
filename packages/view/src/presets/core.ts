@@ -10,7 +10,7 @@ import type {
   TextNode,
 } from '../renderer';
 import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
-import { create as baseCreate, type LatticeViewAPI } from '../component';
+import { create as baseCreate } from '../component';
 import type { RefSpec, SealedSpec, NodeRef } from '../types';
 
 export {
@@ -39,13 +39,13 @@ export const extensions = {
 };
 
 /**
- * Component factory type - pre-typed with renderer configuration
+ * Component factory type - dynamically typed based on actual API
  */
-export type ComponentFactory<TConfig extends RendererConfig, TElement extends RendererElement> = <
+export type ComponentFactory<TApi> = <
   TArgs extends unknown[],
   TElementResult
 >(
-  factory: (api: LatticeViewAPI<TConfig, TElement>) => (...args: TArgs) => RefSpec<TElementResult>
+  factory: (api: TApi) => (...args: TArgs) => RefSpec<TElementResult>
 ) => (...args: TArgs) => SealedSpec<TElementResult>;
 
 export function createApi<
@@ -62,20 +62,7 @@ export function createApi<
   signalsApi = createReactiveApi(),
   opts?: CreateContextOptions
 ) {
-  // Create a renderer-specific component factory
-  // This automatically provides type information based on the renderer
-  const create: ComponentFactory<TConfig, TElement> = <
-    TArgs extends unknown[],
-    TElementResult,
-  >(
-    factory: (
-      api: LatticeViewAPI<TConfig, TElement>
-    ) => (...args: TArgs) => RefSpec<TElementResult>
-  ): ((...args: TArgs) => SealedSpec<TElementResult>) => {
-    return baseCreate<TArgs, TElementResult, TConfig, TElement>(factory);
-  };
-
-  // Merge signals and view apis
+  // Merge signals and view apis first
   const api = {
     ...signalsApi.api,
     ...createLatticeApi(
@@ -83,6 +70,11 @@ export function createApi<
       createSpec(renderer, signalsApi),
       opts
     ),
+  };
+
+  // Create a component factory typed with the actual API
+  const create: ComponentFactory<typeof api> = (factory) => {
+    return baseCreate(factory);
   };
 
   // Convenience method for mounting components with the bound extensions
