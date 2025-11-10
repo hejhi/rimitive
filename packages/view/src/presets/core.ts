@@ -4,6 +4,7 @@ import { createApi } from '@lattice/lattice';
 import { createSpec } from '../helpers';
 import type {
   Renderer,
+  RendererConfig,
   Element as RendererElement,
   TextNode,
 } from '../renderer';
@@ -15,10 +16,11 @@ export const extensions = {
 };
 
 export function create<
+  TConfig extends RendererConfig,
   TElement extends RendererElement,
   TText extends TextNode,
 >(
-  renderer: Renderer<TElement, TText>,
+  renderer: Renderer<TConfig, TElement, TText>,
   ext = extensions,
   deps = createReactives()
 ) {

@@ -2,7 +2,7 @@
  * DOM Renderer - browser implementation
  */
 
-import type { Renderer } from '../renderer';
+import type { Renderer, RendererConfig } from '../renderer';
 
 /**
  * DOM-specific element type
@@ -21,9 +21,17 @@ export type DOMTextNode = Text;
 export type DOM = DOMElement;
 
 /**
+ * DOM Renderer configuration - maps to HTML elements and events
+ */
+export interface DOMRendererConfig extends RendererConfig {
+  elements: HTMLElementTagNameMap;
+  events: HTMLElementEventMap;
+}
+
+/**
  * Create a DOM renderer for browser environments
  */
-export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
+export function createDOMRenderer(): Renderer<DOMRendererConfig, DOMElement, DOMTextNode> {
   return {
     createElement(tag: string): DOMElement {
       return document.createElement(tag);
@@ -63,6 +71,16 @@ export function createDOMRenderer(): Renderer<DOMElement, DOMTextNode> {
 
     isElement(value: unknown): value is DOMElement {
       return value instanceof HTMLElement;
+    },
+
+    addEventListener(
+      element: DOMElement,
+      event: string,
+      handler: (event: unknown) => void,
+      options?: unknown
+    ): () => void {
+      element.addEventListener(event, handler as EventListener, options as AddEventListenerOptions);
+      return () => element.removeEventListener(event, handler as EventListener, options as AddEventListenerOptions);
     },
   };
 }

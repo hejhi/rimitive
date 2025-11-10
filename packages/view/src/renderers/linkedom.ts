@@ -12,7 +12,7 @@
  */
 
 import { parseHTML } from 'linkedom';
-import type { Renderer } from '../renderer';
+import type { Renderer, RendererConfig } from '../renderer';
 
 /**
  * Linkedom-specific element type (extends DOM Element)
@@ -29,6 +29,58 @@ export type LinkedomTextNode = Text;
  * Use this to parameterize view factories for SSR
  */
 export type Linkedom = LinkedomElement;
+
+/**
+ * LinkedOM Renderer configuration - maps to HTML elements (similar to DOM)
+ * Note: linkedom provides DOM-like elements but events aren't meaningful in SSR
+ */
+export interface LinkedOMRendererConfig extends RendererConfig {
+  elements: {
+    // Common HTML elements
+    div: Element;
+    span: Element;
+    p: Element;
+    a: Element;
+    button: Element;
+    input: Element;
+    form: Element;
+    label: Element;
+    select: Element;
+    option: Element;
+    textarea: Element;
+    h1: Element;
+    h2: Element;
+    h3: Element;
+    h4: Element;
+    h5: Element;
+    h6: Element;
+    ul: Element;
+    ol: Element;
+    li: Element;
+    table: Element;
+    thead: Element;
+    tbody: Element;
+    tr: Element;
+    th: Element;
+    td: Element;
+    header: Element;
+    footer: Element;
+    nav: Element;
+    main: Element;
+    section: Element;
+    article: Element;
+    aside: Element;
+    img: Element;
+    video: Element;
+    audio: Element;
+    canvas: Element;
+    svg: Element;
+    // Allow any string key for custom elements
+    [key: string]: Element;
+  };
+  // Events are not meaningful in SSR but we need to satisfy the interface
+  events: Record<string, Event>;
+}
 
 /**
  * Create a linkedom renderer for server-side rendering
@@ -49,7 +101,7 @@ export type Linkedom = LinkedomElement;
  * // <div><h1>Hello World</h1><p>Server-side rendered!</p></div>
  * ```
  */
-export function createLinkedomRenderer(): Renderer<LinkedomElement, LinkedomTextNode> {
+export function createLinkedomRenderer(): Renderer<LinkedOMRendererConfig, LinkedomElement, LinkedomTextNode> {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
@@ -104,6 +156,12 @@ export function createLinkedomRenderer(): Renderer<LinkedomElement, LinkedomText
 
     isElement(value: unknown): value is LinkedomElement {
       return document.defaultView != null && value instanceof document.defaultView.Element;
+    },
+
+    addEventListener(): () => void {
+      // No-op for SSR - events aren't meaningful on the server
+      // Return empty cleanup function
+      return () => {};
     },
   };
 }

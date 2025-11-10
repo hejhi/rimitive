@@ -1,10 +1,18 @@
-import type { Renderer } from './renderer';
+import type { Renderer, RendererConfig } from './renderer';
+
+/**
+ * DOM Renderer configuration - maps to HTML elements and events
+ */
+export interface DOMRendererConfig extends RendererConfig {
+  elements: HTMLElementTagNameMap;
+  events: HTMLElementEventMap;
+}
 
 /**
  * Browser DOM renderer implementation
  * Works with real HTMLElement and Text nodes
  */
-export function createBrowserRenderer(): Renderer<HTMLElement, Text> {
+export function createBrowserRenderer(): Renderer<DOMRendererConfig, HTMLElement, Text> {
   return {
     createElement: (tag: string) => document.createElement(tag),
 
@@ -49,5 +57,15 @@ export function createBrowserRenderer(): Renderer<HTMLElement, Text> {
 
     isElement: (value: unknown): value is HTMLElement =>
       value instanceof HTMLElement,
+
+    addEventListener: (
+      element: HTMLElement,
+      event: string,
+      handler: (event: unknown) => void,
+      options?: unknown
+    ) => {
+      element.addEventListener(event, handler as EventListener, options as AddEventListenerOptions);
+      return () => element.removeEventListener(event, handler as EventListener, options as AddEventListenerOptions);
+    },
   };
 }

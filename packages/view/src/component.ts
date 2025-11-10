@@ -26,8 +26,8 @@
 
 import { create as baseCreate } from '@lattice/lattice';
 import { type RefSpec, type SealedSpec, type Reactive, type FragmentRef, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
-import type { ReactiveElSpec } from './el';
-import type { Element as RendererElement } from './renderer';
+import type { ReactiveElSpec, ElementProps as ElElementProps } from './el';
+import type { Element as RendererElement, RendererConfig } from './renderer';
 
 /**
  * Signal function with both getter and setter
@@ -47,50 +47,43 @@ export interface ComputedFunction<T> {
 }
 
 /**
- * Makes each property in T accept either the value or a Reactive<value>
- */
-type ReactiveProps<T> = {
-  [K in keyof T]?: T[K] | Reactive<T[K]>;
-};
-
-export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> =
-  ReactiveProps<HTMLElementTagNameMap[Tag]> & {
-    style?: Partial<CSSStyleDeclaration>;
-    status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
-  };
-
-/**
  * Type for the el method with both overloads
- * Generic over TElement to match the element type used by the renderer
+ * Generic over TConfig to match the renderer configuration
  */
-export interface ElMethod<TElement extends RendererElement> {
+export interface ElMethod<TConfig extends RendererConfig, TElement extends RendererElement> {
   // Static element builder
-  <Tag extends keyof HTMLElementTagNameMap>(
+  <Tag extends string & keyof TConfig['elements']>(
     tag: Tag,
-    props?: ElementProps<Tag>
-  ): (...children: ElRefSpecChild[]) => RefSpec<HTMLElementTagNameMap[Tag]>;
+    props?: ElElementProps<TConfig, Tag>
+  ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
 
   // Reactive element builder
-  <Tag extends keyof HTMLElementTagNameMap>(
-    reactive: Reactive<ReactiveElSpec<Tag>>
+  <Tag extends string & keyof TConfig['elements']>(
+    reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
   ): FragmentRef<TElement>;
 }
 
 /**
  * Minimal API shape needed for lazy components
- * Generic over TElement to match the element type used by the renderer (e.g., HTMLElement for DOM)
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration (defines available elements and events)
+ * - TElement: Base element type used by the renderer (e.g., HTMLElement for DOM)
  */
-export interface LatticeViewAPI<TElement extends RendererElement = RendererElement> {
+export interface LatticeViewAPI<
+  TConfig extends RendererConfig = RendererConfig,
+  TElement extends RendererElement = RendererElement
+> {
   signal: <T>(value: T) => SignalFunction<T>;
   computed: <T>(compute: () => T) => ComputedFunction<T>;
   batch: <T>(fn: () => T) => T;
   effect: (fn: () => void | (() => void)) => () => void;
-  el: ElMethod<TElement>;
-  on: <K extends keyof HTMLElementEventMap>(
+  el: ElMethod<TConfig, TElement>;
+  on: <K extends string & keyof TConfig['events']>(
     event: K,
-    handler: (event: HTMLElementEventMap[K]) => void,
-    options?: boolean | AddEventListenerOptions
-  ) => (element: HTMLElement) => () => void;
+    handler: (event: TConfig['events'][K]) => void,
+    options?: unknown
+  ) => <El extends TElement>(element: El) => () => void;
   map: <T>(
     items: () => T[],
     keyFn?: (item: T) => string | number
@@ -131,8 +124,13 @@ export interface LatticeViewAPI<TElement extends RendererElement = RendererEleme
  * app.appendChild(nodeRef.element);
  * ```
  */
-export function create<TArgs extends unknown[], TElement, TRendererElement extends RendererElement = RendererElement>(
-  factory: (api: LatticeViewAPI<TRendererElement>) => (...args: TArgs) => RefSpec<TElement>
+export function create<
+  TArgs extends unknown[],
+  TElement,
+  TConfig extends RendererConfig = RendererConfig,
+  TRendererElement extends RendererElement = RendererElement
+>(
+  factory: (api: LatticeViewAPI<TConfig, TRendererElement>) => (...args: TArgs) => RefSpec<TElement>
 ) {
   return (...args: TArgs): SealedSpec<TElement> => {
     // Use lattice create for API injection
@@ -141,7 +139,7 @@ export function create<TArgs extends unknown[], TElement, TRendererElement exten
     // Return a SealedSpec that wraps the RefSpec's create
     return {
       status: STATUS_SEALED_SPEC,
-      create(api: LatticeViewAPI<TRendererElement>): NodeRef<TElement> {
+      create(api: LatticeViewAPI<TConfig, TRendererElement>): NodeRef<TElement> {
         // Step 1: Inject API to get RefSpec
         const refSpec = baseInstantiatable.create(api);
 

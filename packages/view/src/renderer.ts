@@ -18,9 +18,42 @@ export type Element = object;
 export type TextNode = object;
 
 /**
- * Renderer interface - all platform-specific operations
+ * RendererConfig defines the type-level contract for a renderer:
+ * - elements: Maps tag names to their element types (e.g., 'div' -> HTMLDivElement)
+ * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
+ *
+ * This allows the type system to provide full type safety while keeping
+ * the renderer implementation simple and agnostic.
  */
-export interface Renderer<TElement extends Element = Element, TText extends TextNode = TextNode> {
+export interface RendererConfig {
+  elements: object;
+  events: object;
+}
+
+/**
+ * Extract the config from a Renderer type
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type InferConfig<R> = R extends Renderer<infer C, any, any> ? C : never;
+
+/**
+ * Renderer interface - all platform-specific operations
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration (elements, events)
+ * - TElement: Base element type for this renderer
+ * - TText: Text node type for this renderer
+ */
+export interface Renderer<
+  TConfig extends RendererConfig,
+  TElement extends Element = Element,
+  TText extends TextNode = TextNode
+> {
+  /**
+   * Phantom type to carry renderer configuration
+   * This is never set at runtime - it exists purely for type inference
+   */
+  readonly _config?: TConfig;
   /**
    * Create an element with the given tag name
    */
@@ -65,4 +98,18 @@ export interface Renderer<TElement extends Element = Element, TText extends Text
    * Check if a value is an element created by this renderer
    */
   isElement(value: unknown): value is TElement;
+
+  /**
+   * Add an event listener to an element
+   * Returns a cleanup function to remove the listener
+   *
+   * Implementation note: The runtime implementation uses string for event name
+   * and unknown for handler, but the type system constrains these based on TConfig
+   */
+  addEventListener(
+    element: TElement,
+    event: string,
+    handler: (event: unknown) => void,
+    options?: unknown
+  ): () => void;
 }

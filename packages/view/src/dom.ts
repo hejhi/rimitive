@@ -21,7 +21,7 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { El } from './el';
 import { Map } from './helpers/map';
 import { createBaseContext } from './context';
-import { createDOMRenderer } from './renderers/dom';
+import { createDOMRenderer, type DOMRendererConfig } from './renderers/dom';
 import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
 import { On } from './on';
@@ -60,7 +60,7 @@ export interface DOMAPIOptions {
  * and the view layer, providing a ready-to-use API for building reactive
  * DOM applications.
  */
-export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLElement> {
+export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<DOMRendererConfig, HTMLElement> {
   // Create signal context infrastructure
   const ctx = createSignalContext();
   const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
@@ -121,13 +121,13 @@ export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLEl
     baseEffect: effect,
   });
 
-  const { processChildren } = createProcessChildren<HTMLElement, Text>({
+  const { processChildren } = createProcessChildren<DOMRendererConfig, HTMLElement, Text>({
     scopedEffect,
     renderer,
   });
 
   // Build view factories
-  const elFactory = El<HTMLElement, Text>().create({
+  const elFactory = El<DOMRendererConfig, HTMLElement, Text>().create({
     ctx: viewCtx,
     scopedEffect,
     renderer,
@@ -137,7 +137,7 @@ export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLEl
     onCleanup,
   });
 
-  const mapFactory = Map<HTMLElement, Text>().create({
+  const mapFactory = Map<DOMRendererConfig, HTMLElement, Text>().create({
     ctx: viewCtx,
     signalCtx: signalCtx.ctx,
     signal: signalFactory.method,
@@ -160,7 +160,7 @@ export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLEl
   });
 
   // Compose into unified API
-  const api: LatticeViewAPI<HTMLElement> = createContext(
+  const api: LatticeViewAPI<DOMRendererConfig, HTMLElement> = createContext(
     signalFactory,
     computedFactory,
     effectFactory,
@@ -168,7 +168,7 @@ export function createDOMAPI(options: DOMAPIOptions = {}): LatticeViewAPI<HTMLEl
     onFactory,
     mapFactory,
     batchFactory
-  ) as LatticeViewAPI<HTMLElement>;
+  ) as LatticeViewAPI<DOMRendererConfig, HTMLElement>;
 
   return api;
 }

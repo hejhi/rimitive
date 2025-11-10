@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import { createBaseContext } from './context';
-import type { Renderer } from './renderer';
+import type { Renderer, RendererConfig } from './renderer';
 import type { Reactive, RefSpec, LifecycleCallback, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
 import { createProcessChildren } from './helpers/processChildren';
@@ -26,6 +26,18 @@ export class MockElement {
   parent: MockElement | null = null;
   connected: boolean = false;
   listeners: Map<string, (...args: unknown[]) => void> = new Map();
+
+  // DOM-like properties commonly used in tests
+  className?: string;
+  title?: string;
+  value?: string;
+  href?: string;
+  src?: string;
+  type?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  checked?: boolean;
+  name?: string;
 
   // Custom test data - used to verify element reuse/preservation in tests
   __customState?: string;
@@ -67,10 +79,58 @@ export class MockText {
 }
 
 /**
+ * Mock event for testing event handling
+ */
+export interface MockEvent {
+  type: string;
+  target: MockElement | null;
+}
+
+/**
+ * Mock renderer configuration - maps tag names to MockElement and events to MockEvent
+ */
+export interface MockRendererConfig extends RendererConfig {
+  elements: {
+    div: MockElement;
+    span: MockElement;
+    button: MockElement;
+    input: MockElement;
+    form: MockElement;
+    section: MockElement;
+    article: MockElement;
+    header: MockElement;
+    footer: MockElement;
+    nav: MockElement;
+    main: MockElement;
+    aside: MockElement;
+    ul: MockElement;
+    ol: MockElement;
+    li: MockElement;
+    p: MockElement;
+    h1: MockElement;
+    h2: MockElement;
+    h3: MockElement;
+    h4: MockElement;
+    h5: MockElement;
+    h6: MockElement;
+    a: MockElement;
+    img: MockElement;
+    [key: string]: MockElement;
+  };
+  events: {
+    click: MockEvent;
+    change: MockEvent;
+    input: MockEvent;
+    submit: MockEvent;
+    [key: string]: MockEvent;
+  };
+}
+
+/**
  * Creates a mock renderer for testing
  */
 export function createMockRenderer() {
-  const renderer: Renderer<MockElement, MockText> = {
+  const renderer: Renderer<MockRendererConfig, MockElement, MockText> = {
     createElement: vi.fn((tag: string) => new MockElement(tag)),
     createTextNode: vi.fn((text: string) => new MockText(text)),
     updateTextNode: vi.fn((node: MockText, text: string) => {
@@ -113,6 +173,10 @@ export function createMockRenderer() {
     isConnected: vi.fn((element: MockElement) => element.connected),
     isElement: (value: unknown): value is MockElement =>
       value !== null && typeof value === 'object' && 'tag' in value,
+    addEventListener: vi.fn((element: MockElement, event: string, handler: (event: unknown) => void) => {
+      element.listeners.set(event, handler);
+      return () => element.listeners.delete(event);
+    }),
   };
 
   return { renderer };
@@ -196,7 +260,7 @@ export function wrapElement<TElement>(element: TElement) {
  * Extracts text content from mock element tree (simulates innerText)
  */
 export function getTextContent(element: MockElement | MockText): string {
-  if ('type' in element && element.type === 'text') {
+  if ('content' in element) {
     return element.content;
   }
   if ('children' in element) {

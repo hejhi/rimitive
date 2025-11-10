@@ -5,27 +5,27 @@
 import type { InstrumentationContext } from '@lattice/lattice';
 import type { ElFactory, ChildrenApplicator, ReactiveElSpec, ElementProps } from '../el';
 import type { RefSpec, FragmentRef, ElRefSpecChild, Reactive } from '../types';
-import type { Element as RendererElement } from '../renderer';
+import type { Element as RendererElement, RendererConfig } from '../renderer';
 
 /**
  * Instrument an el factory to emit events
  */
-export function instrumentEl<TElement extends RendererElement>(
-  method: ElFactory<TElement>['method'],
+export function instrumentEl<TConfig extends RendererConfig, TElement extends RendererElement>(
+  method: ElFactory<TConfig, TElement>['method'],
   instrumentation: InstrumentationContext
-): ElFactory<TElement>['method'] {
+): ElFactory<TConfig, TElement>['method'] {
   // Overloaded implementation matching ElFactory signature
-  function instrumentedEl<Tag extends keyof HTMLElementTagNameMap>(
+  function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
     tag: Tag,
-    props?: ElementProps<Tag>
-  ): ChildrenApplicator<Tag>;
-  function instrumentedEl<Tag extends keyof HTMLElementTagNameMap>(
-    reactive: Reactive<ReactiveElSpec<Tag>>
+    props?: ElementProps<TConfig, Tag>
+  ): ChildrenApplicator<TConfig, Tag>;
+  function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
+    reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
   ): FragmentRef<TElement>;
-  function instrumentedEl<Tag extends keyof HTMLElementTagNameMap>(
-    tagOrReactive: Tag | Reactive<ReactiveElSpec<Tag>>,
-    props?: ElementProps<Tag>
-  ): ChildrenApplicator<Tag> | FragmentRef<TElement> {
+  function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
+    tagOrReactive: Tag | Reactive<ReactiveElSpec<TConfig, Tag>>,
+    props?: ElementProps<TConfig, Tag>
+  ): ChildrenApplicator<TConfig, Tag> | FragmentRef<TElement> {
     // Handle reactive element case
     if (typeof tagOrReactive === 'function') {
       const elId = crypto.randomUUID();
@@ -94,7 +94,7 @@ export function instrumentEl<TElement extends RendererElement>(
     const childrenApplicator = method(tag, props);
 
     // Wrap the children applicator to intercept RefSpec creation
-    return (...children: ElRefSpecChild[]): RefSpec<HTMLElementTagNameMap[Tag]> => {
+    return (...children: ElRefSpecChild[]): RefSpec<TConfig['elements'][Tag]> => {
       instrumentation.emit({
         type: 'EL_CHILDREN_APPLIED',
         timestamp: Date.now(),

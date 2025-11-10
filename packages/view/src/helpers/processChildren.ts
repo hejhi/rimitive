@@ -8,12 +8,16 @@
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
-import type { Renderer, Element as RendererElement, TextNode } from '../renderer';
+import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from '../renderer';
 
 
-export function createProcessChildren<TElement extends RendererElement, TText extends TextNode>(opts: {
+export function createProcessChildren<
+  TConfig extends RendererConfig,
+  TElement extends RendererElement,
+  TText extends TextNode
+>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
-  renderer: Renderer<TElement, TText>;
+  renderer: Renderer<TConfig, TElement, TText>;
 }) {
   type ViewChild = RefSpec<TElement> | FragmentRef<TElement> | SealedSpec<TElement>;
 

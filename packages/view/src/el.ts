@@ -10,7 +10,7 @@ import type {
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { LatticeContext } from './context';
-import type { Renderer, Element as RendererElement, TextNode } from './renderer';
+import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragment } from './helpers/fragment';
 
@@ -22,29 +22,46 @@ type ReactiveProps<T> = {
 };
 
 /**
- * Props for an element - type-safe based on the HTML tag
+ * Props for an element - type-safe based on the renderer's element configuration
  * Each prop can be either a static value or a Reactive value
- * Includes all standard HTML properties and ARIA properties in camelCase (ariaLabel, ariaHidden, etc.)
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration
+ * - Tag: The element tag name (must be a key in TConfig['elements'])
  */
-export type ElementProps<Tag extends keyof HTMLElementTagNameMap = keyof HTMLElementTagNameMap> =
-  ReactiveProps<HTMLElementTagNameMap[Tag]> & {
-    style?: Partial<CSSStyleDeclaration>;
-    status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
-  };
+export type ElementProps<
+  TConfig extends RendererConfig,
+  Tag extends keyof TConfig['elements']
+> = ReactiveProps<TConfig['elements'][Tag]> & {
+  status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
+};
 
 /**
  * Reactive element specification type
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration
+ * - Tag: The element tag name
  */
-export type ReactiveElSpec<Tag extends keyof HTMLElementTagNameMap> = {
+export type ReactiveElSpec<
+  TConfig extends RendererConfig,
+  Tag extends keyof TConfig['elements']
+> = {
   tag: Tag;
-  props?: ElementProps<Tag>;
+  props?: ElementProps<TConfig, Tag>;
   children?: ElRefSpecChild[];
 } | null;
 
 /**
  * Options passed to el factory
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration
+ * - TElement: Base element type
+ * - TText: Text node type
  */
 export type ElOpts<
+  TConfig extends RendererConfig,
   TElement extends RendererElement = RendererElement,
   TText extends TextNode = TextNode,
 > = {
@@ -53,7 +70,7 @@ export type ElOpts<
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
-  renderer: Renderer<TElement, TText>;
+  renderer: Renderer<TConfig, TElement, TText>;
   processChildren: (
     parent: ElementRef<TElement>,
     children: ElRefSpecChild[],
@@ -61,21 +78,28 @@ export type ElOpts<
   ) => void;
   };
 
-export type ElProps<TElement extends RendererElement = RendererElement> = {
+export type ElProps<TConfig extends RendererConfig, TElement extends RendererElement = RendererElement> = {
   instrument?: (
-    method: ElFactory<TElement>['method'],
+    method: ElFactory<TConfig, TElement>['method'],
     instrumentation: InstrumentationContext,
     context: ExtensionContext
-  ) => ElFactory<TElement>['method'];
+  ) => ElFactory<TConfig, TElement>['method'];
 };
 
 /**
  * Children applicator - returned from el(tag, props)
  * Returns RefSpec which is itself callable for chaining lifecycle callbacks
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration
+ * - Tag: The element tag name
  */
-export type ChildrenApplicator<Tag extends keyof HTMLElementTagNameMap> = (
+export type ChildrenApplicator<
+  TConfig extends RendererConfig,
+  Tag extends keyof TConfig['elements']
+> = (
   ...children: ElRefSpecChild[]
-) => RefSpec<HTMLElementTagNameMap[Tag]>;
+) => RefSpec<TConfig['elements'][Tag]>;
 
 /**
  * Factory return type - curried element builder
@@ -83,19 +107,26 @@ export type ChildrenApplicator<Tag extends keyof HTMLElementTagNameMap> = (
  * Element construction is separated into two phases:
  * 1. Structure phase: el(tag, props)(children) - Pure, returns RefSpec blueprint
  * 2. Behavior phase: refSpec(lifecycle) - Imperative, attaches side effects
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration
+ * - TElement: Base element type for the renderer
  */
-export type ElFactory<TElement extends RendererElement> = LatticeExtension<
+export type ElFactory<
+  TConfig extends RendererConfig,
+  TElement extends RendererElement = RendererElement
+> = LatticeExtension<
   'el',
   {
     // Static element builder
-    <Tag extends keyof HTMLElementTagNameMap>(
+    <Tag extends keyof TConfig['elements']>(
       tag: Tag,
-      props?: ElementProps<Tag>
-    ): ChildrenApplicator<Tag>;
+      props?: ElementProps<TConfig, Tag>
+    ): ChildrenApplicator<TConfig, Tag>;
 
     // Reactive element builder
-    <Tag extends keyof HTMLElementTagNameMap>(
-      reactive: Reactive<ReactiveElSpec<Tag>>
+    <Tag extends keyof TConfig['elements']>(
+      reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
     ): FragmentRef<TElement>;
   }
 >;
@@ -103,9 +134,15 @@ export type ElFactory<TElement extends RendererElement> = LatticeExtension<
 /**
  * El primitive - instantiatable extension using the create pattern
  * Similar to Signal() in signals preset
+ *
+ * Generic over:
+ * - TConfig: The renderer configuration (inferred from renderer)
+ * - TElement: Base element type
+ * - TText: Text node type
  */
 export const El = create(
   <
+    TConfig extends RendererConfig,
     TElement extends RendererElement,
     TText extends TextNode,
   >({
@@ -116,14 +153,15 @@ export const El = create(
     createElementScope,
     disposeScope,
     onCleanup,
-  }: ElOpts<TElement, TText>) =>
-    (props?: ElProps<TElement>) => {
+  }: ElOpts<TConfig, TElement, TText>) =>
+    (props?: ElProps<TConfig, TElement>) => {
       const { instrument } = props ?? {};
 
       /**
        * Helper to create a RefSpec with lifecycle callback chaining
+       * Generic over El - the element type (no longer constrained to HTMLElement)
        */
-      const createRefSpec = <El extends HTMLElement>(
+      const createRefSpec = <El>(
         createElement: (
           callbacks: LifecycleCallback<El>[],
           api?: unknown
@@ -160,12 +198,12 @@ export const El = create(
         () =>
           renderer.setAttribute(element, key, getter());
 
-      const createStaticElement = <Tag extends keyof HTMLElementTagNameMap>(
+      const createStaticElement = <Tag extends string & keyof TConfig['elements']>(
         tag: Tag,
-        props: ElementProps<Tag>,
+        props: ElementProps<TConfig, Tag>,
         children: ElRefSpecChild[]
-      ): RefSpec<HTMLElementTagNameMap[Tag]> => {
-        type El = HTMLElementTagNameMap[Tag];
+      ): RefSpec<TConfig['elements'][Tag]> => {
+        type El = TConfig['elements'][Tag];
 
         return createRefSpec<El>((lifecycleCallbacks, api) => {
           const element = renderer.createElement(tag) as unknown as El;
@@ -175,8 +213,8 @@ export const El = create(
             next: undefined,
           };
 
-          createElementScope(element, () => {
-            for (const [key, val] of Object.entries(props)) {
+          createElementScope(element as unknown as object, () => {
+            for (const [key, val] of Object.entries(props as object)) {
               if (typeof val !== 'function') {
                 renderer.setAttribute(element as unknown as TElement, key, val);
                 continue;
@@ -206,8 +244,8 @@ export const El = create(
         });
       };
 
-      const createReactiveElement = <Tag extends keyof HTMLElementTagNameMap>(
-        specReactive: Reactive<ReactiveElSpec<Tag>>
+      const createReactiveElement = <Tag extends string & keyof TConfig['elements']>(
+        specReactive: Reactive<ReactiveElSpec<TConfig, Tag>>
       ): FragmentRef<TElement> => {
         const fragRef = createFragment<TElement>((parent, nextSibling) => {
           return scopedEffect(() => {
@@ -248,17 +286,17 @@ export const El = create(
       };
 
       // Overloaded implementation
-      function el<Tag extends keyof HTMLElementTagNameMap>(
+      function el<Tag extends string & keyof TConfig['elements']>(
         tag: Tag,
-        props?: ElementProps<Tag>
-      ): ChildrenApplicator<Tag>;
-      function el<Tag extends keyof HTMLElementTagNameMap>(
-        reactive: Reactive<ReactiveElSpec<Tag>>
+        props?: ElementProps<TConfig, Tag>
+      ): ChildrenApplicator<TConfig, Tag>;
+      function el<Tag extends string & keyof TConfig['elements']>(
+        reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
       ): FragmentRef<TElement>;
-      function el<Tag extends keyof HTMLElementTagNameMap>(
-        tagOrReactive: Tag | Reactive<ReactiveElSpec<Tag>>,
-        props?: ElementProps<Tag>
-      ): ChildrenApplicator<Tag> | FragmentRef<TElement> {
+      function el<Tag extends string & keyof TConfig['elements']>(
+        tagOrReactive: Tag | Reactive<ReactiveElSpec<TConfig, Tag>>,
+        props?: ElementProps<TConfig, Tag>
+      ): ChildrenApplicator<TConfig, Tag> | FragmentRef<TElement> {
         // Handle reactive case
         if (typeof tagOrReactive === 'function') {
           return createReactiveElement(tagOrReactive);
@@ -268,13 +306,13 @@ export const El = create(
         return (...children: ElRefSpecChild[]) => {
           return createStaticElement(
             tagOrReactive,
-            props ?? ({} as ElementProps<Tag>),
+            props ?? ({} as ElementProps<TConfig, Tag>),
             children
           );
         };
       }
 
-      const extension: ElFactory<TElement> = {
+      const extension: ElFactory<TConfig, TElement> = {
         name: 'el',
         method: el,
         ...(instrument && { instrument }),

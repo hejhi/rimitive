@@ -4,6 +4,7 @@ import type {
   Renderer,
   Element as RendererElement,
   TextNode,
+  RendererConfig,
 } from '../renderer';
 import { createProcessChildren } from './processChildren';
 import { ExtensionsToContext } from '@lattice/lattice';
@@ -12,10 +13,11 @@ import { EffectFactory } from '@lattice/signals/effect';
 import { createPushSchedule } from '@lattice/signals/helpers';
 
 export function createSpec<
+  TConfig extends RendererConfig,
   TElement extends RendererElement,
   TText extends TextNode,
   >(
-    renderer: Renderer<TElement, TText>,
+    renderer: Renderer<TConfig, TElement, TText>,
     reactives: {
       extensions: ExtensionsToContext<(SignalFactory | EffectFactory)[]>,
       deps: ReturnType<typeof createPushSchedule>
@@ -31,7 +33,7 @@ export function createSpec<
     baseEffect: extensions.effect,
   });
 
-  const { processChildren } = createProcessChildren<TElement, TText>({
+  const { processChildren } = createProcessChildren<TConfig, TElement, TText>({
     scopedEffect: scopes.scopedEffect,
     renderer,
   });
