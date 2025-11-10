@@ -4,8 +4,7 @@
  * Uses the create() pattern - the API is provided automatically when .create({ api }) is called.
  */
 
-import { create } from '../create';
-import type { RefSpec } from '@lattice/view/types';
+import { create } from '../api';
 
 interface CounterInstance {
   set: (value: number) => void;
@@ -21,7 +20,7 @@ export const Counter = create(
       count,
       doubled,
       isEven,
-    }: CounterInstance): RefSpec<HTMLElement> => {
+    }: CounterInstance) => {
       const incrementBtn = el('button')('Increment')(
         on('click', () => set(count() + 1))
       );

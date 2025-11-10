@@ -5,7 +5,7 @@
  * Uses the create() pattern.
  */
 
-import { create } from '../create';
+import { create } from '../api';
 import type { Todo } from '../behaviors/todo-list';
 
 export const TodoItem = create(

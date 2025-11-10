@@ -5,7 +5,7 @@
  * Uses the create() pattern.
  */
 
-import { create } from '../create';
+import { create } from '../api';
 import type { RefSpec } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';

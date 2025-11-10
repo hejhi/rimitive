@@ -1,19 +1,3 @@
-/**
- * Lattice DevTools Example
- *
- * Demonstrates the behavior pattern with Lattice:
- * - Counter: Simple reactive state with derived values
- * - TodoList: Managing collections of items
- * - Filter: Composing behaviors together
- *
- * Each behavior is framework-agnostic and can be tested in isolation.
- */
-
-import { create } from './create';
-
-// Import API modules
-import { mount } from './api/view';
-
 // Import headless behaviors
 import { Counter } from './behaviors/counter';
 import { TodoList } from './behaviors/todo-list';
@@ -24,10 +8,7 @@ import { TodoStats } from './behaviors/todo-stats';
 import { Counter as CounterView } from './views/Counter';
 import { TodoList as TodoListView } from './views/TodoList';
 import { BatchedUpdates as BatchedUpdatesView } from './views/BatchedUpdates';
-
-// ============================================================================
-// Main App Component using create() pattern
-// ============================================================================
+import { create, extensions } from './api';
 
 const App = create((api) => () => {
   const { el, computed, batch } = api;
@@ -66,4 +47,8 @@ const App = create((api) => () => {
 // Mount App
 // ============================================================================
 
-mount('#app', App());
+// Mount the app
+const app = App().create(extensions);
+const container = document.querySelector('#app');
+
+if (container && app.element) container.appendChild(app.element);

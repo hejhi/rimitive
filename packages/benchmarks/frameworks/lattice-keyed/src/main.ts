@@ -1,13 +1,8 @@
-import { createApi } from '@lattice/view/presets/core';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
-import { ElRefSpecChild, type Reactive } from '@lattice/view/types';
-import { createCoreCtx, extensions } from '@lattice/signals/presets/core';
+import { createDOMAPI } from '@lattice/view/dom';
+import { type Reactive, type ElRefSpecChild } from '@lattice/view/types';
 
 // Wire up view layer
-const renderer = createDOMRenderer();
-const signalsCtx = createCoreCtx();
-const api = createApi({ signalsCtx, signalsExtensions: extensions, renderer });
-const { el, map, on, signal, computed } = api;
+const { el, map, on, signal, computed } = createDOMAPI();
 
 // ============================================================================
 // Benchmark Data
@@ -195,7 +190,7 @@ const App = () => {
       )()
     )(),
     el('table', { className: 'table table-hover table-striped test-data' })(
-      el('tbody')(map<RowData>(data, (rowData) => rowData.id)(Row))()
+      el('tbody')(map(data, (rowData: RowData) => rowData.id)(Row))()
     )(),
     el('span', {
       className: 'preloadicon glyphicon glyphicon-remove',

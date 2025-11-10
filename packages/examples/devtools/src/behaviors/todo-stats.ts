@@ -8,29 +8,22 @@
  */
 
 import { create } from '@lattice/lattice';
-import type { SignalsAPI, ComputedFunction } from '../types';
-import type { TodoListAPI, Todo } from './todo-list';
-
-export interface TodoStatsAPI {
-  total: ComputedFunction<number>;
-  active: ComputedFunction<number>;
-  completed: ComputedFunction<number>;
-  completionRate: ComputedFunction<number>;
-}
+import type { SignalsAPI } from '../types';
+import type { TodoListAPI } from './todo-list';
 
 /**
  * Create a stats behavior that depends on an existing TodoList
  */
-export const TodoStats = create((api: SignalsAPI) => (
+export const TodoStats = create(({ computed }: SignalsAPI) => (
   { todos, activeCount }: Pick<TodoListAPI, 'todos' | 'activeCount'>
-): TodoStatsAPI => {
+) => {
   // These computed values depend on the injected todoList
-  const total = api.computed(() => todos().length);
-  const active = api.computed(() => activeCount());
-  const completed = api.computed(() => {
-    return todos().filter((todo: Todo) => todo.completed).length;
+  const total = computed(() => todos().length);
+  const active = computed(() => activeCount());
+  const completed = computed(() => {
+    return todos().filter((todo) => todo.completed).length;
   });
-  const completionRate = api.computed(() => {
+  const completionRate = computed(() => {
     const t = total();
     return t === 0 ? 0 : (completed() / t) * 100;
   });

@@ -5,8 +5,7 @@
  * Uses the create() pattern.
  */
 
-import { create } from '../create';
-import type { RefSpec } from '@lattice/view/types';
+import { create } from '../api';
 
 interface BatchedUpdateHandlers {
   onBatchedUpdate: () => void;
@@ -14,7 +13,7 @@ interface BatchedUpdateHandlers {
 
 export const BatchedUpdates = create(
   ({ el, on }) =>
-    ({ onBatchedUpdate }: BatchedUpdateHandlers): RefSpec<HTMLElement> => {
+    ({ onBatchedUpdate }: BatchedUpdateHandlers) => {
       const batchBtn = el('button')('Run Batched Updates')(
         on('click', onBatchedUpdate)
       );

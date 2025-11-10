@@ -23,15 +23,15 @@ export interface TodoListAPI {
   toggleAll: () => void;
 }
 
-export const TodoList = create((api: SignalsAPI) => (initialTodos: Todo[] = []): TodoListAPI => {
-  const todos = api.signal<Todo[]>(initialTodos);
+export const TodoList = create(({ signal, computed }: SignalsAPI) => (initialTodos: Todo[] = []): TodoListAPI => {
+  const todos = signal<Todo[]>(initialTodos);
 
-  const allCompleted = api.computed(() => {
+  const allCompleted = computed(() => {
     const list = todos();
     return list.length > 0 && list.every((todo: Todo) => todo.completed);
   });
 
-  const activeCount = api.computed(() => {
+  const activeCount = computed(() => {
     return todos().filter((todo: Todo) => !todo.completed).length;
   });
 

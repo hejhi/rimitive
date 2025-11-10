@@ -6,19 +6,13 @@
  */
 
 import { create } from '@lattice/lattice';
-import type { SignalsAPI, SignalFunction } from '../types';
+import type { SignalsAPI } from '../types';
 import type { Todo } from './todo-list';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export interface FilterAPI {
-  currentFilter: SignalFunction<FilterType>;
-  setFilter: (filter: FilterType) => void;
-  filterTodos: (todos: Todo[]) => Todo[];
-}
-
-export const Filter = create((api: SignalsAPI) => (): FilterAPI => {
-  const currentFilter = api.signal<FilterType>('all');
+export const Filter = create(({ signal }: SignalsAPI) => () => {
+  const currentFilter = signal<FilterType>('all');
 
   return {
     // Reactive state - expose signal directly

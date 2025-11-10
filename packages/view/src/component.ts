@@ -99,30 +99,6 @@ export interface LatticeViewAPI<
  *
  * Components defined with create() don't need the API passed as a parameter.
  * Instead, they receive it when .create(api) is called, which returns a NodeRef.
- *
- * @param factory - Function that receives API and returns a component function
- * @returns A function that takes component arguments and returns an Instantiatable
- *
- * @example
- * ```typescript
- * // Define component
- * const Counter = create((api) => (initialCount = 0) => {
- *   const { el, signal, on } = api;
- *   const count = signal(initialCount);
- *
- *   return el('div')(
- *     el('p')(`Count: ${count()}`)(),
- *     el('button')('+')(on('click', () => count(count() + 1)))()
- *   )();
- * });
- *
- * // Compose without API
- * const counterSpec = Counter(10);
- *
- * // Instantiate with API - returns NodeRef directly
- * const nodeRef = counterSpec.create(api);
- * app.appendChild(nodeRef.element);
- * ```
  */
 export function create<
   TArgs extends unknown[],
@@ -155,36 +131,6 @@ export function create<
  *
  * This helper infers types from your renderer instance, allowing you to write
  * components without manually specifying configuration types.
- *
- * @template R - The renderer type (TConfig and TElement are inferred)
- * @param renderer - Your renderer instance (e.g., from createDOMRenderer())
- *
- * @returns A `create` function with the API type pre-bound to your renderer
- *
- * @example
- * ```typescript
- * import { createRenderer } from '@lattice/view/component';
- * import { createDOMRenderer } from '@lattice/view/renderers/dom';
- *
- * // Create a renderer instance
- * const renderer = createDOMRenderer();
- *
- * // Create a component factory - types inferred from renderer!
- * export const create = createRenderer(renderer);
- *
- * // Now components don't need any type annotations
- * export const Counter = create(
- *   ({ el, signal, on }) => // <- fully typed for DOM!
- *     (initialCount = 0) => {
- *       const count = signal(initialCount);
- *       return el('div')(
- *         el('button')('+')(on('click', () => count(count() + 1)))(),
- *         el('span')(count),
- *         el('button')('-')(on('click', () => count(count() - 1)))()
- *       );
- *     }
- * );
- * ```
  */
 export function createRenderer<R extends Renderer<any, any, any>>(
   _renderer: R
@@ -198,4 +144,3 @@ export function createRenderer<R extends Renderer<any, any, any>>(
     return create<TArgs, TElementResult, TConfig, TElement>(factory);
   };
 }
-

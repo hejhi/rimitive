@@ -61,7 +61,6 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        dom: resolve(__dirname, 'src/dom.ts'),
         el: resolve(__dirname, 'src/el.ts'),
         component: resolve(__dirname, 'src/component.ts'),
         context: resolve(__dirname, 'src/context.ts'),
