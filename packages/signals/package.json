@@ -93,15 +93,15 @@
     "@lattice/lattice": "workspace:*"
   },
   "devDependencies": {
-    "alien-signals": "^2.0.5",
-    "esbuild": "^0.25.8",
+    "alien-signals": "^3.1.0",
+    "esbuild": "^0.27.0",
     "rimraf": "^6.0.1",
     "tdd-guard-vitest": "^0.1.5",
     "terser": "^5.36.0",
     "typescript": "^5.8.3",
     "vite": "^7.1.1",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.8"
   },
   "sideEffects": false,
   "publishConfig": {
