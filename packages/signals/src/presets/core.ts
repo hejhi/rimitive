@@ -16,11 +16,11 @@ import {
 } from '@lattice/lattice';
 
 // Re-export types so they're part of the public API
-export type { SubscribeFactory, SubscribeFunction, SubscribeCallback } from '../subscribe';
-export type { SignalFactory } from '../signal';
-export type { ComputedFactory } from '../computed';
-export type { EffectFactory } from '../effect';
-export type { BatchFactory } from '../batch';
+export type { SubscribeFactory, SubscribeOpts, SubscribeProps, SubscribeFunction } from '../subscribe';
+export type { SignalFactory, SignalOpts, SignalProps } from '../signal';
+export type { ComputedFactory, ComputedOpts, ComputedProps, ComputedFunction } from '../computed';
+export type { EffectFactory, EffectOpts, EffectProps } from '../effect';
+export type { BatchFactory, BatchOpts, BatchProps } from '../batch';
 
 export const extensions = {
   signal: Signal(),
@@ -35,8 +35,10 @@ export function createApi(
   deps = createPushPullSchedule(),
   opts?: CreateContextOptions
 ) {
+  const allExtensions = { ...extensions, ...ext };
   return {
-    extensions: createLatticeApi({ ...extensions, ...ext }, deps, opts),
+    extensions: createLatticeApi(allExtensions, deps, opts),
+    rawExtensions: allExtensions,
     deps,
   };
 }

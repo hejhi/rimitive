@@ -70,14 +70,17 @@ export function createApi<
     return baseCreate<TArgs, TElementResult, TConfig, TElement>(factory);
   };
 
+  // Merge reactive and view extensions into single context
+  const mergedExtensions = { ...reactiveApi.extensions, ...extensionsApi };
+
   // Convenience method for mounting components with the bound extensions
   // This eliminates the need to manually call .create(extensions)
   const mount = <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> => {
-    return spec.create(extensionsApi);
+    return spec.create(mergedExtensions);
   };
 
   return {
-    extensions: extensionsApi,
+    extensions: mergedExtensions,
     deps: reactiveApi,
     create,
     mount,
