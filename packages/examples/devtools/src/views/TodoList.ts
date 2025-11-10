@@ -6,7 +6,6 @@
  */
 
 import { create } from '../api';
-import type { RefSpec } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';
 
@@ -36,7 +35,7 @@ export const TodoList = create(
       { currentFilter, setFilter }: FilterInstance,
       filteredTodos: () => Todo[],
       { total, active, completed, completionRate }: TodoStatsInstance
-    ): RefSpec<HTMLElement> => {
+    ) => {
       const inputValue = signal('');
 
       const handleAddTodo = () => {
@@ -53,8 +52,8 @@ export const TodoList = create(
         placeholder: 'What needs to be done?',
         value: inputValue
       })()(
-        on('input', (e: Event) => inputValue((e.target as HTMLInputElement).value)),
-        on('keydown', (e: KeyboardEvent) => {
+        on('input', (e) => inputValue((e.target as HTMLInputElement).value)),
+        on('keydown', (e) => {
           if (e.key === 'Enter') handleAddTodo();
         })
       );

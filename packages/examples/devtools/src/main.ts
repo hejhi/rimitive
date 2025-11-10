@@ -8,7 +8,7 @@ import { TodoStats } from './behaviors/todo-stats';
 import { Counter as CounterView } from './views/Counter';
 import { TodoList as TodoListView } from './views/TodoList';
 import { BatchedUpdates as BatchedUpdatesView } from './views/BatchedUpdates';
-import { create, extensions } from './api';
+import { create, mount } from './api';
 
 const App = create((api) => () => {
   const { el, computed, batch } = api;
@@ -43,12 +43,8 @@ const App = create((api) => () => {
   );
 });
 
-// ============================================================================
-// Mount App
-// ============================================================================
-
 // Mount the app
-const app = App().create(extensions);
+const app = mount(App());
 const container = document.querySelector('#app');
 
-if (container && app.element) container.appendChild(app.element);
+container?.appendChild(app.element!);

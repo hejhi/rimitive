@@ -11,7 +11,7 @@ import type {
 } from '../renderer';
 import { create as createReactives } from '@lattice/signals/presets/core';
 import { create as baseCreate, type LatticeViewAPI } from '../component';
-import type { RefSpec, SealedSpec } from '../types';
+import type { RefSpec, SealedSpec, NodeRef } from '../types';
 
 export {
   Renderer,
@@ -23,6 +23,7 @@ export {
 export type { ElFactory } from '../el';
 export type { MapFactory } from '../helpers/map';
 export type { OnFactory } from '../on';
+export type { RefSpec, SealedSpec, NodeRef, ElementRef, FragmentRef } from '../types';
 
 export const extensions = {
   el: El(),
@@ -62,9 +63,16 @@ export function createApi<
     return baseCreate<TArgs, TElementResult, TConfig, TElement>(factory);
   };
 
+  // Convenience method for mounting components with the bound extensions
+  // This eliminates the need to manually call .create(extensions)
+  const mount = <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> => {
+    return spec.create(extensionsApi);
+  };
+
   return {
     extensions: extensionsApi,
     deps,
     create,
+    mount,
   };
 }
