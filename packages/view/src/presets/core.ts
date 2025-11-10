@@ -20,9 +20,16 @@ export {
   TextNode,
 };
 
-export type { ElFactory } from '../el';
-export type { MapFactory } from '../helpers/map';
-export type { OnFactory } from '../on';
+export type {
+  ElFactory,
+  ElOpts,
+  ElProps,
+  ChildrenApplicator,
+  ElementProps,
+  ReactiveElSpec
+} from '../el';
+export type { MapFactory, MapHelperOpts, MapProps } from '../helpers/map';
+export type { OnFactory, OnOpts, OnProps } from '../on';
 export type {
   RefSpec,
   SealedSpec,
@@ -30,6 +37,8 @@ export type {
   ElementRef,
   FragmentRef,
   Reactive,
+  ElRefSpecChild,
+  LifecycleCallback,
 } from '../types';
 
 export const extensions = {

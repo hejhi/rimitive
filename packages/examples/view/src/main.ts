@@ -1,5 +1,4 @@
-import { mount } from '@lattice/view/dom';
-import { create } from './create';
+import { create, mount } from './create';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
@@ -12,4 +11,6 @@ const App = create(({ el }) => () => {
   )();
 });
 
-mount('#app', App());
+const app = mount(App());
+const container = document.querySelector('#app');
+container?.appendChild(app.element!);

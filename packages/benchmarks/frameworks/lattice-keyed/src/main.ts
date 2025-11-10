@@ -1,8 +1,10 @@
-import { createDOMAPI } from '@lattice/view/dom';
-import { type Reactive, type ElRefSpecChild } from '@lattice/view/types';
+import { createApi } from '@lattice/view/presets/core';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
 
 // Wire up view layer
-const { el, map, on, signal, computed } = createDOMAPI();
+const { api } = createApi(createDOMRenderer());
+const { el, map, on, signal, computed } = api;
 
 // ============================================================================
 // Benchmark Data
@@ -206,5 +208,8 @@ const App = () => {
 const appElement = document.getElementById('main');
 if (appElement) {
   const app = App();
-  appElement.appendChild(app.create().element as HTMLElement);
+  const mounted = app.create(api);
+  if (mounted.element) {
+    appElement.appendChild(mounted.element as HTMLElement);
+  }
 }

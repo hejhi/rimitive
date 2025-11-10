@@ -1,17 +1,17 @@
 /**
- * App-level component factory
+ * App-level API
  *
- * All components in this app use this shared create function.
+ * All components in this app use this shared API.
  * This ensures consistent renderer configuration across the entire app.
  */
 
-import { createRenderer } from '@lattice/view/component';
+import { createApi } from '@lattice/view/presets/core';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 
 const renderer = createDOMRenderer();
 
 /**
- * DOM-specific component factory for this app
+ * DOM-specific API for this app
  * Types are automatically inferred from the renderer
  */
-export const create = createRenderer(renderer);
+export const { api, create, mount } = createApi(renderer);

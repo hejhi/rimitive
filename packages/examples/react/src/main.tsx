@@ -64,13 +64,13 @@ function createContext() {
 }
 
 // Manually create extensions with custom instrumentation
-// Each extension needs its own instrument function passed to .create()
+// Each extension needs its own instrument function passed to the constructor
 const ctx = createContext();
 const signalAPI = {
-  signal: Signal().create({ ...ctx, instrument: instrumentSignal }).method,
-  computed: Computed().create({ ...ctx, instrument: instrumentComputed }).method,
-  effect: Effect().create({ ...ctx, instrument: instrumentEffect }).method,
-  batch: Batch().create({ ...ctx, instrument: instrumentBatch }).method,
+  signal: Signal({ instrument: instrumentSignal }).create(ctx).method,
+  computed: Computed({ instrument: instrumentComputed }).create(ctx).method,
+  effect: Effect({ instrument: instrumentEffect }).create(ctx).method,
+  batch: Batch({ instrument: instrumentBatch }).create(ctx).method,
   dispose: () => {}, // No-op for manual setup
 };
 
