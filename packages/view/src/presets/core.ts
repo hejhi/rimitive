@@ -72,20 +72,12 @@ export function createApi<
     ),
   };
 
-  // Create a component factory typed with the actual API
-  const create: ComponentFactory<typeof api> = (factory) => {
-    return baseCreate(factory);
-  };
-
-  // Convenience method for mounting components with the bound extensions
-  // This eliminates the need to manually call .create(extensions)
-  const mount = <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> => {
-    return spec.create(api);
-  };
+  const mount =
+    <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> => spec.create(api);
 
   return {
     api,
-    create,
+    create: baseCreate as ComponentFactory<typeof api>,
     mount,
   };
 }
