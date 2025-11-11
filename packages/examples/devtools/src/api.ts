@@ -4,7 +4,10 @@
  * Instrumentation is configured here at the API level, so all components
  * created with this API are automatically instrumented for devtools.
  */
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import {
+  createDOMRenderer,
+  type DOMRendererConfig,
+} from '@lattice/view/renderers/dom';
 import { createApi } from '@lattice/view/presets/core';
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/map';
@@ -19,7 +22,11 @@ import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { instrumentSubscribe } from '@lattice/signals/devtools/subscribe';
-import { instrumentEl, instrumentMap, instrumentOn } from '@lattice/view/devtools';
+import {
+  instrumentEl,
+  instrumentMap,
+  instrumentOn,
+} from '@lattice/view/devtools';
 import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
 import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
 import { createPushPullSchedule } from '@lattice/signals/helpers';
@@ -32,8 +39,14 @@ const instrumentation = createInstrumentation({
 export const { create, api, mount } = createApi(
   createDOMRenderer(),
   {
-    el: El({ instrument: instrumentEl }),
-    map: Map({ instrument: instrumentMap }),
+    el: El<DOMRendererConfig>({
+      instrument: (method, instrumentation) =>
+        instrumentEl<DOMRendererConfig>(method, instrumentation),
+    }),
+    map: Map<DOMRendererConfig>({
+      instrument: (method, instrumentation) =>
+        instrumentMap<DOMRendererConfig>(method, instrumentation),
+    }),
     on: On({ instrument: instrumentOn }),
   },
   createReactiveApi(
