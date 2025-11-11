@@ -10,6 +10,7 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { Signal } from '@lattice/signals/signal';
 import { Effect } from '@lattice/signals/effect';
 import { createBaseContext as createSignalContext } from '@lattice/signals/context';
+import { createUntracked } from '@lattice/signals/untrack';
 
 // Status constants for RenderScope disposal tracking (matches scope.ts)
 const CLEAN = 0;
@@ -305,6 +306,9 @@ export function createTestEnv() {
   });
   const effect = effectFactory.method;
 
+  // Create untrack helper
+  const untrack = createUntracked({ ctx: signalsCtx });
+
   const { disposeScope, createElementScope, scopedEffect, onCleanup } =
     createScopes<MockElement>({
       ctx,
@@ -385,6 +389,7 @@ export function createTestEnv() {
     renderer,
     signal,
     effect,
+    untrack,
     disposeScope,
     scopedEffect,
     createElementScope,

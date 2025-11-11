@@ -11,8 +11,6 @@ import type { ViewContext } from './context';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
 import { createFragmentHelpers } from './helpers/fragment';
-import type { SignalsContext } from '@lattice/signals/context';
-import { createUntracked } from '@lattice/signals/untrack';
 
 const { createFragment, resolveNextRef } = createFragmentHelpers();
 
@@ -29,7 +27,7 @@ export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
 
 export interface MapHelperOpts<TConfig extends RendererConfig> {
   ctx: ViewContext<TConfig['baseElement']>;
-  signalsCtx: SignalsContext;
+  untrack: <T>(fn: () => T) => T;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
@@ -55,7 +53,7 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => v
 export const Map = create(
   <TConfig extends RendererConfig>({
     ctx,
-    signalsCtx,
+    untrack,
     signal,
     scopedEffect,
     renderer,
@@ -69,7 +67,6 @@ export const Map = create(
       type TSpec = TRefSpec | TSealedSpec;
 
       const { instrument } = props ?? {};
-      const untrack = createUntracked({ ctx: signalsCtx });
 
       function map<T>(
         items: () => T[],

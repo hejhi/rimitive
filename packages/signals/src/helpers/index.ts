@@ -3,11 +3,15 @@ import { createGraphEdges } from './graph-edges';
 import { createGraphTraversal } from './graph-traversal';
 import { createPullPropagator } from './pull-propagator';
 import { createScheduler } from './scheduler';
+import { createUntracked } from '../untrack';
 
 // Push
 export function createPush(ctx = createBaseContext()) {
+  const untrack = createUntracked({ ctx });
+
   return {
     ctx,
+    untrack,
     ...createGraphEdges({ ctx }),
     ...createGraphTraversal(),
   };

@@ -31,7 +31,7 @@ describe('map() - User-facing behavior', () => {
 
     const mapFactory = Map<MockRendererConfig>().create({
       ctx: env.ctx,
-      signalsCtx: env.signalsCtx,
+      untrack: env.untrack,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
