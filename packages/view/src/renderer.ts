@@ -82,11 +82,6 @@ export interface Renderer<TConfig extends RendererConfig> {
   isConnected: (element: TConfig['baseElement']) => boolean;
 
   /**
-   * Check if a value is an element created by this renderer
-   */
-  isElement: (value: unknown) => value is TConfig['baseElement'];
-
-  /**
    * Add an event listener to an element
    * Returns a cleanup function to remove the listener
    *

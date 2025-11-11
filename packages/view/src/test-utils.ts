@@ -172,8 +172,6 @@ export function createMockRenderer() {
       child.parent = parent;
     }),
     isConnected: vi.fn((element: MockElement) => element.connected),
-    isElement: (value: unknown): value is MockElement =>
-      value !== null && typeof value === 'object' && 'tag' in value,
     addEventListener: vi.fn((element: MockElement, event: string, handler: (event: unknown) => void) => {
       element.listeners.set(event, handler);
       return () => element.listeners.delete(event);

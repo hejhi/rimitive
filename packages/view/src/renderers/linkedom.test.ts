@@ -133,18 +133,6 @@ describe('linkedom renderer', () => {
     expect(div.outerHTML).toBe('<div><span>First</span><span>Second</span></div>');
   });
 
-  it('should check element type', () => {
-    const renderer = createLinkedomRenderer();
-
-    const div = renderer.createElement('div');
-    const text = renderer.createTextNode('text');
-    const plain = { foo: 'bar' };
-
-    expect(renderer.isElement(div)).toBe(true);
-    expect(renderer.isElement(text)).toBe(false);
-    expect(renderer.isElement(plain)).toBe(false);
-  });
-
   it('should report connected status', () => {
     const renderer = createLinkedomRenderer();
 
