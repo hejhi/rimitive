@@ -2,7 +2,6 @@
  * Core types for @lattice/view
  */
 
-import type { Readable } from '@lattice/signals/types';
 import type { Instantiatable } from '@lattice/lattice';
 
 /**
@@ -81,7 +80,15 @@ export interface SealedSpec<TElement> extends Instantiatable<NodeRef<TElement>, 
 /**
  * A reactive value that can be read as a signal or computed
  */
-export type Reactive<T = unknown> = Readable<T>;
+export interface Readable<T> {
+  (): T;
+}
+
+export interface Writable<T> extends Readable<T> {
+  (value: T): void; // Function call with argument for write
+}
+
+export type Reactive<T> = Readable<T> | Writable<T>;
 
 /**
  * Lifecycle callback for element connection/disconnection

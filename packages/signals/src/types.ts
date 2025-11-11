@@ -22,11 +22,11 @@ export interface ReactiveNode {
   status: number; // Current node status (CLEAN, PENDING, DIRTY, DISPOSED) + node type flags (PRODUCER, CONSUMER, SCHEDULED)
 }
 
-export interface Readable<T = unknown> {
+export interface Readable<T> {
   (): T;
 }
 
-export interface Writable<T = unknown> extends Readable<T> {
+export interface Writable<T> extends Readable<T> {
   (value: T): void;  // Function call with argument for write
 }
 

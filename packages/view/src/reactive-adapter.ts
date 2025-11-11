@@ -9,14 +9,7 @@
  * as long as it implements these three primitives.
  */
 
-import type { Reactive } from './types';
-
-/**
- * Writable signal interface - extends Readable with setter
- */
-export interface WritableSignal<T> extends Reactive<T> {
-  (value: T): void;
-}
+import type { Writable } from './types';
 
 /**
  * Minimal reactive system interface that view can integrate with.
@@ -40,7 +33,7 @@ export interface ReactiveAdapter {
    * count(5);     // => void (write)
    * count();      // => 5
    */
-  signal<T>(initialValue: T): WritableSignal<T>;
+  signal: <T>(initialValue: T) => Writable<T>;
 
   /**
    * React to changes in reactive state.
@@ -55,7 +48,7 @@ export interface ReactiveAdapter {
    *   return () => console.log('Cleanup');
    * });
    */
-  effect(fn: () => void | (() => void)): () => void;
+  effect: (fn: () => void | (() => void)) => () => void;
 
   /**
    * Batch multiple updates into a single reactive cycle.
@@ -71,5 +64,5 @@ export interface ReactiveAdapter {
    *   age.set(30);
    * }); // Only triggers one effect execution
    */
-  batch<T>(fn: () => T): T;
+  batch: <T>(fn: () => T) => T;
 }

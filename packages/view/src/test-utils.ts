@@ -186,7 +186,7 @@ export function createSignal<T>(initialValue: T) {
   let value = initialValue;
   const subscribers = new Set<() => void>();
 
-  const read = (() => value) as Reactive<T>;
+  const read = (() => value) as Reactive<T> & { peek: () => T };
   read.peek = () => value;
 
   const write = (newValue: T) => {

@@ -18,10 +18,22 @@ const { createFragment, resolveNextRef } = createFragmentHelpers();
  */
 export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
   'map',
-  <T>(
-    items: Reactive<T[]> | (() => T[]),
-    keyFn?: (item: T) => string | number
-  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>) => FragmentRef<TConfig['baseElement']>
+  {
+    // Array
+    <T, TEl>(
+      items: T[],
+      keyFn?: (item: T) => string | number
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TConfig['baseElement']>;
+    <T, TEl>(
+      items: Reactive<T[]>,
+      keyFn?: (item: T) => string | number
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TConfig['baseElement']>;
+    // Plain function that returns array
+    <T, TEl>(
+      items: () => T[],
+      keyFn?: (item: T) => string | number
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TConfig['baseElement']>;
+  }
 >;
 
 export interface MapHelperOpts<TConfig extends RendererConfig> {
@@ -66,7 +78,7 @@ export const Map = create(
       const { instrument } = props ?? {};
 
       function map<T>(
-        items: Reactive<T[]> | (() => T[]),
+        items: T[] | (() => T[]) | Reactive<T[]>,
         keyFn?: (item: T) => string | number
       ): (render: (itemSignal: Reactive<T>) => TSpec) => TFragRef {
         type TRecNode = RecNode<T, TBaseElement>;
@@ -91,7 +103,9 @@ export const Map = create(
 
                 // Render the item - this creates an element with its own scope
                 // Pass api for SealedSpec components created with create()
-                const elRef = render(itemSignal).create(api) as TRecNode;
+                const elRef = render(itemSignal).create(
+                  api
+                ) as TRecNode;
 
                 renderer.insertBefore(
                   parentElement,
@@ -142,8 +156,11 @@ export const Map = create(
 
             // Create effect within parent's scope - auto-tracked!
             const effectDispose = scopedEffect(() => {
+              // Get items - handle both array and function
+              const itemsArray = typeof items === 'function' ? items() : items;
+
               // Reconcile with just items and key function
-              reconcile(items(), (item) =>
+              reconcile(itemsArray, (item) =>
                 keyFn ? keyFn(item) : (item as string | number)
               );
             });

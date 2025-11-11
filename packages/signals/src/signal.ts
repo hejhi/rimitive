@@ -13,7 +13,7 @@
  * - The edge tracks version numbers for efficient cache invalidation
  * - This enables automatic dependency discovery during execution
  */
-import type { ProducerNode, Dependency } from './types';
+import type { ProducerNode, Dependency, Writable } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import { CONSTANTS } from './constants';
@@ -25,9 +25,7 @@ const { CLEAN, PRODUCER, DIRTY } = CONSTANTS;
 const SIGNAL_CLEAN = PRODUCER | CLEAN;
 const SIGNAL_DIRTY = PRODUCER | DIRTY;
 
-export interface SignalFunction<T = unknown> {
-  (): T;                    // Read operation (monomorphic)
-  (value: T): void;         // Write operation
+export interface SignalFunction<T> extends Writable<T> {
   peek(): T;                // Non-tracking read
 }
 

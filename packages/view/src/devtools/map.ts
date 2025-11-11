@@ -14,8 +14,10 @@ export function instrumentMap<TConfig extends RendererConfig>(
   method: MapFactory<TConfig>['method'],
   instrumentation: InstrumentationContext
 ): MapFactory<TConfig>['method'] {
+  type TEl = TConfig['baseElement'];
+
   return function instrumentedMap<T>(
-    items: () => T[],
+    items: T[] | (() => T[]) | Reactive<T[]>,
     keyFn?: (item: T) => string | number
   ): (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>) => FragmentRef<TConfig['baseElement']> {
     const mapId = crypto.randomUUID();
@@ -33,7 +35,7 @@ export function instrumentMap<TConfig extends RendererConfig>(
     const renderApplicator = method(items, keyFn);
 
     // Wrap the render applicator
-    return (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>): FragmentRef<TConfig['baseElement']> => {
+    return (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>): FragmentRef<TEl> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -43,7 +45,7 @@ export function instrumentMap<TConfig extends RendererConfig>(
       });
 
       // Track reconciliation operations by wrapping the render function
-      const instrumentedRender = (itemSignal: Reactive<T>): RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']> => {
+      const instrumentedRender = (itemSignal: Reactive<T>): RefSpec<TEl> | SealedSpec<TEl> => {
         const itemId = crypto.randomUUID();
 
         instrumentation.emit({
