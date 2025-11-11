@@ -8,65 +8,73 @@ export type FragmentInitFn<TElement> = (
 ) => (() => void) | void;
 
 /**
- * Create a fragment factory for userland reconciliation helpers
+ * Fragment helpers factory - creates local copies for each consumer module
+ * This pattern enables bundler inlining while maintaining code reusability
  */
-export function createFragment<TElement>(
-  init: FragmentInitFn<TElement>
-): FragmentRef<TElement> {
-  const fragRef: FragmentRef<TElement> = {
-    status: STATUS_FRAGMENT,
-    element: null,
-    next: undefined,
-    firstChild: undefined,
-    attach: (
-      parent: ElementRef<unknown>,
-      nextSibling: NodeRef<unknown> | null = null,
-      api?: unknown
-    ) => {
-      // Call user's initialization logic - cast to TElement as all elements are compatible at runtime
-      const dispose = init(
-        parent as ElementRef<TElement>,
-        nextSibling as NodeRef<TElement> | null,
-        api
-      );
+export function createFragmentHelpers() {
+  /**
+   * Create a fragment factory for userland reconciliation helpers
+   */
+  function createFragment<TElement>(
+    init: FragmentInitFn<TElement>
+  ): FragmentRef<TElement> {
+    const fragRef: FragmentRef<TElement> = {
+      status: STATUS_FRAGMENT,
+      element: null,
+      next: undefined,
+      firstChild: undefined,
+      attach: (
+        parent: ElementRef<unknown>,
+        nextSibling: NodeRef<unknown> | null = null,
+        api?: unknown
+      ) => {
+        // Call user's initialization logic - cast to TElement as all elements are compatible at runtime
+        const dispose = init(
+          parent as ElementRef<TElement>,
+          nextSibling as NodeRef<TElement> | null,
+          api
+        );
 
-      // Store dispose if provided
-      if (dispose) fragRef.dispose = dispose;
+        // Store dispose if provided
+        if (dispose) fragRef.dispose = dispose;
 
-      return fragRef;
-    },
-  };
+        return fragRef;
+      },
+    };
 
-  return fragRef;
-}
-
-/**
- * Resolve the next DOM element from a NodeRef chain.
- * Walks the `next` chain to find the first actual element, skipping empty fragments.
- *
- * @param ref - Starting NodeRef (typically fragment.next)
- * @returns The next DOM element, or null if end of chain
- */
-export function resolveNextRef<TElement>(
-  ref: NodeRef<TElement> | undefined | null
-): NodeRef<TElement> | null {
-  let current = ref;
-  while (current) {
-    if (current.status === STATUS_ELEMENT) return current;
-
-    const firstChild = current.firstChild;
-
-    // FragmentRef - try to get first child element
-    if (firstChild) {
-      const status = firstChild.status;
-
-      if (status === STATUS_FRAGMENT || status === STATUS_ELEMENT) {
-        return firstChild as NodeRef<TElement>;
-      }
-    }
-
-    current = current.next as NodeRef<TElement> | null | undefined; // Empty fragment - skip to next sibling
+    return fragRef;
   }
 
-  return null;
+  /**
+   * Resolve the next DOM element from a NodeRef chain.
+   * Walks the `next` chain to find the first actual element, skipping empty fragments.
+   *
+   * @param ref - Starting NodeRef (typically fragment.next)
+   * @returns The next DOM element, or null if end of chain
+   */
+  function resolveNextRef<TElement>(
+    ref: NodeRef<TElement> | undefined | null
+  ): NodeRef<TElement> | null {
+    let current = ref;
+    while (current) {
+      if (current.status === STATUS_ELEMENT) return current;
+
+      const firstChild = current.firstChild;
+
+      // FragmentRef - try to get first child element
+      if (firstChild) {
+        const status = firstChild.status;
+
+        if (status === STATUS_FRAGMENT || status === STATUS_ELEMENT) {
+          return firstChild as NodeRef<TElement>;
+        }
+      }
+
+      current = current.next as NodeRef<TElement> | null | undefined; // Empty fragment - skip to next sibling
+    }
+
+    return null;
+  }
+
+  return { createFragment, resolveNextRef };
 }

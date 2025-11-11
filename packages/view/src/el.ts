@@ -12,8 +12,10 @@ import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { ViewContext } from './context';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
-import { createFragment } from './helpers/fragment';
+import { createFragmentHelpers } from './helpers/fragment';
 import { createProcessChildren } from './helpers/processChildren';
+
+const { createFragment } = createFragmentHelpers();
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>

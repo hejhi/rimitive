@@ -10,9 +10,11 @@ import type { Renderer, RendererConfig } from './renderer';
 import type { ViewContext } from './context';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
-import { createFragment, resolveNextRef } from './helpers/fragment';
+import { createFragmentHelpers } from './helpers/fragment';
 import type { SignalsContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
+
+const { createFragment, resolveNextRef } = createFragmentHelpers();
 
 /**
  * Map factory type - curried for element builder pattern
