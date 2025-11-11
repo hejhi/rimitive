@@ -1,12 +1,11 @@
 import type { RenderScope } from '../types';
 import type { ViewContext } from '../context';
-import { CONSTANTS } from '@lattice/signals/constants';
 
-const { CLEAN, CONSUMER, DISPOSED, STATE_MASK } = CONSTANTS;
-
-// Status combination for render scopes (consumer + clean)
-// Note: Not marked as SCHEDULED since RenderScopes don't implement reactive flush behavior
-const RENDER_SCOPE_CLEAN = CONSUMER | CLEAN;
+// Status constants for RenderScope disposal tracking
+// Note: RenderScope is not a reactive node - these are just for lifecycle management
+const CLEAN = 0;
+const DISPOSED = 1 << 2;  // Bit 2: disposed state
+const RENDER_SCOPE_CLEAN = CLEAN;
 
 /**
  * Public scope API for managing element lifecycles and cleanup.
@@ -62,7 +61,7 @@ export function createScopes<TElement extends object>({
     rootScope: RenderScope<TElement>
   ): void => {
     // Already disposed (idempotent)
-    if ((rootScope.status & STATE_MASK) === DISPOSED) return;
+    if (rootScope.status & DISPOSED) return;
 
     // Stack node: tracks parent (for cleanup) and next sibling (for traversal)
     interface StackNode {
@@ -77,8 +76,8 @@ export function createScopes<TElement extends object>({
     // DESCENT PHASE: Walk down the tree marking nodes as disposed
     descent: for (;;) {
       // Mark as disposed
-      if ((scope.status & STATE_MASK) !== DISPOSED) {
-        scope.status = (scope.status & ~STATE_MASK) | DISPOSED;
+      if (!(scope.status & DISPOSED)) {
+        scope.status |= DISPOSED;
 
         // Descend into children
         const firstChild = scope.firstChild;

@@ -11,6 +11,9 @@ import { Signal } from '@lattice/signals/signal';
 import { Effect } from '@lattice/signals/effect';
 import { createBaseContext as createSignalContext } from '@lattice/signals/context';
 
+// Status constants for RenderScope disposal tracking (matches scope.ts)
+const CLEAN = 0;
+
 // Re-export types for convenience
 export type { Reactive };
 
@@ -326,7 +329,7 @@ export function createTestEnv() {
       parentScope = ctx.activeScope;
 
       // Create scope inline (similar to production createElementScope but always returns scope)
-      const RENDER_SCOPE_CLEAN = 0b0011; // CONSUMER | CLEAN
+      const RENDER_SCOPE_CLEAN = CLEAN;
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,

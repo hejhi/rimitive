@@ -3,10 +3,11 @@ import { createMockDisposable } from '../test-utils';
 import { createTestScopes, createMockElement, MockTestElement } from '../test-helpers';
 import { createBaseContext } from '../context';
 import { createScopes, type CreateScopes } from './scope';
-import { CONSTANTS } from '@lattice/signals/constants';
 import type { RenderScope } from '../types';
 
-const { DISPOSED, STATE_MASK, CONSUMER } = CONSTANTS;
+// Status constants for RenderScope disposal tracking (matches scope.ts)
+const CLEAN = 0;
+const DISPOSED = 1 << 2;
 
 // Helper to add withScope to CreateScopes result for tests that need custom mocks
 function addWithScope<TElement extends object>(
@@ -28,7 +29,7 @@ function addWithScope<TElement extends object>(
       parentScope = ctx.activeScope;
 
       // Create scope inline
-      const RENDER_SCOPE_CLEAN = CONSUMER | 0b0001; // CONSUMER | CLEAN
+      const RENDER_SCOPE_CLEAN = CLEAN;
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,
@@ -480,8 +481,8 @@ describe('Scope Tree', () => {
       expect(parent.firstDisposable).toBeUndefined();
 
       // Children disposed
-      expect(child1.status & STATE_MASK).toBe(DISPOSED);
-      expect(child2.status & STATE_MASK).toBe(DISPOSED);
+      expect(child1.status & DISPOSED).toBe(DISPOSED);
+      expect(child2.status & DISPOSED).toBe(DISPOSED);
 
       // Disposables called
       expect(disposable1.disposed).toBe(true);
@@ -514,7 +515,7 @@ describe('Scope Tree', () => {
       }
 
       // Scope disposed and removed from context
-      expect(scope.status & STATE_MASK).toBe(DISPOSED);
+      expect(scope.status & DISPOSED).toBe(DISPOSED);
       expect(ctx.elementScopes.has(element)).toBe(false);
     });
 
@@ -579,7 +580,7 @@ describe('Scope Tree', () => {
 
       // Status unchanged after first disposal
       expect(scope.status).toBe(statusAfterFirst);
-      expect(scope.status & STATE_MASK).toBe(DISPOSED);
+      expect(scope.status & DISPOSED).toBe(DISPOSED);
 
       // Disposable only called once
       expect(disposableSpy).toHaveBeenCalledTimes(1);
@@ -623,9 +624,9 @@ describe('Scope Tree', () => {
       expect(childDisposableSpy).toHaveBeenCalledTimes(1);     // Child disposable
       expect(parentDisposableSpy).toHaveBeenCalledTimes(1);    // Parent disposable
       expect(eventListenerSpy).toHaveBeenCalledTimes(1);       // Event listener
-      expect(scope.status & STATE_MASK).toBe(DISPOSED);
+      expect(scope.status & DISPOSED).toBe(DISPOSED);
       if (childScope) {
-        expect(childScope.status & STATE_MASK).toBe(DISPOSED);
+        expect(childScope.status & DISPOSED).toBe(DISPOSED);
       }
 
       // Assert: Memory safety - references cleared

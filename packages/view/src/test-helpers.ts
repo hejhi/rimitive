@@ -8,6 +8,9 @@ import { createBaseContext, type ViewContext } from './context';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import type { RenderScope } from './types';
 
+// Status constants for RenderScope disposal tracking (matches scope.ts)
+const CLEAN = 0;
+
 // Mock element for testing
 export type MockTestElement = { __mock: boolean };
 export const createMockElement = (): MockTestElement => ({ __mock: true });
@@ -68,7 +71,7 @@ export const createTestScopes = <TElement extends object = MockTestElement>(
       parentScope = ctx.activeScope;
 
       // Create scope inline
-      const RENDER_SCOPE_CLEAN = 0b10000001; // CONSUMER | CLEAN (0b10000000 | 0b00000001)
+      const RENDER_SCOPE_CLEAN = CLEAN;
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,
