@@ -398,7 +398,7 @@ export function createTestEnv() {
 
   return {
     ctx,
-    signalCtx: signalsCtx,
+    signalsCtx,
     renderer,
     signal,
     effect,

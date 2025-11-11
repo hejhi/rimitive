@@ -30,7 +30,7 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const mapFactory = Map<MockRendererConfig>().create({
       ctx: env.ctx,
-      signalCtx: env.signalCtx,
+      signalsCtx: env.signalsCtx,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -443,7 +443,7 @@ describe('List reconciliation - Edge cases', () => {
 
     const mapFactory = Map<MockRendererConfig>().create({
       ctx: env.ctx,
-      signalCtx: env.signalCtx,
+      signalsCtx: env.signalsCtx,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,

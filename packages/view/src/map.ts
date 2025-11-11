@@ -27,7 +27,7 @@ export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
 
 export interface MapHelperOpts<TConfig extends RendererConfig> {
   ctx: ViewContext<TConfig['baseElement']>;
-  signalCtx: SignalsContext;
+  signalsCtx: SignalsContext;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
@@ -51,11 +51,9 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => v
  * Similar to Signal() in signals preset
  */
 export const Map = create(
-  <
-    TConfig extends RendererConfig,
-  >({
+  <TConfig extends RendererConfig>({
     ctx,
-    signalCtx,
+    signalsCtx,
     signal,
     scopedEffect,
     renderer,
@@ -68,8 +66,8 @@ export const Map = create(
       type TSealedSpec = SealedSpec<TBaseElement>;
       type TSpec = TRefSpec | TSealedSpec;
 
-      const { instrument } = props ?? {}
-      const untrack = createUntracked({ ctx: signalCtx });
+      const { instrument } = props ?? {};
+      const untrack = createUntracked({ ctx: signalsCtx });
 
       function map<T>(
         items: () => T[],

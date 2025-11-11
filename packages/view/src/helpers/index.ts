@@ -20,7 +20,7 @@ export function createSpec<
     ctx = createBaseContext<TConfig['baseElement']>()
 ) {
   const { api, deps } = signals;
-  const { ctx: signalCtx, track, dispose, ...restDeps } = deps;
+  const { ctx: signalsCtx, track, dispose, ...restDeps } = deps;
   const { signal, effect } = api;
   const scopes = createScopes<TConfig['baseElement']>({
     ctx,
@@ -31,13 +31,12 @@ export function createSpec<
 
   return {
     ctx,
-    // TODO: rename to reactiveCtx or merge into ctx
-    signalCtx,
+    signalsCtx,
     track,
     renderer,
     ...scopes,
     signal,
     // Pass back user-provided deps in case they provide other reactives with context
-    ...restDeps
+    ...restDeps,
   };
 }
