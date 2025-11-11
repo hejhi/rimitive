@@ -42,10 +42,8 @@ export function createLinkedomRenderer(): Renderer<LinkedomRendererConfig> {
       parent.insertBefore(child, reference),
     // In linkedom, elements are always "connected" to the document
     isConnected: (element) => element.isConnected,
-    addEventListener: () => () => {
-      // No-op for SSR - events aren't meaningful on the server
-      // Return empty cleanup function
-      return () => {};
-    },
+    // No-op for SSR - events aren't meaningful on the server
+    // Return empty cleanup function
+    addEventListener: () => () => () => {},
   };
 }
