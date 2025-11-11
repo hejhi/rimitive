@@ -15,11 +15,12 @@ export function instrumentMap<TConfig extends RendererConfig>(
   instrumentation: InstrumentationContext
 ): MapFactory<TConfig>['method'] {
   type TEl = TConfig['baseElement'];
+  type TSpec = RefSpec<TEl> | SealedSpec<TEl>;
 
-  return function instrumentedMap<T>(
+  function instrumentedMap<T>(
     items: T[] | (() => T[]) | Reactive<T[]>,
     keyFn?: (item: T) => string | number
-  ): (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>) => FragmentRef<TConfig['baseElement']> {
+  ) {
     const mapId = crypto.randomUUID();
 
     instrumentation.emit({
@@ -31,11 +32,11 @@ export function instrumentMap<TConfig extends RendererConfig>(
       },
     });
 
-    // Call base method to get render function applicator
-    const renderApplicator = method(items, keyFn);
+    // Call base method - TypeScript overloads will resolve at call site
+    const renderApplicator = method(items as () => T[], keyFn);
 
     // Wrap the render applicator
-    return (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>): FragmentRef<TEl> => {
+    return (render: (itemSignal: Reactive<T>) => TSpec): FragmentRef<TEl> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -45,7 +46,7 @@ export function instrumentMap<TConfig extends RendererConfig>(
       });
 
       // Track reconciliation operations by wrapping the render function
-      const instrumentedRender = (itemSignal: Reactive<T>): RefSpec<TEl> | SealedSpec<TEl> => {
+      const instrumentedRender = (itemSignal: Reactive<T>): TSpec => {
         const itemId = crypto.randomUUID();
 
         instrumentation.emit({
@@ -80,5 +81,7 @@ export function instrumentMap<TConfig extends RendererConfig>(
 
       return fragmentRef;
     };
-  };
+  }
+
+  return instrumentedMap as MapFactory<TConfig>['method'];
 }
