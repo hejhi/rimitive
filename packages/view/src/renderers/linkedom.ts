@@ -34,9 +34,11 @@ export type Linkedom = LinkedomElement;
  * LinkedOM Renderer configuration - maps to HTML elements (similar to DOM)
  * Note: linkedom provides DOM-like elements but events aren't meaningful in SSR
  */
-export interface DOMRendererConfig extends RendererConfig {
+export interface LinkedomRendererConfig extends RendererConfig {
   elements: HTMLElementTagNameMap;
   events: HTMLElementEventMap;
+  baseElement: HTMLElement;
+  textNode: Text;
 }
 
 /**
@@ -58,11 +60,7 @@ export interface DOMRendererConfig extends RendererConfig {
  * // <div><h1>Hello World</h1><p>Server-side rendered!</p></div>
  * ```
  */
-export function createLinkedomRenderer(): Renderer<
-  DOMRendererConfig,
-  LinkedomElement,
-  LinkedomTextNode
-> {
+export function createLinkedomRenderer(): Renderer<LinkedomRendererConfig> {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 

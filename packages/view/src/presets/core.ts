@@ -59,13 +59,11 @@ export type ComponentFactory<TApi> = <
 
 export function createApi<
   TConfig extends RendererConfig,
-  TElement extends RendererElement,
-  TText extends TextNode,
 >(
-  renderer: Renderer<TConfig, TElement, TText>,
+  renderer: Renderer<TConfig>,
   ext = {
-    el: El<TConfig, TElement, TText>(),
-    map: Map<TConfig, TElement, TText>(),
+    el: El<TConfig>(),
+    map: Map<TConfig>(),
     on: On(),
   },
   signalsApi = createReactiveApi(),

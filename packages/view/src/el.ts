@@ -10,7 +10,7 @@ import type {
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { ViewContext } from './context';
-import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from './renderer';
+import type { Renderer, Element as RendererElement, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragment } from './helpers/fragment';
 import { createProcessChildren } from './helpers/processChildren';
@@ -63,15 +63,13 @@ export type ReactiveElSpec<
  */
 export type ElOpts<
   TConfig extends RendererConfig,
-  TElement extends RendererElement = RendererElement,
-  TText extends TextNode = TextNode,
 > = {
-  ctx: ViewContext<TElement>;
+  ctx: ViewContext<TConfig['baseElement']>;
   createElementScope: CreateScopes['createElementScope'];
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
-  renderer: Renderer<TConfig, TElement, TText>;
+  renderer: Renderer<TConfig>;
 };
 
 export type ElProps<TConfig extends RendererConfig, TElement extends RendererElement = RendererElement> = {
@@ -139,8 +137,6 @@ export type ElFactory<
 export const El = create(
   <
     TConfig extends RendererConfig,
-    TElement extends RendererElement,
-    TText extends TextNode,
   >({
     ctx,
     scopedEffect,
@@ -148,10 +144,11 @@ export const El = create(
     createElementScope,
     disposeScope,
     onCleanup,
-  }: ElOpts<TConfig, TElement, TText>) =>
-    (props?: ElProps<TConfig, TElement>) => {
+  }: ElOpts<TConfig>) =>
+    (props?: ElProps<TConfig, TConfig['baseElement']>) => {
+      type TElement = TConfig['baseElement'];
       const { instrument } = props ?? {};
-      const { processChildren } = createProcessChildren<TConfig, TElement, TText>({
+      const { processChildren } = createProcessChildren<TConfig, TElement>({
         scopedEffect,
         renderer,
       });

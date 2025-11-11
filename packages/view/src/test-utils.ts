@@ -123,13 +123,15 @@ export interface MockRendererConfig extends RendererConfig {
     submit: MockEvent;
     [key: string]: MockEvent;
   };
+  baseElement: MockElement;
+  textNode: MockText;
 }
 
 /**
  * Creates a mock renderer for testing
  */
 export function createMockRenderer() {
-  const renderer: Renderer<MockRendererConfig, MockElement, MockText> = {
+  const renderer: Renderer<MockRendererConfig> = {
     createElement: vi.fn((tag: string) => new MockElement(tag)),
     createTextNode: vi.fn((text: string) => new MockText(text)),
     updateTextNode: vi.fn((node: MockText, text: string) => {

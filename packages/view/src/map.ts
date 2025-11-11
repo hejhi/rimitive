@@ -6,7 +6,7 @@ import type { LatticeExtension, InstrumentationContext, ExtensionContext } from 
 import { create } from '@lattice/lattice';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from './types';
 import { STATUS_ELEMENT } from './types';
-import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from './renderer';
+import type { Renderer, Element as RendererElement, RendererConfig } from './renderer';
 import type { ViewContext } from './context';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
@@ -27,14 +27,12 @@ export type MapFactory<TElement extends RendererElement> = LatticeExtension<
 
 export interface MapHelperOpts<
   TConfig extends RendererConfig,
-  TElement extends RendererElement,
-  TText extends TextNode,
 > {
-  ctx: ViewContext<TElement>;
+  ctx: ViewContext<TConfig['baseElement']>;
   signalCtx: GlobalContext;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
-  renderer: Renderer<TConfig, TElement, TText>;
+  renderer: Renderer<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
 }
 
@@ -57,8 +55,6 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => v
 export const Map = create(
   <
     TConfig extends RendererConfig,
-    TElement extends RendererElement,
-    TText extends TextNode,
   >({
     ctx,
     signalCtx,
@@ -66,8 +62,9 @@ export const Map = create(
     scopedEffect,
     renderer,
     disposeScope,
-  }: MapHelperOpts<TConfig, TElement, TText>) =>
-    (props?: MapProps<TElement>) => {
+  }: MapHelperOpts<TConfig>) =>
+    (props?: MapProps<TConfig['baseElement']>) => {
+      type TElement = TConfig['baseElement'];
       const { instrument } = props ?? {}
       const untrack = createUntracked({ ctx: signalCtx });
 

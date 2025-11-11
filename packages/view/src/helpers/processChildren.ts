@@ -8,22 +8,21 @@
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
-import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from '../renderer';
+import type { Renderer, RendererConfig } from '../renderer';
 
 
 export function createProcessChildren<
   TConfig extends RendererConfig,
-  TElement extends RendererElement,
-  TText extends TextNode
+  TElement = TConfig['baseElement']
 >(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
-  renderer: Renderer<TConfig, TElement, TText>;
+  renderer: Renderer<TConfig>;
 }) {
   type ViewChild = RefSpec<TElement> | FragmentRef<TElement> | SealedSpec<TElement>;
 
   const { scopedEffect, renderer } = opts;
   const createTextEffect =
-    (child: () => string | number, text: TText) =>
+    (child: () => string | number, text: TConfig['textNode']) =>
     () => {
       const value = child();
       const stringValue = value == null ? '' : String(value);
@@ -35,7 +34,7 @@ export function createProcessChildren<
     child: ElRefSpecChild,
     api?: unknown
   ): NodeRef<TElement> | null => {
-    const element = parentRef.element;
+    const element = parentRef.element as TConfig['baseElement'];
     const childType = typeof child;
 
     // Skip null/undefined/false
@@ -59,7 +58,7 @@ export function createProcessChildren<
       // RefSpec or SealedSpec - both have .create() method
       if (spec.status & STATUS_SPEC_MASK) {
         const childRef = spec.create(api);
-        if (childRef.status === STATUS_ELEMENT) renderer.appendChild(element, childRef.element);
+        if (childRef.status === STATUS_ELEMENT) renderer.appendChild(element, childRef.element as TConfig['baseElement']);
         return childRef;
       }
     }

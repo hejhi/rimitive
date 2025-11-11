@@ -26,12 +26,14 @@ export type DOM = DOMElement;
 export interface DOMRendererConfig extends RendererConfig {
   elements: HTMLElementTagNameMap;
   events: HTMLElementEventMap;
+  baseElement: HTMLElement;
+  textNode: Text;
 }
 
 /**
  * Create a DOM renderer for browser environments
  */
-export function createDOMRenderer(): Renderer<DOMRendererConfig, DOMElement, DOMTextNode> {
+export function createDOMRenderer(): Renderer<DOMRendererConfig> {
   return {
     createElement: (tag: string) => {
       return document.createElement(tag);
