@@ -3,8 +3,7 @@
  * This creates a single context that:
  * 1. Tracks the active scope for reactive dependency tracking (from signals' SignalsContext.consumerScope)
  * 2. Manages view lifecycle and cleanup through scope tracking (from view's ViewContext.currentScope)
- * 3. Provides version tracking for change detection (from signals' SignalsContext.trackingVersion)
- * 4. Maps elements to their scopes for efficient lookup (from view's ViewContext.elementScopes)
+ * 3. Maps elements to their scopes for efficient lookup (from view's ViewContext.elementScopes)
  */
 
 import type { RenderScope } from './types';
@@ -17,13 +16,6 @@ export interface ViewContext<TElement extends object> {
    * Active scope for reactive tracking and lifecycle management
    */
   activeScope: RenderScope<TElement> | null;
-
-  /**
-   * Global version counter for change detection
-   *
-   * Incremented on each reactive update cycle to detect stale dependencies.
-   */
-  trackingVersion: number;
 
   /**
    * Map element to its render scope
@@ -40,7 +32,6 @@ export interface ViewContext<TElement extends object> {
 export function createBaseContext<TElement extends object>(): ViewContext<TElement> {
   return {
     activeScope: null,
-    trackingVersion: 0,
     elementScopes: new WeakMap(),
   };
 }
