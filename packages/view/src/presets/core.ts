@@ -41,6 +41,38 @@ export type {
   ElRefSpecChild,
   LifecycleCallback,
 } from '../types';
+export type { ReactiveAdapter, WritableSignal } from '../reactive-adapter';
+
+// Re-export signals types needed for public API portability
+export type {
+  SignalFactory,
+  SignalProps,
+  SignalOpts,
+} from '@lattice/signals/signal';
+export type {
+  EffectFactory,
+  EffectProps,
+  EffectOpts,
+} from '@lattice/signals/effect';
+export type {
+  ComputedFactory,
+  ComputedProps,
+  ComputedOpts,
+  ComputedFunction,
+} from '@lattice/signals/computed';
+export type {
+  BatchFactory,
+  BatchProps,
+  BatchOpts,
+} from '@lattice/signals/batch';
+export type {
+  SubscribeFactory,
+  SubscribeProps,
+  SubscribeOpts,
+  SubscribeFunction,
+  SubscribeCallback,
+  UnsubscribeFunction,
+} from '@lattice/signals/subscribe';
 
 export const extensions = {
   el: El(),
