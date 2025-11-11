@@ -15,10 +15,6 @@ import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
 import { Effect } from '@lattice/signals/effect';
 import { Batch } from '@lattice/signals/batch';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { instrumentSignal } from '@lattice/signals/devtools/signal';
 import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
@@ -31,48 +27,26 @@ import { createTodoList } from './components/todo-list';
 import { createFilter } from './components/filter';
 import { createAppState } from './components/app-state';
 import { Modal } from './design-system/Modal';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createApi } from '@lattice/signals/presets/core';
+import { createPushPullSchedule } from '@lattice/signals/helpers';
 
-// ============================================================================
-// Create Instrumented Signal API with DevTools
-// ============================================================================
-
-function createContext() {
-  const ctx = createBaseContext();
-  const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
-  const { withVisitor } = createGraphTraversal();
-  const { withPropagate, dispose, startBatch, endBatch } = createScheduler({ detachAll });
-  const pullPropagator = createPullPropagator({ track });
-
-  const instrumentation = createInstrumentation({
-    enabled: true,
-    providers: [devtoolsProvider({ debug: false })],
-  });
-
-  return {
-    ctx,
-    trackDependency,
-    propagate: withPropagate(withVisitor),
-    track,
-    dispose,
-    pullUpdates: pullPropagator.pullUpdates,
-    shallowPropagate: pullPropagator.shallowPropagate,
-    startBatch,
-    endBatch,
-    instrumentation,
-  };
-}
+const instrumentation = createInstrumentation({
+  providers: [devtoolsProvider()],
+  enabled: true,
+});
 
 // Manually create extensions with custom instrumentation
 // Each extension needs its own instrument function passed to the constructor
-const ctx = createContext();
-const signalAPI = {
-  signal: Signal({ instrument: instrumentSignal }).create(ctx).method,
-  computed: Computed({ instrument: instrumentComputed }).create(ctx).method,
-  effect: Effect({ instrument: instrumentEffect }).create(ctx).method,
-  batch: Batch({ instrument: instrumentBatch }).create(ctx).method,
-  dispose: () => {}, // No-op for manual setup
-};
+export const signalApi = createApi(
+  {
+    signal: Signal({ instrument: instrumentSignal }),
+    computed: Computed({ instrument: instrumentComputed }),
+    effect: Effect({ instrument: instrumentEffect }),
+    batch: Batch({ instrument: instrumentBatch }),
+  },
+  createPushPullSchedule(),
+  { instrumentation }
+).api;
 
 /**
  * Example 1: Step Counter
@@ -480,7 +454,7 @@ function App() {
 const root = createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
-    <SignalProvider api={signalAPI}>
+    <SignalProvider api={signalApi}>
       <App />
     </SignalProvider>
   </React.StrictMode>

@@ -31,7 +31,7 @@ export const extensions = {
 };
 
 export function createApi(
-  ext = extensions,
+  ext: Partial<typeof extensions> = extensions,
   deps = createPushPullSchedule(),
   opts?: CreateContextOptions
 ) {

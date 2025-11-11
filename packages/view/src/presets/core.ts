@@ -13,6 +13,9 @@ import type {
 import type { ReactiveAdapter } from '../reactive-adapter';
 import { create as baseCreate } from '../component';
 import type { RefSpec, SealedSpec, NodeRef } from '../types';
+import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
+
+export type { ElementProps, ChildrenApplicator, ReactiveElSpec } from '../el';
 
 export const extensions = {
   el: El(),
@@ -27,22 +30,27 @@ export type ComponentFactory<TApi> = <TArgs extends unknown[], TElementResult>(
   factory: (api: TApi) => (...args: TArgs) => RefSpec<TElementResult>
 ) => (...args: TArgs) => SealedSpec<TElementResult>;
 
-export function createApi<TConfig extends RendererConfig>(
+export function createApi<
+  TConfig extends RendererConfig,
+  TReactive extends ReactiveAdapter,
+>(
   renderer: Renderer<TConfig>,
   ext = {
     el: El<TConfig>(),
     map: Map<TConfig>(),
     on: On(),
   },
-  signalsApi: ReactiveAdapter,
+  signalsApi: TReactive = (createReactiveApi() as unknown as TReactive),
   opts?: CreateContextOptions
 ) {
+  const baseReactives = signalsApi;
+
   // Merge signals and view apis first
   const api = {
     ...signalsApi,
     ...createLatticeApi(
       { ...extensions, ...ext },
-      createSpec(renderer, signalsApi),
+      createSpec(renderer, baseReactives),
       opts
     ),
   };
@@ -64,4 +72,8 @@ export type {
   ElementRef,
   FragmentRef,
   Reactive,
+  Readable,
+  Writable
 } from '../types';
+
+export type { ReactiveAdapter };

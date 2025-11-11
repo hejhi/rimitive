@@ -1,9 +1,23 @@
 import { createApi } from '@lattice/view/presets/core';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import { createApi as createSignalsApi } from '@lattice/signals/presets/core';
+
+import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
+import { El } from '@lattice/view/el';
+import { Map } from '@lattice/view/map';
+import { On } from '@lattice/view/on';
 
 // Wire up view layer
-const { api } = createApi(createDOMRenderer());
+const { api } = createApi(
+  createDOMRenderer(),
+  {
+    el: El<DOMRendererConfig>(),
+    map: Map<DOMRendererConfig>(),
+    on: On(),
+  },
+  createSignalsApi().api
+);
+
 const { el, map, on, signal, computed } = api;
 
 // ============================================================================
