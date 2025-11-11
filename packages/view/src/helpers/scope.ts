@@ -53,10 +53,10 @@ export function createScopes<TElement extends object>({
   /**
    * Dispose a RenderScope and all its children/disposables
    *
-   * Zero-allocation iterative algorithm:
-   * 1. Flatten tree to linked list (pre-order)
-   * 2. Reverse list to get post-order (children before parents)
-   * 3. Traverse and cleanup each scope
+   * Single-pass DFS with descent/unwind phases (inspired by pull-propagator pattern):
+   * - Descent: Mark as disposed, descend into children
+   * - Unwind: Cleanup disposables when returning from children
+   * - Stack tracks both parent and sibling continuations
    */
   const disposeScope = <TElement = object>(
     rootScope: RenderScope<TElement>
@@ -64,68 +64,77 @@ export function createScopes<TElement extends object>({
     // Already disposed (idempotent)
     if ((rootScope.status & STATE_MASK) === DISPOSED) return;
 
-    // Phase 1: Flatten tree to linked list (pre-order) and mark all as disposed
-    // Uses existing nextSibling pointers - zero allocations
-    let tail = rootScope;
-    let current: RenderScope<TElement> | undefined = rootScope;
+    // Stack node: tracks parent (for cleanup) and next sibling (for traversal)
+    interface StackNode {
+      parent: RenderScope<TElement>; // Parent to cleanup after all children done
+      nextSibling: RenderScope<TElement> | undefined; // Next sibling to process
+      prev: StackNode | undefined;
+    }
 
-    while (current !== undefined) {
-      // Skip if already disposed
-      if ((current.status & STATE_MASK) === DISPOSED) {
-        current = current.nextSibling;
-        continue;
-      }
+    let stack: StackNode | undefined;
+    let scope = rootScope;
 
+    // DESCENT PHASE: Walk down the tree marking nodes as disposed
+    descent: for (;;) {
       // Mark as disposed
-      current.status = (current.status & ~STATE_MASK) | DISPOSED;
+      if ((scope.status & STATE_MASK) !== DISPOSED) {
+        scope.status = (scope.status & ~STATE_MASK) | DISPOSED;
 
-      // Flatten: append children to the linked list
-      if (current.firstChild !== undefined) {
-        tail.nextSibling = current.firstChild;
+        // Descend into children
+        const firstChild = scope.firstChild;
+        if (firstChild !== undefined) {
+          // Push parent to stack (will cleanup after all children done)
+          stack = {
+            parent: scope,
+            nextSibling: firstChild.nextSibling,
+            prev: stack,
+          };
 
-        // Find the last sibling (new tail)
-        let child = current.firstChild;
-        while (child.nextSibling !== undefined) {
-          child = child.nextSibling;
+          scope = firstChild;
+          continue descent;
         }
-        tail = child;
       }
 
-      current = current.nextSibling;
-    }
+      // UNWIND PHASE: Cleanup when no children or children already processed
+      for (;;) {
+        // Dispose all tracked disposables
+        let node = scope.firstDisposable;
+        while (node) {
+          node.dispose();
+          node = node.next;
+        }
 
-    // Phase 2: Reverse the linked list to get post-order (children before parents)
-    let reversed: RenderScope<TElement> | undefined = undefined;
-    current = rootScope;
+        // Clear references
+        scope.firstChild = undefined;
+        scope.firstDisposable = undefined;
 
-    while (current !== undefined) {
-      const next: RenderScope<TElement> | undefined = current.nextSibling;
-      current.nextSibling = reversed;
-      reversed = current;
-      current = next;
-    }
+        // Remove from elementScopes map
+        anyCtx.elementScopes.delete(scope.element as object);
 
-    // Phase 3: Cleanup in reverse order (post-order: children before parents)
-    current = reversed;
+        // Done if we've returned to root and no more siblings
+        if (scope === rootScope) return;
 
-    while (current !== undefined) {
-      const next = current.nextSibling;
+        // Pop from stack to get parent and next sibling
+        if (stack !== undefined) {
+          const { parent, nextSibling, prev } = stack;
+          stack = prev;
 
-      // Dispose all tracked disposables (lifecycle tracking)
-      let node = current.firstDisposable;
-      while (node) {
-        node.dispose();
-        node = node.next;
+          // Process next sibling if exists
+          if (nextSibling !== undefined) {
+            // Re-push parent since we're not done with all its children
+            stack = { parent, nextSibling: nextSibling.nextSibling, prev: stack };
+            scope = nextSibling;
+            continue descent;
+          }
+
+          // All siblings done, now cleanup parent
+          scope = parent;
+          continue;
+        }
+
+        // No more work
+        return;
       }
-
-      // Clear references
-      current.firstChild = undefined;
-      current.firstDisposable = undefined;
-
-      // Remove from elementScopes map (centralized cleanup)
-      anyCtx.elementScopes.delete(current.element as object);
-
-      current = next;
     }
   };
 
