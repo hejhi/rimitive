@@ -50,14 +50,6 @@
       "import": "./dist/on.js",
       "types": "./dist/on.d.ts"
     },
-    "./combinators": {
-      "import": "./dist/combinators.js",
-      "types": "./dist/combinators.d.ts"
-    },
-    "./browser-renderer": {
-      "import": "./dist/browser-renderer.js",
-      "types": "./dist/browser-renderer.d.ts"
-    },
     "./presets/core": {
       "import": "./dist/presets/core.js",
       "types": "./dist/presets/core.d.ts"

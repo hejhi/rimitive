@@ -1,5 +1,5 @@
 import type { RenderScope } from '../types';
-import type { LatticeContext } from '../context';
+import type { ViewContext } from '../context';
 import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -47,13 +47,13 @@ export function createScopes<TElement extends object>({
   dispose: disposeNode,
   baseEffect,
 }: {
-  ctx: LatticeContext<TElement>;
+  ctx: ViewContext<TElement>;
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
   baseEffect: (fn: () => void | (() => void)) => () => void;
 }): CreateScopes {
   // Cast ctx to handle any object type at runtime
-  const anyCtx = ctx as unknown as LatticeContext<object>;
+  const anyCtx = ctx as ViewContext<object>;
 
   /**
    * Dispose a RenderScope and all its children/disposables

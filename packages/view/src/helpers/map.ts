@@ -14,7 +14,7 @@ import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from '../
 import { isElementRef } from '../types';
 import { resolveNextRef } from './fragment';
 import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from '../renderer';
-import type { LatticeContext } from '../context';
+import type { ViewContext } from '../context';
 import type { CreateScopes } from './scope';
 import { createReconciler, ReconcileNode } from './reconcile';
 import { createFragment } from './fragment';
@@ -35,9 +35,9 @@ export type MapFactory<TElement extends RendererElement> = LatticeExtension<
 export interface MapHelperOpts<
   TConfig extends RendererConfig,
   TElement extends RendererElement,
-  TText extends TextNode
+  TText extends TextNode,
 > {
-  ctx: LatticeContext<TElement>;
+  ctx: ViewContext<TElement>;
   signalCtx: GlobalContext;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;

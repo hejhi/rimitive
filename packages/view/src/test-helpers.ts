@@ -4,7 +4,7 @@
 
 import { vi } from 'vitest';
 import { createScopes } from './helpers/scope';
-import { createBaseContext, type LatticeContext } from './context';
+import { createBaseContext, type ViewContext } from './context';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import type { RenderScope } from './types';
 import { CONSTANTS } from '@lattice/signals/constants';
@@ -43,7 +43,9 @@ export const createTestScheduler = (): Pick<Scheduler, 'startBatch' | 'endBatch'
 };
 
 // Helper to create scopes with mock dependencies
-export const createTestScopes = <TElement extends object = MockTestElement>(providedCtx?: LatticeContext<TElement>) => {
+export const createTestScopes = <TElement extends object = MockTestElement>(
+  providedCtx?: ViewContext<TElement>
+) => {
   const ctx = providedCtx || createBaseContext<TElement>();
   const track = <T>(_node: unknown, fn: () => T): T => fn();
 
@@ -78,7 +80,9 @@ export const createTestScopes = <TElement extends object = MockTestElement>(prov
     fn: (scope: RenderScope<TElem>) => T
   ): { result: T; scope: RenderScope<TElem> | null } => {
     // Try to get existing scope first (idempotent)
-    let scope = ctx.elementScopes.get(element) as RenderScope<TElem> | undefined;
+    let scope = ctx.elementScopes.get(element) as
+      | RenderScope<TElem>
+      | undefined;
     let isNewScope = false;
     let parentScope: RenderScope<TElement> | null = null;
 
@@ -113,7 +117,9 @@ export const createTestScopes = <TElement extends object = MockTestElement>(prov
 
       // Attach to parent's child list
       if (parentScope) {
-        scope.nextSibling = parentScope.firstChild as RenderScope<TElem> | undefined;
+        scope.nextSibling = parentScope.firstChild as
+          | RenderScope<TElem>
+          | undefined;
         parentScope.firstChild = scope as RenderScope<TElement>;
       }
 

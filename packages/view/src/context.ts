@@ -12,7 +12,7 @@ import type { RenderScope } from './types';
 /**
  * Combines reactive tracking (signals) with view lifecycle management (view)
  */
-export interface LatticeContext<TElement extends object> {
+export interface ViewContext<TElement extends object> {
   /**
    * Active scope for reactive tracking and lifecycle management
    */
@@ -37,7 +37,7 @@ export interface LatticeContext<TElement extends object> {
  * This should be called once per rendering context (e.g., per SSR request, per client app)
  * to ensure isolation and enable concurrent rendering.
  */
-export function createBaseContext<TElement extends object>(): LatticeContext<TElement> {
+export function createBaseContext<TElement extends object>(): ViewContext<TElement> {
   return {
     activeScope: null,
     trackingVersion: 0,

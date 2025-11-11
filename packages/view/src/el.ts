@@ -9,7 +9,7 @@ import type {
   FragmentRef,
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
-import type { LatticeContext } from './context';
+import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragment } from './helpers/fragment';
@@ -65,7 +65,7 @@ export type ElOpts<
   TElement extends RendererElement = RendererElement,
   TText extends TextNode = TextNode,
 > = {
-  ctx: LatticeContext<TElement>;
+  ctx: ViewContext<TElement>;
   createElementScope: CreateScopes['createElementScope'];
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
@@ -76,7 +76,7 @@ export type ElOpts<
     children: ElRefSpecChild[],
     api?: unknown
   ) => void;
-  };
+};
 
 export type ElProps<TConfig extends RendererConfig, TElement extends RendererElement = RendererElement> = {
   instrument?: (

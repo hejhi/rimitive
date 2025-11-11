@@ -67,8 +67,6 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types.ts'),
         renderer: resolve(__dirname, 'src/renderer.ts'),
         on: resolve(__dirname, 'src/on.ts'),
-        combinators: resolve(__dirname, 'src/combinators.ts'),
-        'browser-renderer': resolve(__dirname, 'src/browser-renderer.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
         'helpers/map': resolve(__dirname, 'src/helpers/map.ts'),
