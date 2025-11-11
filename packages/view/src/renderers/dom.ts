@@ -15,7 +15,9 @@ export function createDOMRenderer(): Renderer<DOMRendererConfig> {
     createElement: (tag) => document.createElement(tag),
     createTextNode: (text) => document.createTextNode(text),
     updateTextNode: (node, text) => (node.textContent = text),
-    setAttribute: (element, key, value) => Reflect.set(element, key, value),
+    setAttribute: (element, key, value) => {
+      Reflect.set(element, key, value);
+    },
     appendChild: (parent, child) => parent.appendChild(child),
     removeChild: (parent, child) => parent.removeChild(child),
     insertBefore: (parent, child, reference) => parent.insertBefore(child, reference),
