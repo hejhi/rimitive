@@ -41,7 +41,6 @@ function createConsumer(): ConsumerNode {
 function createContext(): SignalsContext {
   return {
     consumerScope: null,
-    trackingVersion: 0,
   };
 }
 

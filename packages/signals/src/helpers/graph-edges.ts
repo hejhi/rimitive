@@ -60,13 +60,17 @@ const detachAll = (dep: Dependency): void => {
 };
 
 export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
+  // Tracking version counter - incremented on each tracking cycle
+  // Used to detect stale dependencies
+  let trackingVersion = 0;
+
   const trackDependency = (producer: FromNode, consumer: ToNode): void => {
     const currDep = consumer.dependencyTail;
 
     // Fast path: tail already points to this producer
     if (currDep !== undefined && currDep.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      currDep.version = ctx.trackingVersion;
+      currDep.version = trackingVersion;
       return; // Already tracking
     }
 
@@ -74,7 +78,7 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
     const next = currDep ? currDep.nextDependency : consumer.dependencies;
     if (next !== undefined && next.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
-      next.version = ctx.trackingVersion;
+      next.version = trackingVersion;
       consumer.dependencyTail = next;
       return; // Found and reused
     }
@@ -90,7 +94,7 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
       prevConsumer,
       nextDependency: next,
       nextConsumer: undefined,
-      version: ctx.trackingVersion,
+      version: trackingVersion,
     };
 
     // Wire consumer side
@@ -108,7 +112,7 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
   };
 
   const track = <T>(node: ConsumerNode, fn: () => T): T => {
-    ctx.trackingVersion++;
+    trackingVersion++;
 
     // Clear dirty and pending flags before tracking
     node.status = (node.status & TYPE_MASK) | CLEAN;
@@ -121,7 +125,7 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
       return fn();
     } finally {
       // Record when this node was last tracked (for staleness detection)
-      node.trackingVersion = ctx.trackingVersion;
+      node.trackingVersion = trackingVersion;
       ctx.consumerScope = prevConsumer;
 
       // Prune stale dependencies (everything after dependencyTail)
