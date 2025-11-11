@@ -8,8 +8,7 @@ import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { SignalsContext } from './context';
-import { GraphEdges } from './helpers/graph-edges';
+import { GraphEdges, Consumer } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
 
 // Single function interface for both read and peek
@@ -20,7 +19,7 @@ export interface ComputedFunction<T = unknown> {
 }
 
 export type ComputedOpts = {
-  ctx: SignalsContext;
+  consumer: Consumer;
   trackDependency: GraphEdges['trackDependency'];
   pullUpdates: PullPropagator['pullUpdates'];
   track: GraphEdges['track'];
@@ -36,7 +35,7 @@ export type ComputedProps = {
 };
 
 // Re-export types for proper type inference
-export type { SignalsContext } from './context';
+export type { Consumer } from './helpers/graph-edges';
 export type { GraphEdges } from './helpers/graph-edges';
 export type { PullPropagator } from './helpers/pull-propagator';
 
@@ -57,7 +56,7 @@ const COMPUTED_DIRTY = COMPUTED | DIRTY;
 export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
 
 export const Computed = create(({
-    ctx,
+    consumer,
     trackDependency,
     pullUpdates,
     track,
@@ -84,8 +83,8 @@ export const Computed = create(({
     } else if (isPending) this.status = COMPUTED_CLEAN;
 
     // Track dependency AFTER pulling updates
-    const consumer = ctx.consumerScope;
-    if (consumer) trackDependency(this, consumer);
+    const activeConsumer = consumer.active;
+    if (activeConsumer) trackDependency(this, activeConsumer);
 
     return this.value;
   }
@@ -93,8 +92,8 @@ export const Computed = create(({
   // Shared peek function - uses `this` binding
   function peekImpl<T>(this: ComputedNode<T>): T {
     // Save and clear consumer to prevent tracking
-    const prevConsumer = ctx.consumerScope;
-    ctx.consumerScope = null;
+    const prevConsumer = consumer.active;
+    consumer.active = null;
 
     try {
       const status = this.status;
@@ -106,7 +105,7 @@ export const Computed = create(({
 
       return this.value;
     } finally {
-      ctx.consumerScope = prevConsumer;
+      consumer.active = prevConsumer;
     }
   }
 

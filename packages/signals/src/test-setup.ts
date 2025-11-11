@@ -11,7 +11,6 @@ import { Computed } from './computed';
 import { Effect } from './effect';
 import { Batch } from './batch';
 import { createContext as createLattice } from '@lattice/lattice';
-import { createBaseContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPullPropagator } from './helpers/pull-propagator';
 import { createScheduler } from './helpers/scheduler';
@@ -19,15 +18,13 @@ import { createGraphTraversal } from './helpers/graph-traversal';
 
 // Create a complete context with all helpers
 export function createDefaultContext() {
-  const ctx = createBaseContext();
-  const graphEdges = createGraphEdges({ ctx });
+  const graphEdges = createGraphEdges();
   const { withVisitor } = createGraphTraversal();
   const _scheduler = createScheduler({ detachAll: graphEdges.detachAll });
   const { withPropagate, ...scheduler } = _scheduler;
   const pull = createPullPropagator({ track: graphEdges.track });
 
   return {
-    ctx,
     propagate: withPropagate(withVisitor),
     ...graphEdges,
     ...scheduler,
@@ -38,7 +35,7 @@ export function createDefaultContext() {
 // Create a test instance with a stable context
 export function createTestInstance() {
   const opts = createDefaultContext();
-  const { ctx, propagate, startBatch, endBatch } = opts;
+  const { consumer, propagate, startBatch, endBatch } = opts;
 
   // Create extensions
   const signalExt = Signal().create({ ...opts, propagate });
@@ -58,7 +55,7 @@ export function createTestInstance() {
 
   // Reset function for test cleanup
   const resetGlobalState = () => {
-    ctx.consumerScope = null;
+    consumer.active = null;
     // Can't reset batch from outside anymore - tests should use endBatch
   };
 
@@ -71,14 +68,14 @@ export function createTestInstance() {
     subscribe: api.subscribe,
 
     // Context access for testing
-    setCurrentConsumer: (consumer: ConsumerNode | null) => {
-      ctx.consumerScope = consumer;
+    setCurrentConsumer: (consumerNode: ConsumerNode | null) => {
+      consumer.active = consumerNode;
     },
-    getCurrentConsumer: () => ctx.consumerScope,
+    getCurrentConsumer: () => consumer.active,
     resetGlobalState,
 
     // Raw access for advanced testing
-    activeContext: ctx,
+    consumer,
   };
 }
 
@@ -112,13 +109,13 @@ export function resetGlobalState() {
   defaultInstance.resetGlobalState();
 }
 
-// Export the context with getters for backward compatibility
+// Export the consumer with getters for backward compatibility
 export const activeContext = {
   get consumerScope() {
-    return defaultInstance.activeContext.consumerScope;
+    return defaultInstance.consumer.active;
   },
   set consumerScope(v: ConsumerNode | null) {
-    defaultInstance.activeContext.consumerScope = v;
+    defaultInstance.consumer.active = v;
   },
 };
 

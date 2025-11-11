@@ -18,14 +18,14 @@ export function createSpec<
     }
 ) {
   const { api, deps } = signals;
-  const { ctx: signalsCtx, track, untrack, ...restDeps } = deps;
+  const { consumer, track, untrack, ...restDeps } = deps;
   const { signal, effect } = api;
   const scopes = createScopes({
     baseEffect: effect,
   });
 
   return {
-    signalsCtx,
+    consumer,
     track,
     untrack,
     renderer,

@@ -16,9 +16,8 @@
 import type { ProducerNode, Dependency } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { SignalsContext } from './context';
 import { CONSTANTS } from './constants';
-import { GraphEdges } from './helpers/graph-edges';
+import { GraphEdges, Consumer } from './helpers/graph-edges';
 
 const { CLEAN, PRODUCER, DIRTY } = CONSTANTS;
 
@@ -33,7 +32,7 @@ export interface SignalFunction<T = unknown> {
 }
 
 export type SignalOpts = {
-  ctx: SignalsContext;
+  consumer: Consumer;
   trackDependency: GraphEdges['trackDependency'];
   propagate: (subscribers: Dependency) => void;
 };
@@ -47,7 +46,7 @@ export type SignalProps = {
 };
 
 // Re-export types needed for type inference
-export type { SignalsContext } from './context';
+export type { Consumer } from './helpers/graph-edges';
 export type { GraphEdges } from './helpers/graph-edges';
 
 interface SignalNode<T> extends ProducerNode {
@@ -61,7 +60,7 @@ export type SignalFactory = LatticeExtension<'signal', <T>(value: T) => SignalFu
 export const Signal = create(({
     trackDependency,
     propagate,
-    ctx,
+    consumer,
 }: SignalOpts) => (props?: SignalProps): SignalFactory => {
   const { instrument } = props ?? {};
 
@@ -78,8 +77,8 @@ export const Signal = create(({
     function signal(value?: T): T | void {
       // Read path - track dependency inline
       if (!arguments.length) {
-        const consumer = ctx.consumerScope;
-        if (consumer) trackDependency(node, consumer);
+        const activeConsumer = consumer.active;
+        if (activeConsumer) trackDependency(node, activeConsumer);
         return node.value;
       }
 

@@ -69,7 +69,6 @@ export default defineConfig({
         subscribe: resolve(__dirname, 'src/subscribe.ts'),
         untrack: resolve(__dirname, 'src/untrack.ts'),
         types: resolve(__dirname, 'src/types.ts'),
-        context: resolve(__dirname, 'src/context.ts'),
         constants: resolve(__dirname, 'src/constants.ts'),
         'devtools/signal': resolve(__dirname, 'src/devtools/signal.ts'),
         'devtools/computed': resolve(__dirname, 'src/devtools/computed.ts'),

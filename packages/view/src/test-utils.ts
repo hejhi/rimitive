@@ -8,7 +8,6 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { Signal } from '@lattice/signals/signal';
 import { Effect } from '@lattice/signals/effect';
-import { createBaseContext as createSignalContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
 
 // Re-export types for convenience
@@ -274,18 +273,15 @@ export function getTextContent(element: MockElement | MockText): string {
 export function createTestEnv() {
   const { renderer } = createMockRenderer();
 
-  // Create proper SignalsContext for signals
-  const signalsCtx = createSignalContext();
-
   // Use real signals integration for proper reactive updates
-  const graphEdges = createGraphEdges({ ctx: signalsCtx });
+  const graphEdges = createGraphEdges();
   const { withVisitor } = createGraphTraversal();
   const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
   const propagate = scheduler.withPropagate(withVisitor);
 
   // Create real signal factory
   const signalFactory = Signal().create({
-    ctx: signalsCtx,
+    consumer: graphEdges.consumer,
     trackDependency: graphEdges.trackDependency,
     propagate,
   });
@@ -295,14 +291,13 @@ export function createTestEnv() {
 
   // Use real effect from signals
   const effectFactory = Effect().create({
-    ctx: signalsCtx,
     track: graphEdges.track,
     dispose: scheduler.dispose,
   });
   const effect = effectFactory.method;
 
   // Create untrack helper
-  const untrack = createUntracked({ ctx: signalsCtx });
+  const untrack = createUntracked({ consumer: graphEdges.consumer });
 
   const { disposeScope, createElementScope, scopedEffect, onCleanup, getElementScope } =
     createScopes({
@@ -310,7 +305,7 @@ export function createTestEnv() {
     });
 
   return {
-    signalsCtx,
+    consumer: graphEdges.consumer,
     renderer,
     signal,
     effect,

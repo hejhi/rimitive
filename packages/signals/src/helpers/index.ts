@@ -1,4 +1,3 @@
-import { createBaseContext } from '../context';
 import { createGraphEdges } from './graph-edges';
 import { createGraphTraversal } from './graph-traversal';
 import { createPullPropagator } from './pull-propagator';
@@ -6,20 +5,20 @@ import { createScheduler } from './scheduler';
 import { createUntracked } from '../untrack';
 
 // Push
-export function createPush(ctx = createBaseContext()) {
-  const untrack = createUntracked({ ctx });
+export function createPush() {
+  const edges = createGraphEdges();
+  const untrack = createUntracked({ consumer: edges.consumer });
 
   return {
-    ctx,
     untrack,
-    ...createGraphEdges({ ctx }),
+    ...edges,
     ...createGraphTraversal(),
   };
 }
 
 // Push, pull
-export function createPushPull(ctx = createBaseContext()) {
-  const { track, ...restPush } = createPush(ctx);
+export function createPushPull() {
+  const { track, ...restPush } = createPush();
 
   return {
     track,
@@ -29,8 +28,8 @@ export function createPushPull(ctx = createBaseContext()) {
 }
 
 // Push, schedule
-export function createPushSchedule(ctx = createBaseContext()) {
-  const { detachAll, track, withVisitor, ...restPush } = createPush(ctx);
+export function createPushSchedule() {
+  const { detachAll, track, withVisitor, ...restPush } = createPush();
   const { withPropagate, ...scheduler } = createScheduler({ detachAll });
 
   return {
@@ -43,8 +42,8 @@ export function createPushSchedule(ctx = createBaseContext()) {
 }
 
 // Push, pull, schedule
-export function createPushPullSchedule(ctx = createBaseContext()) {
-  const { detachAll, track, withVisitor, ...restPushPull } = createPushPull(ctx);
+export function createPushPullSchedule() {
+  const { detachAll, track, withVisitor, ...restPushPull } = createPushPull();
   const { withPropagate, ...scheduler } = createScheduler({ detachAll });
   const pull = createPullPropagator({ track });
 

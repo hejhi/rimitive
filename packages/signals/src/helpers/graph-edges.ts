@@ -1,4 +1,3 @@
-import { SignalsContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 
@@ -7,7 +6,15 @@ const { TYPE_MASK, CLEAN } = CONSTANTS;
 // Re-export types for proper type inference
 export type { ProducerNode, ConsumerNode, Dependency } from '../types';
 
+/**
+ * Consumer tracking state - tracks the currently active consumer during reactive reads
+ */
+export interface Consumer {
+  active: ConsumerNode | null;
+}
+
 export interface GraphEdges {
+  consumer: Consumer;
   trackDependency: (
     producer: ProducerNode,
     consumer: ConsumerNode,
@@ -59,13 +66,16 @@ const detachAll = (dep: Dependency): void => {
   } while (current);
 };
 
-export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
+export function createGraphEdges(): GraphEdges {
+  // Consumer tracking state - owned by this graph edges instance
+  const consumer: Consumer = { active: null };
+
   // Tracking version counter - incremented on each tracking cycle
   // Used to detect stale dependencies
   let trackingVersion = 0;
 
-  const trackDependency = (producer: FromNode, consumer: ToNode): void => {
-    const currDep = consumer.dependencyTail;
+  const trackDependency = (producer: FromNode, consumerNode: ToNode): void => {
+    const currDep = consumerNode.dependencyTail;
 
     // Fast path: tail already points to this producer
     if (currDep !== undefined && currDep.producer === producer) {
@@ -75,11 +85,11 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
     }
 
     // Check next dependency in sequence
-    const next = currDep ? currDep.nextDependency : consumer.dependencies;
+    const next = currDep ? currDep.nextDependency : consumerNode.dependencies;
     if (next !== undefined && next.producer === producer) {
       // Update version to mark as accessed in this tracking cycle
       next.version = trackingVersion;
-      consumer.dependencyTail = next;
+      consumerNode.dependencyTail = next;
       return; // Found and reused
     }
 
@@ -89,7 +99,7 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
     // Create new dependency edge
     const dep: Dependency = {
       producer,
-      consumer,
+      consumer: consumerNode,
       prevDependency: currDep,
       prevConsumer,
       nextDependency: next,
@@ -98,11 +108,11 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
     };
 
     // Wire consumer side
-    consumer.dependencyTail = dep;
+    consumerNode.dependencyTail = dep;
 
     if (next) next.prevDependency = dep;
     if (currDep) currDep.nextDependency = dep;
-    else consumer.dependencies = dep;
+    else consumerNode.dependencies = dep;
 
     // Wire producer side - single subscriber list for all consumers
     if (prevConsumer) prevConsumer.nextConsumer = dep;
@@ -117,16 +127,16 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
     // Clear dirty and pending flags before tracking
     node.status = (node.status & TYPE_MASK) | CLEAN;
 
-    const prevConsumer = ctx.consumerScope;
+    const prevConsumer = consumer.active;
     node.dependencyTail = undefined;
-    ctx.consumerScope = node;
+    consumer.active = node;
 
     try {
       return fn();
     } finally {
       // Record when this node was last tracked (for staleness detection)
       node.trackingVersion = trackingVersion;
-      ctx.consumerScope = prevConsumer;
+      consumer.active = prevConsumer;
 
       // Prune stale dependencies (everything after dependencyTail)
       // dependencyTail marks the last dependency accessed in this tracking cycle
@@ -156,6 +166,7 @@ export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
   };
 
   return {
+    consumer,
     trackDependency,
     detachAll,
     track,

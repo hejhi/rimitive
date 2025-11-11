@@ -8,26 +8,26 @@
  * - Sampling values for debugging/logging
  */
 
-import type { SignalsContext } from './context';
+import type { Consumer } from './helpers/graph-edges';
 
 export interface UntrackedOpts {
-  ctx: SignalsContext;
+  consumer: Consumer;
 }
 
 /**
  * Create an untracked helper
  */
 export function createUntracked(opts: UntrackedOpts) {
-  const { ctx } = opts;
+  const { consumer } = opts;
 
   return function untrack<T>(fn: () => T): T {
-    const prevConsumer = ctx.consumerScope;
-    ctx.consumerScope = null;  // Disable tracking
+    const prevConsumer = consumer.active;
+    consumer.active = null;  // Disable tracking
 
     try {
       return fn();
     } finally {
-      ctx.consumerScope = prevConsumer;  // Restore previous tracking context
+      consumer.active = prevConsumer;  // Restore previous tracking context
     }
   };
 }
