@@ -11,13 +11,12 @@
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from './types';
-import { isElementRef } from './types';
-import { resolveNextRef } from './helpers/fragment';
+import { STATUS_ELEMENT } from './types';
 import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from './renderer';
 import type { ViewContext } from './context';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
-import { createFragment } from './helpers/fragment';
+import { createFragment, resolveNextRef } from './helpers/fragment';
 import type { GlobalContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
 
@@ -92,7 +91,7 @@ export const Map = create(
           ) => RefSpec<TElement> | SealedSpec<TElement>
         ) =>
           createFragment((parent, nextSibling, api) => {
-            const parentEl = parent.element;
+            const parentElement = parent.element;
             const nextSib = nextSibling as
               | RecNode<T, TElement>
               | null
@@ -104,7 +103,7 @@ export const Map = create(
               TElement,
               RecNode<T, TElement>
             >({
-              parentElement: parentEl,
+              parentElement,
               parentRef: parent,
               nextSibling: nextSib ?? undefined,
 
@@ -119,7 +118,7 @@ export const Map = create(
                 >;
 
                 renderer.insertBefore(
-                  parentEl,
+                  parentElement,
                   elRef.element,
                   resolveNextRef(nextSibling)?.element ?? null
                 );
@@ -137,28 +136,28 @@ export const Map = create(
 
               // onMove: called when item needs repositioning
               onMove(node, nextSiblingNode) {
-                if (!isElementRef(node)) return;
+                if (node.status !== STATUS_ELEMENT) return;
 
                 let nextEl: TElement | null = null;
 
-                if (nextSiblingNode && isElementRef(nextSiblingNode)) {
+                if (nextSiblingNode && nextSiblingNode.status === STATUS_ELEMENT) {
                   nextEl = nextSiblingNode.element;
                 } else if (!nextSiblingNode) {
                   nextEl = resolveNextRef(nextSibling)?.element ?? null;
                 }
 
-                renderer.insertBefore(parentEl, node.element, nextEl);
+                renderer.insertBefore(parentElement, node.element, nextEl);
               },
 
               // onRemove: called when item is being removed
               onRemove(node) {
                 // Remove from DOM and clean up element scope
-                if (!isElementRef(node)) return;
+                if (node.status !== STATUS_ELEMENT) return;
 
                 const scope = ctx.elementScopes.get(node.element);
                 if (scope) disposeScope(scope);
 
-                renderer.removeChild(parentEl, node.element);
+                renderer.removeChild(parentElement, node.element);
               },
             });
 

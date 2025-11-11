@@ -1,5 +1,5 @@
 import type { ElementRef, NodeRef, FragmentRef } from '../types';
-import { STATUS_FRAGMENT, STATUS_ELEMENT, isFragmentRef, isElementRef } from '../types';
+import { STATUS_FRAGMENT, STATUS_ELEMENT } from '../types';
 
 export type FragmentInitFn<TElement> = (
   parent: ElementRef<TElement>,
@@ -54,11 +54,15 @@ export function resolveNextRef<TElement>(
   while (current) {
     if (current.status === STATUS_ELEMENT) return current;
 
-    // FragmentRef - try to get first child element
-    if (current.firstChild) {
-      const firstChild = current.firstChild as NodeRef<TElement>;
+    const firstChild = current.firstChild;
 
-      if (isFragmentRef(firstChild) || isElementRef(firstChild)) return firstChild;
+    // FragmentRef - try to get first child element
+    if (firstChild) {
+      const status = firstChild.status;
+
+      if (status === STATUS_FRAGMENT || status === STATUS_ELEMENT) {
+        return firstChild as NodeRef<TElement>;
+      }
     }
 
     current = current.next as NodeRef<TElement> | null | undefined; // Empty fragment - skip to next sibling
