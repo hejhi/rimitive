@@ -7,9 +7,6 @@ import { createScopes } from './helpers/scope';
 import { createBaseContext, type ViewContext } from './context';
 import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import type { RenderScope } from './types';
-import { CONSTANTS } from '@lattice/signals/constants';
-
-const { DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } = CONSTANTS;
 
 // Mock element for testing
 export type MockTestElement = { __mock: boolean };
@@ -47,32 +44,18 @@ export const createTestScopes = <TElement extends object = MockTestElement>(
   providedCtx?: ViewContext<TElement>
 ) => {
   const ctx = providedCtx || createBaseContext<TElement>();
-  const track = <T>(_node: unknown, fn: () => T): T => fn();
 
-  // Mock dispose that mimics real scheduler behavior
-  const dispose = <T>(_node: unknown, cleanup: (node: T) => void): void => {
-    const scope = _node as RenderScope<HTMLElement>;
-
-    // Check if already disposed (idempotent)
-    if ((scope.status & STATE_MASK) === DISPOSED) return;
-
-    // Set DISPOSED status (mimics scheduler.dispose line 154)
-    scope.status = CONSUMER | SCHEDULED | DISPOSED;
-
-    // Call cleanup callback
-    cleanup(_node as T);
-
-    // Clear dependencies (mimics scheduler.dispose lines 157-165)
-    scope.dependencies = undefined;
-    scope.dependencyTail = undefined;
-  };
+  // Mock detachAll - no-op for tests since we don't track real dependencies
+  const detachAll = vi.fn(() => {
+    // No-op in tests
+  });
 
   const baseEffect = vi.fn((fn: () => void | (() => void)) => {
     fn();
     return () => {};
   });
 
-  const scopes = createScopes<TElement>({ ctx, track, dispose, baseEffect });
+  const scopes = createScopes<TElement>({ ctx, detachAll, baseEffect });
 
   // Test-only withScope implementation for backward compatibility with tests
   const withScope = <TElem extends TElement = TElement, T = void>(
@@ -90,29 +73,17 @@ export const createTestScopes = <TElement extends object = MockTestElement>(
       parentScope = ctx.activeScope;
 
       // Create scope inline
-      const RENDER_SCOPE_CLEAN = CONSUMER | SCHEDULED | 0b0001; // CONSUMER | SCHEDULED | CLEAN
+      const RENDER_SCOPE_CLEAN = 0b10000001; // CONSUMER | CLEAN (0b10000000 | 0b00000001)
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,
         dependencies: undefined,
         dependencyTail: undefined,
         trackingVersion: 0,
-        nextScheduled: undefined,
-        flush(): void {
-          if (scope!.renderFn === undefined) return;
-          const { cleanup } = scope!;
-          if (cleanup) {
-            cleanup();
-            scope!.cleanup = undefined;
-          }
-          const result = track(scope!, scope!.renderFn);
-          if (typeof result === 'function') scope!.cleanup = result;
-        },
         firstChild: undefined,
         nextSibling: undefined,
         firstDisposable: undefined,
         element,
-        cleanup: undefined,
       };
 
       // Attach to parent's child list
@@ -143,7 +114,7 @@ export const createTestScopes = <TElement extends object = MockTestElement>(
       ctx.activeScope = prevScope;
     }
 
-    // CRITICAL: Only keep scope if it has disposables/renderFn
+    // CRITICAL: Only keep scope if it has disposables
     if (isNewScope && scope.firstDisposable !== undefined) {
       ctx.elementScopes.set(element, scope);
       return { result, scope };

@@ -2,7 +2,7 @@
  * Core types for @lattice/view
  */
 
-import type { Readable, ScheduledNode } from '@lattice/signals/types';
+import type { Readable, ConsumerNode } from '@lattice/signals/types';
 import type { Instantiatable } from '@lattice/lattice';
 
 /**
@@ -108,7 +108,7 @@ export type ElRefSpecChild =
   | Reactive<unknown>
   | FragmentRef<unknown>;
 
-export interface RenderScope<TElement> extends ScheduledNode {
+export interface RenderScope<TElement> extends ConsumerNode {
   // Tree structure (from Scope) - intrusive singly-linked tree
   firstChild: RenderScope<TElement> | undefined;
   nextSibling: RenderScope<TElement> | undefined;
@@ -118,10 +118,6 @@ export interface RenderScope<TElement> extends ScheduledNode {
 
   // Element binding (view-specific)
   element: TElement;
-  cleanup?: () => void;
-
-  // Reactive rendering (for effect-based scopes)
-  renderFn?: () => void | (() => void);
 }
 
 /**

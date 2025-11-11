@@ -302,14 +302,12 @@ export function createTestEnv() {
   });
   const effect = effectFactory.method;
 
-  const track = graphEdges.track;
-  const dispose = scheduler.dispose;
+  const detachAll = graphEdges.detachAll;
 
   const { disposeScope, createElementScope, scopedEffect, onCleanup } =
     createScopes<MockElement>({
       ctx,
-      track,
-      dispose,
+      detachAll,
       baseEffect: effect,
     });
 
@@ -331,29 +329,17 @@ export function createTestEnv() {
       parentScope = ctx.activeScope;
 
       // Create scope inline (similar to production createElementScope but always returns scope)
-      const RENDER_SCOPE_CLEAN = 0b0111; // CONSUMER | SCHEDULED | CLEAN
+      const RENDER_SCOPE_CLEAN = 0b0011; // CONSUMER | CLEAN
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,
         dependencies: undefined,
         dependencyTail: undefined,
         trackingVersion: 0,
-        nextScheduled: undefined,
-        flush(): void {
-          if (scope!.renderFn === undefined) return;
-          const { cleanup } = scope!;
-          if (cleanup) {
-            cleanup();
-            scope!.cleanup = undefined;
-          }
-          const result = track(scope!, scope!.renderFn);
-          if (typeof result === 'function') scope!.cleanup = result;
-        },
         firstChild: undefined,
         nextSibling: undefined,
         firstDisposable: undefined,
         element,
-        cleanup: undefined,
       };
 
       // Attach to parent's child list
@@ -382,7 +368,7 @@ export function createTestEnv() {
       ctx.activeScope = prevScope;
     }
 
-    // CRITICAL: Only keep scope if it has disposables/renderFn
+    // CRITICAL: Only keep scope if it has disposables
     if (isNewScope && scope.firstDisposable !== undefined) {
       ctx.elementScopes.set(element, scope);
       return { result, scope };

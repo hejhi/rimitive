@@ -1,13 +1,13 @@
 import type { RenderScope } from '../types';
 import type { ViewContext } from '../context';
 import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
-import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 import { CONSTANTS } from '@lattice/signals/constants';
 
-const { CLEAN, CONSUMER, SCHEDULED, DISPOSED, STATE_MASK } = CONSTANTS;
+const { CLEAN, CONSUMER, DISPOSED, STATE_MASK } = CONSTANTS;
 
-// Status combination for render scopes (consumer + scheduled + clean)
-const RENDER_SCOPE_CLEAN = CONSUMER | SCHEDULED | CLEAN;
+// Status combination for render scopes (consumer + clean)
+// Note: Not marked as SCHEDULED since RenderScopes don't implement reactive flush behavior
+const RENDER_SCOPE_CLEAN = CONSUMER | CLEAN;
 
 /**
  * Public scope API for managing element lifecycles and cleanup.
@@ -43,13 +43,11 @@ export type CreateScopes = {
 
 export function createScopes<TElement extends object>({
   ctx,
-  track,
-  dispose: disposeNode,
+  detachAll,
   baseEffect,
 }: {
   ctx: ViewContext<TElement>;
-  track: GraphEdges['track'];
-  dispose: Scheduler['dispose'];
+  detachAll: GraphEdges['detachAll'];
   baseEffect: (fn: () => void | (() => void)) => () => void;
 }): CreateScopes {
   // Cast ctx to handle any object type at runtime
@@ -67,15 +65,15 @@ export function createScopes<TElement extends object>({
     // Already disposed (idempotent)
     if ((scope.status & STATE_MASK) === DISPOSED) return;
 
-    // Use scheduler to dispose the reactive node
-    // This handles dependency graph cleanup and marks the node as disposed
-    disposeNode(scope, () => {
-      // Run cleanup function if present
-      if (scope.cleanup) {
-        scope.cleanup();
-        scope.cleanup = undefined;
-      }
-    });
+    // Mark as disposed
+    scope.status = (scope.status & ~STATE_MASK) | DISPOSED;
+
+    // Detach dependencies from the reactive graph
+    if (scope.dependencies) {
+      detachAll(scope.dependencies);
+      scope.dependencies = undefined;
+      scope.dependencyTail = undefined;
+    }
 
     // Dispose all child scopes recursively (tree structure)
     let child = scope.firstChild;
@@ -118,36 +116,14 @@ export function createScopes<TElement extends object>({
     // Use activeScope as parent for automatic hierarchy
     const parentScope = anyCtx.activeScope;
 
-    // Inline scope creation - combines reactive graph node (ScheduledNode) with tree structure (Scope)
+    // Inline scope creation - combines reactive graph node (ConsumerNode) with tree structure (Scope)
     const scope: RenderScope<TElem> = {
-      // Reactive graph fields (from ScheduledNode -> ConsumerNode -> ReactiveNode)
+      // Reactive graph fields (from ConsumerNode -> ReactiveNode)
       __type: 'render-scope',
       status: RENDER_SCOPE_CLEAN,
       dependencies: undefined,
       dependencyTail: undefined,
       trackingVersion: 0,
-      nextScheduled: undefined,
-
-      // Flush method - re-runs render function with reactive tracking
-      // When signals change, scheduler marks this scope DIRTY and queues for flush
-      flush(): void {
-        if (scope.renderFn === undefined) return;
-
-        const { cleanup } = scope;
-
-        // Clear previous cleanup
-        if (cleanup) {
-          cleanup();
-          scope.cleanup = undefined;
-        }
-
-        // Re-run render with dependency tracking
-        // track() establishes edges from signals to this scope
-        const result = track(scope, scope.renderFn);
-
-        // Store cleanup function if returned
-        if (typeof result === 'function') scope.cleanup = result;
-      },
 
       // Tree structure (from Scope)
       firstChild: undefined,
@@ -158,7 +134,6 @@ export function createScopes<TElement extends object>({
 
       // Element binding
       element,
-      cleanup: undefined,
     };
 
     // Attach to parent's child list
