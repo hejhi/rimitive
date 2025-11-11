@@ -59,6 +59,6 @@ export const { create, api, mount } = createApi(
     },
     createPushPullSchedule(),
     { instrumentation }
-  ),
+  ).api,
   { instrumentation }
 );
