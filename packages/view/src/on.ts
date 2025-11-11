@@ -8,14 +8,12 @@
 
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { Scheduler } from '@lattice/signals/helpers/scheduler';
 
 /**
  * Options for creating on factory
  */
 export type OnOpts = {
-  startBatch: Scheduler['startBatch'];
-  endBatch: Scheduler['endBatch'];
+  batch: <T>(fn: () => T) => T;
 };
 
 export type OnProps = {
@@ -41,28 +39,10 @@ export type OnFactory = LatticeExtension<
 >;
 
 /**
- * Utility to wrap a function with batching
- * Ensures all signal updates in the function trigger one re-render
- */
-export function withBatch<TArgs extends unknown[], TReturn>(
-  scheduler: Pick<Scheduler, 'startBatch' | 'endBatch'>,
-  fn: (...args: TArgs) => TReturn
-): (...args: TArgs) => TReturn {
-  return (...args: TArgs) => {
-    scheduler.startBatch();
-    try {
-      return fn(...args);
-    } finally {
-      scheduler.endBatch();
-    }
-  };
-}
-
-/**
  * On primitive - instantiatable extension using the create pattern
  * Similar to Signal() in signals preset
  */
-export const On = create(({ startBatch, endBatch }: OnOpts) => (props?: OnProps) => {
+export const On = create(({ batch }: OnOpts) => (props?: OnProps) => {
   const { instrument } = props ?? {};
 
   /**
@@ -75,7 +55,7 @@ export const On = create(({ startBatch, endBatch }: OnOpts) => (props?: OnProps)
   ): (element: HTMLElement) => () => void {
     return (element: HTMLElement) => {
       // Wrap handler with batching for automatic performance optimization
-      const batchedHandler = withBatch({ startBatch, endBatch }, handler);
+      const batchedHandler = (e: HTMLElementEventMap[K]) => batch(() => handler(e));
 
       element.addEventListener(event, batchedHandler as EventListener, options);
       return () =>

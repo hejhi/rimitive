@@ -42,11 +42,13 @@ export const createTestScheduler = () => {
     get batchDepth() {
       return batchDepth;
     },
-    startBatch(): number {
-      return ++batchDepth;
-    },
-    endBatch(): number {
-      return --batchDepth;
+    batch<T>(fn: () => T): T {
+      batchDepth++;
+      try {
+        return fn();
+      } finally {
+        batchDepth--;
+      }
     },
   };
 };

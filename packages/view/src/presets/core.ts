@@ -9,6 +9,7 @@ import type {
   Element as RendererElement,
   TextNode,
 } from '../renderer';
+import type { ReactiveAdapter } from '../reactive-adapter';
 import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
 import { create as baseCreate } from '../component';
 import type { RefSpec, SealedSpec, NodeRef } from '../types';
@@ -69,12 +70,20 @@ export function createApi<
   signalsApi = createReactiveApi(),
   opts?: CreateContextOptions
 ) {
+  // Create ReactiveAdapter from signals API
+  const { signal, effect, batch } = signalsApi.api;
+  const reactive: ReactiveAdapter = {
+    signal,
+    effect,
+    batch,
+  };
+
   // Merge signals and view apis first
   const api = {
     ...signalsApi.api,
     ...createLatticeApi(
       { ...extensions, ...ext },
-      createSpec(renderer, signalsApi),
+      createSpec(renderer, reactive, signalsApi.deps),
       opts
     ),
   };
