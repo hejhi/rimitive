@@ -6,7 +6,7 @@ import type { LatticeExtension, InstrumentationContext, ExtensionContext } from 
 import { create } from '@lattice/lattice';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from './types';
 import { STATUS_ELEMENT } from './types';
-import type { Renderer, Element as RendererElement, RendererConfig } from './renderer';
+import type { Renderer, RendererConfig } from './renderer';
 import type { ViewContext } from './context';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
@@ -17,12 +17,12 @@ import { createUntracked } from '@lattice/signals/untrack';
 /**
  * Map factory type - curried for element builder pattern
  */
-export type MapFactory<TElement extends RendererElement> = LatticeExtension<
+export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
   'map',
   <T>(
     items: () => T[],
     keyFn?: (item: T) => string | number
-  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TElement> | SealedSpec<TElement>) => FragmentRef<TElement>
+  ) => (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>) => FragmentRef<TConfig['baseElement']>
 >;
 
 export interface MapHelperOpts<
@@ -37,13 +37,13 @@ export interface MapHelperOpts<
 }
 
 export interface MapProps<
-  TElement extends RendererElement,
+  TConfig extends RendererConfig,
 > {
   instrument?: (
-    method: MapFactory<TElement>['method'],
+    method: MapFactory<TConfig>['method'],
     instrumentation: InstrumentationContext,
     context: ExtensionContext
-  ) => MapFactory<TElement>['method'];
+  ) => MapFactory<TConfig>['method'];
 }
 
 type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => void>;
@@ -63,36 +63,32 @@ export const Map = create(
     renderer,
     disposeScope,
   }: MapHelperOpts<TConfig>) =>
-    (props?: MapProps<TConfig['baseElement']>) => {
-      type TElement = TConfig['baseElement'];
+    (props?: MapProps<TConfig>) => {
+      type TBaseElement = TConfig['baseElement'];
+      type TFragRef = FragmentRef<TBaseElement>;
+      type TRefSpec = RefSpec<TBaseElement>;
+      type TSealedSpec = SealedSpec<TBaseElement>;
+      type TSpec = TRefSpec | TSealedSpec;
+
       const { instrument } = props ?? {}
       const untrack = createUntracked({ ctx: signalCtx });
 
       function map<T>(
         items: () => T[],
         keyFn?: (item: T) => string | number
-      ): (
-        render: (
-          itemSignal: Reactive<T>
-        ) => RefSpec<TElement> | SealedSpec<TElement>
-      ) => FragmentRef<TElement> {
-        return (
-          render: (
-            itemSignal: Reactive<T>
-          ) => RefSpec<TElement> | SealedSpec<TElement>
-        ) =>
+      ): (render: (itemSignal: Reactive<T>) => TSpec) => TFragRef {
+        type TRecNode = RecNode<T, TBaseElement>;
+
+        return (render: (itemSignal: Reactive<T>) => TSpec) =>
           createFragment((parent, nextSibling, api) => {
             const parentElement = parent.element;
-            const nextSib = nextSibling as
-              | RecNode<T, TElement>
-              | null
-              | undefined;
+            const nextSib = nextSibling as TRecNode | null | undefined;
 
             // Create reconciler with internal state management and hooks
             const { reconcile, dispose } = createReconciler<
               T,
-              TElement,
-              RecNode<T, TElement>
+              TBaseElement,
+              TRecNode
             >({
               parentElement,
               parentRef: parent,
@@ -103,10 +99,7 @@ export const Map = create(
 
                 // Render the item - this creates an element with its own scope
                 // Pass api for SealedSpec components created with create()
-                const elRef = render(itemSignal).create(api) as RecNode<
-                  T,
-                  TElement
-                >;
+                const elRef = render(itemSignal).create(api) as TRecNode;
 
                 renderer.insertBefore(
                   parentElement,
@@ -129,9 +122,12 @@ export const Map = create(
               onMove(node, nextSiblingNode) {
                 if (node.status !== STATUS_ELEMENT) return;
 
-                let nextEl: TElement | null = null;
+                let nextEl: TBaseElement | null = null;
 
-                if (nextSiblingNode && nextSiblingNode.status === STATUS_ELEMENT) {
+                if (
+                  nextSiblingNode &&
+                  nextSiblingNode.status === STATUS_ELEMENT
+                ) {
                   nextEl = nextSiblingNode.element;
                 } else if (!nextSiblingNode) {
                   nextEl = resolveNextRef(nextSibling)?.element ?? null;
@@ -172,7 +168,7 @@ export const Map = create(
           });
       }
 
-      const extension: MapFactory<TElement> = {
+      const extension: MapFactory<TConfig> = {
         name: 'map',
         method: map,
         ...(instrument && { instrument }),

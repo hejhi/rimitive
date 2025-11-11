@@ -10,7 +10,7 @@ import type {
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { ViewContext } from './context';
-import type { Renderer, Element as RendererElement, RendererConfig } from './renderer';
+import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragment } from './helpers/fragment';
 import { createProcessChildren } from './helpers/processChildren';
@@ -72,12 +72,12 @@ export type ElOpts<
   renderer: Renderer<TConfig>;
 };
 
-export type ElProps<TConfig extends RendererConfig, TElement extends RendererElement = RendererElement> = {
+export type ElProps<TConfig extends RendererConfig> = {
   instrument?: (
-    method: ElFactory<TConfig, TElement>['method'],
+    method: ElFactory<TConfig>['method'],
     instrumentation: InstrumentationContext,
     context: ExtensionContext
-  ) => ElFactory<TConfig, TElement>['method'];
+  ) => ElFactory<TConfig>['method'];
 };
 
 /**
@@ -104,11 +104,9 @@ export type ChildrenApplicator<
  *
  * Generic over:
  * - TConfig: The renderer configuration
- * - TElement: Base element type for the renderer
  */
 export type ElFactory<
-  TConfig extends RendererConfig,
-  TElement extends RendererElement = RendererElement
+  TConfig extends RendererConfig
 > = LatticeExtension<
   'el',
   {
@@ -121,7 +119,7 @@ export type ElFactory<
     // Reactive element builder
     <Tag extends keyof TConfig['elements']>(
       reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
-    ): FragmentRef<TElement>;
+    ): FragmentRef<TConfig['baseElement']>;
   }
 >;
 
@@ -145,10 +143,14 @@ export const El = create(
     disposeScope,
     onCleanup,
   }: ElOpts<TConfig>) =>
-    (props?: ElProps<TConfig, TConfig['baseElement']>) => {
-      type TElement = TConfig['baseElement'];
+    (props?: ElProps<TConfig>) => {
+      type TBaseElement = TConfig['baseElement'];
+      type TElements = TConfig['elements'];
+      type TElementKeys = keyof TElements;
+      type TFragRef = FragmentRef<TBaseElement>;
+
       const { instrument } = props ?? {};
-      const { processChildren } = createProcessChildren<TConfig, TElement>({
+      const { processChildren } = createProcessChildren<TConfig>({
         scopedEffect,
         renderer,
       });
@@ -169,6 +171,7 @@ export const El = create(
           api?: unknown
         ) => ElementRef<El>
       ): RefSpec<El> => {
+        type TElRef = ElementRef<El>;
         const lifecycleCallbacks: LifecycleCallback<El>[] = [];
 
         const refSpec: RefSpec<El> = (
@@ -183,71 +186,64 @@ export const El = create(
         refSpec.create = <TExt>(
           api?: unknown,
           extensions?: TExt
-        ): ElementRef<El> & TExt => {
+        ) => {
           const elRef = createElement(lifecycleCallbacks, api);
-          return { ...elRef, ...extensions } as ElementRef<El> & TExt;
+          return { ...elRef, ...extensions } as TElRef & TExt;
         };
 
         return refSpec;
       };
 
       const createAttrEffect =
-        <TEl extends TElement>(
+        <TEl extends TBaseElement>(
           element: TEl,
           key: string,
           getter: () => unknown
         ) => () => setAttribute(element, key, getter());
 
-      const createStaticElement = <Tag extends string & keyof TConfig['elements']>(
+      const createStaticElement = <Tag extends string & TElementKeys>(
         tag: Tag,
         props: ElementProps<TConfig, Tag>,
         children: ElRefSpecChild[]
-      ): RefSpec<TConfig['elements'][Tag]> => {
-        type El = TConfig['elements'][Tag];
+      ): RefSpec<TElements[Tag]> => {
+        // The specific element the user provides
+        type TElement = TElements[Tag];
 
-        return createRefSpec<El>((lifecycleCallbacks, api) => {
-          const element = createElement(tag) as El;
-          const elRef: ElementRef<El> = {
+        return createRefSpec<TElement>((lifecycleCallbacks, api) => {
+          const element = createElement(tag);
+          const elRef: ElementRef<TBaseElement> = {
             status: STATUS_ELEMENT,
-            element,
+            element: element,
             next: undefined,
           };
 
-          createElementScope(element as object, () => {
+          createElementScope(element, () => {
             for (const [key, val] of Object.entries(props)) {
               if (typeof val !== 'function') {
-                setAttribute(element as TElement, key, val);
+                setAttribute(element, key, val);
                 continue;
               }
               scopedEffect(
-                createAttrEffect(
-                  element as TElement,
-                  key,
-                  val as () => unknown
-                )
+                createAttrEffect(element, key, val as () => unknown)
               );
             }
-            processChildren(
-              elRef as ElementRef<TElement>,
-              children,
-              api
-            );
+            processChildren(elRef, children, api);
 
             // Execute lifecycle callbacks within scope
             for (const callback of lifecycleCallbacks) {
-              const cleanup = callback(element);
+              const cleanup = callback(element as TElement);
               if (cleanup) onCleanup(cleanup);
             }
           });
 
-          return elRef;
+          return elRef as ElementRef<TElement>;
         });
       };
 
-      const createReactiveElement = <Tag extends string & keyof TConfig['elements']>(
+      const createReactiveElement = <Tag extends string & TElementKeys>(
         specReactive: Reactive<ReactiveElSpec<TConfig, Tag>>
-      ): FragmentRef<TElement> => {
-        const fragRef = createFragment<TElement>((parent, nextSibling) => {
+      ): TFragRef => {
+        const fragRef = createFragment<TBaseElement>((parent, nextSibling) => {
           return scopedEffect(() => {
             const spec = specReactive();
 
@@ -262,7 +258,7 @@ export const El = create(
               spec.tag,
               spec.props || {},
               spec.children || []
-            ).create<ElementRef<TElement>>();
+            ).create<ElementRef<TBaseElement>>();
 
             fragRef.firstChild = elementRef;
 
@@ -286,17 +282,17 @@ export const El = create(
       };
 
       // Overloaded implementation
-      function el<Tag extends string & keyof TConfig['elements']>(
+      function el<Tag extends string & TElementKeys>(
         tag: Tag,
         props?: ElementProps<TConfig, Tag>
       ): ChildrenApplicator<TConfig, Tag>;
-      function el<Tag extends string & keyof TConfig['elements']>(
+      function el<Tag extends string & TElementKeys>(
         reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
-      ): FragmentRef<TElement>;
-      function el<Tag extends string & keyof TConfig['elements']>(
+      ): TFragRef;
+      function el<Tag extends string & TElementKeys>(
         tagOrReactive: Tag | Reactive<ReactiveElSpec<TConfig, Tag>>,
         props?: ElementProps<TConfig, Tag>
-      ): ChildrenApplicator<TConfig, Tag> | FragmentRef<TElement> {
+      ): ChildrenApplicator<TConfig, Tag> | TFragRef {
         // Handle reactive case
         if (typeof tagOrReactive === 'function') {
           return createReactiveElement(tagOrReactive);
@@ -306,13 +302,13 @@ export const El = create(
         return (...children: ElRefSpecChild[]) => {
           return createStaticElement(
             tagOrReactive,
-            props ?? ({} as ElementProps<TConfig, Tag>),
+            props ?? {},
             children
           );
         };
       }
 
-      const extension: ElFactory<TConfig, TElement> = {
+      const extension: ElFactory<TConfig> = {
         name: 'el',
         method: el,
         ...(instrument && { instrument }),

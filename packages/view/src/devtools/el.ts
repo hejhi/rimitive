@@ -5,15 +5,15 @@
 import type { InstrumentationContext } from '@lattice/lattice';
 import type { ElFactory, ChildrenApplicator, ReactiveElSpec, ElementProps } from '../el';
 import type { RefSpec, FragmentRef, ElRefSpecChild, Reactive } from '../types';
-import type { Element as RendererElement, RendererConfig } from '../renderer';
+import type { RendererConfig } from '../renderer';
 
 /**
  * Instrument an el factory to emit events
  */
-export function instrumentEl<TConfig extends RendererConfig, TElement extends RendererElement>(
-  method: ElFactory<TConfig, TElement>['method'],
+export function instrumentEl<TConfig extends RendererConfig>(
+  method: ElFactory<TConfig>['method'],
   instrumentation: InstrumentationContext
-): ElFactory<TConfig, TElement>['method'] {
+): ElFactory<TConfig>['method'] {
   // Overloaded implementation matching ElFactory signature
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
     tag: Tag,
@@ -21,11 +21,11 @@ export function instrumentEl<TConfig extends RendererConfig, TElement extends Re
   ): ChildrenApplicator<TConfig, Tag>;
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
     reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
-  ): FragmentRef<TElement>;
+  ): FragmentRef<TConfig['baseElement']>;
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
     tagOrReactive: Tag | Reactive<ReactiveElSpec<TConfig, Tag>>,
     props?: ElementProps<TConfig, Tag>
-  ): ChildrenApplicator<TConfig, Tag> | FragmentRef<TElement> {
+  ): ChildrenApplicator<TConfig, Tag> | FragmentRef<TConfig['baseElement']> {
     // Handle reactive element case
     if (typeof tagOrReactive === 'function') {
       const elId = crypto.randomUUID();

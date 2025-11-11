@@ -59,22 +59,36 @@ export interface Renderer<TConfig extends RendererConfig> {
   /**
    * Set an attribute/property on an element
    */
-  setAttribute: (element: TConfig['baseElement'], key: string, value: unknown) => void;
+  setAttribute: (
+    element: TConfig['baseElement'],
+    key: string,
+    value: unknown
+  ) => void;
 
   /**
    * Append a child to a parent element
    */
-  appendChild: (parent: TConfig['baseElement'], child: TConfig['baseElement'] | TConfig['textNode']) => void;
+  appendChild: (
+    parent: TConfig['baseElement'],
+    child: TConfig['baseElement'] | TConfig['textNode']
+  ) => void;
 
   /**
    * Remove a child from a parent element
    */
-  removeChild: (parent: TConfig['baseElement'], child: TConfig['baseElement'] | TConfig['textNode']) => void;
+  removeChild: (
+    parent: TConfig['baseElement'],
+    child: TConfig['baseElement'] | TConfig['textNode']
+  ) => void;
 
   /**
    * Insert a child before a reference node
    */
-  insertBefore: (parent: TConfig['baseElement'], child: TConfig['baseElement'] | TConfig['textNode'], reference: TConfig['baseElement'] | TConfig['textNode'] | null) => void;
+  insertBefore: (
+    parent: TConfig['baseElement'],
+    child: TConfig['baseElement'] | TConfig['textNode'],
+    reference: TConfig['baseElement'] | TConfig['textNode'] | null
+  ) => void;
 
   /**
    * Check if an element is currently connected to the render tree
@@ -88,10 +102,10 @@ export interface Renderer<TConfig extends RendererConfig> {
    * Implementation note: The runtime implementation uses string for event name
    * and unknown for handler, but the type system constrains these based on TConfig
    */
-  addEventListener: (
+  addEventListener: <TOpts extends Record<string, unknown>>(
     element: TConfig['baseElement'],
     event: string,
     handler: (event: unknown) => void,
-    options?: unknown
+    options?: TOpts
   ) => () => void;
 }

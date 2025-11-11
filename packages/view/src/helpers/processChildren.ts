@@ -13,11 +13,11 @@ import type { Renderer, RendererConfig } from '../renderer';
 
 export function createProcessChildren<
   TConfig extends RendererConfig,
-  TElement = TConfig['baseElement']
->(opts: {
+  >(opts: { 
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
-}) {
+  }) {
+  type TElement = TConfig['baseElement'];
   type ViewChild = RefSpec<TElement> | FragmentRef<TElement> | SealedSpec<TElement>;
 
   const { scopedEffect, renderer } = opts;

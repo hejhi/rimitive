@@ -20,8 +20,8 @@ export function createDOMRenderer(): Renderer<DOMRendererConfig> {
     removeChild: (parent, child) => parent.removeChild(child),
     insertBefore: (parent, child, reference) => parent.insertBefore(child, reference),
     isConnected: (element) => element.isConnected,
-    addEventListener: (element, event, handler, options) => {
-      element.addEventListener(event, handler, options as AddEventListenerOptions);
+    addEventListener: (element, event, handler, options?: AddEventListenerOptions) => {
+      element.addEventListener(event, handler, options);
       return () => element.removeEventListener(event, handler, options as AddEventListenerOptions);
     },
   };

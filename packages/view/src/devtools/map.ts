@@ -5,19 +5,19 @@
 import type { InstrumentationContext } from '@lattice/lattice';
 import type { MapFactory } from '../map';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive } from '../types';
-import type { Element as RendererElement } from '../renderer';
+import type { RendererConfig } from '../renderer';
 
 /**
  * Instrument a map factory to emit events
  */
-export function instrumentMap<TElement extends RendererElement>(
-  method: MapFactory<TElement>['method'],
+export function instrumentMap<TConfig extends RendererConfig>(
+  method: MapFactory<TConfig>['method'],
   instrumentation: InstrumentationContext
-): MapFactory<TElement>['method'] {
+): MapFactory<TConfig>['method'] {
   return function instrumentedMap<T>(
     items: () => T[],
     keyFn?: (item: T) => string | number
-  ): (render: (itemSignal: Reactive<T>) => RefSpec<TElement> | SealedSpec<TElement>) => FragmentRef<TElement> {
+  ): (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>) => FragmentRef<TConfig['baseElement']> {
     const mapId = crypto.randomUUID();
 
     instrumentation.emit({
@@ -33,7 +33,7 @@ export function instrumentMap<TElement extends RendererElement>(
     const renderApplicator = method(items, keyFn);
 
     // Wrap the render applicator
-    return (render: (itemSignal: Reactive<T>) => RefSpec<TElement> | SealedSpec<TElement>): FragmentRef<TElement> => {
+    return (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>): FragmentRef<TConfig['baseElement']> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -43,7 +43,7 @@ export function instrumentMap<TElement extends RendererElement>(
       });
 
       // Track reconciliation operations by wrapping the render function
-      const instrumentedRender = (itemSignal: Reactive<T>): RefSpec<TElement> | SealedSpec<TElement> => {
+      const instrumentedRender = (itemSignal: Reactive<T>): RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']> => {
         const itemId = crypto.randomUUID();
 
         instrumentation.emit({

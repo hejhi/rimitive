@@ -8,7 +8,7 @@
 import { create as baseCreate } from '@lattice/lattice';
 import { type RefSpec, type SealedSpec, type Reactive, type FragmentRef, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
 import type { ReactiveElSpec, ElementProps as ElElementProps } from './el';
-import type { Element as RendererElement, RendererConfig } from './renderer';
+import type { RendererConfig } from './renderer';
 
 /**
  * Signal function with both getter and setter
@@ -31,7 +31,7 @@ export interface ComputedFunction<T> {
  * Type for the el method with both overloads
  * Generic over TConfig to match the renderer configuration
  */
-export interface ElMethod<TConfig extends RendererConfig, TElement extends RendererElement> {
+export interface ElMethod<TConfig extends RendererConfig> {
   // Static element builder
   <Tag extends string & keyof TConfig['elements']>(
     tag: Tag,
@@ -41,7 +41,7 @@ export interface ElMethod<TConfig extends RendererConfig, TElement extends Rende
   // Reactive element builder
   <Tag extends string & keyof TConfig['elements']>(
     reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
-  ): FragmentRef<TElement>;
+  ): FragmentRef<TConfig['baseElement']>;
 }
 
 /**
