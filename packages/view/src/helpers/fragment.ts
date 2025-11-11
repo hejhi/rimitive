@@ -29,14 +29,11 @@ export function createFragmentHelpers() {
         api?: unknown
       ) => {
         // Call user's initialization logic - cast to TElement as all elements are compatible at runtime
-        const dispose = init(
+        init(
           parent as ElementRef<TElement>,
           nextSibling as NodeRef<TElement> | null,
           api
         );
-
-        // Store dispose if provided
-        if (dispose) fragRef.dispose = dispose;
 
         return fragRef;
       },

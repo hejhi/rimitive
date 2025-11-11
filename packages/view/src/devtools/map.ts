@@ -73,24 +73,7 @@ export function instrumentMap<TConfig extends RendererConfig>(
           },
         });
 
-        const result = originalAttach.call(fragmentRef, parent, nextSibling, api);
-
-        // Wrap dispose to emit unmount event
-        if (result.dispose) {
-          const originalDispose = result.dispose;
-          result.dispose = () => {
-            instrumentation.emit({
-              type: 'MAP_UNMOUNTED',
-              timestamp: Date.now(),
-              data: {
-                mapId,
-              },
-            });
-            originalDispose();
-          };
-        }
-
-        return result;
+        return originalAttach.call(fragmentRef, parent, nextSibling, api);
       };
 
       return fragmentRef;

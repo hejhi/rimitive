@@ -41,7 +41,6 @@ export interface FragmentRef<TElement> extends BaseRef {
   status: typeof STATUS_FRAGMENT;
   element: TElement | null;
   firstChild?: BaseRef;
-  dispose?: () => void;
   // Bivariant function property with widened parameters for variance
   // Parameters use 'unknown' to allow FragmentRef<T> to be assignable to FragmentRef<unknown>
   // This is safe because at runtime all element types are compatible
