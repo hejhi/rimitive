@@ -2,7 +2,7 @@
  * Core types for @lattice/view
  */
 
-import type { Readable, ConsumerNode } from '@lattice/signals/types';
+import type { Readable } from '@lattice/signals/types';
 import type { Instantiatable } from '@lattice/lattice';
 
 /**
@@ -108,7 +108,13 @@ export type ElRefSpecChild =
   | Reactive<unknown>
   | FragmentRef<unknown>;
 
-export interface RenderScope<TElement> extends ConsumerNode {
+export interface RenderScope<TElement> {
+  // Type marker
+  __type: string;
+
+  // Status for tracking disposal state
+  status: number;
+
   // Tree structure (from Scope) - intrusive singly-linked tree
   firstChild: RenderScope<TElement> | undefined;
   nextSibling: RenderScope<TElement> | undefined;

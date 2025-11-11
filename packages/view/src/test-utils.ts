@@ -302,12 +302,9 @@ export function createTestEnv() {
   });
   const effect = effectFactory.method;
 
-  const detachAll = graphEdges.detachAll;
-
   const { disposeScope, createElementScope, scopedEffect, onCleanup } =
     createScopes<MockElement>({
       ctx,
-      detachAll,
       baseEffect: effect,
     });
 
@@ -333,9 +330,6 @@ export function createTestEnv() {
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,
-        dependencies: undefined,
-        dependencyTail: undefined,
-        trackingVersion: 0,
         firstChild: undefined,
         nextSibling: undefined,
         firstDisposable: undefined,

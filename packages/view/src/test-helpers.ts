@@ -45,17 +45,12 @@ export const createTestScopes = <TElement extends object = MockTestElement>(
 ) => {
   const ctx = providedCtx || createBaseContext<TElement>();
 
-  // Mock detachAll - no-op for tests since we don't track real dependencies
-  const detachAll = vi.fn(() => {
-    // No-op in tests
-  });
-
   const baseEffect = vi.fn((fn: () => void | (() => void)) => {
     fn();
     return () => {};
   });
 
-  const scopes = createScopes<TElement>({ ctx, detachAll, baseEffect });
+  const scopes = createScopes<TElement>({ ctx, baseEffect });
 
   // Test-only withScope implementation for backward compatibility with tests
   const withScope = <TElem extends TElement = TElement, T = void>(
@@ -77,9 +72,6 @@ export const createTestScopes = <TElement extends object = MockTestElement>(
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,
-        dependencies: undefined,
-        dependencyTail: undefined,
-        trackingVersion: 0,
         firstChild: undefined,
         nextSibling: undefined,
         firstDisposable: undefined,

@@ -32,9 +32,6 @@ function addWithScope<TElement extends object>(
       scope = {
         __type: 'render-scope',
         status: RENDER_SCOPE_CLEAN,
-        dependencies: undefined,
-        dependencyTail: undefined,
-        trackingVersion: 0,
         firstChild: undefined,
         nextSibling: undefined,
         firstDisposable: undefined,
@@ -350,37 +347,7 @@ describe('Scope Tree', () => {
     });
   });
 
-  describe('disposal integration with graph', () => {
-    it('should call detachAll when disposing scope', () => {
-      const detachAllSpy = vi.fn(() => {
-        // No-op in tests
-      });
-
-      const ctx = createBaseContext<MockTestElement>();
-      const baseEffect = vi.fn(() => () => {});
-      const { withScope, disposeScope } = addWithScope(
-        createScopes<MockTestElement>({ ctx, detachAll: detachAllSpy, baseEffect }),
-        ctx
-      );
-      const element = createMockElement();
-      // Add a disposable so scope is kept
-      const { scope } = withScope(element, (scope) => {
-        scope.firstDisposable = { dispose: () => {}, next: undefined };
-        // Add mock dependencies to verify detachAll is called
-        scope.dependencies = { producer: {}, consumer: {} } as unknown as RenderScope<MockTestElement>['dependencies'];
-      });
-
-      if (!scope) throw new Error('Expected scope to be created');
-
-      disposeScope(scope);
-
-      // detachAll was called with dependencies
-      expect(detachAllSpy).toHaveBeenCalledTimes(1);
-      // Status bits set correctly
-      expect(scope.status & STATE_MASK).toBe(DISPOSED);
-      // Dependencies cleared
-      expect(scope.dependencies).toBeUndefined();
-    });
+  describe('disposal integration', () => {
 
     it('should execute cleanup function during disposal', () => {
       const cleanupSpy = vi.fn();
@@ -430,37 +397,6 @@ describe('Scope Tree', () => {
       expect(callOrder).toEqual(['child-disposable', 'parent-disposable']);
     });
 
-    it('should clear dependencies through detachAll', () => {
-      const detachAllSpy = vi.fn(() => {
-        // No-op in tests
-      });
-
-      const ctx = createBaseContext<MockTestElement>();
-      const baseEffect = vi.fn(() => () => {});
-      const { withScope, disposeScope } = addWithScope(
-        createScopes<MockTestElement>({ ctx, detachAll: detachAllSpy, baseEffect }),
-        ctx
-      );
-      const element = createMockElement();
-      // Add a disposable so scope is kept
-      const { scope } = withScope(element, (scope) => {
-        scope.firstDisposable = { dispose: () => {}, next: undefined };
-      });
-
-      if (!scope) throw new Error('Expected scope to be created');
-
-      // Add dependencies to verify detachAll is called
-      scope.dependencies = { producer: {}, consumer: {} } as unknown as RenderScope<MockTestElement>['dependencies'];
-
-      disposeScope(scope);
-
-      // detachAll was called with dependencies
-      expect(detachAllSpy).toHaveBeenCalledTimes(1);
-      // Scope is marked as disposed
-      expect(scope.status & STATE_MASK).toBe(DISPOSED);
-      // Dependencies cleared
-      expect(scope.dependencies).toBeUndefined();
-    });
 
     it('should handle disposable errors gracefully', () => {
       const { withScope, disposeScope, ctx } = createTestScopes();
@@ -554,13 +490,9 @@ describe('Scope Tree', () => {
 
     it('should integrate with element removal from context', () => {
       const ctx = createBaseContext<MockTestElement>();
-      const detachAllSpy = vi.fn(() => {
-        // No-op in tests
-      });
-
       const baseEffect = vi.fn(() => () => {});
       const { withScope, disposeScope } = addWithScope(
-        createScopes<MockTestElement>({ ctx, detachAll: detachAllSpy, baseEffect }),
+        createScopes<MockTestElement>({ ctx, baseEffect }),
         ctx
       );
       const element = createMockElement();
@@ -588,16 +520,8 @@ describe('Scope Tree', () => {
 
     it('should handle disposal order correctly', () => {
       const disposalOrder: string[] = [];
-      const detachAllSpy = vi.fn(() => {
-        disposalOrder.push('detachAll');
-      });
 
-      const ctx = createBaseContext<MockTestElement>();
-      const baseEffect = vi.fn(() => () => {});
-      const { withScope, disposeScope } = addWithScope(
-        createScopes<MockTestElement>({ ctx, detachAll: detachAllSpy, baseEffect }),
-        ctx
-      );
+      const { withScope, disposeScope, ctx } = createTestScopes();
       const parentElement = createMockElement();
       const childElement = createMockElement();
 
@@ -623,20 +547,12 @@ describe('Scope Tree', () => {
         next: parent.firstDisposable,
       };
 
-      // Add dependencies to trigger detachAll
-      parent.dependencies = { producer: {}, consumer: {} } as unknown as RenderScope<MockTestElement>['dependencies'];
-      child.dependencies = { producer: {}, consumer: {} } as unknown as RenderScope<MockTestElement>['dependencies'];
-
       disposeScope(parent);
 
       // Verify disposal order:
-      // 1. detachAll (parent dependencies)
-      // 2. detachAll (child dependencies - from recursive child disposal)
-      // 3. Child disposable (from recursive child disposal)
-      // 4. Parent disposables (in FIFO order - second, then initial)
+      // 1. Child disposable (from recursive child disposal)
+      // 2. Parent disposables (in FIFO order - second, then initial)
       expect(disposalOrder).toEqual([
-        'detachAll',                  // Parent dependencies detached
-        'detachAll',                  // Child dependencies detached (recursive)
         'child-disposable',           // Child disposable (recursive)
         'parent-second-disposable',   // Parent disposables (FIFO)
         'parent-initial-disposable',

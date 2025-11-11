@@ -1,6 +1,5 @@
 import type { RenderScope } from '../types';
 import type { ViewContext } from '../context';
-import type { GraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { CONSTANTS } from '@lattice/signals/constants';
 
 const { CLEAN, CONSUMER, DISPOSED, STATE_MASK } = CONSTANTS;
@@ -43,11 +42,9 @@ export type CreateScopes = {
 
 export function createScopes<TElement extends object>({
   ctx,
-  detachAll,
   baseEffect,
 }: {
   ctx: ViewContext<TElement>;
-  detachAll: GraphEdges['detachAll'];
   baseEffect: (fn: () => void | (() => void)) => () => void;
 }): CreateScopes {
   // Cast ctx to handle any object type at runtime
@@ -67,13 +64,6 @@ export function createScopes<TElement extends object>({
 
     // Mark as disposed
     scope.status = (scope.status & ~STATE_MASK) | DISPOSED;
-
-    // Detach dependencies from the reactive graph
-    if (scope.dependencies) {
-      detachAll(scope.dependencies);
-      scope.dependencies = undefined;
-      scope.dependencyTail = undefined;
-    }
 
     // Dispose all child scopes recursively (tree structure)
     let child = scope.firstChild;
@@ -116,14 +106,11 @@ export function createScopes<TElement extends object>({
     // Use activeScope as parent for automatic hierarchy
     const parentScope = anyCtx.activeScope;
 
-    // Inline scope creation - combines reactive graph node (ConsumerNode) with tree structure (Scope)
+    // Inline scope creation - combines status tracking with tree structure (Scope)
     const scope: RenderScope<TElem> = {
-      // Reactive graph fields (from ConsumerNode -> ReactiveNode)
+      // Type marker and status
       __type: 'render-scope',
       status: RENDER_SCOPE_CLEAN,
-      dependencies: undefined,
-      dependencyTail: undefined,
-      trackingVersion: 0,
 
       // Tree structure (from Scope)
       firstChild: undefined,

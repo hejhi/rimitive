@@ -20,11 +20,10 @@ export function createSpec<
     ctx = createBaseContext<TConfig['baseElement']>()
 ) {
   const { api, deps } = signals;
-  const { ctx: signalsCtx, detachAll, track, ...restDeps } = deps;
+  const { ctx: signalsCtx, track, ...restDeps } = deps;
   const { signal, effect } = api;
   const scopes = createScopes<TConfig['baseElement']>({
     ctx,
-    detachAll,
     baseEffect: effect,
   });
 
