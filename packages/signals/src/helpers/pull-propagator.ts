@@ -4,7 +4,7 @@ import { GraphEdges } from './graph-edges';
 
 // Re-export types for proper type inference
 export type { DerivedNode } from '../types';
-export type { GlobalContext } from '../context';
+export type { SignalsContext } from '../context';
 export type { GraphEdges } from './graph-edges';
 
 const { DIRTY, PENDING, STATE_MASK, TYPE_MASK, CONSUMER, CLEAN, PRODUCER } = CONSTANTS;

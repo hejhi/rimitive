@@ -24,7 +24,7 @@ export interface ModalProps {
  *
  * Each Modal instance creates its own signal instance via useComponent,
  * giving it isolated state. But all Modals share the parent SignalProvider's
- * reactive graph infrastructure (GlobalContext, scheduler, propagation).
+ * reactive graph infrastructure (SignalsContext, scheduler, propagation).
  *
  * Usage:
  * ```tsx

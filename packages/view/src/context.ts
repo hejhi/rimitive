@@ -1,9 +1,9 @@
 /**
  * LatticeContext unifies the context requirements from both @lattice/signals and @lattice/view.
  * This creates a single context that:
- * 1. Tracks the active scope for reactive dependency tracking (from signals' GlobalContext.consumerScope)
+ * 1. Tracks the active scope for reactive dependency tracking (from signals' SignalsContext.consumerScope)
  * 2. Manages view lifecycle and cleanup through scope tracking (from view's ViewContext.currentScope)
- * 3. Provides version tracking for change detection (from signals' GlobalContext.trackingVersion)
+ * 3. Provides version tracking for change detection (from signals' SignalsContext.trackingVersion)
  * 4. Maps elements to their scopes for efficient lookup (from view's ViewContext.elementScopes)
  */
 

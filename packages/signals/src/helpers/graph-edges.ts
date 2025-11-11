@@ -1,4 +1,4 @@
-import { GlobalContext } from '../context';
+import { SignalsContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 
@@ -59,11 +59,8 @@ const detachAll = (dep: Dependency): void => {
   } while (current);
 };
 
-export function createGraphEdges({ ctx }: { ctx: GlobalContext }): GraphEdges {
-  const trackDependency = (
-    producer: FromNode,
-    consumer: ToNode
-  ): void => {
+export function createGraphEdges({ ctx }: { ctx: SignalsContext }): GraphEdges {
+  const trackDependency = (producer: FromNode, consumer: ToNode): void => {
     const currDep = consumer.dependencyTail;
 
     // Fast path: tail already points to this producer

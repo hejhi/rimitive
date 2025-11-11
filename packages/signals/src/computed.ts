@@ -8,7 +8,7 @@ import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { GlobalContext } from './context';
+import type { SignalsContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
 
@@ -20,7 +20,7 @@ export interface ComputedFunction<T = unknown> {
 }
 
 export type ComputedOpts = {
-  ctx: GlobalContext;
+  ctx: SignalsContext;
   trackDependency: GraphEdges['trackDependency'];
   pullUpdates: PullPropagator['pullUpdates'];
   track: GraphEdges['track'];
@@ -36,7 +36,7 @@ export type ComputedProps = {
 };
 
 // Re-export types for proper type inference
-export type { GlobalContext } from './context';
+export type { SignalsContext } from './context';
 export type { GraphEdges } from './helpers/graph-edges';
 export type { PullPropagator } from './helpers/pull-propagator';
 

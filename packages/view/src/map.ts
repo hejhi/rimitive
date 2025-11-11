@@ -11,7 +11,7 @@ import type { ViewContext } from './context';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
 import { createFragment, resolveNextRef } from './helpers/fragment';
-import type { GlobalContext } from '@lattice/signals/context';
+import type { SignalsContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
 
 /**
@@ -25,11 +25,9 @@ export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
   ) => (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>) => FragmentRef<TConfig['baseElement']>
 >;
 
-export interface MapHelperOpts<
-  TConfig extends RendererConfig,
-> {
+export interface MapHelperOpts<TConfig extends RendererConfig> {
   ctx: ViewContext<TConfig['baseElement']>;
-  signalCtx: GlobalContext;
+  signalCtx: SignalsContext;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;

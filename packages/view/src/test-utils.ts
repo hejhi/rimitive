@@ -275,7 +275,7 @@ export function createTestEnv() {
   const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
 
-  // Create proper GlobalContext for signals (separate from view context)
+  // Create proper SignalsContext for signals (separate from view context)
   const signalsCtx = createSignalContext();
 
   // Use real signals integration for proper reactive updates
@@ -305,19 +305,23 @@ export function createTestEnv() {
   const track = graphEdges.track;
   const dispose = scheduler.dispose;
 
-  const { disposeScope, createElementScope, scopedEffect, onCleanup } = createScopes<MockElement>({
-    ctx,
-    track,
-    dispose,
-    baseEffect: effect
-  });
+  const { disposeScope, createElementScope, scopedEffect, onCleanup } =
+    createScopes<MockElement>({
+      ctx,
+      track,
+      dispose,
+      baseEffect: effect,
+    });
 
   // Test-only withScope implementation for backward compatibility with tests
   // This provides the idempotent behavior and scope object creation that tests expect
   const withScope = <T = void>(
     element: MockElement,
     fn: (scope: import('./types').RenderScope<MockElement>) => T
-  ): { result: T; scope: import('./types').RenderScope<MockElement> | null } => {
+  ): {
+    result: T;
+    scope: import('./types').RenderScope<MockElement> | null;
+  } => {
     // Try to get existing scope first (idempotent)
     let scope = ctx.elementScopes.get(element);
     let isNewScope = false;

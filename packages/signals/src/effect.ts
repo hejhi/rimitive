@@ -1,6 +1,6 @@
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { GlobalContext } from './context';
+import type { SignalsContext } from './context';
 import type { ScheduledNode } from './types';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
@@ -12,7 +12,7 @@ const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 const EFFECT_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
 export type EffectOpts = {
-  ctx: GlobalContext;
+  ctx: SignalsContext;
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
 };
@@ -26,7 +26,7 @@ export type EffectProps = {
 };
 
 // Re-export types for proper type inference
-export type { GlobalContext } from './context';
+export type { SignalsContext } from './context';
 export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 

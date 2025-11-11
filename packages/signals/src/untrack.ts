@@ -8,10 +8,10 @@
  * - Sampling values for debugging/logging
  */
 
-import type { GlobalContext } from './context';
+import type { SignalsContext } from './context';
 
 export interface UntrackedOpts {
-  ctx: GlobalContext;
+  ctx: SignalsContext;
 }
 
 /**

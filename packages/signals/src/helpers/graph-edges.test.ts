@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGraphEdges } from './graph-edges';
 import type { ProducerNode, ConsumerNode, Dependency } from '../types';
-import { createBaseContext, GlobalContext } from '../context';
+import { createBaseContext, SignalsContext } from '../context';
 
 /**
  * PRINCIPLED TESTS FOR GRAPH-EDGES
@@ -38,7 +38,7 @@ function createConsumer(): ConsumerNode {
   };
 }
 
-function createContext(): GlobalContext {
+function createContext(): SignalsContext {
   return {
     consumerScope: null,
     trackingVersion: 0,

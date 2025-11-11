@@ -16,7 +16,7 @@
 import type { ProducerNode, Dependency } from './types';
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { GlobalContext } from './context';
+import type { SignalsContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
 
@@ -33,7 +33,7 @@ export interface SignalFunction<T = unknown> {
 }
 
 export type SignalOpts = {
-  ctx: GlobalContext;
+  ctx: SignalsContext;
   trackDependency: GraphEdges['trackDependency'];
   propagate: (subscribers: Dependency) => void;
 };
@@ -47,7 +47,7 @@ export type SignalProps = {
 };
 
 // Re-export types needed for type inference
-export type { GlobalContext } from './context';
+export type { SignalsContext } from './context';
 export type { GraphEdges } from './helpers/graph-edges';
 
 interface SignalNode<T> extends ProducerNode {

@@ -1,19 +1,19 @@
 import type { ExtensionContext, InstrumentationContext, LatticeExtension } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import { Scheduler } from './helpers/scheduler';
-import { GlobalContext } from './context';
+import { SignalsContext } from './context';
 
-export type BatchContext = GlobalContext & {
+export type BatchContext = SignalsContext & {
   scheduler: Scheduler;
-}
+};
 
 export type BatchFactory = LatticeExtension<'batch', <T>(fn: () => T) => T>;
 
 export type BatchOpts = {
-  ctx: GlobalContext;
+  ctx: SignalsContext;
   startBatch: Scheduler['startBatch'];
   endBatch: Scheduler['endBatch'];
-}
+};
 
 export type BatchProps = {
   instrument?: (
