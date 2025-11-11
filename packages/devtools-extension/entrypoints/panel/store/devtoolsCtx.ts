@@ -1,45 +1,13 @@
-import { createContext as createLatticeContext } from '@lattice/lattice';
-import { Signal, type SignalFunction } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Effect } from '@lattice/signals/effect';
-import { Batch } from '@lattice/signals/batch';
+import type { SignalFunction } from '@lattice/signals/signal';
 import type { ContextInfo, LogEntry } from './types';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-
-function createContext() {
-  const ctx = createBaseContext();
-  const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
-  const { withVisitor } = createGraphTraversal();
-  const { withPropagate, dispose, startBatch, endBatch } = createScheduler({
-    detachAll,
-  });
-  const pullPropagator = createPullPropagator({ track });
-
-  return {
-    ctx,
-    trackDependency,
-    propagate: withPropagate(withVisitor),
-    track,
-    dispose,
-    pullUpdates: pullPropagator.pullUpdates,
-    shallowPropagate: pullPropagator.shallowPropagate,
-    startBatch,
-    endBatch,
-  };
-}
+import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
+import { createPushPullSchedule } from '@lattice/signals/helpers';
 
 // Create a Lattice context for the devtools panel itself
-const ctx = createContext();
-export const devtoolsContext = createLatticeContext(
-  Signal().create(ctx),
-  Computed().create(ctx),
-  Effect().create(ctx),
-  Batch().create(ctx)
-);
+export const devtoolsContext = createReactiveApi(
+  undefined,
+  createPushPullSchedule()
+).api;
 
 // Create signals for each piece of state
 interface DevtoolsStateSignals {
