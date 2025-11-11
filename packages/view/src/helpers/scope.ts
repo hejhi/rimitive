@@ -53,39 +53,80 @@ export function createScopes<TElement extends object>({
   /**
    * Dispose a RenderScope and all its children/disposables
    *
-   * This implements a layered disposal strategy that integrates the reactive graph
-   * (signals) with the view tree structure.
+   * Zero-allocation iterative algorithm:
+   * 1. Flatten tree to linked list (pre-order)
+   * 2. Reverse list to get post-order (children before parents)
+   * 3. Traverse and cleanup each scope
    */
   const disposeScope = <TElement = object>(
-    scope: RenderScope<TElement>
+    rootScope: RenderScope<TElement>
   ): void => {
     // Already disposed (idempotent)
-    if ((scope.status & STATE_MASK) === DISPOSED) return;
+    if ((rootScope.status & STATE_MASK) === DISPOSED) return;
 
-    // Mark as disposed
-    scope.status = (scope.status & ~STATE_MASK) | DISPOSED;
+    // Phase 1: Flatten tree to linked list (pre-order) and mark all as disposed
+    // Uses existing nextSibling pointers - zero allocations
+    let tail = rootScope;
+    let current: RenderScope<TElement> | undefined = rootScope;
 
-    // Dispose all child scopes recursively (tree structure)
-    let child = scope.firstChild;
-    while (child) {
-      const next = child.nextSibling;
-      disposeScope(child);
-      child = next;
+    while (current !== undefined) {
+      // Skip if already disposed
+      if ((current.status & STATE_MASK) === DISPOSED) {
+        current = current.nextSibling;
+        continue;
+      }
+
+      // Mark as disposed
+      current.status = (current.status & ~STATE_MASK) | DISPOSED;
+
+      // Flatten: append children to the linked list
+      if (current.firstChild !== undefined) {
+        tail.nextSibling = current.firstChild;
+
+        // Find the last sibling (new tail)
+        let child = current.firstChild;
+        while (child.nextSibling !== undefined) {
+          child = child.nextSibling;
+        }
+        tail = child;
+      }
+
+      current = current.nextSibling;
     }
 
-    // Dispose all tracked disposables (lifecycle tracking)
-    let node = scope.firstDisposable;
-    while (node) {
-      node.dispose();
-      node = node.next;
+    // Phase 2: Reverse the linked list to get post-order (children before parents)
+    let reversed: RenderScope<TElement> | undefined = undefined;
+    current = rootScope;
+
+    while (current !== undefined) {
+      const next: RenderScope<TElement> | undefined = current.nextSibling;
+      current.nextSibling = reversed;
+      reversed = current;
+      current = next;
     }
 
-    // Clear references
-    scope.firstChild = undefined;
-    scope.firstDisposable = undefined;
+    // Phase 3: Cleanup in reverse order (post-order: children before parents)
+    current = reversed;
 
-    // Remove from elementScopes map (centralized cleanup)
-    anyCtx.elementScopes.delete(scope.element as object);
+    while (current !== undefined) {
+      const next = current.nextSibling;
+
+      // Dispose all tracked disposables (lifecycle tracking)
+      let node = current.firstDisposable;
+      while (node) {
+        node.dispose();
+        node = node.next;
+      }
+
+      // Clear references
+      current.firstChild = undefined;
+      current.firstDisposable = undefined;
+
+      // Remove from elementScopes map (centralized cleanup)
+      anyCtx.elementScopes.delete(current.element as object);
+
+      current = next;
+    }
   };
 
   /**
