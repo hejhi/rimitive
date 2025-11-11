@@ -9,9 +9,7 @@ export function createSpec<
   TConfig extends RendererConfig,
   >(
     renderer: Renderer<TConfig>,
-    reactive: ReactiveAdapter,
-    // Optional: full context for power users who need access to raw internals
-    extensions?: Record<string, unknown>
+    reactive: ReactiveAdapter
 ) {
   const scopes = createScopes({
     baseEffect: reactive.effect,
@@ -24,7 +22,5 @@ export function createSpec<
     signal: reactive.signal,
     effect: reactive.effect,
     batch: reactive.batch,
-    // Optional: expose additional extensions for power users
-    ...(extensions ?? {}),
   };
 }

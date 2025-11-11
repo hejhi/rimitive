@@ -83,7 +83,7 @@ export function createApi<
     ...signalsApi.api,
     ...createLatticeApi(
       { ...extensions, ...ext },
-      createSpec(renderer, reactive, signalsApi.deps),
+      createSpec(renderer, reactive),
       opts
     ),
   };
