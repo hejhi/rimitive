@@ -155,6 +155,12 @@ export const El = create(
         scopedEffect,
         renderer,
       });
+      const {
+        setAttribute,
+        createElement,
+        insertBefore,
+        removeChild
+      } = renderer;
 
       /**
        * Helper to create a RefSpec with lifecycle callback chaining
@@ -193,9 +199,7 @@ export const El = create(
           element: TEl,
           key: string,
           getter: () => unknown
-        ) =>
-        () =>
-          renderer.setAttribute(element, key, getter());
+        ) => () => setAttribute(element, key, getter());
 
       const createStaticElement = <Tag extends string & keyof TConfig['elements']>(
         tag: Tag,
@@ -205,22 +209,22 @@ export const El = create(
         type El = TConfig['elements'][Tag];
 
         return createRefSpec<El>((lifecycleCallbacks, api) => {
-          const element = renderer.createElement(tag) as unknown as El;
+          const element = createElement(tag) as El;
           const elRef: ElementRef<El> = {
             status: STATUS_ELEMENT,
             element,
             next: undefined,
           };
 
-          createElementScope(element as unknown as object, () => {
-            for (const [key, val] of Object.entries(props as object)) {
+          createElementScope(element as object, () => {
+            for (const [key, val] of Object.entries(props)) {
               if (typeof val !== 'function') {
-                renderer.setAttribute(element as unknown as TElement, key, val);
+                setAttribute(element as TElement, key, val);
                 continue;
               }
               scopedEffect(
                 createAttrEffect(
-                  element as unknown as TElement,
+                  element as TElement,
                   key,
                   val as () => unknown
                 )
@@ -266,7 +270,7 @@ export const El = create(
             fragRef.firstChild = elementRef;
 
             // Insert at correct position
-            renderer.insertBefore(
+            insertBefore(
               parent.element,
               elementRef.element,
               nextSibling?.element ?? null
@@ -276,7 +280,7 @@ export const El = create(
             return () => {
               const scope = ctx.elementScopes.get(elementRef.element);
               if (scope) disposeScope(scope);
-              renderer.removeChild(parent.element, elementRef.element);
+              removeChild(parent.element, elementRef.element);
             };
           });
         });

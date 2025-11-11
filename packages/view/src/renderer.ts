@@ -57,47 +57,47 @@ export interface Renderer<
   /**
    * Create an element with the given tag name
    */
-  createElement(tag: string): TElement;
+  createElement: (tag: string) => TElement;
 
   /**
    * Create a text node with initial content
    */
-  createTextNode(text: string): TText;
+  createTextNode: (text: string) => TText;
 
   /**
    * Update a text node's content
    */
-  updateTextNode(node: TText, text: string): void;
+  updateTextNode: (node: TText, text: string) => void;
 
   /**
    * Set an attribute/property on an element
    */
-  setAttribute(element: TElement, key: string, value: unknown): void;
+  setAttribute: (element: TElement, key: string, value: unknown) => void;
 
   /**
    * Append a child to a parent element
    */
-  appendChild(parent: TElement, child: Element | TText): void;
+  appendChild: (parent: TElement, child: TElement | TText) => void;
 
   /**
    * Remove a child from a parent element
    */
-  removeChild(parent: TElement, child: Element | TText): void;
+  removeChild: (parent: TElement, child: TElement | TText) => void;
 
   /**
    * Insert a child before a reference node
    */
-  insertBefore(parent: TElement, child: Element | TText, reference: Element | TText | null): void;
+  insertBefore: (parent: TElement, child: TElement | TText, reference: TElement | TText | null) => void;
 
   /**
    * Check if an element is currently connected to the render tree
    */
-  isConnected(element: TElement): boolean;
+  isConnected: (element: TElement) => boolean;
 
   /**
    * Check if a value is an element created by this renderer
    */
-  isElement(value: unknown): value is TElement;
+  isElement: (value: unknown) => value is TElement;
 
   /**
    * Add an event listener to an element
@@ -106,10 +106,10 @@ export interface Renderer<
    * Implementation note: The runtime implementation uses string for event name
    * and unknown for handler, but the type system constrains these based on TConfig
    */
-  addEventListener(
+  addEventListener: (
     element: TElement,
     event: string,
     handler: (event: unknown) => void,
     options?: unknown
-  ): () => void;
+  ) => () => void;
 }

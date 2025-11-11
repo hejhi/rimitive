@@ -17,7 +17,7 @@ import type { Renderer, RendererConfig } from '../renderer';
 /**
  * Linkedom-specific element type (extends DOM Element)
  */
-export type LinkedomElement = Element;
+export type LinkedomElement = HTMLElement;
 
 /**
  * Linkedom-specific text node type (extends DOM Text)
@@ -34,52 +34,9 @@ export type Linkedom = LinkedomElement;
  * LinkedOM Renderer configuration - maps to HTML elements (similar to DOM)
  * Note: linkedom provides DOM-like elements but events aren't meaningful in SSR
  */
-export interface LinkedOMRendererConfig extends RendererConfig {
-  elements: {
-    // Common HTML elements
-    div: Element;
-    span: Element;
-    p: Element;
-    a: Element;
-    button: Element;
-    input: Element;
-    form: Element;
-    label: Element;
-    select: Element;
-    option: Element;
-    textarea: Element;
-    h1: Element;
-    h2: Element;
-    h3: Element;
-    h4: Element;
-    h5: Element;
-    h6: Element;
-    ul: Element;
-    ol: Element;
-    li: Element;
-    table: Element;
-    thead: Element;
-    tbody: Element;
-    tr: Element;
-    th: Element;
-    td: Element;
-    header: Element;
-    footer: Element;
-    nav: Element;
-    main: Element;
-    section: Element;
-    article: Element;
-    aside: Element;
-    img: Element;
-    video: Element;
-    audio: Element;
-    canvas: Element;
-    svg: Element;
-    // Allow any string key for custom elements
-    [key: string]: Element;
-  };
-  // Events are not meaningful in SSR but we need to satisfy the interface
-  events: Record<string, Event>;
+export interface DOMRendererConfig extends RendererConfig {
+  elements: HTMLElementTagNameMap;
+  events: HTMLElementEventMap;
 }
 
 /**
@@ -101,24 +58,28 @@ export interface LinkedOMRendererConfig extends RendererConfig {
  * // <div><h1>Hello World</h1><p>Server-side rendered!</p></div>
  * ```
  */
-export function createLinkedomRenderer(): Renderer<LinkedOMRendererConfig, LinkedomElement, LinkedomTextNode> {
+export function createLinkedomRenderer(): Renderer<
+  DOMRendererConfig,
+  LinkedomElement,
+  LinkedomTextNode
+> {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
   return {
-    createElement(tag: string): LinkedomElement {
+    createElement: (tag: string) => {
       return document.createElement(tag);
     },
 
-    createTextNode(text: string): LinkedomTextNode {
+    createTextNode: (text: string) => {
       return document.createTextNode(text);
     },
 
-    updateTextNode(node: LinkedomTextNode, text: string): void {
+    updateTextNode: (node: LinkedomTextNode, text: string) => {
       node.textContent = text;
     },
 
-    setAttribute(element: LinkedomElement, key: string, value: unknown): void {
+    setAttribute: (element: LinkedomElement, key: string, value: unknown) => {
       // Skip event handlers during SSR (no interactivity on server)
       if (key.startsWith('on')) return;
 
@@ -132,33 +93,45 @@ export function createLinkedomRenderer(): Renderer<LinkedOMRendererConfig, Linke
       }
     },
 
-    appendChild(parent: LinkedomElement, child: LinkedomElement | LinkedomTextNode): void {
+    appendChild: (
+      parent: LinkedomElement,
+      child: LinkedomElement | LinkedomTextNode
+    ) => {
       // Cast to Node for linkedom compatibility
       parent.appendChild(child as unknown as Node);
     },
 
-    removeChild(parent: LinkedomElement, child: LinkedomElement | LinkedomTextNode): void {
+    removeChild: (
+      parent: LinkedomElement,
+      child: LinkedomElement | LinkedomTextNode
+    ) => {
       parent.removeChild(child as unknown as Node);
     },
 
-    insertBefore(
+    insertBefore: (
       parent: LinkedomElement,
       child: LinkedomElement | LinkedomTextNode,
       reference: LinkedomElement | LinkedomTextNode | null
-    ): void {
-      parent.insertBefore(child as unknown as Node, reference as unknown as Node | null);
+    ) => {
+      parent.insertBefore(
+        child as unknown as Node,
+        reference as unknown as Node | null
+      );
     },
 
-    isConnected(element: LinkedomElement): boolean {
+    isConnected: (element: LinkedomElement) => {
       // In linkedom, elements are always "connected" to the document
       return element.isConnected;
     },
 
-    isElement(value: unknown): value is LinkedomElement {
-      return document.defaultView != null && value instanceof document.defaultView.Element;
+    isElement: (value: unknown): value is LinkedomElement => {
+      return (
+        document.defaultView != null &&
+        value instanceof document.defaultView.Element
+      );
     },
 
-    addEventListener(): () => void {
+    addEventListener: () => () => {
       // No-op for SSR - events aren't meaningful on the server
       // Return empty cleanup function
       return () => {};

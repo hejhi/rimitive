@@ -33,52 +33,52 @@ export interface DOMRendererConfig extends RendererConfig {
  */
 export function createDOMRenderer(): Renderer<DOMRendererConfig, DOMElement, DOMTextNode> {
   return {
-    createElement(tag: string): DOMElement {
+    createElement: (tag: string) => {
       return document.createElement(tag);
     },
 
-    createTextNode(text: string): DOMTextNode {
+    createTextNode: (text: string) => {
       return document.createTextNode(text);
     },
 
-    updateTextNode(node: DOMTextNode, text: string): void {
+    updateTextNode: (node: DOMTextNode, text: string) => {
       node.textContent = text;
     },
 
-    setAttribute(element: DOMElement, key: string, value: unknown): void {
+    setAttribute: (element: DOMElement, key: string, value: unknown) => {
       Reflect.set(element, key, value);
     },
 
-    appendChild(parent: DOMElement, child: DOMElement | DOMTextNode): void {
+    appendChild: (parent: DOMElement, child: DOMElement | DOMTextNode) => {
       parent.appendChild(child as Node);
     },
 
-    removeChild(parent: DOMElement, child: DOMElement | DOMTextNode): void {
+    removeChild: (parent: DOMElement, child: DOMElement | DOMTextNode) => {
       parent.removeChild(child as Node);
     },
 
-    insertBefore(
+    insertBefore: (
       parent: DOMElement,
       child: DOMElement | DOMTextNode,
       reference: DOMElement | DOMTextNode | null
-    ): void {
+    ) => {
       parent.insertBefore(child as Node, reference as Node | null);
     },
 
-    isConnected(element: DOMElement): boolean {
+    isConnected: (element: DOMElement) => {
       return element.isConnected;
     },
 
-    isElement(value: unknown): value is DOMElement {
+    isElement: (value: unknown): value is DOMElement => {
       return value instanceof HTMLElement;
     },
 
-    addEventListener(
+    addEventListener: (
       element: DOMElement,
       event: string,
       handler: (event: unknown) => void,
       options?: unknown
-    ): () => void {
+    ): () => void => {
       element.addEventListener(event, handler as EventListener, options as AddEventListenerOptions);
       return () => element.removeEventListener(event, handler as EventListener, options as AddEventListenerOptions);
     },
