@@ -1,5 +1,5 @@
 import { El } from '../el';
-import { Map } from '../helpers/map';
+import { Map } from '../map';
 import { On } from '../on';
 import { CreateContextOptions, createApi as createLatticeApi } from '@lattice/lattice';
 import { createSpec } from '../helpers';
@@ -28,7 +28,7 @@ export type {
   ElementProps,
   ReactiveElSpec
 } from '../el';
-export type { MapFactory, MapHelperOpts, MapProps } from '../helpers/map';
+export type { MapFactory, MapHelperOpts, MapProps } from '../map';
 export type { OnFactory, OnOpts, OnProps } from '../on';
 export type {
   RefSpec,

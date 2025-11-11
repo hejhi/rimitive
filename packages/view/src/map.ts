@@ -10,14 +10,14 @@
 
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from '../types';
-import { isElementRef } from '../types';
-import { resolveNextRef } from './fragment';
-import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from '../renderer';
-import type { ViewContext } from '../context';
-import type { CreateScopes } from './scope';
-import { createReconciler, ReconcileNode } from './reconcile';
-import { createFragment } from './fragment';
+import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from './types';
+import { isElementRef } from './types';
+import { resolveNextRef } from './helpers/fragment';
+import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from './renderer';
+import type { ViewContext } from './context';
+import type { CreateScopes } from './helpers/scope';
+import { createReconciler, ReconcileNode } from './helpers/reconcile';
+import { createFragment } from './helpers/fragment';
 import type { GlobalContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
 

@@ -71,7 +71,7 @@ const el = El().create({
 ```typescript
 import { createContext } from '@lattice/lattice';
 import { El } from '@lattice/view';
-import { Map } from '@lattice/view/helpers/map';
+import { Map } from '@lattice/view/map';
 import { On } from '@lattice/view/on';
 import { instrumentEl, instrumentMap, instrumentOn } from '@lattice/view/devtools';
 

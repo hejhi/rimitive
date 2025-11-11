@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { createTestEnv, MockElement, MockText, getTextContent, MockRendererConfig } from '../test-utils';
 import { El } from '../el';
-import { Map } from './map';
+import { Map } from '../map';
 import type { RefSpec } from '../types';
 
 describe('List reconciliation - Complex reorderings', () => {

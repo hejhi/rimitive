@@ -67,9 +67,9 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types.ts'),
         renderer: resolve(__dirname, 'src/renderer.ts'),
         on: resolve(__dirname, 'src/on.ts'),
+        map: resolve(__dirname, 'src/map.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
-        'helpers/map': resolve(__dirname, 'src/helpers/map.ts'),
         'helpers/processChildren': resolve(
           __dirname,
           'src/helpers/processChildren.ts'

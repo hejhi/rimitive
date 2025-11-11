@@ -42,9 +42,9 @@
       "import": "./dist/helpers/processChildren.js",
       "types": "./dist/helpers/processChildren.d.ts"
     },
-    "./helpers/map": {
-      "import": "./dist/helpers/map.js",
-      "types": "./dist/helpers/map.d.ts"
+    "./map": {
+      "import": "./dist/map.js",
+      "types": "./dist/map.d.ts"
     },
     "./on": {
       "import": "./dist/on.js",

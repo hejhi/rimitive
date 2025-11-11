@@ -3,7 +3,7 @@
  */
 
 import type { InstrumentationContext } from '@lattice/lattice';
-import type { MapFactory } from '../helpers/map';
+import type { MapFactory } from '../map';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive } from '../types';
 import type { Element as RendererElement } from '../renderer';
 

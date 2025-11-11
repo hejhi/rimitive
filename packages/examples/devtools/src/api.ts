@@ -7,7 +7,7 @@
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createApi } from '@lattice/view/presets/core';
 import { El } from '@lattice/view/el';
-import { Map } from '@lattice/view/helpers/map';
+import { Map } from '@lattice/view/map';
 import { On } from '@lattice/view/on';
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';

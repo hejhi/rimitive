@@ -11,10 +11,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestEnv, MockElement, MockText, getTextContent, MockRendererConfig } from '../test-utils';
+import { createTestEnv, MockElement, MockText, getTextContent, MockRendererConfig } from './test-utils';
 import { Map } from './map';
-import { El } from '../el';
-import type { RefSpec } from '../types';
+import { El } from './el';
+import type { RefSpec } from './types';
 
 describe('map() - User-facing behavior', () => {
   // Helper to set up test environment
