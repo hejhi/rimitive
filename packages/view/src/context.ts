@@ -1,22 +1,19 @@
 /**
- * LatticeContext unifies the context requirements from both @lattice/signals and @lattice/view.
- * This creates a single context that:
- * 1. Tracks the active scope for reactive dependency tracking (from signals' SignalsContext.consumerScope)
- * 2. Manages view lifecycle and cleanup through scope tracking (from view's ViewContext.currentScope)
- * 3. Maps elements to their scopes for efficient lookup (from view's ViewContext.elementScopes)
+ * ViewContext provides infrastructure for view lifecycle management.
+ * Maps elements to their scopes for efficient lookup during reconciliation.
+ *
+ * Note: Version tracking is handled by the signals infrastructure
+ * (signalsCtx.trackingVersion and node.trackingVersion on each ConsumerNode/RenderScope).
+ * The active scope for hierarchy management is handled locally by createScopes()
+ * as a closure variable, since it's only needed internally.
  */
 
 import type { RenderScope } from './types';
 
 /**
- * Combines reactive tracking (signals) with view lifecycle management (view)
+ * View lifecycle management context
  */
 export interface ViewContext<TElement extends object> {
-  /**
-   * Active scope for reactive tracking and lifecycle management
-   */
-  activeScope: RenderScope<TElement> | null;
-
   /**
    * Map element to its render scope
    */
@@ -24,14 +21,13 @@ export interface ViewContext<TElement extends object> {
 }
 
 /**
- * Create a new LatticeContext instance
+ * Create a new ViewContext instance
  *
  * This should be called once per rendering context (e.g., per SSR request, per client app)
  * to ensure isolation and enable concurrent rendering.
  */
 export function createBaseContext<TElement extends object>(): ViewContext<TElement> {
   return {
-    activeScope: null,
     elementScopes: new WeakMap(),
   };
 }

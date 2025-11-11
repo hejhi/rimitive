@@ -16,27 +16,19 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     fn();
     return () => {};
   });
-  const { createElementScope, disposeScope } = createTestScopes<MockElement>(ctx)
+  const { createElementScope, disposeScope, onCleanup } = createTestScopes<MockElement>(ctx);
 
-  // Create scopedEffect using the custom effect
+  // Create scopedEffect that wraps the custom effect and registers cleanup
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
+    // Run the effect and capture its cleanup
     const dispose = effect(fn as () => void);
-    const scope = ctx.activeScope;
-    if (scope) {
-      const node = {
-        dispose,
-        next: scope.firstDisposable,
-      };
-      scope.firstDisposable = node;
-    }
-    return dispose;
-  };
 
-  // Create onCleanup helper
-  const onCleanup = (cleanup: () => void): void => {
-    const scope = ctx.activeScope;
-    if (!scope) return;
-    scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
+    // Use onCleanup to register the effect's disposal
+    onCleanup(() => {
+      dispose();
+    });
+
+    return dispose;
   };
 
   return {
@@ -70,7 +62,7 @@ describe('el primitive - lazy scope creation', () => {
       }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
-    // Note: withScope only registers scopes if they have disposables (performance optimization)
+    // Note: scopes only register if they have disposables (performance optimization)
     const ref = el('div', { className: 'static' })('Hello');
     const element: MockElement = asElement(ref.create());
 

@@ -12,9 +12,6 @@ import { Effect } from '@lattice/signals/effect';
 import { createBaseContext as createSignalContext } from '@lattice/signals/context';
 import { createUntracked } from '@lattice/signals/untrack';
 
-// Status constants for RenderScope disposal tracking (matches scope.ts)
-const CLEAN = 0;
-
 // Re-export types for convenience
 export type { Reactive };
 
@@ -315,74 +312,6 @@ export function createTestEnv() {
       baseEffect: effect,
     });
 
-  // Test-only withScope implementation for backward compatibility with tests
-  // This provides the idempotent behavior and scope object creation that tests expect
-  const withScope = <T = void>(
-    element: MockElement,
-    fn: (scope: import('./types').RenderScope<MockElement>) => T
-  ): {
-    result: T;
-    scope: import('./types').RenderScope<MockElement> | null;
-  } => {
-    // Try to get existing scope first (idempotent)
-    let scope = ctx.elementScopes.get(element);
-    let isNewScope = false;
-    let parentScope: import('./types').RenderScope<MockElement> | null = null;
-
-    if (!scope) {
-      parentScope = ctx.activeScope;
-
-      // Create scope inline (similar to production createElementScope but always returns scope)
-      const RENDER_SCOPE_CLEAN = CLEAN;
-      scope = {
-        __type: 'render-scope',
-        status: RENDER_SCOPE_CLEAN,
-        firstChild: undefined,
-        nextSibling: undefined,
-        firstDisposable: undefined,
-        element,
-      };
-
-      // Attach to parent's child list
-      if (parentScope) {
-        scope.nextSibling = parentScope.firstChild;
-        parentScope.firstChild = scope;
-      }
-
-      isNewScope = true;
-    }
-
-    const prevScope = ctx.activeScope;
-    ctx.activeScope = scope;
-
-    let result: T;
-    try {
-      result = fn(scope);
-    } catch (e) {
-      // Only delete if we registered it
-      if (scope.firstDisposable !== undefined) {
-        ctx.elementScopes.delete(element);
-      }
-      disposeScope(scope); // Clean up any disposables that were registered before error
-      throw e;
-    } finally {
-      ctx.activeScope = prevScope;
-    }
-
-    // CRITICAL: Only keep scope if it has disposables
-    if (isNewScope && scope.firstDisposable !== undefined) {
-      ctx.elementScopes.set(element, scope);
-      return { result, scope };
-    }
-
-    // No disposables - unlink from parent tree and return null
-    if (isNewScope && parentScope && parentScope.firstChild === scope) {
-      parentScope.firstChild = scope.nextSibling;
-    }
-
-    return { result, scope: isNewScope ? null : scope };
-  };
-
   return {
     ctx,
     signalsCtx,
@@ -393,7 +322,6 @@ export function createTestEnv() {
     disposeScope,
     scopedEffect,
     createElementScope,
-    withScope,
     onCleanup,
   };
 }

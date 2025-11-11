@@ -47,7 +47,8 @@ export function createScopes<TElement extends object>({
   baseEffect: (fn: () => void | (() => void)) => () => void;
 }): CreateScopes {
   // Cast ctx to handle any object type at runtime
-  const anyCtx = ctx as ViewContext<object>;
+  const viewCtx = ctx as ViewContext<object>;
+  let activeScope: RenderScope<object> | null = null;
 
   /**
    * Dispose a RenderScope and all its children/disposables
@@ -108,7 +109,7 @@ export function createScopes<TElement extends object>({
         scope.firstDisposable = undefined;
 
         // Remove from elementScopes map
-        anyCtx.elementScopes.delete(scope.element as object);
+        viewCtx.elementScopes.delete(scope.element as object);
 
         // Done if we've returned to root and no more siblings
         if (scope === rootScope) return;
@@ -153,7 +154,7 @@ export function createScopes<TElement extends object>({
     fn: () => void
   ): RenderScope<TElem> | null => {
     // Use activeScope as parent for automatic hierarchy
-    const parentScope = anyCtx.activeScope;
+    const parentScope = activeScope;
 
     // Inline scope creation - combines status tracking with tree structure (Scope)
     const scope: RenderScope<TElem> = {
@@ -180,17 +181,17 @@ export function createScopes<TElement extends object>({
       parentScope.firstChild = scope as RenderScope<object>;
     }
 
-    const prevScope = anyCtx.activeScope;
-    anyCtx.activeScope = scope;
+    const prevScope = activeScope;
+    activeScope = scope;
 
     fn();
 
-    anyCtx.activeScope = prevScope;
+    activeScope = prevScope;
 
     // CRITICAL: Only keep scope if it has disposables
     // Otherwise unlink from parent tree to avoid traversal overhead
     if (scope.firstDisposable !== undefined) {
-      anyCtx.elementScopes.set(element, scope);
+      viewCtx.elementScopes.set(element, scope);
       return scope;
     }
 
@@ -210,7 +211,7 @@ export function createScopes<TElement extends object>({
     const dispose = baseEffect(fn);
 
     // Auto-track in current scope if one is active
-    const scope = anyCtx.activeScope;
+    const scope = activeScope;
 
     // Track the dispose function in the current scope
     if (scope) scope.firstDisposable = { dispose, next: scope.firstDisposable };
@@ -223,7 +224,7 @@ export function createScopes<TElement extends object>({
    * Must be called within a scope context (e.g., inside element setup).
    */
   const onCleanup = (cleanup: () => void): void => {
-    const scope = anyCtx.activeScope;
+    const scope = activeScope;
     if (!scope) return;
 
     // Track cleanup directly in active scope

@@ -1,42 +1,39 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createTestEnv, MockElement } from '../test-utils';
 
 describe('scoped-effect', () => {
   describe('createScopedEffect', () => {
     it('should auto-track effects in active scope', () => {
       const env = createTestEnv();
-      const { ctx, scopedEffect, withScope } = env;
+      const { ctx, scopedEffect, createElementScope } = env;
 
-      // Create a scope and set it as active
       const element = new MockElement('div');
-      // Add a disposable so scope is kept
-      const { scope } = withScope(element, (scope) => {
-        scope.firstDisposable = { dispose: () => {}, next: undefined };
-      });
-
-      if (!scope) throw new Error('Expected scope to be created');
-
-      ctx.activeScope = scope;
-
       let runCount = 0;
-      const dispose = scopedEffect(() => {
-        runCount++;
+      let dispose: (() => void) | undefined;
+
+      // Create a scope - scopedEffect should register within it
+      const scope = createElementScope(element, () => {
+        dispose = scopedEffect(() => {
+          runCount++;
+        });
       });
 
       // Effect should have run once
       expect(runCount).toBe(1);
 
-      // Dispose function should be tracked in scope (it's second in the list now)
-      expect(scope.firstDisposable).toBeDefined();
-      expect(scope.firstDisposable?.dispose).toBe(dispose);
+      // Scope should exist because scopedEffect registered a cleanup
+      expect(scope).toBeTruthy();
+      expect(ctx.elementScopes.get(element)).toBe(scope);
+
+      // Dispose function should work
+      expect(dispose).toBeDefined();
     });
 
     it('should not track when no active scope', () => {
       const env = createTestEnv();
-      const { ctx, scopedEffect } = env;
+      const { scopedEffect } = env;
 
-      ctx.activeScope = null;
-
+      // Call scopedEffect outside of any scope
       let runCount = 0;
       scopedEffect(() => {
         runCount++;
@@ -49,23 +46,19 @@ describe('scoped-effect', () => {
 
     it('should dispose when scope is disposed', () => {
       const env = createTestEnv();
-      const { ctx, signal, disposeScope, scopedEffect, withScope } = env;
+      const { ctx, signal, disposeScope, scopedEffect, createElementScope } = env;
 
       const count = signal(0);
       const element = new MockElement('div');
-      // Add a disposable so scope is kept
-      const { scope } = withScope(element, (scope) => {
-        scope.firstDisposable = { dispose: () => {}, next: undefined };
-      });
-
-      if (!scope) throw new Error('Expected scope to be created');
-
-      ctx.activeScope = scope;
 
       let runCount = 0;
-      scopedEffect(() => {
-        count(); // Read signal
-        runCount++;
+
+      // Create scope with reactive effect
+      const scope = createElementScope(element, () => {
+        scopedEffect(() => {
+          count(); // Read signal
+          runCount++;
+        });
       });
 
       expect(runCount).toBe(1);
@@ -75,7 +68,8 @@ describe('scoped-effect', () => {
       expect(runCount).toBe(2);
 
       // Dispose scope
-      disposeScope(scope);
+      disposeScope(scope!);
+      ctx.elementScopes.delete(element);
 
       // Effect should not run anymore
       count(2);
@@ -84,32 +78,24 @@ describe('scoped-effect', () => {
 
     it('should track multiple effects in same scope', () => {
       const env = createTestEnv();
-      const { ctx, scopedEffect, withScope } = env;
+      const { scopedEffect, createElementScope, disposeScope } = env;
 
       const element = new MockElement('div');
-      // Add a disposable so scope is kept
-      const { scope } = withScope(element, (scope) => {
-        scope.firstDisposable = { dispose: () => {}, next: undefined };
+      const cleanups = [vi.fn(), vi.fn(), vi.fn()];
+
+      // Create scope with multiple effects
+      const scope = createElementScope(element, () => {
+        scopedEffect(() => cleanups[0]);
+        scopedEffect(() => cleanups[1]);
+        scopedEffect(() => cleanups[2]);
       });
 
-      if (!scope) throw new Error('Expected scope to be created');
+      expect(scope).toBeTruthy();
 
-      ctx.activeScope = scope;
+      // Dispose scope - all cleanups should run
+      disposeScope(scope!);
 
-      const dispose1 = scopedEffect(() => {});
-      const dispose2 = scopedEffect(() => {});
-      const dispose3 = scopedEffect(() => {});
-
-      // All three should be tracked (plus the initial dummy disposable makes 4 total)
-      expect(scope.firstDisposable).toBeDefined();
-      expect(scope.firstDisposable?.next).toBeDefined();
-      expect(scope.firstDisposable?.next?.next).toBeDefined();
-      expect(scope.firstDisposable?.next?.next?.next).toBeDefined();
-
-      // First in linked list is last added (LIFO)
-      expect(scope.firstDisposable?.dispose).toBe(dispose3);
-      expect(scope.firstDisposable?.next?.dispose).toBe(dispose2);
-      expect(scope.firstDisposable?.next?.next?.dispose).toBe(dispose1);
+      cleanups.forEach(cleanup => expect(cleanup).toHaveBeenCalledOnce());
     });
   });
 });

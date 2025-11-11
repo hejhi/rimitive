@@ -12,27 +12,19 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
-  const { createElementScope, disposeScope } = createTestScopes<MockElement>(ctx);
+  const { createElementScope, disposeScope, onCleanup } = createTestScopes<MockElement>(ctx);
 
-  // Create scopedEffect using the custom effect
+  // Create scopedEffect that wraps the custom effect and registers cleanup
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
+    // Run the effect and capture its cleanup
     const dispose = effectFn(fn as () => void);
-    const scope = ctx.activeScope;
-    if (scope) {
-      const node = {
-        dispose,
-        next: scope.firstDisposable,
-      };
-      scope.firstDisposable = node;
-    }
-    return dispose;
-  };
 
-  // Create onCleanup helper
-  const onCleanup = (cleanup: () => void): void => {
-    const scope = ctx.activeScope;
-    if (!scope) return;
-    scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
+    // Use onCleanup to register the effect's disposal
+    onCleanup(() => {
+      dispose();
+    });
+
+    return dispose;
   };
 
   return { ctx, renderer, effect: effectFn, scopedEffect, disposeScope, createElementScope, onCleanup };
