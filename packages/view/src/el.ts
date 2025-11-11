@@ -13,6 +13,7 @@ import type { ViewContext } from './context';
 import type { Renderer, Element as RendererElement, TextNode, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragment } from './helpers/fragment';
+import { createProcessChildren } from './helpers/processChildren';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -71,11 +72,6 @@ export type ElOpts<
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
   renderer: Renderer<TConfig, TElement, TText>;
-  processChildren: (
-    parent: ElementRef<TElement>,
-    children: ElRefSpecChild[],
-    api?: unknown
-  ) => void;
 };
 
 export type ElProps<TConfig extends RendererConfig, TElement extends RendererElement = RendererElement> = {
@@ -149,13 +145,16 @@ export const El = create(
     ctx,
     scopedEffect,
     renderer,
-    processChildren,
     createElementScope,
     disposeScope,
     onCleanup,
   }: ElOpts<TConfig, TElement, TText>) =>
     (props?: ElProps<TConfig, TElement>) => {
       const { instrument } = props ?? {};
+      const { processChildren } = createProcessChildren<TConfig, TElement, TText>({
+        scopedEffect,
+        renderer,
+      });
 
       /**
        * Helper to create a RefSpec with lifecycle callback chaining
@@ -228,7 +227,7 @@ export const El = create(
               );
             }
             processChildren(
-              elRef as unknown as ElementRef<TElement>,
+              elRef as ElementRef<TElement>,
               children,
               api
             );

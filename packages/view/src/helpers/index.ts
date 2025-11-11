@@ -6,7 +6,6 @@ import type {
   TextNode,
   RendererConfig,
 } from '../renderer';
-import { createProcessChildren } from './processChildren';
 import { ExtensionsToContext } from '@lattice/lattice';
 import { SignalFactory } from '@lattice/signals/signal';
 import { EffectFactory } from '@lattice/signals/effect';
@@ -34,18 +33,12 @@ export function createSpec<
     baseEffect: effect,
   });
 
-  const { processChildren } = createProcessChildren<TConfig, TElement, TText>({
-    scopedEffect: scopes.scopedEffect,
-    renderer,
-  });
-
   return {
     ctx,
     // TODO: rename to reactiveCtx or merge into ctx
     signalCtx,
     track,
     renderer,
-    processChildren,
     ...scopes,
     signal,
     // Pass back user-provided deps in case they provide other reactives with context

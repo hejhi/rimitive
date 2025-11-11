@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { El } from './el';
 import { createBaseContext } from './context';
 import { createMockRenderer, createSignal, MockElement, MockText, MockRendererConfig } from './test-utils';
-import { createProcessChildren } from './helpers/processChildren';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
 
@@ -33,11 +32,6 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     return dispose;
   };
 
-  const { handleChild, processChildren } = createProcessChildren({
-    scopedEffect,
-    renderer,
-  });
-
   // Create onCleanup helper
   const onCleanup = (cleanup: () => void): void => {
     const scope = ctx.activeScope;
@@ -50,8 +44,6 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
     renderer,
     effect,
     scopedEffect,
-    handleChild,
-    processChildren,
     createElementScope,
     disposeScope,
     onCleanup
@@ -64,7 +56,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       renderer,
       scopedEffect,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -73,7 +64,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       scopedEffect,
       renderer,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -94,7 +84,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       renderer,
       scopedEffect,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -107,7 +96,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       scopedEffect,
       renderer,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -127,7 +115,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       renderer,
       scopedEffect,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -140,7 +127,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       scopedEffect,
       renderer,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -159,7 +145,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       renderer,
       scopedEffect,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -168,7 +153,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       scopedEffect,
       renderer,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -190,7 +174,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       renderer,
       scopedEffect,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -199,7 +182,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       scopedEffect,
       renderer,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -221,7 +203,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       renderer,
       scopedEffect,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,
@@ -230,7 +211,6 @@ describe('el primitive - lazy scope creation', () => {
       ctx,
       scopedEffect,
       renderer,
-      processChildren,
       createElementScope,
       disposeScope,
       onCleanup,

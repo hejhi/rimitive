@@ -3,7 +3,6 @@ import { createBaseContext } from './context';
 import type { Renderer, RendererConfig } from './renderer';
 import type { Reactive, RefSpec, LifecycleCallback, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
-import { createProcessChildren } from './helpers/processChildren';
 import { createScopes } from './helpers/scope';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
@@ -393,20 +392,12 @@ export function createTestEnv() {
     return { result, scope: isNewScope ? null : scope };
   };
 
-  // Create helpers
-  const { processChildren, handleChild} = createProcessChildren({
-    scopedEffect,
-    renderer,
-  });
-
   return {
     ctx,
     signalCtx: signalsCtx,
     renderer,
     signal,
     effect,
-    handleChild,
-    processChildren,
     disposeScope,
     scopedEffect,
     createElementScope,

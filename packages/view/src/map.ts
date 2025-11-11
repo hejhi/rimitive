@@ -1,11 +1,5 @@
 /**
  * User-space map() helper using stable signal pattern
- *
- * Key design principles:
- * - Render callback runs ONCE per key (no orphaned computeds)
- * - Each item gets a stable signal that map() updates
- * - Keys extracted from el() calls (no separate keyFn parameter)
- * - Efficient reconciliation with LIS algorithm
  */
 
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';

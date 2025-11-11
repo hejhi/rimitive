@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { El } from './el';
 import { createTestEnv, getTextContent, createMockRenderer, createSignal, MockElement, MockText, MockRendererConfig } from './test-utils';
 import { createBaseContext } from './context';
-import { createProcessChildren } from './helpers/processChildren';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
 
@@ -36,11 +35,7 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
   };
 
-  const { processChildren } = createProcessChildren({
-    scopedEffect,
-    renderer,
-  });
-  return { ctx, renderer, effect: effectFn, scopedEffect, processChildren, disposeScope, createElementScope, onCleanup };
+  return { ctx, renderer, effect: effectFn, scopedEffect, disposeScope, createElementScope, onCleanup };
 }
 
 describe('el primitive', () => {
@@ -50,7 +45,6 @@ describe('el primitive', () => {
         ctx,
         renderer,
         scopedEffect,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -59,7 +53,6 @@ describe('el primitive', () => {
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -78,7 +71,6 @@ describe('el primitive', () => {
         ctx,
         renderer,
         scopedEffect,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -87,7 +79,6 @@ describe('el primitive', () => {
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -113,7 +104,6 @@ describe('el primitive', () => {
         ctx,
         renderer,
         scopedEffect,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -126,7 +116,6 @@ describe('el primitive', () => {
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -149,7 +138,6 @@ describe('el primitive', () => {
         ctx,
         renderer,
         scopedEffect,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -162,7 +150,6 @@ describe('el primitive', () => {
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -185,7 +172,6 @@ describe('el primitive', () => {
         ctx,
         renderer,
         scopedEffect,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -198,7 +184,6 @@ describe('el primitive', () => {
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -221,7 +206,6 @@ describe('el primitive', () => {
         ctx,
         renderer,
         scopedEffect,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -234,7 +218,6 @@ describe('el primitive', () => {
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -262,7 +245,6 @@ describe('el primitive', () => {
         ctx,
         renderer,
         scopedEffect,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -271,7 +253,6 @@ describe('el primitive', () => {
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -297,12 +278,11 @@ describe('el primitive', () => {
 
   describe('reactive element specs', () => {
     it('creates element from reactive spec', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
       const el = El<MockRendererConfig, MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -328,12 +308,11 @@ describe('el primitive', () => {
     });
 
     it('toggles between element and null', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
       const el = El<MockRendererConfig, MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -379,12 +358,11 @@ describe('el primitive', () => {
     });
 
     it('swaps between different element types', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
       const el = El<MockRendererConfig, MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -420,12 +398,11 @@ describe('el primitive', () => {
     });
 
     it('cleans up scope when element is removed', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
       const el = El<MockRendererConfig, MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -459,12 +436,11 @@ describe('el primitive', () => {
     });
 
     it('handles initial null spec', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
       const el = El<MockRendererConfig, MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
@@ -491,12 +467,11 @@ describe('el primitive', () => {
     });
 
     it('maintains position in DOM when toggling', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, processChildren, onCleanup, signal } = createTestEnv();
+      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
       const el = El<MockRendererConfig, MockElement, MockText>().create({
         ctx,
         scopedEffect,
         renderer,
-        processChildren,
         createElementScope,
         disposeScope,
         onCleanup,
