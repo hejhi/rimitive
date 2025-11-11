@@ -19,13 +19,12 @@ const { createFragment, resolveNextRef } = createFragmentHelpers();
 export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
   'map',
   <T>(
-    items: () => T[],
+    items: Reactive<T[]> | (() => T[]),
     keyFn?: (item: T) => string | number
   ) => (render: (itemSignal: Reactive<T>) => RefSpec<TConfig['baseElement']> | SealedSpec<TConfig['baseElement']>) => FragmentRef<TConfig['baseElement']>
 >;
 
 export interface MapHelperOpts<TConfig extends RendererConfig> {
-  untrack: <T>(fn: () => T) => T;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
@@ -51,7 +50,6 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => v
  */
 export const Map = create(
   <TConfig extends RendererConfig>({
-    untrack,
     signal,
     scopedEffect,
     renderer,
@@ -68,7 +66,7 @@ export const Map = create(
       const { instrument } = props ?? {};
 
       function map<T>(
-        items: () => T[],
+        items: Reactive<T[]> | (() => T[]),
         keyFn?: (item: T) => string | number
       ): (render: (itemSignal: Reactive<T>) => TSpec) => TFragRef {
         type TRecNode = RecNode<T, TBaseElement>;
@@ -88,7 +86,7 @@ export const Map = create(
               parentRef: parent,
               nextSibling: nextSib ?? undefined,
 
-              onCreate: untrack(() => (item) => {
+              onCreate: (item) => {
                 const itemSignal = signal(item);
 
                 // Render the item - this creates an element with its own scope
@@ -105,7 +103,7 @@ export const Map = create(
 
                 // Attach the signal to the node ref for updates
                 return elRef;
-              }),
+              },
 
               // onUpdate: called when existing item's data should be updated
               onUpdate(item, node) {

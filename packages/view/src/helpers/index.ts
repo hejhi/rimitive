@@ -18,7 +18,7 @@ export function createSpec<
     }
 ) {
   const { api, deps } = signals;
-  const { consumer, track, untrack, ...restDeps } = deps;
+  const { consumer, track, ...restDeps } = deps;
   const { signal, effect } = api;
   const scopes = createScopes({
     baseEffect: effect,
@@ -27,7 +27,6 @@ export function createSpec<
   return {
     consumer,
     track,
-    untrack,
     renderer,
     ...scopes,
     signal,

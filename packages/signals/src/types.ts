@@ -22,13 +22,8 @@ export interface ReactiveNode {
   status: number; // Current node status (CLEAN, PENDING, DIRTY, DISPOSED) + node type flags (PRODUCER, CONSUMER, SCHEDULED)
 }
 
-// DESIGN: User-facing API contracts
-// These interfaces define the public API without exposing internal graph mechanics.
-// This separation allows changing the implementation without breaking the API.
-// ALIEN-SIGNALS Function-based APIs for cleaner usage
 export interface Readable<T = unknown> {
-  (): T;             // Triggers dependency tracking when called
-  peek(): T;         // Read without creating dependencies (optimization)
+  (): T;
 }
 
 export interface Writable<T = unknown> extends Readable<T> {

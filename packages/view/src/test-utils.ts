@@ -8,7 +8,6 @@ import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { Signal } from '@lattice/signals/signal';
 import { Effect } from '@lattice/signals/effect';
-import { createUntracked } from '@lattice/signals/untrack';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -296,9 +295,6 @@ export function createTestEnv() {
   });
   const effect = effectFactory.method;
 
-  // Create untrack helper
-  const untrack = createUntracked({ consumer: graphEdges.consumer });
-
   const { disposeScope, createElementScope, scopedEffect, onCleanup, getElementScope } =
     createScopes({
       baseEffect: effect,
@@ -309,7 +305,6 @@ export function createTestEnv() {
     renderer,
     signal,
     effect,
-    untrack,
     disposeScope,
     scopedEffect,
     createElementScope,

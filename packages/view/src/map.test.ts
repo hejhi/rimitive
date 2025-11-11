@@ -30,7 +30,6 @@ describe('map() - User-facing behavior', () => {
     });
 
     const mapFactory = Map<MockRendererConfig>().create({
-      untrack: env.untrack,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -53,7 +52,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -73,7 +72,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -89,7 +88,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -111,7 +110,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -136,7 +135,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -163,7 +162,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -188,7 +187,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -218,7 +217,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -250,7 +249,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -277,7 +276,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -304,7 +303,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -334,7 +333,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -361,7 +360,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -388,7 +387,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -415,7 +414,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -445,7 +444,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -476,7 +475,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -507,7 +506,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -540,7 +539,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -574,7 +573,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -610,7 +609,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -647,7 +646,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -682,7 +681,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -712,7 +711,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -747,7 +746,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -773,7 +772,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -842,7 +841,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -878,7 +877,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -912,7 +911,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -948,7 +947,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -983,7 +982,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) => el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>)
       );
@@ -1019,7 +1018,7 @@ describe('map() - User-facing behavior', () => {
 
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id  // Key function
         )((itemSignal) =>
             el.method('li')(itemSignal().name)(((element) => {
@@ -1126,7 +1125,7 @@ describe('map() - User-facing behavior', () => {
       // Create list where render() accidentally reads outerState
       const list = el.method('ul')(
         map(
-          () => items(),
+          items,
           item => item.id
         )((itemSignal) => {
             renderCount++;
