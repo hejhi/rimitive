@@ -1,5 +1,4 @@
 import type { RenderScope } from '../types';
-import type { ViewContext } from '../context';
 
 // Status constants for RenderScope disposal tracking
 // Note: RenderScope is not a reactive node - these are just for lifecycle management
@@ -37,17 +36,21 @@ export type CreateScopes = {
    * Must be called within a scope context (e.g., inside element setup).
    */
   onCleanup: (cleanup: () => void) => void;
+
+  /**
+   * Get the scope associated with an element, if one exists.
+   * Used during disposal to look up scopes when removing elements.
+   */
+  getElementScope: <TElement extends object>(element: TElement) => RenderScope<TElement> | undefined;
 };
 
-export function createScopes<TElement extends object>({
-  ctx,
+export function createScopes({
   baseEffect,
 }: {
-  ctx: ViewContext<TElement>;
   baseEffect: (fn: () => void | (() => void)) => () => void;
 }): CreateScopes {
-  // Cast ctx to handle any object type at runtime
-  const viewCtx = ctx as ViewContext<object>;
+  // Element-to-scope mapping for disposal lookup
+  const elementScopes = new WeakMap<object, RenderScope<object>>();
   let activeScope: RenderScope<object> | null = null;
 
   /**
@@ -109,7 +112,7 @@ export function createScopes<TElement extends object>({
         scope.firstDisposable = undefined;
 
         // Remove from elementScopes map
-        viewCtx.elementScopes.delete(scope.element as object);
+        elementScopes.delete(scope.element as object);
 
         // Done if we've returned to root and no more siblings
         if (scope === rootScope) return;
@@ -191,7 +194,7 @@ export function createScopes<TElement extends object>({
     // CRITICAL: Only keep scope if it has disposables
     // Otherwise unlink from parent tree to avoid traversal overhead
     if (scope.firstDisposable !== undefined) {
-      viewCtx.elementScopes.set(element, scope);
+      elementScopes.set(element, scope);
       return scope;
     }
 
@@ -231,10 +234,20 @@ export function createScopes<TElement extends object>({
     scope.firstDisposable = { dispose: cleanup, next: scope.firstDisposable };
   };
 
+  /**
+   * Get the scope associated with an element, if one exists
+   */
+  const getElementScope = <TElem extends object>(
+    element: TElem
+  ): RenderScope<TElem> | undefined => {
+    return elementScopes.get(element) as RenderScope<TElem> | undefined;
+  };
+
   return {
     disposeScope,
     createElementScope,
     scopedEffect,
     onCleanup,
+    getElementScope,
   };
 }

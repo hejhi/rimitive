@@ -20,21 +20,21 @@ describe('List reconciliation - Complex reorderings', () => {
   function setup() {
     const env = createTestEnv();
     const el = El<MockRendererConfig>().create({
-      ctx: env.ctx,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
     });
 
     const mapFactory = Map<MockRendererConfig>().create({
-      ctx: env.ctx,
       untrack: env.untrack,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       disposeScope: env.disposeScope,
+      getElementScope: env.getElementScope,
     });
 
     return { ...env, el, map: mapFactory.method };
@@ -433,21 +433,21 @@ describe('List reconciliation - Edge cases', () => {
   function setup() {
     const env = createTestEnv();
     const el = El<MockRendererConfig>().create({
-      ctx: env.ctx,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
     });
 
     const mapFactory = Map<MockRendererConfig>().create({
-      ctx: env.ctx,
       untrack: env.untrack,
       signal: env.signal,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       disposeScope: env.disposeScope,
+      getElementScope: env.getElementScope,
     });
 
     return { ...env, el, map: mapFactory.method };

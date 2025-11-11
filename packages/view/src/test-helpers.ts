@@ -6,7 +6,6 @@
 
 import { vi } from 'vitest';
 import { createScopes } from './helpers/scope';
-import { createBaseContext, type ViewContext } from './context';
 
 // Mock element for testing
 export type MockTestElement = { __mock: boolean };
@@ -18,22 +17,17 @@ export const createMockElement = (): MockTestElement => ({ __mock: true });
  * This provides the same public API as the production createScopes,
  * but with a mocked baseEffect for testing purposes.
  */
-export const createTestScopes = <TElement extends object = MockTestElement>(
-  providedCtx?: ViewContext<TElement>
-) => {
-  const ctx = providedCtx || createBaseContext<TElement>();
-
+export const createTestScopes = () => {
   // Mock effect that runs synchronously for testing
   const baseEffect = vi.fn((fn: () => void | (() => void)) => {
     const cleanup = fn();
     return cleanup || (() => {});
   });
 
-  const scopes = createScopes<TElement>({ ctx, baseEffect });
+  const scopes = createScopes({ baseEffect });
 
   return {
     ...scopes,
-    ctx,
     baseEffect,
   };
 };

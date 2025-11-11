@@ -5,7 +5,7 @@ describe('scoped-effect', () => {
   describe('createScopedEffect', () => {
     it('should auto-track effects in active scope', () => {
       const env = createTestEnv();
-      const { ctx, scopedEffect, createElementScope } = env;
+      const { scopedEffect, createElementScope, getElementScope } = env;
 
       const element = new MockElement('div');
       let runCount = 0;
@@ -23,7 +23,7 @@ describe('scoped-effect', () => {
 
       // Scope should exist because scopedEffect registered a cleanup
       expect(scope).toBeTruthy();
-      expect(ctx.elementScopes.get(element)).toBe(scope);
+      expect(getElementScope(element)).toBe(scope);
 
       // Dispose function should work
       expect(dispose).toBeDefined();
@@ -46,7 +46,7 @@ describe('scoped-effect', () => {
 
     it('should dispose when scope is disposed', () => {
       const env = createTestEnv();
-      const { ctx, signal, disposeScope, scopedEffect, createElementScope } = env;
+      const { signal, disposeScope, scopedEffect, createElementScope } = env;
 
       const count = signal(0);
       const element = new MockElement('div');
@@ -67,9 +67,8 @@ describe('scoped-effect', () => {
       count(1);
       expect(runCount).toBe(2);
 
-      // Dispose scope
+      // Dispose scope (this automatically removes from elementScopes)
       disposeScope(scope!);
-      ctx.elementScopes.delete(element);
 
       // Effect should not run anymore
       count(2);

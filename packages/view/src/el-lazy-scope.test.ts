@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { El } from './el';
-import { createBaseContext } from './context';
 import { createMockRenderer, createSignal, MockElement, MockRendererConfig } from './test-utils';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
@@ -10,13 +9,12 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 
 // Helper to create test environment
 function createTestEnv(effectFn?: (fn: () => void) => () => void) {
-  const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
   const effect = effectFn || ((fn: () => void) => {
     fn();
     return () => {};
   });
-  const { createElementScope, disposeScope, onCleanup } = createTestScopes<MockElement>(ctx);
+  const { createElementScope, disposeScope, onCleanup, getElementScope } = createTestScopes();
 
   // Create scopedEffect that wraps the custom effect and registers cleanup
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -32,33 +30,33 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
   };
 
   return {
-    ctx,
     renderer,
     effect,
     scopedEffect,
     createElementScope,
     disposeScope,
-    onCleanup
+    onCleanup,
+    getElementScope
   };
 }
 
 describe('el primitive - lazy scope creation', () => {
   it('creates scope for fully static elements (always creates scopes)', () => {
     const {
-      ctx,
       renderer,
       scopedEffect,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
     } = createTestEnv();
     const el = El<MockRendererConfig>().create({
-      ctx,
       scopedEffect,
       renderer,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
       }).method;
 
     // Static element - no reactive content, no lifecycle callbacks
@@ -67,30 +65,30 @@ describe('el primitive - lazy scope creation', () => {
     const element: MockElement = asElement(ref.create());
 
     // No scope registered for static elements (no disposables)
-    expect(ctx.elementScopes.has(element)).toBe(false);
+    expect(getElementScope(element)).toBeUndefined();
   });
 
   it('creates scope for elements with reactive props', () => {
     const { read: text, subscribers } = createSignal('initial');
     const {
-      ctx,
       renderer,
       scopedEffect,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
       return () => subscribers.delete(fn);
     });
     const el = El<MockRendererConfig>().create({
-      ctx,
       scopedEffect,
       renderer,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
       }).method;
 
     // Element with reactive prop
@@ -98,30 +96,30 @@ describe('el primitive - lazy scope creation', () => {
     const element: MockElement = asElement(ref.create());
 
     // Should have a scope (tracks the effect for reactive title)
-    expect(ctx.elementScopes.has(element)).toBe(true);
+    expect(getElementScope(element)).toBeDefined();
   });
 
   it('creates scope for elements with reactive children', () => {
     const { read: text, subscribers } = createSignal('dynamic');
     const {
-      ctx,
       renderer,
       scopedEffect,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
     } = createTestEnv((fn: () => void) => {
       subscribers.add(fn);
       fn();
       return () => subscribers.delete(fn);
     });
     const el = El<MockRendererConfig>().create({
-      ctx,
       scopedEffect,
       renderer,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
       }).method;
 
     // Element with reactive text child
@@ -129,25 +127,25 @@ describe('el primitive - lazy scope creation', () => {
     const element: MockElement = asElement(ref.create());
 
     // Should have a scope (tracks the effect for reactive text)
-    expect(ctx.elementScopes.has(element)).toBe(true);
+    expect(getElementScope(element)).toBeDefined();
   });
 
   it('creates scope for elements with lifecycle cleanup', () => {
     const {
-      ctx,
       renderer,
       scopedEffect,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
     } = createTestEnv();
     const el = El<MockRendererConfig>().create({
-      ctx,
       scopedEffect,
       renderer,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
       }).method;
 
     // Static element with lifecycle callback that returns cleanup
@@ -158,25 +156,25 @@ describe('el primitive - lazy scope creation', () => {
     const element: MockElement = asElement(ref.create());
 
     // Should have a scope (tracks the cleanup function)
-    expect(ctx.elementScopes.has(element)).toBe(true);
+    expect(getElementScope(element)).toBeDefined();
   });
 
   it('does not register scope when lifecycle callback returns undefined (no disposables)', () => {
     const {
-      ctx,
       renderer,
       scopedEffect,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
     } = createTestEnv();
     const el = El<MockRendererConfig>().create({
-      ctx,
       scopedEffect,
       renderer,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
       }).method;
 
     // Static element with lifecycle callback that returns nothing
@@ -187,25 +185,25 @@ describe('el primitive - lazy scope creation', () => {
     const element: MockElement = asElement(ref.create());
 
     // No scope registered (callback returns undefined, no disposables)
-    expect(ctx.elementScopes.has(element)).toBe(false);
+    expect(getElementScope(element)).toBeUndefined();
   });
 
   it('nested static elements do not register scopes (no disposables)', () => {
     const {
-      ctx,
       renderer,
       scopedEffect,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
     } = createTestEnv();
     const el = El<MockRendererConfig>().create({
-      ctx,
       scopedEffect,
       renderer,
       createElementScope,
       disposeScope,
       onCleanup,
+      getElementScope,
       }).method;
 
     // Nested static elements
@@ -216,9 +214,9 @@ describe('el primitive - lazy scope creation', () => {
     const childElement = parentElement.children[0] as MockElement;
 
     // No scopes registered (static elements with no disposables)
-    expect(ctx.elementScopes.has(parentElement)).toBe(false);
+    expect(getElementScope(parentElement)).toBeUndefined();
     if (childElement) {
-      expect(ctx.elementScopes.has(childElement)).toBe(false);
+      expect(getElementScope(childElement)).toBeUndefined();
     }
   });
 });

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMockElement, MockTestElement } from '../test-helpers';
-import { createBaseContext } from '../context';
 import { createScopes } from './scope';
 import type { RenderScope } from '../types';
 
@@ -21,16 +20,14 @@ const DISPOSED = 1 << 2;  // Bit 2: disposed state
 
 describe('Scope Management', () => {
   const createTestEnv = () => {
-    const ctx = createBaseContext<MockTestElement>();
-
     const baseEffect = vi.fn((fn: () => void | (() => void)) => {
       const cleanup = fn();
       return cleanup || (() => {});
     });
 
-    const scopes = createScopes<MockTestElement>({ ctx, baseEffect });
+    const scopes = createScopes({ baseEffect });
 
-    return { ...scopes, ctx, baseEffect };
+    return { ...scopes, baseEffect };
   };
 
   describe('cleanup registration', () => {
@@ -252,40 +249,40 @@ describe('Scope Management', () => {
 
   describe('element-scope mapping', () => {
     it('maps element to scope when cleanup is registered', () => {
-      const { createElementScope, onCleanup, ctx } = createTestEnv();
+      const { createElementScope, onCleanup, getElementScope } = createTestEnv();
       const element = createMockElement();
 
       const scope = createElementScope(element, () => {
         onCleanup(() => {});
       });
 
-      expect(ctx.elementScopes.get(element)).toBe(scope);
+      expect(getElementScope(element)).toBe(scope);
     });
 
     it('does not map element when no cleanup is registered', () => {
-      const { createElementScope, ctx } = createTestEnv();
+      const { createElementScope, getElementScope } = createTestEnv();
       const element = createMockElement();
 
       createElementScope(element, () => {
         // No cleanup
       });
 
-      expect(ctx.elementScopes.has(element)).toBe(false);
+      expect(getElementScope(element)).toBeUndefined();
     });
 
     it('removes element mapping after disposal', () => {
-      const { createElementScope, onCleanup, disposeScope, ctx } = createTestEnv();
+      const { createElementScope, onCleanup, disposeScope, getElementScope } = createTestEnv();
       const element = createMockElement();
 
       const scope = createElementScope(element, () => {
         onCleanup(() => {});
       });
 
-      expect(ctx.elementScopes.has(element)).toBe(true);
+      expect(getElementScope(element)).toBeDefined();
 
       disposeScope(scope!);
 
-      expect(ctx.elementScopes.has(element)).toBe(false);
+      expect(getElementScope(element)).toBeUndefined();
     });
   });
 

@@ -7,7 +7,6 @@ import { create } from '@lattice/lattice';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from './types';
 import { STATUS_ELEMENT } from './types';
 import type { Renderer, RendererConfig } from './renderer';
-import type { ViewContext } from './context';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
 import { createFragmentHelpers } from './helpers/fragment';
@@ -26,12 +25,12 @@ export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
 >;
 
 export interface MapHelperOpts<TConfig extends RendererConfig> {
-  ctx: ViewContext<TConfig['baseElement']>;
   untrack: <T>(fn: () => T) => T;
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
+  getElementScope: CreateScopes['getElementScope'];
 }
 
 export interface MapProps<
@@ -52,12 +51,12 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => v
  */
 export const Map = create(
   <TConfig extends RendererConfig>({
-    ctx,
     untrack,
     signal,
     scopedEffect,
     renderer,
     disposeScope,
+    getElementScope,
   }: MapHelperOpts<TConfig>) =>
     (props?: MapProps<TConfig>) => {
       type TBaseElement = TConfig['baseElement'];
@@ -136,7 +135,7 @@ export const Map = create(
                 // Remove from DOM and clean up element scope
                 if (node.status !== STATUS_ELEMENT) return;
 
-                const scope = ctx.elementScopes.get(node.element);
+                const scope = getElementScope(node.element);
                 if (scope) disposeScope(scope);
 
                 renderer.removeChild(parentElement, node.element);

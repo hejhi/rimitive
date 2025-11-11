@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import { createBaseContext } from './context';
 import type { Renderer, RendererConfig } from './renderer';
 import type { Reactive, RefSpec, LifecycleCallback, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
@@ -270,13 +269,12 @@ export function getTextContent(element: MockElement | MockText): string {
 }
 
 /**
- * Creates a complete test environment with context, renderer, and reactive primitives
+ * Creates a complete test environment with renderer and reactive primitives
  */
 export function createTestEnv() {
-  const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
 
-  // Create proper SignalsContext for signals (separate from view context)
+  // Create proper SignalsContext for signals
   const signalsCtx = createSignalContext();
 
   // Use real signals integration for proper reactive updates
@@ -306,14 +304,12 @@ export function createTestEnv() {
   // Create untrack helper
   const untrack = createUntracked({ ctx: signalsCtx });
 
-  const { disposeScope, createElementScope, scopedEffect, onCleanup } =
-    createScopes<MockElement>({
-      ctx,
+  const { disposeScope, createElementScope, scopedEffect, onCleanup, getElementScope } =
+    createScopes({
       baseEffect: effect,
     });
 
   return {
-    ctx,
     signalsCtx,
     renderer,
     signal,
@@ -323,5 +319,6 @@ export function createTestEnv() {
     scopedEffect,
     createElementScope,
     onCleanup,
+    getElementScope,
   };
 }

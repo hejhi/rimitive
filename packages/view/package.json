@@ -26,10 +26,6 @@
       "import": "./dist/create.js",
       "types": "./dist/create.d.ts"
     },
-    "./context": {
-      "import": "./dist/context.js",
-      "types": "./dist/context.d.ts"
-    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

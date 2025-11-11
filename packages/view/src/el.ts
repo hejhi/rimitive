@@ -9,7 +9,6 @@ import type {
   FragmentRef,
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
-import type { ViewContext } from './context';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragmentHelpers } from './helpers/fragment';
@@ -66,11 +65,11 @@ export type ReactiveElSpec<
 export type ElOpts<
   TConfig extends RendererConfig,
 > = {
-  ctx: ViewContext<TConfig['baseElement']>;
   createElementScope: CreateScopes['createElementScope'];
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
+  getElementScope: CreateScopes['getElementScope'];
   renderer: Renderer<TConfig>;
 };
 
@@ -138,12 +137,12 @@ export const El = create(
   <
     TConfig extends RendererConfig,
   >({
-    ctx,
     scopedEffect,
     renderer,
     createElementScope,
     disposeScope,
     onCleanup,
+    getElementScope,
   }: ElOpts<TConfig>) =>
     (props?: ElProps<TConfig>) => {
       type TBaseElement = TConfig['baseElement'];
@@ -273,7 +272,7 @@ export const El = create(
 
             // Return cleanup - runs automatically before next effect execution
             return () => {
-              const scope = ctx.elementScopes.get(elementRef.element);
+              const scope = getElementScope(elementRef.element);
               if (scope) disposeScope(scope);
               removeChild(parent.element, elementRef.element);
             };

@@ -1,4 +1,3 @@
-import { createBaseContext } from '../context';
 import { createScopes } from './scope';
 import type {
   Renderer,
@@ -16,19 +15,16 @@ export function createSpec<
     signals: {
       api: ExtensionsToContext<(SignalFactory | EffectFactory)[]>,
       deps: ReturnType<typeof createPushSchedule>
-    },
-    ctx = createBaseContext<TConfig['baseElement']>()
+    }
 ) {
   const { api, deps } = signals;
   const { ctx: signalsCtx, track, untrack, ...restDeps } = deps;
   const { signal, effect } = api;
-  const scopes = createScopes<TConfig['baseElement']>({
-    ctx,
+  const scopes = createScopes({
     baseEffect: effect,
   });
 
   return {
-    ctx,
     signalsCtx,
     track,
     untrack,

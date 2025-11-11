@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { El } from './el';
 import { createTestEnv, getTextContent, createMockRenderer, createSignal, MockElement, MockRendererConfig } from './test-utils';
-import { createBaseContext } from './context';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
 
@@ -10,9 +9,8 @@ const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).elem
 
 // Helper to create test environment for tests that need custom effect
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
-  const ctx = createBaseContext<MockElement>();
   const { renderer } = createMockRenderer();
-  const { createElementScope, disposeScope, onCleanup } = createTestScopes<MockElement>(ctx);
+  const { createElementScope, disposeScope, onCleanup, getElementScope } = createTestScopes();
 
   // Create scopedEffect that wraps the custom effect and registers cleanup
   const scopedEffect = (fn: () => void | (() => void)): () => void => {
@@ -27,27 +25,27 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     return dispose;
   };
 
-  return { ctx, renderer, effect: effectFn, scopedEffect, disposeScope, createElementScope, onCleanup };
+  return { renderer, effect: effectFn, scopedEffect, disposeScope, createElementScope, onCleanup, getElementScope };
 }
 
 describe('el primitive', () => {
   describe('static content', () => {
     it('renders static content', () => {
       const {
-        ctx,
         renderer,
         scopedEffect,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const ref = el('div', { className: 'container' })('Hello ', 'World');
@@ -60,20 +58,20 @@ describe('el primitive', () => {
 
     it('nests elements', () => {
       const {
-        ctx,
         renderer,
         scopedEffect,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
         } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const child = el('span')('nested content') as unknown as RefSpec<MockElement>;
@@ -93,24 +91,24 @@ describe('el primitive', () => {
     it('renders reactive text children', () => {
       const { read: text, write: setText, subscribers } = createSignal('initial');
       const {
-        ctx,
         renderer,
         scopedEffect,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
       const el = El<MockRendererConfig>().create({
-        ctx,
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const ref = el('div')(text);
@@ -127,24 +125,26 @@ describe('el primitive', () => {
     it('updates reactive props', () => {
       const { read: className, write: setClassName, subscribers } = createSignal('foo');
       const {
-        ctx,
+
         renderer,
         scopedEffect,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const ref = el('div', { className })();
@@ -161,24 +161,26 @@ describe('el primitive', () => {
     it('handles mixed static and reactive content', () => {
       const { read: count, write: setCount, subscribers } = createSignal(0);
       const {
-        ctx,
+
         renderer,
         scopedEffect,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const ref = el('div')('Count: ', count);
@@ -195,24 +197,26 @@ describe('el primitive', () => {
     it('cleans up effects on disconnect', () => {
       const { read: text, subscribers } = createSignal('initial');
       const {
-        ctx,
+
         renderer,
         scopedEffect,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       } = createCustomTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const ref = el('div')(text);
@@ -222,10 +226,9 @@ describe('el primitive', () => {
       expect(subscribers.size).toBe(1);
 
       // Simulate element removal (reconciler would call this)
-      const scope = ctx.elementScopes.get(element);
+      const scope = getElementScope(element);
       if (scope) {
         disposeScope(scope);
-        ctx.elementScopes.delete(element);
       }
 
       // User cares: effect was cleaned up (no memory leak)
@@ -234,20 +237,22 @@ describe('el primitive', () => {
 
     it('calls lifecycle cleanup function', () => {
       const {
-        ctx,
+
         renderer,
         scopedEffect,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
         } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const cleanup = vi.fn();
@@ -257,10 +262,9 @@ describe('el primitive', () => {
       const element: MockElement = asElement(ref.create());
 
       // Reconciler removes element (disposes scope explicitly)
-      const scope = ctx.elementScopes.get(element);
+      const scope = getElementScope(element);
       if (scope) {
         disposeScope(scope);
-        ctx.elementScopes.delete(element);
       }
 
       // User cares: cleanup was called
@@ -270,14 +274,15 @@ describe('el primitive', () => {
 
   describe('reactive element specs', () => {
     it('creates element from reactive spec', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
+      const { renderer, createElementScope, disposeScope, scopedEffect, onCleanup, getElementScope, signal } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const reactiveSpec = signal<{ tag: 'div'; children: string[] } | null>({ tag: 'div', children: ['Hello'] });
@@ -300,14 +305,15 @@ describe('el primitive', () => {
     });
 
     it('toggles between element and null', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
+      const { renderer, createElementScope, disposeScope, scopedEffect, onCleanup, getElementScope, signal } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const spec = signal<{ tag: 'div'; children: string[] } | null>({ tag: 'div', children: ['Hello'] });
@@ -350,14 +356,15 @@ describe('el primitive', () => {
     });
 
     it('swaps between different element types', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
+      const { renderer, createElementScope, disposeScope, scopedEffect, onCleanup, getElementScope, signal } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const spec = signal<{ tag: 'div' | 'span'; children: string[] }>({ tag: 'div', children: ['Hello'] });
@@ -390,14 +397,15 @@ describe('el primitive', () => {
     });
 
     it('cleans up scope when element is removed', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
+      const { renderer, createElementScope, disposeScope, scopedEffect, onCleanup, getElementScope, signal } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       // Create a spec with reactive content to ensure scope is created
@@ -424,18 +432,19 @@ describe('el primitive', () => {
       // Element should be removed from DOM
       expect(parent.children).not.toContain(element);
       // If there was a scope, it should be cleaned up
-      expect(ctx.elementScopes.get(element)).toBeUndefined();
+      expect(getElementScope(element)).toBeUndefined();
     });
 
     it('handles initial null spec', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
+      const { renderer, createElementScope, disposeScope, scopedEffect, onCleanup, getElementScope, signal } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const spec = signal<{ tag: 'div'; children: string[] } | null>(null);
@@ -459,14 +468,15 @@ describe('el primitive', () => {
     });
 
     it('maintains position in DOM when toggling', () => {
-      const { renderer, ctx, createElementScope, disposeScope, scopedEffect, onCleanup, signal } = createTestEnv();
+      const { renderer, createElementScope, disposeScope, scopedEffect, onCleanup, getElementScope, signal } = createTestEnv();
       const el = El<MockRendererConfig>().create({
-        ctx,
+
         scopedEffect,
         renderer,
         createElementScope,
         disposeScope,
         onCleanup,
+        getElementScope,
       }).method;
 
       const spec = signal<{ tag: 'span'; children: string[] } | null>({ tag: 'span', children: ['Middle'] });

@@ -14,7 +14,7 @@ import { createTestScopes, createMockElement } from '../test-helpers';
 describe('createElementScope', () => {
   describe('scope creation and registration', () => {
     it('does not register scope when no disposables are added', () => {
-      const { createElementScope, ctx } = createTestScopes();
+      const { createElementScope, getElementScope } = createTestScopes();
       const element = createMockElement();
 
       let didRun = false;
@@ -26,11 +26,11 @@ describe('createElementScope', () => {
       expect(scope).toBeNull(); // No scope created when no disposables
 
       // Scope should NOT be registered (performance optimization)
-      expect(ctx.elementScopes.has(element)).toBe(false);
+      expect(getElementScope(element)).toBeUndefined();
     });
 
     it('registers scope when disposables are added', () => {
-      const { createElementScope, onCleanup, ctx } = createTestScopes();
+      const { createElementScope, onCleanup, getElementScope } = createTestScopes();
       const element = createMockElement();
 
       const scope = createElementScope(element, () => {
@@ -39,7 +39,7 @@ describe('createElementScope', () => {
 
       // Scope should be created and registered
       expect(scope).toBeTruthy();
-      expect(ctx.elementScopes.get(element)).toBe(scope);
+      expect(getElementScope(element)).toBe(scope);
     });
   });
 
@@ -98,7 +98,7 @@ describe('createElementScope', () => {
 
   describe('scope reuse', () => {
     it('can look up existing scope from element', () => {
-      const { createElementScope, onCleanup, ctx } = createTestScopes();
+      const { createElementScope, onCleanup, getElementScope } = createTestScopes();
       const element = createMockElement();
 
       // First call creates scope
@@ -108,17 +108,17 @@ describe('createElementScope', () => {
 
       // Scope is registered
       expect(scope1).toBeTruthy();
-      expect(ctx.elementScopes.get(element)).toBe(scope1);
+      expect(getElementScope(element)).toBe(scope1);
 
       // Can retrieve the same scope from the map
-      const retrievedScope = ctx.elementScopes.get(element);
+      const retrievedScope = getElementScope(element);
       expect(retrievedScope).toBe(scope1);
     });
   });
 
   describe('integration with effects', () => {
     it('enables automatic disposal tracking pattern', () => {
-      const { createElementScope, scopedEffect, disposeScope, ctx } = createTestScopes();
+      const { createElementScope, scopedEffect, disposeScope, getElementScope } = createTestScopes();
 
       const element = createMockElement();
       const effectCleanup = vi.fn();
@@ -129,7 +129,7 @@ describe('createElementScope', () => {
       });
 
       expect(scope).toBeTruthy();
-      expect(ctx.elementScopes.get(element)).toBe(scope);
+      expect(getElementScope(element)).toBe(scope);
 
       // Dispose the scope
       disposeScope(scope!);

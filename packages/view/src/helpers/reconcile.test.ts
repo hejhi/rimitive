@@ -53,10 +53,9 @@ describe('reconcileWithKeys', () => {
       },
       onRemove: (node) => {
         const li = (node as ElementRef<MockElement>).element;
-        const scope = env.ctx.elementScopes.get(li);
+        const scope = env.getElementScope(li);
         if (scope) {
           env.disposeScope(scope);
-          env.ctx.elementScopes.delete(li);
         }
         env.renderer.removeChild(parent, li);
       },
