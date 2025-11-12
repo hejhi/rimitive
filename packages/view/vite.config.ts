@@ -73,6 +73,10 @@ export default defineConfig({
           __dirname,
           'src/helpers/processChildren.ts'
         ),
+        'helpers/addEventListener': resolve(
+          __dirname,
+          'src/helpers/addEventListener.ts'
+        ),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),
       },

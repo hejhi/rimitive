@@ -1,13 +1,12 @@
 import type { SignalFunction } from '@lattice/signals/signal';
 import type { ContextInfo, LogEntry } from './types';
-import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
-import { createPushPullSchedule } from '@lattice/signals/helpers';
+
+import { createApi } from '@lattice/lattice';
+import { defaultExtensions, defaultHelpers } from '@lattice/signals/presets/core';
+
 
 // Create a Lattice context for the devtools panel itself
-export const devtoolsContext = createReactiveApi(
-  undefined,
-  createPushPullSchedule()
-).api;
+export const devtoolsContext = createApi(defaultExtensions(), defaultHelpers());
 
 // Create signals for each piece of state
 interface DevtoolsStateSignals {

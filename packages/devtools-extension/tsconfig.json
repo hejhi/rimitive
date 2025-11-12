@@ -9,8 +9,7 @@
     "strict": false,
     "noImplicitAny": false,
     "paths": {
-      "@/*": ["./src/*"],
-      "@lattice/lattice": ["../lattice/src/index.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

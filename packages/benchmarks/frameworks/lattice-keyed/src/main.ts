@@ -1,26 +1,38 @@
-import { createApi } from '@lattice/view/presets/core';
-import { createApi as createSignalsApi } from '@lattice/signals/presets/core';
-
+import {
+  defaultExtensions as defaultSignalsExtensions,
+  defaultHelpers as defaultSignalsHelpers,
+} from '@lattice/signals/presets/core';
+import {
+  defaultExtensions as defaultViewExtensions,
+  defaultHelpers as defaultViewHelpers,
+} from '@lattice/view/presets/core';
+import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
-import { El } from '@lattice/view/el';
-import { Map } from '@lattice/view/map';
-import { On } from '@lattice/view/on';
-import { Match } from '@lattice/view/match';
+import { createApi } from '@lattice/lattice';
 
 // Wire up view layer
-const { api } = createApi(
-  createDOMRenderer(),
-  {
-    el: El<DOMRendererConfig>(),
-    map: Map<DOMRendererConfig>(),
-    on: On(),
-    match: Match<DOMRendererConfig>(),
-  },
-  createSignalsApi().api
+
+const renderer = createDOMRenderer();
+const signals = createApi(defaultSignalsExtensions(), defaultSignalsHelpers());
+const viewHelpers = defaultViewHelpers(renderer, signals);
+
+/**
+ * DOM-specific API for this app
+ * Types are automatically inferred from the renderer
+ */
+const views = createApi(
+  defaultViewExtensions<DOMRendererConfig>(),
+  viewHelpers
 );
 
-const { el, map, on, signal, computed } = api;
+const api = {
+  ...signals,
+  ...views,
+  addEventListener: createAddEventListener(viewHelpers.batch),
+};
+
+const { el, map, addEventListener, signal, computed } = api;
 
 // ============================================================================
 // Benchmark Data
@@ -178,12 +190,15 @@ const Row = (
   return el('tr', { className: rowClass })(
     el('td', { className: 'col-md-1' })(String(id))(),
     el('td', { className: 'col-md-4' })(
-      el('a')(label)(on('click', () => select(id)))
+      el('a')(label)(addEventListener('click', () => select(id)))
     )(),
     el('td', { className: 'col-md-1' })(
       el('a')(
-        el('span', { className: 'glyphicon glyphicon-remove', ariaHidden: 'true' })()
-      )(on('click', () => remove(id)))
+        el('span', {
+          className: 'glyphicon glyphicon-remove',
+          ariaHidden: 'true',
+        })()
+      )(addEventListener('click', () => remove(id)))
     )(),
     el('td', { className: 'col-md-6' })(),
     ...children
@@ -197,12 +212,12 @@ const App = () => {
         el('div', { className: 'col-md-6' })(el('h1')('Lattice-keyed')())(),
         el('div', { className: 'col-md-6' })(
           el('div', { className: 'row' })(
-            Button('run', 'Create 1,000 rows')(on('click', run)),
-            Button('runlots', 'Create 10,000 rows')(on('click', runLots)),
-            Button('add', 'Append 1,000 rows')(on('click', add)),
-            Button('update', 'Update every 10th row')(on('click', update)),
-            Button('clear', 'Clear')(on('click', clear)),
-            Button('swaprows', 'Swap Rows')(on('click', swapRows))
+            Button('run', 'Create 1,000 rows')(addEventListener('click', run)),
+            Button('runlots', 'Create 10,000 rows')(addEventListener('click', runLots)),
+            Button('add', 'Append 1,000 rows')(addEventListener('click', add)),
+            Button('update', 'Update every 10th row')(addEventListener('click', update)),
+            Button('clear', 'Clear')(addEventListener('click', clear)),
+            Button('swaprows', 'Swap Rows')(addEventListener('click', swapRows))
           )()
         )()
       )()

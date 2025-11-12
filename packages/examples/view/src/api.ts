@@ -5,15 +5,16 @@
  * This ensures consistent renderer configuration across the entire app.
  */
 import { ComponentFactory, defaultExtensions as defaultViewExtensions, defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
-import { createApi as createLatticeApi } from '@lattice/lattice';
+import { createApi } from '@lattice/lattice';
 import { defaultExtensions as defaultSignalsExtensions, defaultHelpers } from '@lattice/signals/presets/core';
 import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { NodeRef, SealedSpec } from '@lattice/view/types';
 import { create as createComponent } from '@lattice/view/component';
+import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
 const renderer = createDOMRenderer();
 
-export const signals = createLatticeApi(defaultSignalsExtensions(), defaultHelpers());
+export const signals = createApi(defaultSignalsExtensions(), defaultHelpers());
 export type Signals = typeof signals;
 
 const viewHelpers = defaultViewHelpers(renderer, signals);
@@ -22,7 +23,7 @@ const viewHelpers = defaultViewHelpers(renderer, signals);
  * DOM-specific API for this app
  * Types are automatically inferred from the renderer
  */
-export const views = createLatticeApi(
+export const views = createApi(
   defaultViewExtensions<DOMRendererConfig>(),
   viewHelpers
 );
@@ -33,8 +34,7 @@ export const mount = <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> =
 export const api = {
   ...signals,
   ...views,
-  // Include addEventListener helper from view
-  addEventListener: viewHelpers.addEventListener,
+  addEventListener: createAddEventListener(viewHelpers.batch),
 };
 export type CoreApi = typeof api;
 

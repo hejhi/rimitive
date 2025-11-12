@@ -42,6 +42,10 @@
       "import": "./dist/helpers/processChildren.js",
       "types": "./dist/helpers/processChildren.d.ts"
     },
+    "./helpers/addEventListener": {
+      "import": "./dist/helpers/addEventListener.js",
+      "types": "./dist/helpers/addEventListener.d.ts"
+    },
     "./map": {
       "import": "./dist/map.js",
       "types": "./dist/map.d.ts"

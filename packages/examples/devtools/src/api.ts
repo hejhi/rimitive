@@ -30,13 +30,13 @@ import { Match } from '@lattice/view/match';
 import { ComponentFactory, defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
 import { NodeRef, SealedSpec } from '@lattice/view/types';
 import { create as createComponent } from '@lattice/view/component';
+import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
 const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
   enabled: true,
 });
 
-const renderer = createDOMRenderer();
 
 export const signals = createApi(
   {
@@ -51,6 +51,7 @@ export const signals = createApi(
 );
 export type Signals = typeof signals;
 
+const renderer = createDOMRenderer();
 const viewHelpers = defaultViewHelpers(renderer, signals);
 
 /**
@@ -74,7 +75,7 @@ export const api = {
   ...signals,
   ...views,
   // Include addEventListener helper from view
-  addEventListener: viewHelpers.addEventListener,
+  addEventListener: createAddEventListener(viewHelpers.batch),
 };
 export type CoreApi = typeof api;
 

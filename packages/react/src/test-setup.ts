@@ -4,22 +4,22 @@ import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { SignalProvider } from './signals/context';
-import { createApi } from '@lattice/signals/presets/core';
+import { createApi } from '@lattice/lattice';
+import { defaultExtensions, defaultHelpers } from '@lattice/signals/presets/core';
 
-// Type alias for the API created with our standard components
-type TestSignalAPI = ReturnType<typeof createApi>['api'];
+const createSignals = () => createApi(defaultExtensions(), defaultHelpers());
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
   // Create a fresh signal API for each test
-  const { api } = createApi();
-
-  return render(createElement(SignalProvider, { api, children: ui }));
+  return render(
+    createElement(SignalProvider, { api: createSignals(), children: ui })
+  );
 }
 
 // Also export api creation for tests that need direct access
-export function createTestSignalAPI(): TestSignalAPI {
-  return createApi().api;
+export function createTestSignalAPI() {
+  return createSignals();
 }
 
 // Clean up after each test to prevent memory leaks
