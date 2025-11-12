@@ -68,14 +68,12 @@ export const Map = create(
     disposeScope,
     getElementScope,
   }: MapHelperOpts<TConfig>) =>
-    (props?: MapProps<TConfig>) => {
+    ({ instrument }: MapProps<TConfig> = {}) => {
       type TBaseElement = TConfig['baseElement'];
       type TFragRef = FragmentRef<TBaseElement>;
       type TRefSpec = RefSpec<TBaseElement>;
       type TSealedSpec = SealedSpec<TBaseElement>;
       type TSpec = TRefSpec | TSealedSpec;
-
-      const { instrument } = props ?? {};
 
       function map<T>(
         items: T[] | (() => T[]) | Reactive<T[]>,
@@ -108,9 +106,7 @@ export const Map = create(
 
                   // Render the item - this creates an element with its own scope
                   // Pass api for SealedSpec components created with create()
-                  elRef = render(itemSignal).create(
-                    api
-                  ) as TRecNode;
+                  elRef = render(itemSignal).create(api) as TRecNode;
 
                   renderer.insertBefore(
                     parentElement,
