@@ -10,8 +10,9 @@ import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
 import { createFragmentHelpers } from './helpers/fragment';
+import { createNodeHelpers } from './helpers/node-helpers';
 
-const { createFragment, resolveNextRef } = createFragmentHelpers();
+const { createFragment } = createFragmentHelpers();
 
 /**
  * Map factory type - curried for element builder pattern
@@ -75,6 +76,12 @@ export const Map = create(
       type TSealedSpec = SealedSpec<TBaseElement>;
       type TSpec = TRefSpec | TSealedSpec;
 
+      const { insertNodeBefore, removeNode } = createNodeHelpers({
+        renderer,
+        disposeScope,
+        getElementScope,
+      });
+
       function map<T>(
         items: T[] | (() => T[]) | Reactive<T[]>,
         keyFn?: (item: T) => string | number
@@ -108,10 +115,13 @@ export const Map = create(
                   // Pass api for SealedSpec components created with create()
                   elRef = render(itemSignal).create(api) as TRecNode;
 
-                  renderer.insertBefore(
+                  // Insert into DOM
+                  insertNodeBefore(
+                    api,
                     parentElement,
-                    elRef.element,
-                    resolveNextRef(nextSibling)?.element ?? null
+                    elRef,
+                    undefined,
+                    nextSibling,
                   );
 
                   elRef.data = itemSignal;
@@ -131,30 +141,19 @@ export const Map = create(
               // onMove: called when item needs repositioning
               onMove(node, nextSiblingNode) {
                 if (node.status !== STATUS_ELEMENT) return;
-
-                let nextEl: TBaseElement | null = null;
-
-                if (
-                  nextSiblingNode &&
-                  nextSiblingNode.status === STATUS_ELEMENT
-                ) {
-                  nextEl = nextSiblingNode.element;
-                } else if (!nextSiblingNode) {
-                  nextEl = resolveNextRef(nextSibling)?.element ?? null;
-                }
-
-                renderer.insertBefore(parentElement, node.element, nextEl);
+                insertNodeBefore(
+                  api,
+                  parentElement,
+                  node,
+                  nextSiblingNode,
+                  nextSibling,
+                );
               },
 
               // onRemove: called when item is being removed
               onRemove(node) {
-                // Remove from DOM and clean up element scope
                 if (node.status !== STATUS_ELEMENT) return;
-
-                const scope = getElementScope(node.element);
-                if (scope) disposeScope(scope);
-
-                renderer.removeChild(parentElement, node.element);
+                removeNode(parentElement, node);
               },
             });
 

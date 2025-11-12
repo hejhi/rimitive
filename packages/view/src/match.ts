@@ -7,10 +7,11 @@ import type {
   FragmentRef,
   ElementRef,
 } from './types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
+import { STATUS_ELEMENT, STATUS_REF_SPEC } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragmentHelpers } from './helpers/fragment';
+import { createNodeHelpers } from './helpers/node-helpers';
 
 const { createFragment } = createFragmentHelpers();
 
@@ -91,7 +92,11 @@ export const Match = create(
       type TFragRef = FragmentRef<TBaseElement>;
 
       const { instrument } = props ?? {};
-      const { insertBefore, removeChild } = renderer;
+      const { insertNodeBefore, removeNode } = createNodeHelpers({
+        renderer,
+        disposeScope,
+        getElementScope,
+      });
 
       /**
        * Helper to create a RefSpec that accumulates lifecycle callbacks
@@ -135,29 +140,6 @@ export const Match = create(
             const fragRef = createFragment<TBaseElement>((parent, nextSibling) => {
               let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
 
-              // Clean up old element or fragment
-              const cleanupCurrent = () => {
-                if (!currentNode) return;
-
-                if (currentNode.status === STATUS_ELEMENT) {
-                  const scope = getElementScope(currentNode.element);
-                  if (scope) disposeScope(scope);
-                  removeChild(parent.element, currentNode.element);
-                } else if (currentNode.status === STATUS_FRAGMENT) {
-                  // Dispose all elements in fragment
-                  let current = currentNode.firstChild;
-                  while (current) {
-                    if (current.status === STATUS_ELEMENT) {
-                      const elementRef = current as ElementRef<TBaseElement>;
-                      const scope = getElementScope(elementRef.element);
-                      if (scope) disposeScope(scope);
-                      removeChild(parent.element, elementRef.element);
-                    }
-                    current = current.next;
-                  }
-                }
-              };
-
               // Run lifecycle callbacks for element
               const runLifecycleCallbacks = (element: TElement) => {
                 createElementScope(element, () => {
@@ -168,22 +150,10 @@ export const Match = create(
                 });
               };
 
-              // Insert node into DOM
-              const insertNode = (nodeRef: ElementRef<TBaseElement> | TFragRef) => {
-                if (nodeRef.status === STATUS_ELEMENT) {
-                  insertBefore(
-                    parent.element,
-                    nodeRef.element,
-                    nextSibling && nextSibling.element
-                  );
-                } else if (nodeRef.status === STATUS_FRAGMENT) {
-                  nodeRef.attach(parent, nextSibling, api);
-                }
-              };
-
               // Update function - called when reactive value changes
               const updateElement = (value: T) => {
-                cleanupCurrent();
+                // Clean up old element or fragment
+                if (currentNode) removeNode(parent.element, currentNode);
 
                 // Get RefSpec from matcher (pure function call)
                 const refSpec = matcher(value);
@@ -207,7 +177,13 @@ export const Match = create(
                 }
 
                 // Insert into DOM
-                insertNode(nodeRef);
+                insertNodeBefore(
+                  api,
+                  parent.element,
+                  nodeRef,
+                  undefined,
+                  nextSibling
+                );
               };
 
               // Effect only tracks the reactive value, then calls updateElement
