@@ -5,17 +5,15 @@
 import type { InstrumentationContext } from '@lattice/lattice';
 import type { MapFactory } from '../map';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive } from '../types';
-import type { RendererConfig } from '../renderer';
 
 /**
  * Instrument a map factory to emit events
  */
-export function instrumentMap<TConfig extends RendererConfig>(
-  method: MapFactory<TConfig>['method'],
+export function instrumentMap<TBaseElement>(
+  method: MapFactory<TBaseElement>['method'],
   instrumentation: InstrumentationContext
-): MapFactory<TConfig>['method'] {
-  type TEl = TConfig['baseElement'];
-  type TSpec = RefSpec<TEl> | SealedSpec<TEl>;
+): MapFactory<TBaseElement>['method'] {
+  type TSpec = RefSpec<TBaseElement> | SealedSpec<TBaseElement>;
 
   function instrumentedMap<T>(
     items: T[] | (() => T[]) | Reactive<T[]>,
@@ -36,7 +34,7 @@ export function instrumentMap<TConfig extends RendererConfig>(
     const renderApplicator = method(items as () => T[], keyFn);
 
     // Wrap the render applicator
-    return (render: (itemSignal: Reactive<T>) => TSpec): FragmentRef<TEl> => {
+    return (render: (itemSignal: Reactive<T>) => TSpec): FragmentRef<TBaseElement> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -83,5 +81,5 @@ export function instrumentMap<TConfig extends RendererConfig>(
     };
   }
 
-  return instrumentedMap as MapFactory<TConfig>['method'];
+  return instrumentedMap;
 }

@@ -8,7 +8,6 @@ import {
   createDOMRenderer,
   type DOMRendererConfig,
 } from '@lattice/view/renderers/dom';
-import { createApi } from '@lattice/view/presets/core';
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/map';
 import { On } from '@lattice/view/on';
@@ -27,17 +26,21 @@ import {
   instrumentMap,
   instrumentOn,
 } from '@lattice/view/devtools';
-import { createApi as createSignals } from '@lattice/signals/presets/core';
-import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
-import { createPushPullSchedule } from '@lattice/signals/helpers';
+import { createApi, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+import { defaultHelpers } from '@lattice/signals/presets/core';
 import { Match } from '@lattice/view/match';
+import { ComponentFactory, defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
+import { NodeRef, SealedSpec } from '@lattice/view/types';
+import { create as createComponent } from '@lattice/view/component';
 
 const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
   enabled: true,
 });
 
-const signals = createSignals(
+const renderer = createDOMRenderer();
+
+export const signals = createApi(
   {
     signal: Signal({ instrument: instrumentSignal }),
     computed: Computed({ instrument: instrumentComputed }),
@@ -45,26 +48,31 @@ const signals = createSignals(
     batch: Batch({ instrument: instrumentBatch }),
     subscribe: Subscribe({ instrument: instrumentSubscribe }),
   },
-  createPushPullSchedule(),
-  { instrumentation }
-).api;
-
-export type Signals = typeof signals;
-
-export const { create, api, mount } = createApi(
-  createDOMRenderer(),
-  {
-    el: El<DOMRendererConfig>({
-      instrument: (method, instrumentation) =>
-        instrumentEl<DOMRendererConfig>(method, instrumentation),
-    }),
-    map: Map<DOMRendererConfig>({
-      instrument: (method, instrumentation) =>
-        instrumentMap<DOMRendererConfig>(method, instrumentation),
-    }),
-    on: On({ instrument: instrumentOn }),
-    match: Match()
-  },
-  signals,
+  defaultHelpers(),
   { instrumentation }
 );
+export type Signals = typeof signals;
+
+/**
+ * DOM-specific API for this app
+ * Types are automatically inferred from the renderer
+ */
+export const views = createApi(
+  {
+    el: El<DOMRendererConfig>({ instrument: instrumentEl }),
+    map: Map<DOMRendererConfig>({ instrument: instrumentMap }),
+    on: On({ instrument: instrumentOn }),
+    match: Match<DOMRendererConfig>(),
+  },
+  defaultViewHelpers(renderer, signals)
+);
+
+export const mount = <TElement>(
+  spec: SealedSpec<TElement>
+): NodeRef<TElement> => spec.create(views);
+
+export const api = { ...signals, ...views };
+export type CoreApi = typeof api;
+
+export const create = createComponent as ComponentFactory<typeof api>;
+export type DOMViews = typeof views;

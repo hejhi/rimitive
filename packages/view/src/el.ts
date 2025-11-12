@@ -108,9 +108,7 @@ export type ElFactory<
  * - TText: Text node type
  */
 export const El = create(
-  <
-    TConfig extends RendererConfig,
-  >({
+  <TConfig extends RendererConfig>({
     scopedEffect,
     renderer,
     createElementScope,

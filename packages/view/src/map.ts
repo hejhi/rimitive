@@ -17,27 +17,27 @@ const { createFragment } = createFragmentHelpers();
 /**
  * Map factory type - curried for element builder pattern
  */
-export type MapFactory<TConfig extends RendererConfig> = LatticeExtension<
+export type MapFactory<TBaseElement> = LatticeExtension<
   'map',
   {
     // Array
     <T, TEl>(
       items: T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TConfig['baseElement']>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TBaseElement>;
     <T, TEl>(
       items: Reactive<T[]>,
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TConfig['baseElement']>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TBaseElement>;
     // Plain function that returns array
     <T, TEl>(
       items: () => T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TConfig['baseElement']>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TBaseElement>;
   }
 >;
 
-export interface MapHelperOpts<TConfig extends RendererConfig> {
+export interface MapOpts<TConfig extends RendererConfig> {
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
@@ -45,14 +45,12 @@ export interface MapHelperOpts<TConfig extends RendererConfig> {
   getElementScope: CreateScopes['getElementScope'];
 }
 
-export interface MapProps<
-  TConfig extends RendererConfig,
-> {
+export interface MapProps<TBaseElement> {
   instrument?: (
-    method: MapFactory<TConfig>['method'],
+    method: MapFactory<TBaseElement>['method'],
     instrumentation: InstrumentationContext,
     context: ExtensionContext
-  ) => MapFactory<TConfig>['method'];
+  ) => MapFactory<TBaseElement>['method'];
 }
 
 type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => void>;
@@ -68,14 +66,15 @@ export const Map = create(
     renderer,
     disposeScope,
     getElementScope,
-  }: MapHelperOpts<TConfig>) =>
-    ({ instrument }: MapProps<TConfig> = {}) => {
+  }: MapOpts<TConfig>) =>
+    (props?: MapProps<TConfig['baseElement']>) => {
       type TBaseElement = TConfig['baseElement'];
       type TFragRef = FragmentRef<TBaseElement>;
       type TRefSpec = RefSpec<TBaseElement>;
       type TSealedSpec = SealedSpec<TBaseElement>;
       type TSpec = TRefSpec | TSealedSpec;
 
+      const { instrument } = props ?? {};
       const { insertNodeBefore, removeNode } = createNodeHelpers({
         renderer,
         disposeScope,
@@ -121,7 +120,7 @@ export const Map = create(
                     parentElement,
                     elRef,
                     undefined,
-                    nextSibling,
+                    nextSibling
                   );
 
                   elRef.data = itemSignal;
@@ -146,7 +145,7 @@ export const Map = create(
                   parentElement,
                   node,
                   nextSiblingNode,
-                  nextSibling,
+                  nextSibling
                 );
               },
 
@@ -180,7 +179,7 @@ export const Map = create(
           });
       }
 
-      const extension: MapFactory<TConfig> = {
+      const extension: MapFactory<TBaseElement> = {
         name: 'map',
         method: map,
         ...(instrument && { instrument }),
