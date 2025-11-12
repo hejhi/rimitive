@@ -24,8 +24,4 @@
     "public",
     "demo"
   ],
-  "references": [
-    { "path": "../lattice" },
-    { "path": "../signals" }
-  ]
 }
