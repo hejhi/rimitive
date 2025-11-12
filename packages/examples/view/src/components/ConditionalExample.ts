@@ -1,7 +1,7 @@
 import { create } from '../api';
 
 export const ConditionalExample = create(
-  ({ el, signal, computed, on, effect }) =>
+  ({ el, signal, computed, on }) =>
     () => {
       // State for various conditional examples
       const showMessage = signal(true);
@@ -27,37 +27,60 @@ export const ConditionalExample = create(
         computed(() => (isEditMode() ? 'Save' : 'Edit'))
       )(on('click', () => isEditMode(!isEditMode())));
 
-      // Switch between input and span based on edit mode
+      // Pattern 1: Reactive tags with only common props
+      // Since input and span don't share type/value props, we only use className
       const editableText = el(
         computed(() => isEditMode() ? 'input' : 'span'),
         {
-          type: computed(() => isEditMode() ? 'text' : undefined),
-          value: computed(() => isEditMode() ? editText() : undefined),
+          // Only common properties work here (className exists on both)
           className: computed(() => isEditMode() ? 'edit-input' : 'display-text'),
         }
       )(
         computed(() => isEditMode() ? '' : editText())
+      )(
+        // Use lifecycle callback to handle element-specific behavior
+        (el) => {
+          if (el instanceof HTMLInputElement) {
+            // Set input-specific attributes
+            el.type = 'text';
+            el.value = editText();
+
+            // Handle input changes
+            const handler = (e: Event) => {
+              editText((e.target as HTMLInputElement).value);
+            };
+            el.addEventListener('input', handler);
+
+            return () => el.removeEventListener('input', handler);
+          }
+          return undefined;
+        }
       );
 
-      // Event handler for input changes - using effect to sync input value
-      effect(() => {
-        // This effect tracks when isEditMode changes
-        // When in edit mode and the element is an input, attach the event listener
-        if (isEditMode()) {
-          // Need to wait for next frame to ensure DOM is updated
-          setTimeout(() => {
-            const input = document.querySelector(
-              '.edit-input'
-            ) as HTMLInputElement;
-            if (input) {
-              const handler = (e: Event) => {
-                editText((e.target as HTMLInputElement).value);
-              };
-              input.addEventListener('input', handler);
-            }
-          }, 0);
-        }
-      });
+      // Pattern 2: Alternative - use separate conditional elements
+      // When elements need different props, conditionally render separate specs
+      const editableTextAlt = el('div', { className: 'editable-wrapper' })(
+        // Input (only renders in edit mode) with all its specific props
+        el(
+          computed(() => isEditMode() ? 'input' : null),
+          { type: 'text', className: 'edit-input' }
+        )()(
+          (input) => {
+            // Sync input value with signal
+            input.value = editText();
+            const handler = (e: Event) => {
+              editText((e.target as HTMLInputElement).value);
+            };
+            input.addEventListener('input', handler);
+            return () => input.removeEventListener('input', handler);
+          }
+        ),
+        // Span (only renders in display mode)
+        el(
+          computed(() => !isEditMode() ? 'span' : null),
+          { className: 'display-text' }
+        )(editText)
+      );
 
       // Cycle button type
       const cycleTypeBtn = el('button')('Change Button Style')(
@@ -112,8 +135,12 @@ export const ConditionalExample = create(
         // Example 2: Switch element types
         el('div', { className: 'example-section' })(
           el('h3')('Example 2: Switch Element Types'),
-          el('p')('Switch between <input> and <span> based on edit mode.'),
+          el('p')('Two patterns for handling elements with different props:'),
+          el('p')('Pattern 1: Reactive tag with common props, element-specific in lifecycle'),
           editableText,
+          el('br')(),
+          el('p')('Pattern 2: Separate conditional elements, each with their own props'),
+          editableTextAlt,
           editToggleBtn
         ),
 

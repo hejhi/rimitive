@@ -21,7 +21,7 @@ export function instrumentEl<TConfig extends RendererConfig>(
   ): ChildrenApplicator<TConfig, Tag>;
   function instrumentedEl<Tag extends keyof TConfig['elements']>(
     reactive: Reactive<Tag | null>,
-    props?: Record<string, unknown>
+    props?: ElementProps<TConfig, Tag>
   ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
     tagOrReactive: Tag | Reactive<Tag | null>,

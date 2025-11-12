@@ -108,9 +108,10 @@ export type ElFactory<
 
     // Reactive tag builder - tag can be dynamic or null for conditional rendering
     // The element type is the union of all possible tag element types
+    // Props are typed as the union - only props valid for ALL tags in the union are allowed
     <Tag extends keyof TConfig['elements']>(
       reactive: Reactive<Tag | null>,
-      props?: Record<string, unknown>
+      props?: ElementProps<TConfig, Tag>
     ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
   }
 >;
@@ -235,7 +236,7 @@ export const El = create(
        */
       const createReactiveElement = <Tag extends string & TElementKeys>(
         tagReactive: Reactive<Tag | null>,
-        props: Record<string, unknown>,
+        props: ElementProps<TConfig, Tag>,
         children: ElRefSpecChild[]
       ): RefSpec<TElements[Tag]> => {
         return createRefSpec<TElements[Tag]>((lifecycleCallbacks, api) => {
@@ -297,11 +298,11 @@ export const El = create(
       ): ChildrenApplicator<TConfig, Tag>;
       function el<Tag extends string & TElementKeys>(
         reactive: Reactive<Tag | null>,
-        props?: Record<string, unknown>
+        props?: ElementProps<TConfig, Tag>
       ): (...children: ElRefSpecChild[]) => RefSpec<TElements[Tag]>;
       function el<Tag extends string & TElementKeys>(
         tagOrReactive: Tag | Reactive<Tag | null>,
-        props?: ElementProps<TConfig, Tag> | Record<string, unknown>
+        props?: ElementProps<TConfig, Tag>
       ): ChildrenApplicator<TConfig, Tag> | ((...children: ElRefSpecChild[]) => RefSpec<TElements[Tag]>) {
         // Handle reactive tag case
         if (typeof tagOrReactive === 'function') {
