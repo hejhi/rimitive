@@ -151,26 +151,15 @@ export const El = create(
       type TFragRef = FragmentRef<TBaseElement>;
 
       const { instrument } = props ?? {};
-      const { processChildren } = createProcessChildren<TConfig>({
-        scopedEffect,
-        renderer,
-      });
-      const {
-        setAttribute,
-        createElement,
-        insertBefore,
-        removeChild
-      } = renderer;
+      const { processChildren } = createProcessChildren<TConfig>({ scopedEffect, renderer });
+      const { setAttribute, createElement, insertBefore, removeChild } = renderer;
 
       /**
        * Helper to create a RefSpec with lifecycle callback chaining
        * Generic over El - the element type (no longer constrained to HTMLElement)
        */
       const createRefSpec = <El>(
-        createElement: (
-          callbacks: LifecycleCallback<El>[],
-          api?: unknown
-        ) => ElementRef<El>
+        createElement: (callbacks: LifecycleCallback<El>[], api?: unknown) => ElementRef<El>
       ): RefSpec<El> => {
         type TElRef = ElementRef<El>;
         const lifecycleCallbacks: LifecycleCallback<El>[] = [];
@@ -183,13 +172,15 @@ export const El = create(
         };
 
         refSpec.status = STATUS_REF_SPEC;
-
         refSpec.create = <TExt>(
           api?: unknown,
           extensions?: TExt
         ) => {
           const elRef = createElement(lifecycleCallbacks, api);
-          return { ...elRef, ...extensions } as TElRef & TExt;
+          return {
+            ...elRef,
+            ...extensions
+          } as TElRef & TExt;
         };
 
         return refSpec;

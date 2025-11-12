@@ -40,17 +40,15 @@ export function createApi<
     map: Map<TConfig>(),
     on: On(),
   },
-  signalsApi: TReactive = (createReactiveApi() as unknown as TReactive),
+  signals: TReactive = (createReactiveApi() as unknown as TReactive),
   opts?: CreateContextOptions
 ) {
-  const baseReactives = signalsApi;
-
   // Merge signals and view apis first
   const api = {
-    ...signalsApi,
+    ...signals,
     ...createLatticeApi(
       { ...extensions, ...ext },
-      createSpec(renderer, baseReactives),
+      createSpec(renderer, signals),
       opts
     ),
   };

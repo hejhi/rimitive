@@ -5,21 +5,11 @@
  * This is a headless component - pure logic with no UI concerns.
  * Can be used with any signals implementation (Lattice, Solid, Preact Signals, etc.)
  */
+import { Signals } from '../create';
 
-import { create } from '@lattice/lattice';
-import type { SignalsAPI, SignalFunction, ComputedFunction } from '../types';
-
-export interface CounterAPI {
-  count: SignalFunction<number>;
-  doubled: ComputedFunction<number>;
-  increment: () => void;
-  decrement: () => void;
-  reset: () => void;
-}
-
-export const createCounter = create((api: SignalsAPI) => (initialCount: number = 0): CounterAPI => {
-  const count = api.signal(initialCount);
-  const doubled = api.computed(() => count() * 2);
+export const createCounter = ({ signal, computed }: Pick<Signals, 'signal' | 'computed'>, initialCount = 0) => {
+  const count = signal(initialCount);
+  const doubled = computed(() => count() * 2);
 
   return {
     // Reactive state - expose signals directly
@@ -31,4 +21,4 @@ export const createCounter = create((api: SignalsAPI) => (initialCount: number =
     decrement: () => count(count() - 1),
     reset: () => count(initialCount),
   };
-});
+};

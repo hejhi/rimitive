@@ -18,6 +18,14 @@ import { Computed } from '@lattice/signals/computed';
 
 const renderer = createDOMRenderer();
 
+export const signals = createSignalsApi({
+  signal: Signal(),
+  effect: Effect(),
+  computed: Computed(),
+}).api;
+
+export type Signals = typeof signals;
+
 /**
  * DOM-specific API for this app
  * Types are automatically inferred from the renderer
@@ -29,9 +37,5 @@ export const { api, create, mount } = createApi(
     map: Map<DOMRendererConfig>(),
     on: On(),
   },
-  createSignalsApi({
-    signal: Signal(),
-    effect: Effect(),
-    computed: Computed(),
-  }).api
+  signals
 );

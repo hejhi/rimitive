@@ -6,8 +6,7 @@
  * Can be used with any signals implementation (Lattice, Solid, Preact Signals, etc.)
  */
 
-import { create } from '@lattice/lattice';
-import type { SignalsAPI, SignalFunction, ComputedFunction } from '../types';
+import { Signals } from '../create';
 
 export interface Todo {
   id: number;
@@ -17,26 +16,13 @@ export interface Todo {
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export interface TodoListAPI {
-  todos: SignalFunction<Todo[]>;
-  filteredTodos: ComputedFunction<Todo[]>;
-  filter: SignalFunction<FilterType>;
-  activeCount: ComputedFunction<number>;
-  completedCount: ComputedFunction<number>;
-  addTodo: (text: string) => void;
-  toggleTodo: (id: number) => void;
-  removeTodo: (id: number) => void;
-  setFilter: (filter: FilterType) => void;
-  clearCompleted: () => void;
-}
-
-export const createTodoList = create((api: SignalsAPI) => (): TodoListAPI => {
+export const createTodoList = ({ signal, computed }: Pick<Signals, 'signal' | 'computed'>) => {
   let nextId = 1;
-  const todos = api.signal<Todo[]>([]);
-  const filter = api.signal<FilterType>('all');
+  const todos = signal<Todo[]>([]);
+  const filter = signal<FilterType>('all');
 
   // Derived state
-  const filteredTodos = api.computed(() => {
+  const filteredTodos = computed(() => {
     const currentTodos = todos();
     const currentFilter = filter();
 
@@ -49,12 +35,12 @@ export const createTodoList = create((api: SignalsAPI) => (): TodoListAPI => {
     return currentTodos;
   });
 
-  const activeCount = api.computed(() =>
-    todos().filter((t: Todo) => !t.completed).length
+  const activeCount = computed(
+    () => todos().filter((t: Todo) => !t.completed).length
   );
 
-  const completedCount = api.computed(() =>
-    todos().filter((t: Todo) => t.completed).length
+  const completedCount = computed(
+    () => todos().filter((t: Todo) => t.completed).length
   );
 
   return {
@@ -73,9 +59,11 @@ export const createTodoList = create((api: SignalsAPI) => (): TodoListAPI => {
     },
 
     toggleTodo: (id: number) => {
-      todos(todos().map((todo: Todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      ));
+      todos(
+        todos().map((todo: Todo) =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        )
+      );
     },
 
     removeTodo: (id: number) => {
@@ -90,4 +78,4 @@ export const createTodoList = create((api: SignalsAPI) => (): TodoListAPI => {
       todos(todos().filter((todo: Todo) => !todo.completed));
     },
   };
-});
+};

@@ -9,9 +9,9 @@ import { createTodoList } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';
 import { create } from '../create';
 
-export const TodoList = create(({ el, map, signal, computed, effect, on }) => () => {
+export const TodoList = create(({ el, map, signal, computed, on }) => () => {
   // Create headless behavior
-  const todoList = createTodoList().create({ computed, effect, signal });
+  const todoList = createTodoList({ computed, signal });
 
   // Local UI state (input value)
   const inputValue = signal('');
