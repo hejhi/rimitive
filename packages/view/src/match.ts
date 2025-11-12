@@ -7,7 +7,7 @@ import type {
   FragmentRef,
   ElementRef,
 } from './types';
-import { STATUS_REF_SPEC } from './types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragmentHelpers } from './helpers/fragment';
@@ -140,15 +140,15 @@ export const Match = create(
               const updateElement = (value: T) => {
                 // Clean up old element
                 if (currentNode) {
-                  if (currentNode.status === 1 /* STATUS_ELEMENT */) {
+                  if (currentNode.status === STATUS_ELEMENT) {
                     const scope = getElementScope(currentNode.element);
                     if (scope) disposeScope(scope);
                     removeChild(parent.element, currentNode.element);
-                  } else if (currentNode.status === 2 /* STATUS_FRAGMENT */) {
+                  } else if (currentNode.status === STATUS_FRAGMENT) {
                     // Dispose fragment
                     let current = currentNode.firstChild;
                     while (current) {
-                      if (current.status === 1 /* STATUS_ELEMENT */) {
+                      if (current.status === STATUS_ELEMENT) {
                         const elementRef = current as ElementRef<TBaseElement>;
                         const scope = getElementScope(elementRef.element);
                         if (scope) disposeScope(scope);
@@ -178,7 +178,7 @@ export const Match = create(
 
                 // Execute lifecycle callbacks from match level
                 // These apply to the currently active element
-                if (nodeRef.status === 1 /* STATUS_ELEMENT */) {
+                if (nodeRef.status === STATUS_ELEMENT) {
                   const elementRef = nodeRef as ElementRef<TElement>;
                   createElementScope(elementRef.element, () => {
                     for (const callback of lifecycleCallbacks) {
@@ -189,16 +189,15 @@ export const Match = create(
                 }
 
                 // Insert at correct position
-                if (nodeRef.status === 1 /* STATUS_ELEMENT */) {
-                  const elementRef = nodeRef as ElementRef<TBaseElement>;
+                if (nodeRef.status === STATUS_ELEMENT) {
                   insertBefore(
                     parent.element,
-                    elementRef.element,
-                    nextSibling && (nextSibling as ElementRef<TBaseElement>).element
+                    nodeRef.element,
+                    nextSibling && nextSibling.element
                   );
-                } else if (nodeRef.status === 2 /* STATUS_FRAGMENT */) {
+                } else if (nodeRef.status === STATUS_FRAGMENT) {
                   // Attach fragment
-                  (nodeRef as TFragRef).attach(parent, nextSibling, api);
+                  nodeRef.attach(parent, nextSibling, api);
                 }
               };
 
