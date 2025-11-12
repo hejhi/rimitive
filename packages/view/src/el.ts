@@ -116,12 +116,12 @@ export const El = create(
     createElementScope,
     onCleanup,
   }: ElOpts<TConfig>) =>
-    (props?: ElProps<TConfig>) => {
+    (props: ElProps<TConfig> = {}) => {
       type TBaseElement = TConfig['baseElement'];
       type TElements = TConfig['elements'];
       type TElementKeys = keyof TElements;
 
-      const { instrument } = props ?? {};
+      const { instrument } = props;
       const { processChildren } = createProcessChildren<TConfig>({ scopedEffect, renderer });
       const { setAttribute, createElement } = renderer;
 
@@ -132,7 +132,6 @@ export const El = create(
       const createRefSpec = <El>(
         createElement: (callbacks: LifecycleCallback<El>[], api?: unknown) => ElementRef<El>
       ): RefSpec<El> => {
-        type TElRef = ElementRef<El>;
         const lifecycleCallbacks: LifecycleCallback<El>[] = [];
 
         const refSpec: RefSpec<El> = (
@@ -150,78 +149,53 @@ export const El = create(
           const elRef = createElement(lifecycleCallbacks, api);
           // If no extensions, return the ref directly to preserve mutability
           // This is critical for FragmentRef which gets firstChild set after creation
-          if (!extensions || Object.keys(extensions).length === 0) {
-            return elRef as TElRef & TExt;
-          }
+          if (!extensions || Object.keys(extensions).length === 0) return elRef;
+
           // With extensions, we need to merge - but this breaks FragmentRef mutation
           // For now, prioritize FragmentRef correctness over extensions
           return {
             ...elRef,
-            ...extensions
-          } as TElRef & TExt;
+            ...extensions,
+          };
         };
 
         return refSpec;
       };
 
-      const createAttrEffect =
-        <TEl extends TBaseElement>(
-          element: TEl,
-          key: string,
-          getter: () => unknown
-        ) => () => setAttribute(element, key, getter());
-
-      const createStaticElement = <Tag extends string & keyof TElements>(
-        tag: Tag,
-        props: ElementProps<TConfig, Tag>,
-        children: ElRefSpecChild[]
-      ): RefSpec<TElements[Tag]> => {
-        // The specific element the user provides
-        type TElement = TElements[Tag];
-
-        return createRefSpec<TElement>((lifecycleCallbacks, api) => {
-          const element = createElement(tag);
-          const elRef: ElementRef<TBaseElement> = {
-            status: STATUS_ELEMENT,
-            element: element,
-            next: undefined,
-          };
-
-          createElementScope(element, () => {
-            for (const [key, val] of Object.entries(props)) {
-              if (typeof val !== 'function') {
-                setAttribute(element, key, val);
-                continue;
-              }
-              scopedEffect(
-                createAttrEffect(element, key, val as () => unknown)
-              );
-            }
-            processChildren(elRef, children, api);
-
-            // Execute lifecycle callbacks within scope
-            for (const callback of lifecycleCallbacks) {
-              const cleanup = callback(element as TElement);
-              if (cleanup) onCleanup(cleanup);
-            }
-          });
-
-          return elRef as ElementRef<TElement>;
-        });
-      };
-
       // Static element builder
       function el<Tag extends string & TElementKeys>(
         tag: Tag,
-        props?: ElementProps<TConfig, Tag>
+        props: ElementProps<TConfig, Tag> = {}
       ): ChildrenApplicator<TConfig, Tag> {
         // Return children applicator
-        return (...children: ElRefSpecChild[]): RefSpec<TElements[Tag]> => {
-          return createStaticElement(
-            tag,
-            (props ?? {}) as ElementProps<TConfig, Tag>,
-            children
-          );
+        return (...children: ElRefSpecChild[]) => {
+          return createRefSpec((lifecycleCallbacks, api) => {
+            const element = createElement(tag);
+            const elRef: ElementRef<TBaseElement> = {
+              status: STATUS_ELEMENT,
+              element: element,
+              next: undefined,
+            };
+
+            createElementScope(element, () => {
+              for (const [key, val] of Object.entries(props)) {
+                if (typeof val !== 'function') {
+                  setAttribute(element, key, val);
+                  continue;
+                }
+                scopedEffect(() => setAttribute(element, key, (val as () => unknown)()));
+              }
+              processChildren(elRef, children, api);
+
+              // Execute lifecycle callbacks within scope
+              for (const callback of lifecycleCallbacks) {
+                const cleanup = callback(element as TElements[Tag]);
+                if (cleanup) onCleanup(cleanup);
+              }
+            });
+
+            return elRef as ElementRef<TElements[Tag]>;
+          });
         };
       }
 
