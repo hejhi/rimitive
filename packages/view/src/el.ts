@@ -10,10 +10,7 @@ import type {
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
-import { createFragmentHelpers } from './helpers/fragment';
 import { createProcessChildren } from './helpers/processChildren';
-
-const { createFragment } = createFragmentHelpers();
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -50,10 +47,8 @@ export type ElOpts<
   TConfig extends RendererConfig,
 > = {
   createElementScope: CreateScopes['createElementScope'];
-  disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
-  getElementScope: CreateScopes['getElementScope'];
   renderer: Renderer<TConfig>;
 };
 
@@ -87,11 +82,6 @@ export type ChildrenApplicator<
  * 1. Structure phase: el(tag, props)(children) - Pure, returns RefSpec blueprint
  * 2. Behavior phase: refSpec(lifecycle) - Imperative, attaches side effects
  *
- * Supports both static and reactive tags:
- * - Static: el('div', props)(children)(lifecycle)
- * - Reactive: el(computed(() => 'div'), props)(children)(lifecycle)
- * - Conditional: el(computed(() => show ? 'div' : null), props)(children)
- *
  * Generic over:
  * - TConfig: The renderer configuration
  */
@@ -101,18 +91,10 @@ export type ElFactory<
   'el',
   {
     // Static element builder
-    <Tag extends keyof TConfig['elements']>(
+    <Tag extends string & keyof TConfig['elements']>(
       tag: Tag,
       props?: ElementProps<TConfig, Tag>
     ): ChildrenApplicator<TConfig, Tag>;
-
-    // Reactive tag builder - tag can be dynamic or null for conditional rendering
-    // The element type is the union of all possible tag element types
-    // Props are typed as the union - only props valid for ALL tags in the union are allowed
-    <Tag extends keyof TConfig['elements']>(
-      reactive: Reactive<Tag | null>,
-      props?: ElementProps<TConfig, Tag>
-    ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
   }
 >;
 
@@ -132,9 +114,7 @@ export const El = create(
     scopedEffect,
     renderer,
     createElementScope,
-    disposeScope,
     onCleanup,
-    getElementScope,
   }: ElOpts<TConfig>) =>
     (props?: ElProps<TConfig>) => {
       type TBaseElement = TConfig['baseElement'];
@@ -143,7 +123,7 @@ export const El = create(
 
       const { instrument } = props ?? {};
       const { processChildren } = createProcessChildren<TConfig>({ scopedEffect, renderer });
-      const { setAttribute, createElement, insertBefore, removeChild } = renderer;
+      const { setAttribute, createElement } = renderer;
 
       /**
        * Helper to create a RefSpec with lifecycle callback chaining
@@ -191,7 +171,7 @@ export const El = create(
           getter: () => unknown
         ) => () => setAttribute(element, key, getter());
 
-      const createStaticElement = <Tag extends string & TElementKeys>(
+      const createStaticElement = <Tag extends string & keyof TElements>(
         tag: Tag,
         props: ElementProps<TConfig, Tag>,
         children: ElRefSpecChild[]
@@ -230,95 +210,15 @@ export const El = create(
         });
       };
 
-      /**
-       * Creates a reactive element that can swap between different tags
-       * Returns a ChildrenApplicator to maintain the curried API
-       */
-      const createReactiveElement = <Tag extends string & TElementKeys>(
-        tagReactive: Reactive<Tag | null>,
-        props: ElementProps<TConfig, Tag>,
-        children: ElRefSpecChild[]
-      ): RefSpec<TElements[Tag]> => {
-        return createRefSpec<TElements[Tag]>((lifecycleCallbacks, api) => {
-          const fragRef = createFragment<TBaseElement>((parent, nextSibling) => {
-            return scopedEffect(() => {
-              const tag = tagReactive();
-
-              // Conditional rendering - null means no element
-              if (tag === null) {
-                fragRef.firstChild = undefined;
-                return; // No cleanup needed
-              }
-
-              // Create static element with accumulated props/children
-              // Type assertion needed because props is Record<string, unknown> for reactive tags
-              // but createStaticElement expects ElementProps<TConfig, Tag>
-              let refSpec = createStaticElement(tag, props as ElementProps<TConfig, Tag>, children);
-
-              // Apply accumulated lifecycle callbacks
-              // Lifecycle callbacks use TBaseElement (the common base type) which is safe to use
-              // with any specific element type Tag since all elements extend from the base
-              for (const callback of lifecycleCallbacks) {
-                refSpec = refSpec(callback as LifecycleCallback<TElements[Tag]>);
-              }
-
-              const nodeRef = refSpec.create(api);
-
-              // createStaticElement always returns ElementRef, not FragmentRef
-              const elementRef = nodeRef as ElementRef<TBaseElement>;
-
-              fragRef.firstChild = elementRef;
-
-              // Insert at correct position
-              insertBefore(
-                parent.element,
-                elementRef.element,
-                nextSibling?.element ?? null
-              );
-
-              // Return cleanup - runs automatically before next effect execution
-              return () => {
-                const scope = getElementScope(elementRef.element);
-                if (scope) disposeScope(scope);
-                removeChild(parent.element, elementRef.element);
-              };
-            });
-          });
-
-          // FragmentRef is structurally compatible with ElementRef
-          // Cast to the union type so lifecycle callbacks get proper element types
-          return fragRef as unknown as ElementRef<TElements[Tag]>;
-        });
-      };
-
-      // Overloaded implementation
+      // Static element builder
       function el<Tag extends string & TElementKeys>(
         tag: Tag,
         props?: ElementProps<TConfig, Tag>
-      ): ChildrenApplicator<TConfig, Tag>;
-      function el<Tag extends string & TElementKeys>(
-        reactive: Reactive<Tag | null>,
-        props?: ElementProps<TConfig, Tag>
-      ): (...children: ElRefSpecChild[]) => RefSpec<TElements[Tag]>;
-      function el<Tag extends string & TElementKeys>(
-        tagOrReactive: Tag | Reactive<Tag | null>,
-        props?: ElementProps<TConfig, Tag>
-      ): ChildrenApplicator<TConfig, Tag> | ((...children: ElRefSpecChild[]) => RefSpec<TElements[Tag]>) {
-        // Handle reactive tag case
-        if (typeof tagOrReactive === 'function') {
-          return (...children: ElRefSpecChild[]) => {
-            return createReactiveElement(
-              tagOrReactive,
-              props ?? {},
-              children
-            );
-          };
-        }
-
-        // Handle static tag case - return children applicator
-        return (...children: ElRefSpecChild[]) => {
+      ): ChildrenApplicator<TConfig, Tag> {
+        // Return children applicator
+        return (...children: ElRefSpecChild[]): RefSpec<TElements[Tag]> => {
           return createStaticElement(
-            tagOrReactive,
+            tag,
             (props ?? {}) as ElementProps<TConfig, Tag>,
             children
           );

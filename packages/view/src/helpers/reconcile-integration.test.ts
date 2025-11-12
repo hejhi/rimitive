@@ -23,9 +23,7 @@ describe('List reconciliation - Complex reorderings', () => {
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       createElementScope: env.createElementScope,
-      disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
-      getElementScope: env.getElementScope,
     });
 
     const mapFactory = Map<MockRendererConfig>().create({
@@ -435,9 +433,7 @@ describe('List reconciliation - Edge cases', () => {
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
       createElementScope: env.createElementScope,
-      disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
-      getElementScope: env.getElementScope,
     });
 
     const mapFactory = Map<MockRendererConfig>().create({

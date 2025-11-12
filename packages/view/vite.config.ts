@@ -62,6 +62,7 @@ export default defineConfig({
     lib: {
       entry: {
         el: resolve(__dirname, 'src/el.ts'),
+        match: resolve(__dirname, 'src/match.ts'),
         component: resolve(__dirname, 'src/component.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         renderer: resolve(__dirname, 'src/renderer.ts'),

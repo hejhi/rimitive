@@ -15,6 +15,7 @@ import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/do
 import { Signal } from '@lattice/signals/signal';
 import { Effect } from '@lattice/signals/effect';
 import { Computed } from '@lattice/signals/computed';
+import { Match } from '@lattice/view/match';
 
 const renderer = createDOMRenderer();
 
@@ -35,6 +36,7 @@ export const { api, create, mount } = createApi(
   {
     el: El<DOMRendererConfig>(),
     map: Map<DOMRendererConfig>(),
+    match: Match<DOMRendererConfig>(),
     on: On(),
   },
   signals

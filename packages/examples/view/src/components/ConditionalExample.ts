@@ -1,7 +1,7 @@
 import { create } from '../api';
 
 export const ConditionalExample = create(
-  ({ el, signal, computed, on }) =>
+  ({ el, signal, computed, on, match }) =>
     () => {
       // State for various conditional examples
       const showMessage = signal(true);
@@ -15,11 +15,12 @@ export const ConditionalExample = create(
       );
 
       // Conditional message - renders null when hidden
-      const conditionalMessage = el(
-        computed(() => showMessage() ? 'div' : null),
-        { className: 'conditional-message' }
-      )(
-        el('span')('👋 This message can be toggled on and off!')
+      const conditionalMessage = match(showMessage)((show) =>
+        show
+          ? el('div', { className: 'conditional-message' })(
+              el('span')('👋 This message can be toggled on and off!')
+            )
+          : null
       );
 
       // Toggle edit mode
@@ -27,59 +28,57 @@ export const ConditionalExample = create(
         computed(() => (isEditMode() ? 'Save' : 'Edit'))
       )(on('click', () => isEditMode(!isEditMode())));
 
-      // Pattern 1: Reactive tags with only common props
-      // Since input and span don't share type/value props, we only use className
-      const editableText = el(
-        computed(() => isEditMode() ? 'input' : 'span'),
-        {
-          // Only common properties work here (className exists on both)
-          className: computed(() => isEditMode() ? 'edit-input' : 'display-text'),
-        }
-      )(
-        computed(() => isEditMode() ? '' : editText())
-      )(
-        // Use lifecycle callback to handle element-specific behavior
-        (el) => {
-          if (el instanceof HTMLInputElement) {
-            // Set input-specific attributes
-            el.type = 'text';
-            el.value = editText();
-
-            // Handle input changes
-            const handler = (e: Event) => {
-              editText((e.target as HTMLInputElement).value);
-            };
-            el.addEventListener('input', handler);
-
-            return () => el.removeEventListener('input', handler);
-          }
-          return undefined;
-        }
+      // Pattern 1: Match with conditional element types
+      // Use match to switch between input and span based on edit mode
+      const editableText = match(isEditMode)((isEdit) =>
+        isEdit
+          ? el('input', {
+              type: 'text',
+              className: 'edit-input',
+              value: editText, // Reactive prop keeps input synced
+            })()(
+              (input) => {
+                // Only handle user input events
+                const handler = (e: Event) => {
+                  editText((e.target as HTMLInputElement).value);
+                };
+                input.addEventListener('input', handler);
+                return () => input.removeEventListener('input', handler);
+              }
+            )
+          : el('span', {
+              className: 'display-text',
+            })(editText())
       );
 
-      // Pattern 2: Alternative - use separate conditional elements
-      // When elements need different props, conditionally render separate specs
+      // Pattern 2: Alternative - use separate conditional elements with match
+      // Multiple conditional elements can be composed
       const editableTextAlt = el('div', { className: 'editable-wrapper' })(
         // Input (only renders in edit mode) with all its specific props
-        el(
-          computed(() => isEditMode() ? 'input' : null),
-          { type: 'text', className: 'edit-input' }
-        )()(
-          (input) => {
-            // Sync input value with signal
-            input.value = editText();
-            const handler = (e: Event) => {
-              editText((e.target as HTMLInputElement).value);
-            };
-            input.addEventListener('input', handler);
-            return () => input.removeEventListener('input', handler);
-          }
+        match(isEditMode)((isEdit) =>
+          isEdit
+            ? el('input', {
+                type: 'text',
+                className: 'edit-input',
+                value: editText, // Reactive prop keeps input synced
+              })()(
+                (input) => {
+                  // Only handle user input events
+                  const handler = (e: Event) => {
+                    editText((e.target as HTMLInputElement).value);
+                  };
+                  input.addEventListener('input', handler);
+                  return () => input.removeEventListener('input', handler);
+                }
+              )
+            : null
         ),
         // Span (only renders in display mode)
-        el(
-          computed(() => !isEditMode() ? 'span' : null),
-          { className: 'display-text' }
-        )(editText)
+        match(isEditMode)((isEdit) =>
+          !isEdit
+            ? el('span', { className: 'display-text' })(editText())
+            : null
+        )
       );
 
       // Cycle button type
@@ -101,10 +100,10 @@ export const ConditionalExample = create(
       );
 
       // Dynamic button that changes based on state
-      const dynamicButton = el(
-        computed(() => 'button' as const),
-        { className: computed(() => `dynamic-btn ${buttonType()}`) }
-      )(
+      // Static button element with reactive props and children
+      const dynamicButton = el('button', {
+        className: computed(() => `dynamic-btn ${buttonType()}`),
+      })(
         computed(() => {
           const type = buttonType();
           const labels = {
@@ -119,7 +118,7 @@ export const ConditionalExample = create(
       return el('div', { className: 'example conditional-example' })(
         el('h2')('Conditional Element Example'),
         el('p')(
-          'Demonstrates reactive conditional rendering with el(computed(() => spec | null)).'
+          'Demonstrates reactive conditional rendering with match(reactive)((value) => refSpec | null).'
         ),
 
         // Example 1: Toggle visibility
@@ -136,10 +135,10 @@ export const ConditionalExample = create(
         el('div', { className: 'example-section' })(
           el('h3')('Example 2: Switch Element Types'),
           el('p')('Two patterns for handling elements with different props:'),
-          el('p')('Pattern 1: Reactive tag with common props, element-specific in lifecycle'),
+          el('p')('Pattern 1: Match switches between different element types with their own props'),
           editableText,
           el('br')(),
-          el('p')('Pattern 2: Separate conditional elements, each with their own props'),
+          el('p')('Pattern 2: Separate conditional elements using match for show/hide behavior'),
           editableTextAlt,
           editToggleBtn
         ),

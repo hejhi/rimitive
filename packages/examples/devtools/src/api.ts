@@ -30,6 +30,7 @@ import {
 import { createApi as createSignals } from '@lattice/signals/presets/core';
 import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
 import { createPushPullSchedule } from '@lattice/signals/helpers';
+import { Match } from '@lattice/view/match';
 
 const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
@@ -62,6 +63,7 @@ export const { create, api, mount } = createApi(
         instrumentMap<DOMRendererConfig>(method, instrumentation),
     }),
     on: On({ instrument: instrumentOn }),
+    match: Match()
   },
   signals,
   { instrumentation }

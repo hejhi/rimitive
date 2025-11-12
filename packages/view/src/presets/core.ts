@@ -1,6 +1,7 @@
 import { El } from '../el';
 import { Map } from '../map';
 import { On } from '../on';
+import { Match } from '../match';
 import {
   CreateContextOptions,
   createApi as createLatticeApi,
@@ -16,11 +17,13 @@ import type { RefSpec, SealedSpec, NodeRef } from '../types';
 import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
 
 export type { ElementProps, ChildrenApplicator } from '../el';
+export type { MatchFactory } from '../match';
 
 export const extensions = {
   el: El(),
   map: Map(),
   on: On(),
+  match: Match(),
 };
 
 /**
@@ -39,6 +42,7 @@ export function createApi<
     el: El<TConfig>(),
     map: Map<TConfig>(),
     on: On(),
+    match: Match<TConfig>(),
   },
   signals: TReactive = (createReactiveApi().api as unknown as TReactive),
   opts?: CreateContextOptions

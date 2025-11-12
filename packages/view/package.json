@@ -18,6 +18,10 @@
       "import": "./dist/el.js",
       "types": "./dist/el.d.ts"
     },
+    "./match": {
+      "import": "./dist/match.js",
+      "types": "./dist/match.d.ts"
+    },
     "./component": {
       "import": "./dist/component.js",
       "types": "./dist/component.d.ts"
