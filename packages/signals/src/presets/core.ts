@@ -10,7 +10,7 @@ import { Effect } from '../effect';
 import { Batch } from '../batch';
 import { Subscribe } from '../subscribe';
 import { createPushPullSchedule } from '../helpers';
-import type { InstantiableExtension } from '@lattice/lattice';
+import { createApi, type InstantiableExtension } from '@lattice/lattice';
 
 // Re-export types so they're part of the public API
 export type { SubscribeFactory, SubscribeOpts, SubscribeProps, SubscribeFunction } from '../subscribe';
@@ -32,3 +32,4 @@ export const defaultExtensions = <T extends Record<string, InstantiableExtension
 });
 
 export const defaultHelpers = createPushPullSchedule;
+export const createSignalsApi = () => createApi(defaultExtensions(), defaultHelpers());

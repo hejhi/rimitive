@@ -36,40 +36,53 @@ import { SealedSpec } from '@lattice/view/types';
 import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
-const instrumentation = createInstrumentation({
-  providers: [devtoolsProvider()],
-  enabled: true,
-});
+const createInstrumentedSignals = () => {
+  const instrumentation = createInstrumentation({
+    providers: [devtoolsProvider()],
+    enabled: true,
+  });
+  const signals = createApi(
+    {
+      signal: Signal({ instrument: instrumentSignal }),
+      computed: Computed({ instrument: instrumentComputed }),
+      effect: Effect({ instrument: instrumentEffect }),
+      batch: Batch({ instrument: instrumentBatch }),
+      subscribe: Subscribe({ instrument: instrumentSubscribe }),
+    },
+    defaultHelpers(),
+    { instrumentation }
+  );
 
-export const signals = createApi(
-  {
-    signal: Signal({ instrument: instrumentSignal }),
-    computed: Computed({ instrument: instrumentComputed }),
-    effect: Effect({ instrument: instrumentEffect }),
-    batch: Batch({ instrument: instrumentBatch }),
-    subscribe: Subscribe({ instrument: instrumentSubscribe }),
-  },
-  defaultHelpers(),
-  { instrumentation }
-);
+  return signals;
+}
 
-const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
+const createInstrumentedViewApi = () => {
+  const signals = createInstrumentedSignals();
+  const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
+  const views = createApi(
+    {
+      el: El<DOMRendererConfig>({ instrument: instrumentEl }),
+      map: Map<DOMRendererConfig>({ instrument: instrumentMap }),
+      match: Match<DOMRendererConfig>(),
+    },
+    viewHelpers
+  );
+  const api = {
+    ...signals,
+    ...views,
+    addEventListener: createAddEventListener(viewHelpers.batch),
+  };
 
-export const views = createApi(
-  {
-    el: El<DOMRendererConfig>({ instrument: instrumentEl }),
-    map: Map<DOMRendererConfig>({ instrument: instrumentMap }),
-    match: Match<DOMRendererConfig>(),
-  },
-  viewHelpers
-);
-export const mount = <TElement>(spec: SealedSpec<TElement>) => spec.create(views);
-export const api = {
-  ...signals,
-  ...views,
-  addEventListener: createAddEventListener(viewHelpers.batch),
-};
-export const create = createComponent as ComponentFactory<typeof api>;
+  return {
+    api,
+    signals,
+    views,
+    mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(views),
+    create: createComponent as ComponentFactory<typeof api>,
+  };
+}
+
+export const { api, signals, mount, create, views } = createInstrumentedViewApi();
 
 export type Signals = typeof signals;
 export type DOMViews = typeof views;

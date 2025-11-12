@@ -5,6 +5,7 @@ import { createScheduler } from './scheduler';
 import { createUntracked } from '../untrack';
 
 // Push
+// (signals only)
 export function createPush() {
   const edges = createGraphEdges();
   const untrack = createUntracked({ consumer: edges.consumer });
@@ -17,6 +18,7 @@ export function createPush() {
 }
 
 // Push, pull
+// (signals, computeds)
 export function createPushPull() {
   const { track, ...restPush } = createPush();
 
@@ -28,6 +30,7 @@ export function createPushPull() {
 }
 
 // Push, schedule
+// (signals, effects)
 export function createPushSchedule() {
   const { detachAll, track, withVisitor, ...restPush } = createPush();
   const { withPropagate, ...scheduler } = createScheduler({ detachAll });
@@ -42,6 +45,7 @@ export function createPushSchedule() {
 }
 
 // Push, pull, schedule
+// (signals, computeds, effects)
 export function createPushPullSchedule() {
   const { detachAll, track, withVisitor, ...restPushPull } = createPushPull();
   const { withPropagate, ...scheduler } = createScheduler({ detachAll });
