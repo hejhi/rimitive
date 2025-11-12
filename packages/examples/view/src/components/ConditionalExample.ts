@@ -21,7 +21,9 @@ export const ConditionalExample = create(
           return {
             tag: 'div' as const,
             props: { className: 'conditional-message' },
-            children: ['👋 This message can be toggled on and off!'],
+            children: [
+              el('span')('👋 This message can be toggled on and off!')
+            ],
           };
         })
       );

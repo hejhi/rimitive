@@ -26,12 +26,9 @@ export const createTodoList = ({ signal, computed }: Pick<Signals, 'signal' | 'c
     const currentTodos = todos();
     const currentFilter = filter();
 
-    if (currentFilter === 'active') {
-      return currentTodos.filter((t: Todo) => !t.completed);
-    }
-    if (currentFilter === 'completed') {
-      return currentTodos.filter((t: Todo) => t.completed);
-    }
+    if (currentFilter === 'active') return currentTodos.filter((t: Todo) => !t.completed);
+    if (currentFilter === 'completed') return currentTodos.filter((t: Todo) => t.completed);
+
     return currentTodos;
   });
 
