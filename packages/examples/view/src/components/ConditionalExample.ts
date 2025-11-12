@@ -1,4 +1,4 @@
-import { create } from '../create';
+import { create } from '../api';
 
 export const ConditionalExample = create(
   ({ el, signal, computed, on, effect }) =>

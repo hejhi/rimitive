@@ -5,7 +5,7 @@
  * This is a headless component - pure logic with no UI concerns.
  * Can be used with any signals implementation (Lattice, Solid, Preact Signals, etc.)
  */
-import { Signals } from '../create';
+import { Signals } from '../api';
 
 export const createCounter = ({ signal, computed }: Pick<Signals, 'signal' | 'computed'>, initialCount = 0) => {
   const count = signal(initialCount);

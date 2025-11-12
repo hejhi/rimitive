@@ -5,8 +5,8 @@
  * Demonstrates working with arrays in signals and computed values.
  */
 
-import { create } from '@lattice/lattice';
-import type { SignalsAPI, SignalFunction, ComputedFunction } from '../types';
+import { Signals } from '../api';
+import type { SignalFunction, ComputedFunction } from '../types';
 
 export interface Todo {
   id: number;
@@ -23,7 +23,10 @@ export interface TodoListAPI {
   toggleAll: () => void;
 }
 
-export const TodoList = create(({ signal, computed }: SignalsAPI) => (initialTodos: Todo[] = []): TodoListAPI => {
+export const createTodoList = (
+  { signal, computed }: Pick<Signals, 'signal' | 'computed'>,
+  initialTodos: Todo[] = []
+): TodoListAPI => {
   const todos = signal<Todo[]>(initialTodos);
 
   const allCompleted = computed(() => {
@@ -64,4 +67,4 @@ export const TodoList = create(({ signal, computed }: SignalsAPI) => (initialTod
       todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
     },
   };
-});
+};

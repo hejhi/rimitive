@@ -1,4 +1,4 @@
-import { create } from '../create';
+import { create } from '../api';
 import { createCounter } from '../behaviors/counter';
 
 export const Counter = create((api) => (initialCount: number = 0) => {

@@ -6,7 +6,7 @@
  * Can be used with any signals implementation (Lattice, Solid, Preact Signals, etc.)
  */
 
-import { Signals } from '../create';
+import { Signals } from '../api';
 
 export interface Todo {
   id: number;

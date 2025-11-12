@@ -1,8 +1,8 @@
 // Import headless behaviors
-import { Counter } from './behaviors/counter';
-import { TodoList } from './behaviors/todo-list';
-import { Filter } from './behaviors/filter';
-import { TodoStats } from './behaviors/todo-stats';
+import { createCounter } from './behaviors/counter';
+import { createTodoList } from './behaviors/todo-list';
+import { createFilter } from './behaviors/filter';
+import { createTodoStats } from './behaviors/todo-stats';
 
 // Import view components
 import { Counter as CounterView } from './views/Counter';
@@ -10,21 +10,20 @@ import { TodoList as TodoListView } from './views/TodoList';
 import { BatchedUpdates as BatchedUpdatesView } from './views/BatchedUpdates';
 import { create, mount } from './api';
 
-const App = create((api) => () => {
-  const { el, computed, batch } = api;
-  const counter = Counter(0).create(api);
-  const todoList = TodoList([
+const App = create(({ el, signal, computed, batch }) => () => {
+  const counter = createCounter({ signal, computed }, 0);
+  const todoList = createTodoList({ signal, computed }, [
     { id: 1, text: 'Learn Lattice', completed: false },
     { id: 2, text: 'Build an app', completed: false },
-  ]).create(api);
-  const filter = Filter().create(api);
+  ]);
+  const { todos, activeCount, addTodo, toggleTodo } = todoList;
+  const filter = createFilter({ signal });
   const { set: setCounter } = counter;
-  const { addTodo, toggleTodo } = todoList;
-  const filteredTodos = computed(() => filter.filterTodos(todoList.todos()));
-  const todoStats = TodoStats({
-    todos: todoList.todos,
-    activeCount: todoList.activeCount,
-  }).create(api);
+  const filteredTodos = computed(() => filter.filterTodos(todos()));
+  const todoStats = createTodoStats(
+    { computed },
+    { todos, activeCount }
+  );
 
   return el('div', { className: 'app' })(
     el('h1')('Lattice DevTools Example'),

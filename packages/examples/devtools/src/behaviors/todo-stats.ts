@@ -6,15 +6,14 @@
  *
  * This shows composition through dependencies rather than creating everything internally.
  */
-
-import { create } from '@lattice/lattice';
-import type { SignalsAPI } from '../types';
 import type { TodoListAPI } from './todo-list';
+import { Signals } from '../api';
 
 /**
  * Create a stats behavior that depends on an existing TodoList
  */
-export const TodoStats = create(({ computed }: SignalsAPI) => (
+export const createTodoStats = (
+  { computed }: Pick<Signals, 'computed' >,
   { todos, activeCount }: Pick<TodoListAPI, 'todos' | 'activeCount'>
 ) => {
   // These computed values depend on the injected todoList
@@ -34,4 +33,4 @@ export const TodoStats = create(({ computed }: SignalsAPI) => (
     completed,
     completionRate,
   };
-});
+}

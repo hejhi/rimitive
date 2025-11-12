@@ -1,4 +1,4 @@
-import { create, mount } from './create';
+import { create, mount } from './api';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';

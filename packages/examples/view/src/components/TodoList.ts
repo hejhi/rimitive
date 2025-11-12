@@ -7,7 +7,7 @@
 
 import { createTodoList } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';
-import { create } from '../create';
+import { create } from '../api';
 
 export const TodoList = create(({ el, map, signal, computed, on }) => () => {
   // Create headless behavior

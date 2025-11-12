@@ -5,10 +5,11 @@
  * Demonstrates basic signal usage and computed values.
  */
 
-import { create } from '@lattice/lattice';
-import type { SignalsAPI } from '../types';
+import { Signals } from '../api';
 
-export const Counter = create(({ signal, computed }: SignalsAPI) => (initialCount: number = 0) => {
+export const createCounter = (
+  { signal, computed }: Pick<Signals, 'signal' | 'computed'>, initialCount = 0
+) => {
   const count = signal(initialCount);
   const doubled = computed(() => count() * 2);
   const isEven = computed(() => count() % 2 === 0);
@@ -24,4 +25,4 @@ export const Counter = create(({ signal, computed }: SignalsAPI) => (initialCoun
     decrement: () => count(count() - 1),
     set: (value: number) => count(value),
   };
-});
+};

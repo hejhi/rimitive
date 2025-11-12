@@ -27,7 +27,7 @@ import {
   instrumentMap,
   instrumentOn,
 } from '@lattice/view/devtools';
-import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
+import { createApi as createSignals } from '@lattice/signals/presets/core';
 import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
 import { createPushPullSchedule } from '@lattice/signals/helpers';
 
@@ -35,6 +35,20 @@ const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
   enabled: true,
 });
+
+const signals = createSignals(
+  {
+    signal: Signal({ instrument: instrumentSignal }),
+    computed: Computed({ instrument: instrumentComputed }),
+    effect: Effect({ instrument: instrumentEffect }),
+    batch: Batch({ instrument: instrumentBatch }),
+    subscribe: Subscribe({ instrument: instrumentSubscribe }),
+  },
+  createPushPullSchedule(),
+  { instrumentation }
+).api;
+
+export type Signals = typeof signals;
 
 export const { create, api, mount } = createApi(
   createDOMRenderer(),
@@ -49,16 +63,6 @@ export const { create, api, mount } = createApi(
     }),
     on: On({ instrument: instrumentOn }),
   },
-  createReactiveApi(
-    {
-      signal: Signal({ instrument: instrumentSignal }),
-      computed: Computed({ instrument: instrumentComputed }),
-      effect: Effect({ instrument: instrumentEffect }),
-      batch: Batch({ instrument: instrumentBatch }),
-      subscribe: Subscribe({ instrument: instrumentSubscribe }),
-    },
-    createPushPullSchedule(),
-    { instrumentation }
-  ).api,
+  signals,
   { instrumentation }
 );

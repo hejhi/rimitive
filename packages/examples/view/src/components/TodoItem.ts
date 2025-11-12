@@ -6,7 +6,7 @@
 
 import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/todo-list';
-import { create } from '../create';
+import { create } from '../api';
 
 export const TodoItem = create(
   ({ el, on, computed }) =>
