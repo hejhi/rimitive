@@ -11,14 +11,9 @@ export function createSpec<
     renderer: Renderer<TConfig>,
     signals: ReactiveAdapter
 ) {
-  const scopes = createScopes({
-    baseEffect: signals.effect,
-  });
-
   return {
     renderer,
-    ...scopes,
-    // Reactive primitives required by view
+    ...createScopes({ baseEffect: signals.effect }),
     signal: signals.signal,
     effect: signals.effect,
     batch: signals.batch,
