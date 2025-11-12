@@ -28,7 +28,7 @@ import { createApi, createInstrumentation, devtoolsProvider } from '@lattice/lat
 import { defaultHelpers } from '@lattice/signals/presets/core';
 import { Match } from '@lattice/view/match';
 import { ComponentFactory, defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
-import { NodeRef, SealedSpec } from '@lattice/view/types';
+import { SealedSpec } from '@lattice/view/types';
 import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
@@ -67,9 +67,7 @@ export const views = createApi(
   viewHelpers
 );
 
-export const mount = <TElement>(
-  spec: SealedSpec<TElement>
-): NodeRef<TElement> => spec.create(views);
+export const mount = <TElement>(spec: SealedSpec<TElement>) => spec.create(views);
 
 export const api = {
   ...signals,
