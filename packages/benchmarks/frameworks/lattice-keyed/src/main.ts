@@ -6,6 +6,7 @@ import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/map';
 import { On } from '@lattice/view/on';
+import { Match } from '@lattice/view/match';
 
 // Wire up view layer
 const { api } = createApi(
@@ -14,6 +15,7 @@ const { api } = createApi(
     el: El<DOMRendererConfig>(),
     map: Map<DOMRendererConfig>(),
     on: On(),
+    match: Match<DOMRendererConfig>(),
   },
   createSignalsApi().api
 );

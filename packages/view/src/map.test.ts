@@ -1147,5 +1147,51 @@ describe('map() - User-facing behavior', () => {
       ]);
       expect(renderCount).toBe(2);  // Re-rendered once for new item
     });
+
+    it('should not track outer reactive state in lifecycle callbacks', () => {
+      const { el, map, signal } = setup();
+
+      const items = signal([{ id: 1, name: 'Item 1' }]);
+      const outerState = signal('outer-value');
+      let lifecycleCallCount = 0;
+      let renderCount = 0;
+
+      // Create list where lifecycle callback reads outerState
+      const list = el.method('ul')(
+        map(
+          items,
+          item => item.id
+        )((itemSignal) => {
+            renderCount++;
+            return el.method('li')(itemSignal().name)(
+              // Lifecycle callback reads a signal
+              () => {
+                lifecycleCallCount++;
+                // This read should NOT become a dependency of map's effect
+                const value = outerState();
+                // Just read the signal - we don't need to use the value
+                void value;
+              }
+            );
+          })
+      );
+
+      list.create();
+      expect(renderCount).toBe(1);  // Initial render
+      expect(lifecycleCallCount).toBe(1);  // Initial lifecycle
+
+      // Change outerState - should NOT trigger map reconciliation or re-create elements
+      outerState('changed-value');
+      expect(renderCount).toBe(1);  // Still 1 - element not recreated
+      expect(lifecycleCallCount).toBe(1);  // Still 1 - lifecycle not re-run
+
+      // Change items - SHOULD trigger map reconciliation for new items only
+      items([
+        { id: 1, name: 'Item 1' },
+        { id: 2, name: 'Item 2' },
+      ]);
+      expect(renderCount).toBe(2);  // Only new item rendered
+      expect(lifecycleCallCount).toBe(2);  // Only new item's lifecycle
+    });
   });
 });

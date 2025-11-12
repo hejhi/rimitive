@@ -99,24 +99,32 @@ export const Map = create(
               nextSibling: nextSib ?? undefined,
 
               onCreate: (item) => {
-                const itemSignal = signal(item);
+                // Use nested effect to isolate render callback and lifecycle from tracking
+                // This prevents signals read in render/lifecycle from being tracked by map's effect
+                let elRef: TRecNode;
 
-                // Render the item - this creates an element with its own scope
-                // Pass api for SealedSpec components created with create()
-                const elRef = render(itemSignal).create(
-                  api
-                ) as TRecNode;
+                const isolate = scopedEffect(() => {
+                  const itemSignal = signal(item);
 
-                renderer.insertBefore(
-                  parentElement,
-                  elRef.element,
-                  resolveNextRef(nextSibling)?.element ?? null
-                );
+                  // Render the item - this creates an element with its own scope
+                  // Pass api for SealedSpec components created with create()
+                  elRef = render(itemSignal).create(
+                    api
+                  ) as TRecNode;
 
-                elRef.data = itemSignal;
+                  renderer.insertBefore(
+                    parentElement,
+                    elRef.element,
+                    resolveNextRef(nextSibling)?.element ?? null
+                  );
+
+                  elRef.data = itemSignal;
+                });
+
+                isolate(); // Dispose immediately after it runs
 
                 // Attach the signal to the node ref for updates
-                return elRef;
+                return elRef!;
               },
 
               // onUpdate: called when existing item's data should be updated

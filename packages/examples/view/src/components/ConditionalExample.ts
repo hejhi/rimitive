@@ -35,20 +35,17 @@ export const ConditionalExample = create(
           ? el('input', {
               type: 'text',
               className: 'edit-input',
-              value: editText, // Reactive prop keeps input synced
-            })()(
-              (input) => {
-                // Only handle user input events
-                const handler = (e: Event) => {
-                  editText((e.target as HTMLInputElement).value);
-                };
-                input.addEventListener('input', handler);
-                return () => input.removeEventListener('input', handler);
-              }
-            )
+              value: editText,
+            })()((input) => {
+              const handler = (e: Event) => {
+                editText((e.target as HTMLInputElement).value);
+              };
+              input.addEventListener('input', handler);
+              return () => input.removeEventListener('input', handler);
+            })
           : el('span', {
               className: 'display-text',
-            })(editText())
+            })(editText)
       );
 
       // Pattern 2: Alternative - use separate conditional elements with match
@@ -60,24 +57,19 @@ export const ConditionalExample = create(
             ? el('input', {
                 type: 'text',
                 className: 'edit-input',
-                value: editText, // Reactive prop keeps input synced
-              })()(
-                (input) => {
-                  // Only handle user input events
-                  const handler = (e: Event) => {
-                    editText((e.target as HTMLInputElement).value);
-                  };
-                  input.addEventListener('input', handler);
-                  return () => input.removeEventListener('input', handler);
-                }
-              )
+                value: editText,
+              })()((input) => {
+                const handler = (e: Event) => {
+                  editText((e.target as HTMLInputElement).value);
+                };
+                input.addEventListener('input', handler);
+                return () => input.removeEventListener('input', handler);
+              })
             : null
         ),
         // Span (only renders in display mode)
         match(isEditMode)((isEdit) =>
-          !isEdit
-            ? el('span', { className: 'display-text' })(editText())
-            : null
+          !isEdit ? el('span', { className: 'display-text' })(editText) : null
         )
       );
 

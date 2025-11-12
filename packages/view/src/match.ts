@@ -133,8 +133,31 @@ export const Match = create(
         return (matcher: (value: T) => RefSpec<TElement> | null) => {
           return createMatchSpec<TElement>((lifecycleCallbacks, api) => {
             const fragRef = createFragment<TBaseElement>((parent, nextSibling) => {
-              return scopedEffect(() => {
-                const value = reactive();
+              let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
+
+              // Update function - called when reactive value changes
+              // Runs OUTSIDE the tracking scope (like map's onCreate callback)
+              const updateElement = (value: T) => {
+                // Clean up old element
+                if (currentNode) {
+                  if (currentNode.status === 1 /* STATUS_ELEMENT */) {
+                    const scope = getElementScope(currentNode.element);
+                    if (scope) disposeScope(scope);
+                    removeChild(parent.element, currentNode.element);
+                  } else if (currentNode.status === 2 /* STATUS_FRAGMENT */) {
+                    // Dispose fragment
+                    let current = currentNode.firstChild;
+                    while (current) {
+                      if (current.status === 1 /* STATUS_ELEMENT */) {
+                        const elementRef = current as ElementRef<TBaseElement>;
+                        const scope = getElementScope(elementRef.element);
+                        if (scope) disposeScope(scope);
+                        removeChild(parent.element, elementRef.element);
+                      }
+                      current = current.next;
+                    }
+                  }
+                }
 
                 // Get RefSpec from matcher (pure function call, no tracking)
                 const refSpec = matcher(value);
@@ -142,13 +165,16 @@ export const Match = create(
                 // Handle null - conditional rendering (no element)
                 if (refSpec === null) {
                   fragRef.firstChild = undefined;
-                  return; // No cleanup needed
+                  currentNode = undefined;
+                  return;
                 }
 
                 // Create the element/fragment from the spec
+                // Lifecycle callbacks run here, OUTSIDE the effect's tracking scope
                 const nodeRef = refSpec.create(api);
 
                 fragRef.firstChild = nodeRef;
+                currentNode = nodeRef;
 
                 // Execute lifecycle callbacks from match level
                 // These apply to the currently active element
@@ -174,28 +200,17 @@ export const Match = create(
                   // Attach fragment
                   (nodeRef as TFragRef).attach(parent, nextSibling, api);
                 }
+              };
 
-                // Return cleanup - runs automatically before next effect execution
-                return () => {
-                  if (nodeRef.status === 1 /* STATUS_ELEMENT */) {
-                    const elementRef = nodeRef as ElementRef<TBaseElement>;
-                    const scope = getElementScope(elementRef.element);
-                    if (scope) disposeScope(scope);
-                    removeChild(parent.element, elementRef.element);
-                  } else if (nodeRef.status === 2 /* STATUS_FRAGMENT */) {
-                    // Dispose fragment
-                    let current = (nodeRef as TFragRef).firstChild;
-                    while (current) {
-                      if (current.status === 1 /* STATUS_ELEMENT */) {
-                        const elementRef = current as ElementRef<TBaseElement>;
-                        const scope = getElementScope(elementRef.element);
-                        if (scope) disposeScope(scope);
-                        removeChild(parent.element, elementRef.element);
-                      }
-                      current = current.next;
-                    }
-                  }
-                };
+              // Effect only tracks the reactive value, then calls updateElement
+              // Use nested effect to isolate updateElement from tracking
+              // The inner effect creates a tracking boundary, then we dispose it
+              return scopedEffect(() => {
+                const value = reactive();
+                const isolate = scopedEffect(() => {
+                  updateElement(value);
+                });
+                isolate(); // Dispose immediately after it runs
               });
             });
 
