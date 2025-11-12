@@ -16,16 +16,10 @@ export const ConditionalExample = create(
 
       // Conditional message - renders null when hidden
       const conditionalMessage = el(
-        computed(() => {
-          if (!showMessage()) return null;
-          return {
-            tag: 'div' as const,
-            props: { className: 'conditional-message' },
-            children: [
-              el('span')('👋 This message can be toggled on and off!')
-            ],
-          };
-        })
+        computed(() => showMessage() ? 'div' : null),
+        { className: 'conditional-message' }
+      )(
+        el('span')('👋 This message can be toggled on and off!')
       );
 
       // Toggle edit mode
@@ -35,24 +29,14 @@ export const ConditionalExample = create(
 
       // Switch between input and span based on edit mode
       const editableText = el(
-        computed(() => {
-          if (isEditMode()) {
-            return {
-              tag: 'input' as const,
-              props: {
-                type: 'text',
-                value: editText,
-                className: 'edit-input',
-              },
-            };
-          } else {
-            return {
-              tag: 'span' as const,
-              props: { className: 'display-text' },
-              children: [editText],
-            };
-          }
-        })
+        computed(() => isEditMode() ? 'input' : 'span'),
+        {
+          type: computed(() => isEditMode() ? 'text' : undefined),
+          value: computed(() => isEditMode() ? editText() : undefined),
+          className: computed(() => isEditMode() ? 'edit-input' : 'display-text'),
+        }
+      )(
+        computed(() => isEditMode() ? '' : editText())
       );
 
       // Event handler for input changes - using effect to sync input value
@@ -95,6 +79,9 @@ export const ConditionalExample = create(
 
       // Dynamic button that changes based on state
       const dynamicButton = el(
+        computed(() => 'button' as const),
+        { className: computed(() => `dynamic-btn ${buttonType()}`) }
+      )(
         computed(() => {
           const type = buttonType();
           const labels = {
@@ -102,12 +89,7 @@ export const ConditionalExample = create(
             danger: '🔴 Danger Action',
             success: '🟢 Success Action',
           };
-
-          return {
-            tag: 'button' as const,
-            props: { className: `dynamic-btn ${type}` },
-            children: [labels[type]],
-          };
+          return labels[type];
         })
       );
 

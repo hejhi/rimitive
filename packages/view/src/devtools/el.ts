@@ -3,8 +3,8 @@
  */
 
 import type { InstrumentationContext } from '@lattice/lattice';
-import type { ElFactory, ChildrenApplicator, ReactiveElSpec, ElementProps } from '../el';
-import type { RefSpec, FragmentRef, ElRefSpecChild, Reactive } from '../types';
+import type { ElFactory, ChildrenApplicator, ElementProps } from '../el';
+import type { RefSpec, ElRefSpecChild, Reactive } from '../types';
 import type { RendererConfig } from '../renderer';
 
 /**
@@ -19,13 +19,14 @@ export function instrumentEl<TConfig extends RendererConfig>(
     tag: Tag,
     props?: ElementProps<TConfig, Tag>
   ): ChildrenApplicator<TConfig, Tag>;
+  function instrumentedEl<Tag extends keyof TConfig['elements']>(
+    reactive: Reactive<Tag | null>,
+    props?: Record<string, unknown>
+  ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['baseElement']>;
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
-    reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
-  ): FragmentRef<TConfig['baseElement']>;
-  function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
-    tagOrReactive: Tag | Reactive<ReactiveElSpec<TConfig, Tag>>,
+    tagOrReactive: Tag | Reactive<Tag | null>,
     props?: ElementProps<TConfig, Tag>
-  ): ChildrenApplicator<TConfig, Tag> | FragmentRef<TConfig['baseElement']> {
+  ): ChildrenApplicator<TConfig, Tag> | ((...children: ElRefSpecChild[]) => RefSpec<TConfig['baseElement']>) {
     // Handle reactive element case
     if (typeof tagOrReactive === 'function') {
       const elId = crypto.randomUUID();
@@ -39,24 +40,39 @@ export function instrumentEl<TConfig extends RendererConfig>(
         },
       });
 
-      // Create the reactive element through base method
-      const fragmentRef = method(tagOrReactive);
+      // Create the reactive element through base method - returns ChildrenApplicator
+      const childrenApplicator = method(tagOrReactive, props);
 
-      // Wrap attach to emit mount event
-      const originalAttach = fragmentRef.attach;
-      fragmentRef.attach = (parent, nextSibling, api) => {
+      // Wrap the children applicator to track mounting
+      return (...children: ElRefSpecChild[]): RefSpec<TConfig['baseElement']> => {
         instrumentation.emit({
-          type: 'EL_REACTIVE_MOUNTED',
+          type: 'EL_CHILDREN_APPLIED',
           timestamp: Date.now(),
           data: {
             elId,
+            childCount: children.length,
           },
         });
 
-        return originalAttach.call(fragmentRef, parent, nextSibling, api);
-      };
+        // Call the original children applicator to get RefSpec
+        const refSpec = childrenApplicator(...children);
 
-      return fragmentRef;
+        // Wrap the create method to emit mount event
+        const originalCreate = refSpec.create.bind(refSpec);
+        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
+          instrumentation.emit({
+            type: 'EL_REACTIVE_MOUNTED',
+            timestamp: Date.now(),
+            data: {
+              elId,
+            },
+          });
+
+          return originalCreate(api, extensions);
+        };
+
+        return refSpec;
+      };
     }
 
     // Handle static element case

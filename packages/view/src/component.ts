@@ -6,8 +6,8 @@
  */
 
 import { create as baseCreate } from '@lattice/lattice';
-import { type RefSpec, type SealedSpec, type Reactive, type FragmentRef, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
-import type { ReactiveElSpec, ElementProps as ElElementProps } from './el';
+import { type RefSpec, type SealedSpec, type Reactive, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
+import type { ElementProps as ElElementProps } from './el';
 import type { RendererConfig } from './renderer';
 
 /**
@@ -37,10 +37,11 @@ export interface ElMethod<TConfig extends RendererConfig> {
     tag: Tag,
     props?: ElElementProps<TConfig, Tag>
   ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
-  // Reactive element builder
-  <Tag extends string & keyof TConfig['elements']>(
-    reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
-  ): FragmentRef<TConfig['baseElement']>;
+  // Reactive element builder - tag can be dynamic or null for conditional rendering
+  <Tag extends keyof TConfig['elements']>(
+    reactive: Reactive<Tag | null>,
+    props?: Record<string, unknown>
+  ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['baseElement']>;
 }
 
 /**

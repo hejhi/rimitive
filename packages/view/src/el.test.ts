@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { El } from './el';
 import { createTestEnv, getTextContent, createMockRenderer, createSignal, MockElement, MockRendererConfig } from './test-utils';
-import type { ElementRef, NodeRef, RefSpec } from './types';
+import type { ElementRef, NodeRef, RefSpec, FragmentRef } from './types';
 import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
@@ -285,8 +285,13 @@ describe('el primitive', () => {
         getElementScope,
       }).method;
 
-      const reactiveSpec = signal<{ tag: 'div'; children: string[] } | null>({ tag: 'div', children: ['Hello'] });
-      const fragmentRef = el(reactiveSpec);
+      const reactiveTag = signal<'div' | null>('div');
+      const refSpec = el(reactiveTag)('Hello');
+
+      expect(refSpec.status).toBe(4); // STATUS_REF_SPEC
+
+      // Create the fragment by calling create
+      const fragmentRef = refSpec.create() as FragmentRef<MockElement>;
 
       expect(fragmentRef.status).toBe(2); // STATUS_FRAGMENT
 
@@ -316,9 +321,9 @@ describe('el primitive', () => {
         getElementScope,
       }).method;
 
-      const spec = signal<{ tag: 'div'; children: string[] } | null>({ tag: 'div', children: ['Hello'] });
+      const reactiveTag = signal<'div' | null>('div');
 
-      const fragmentRef = el(spec);
+      const fragmentRef = el(reactiveTag)('Hello').create() as FragmentRef<MockElement>;
       const parent = renderer.createElement('div');
       const parentRef = { status: 1 as const, element: parent, next: undefined };
 
@@ -335,14 +340,14 @@ describe('el primitive', () => {
       expect(parent.children).toContain(firstElement);
 
       // Toggle to null
-      spec(null);
+      reactiveTag(null);
 
       // Element should be removed
       expect(fragmentRef.firstChild).toBeUndefined();
       expect(parent.children).not.toContain(firstElement);
 
       // Toggle back to element
-      spec({ tag: 'div', children: ['World'] });
+      reactiveTag('div');
 
       // Should have new element
       expect(fragmentRef.firstChild).toBeDefined();
@@ -367,9 +372,9 @@ describe('el primitive', () => {
         getElementScope,
       }).method;
 
-      const spec = signal<{ tag: 'div' | 'span'; children: string[] }>({ tag: 'div', children: ['Hello'] });
+      const reactiveTag = signal<'div' | 'span'>('div');
 
-      const fragmentRef = el(spec);
+      const fragmentRef = el(reactiveTag)('Hello').create() as FragmentRef<MockElement>;
       const parent = renderer.createElement('div');
       const parentRef = { status: 1 as const, element: parent, next: undefined };
 
@@ -382,7 +387,7 @@ describe('el primitive', () => {
       const divElement = divChild.element;
 
       // Swap to span
-      spec({ tag: 'span', children: ['World'] });
+      reactiveTag('span');
 
       // Should now be span
       expect(fragmentRef.firstChild).toBeDefined();
@@ -410,9 +415,9 @@ describe('el primitive', () => {
 
       // Create a spec with reactive content to ensure scope is created
       const text = signal('Hello');
-      const spec = signal<{ tag: 'div'; children: (typeof text)[] } | null>({ tag: 'div', children: [text] });
+      const reactiveTag = signal<'div' | null>('div');
 
-      const fragmentRef = el(spec);
+      const fragmentRef = el(reactiveTag)(text).create() as FragmentRef<MockElement>;
       const parent = renderer.createElement('div');
       const parentRef = { status: 1 as const, element: parent, next: undefined };
 
@@ -427,7 +432,7 @@ describe('el primitive', () => {
       expect(parent.children).toContain(element);
 
       // Toggle to null
-      spec(null);
+      reactiveTag(null);
 
       // Element should be removed from DOM
       expect(parent.children).not.toContain(element);
@@ -447,9 +452,9 @@ describe('el primitive', () => {
         getElementScope,
       }).method;
 
-      const spec = signal<{ tag: 'div'; children: string[] } | null>(null);
+      const reactiveTag = signal<'div' | null>(null);
 
-      const fragmentRef = el(spec);
+      const fragmentRef = el(reactiveTag)('Hello').create() as FragmentRef<MockElement>;
       const parent = renderer.createElement('div');
       const parentRef = { status: 1 as const, element: parent, next: undefined };
 
@@ -460,7 +465,7 @@ describe('el primitive', () => {
       expect(parent.children.length).toBe(0);
 
       // Toggle to element
-      spec({ tag: 'div', children: ['Hello'] });
+      reactiveTag('div');
 
       // Should now have element
       expect(fragmentRef.firstChild).toBeDefined();
@@ -479,9 +484,9 @@ describe('el primitive', () => {
         getElementScope,
       }).method;
 
-      const spec = signal<{ tag: 'span'; children: string[] } | null>({ tag: 'span', children: ['Middle'] });
+      const reactiveTag = signal<'span' | null>('span');
 
-      const fragmentRef = el(spec);
+      const fragmentRef = el(reactiveTag)('Middle').create() as FragmentRef<MockElement>;
       const parent = renderer.createElement('div');
       const parentRef = { status: 1 as const, element: parent, next: undefined };
 
@@ -508,11 +513,11 @@ describe('el primitive', () => {
       expect(parent.children).toEqual([before, middleElement, after]);
 
       // Toggle to null
-      spec(null);
+      reactiveTag(null);
       expect(parent.children).toEqual([before, after]);
 
       // Toggle back
-      spec({ tag: 'span', children: ['Middle Again'] });
+      reactiveTag('span');
       expect(fragmentRef.firstChild).toBeDefined();
       const newMiddle = (fragmentRef.firstChild as ElementRef<MockElement>).element;
 

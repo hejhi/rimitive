@@ -15,7 +15,7 @@ import { create as baseCreate } from '../component';
 import type { RefSpec, SealedSpec, NodeRef } from '../types';
 import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
 
-export type { ElementProps, ChildrenApplicator, ReactiveElSpec } from '../el';
+export type { ElementProps, ChildrenApplicator } from '../el';
 
 export const extensions = {
   el: El(),
@@ -40,7 +40,7 @@ export function createApi<
     map: Map<TConfig>(),
     on: On(),
   },
-  signals: TReactive = (createReactiveApi() as unknown as TReactive),
+  signals: TReactive = (createReactiveApi().api as unknown as TReactive),
   opts?: CreateContextOptions
 ) {
   // Merge signals and view apis first
