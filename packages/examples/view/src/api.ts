@@ -4,40 +4,18 @@
  * All components in this app use this shared API.
  * This ensures consistent renderer configuration across the entire app.
  */
-
-import { El } from '@lattice/view/el';
-import { Map } from '@lattice/view/map';
-import { On } from '@lattice/view/on';
-import { createApi } from '@lattice/view/presets/core';
-import { createApi as createSignalsApi } from '@lattice/signals/presets/core';
-
-import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { Signal } from '@lattice/signals/signal';
-import { Effect } from '@lattice/signals/effect';
-import { Computed } from '@lattice/signals/computed';
-import { Match } from '@lattice/view/match';
+import { createApi, defaultExtensions } from '@lattice/view/presets/core';
+import { createApi as createLatticeApi } from '@lattice/lattice';
+import { defaultExtensions as defaultSignalsExtensions, defaultHelpers } from '@lattice/signals/presets/core';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
 
 const renderer = createDOMRenderer();
 
-export const signals = createSignalsApi({
-  signal: Signal(),
-  effect: Effect(),
-  computed: Computed(),
-}).api;
-
+export const signals = createLatticeApi(defaultSignalsExtensions(), defaultHelpers());
 export type Signals = typeof signals;
 
 /**
  * DOM-specific API for this app
  * Types are automatically inferred from the renderer
  */
-export const { api, create, mount } = createApi(
-  renderer,
-  {
-    el: El<DOMRendererConfig>(),
-    map: Map<DOMRendererConfig>(),
-    match: Match<DOMRendererConfig>(),
-    on: On(),
-  },
-  signals
-);
+export const { api, create, mount } = createApi(renderer, defaultExtensions(), signals);

@@ -6,6 +6,7 @@ export type { LatticeExtension, ExtensionContext, InstrumentationContext, Create
 
 // Export factory-based API (separate for tree-shaking)
 export { createApi } from './api';
+export type { InstantiableExtension } from './api';
 
 // Export component composition pattern
 export { create } from './component';

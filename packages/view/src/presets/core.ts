@@ -5,6 +5,7 @@ import { Match } from '../match';
 import {
   CreateContextOptions,
   createApi as createLatticeApi,
+  Instantiatable,
 } from '@lattice/lattice';
 import { createSpec } from '../helpers';
 import type {
@@ -14,17 +15,19 @@ import type {
 import type { ReactiveAdapter } from '../reactive-adapter';
 import { create as baseCreate } from '../component';
 import type { RefSpec, SealedSpec, NodeRef } from '../types';
-import { createApi as createReactiveApi } from '@lattice/signals/presets/core';
 
 export type { ElementProps, ChildrenApplicator } from '../el';
 export type { MatchFactory } from '../match';
 
-export const extensions = {
-  el: El(),
-  map: Map(),
+export const defaultExtensions = <TConfig extends RendererConfig, TApi = unknown>(
+  ext?: Record<string, Instantiatable<RefSpec<TConfig['baseElement']>, TApi>>
+) => ({
+  el: El<TConfig>(),
+  map: Map<TConfig>(),
   on: On(),
-  match: Match(),
-};
+  match: Match<TConfig>(),
+  ...ext,
+});
 
 /**
  * Component factory type - dynamically typed based on actual API
@@ -38,23 +41,13 @@ export function createApi<
   TReactive extends ReactiveAdapter,
 >(
   renderer: Renderer<TConfig>,
-  ext = {
-    el: El<TConfig>(),
-    map: Map<TConfig>(),
-    on: On(),
-    match: Match<TConfig>(),
-  },
-  signals: TReactive = (createReactiveApi().api as unknown as TReactive),
+  extensions = defaultExtensions<TConfig>(),
+  signals: TReactive,
   opts?: CreateContextOptions
 ) {
-  // Merge signals and view apis first
   const api = {
     ...signals,
-    ...createLatticeApi(
-      { ...extensions, ...ext },
-      createSpec(renderer, signals),
-      opts
-    ),
+    ...createLatticeApi(extensions, createSpec(renderer, signals), opts),
   };
 
   const mount = <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> =>

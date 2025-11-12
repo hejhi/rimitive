@@ -14,7 +14,7 @@ import { createContext, CreateContextOptions, type LatticeExtension } from './ex
 import { type Instantiatable } from './component';
 
 // Internal type for type-level operations
-type InstantiableExtension = Instantiatable<LatticeExtension<string, unknown>, unknown>;
+export type InstantiableExtension = Instantiatable<LatticeExtension<string, unknown>, unknown>;
 
 // Helper to extract context requirements from instantiables
 // Uses UnionToIntersection to combine all context requirements
