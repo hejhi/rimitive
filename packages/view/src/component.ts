@@ -37,7 +37,6 @@ export interface ElMethod<TConfig extends RendererConfig> {
     tag: Tag,
     props?: ElElementProps<TConfig, Tag>
   ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
-
   // Reactive element builder
   <Tag extends string & keyof TConfig['elements']>(
     reactive: Reactive<ReactiveElSpec<TConfig, Tag>>
@@ -52,11 +51,7 @@ export interface ElMethod<TConfig extends RendererConfig> {
  *
  * Generic over the actual API type - no prescriptive interface required.
  */
-export function create<
-  TArgs extends unknown[],
-  TElement,
-  TApi = unknown
->(
+export function create<TArgs extends unknown[], TElement, TApi = unknown>(
   factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement>
 ) {
   return (...args: TArgs): SealedSpec<TElement> => {
@@ -66,13 +61,10 @@ export function create<
     // Return a SealedSpec that wraps the RefSpec's create
     return {
       status: STATUS_SEALED_SPEC,
-      create(api: TApi): NodeRef<TElement> {
-        // Step 1: Inject API to get RefSpec
-        const refSpec = baseInstantiatable.create(api);
-
-        // Step 2: Call RefSpec's create, passing API for nested components
-        return refSpec.create(api);
-      }
+      create: (api: TApi): NodeRef<TElement> =>
+        baseInstantiatable
+          .create(api) // Step 1: Inject API to get RefSpec
+          .create(api) // Step 2: Call RefSpec's create, passing API for nested components
     };
   };
 }
