@@ -1,7 +1,7 @@
 import { create } from '../api';
 
 export const ConditionalExample = create(
-  ({ el, signal, computed, on, match }) =>
+  ({ el, signal, computed, addEventListener, match }) =>
     () => {
       // State for various conditional examples
       const showMessage = signal(true);
@@ -11,7 +11,7 @@ export const ConditionalExample = create(
 
       // Toggle message visibility
       const toggleBtn = el('button')('Toggle Message')(
-        on('click', () => showMessage(!showMessage()))
+        addEventListener('click', () => showMessage(!showMessage()))
       );
 
       // Conditional message - renders null when hidden
@@ -26,7 +26,7 @@ export const ConditionalExample = create(
       // Toggle edit mode
       const editToggleBtn = el('button')(
         computed(() => (isEditMode() ? 'Save' : 'Edit'))
-      )(on('click', () => isEditMode(!isEditMode())));
+      )(addEventListener('click', () => isEditMode(!isEditMode())));
 
       // Pattern 1: Match with conditional element types
       // Use match to switch between input and span based on edit mode
@@ -75,7 +75,7 @@ export const ConditionalExample = create(
 
       // Cycle button type
       const cycleTypeBtn = el('button')('Change Button Style')(
-        on('click', () => {
+        addEventListener('click', () => {
           const types: Array<'primary' | 'danger' | 'success'> = [
             'primary',
             'danger',

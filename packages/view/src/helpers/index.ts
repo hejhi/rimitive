@@ -1,4 +1,5 @@
 import { createScopes } from './scope';
+import { createAddEventListener } from './addEventListener';
 import type {
   Renderer,
   RendererConfig,
@@ -22,5 +23,7 @@ export function createSpec<
     signal: reactive.signal,
     effect: reactive.effect,
     batch: reactive.batch,
+    // DOM helpers
+    addEventListener: createAddEventListener(reactive.batch),
   };
 }

@@ -9,7 +9,7 @@ import { createTodoList } from '../behaviors/todo-list';
 import { TodoItem } from './TodoItem';
 import { create } from '../api';
 
-export const TodoList = create(({ el, map, signal, computed, on }) => () => {
+export const TodoList = create(({ el, map, signal, computed, addEventListener }) => () => {
   // Create headless behavior
   const todoList = createTodoList({ computed, signal });
 
@@ -35,16 +35,16 @@ export const TodoList = create(({ el, map, signal, computed, on }) => () => {
       value: inputValue,
     },
   )()(
-    on('input', (e) =>
+    addEventListener('input', (e) =>
       inputValue((e.target as HTMLInputElement).value)
     ),
-    on('keydown', (e) => {
+    addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAdd();
     }),
   );
 
   // Create "Add Todo" button
-  const addBtn = el('button', {})('Add Todo')(on('click', handleAdd))
+  const addBtn = el('button', {})('Add Todo')(addEventListener('click', handleAdd))
 
   // Create filter buttons
   const allBtn = el(
@@ -54,7 +54,7 @@ export const TodoList = create(({ el, map, signal, computed, on }) => () => {
         todoList.filter() === 'all' ? 'active' : ''
       ),
     },
-  )('All')(on('click', () => todoList.setFilter('all')));
+  )('All')(addEventListener('click', () => todoList.setFilter('all')));
 
   const activeBtn = el(
     'button',
@@ -63,7 +63,7 @@ export const TodoList = create(({ el, map, signal, computed, on }) => () => {
         todoList.filter() === 'active' ? 'active' : ''
       ),
     },
-  )('Active')(on('click', () => todoList.setFilter('active')));
+  )('Active')(addEventListener('click', () => todoList.setFilter('active')));
 
   const completedBtn = el(
     'button',
@@ -72,9 +72,9 @@ export const TodoList = create(({ el, map, signal, computed, on }) => () => {
         todoList.filter() === 'completed' ? 'active' : ''
       ),
     },
-  )('Completed')(on('click', () => todoList.setFilter('completed')));
+  )('Completed')(addEventListener('click', () => todoList.setFilter('completed')));
 
-  const clearBtn = el('button')('Clear Completed')(on('click', () => todoList.clearCompleted()));
+  const clearBtn = el('button')('Clear Completed')(addEventListener('click', () => todoList.clearCompleted()));
 
   return el(
     'div',

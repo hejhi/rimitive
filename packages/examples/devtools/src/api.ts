@@ -10,7 +10,6 @@ import {
 } from '@lattice/view/renderers/dom';
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/map';
-import { On } from '@lattice/view/on';
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
 import { Effect } from '@lattice/signals/effect';
@@ -24,7 +23,6 @@ import { instrumentSubscribe } from '@lattice/signals/devtools/subscribe';
 import {
   instrumentEl,
   instrumentMap,
-  instrumentOn,
 } from '@lattice/view/devtools';
 import { createApi, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
 import { defaultHelpers } from '@lattice/signals/presets/core';
@@ -53,6 +51,8 @@ export const signals = createApi(
 );
 export type Signals = typeof signals;
 
+const viewHelpers = defaultViewHelpers(renderer, signals);
+
 /**
  * DOM-specific API for this app
  * Types are automatically inferred from the renderer
@@ -61,17 +61,21 @@ export const views = createApi(
   {
     el: El<DOMRendererConfig>({ instrument: instrumentEl }),
     map: Map<DOMRendererConfig>({ instrument: instrumentMap }),
-    on: On({ instrument: instrumentOn }),
     match: Match<DOMRendererConfig>(),
   },
-  defaultViewHelpers(renderer, signals)
+  viewHelpers
 );
 
 export const mount = <TElement>(
   spec: SealedSpec<TElement>
 ): NodeRef<TElement> => spec.create(views);
 
-export const api = { ...signals, ...views };
+export const api = {
+  ...signals,
+  ...views,
+  // Include addEventListener helper from view
+  addEventListener: viewHelpers.addEventListener,
+};
 export type CoreApi = typeof api;
 
 export const create = createComponent as ComponentFactory<typeof api>;

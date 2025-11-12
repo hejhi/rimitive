@@ -19,7 +19,7 @@ import { instrumentSignal } from '@lattice/signals/devtools/signal';
 import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import { devtoolsProvider, createInstrumentation } from '@lattice/lattice';
+import { devtoolsProvider, createInstrumentation, createApi } from '@lattice/lattice';
 
 // Import our React-compatible components
 import { createCounter } from './components/counter';
@@ -27,7 +27,6 @@ import { createTodoList } from './components/todo-list';
 import { createFilter } from './components/filter';
 import { createAppState } from './components/app-state';
 import { Modal } from './design-system/Modal';
-import { createApi } from '@lattice/signals/presets/core';
 import { createPushPullSchedule } from '@lattice/signals/helpers';
 
 const instrumentation = createInstrumentation({
@@ -46,7 +45,7 @@ export const signalApi = createApi(
   },
   createPushPullSchedule(),
   { instrumentation }
-).api;
+);
 
 /**
  * Example 1: Step Counter

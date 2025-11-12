@@ -2,11 +2,11 @@ import { create } from '../api';
 import { createCounter } from '../behaviors/counter';
 
 export const Counter = create((api) => (initialCount: number = 0) => {
-  const { el, on, computed } = api;
+  const { el, addEventListener, computed } = api;
   const { decrement, increment, reset, count, doubled } = createCounter(api, initialCount);
-  const decrementBtn = el('button')('- Decrement')(on('click', decrement));
-  const incrementBtn = el('button')('+ Increment')(on('click', increment));
-  const resetBtn = el('button')('Reset')(on('click', reset));
+  const decrementBtn = el('button')('- Decrement')(addEventListener('click', decrement));
+  const incrementBtn = el('button')('+ Increment')(addEventListener('click', increment));
+  const resetBtn = el('button')('Reset')(addEventListener('click', reset));
 
   return el('div', { className: 'example' })(
     el('h2')('Counter Example'),

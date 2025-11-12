@@ -9,7 +9,7 @@ import { create } from '../api';
 import type { Todo } from '../behaviors/todo-list';
 
 export const TodoItem = create(
-  ({ el, on, computed }) =>
+  ({ el, addEventListener, computed }) =>
     (
       todoSignal: () => Todo,
       toggleTodo: (id: number) => void
@@ -18,7 +18,7 @@ export const TodoItem = create(
         type: 'checkbox',
         checked: computed(() => todoSignal().completed)
       })()(
-        on('change', () => toggleTodo(todoSignal().id))
+        addEventListener('change', () => toggleTodo(todoSignal().id))
       );
 
       return el('li', {

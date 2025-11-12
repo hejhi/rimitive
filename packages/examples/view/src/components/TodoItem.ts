@@ -9,7 +9,7 @@ import type { Todo } from '../behaviors/todo-list';
 import { create } from '../api';
 
 export const TodoItem = create(
-  ({ el, on, computed }) =>
+  ({ el, addEventListener, computed }) =>
     (
       todoSignal: Reactive<Todo>,
       onToggle: (id: number) => void,
@@ -21,11 +21,11 @@ export const TodoItem = create(
       const checkbox = el('input', {
         type: 'checkbox',
         checked: computed(() => todoSignal().completed),
-      })()(on('change', () => onToggle(todo.id)));
+      })()(addEventListener('change', () => onToggle(todo.id)));
 
       // Create remove button with event listener
       const removeBtn = el('button', { className: 'todo-remove' })('x')(
-        on('click', () => onRemove(todo.id))
+        addEventListener('click', () => onRemove(todo.id))
       );
 
       // Conditionally render completed vs active todo text using computed

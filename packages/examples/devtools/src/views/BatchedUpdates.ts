@@ -12,10 +12,10 @@ interface BatchedUpdateHandlers {
 }
 
 export const BatchedUpdates = create(
-  ({ el, on }) =>
+  ({ el, addEventListener }) =>
     ({ onBatchedUpdate }: BatchedUpdateHandlers) => {
       const batchBtn = el('button')('Run Batched Updates')(
-        on('click', onBatchedUpdate)
+        addEventListener('click', onBatchedUpdate)
       );
 
       return el('section', { className: 'batched-section' })(

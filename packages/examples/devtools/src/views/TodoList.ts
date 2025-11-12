@@ -29,7 +29,7 @@ interface TodoStatsInstance {
 }
 
 export const TodoList = create(
-  ({ el, map, on, signal, computed }) =>
+  ({ el, map, addEventListener, signal, computed }) =>
     (
       { addTodo, toggleTodo }: TodoListInstance,
       { currentFilter, setFilter }: FilterInstance,
@@ -52,31 +52,31 @@ export const TodoList = create(
         placeholder: 'What needs to be done?',
         value: inputValue
       })()(
-        on('input', (e) => inputValue((e.target as HTMLInputElement).value)),
-        on('keydown', (e) => {
+        addEventListener('input', (e) => inputValue((e.target as HTMLInputElement).value)),
+        addEventListener('keydown', (e) => {
           if (e.key === 'Enter') handleAddTodo();
         })
       );
 
       const addBtn = el('button')('Add Todo')(
-        on('click', handleAddTodo)
+        addEventListener('click', handleAddTodo)
       );
 
       // Filter buttons
       const allBtn = el('button', {
         className: computed(() => currentFilter() === 'all' ? 'filter active' : 'filter')
       })('All')(
-        on('click', () => setFilter('all'))
+        addEventListener('click', () => setFilter('all'))
       );
       const activeBtn = el('button', {
         className: computed(() => currentFilter() === 'active' ? 'filter active' : 'filter')
       })('Active')(
-        on('click', () => setFilter('active'))
+        addEventListener('click', () => setFilter('active'))
       );
       const completedBtn = el('button', {
         className: computed(() => currentFilter() === 'completed' ? 'filter active' : 'filter')
       })('Completed')(
-        on('click', () => setFilter('completed'))
+        addEventListener('click', () => setFilter('completed'))
       );
 
       return el('section', { className: 'todo-section' })(

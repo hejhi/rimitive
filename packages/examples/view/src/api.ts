@@ -16,19 +16,26 @@ const renderer = createDOMRenderer();
 export const signals = createLatticeApi(defaultSignalsExtensions(), defaultHelpers());
 export type Signals = typeof signals;
 
+const viewHelpers = defaultViewHelpers(renderer, signals);
+
 /**
  * DOM-specific API for this app
  * Types are automatically inferred from the renderer
  */
 export const views = createLatticeApi(
   defaultViewExtensions<DOMRendererConfig>(),
-  defaultViewHelpers(renderer, signals)
+  viewHelpers
 );
 
 export const mount = <TElement>(spec: SealedSpec<TElement>): NodeRef<TElement> =>
   spec.create(views);
 
-export const api = { ...signals, ...views };
+export const api = {
+  ...signals,
+  ...views,
+  // Include addEventListener helper from view
+  addEventListener: viewHelpers.addEventListener,
+};
 export type CoreApi = typeof api;
 
 export const create = createComponent as ComponentFactory<typeof api>;

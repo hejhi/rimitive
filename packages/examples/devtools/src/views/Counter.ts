@@ -14,7 +14,7 @@ interface CounterInstance {
 }
 
 export const Counter = create(
-  ({ el, on, computed }) =>
+  ({ el, addEventListener, computed }) =>
     ({
       set,
       count,
@@ -22,12 +22,12 @@ export const Counter = create(
       isEven,
     }: CounterInstance) => {
       const incrementBtn = el('button')('Increment')(
-        on('click', () => set(count() + 1))
+        addEventListener('click', () => set(count() + 1))
       );
       const decrementBtn = el('button')('Decrement')(
-        on('click', () => set(count() - 1))
+        addEventListener('click', () => set(count() - 1))
       );
-      const resetBtn = el('button')('Reset')(on('click', () => set(0)));
+      const resetBtn = el('button')('Reset')(addEventListener('click', () => set(0)));
 
       return el('section', { className: 'counter-section' })(
         el('h2')('Counter Example'),

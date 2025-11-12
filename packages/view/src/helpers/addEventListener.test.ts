@@ -1,16 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
-import { On } from './on';
-import { createTestScheduler } from './test-helpers';
+import { createAddEventListener } from './addEventListener';
+import { createTestScheduler } from '../test-helpers';
 
-describe('on', () => {
+describe('addEventListener', () => {
   it('should attach event listener and return unsubscribe function', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const element = document.createElement('button');
     const handler = vi.fn();
 
-    const unsub = on('click', handler)(element);
+    const unsub = addEventListener('click', handler)(element);
 
     element.click();
     expect(handler).toHaveBeenCalledTimes(1);
@@ -24,12 +24,12 @@ describe('on', () => {
 
   it('should pass correct event type to handler', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const input = document.createElement('input');
     const handler = vi.fn();
 
-    on('input', handler)(input);
+    addEventListener('input', handler)(input);
 
     const event = new Event('input');
     input.dispatchEvent(event);
@@ -39,12 +39,12 @@ describe('on', () => {
 
   it('should support event listener options', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const element = document.createElement('div');
     const handler = vi.fn();
 
-    const unsub = on('click', handler, { once: true })(element);
+    const unsub = addEventListener('click', handler, { once: true })(element);
 
     element.click();
     expect(handler).toHaveBeenCalledTimes(1);
@@ -57,14 +57,14 @@ describe('on', () => {
 
   it('should handle multiple listeners on same element', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const element = document.createElement('button');
     const handler1 = vi.fn();
     const handler2 = vi.fn();
 
-    const unsub1 = on('click', handler1)(element);
-    const unsub2 = on('click', handler2)(element);
+    const unsub1 = addEventListener('click', handler1)(element);
+    const unsub2 = addEventListener('click', handler2)(element);
 
     element.click();
     expect(handler1).toHaveBeenCalledTimes(1);
@@ -80,12 +80,12 @@ describe('on', () => {
 
   it('should be safe to call unsubscribe multiple times', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const element = document.createElement('button');
     const handler = vi.fn();
 
-    const unsub = on('click', handler)(element);
+    const unsub = addEventListener('click', handler)(element);
 
     unsub();
     unsub(); // Should not throw
@@ -97,7 +97,7 @@ describe('on', () => {
 
   it('should wrap handler with batching', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const element = document.createElement('button');
     let batchDepthDuringHandler = -1;
@@ -106,7 +106,7 @@ describe('on', () => {
       batchDepthDuringHandler = scheduler.batchDepth;
     };
 
-    on('click', handler)(element);
+    addEventListener('click', handler)(element);
 
     expect(scheduler.batchDepth).toBe(0); // Before click
 
@@ -118,14 +118,14 @@ describe('on', () => {
 
   it('should always call endBatch even if handler throws', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const element = document.createElement('button');
     const handler = () => {
       throw new Error('Handler error');
     };
 
-    on('click', handler)(element);
+    addEventListener('click', handler)(element);
 
     expect(scheduler.batchDepth).toBe(0);
 
@@ -136,7 +136,7 @@ describe('on', () => {
 
   it('should support nested batching with multiple handlers', () => {
     const scheduler = createTestScheduler();
-    const { method: on } = On().create(scheduler);
+    const addEventListener = createAddEventListener((fn) => scheduler.batch(fn));
 
     const button1 = document.createElement('button');
     const button2 = document.createElement('button');
@@ -154,8 +154,8 @@ describe('on', () => {
       handler2BatchDepth = scheduler.batchDepth;
     };
 
-    on('click', handler1)(button1);
-    on('click', handler2)(button2);
+    addEventListener('click', handler1)(button1);
+    addEventListener('click', handler2)(button2);
 
     button1.dispatchEvent(new Event('click', { bubbles: false }));
 
