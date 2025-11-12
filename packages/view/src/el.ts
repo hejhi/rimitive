@@ -107,10 +107,11 @@ export type ElFactory<
     ): ChildrenApplicator<TConfig, Tag>;
 
     // Reactive tag builder - tag can be dynamic or null for conditional rendering
+    // The element type is the union of all possible tag element types
     <Tag extends keyof TConfig['elements']>(
       reactive: Reactive<Tag | null>,
       props?: Record<string, unknown>
-    ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['baseElement']>;
+    ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
   }
 >;
 
@@ -236,8 +237,8 @@ export const El = create(
         tagReactive: Reactive<Tag | null>,
         props: Record<string, unknown>,
         children: ElRefSpecChild[]
-      ): RefSpec<TBaseElement> => {
-        return createRefSpec<TBaseElement>((lifecycleCallbacks, api) => {
+      ): RefSpec<TElements[Tag]> => {
+        return createRefSpec<TElements[Tag]>((lifecycleCallbacks, api) => {
           const fragRef = createFragment<TBaseElement>((parent, nextSibling) => {
             return scopedEffect(() => {
               const tag = tagReactive();
@@ -283,8 +284,9 @@ export const El = create(
             });
           });
 
-          // FragmentRef is structurally compatible with ElementRef for the base type
-          return fragRef as unknown as ElementRef<TBaseElement>;
+          // FragmentRef is structurally compatible with ElementRef
+          // Cast to the union type so lifecycle callbacks get proper element types
+          return fragRef as unknown as ElementRef<TElements[Tag]>;
         });
       };
 
@@ -296,11 +298,11 @@ export const El = create(
       function el<Tag extends string & TElementKeys>(
         reactive: Reactive<Tag | null>,
         props?: Record<string, unknown>
-      ): (...children: ElRefSpecChild[]) => RefSpec<TBaseElement>;
+      ): (...children: ElRefSpecChild[]) => RefSpec<TElements[Tag]>;
       function el<Tag extends string & TElementKeys>(
         tagOrReactive: Tag | Reactive<Tag | null>,
         props?: ElementProps<TConfig, Tag> | Record<string, unknown>
-      ): ChildrenApplicator<TConfig, Tag> | ((...children: ElRefSpecChild[]) => RefSpec<TBaseElement>) {
+      ): ChildrenApplicator<TConfig, Tag> | ((...children: ElRefSpecChild[]) => RefSpec<TElements[Tag]>) {
         // Handle reactive tag case
         if (typeof tagOrReactive === 'function') {
           return (...children: ElRefSpecChild[]) => {
