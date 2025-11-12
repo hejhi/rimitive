@@ -135,31 +135,57 @@ export const Match = create(
             const fragRef = createFragment<TBaseElement>((parent, nextSibling) => {
               let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
 
-              // Update function - called when reactive value changes
-              // Runs OUTSIDE the tracking scope (like map's onCreate callback)
-              const updateElement = (value: T) => {
-                // Clean up old element
-                if (currentNode) {
-                  if (currentNode.status === STATUS_ELEMENT) {
-                    const scope = getElementScope(currentNode.element);
-                    if (scope) disposeScope(scope);
-                    removeChild(parent.element, currentNode.element);
-                  } else if (currentNode.status === STATUS_FRAGMENT) {
-                    // Dispose fragment
-                    let current = currentNode.firstChild;
-                    while (current) {
-                      if (current.status === STATUS_ELEMENT) {
-                        const elementRef = current as ElementRef<TBaseElement>;
-                        const scope = getElementScope(elementRef.element);
-                        if (scope) disposeScope(scope);
-                        removeChild(parent.element, elementRef.element);
-                      }
-                      current = current.next;
+              // Clean up old element or fragment
+              const cleanupCurrent = () => {
+                if (!currentNode) return;
+
+                if (currentNode.status === STATUS_ELEMENT) {
+                  const scope = getElementScope(currentNode.element);
+                  if (scope) disposeScope(scope);
+                  removeChild(parent.element, currentNode.element);
+                } else if (currentNode.status === STATUS_FRAGMENT) {
+                  // Dispose all elements in fragment
+                  let current = currentNode.firstChild;
+                  while (current) {
+                    if (current.status === STATUS_ELEMENT) {
+                      const elementRef = current as ElementRef<TBaseElement>;
+                      const scope = getElementScope(elementRef.element);
+                      if (scope) disposeScope(scope);
+                      removeChild(parent.element, elementRef.element);
                     }
+                    current = current.next;
                   }
                 }
+              };
 
-                // Get RefSpec from matcher (pure function call, no tracking)
+              // Run lifecycle callbacks for element
+              const runLifecycleCallbacks = (element: TElement) => {
+                createElementScope(element, () => {
+                  for (const callback of lifecycleCallbacks) {
+                    const cleanup = callback(element);
+                    if (cleanup) onCleanup(cleanup);
+                  }
+                });
+              };
+
+              // Insert node into DOM
+              const insertNode = (nodeRef: ElementRef<TBaseElement> | TFragRef) => {
+                if (nodeRef.status === STATUS_ELEMENT) {
+                  insertBefore(
+                    parent.element,
+                    nodeRef.element,
+                    nextSibling && nextSibling.element
+                  );
+                } else if (nodeRef.status === STATUS_FRAGMENT) {
+                  nodeRef.attach(parent, nextSibling, api);
+                }
+              };
+
+              // Update function - called when reactive value changes
+              const updateElement = (value: T) => {
+                cleanupCurrent();
+
+                // Get RefSpec from matcher (pure function call)
                 const refSpec = matcher(value);
 
                 // Handle null - conditional rendering (no element)
@@ -170,35 +196,18 @@ export const Match = create(
                 }
 
                 // Create the element/fragment from the spec
-                // Lifecycle callbacks run here, OUTSIDE the effect's tracking scope
                 const nodeRef = refSpec.create(api);
 
                 fragRef.firstChild = nodeRef;
                 currentNode = nodeRef;
 
                 // Execute lifecycle callbacks from match level
-                // These apply to the currently active element
                 if (nodeRef.status === STATUS_ELEMENT) {
-                  const elementRef = nodeRef as ElementRef<TElement>;
-                  createElementScope(elementRef.element, () => {
-                    for (const callback of lifecycleCallbacks) {
-                      const cleanup = callback(elementRef.element);
-                      if (cleanup) onCleanup(cleanup);
-                    }
-                  });
+                  runLifecycleCallbacks((nodeRef as ElementRef<TElement>).element);
                 }
 
-                // Insert at correct position
-                if (nodeRef.status === STATUS_ELEMENT) {
-                  insertBefore(
-                    parent.element,
-                    nodeRef.element,
-                    nextSibling && nextSibling.element
-                  );
-                } else if (nodeRef.status === STATUS_FRAGMENT) {
-                  // Attach fragment
-                  nodeRef.attach(parent, nextSibling, api);
-                }
+                // Insert into DOM
+                insertNode(nodeRef);
               };
 
               // Effect only tracks the reactive value, then calls updateElement
