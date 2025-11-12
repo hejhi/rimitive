@@ -20,14 +20,18 @@ import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { instrumentSubscribe } from '@lattice/signals/devtools/subscribe';
+import { instrumentEl, instrumentMap } from '@lattice/view/devtools';
 import {
-  instrumentEl,
-  instrumentMap,
-} from '@lattice/view/devtools';
-import { createApi, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+  createApi,
+  createInstrumentation,
+  devtoolsProvider,
+} from '@lattice/lattice';
 import { defaultHelpers } from '@lattice/signals/presets/core';
 import { Match } from '@lattice/view/match';
-import { ComponentFactory, defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
+import {
+  ComponentFactory,
+  defaultHelpers as defaultViewHelpers,
+} from '@lattice/view/presets/core';
 import { SealedSpec } from '@lattice/view/types';
 import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
@@ -36,7 +40,6 @@ const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
   enabled: true,
 });
-
 
 export const signals = createApi(
   {
@@ -49,15 +52,9 @@ export const signals = createApi(
   defaultHelpers(),
   { instrumentation }
 );
-export type Signals = typeof signals;
 
-const renderer = createDOMRenderer();
-const viewHelpers = defaultViewHelpers(renderer, signals);
+const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
 
-/**
- * DOM-specific API for this app
- * Types are automatically inferred from the renderer
- */
 export const views = createApi(
   {
     el: El<DOMRendererConfig>({ instrument: instrumentEl }),
@@ -66,16 +63,14 @@ export const views = createApi(
   },
   viewHelpers
 );
-
 export const mount = <TElement>(spec: SealedSpec<TElement>) => spec.create(views);
-
 export const api = {
   ...signals,
   ...views,
-  // Include addEventListener helper from view
   addEventListener: createAddEventListener(viewHelpers.batch),
 };
-export type CoreApi = typeof api;
-
 export const create = createComponent as ComponentFactory<typeof api>;
+
+export type Signals = typeof signals;
 export type DOMViews = typeof views;
+export type CoreApi = typeof api;
