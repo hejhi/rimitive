@@ -68,6 +68,7 @@ export default defineConfig({
         renderer: resolve(__dirname, 'src/renderer.ts'),
         map: resolve(__dirname, 'src/map.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
+        'renderers/linkedom': resolve(__dirname, 'src/renderers/linkedom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
         'helpers/processChildren': resolve(
           __dirname,
@@ -77,7 +78,12 @@ export default defineConfig({
           __dirname,
           'src/helpers/addEventListener.ts'
         ),
+        'helpers/renderToString': resolve(
+          __dirname,
+          'src/helpers/renderToString.ts'
+        ),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
+        'presets/ssr': resolve(__dirname, 'src/presets/ssr.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),
       },
       formats: ['es'],

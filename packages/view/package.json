@@ -10,6 +10,10 @@
       "import": "./dist/renderers/dom.js",
       "types": "./dist/renderers/dom.d.ts"
     },
+    "./renderers/linkedom": {
+      "import": "./dist/renderers/linkedom.js",
+      "types": "./dist/renderers/linkedom.d.ts"
+    },
     "./renderer": {
       "import": "./dist/renderer.js",
       "types": "./dist/renderer.d.ts"
@@ -57,6 +61,14 @@
     "./presets/core": {
       "import": "./dist/presets/core.js",
       "types": "./dist/presets/core.d.ts"
+    },
+    "./presets/ssr": {
+      "import": "./dist/presets/ssr.js",
+      "types": "./dist/presets/ssr.d.ts"
+    },
+    "./helpers/renderToString": {
+      "import": "./dist/helpers/renderToString.js",
+      "types": "./dist/helpers/renderToString.d.ts"
     },
     "./devtools": {
       "import": "./dist/devtools/index.js",
