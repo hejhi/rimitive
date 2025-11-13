@@ -2,7 +2,7 @@
  * Counter Island - Interactive component that ships JS to client
  */
 import { island } from '@lattice/data/island';
-import { create } from '../api';
+import { create } from '../api.js';
 
 export const Counter = island(
   'counter',

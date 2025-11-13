@@ -15,8 +15,8 @@ import {
   getIslandScripts,
   renderToString,
 } from '@lattice/data';
-import { Counter } from './islands/Counter';
-import { TodoList } from './islands/TodoList';
+import { Counter } from './islands/Counter.js';
+import { TodoList } from './islands/TodoList.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientBundlePath = join(__dirname, '../client/client.js');

@@ -10,8 +10,8 @@ import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { createSwitchableDOMRenderer } from '@lattice/view/renderers/switchable-dom';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { signals, mount } from './api';
-import { Counter } from './islands/Counter';
-import { TodoList } from './islands/TodoList';
+import { Counter } from './islands/Counter.js';
+import { TodoList } from './islands/TodoList.js';
 
 // Create API factory for hydrator
 function createFullAPI(
