@@ -30,7 +30,7 @@ export const TodoList = island(
           onkeydown: (e: KeyboardEvent) => {
             if (e.key === 'Enter') addTodo();
           }
-        }),
+        })(),
         el('button', { onclick: addTodo })('Add')
       ),
       el('ul')(
