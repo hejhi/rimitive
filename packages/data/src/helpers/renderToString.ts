@@ -9,6 +9,88 @@ import { renderToString as baseRenderToString } from '@lattice/view/helpers/rend
 import type { NodeRef, ElementRef, FragmentRef } from '@lattice/view/types';
 
 /**
+ * Wrap island elements in container divs
+ *
+ * Finds elements with data-island-id attribute and wraps them in container divs.
+ * Removes the data-island-id attribute from the inner element.
+ *
+ * Uses a simple state machine to properly match opening and closing tags.
+ *
+ * @param html - HTML string to process
+ * @returns HTML string with islands wrapped
+ */
+function wrapIslands(html: string): string {
+  // Find all island elements and their positions
+  const islands: Array<{ start: number; end: number; id: string; tagName: string }> = [];
+
+  // Pattern to match opening tags with data-island-id
+  const openTagPattern = /<(\w+)([^>]*?)\s+data-island-id="([^"]+)"([^>]*)>/g;
+
+  let match;
+  while ((match = openTagPattern.exec(html)) !== null) {
+    const tagName = match[1]!;
+    const islandId = match[3]!;
+    const openTagStart = match.index;
+    const openTagEnd = match.index + match[0].length;
+
+    // Self-closing tag
+    if (match[0].endsWith('/>')) {
+      islands.push({
+        start: openTagStart,
+        end: openTagEnd,
+        id: islandId,
+        tagName,
+      });
+      continue;
+    }
+
+    // Find matching closing tag
+    const closeTag = `</${tagName}>`;
+    let depth = 1;
+    let searchPos = openTagEnd;
+
+    while (depth > 0 && searchPos < html.length) {
+      const nextOpen = html.indexOf(`<${tagName}`, searchPos);
+      const nextClose = html.indexOf(closeTag, searchPos);
+
+      if (nextClose === -1) break;
+
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        // Found nested opening tag of same type
+        depth++;
+        searchPos = nextOpen + tagName.length + 1;
+      } else {
+        // Found closing tag
+        depth--;
+        if (depth === 0) {
+          islands.push({
+            start: openTagStart,
+            end: nextClose + closeTag.length,
+            id: islandId,
+            tagName,
+          });
+        }
+        searchPos = nextClose + closeTag.length;
+      }
+    }
+  }
+
+  // Process islands in reverse order to maintain string positions
+  islands.sort((a, b) => b.start - a.start);
+
+  let result = html;
+  for (const island of islands) {
+    const elementHTML = result.substring(island.start, island.end);
+    // Remove data-island-id attribute
+    const cleanHTML = elementHTML.replace(/\s+data-island-id="[^"]+"/g, '');
+    const wrapped = `<div id="${island.id}">${cleanHTML}</div>`;
+    result = result.substring(0, island.start) + wrapped + result.substring(island.end);
+  }
+
+  return result;
+}
+
+/**
  * Render a node tree to HTML string with island wrapping
  *
  * Islands (marked with __islandId) are wrapped in container divs
@@ -60,5 +142,8 @@ export function renderToString(nodeRef: NodeRef<unknown>): string {
     return html;
   };
 
-  return baseRenderToString(nodeRef, wrapElement, wrapFragment);
+  const html = baseRenderToString(nodeRef, wrapElement, wrapFragment);
+
+  // Process HTML to wrap islands that were nested in the DOM tree
+  return wrapIslands(html);
 }
