@@ -7,7 +7,7 @@ import { createDOMIslandHydrator, type IslandRegistry } from '@lattice/data/hydr
 import { createApi } from '@lattice/lattice';
 import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { createSwitchableDOMRenderer } from '@lattice/view/renderers/switchable-dom';
+import { createHydratingRenderer } from '@lattice/view/renderers/switchable-dom';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { signals, mount } from './api';
 import { Counter } from './islands/Counter.js';
@@ -15,7 +15,7 @@ import { TodoList } from './islands/TodoList.js';
 
 // Create API factory for hydrator
 function createFullAPI(
-  renderer: ReturnType<typeof createSwitchableDOMRenderer>,
+  renderer: ReturnType<typeof createHydratingRenderer>,
   signalsApi: ReturnType<typeof createSignalsApi>
 ) {
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);

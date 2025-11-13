@@ -11,7 +11,9 @@
 
 import type { IslandComponent, IslandMetaData } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
-import { createSwitchableDOMRenderer } from '@lattice/view/renderers/switchable-dom';
+import { createHydratingRenderer } from '@lattice/view/renderers/switchable-dom';
+import { createHydratingDOMRenderer } from '@lattice/view/renderers/hydrating-dom';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createHydratingApi } from '../hydrating-api';
 import type { EffectAPI } from '../hydrating-api';
 import type { SealedSpec } from '@lattice/view/types';
@@ -64,7 +66,7 @@ export type MountFn = (spec: SealedSpec<unknown>) => { element: unknown };
 export function createDOMIslandHydrator<
   TSignals extends EffectAPI
 >(
-  createAPI: (renderer: ReturnType<typeof createSwitchableDOMRenderer>, signals: TSignals) => EffectAPI & Record<string, unknown>,
+  createAPI: (renderer: ReturnType<typeof createHydratingRenderer>, signals: TSignals) => EffectAPI & Record<string, unknown>,
   signals: TSignals,
   mount: MountFn
 ): IslandHydrator {
@@ -95,12 +97,14 @@ export function createDOMIslandHydrator<
         const strategy = meta?.strategy;
 
         try {
-          // Create switchable renderer that starts in hydration mode
-          // The renderer will match existing DOM during initial render,
-          // then switch to regular DOM creation for reactive updates
-          const renderer = createSwitchableDOMRenderer(el);
+          // Create hydrating renderer that delegates to hydrating mode initially,
+          // then switches to fallback mode for reactive updates
+          const renderer = createHydratingRenderer(
+            createHydratingDOMRenderer(el),
+            createDOMRenderer()
+          );
 
-          // Create API with switchable renderer
+          // Create API with hydrating renderer
           const api = createAPI(renderer, signals);
           const { hydratingApi, activate } = createHydratingApi(api);
 
@@ -109,8 +113,8 @@ export function createDOMIslandHydrator<
           Component(props).create(hydratingApi);
 
           // Success! Hydration complete
-          // Switch renderer to regular mode for future reactive updates
-          renderer.switchToRegularMode();
+          // Switch renderer to fallback mode for future reactive updates
+          renderer.switchToFallback();
 
           // Activate queued effects - they'll use regular mode now
           activate();
