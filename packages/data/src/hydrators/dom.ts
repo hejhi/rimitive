@@ -18,6 +18,7 @@ import type { SealedSpec } from '@lattice/view/types';
 
 /**
  * Island registry - maps island type IDs to component functions
+ * Generic to accept components with any specific prop types
  */
 export type IslandRegistry = Record<string, IslandComponent>;
 
@@ -29,7 +30,7 @@ export interface IslandHydrator {
    * Hydrate all islands on the page
    * @param registry - Map of island types to components
    */
-  hydrate(registry: IslandRegistry): void;
+  hydrate<T extends IslandRegistry>(registry: T): void;
 }
 
 /**
@@ -40,6 +41,7 @@ export type MountFn = (spec: SealedSpec<unknown>) => { element: unknown };
 /**
  * Create API helpers function type
  * Used to create both hydrating and regular APIs
+ * Accepts any function that takes two parameters and returns an API object
  */
 export type CreateAPIFn = (
   renderer: unknown,

@@ -6,6 +6,10 @@
  */
 
 import type { SealedSpec } from '@lattice/view/types';
+import { HydrationMismatch } from '@lattice/view/renderers/hydrating-dom';
+
+// Re-export HydrationMismatch for convenience
+export { HydrationMismatch };
 
 /**
  * SSR Context - tracks islands during server-side rendering
@@ -58,22 +62,11 @@ export interface IslandMetadata {
  *
  * Islands are created with: island('counter', Component)
  * Components must accept JSON-serializable props only
+ *
+ * Note: This is a callable interface. The actual functions will satisfy this.
  */
 export interface IslandComponent<TProps = unknown> {
   (props: TProps): SealedSpec<unknown>;
-}
-
-/**
- * Hydration mismatch error
- *
- * Thrown when server-rendered HTML doesn't match client expectations.
- * Triggers fallback to client-side rendering.
- */
-export class HydrationMismatch extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'HydrationMismatch';
-  }
 }
 
 /**
