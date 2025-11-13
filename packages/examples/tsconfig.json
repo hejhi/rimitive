@@ -8,7 +8,8 @@
     "devtools/**/*.ts",
     "react/**/*.ts",
     "react/**/*.tsx",
-    "view/**/*.ts"
+    "view/**/*.ts",
+    "ssr/**/*.ts"
   ],
   "exclude": [
     "**/node_modules",

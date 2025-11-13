@@ -1,8 +1,8 @@
 /**
  * Counter Island - Interactive component that ships JS to client
  */
-import { create } from '@lattice/view/component';
 import { island } from '@lattice/data/island';
+import { create } from '../api';
 
 export const Counter = island(
   'counter',
@@ -13,9 +13,9 @@ export const Counter = island(
 
       return el('div', { className: 'counter' })(
         el('button', { onclick: () => count(count() - 1) })('-'),
-        el('span', { style: 'margin: 0 1rem' })(() => `Count: ${count()}`),
+        el('span', { className: 'counter-value' })(() => `Count: ${count()}`),
         el('button', { onclick: () => count(count() + 1) })('+')
-      )();
+      );
     };
   })
 );

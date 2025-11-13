@@ -6,20 +6,19 @@
 import { createDOMIslandHydrator, type CreateAPIFn, type IslandRegistry } from '@lattice/data/hydrators/dom';
 import { createApi } from '@lattice/lattice';
 import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { createDOMRenderer, type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { signals, mount } from './api';
 import { Counter } from './islands/Counter';
 import { TodoList } from './islands/TodoList';
 
 // Create API factory for hydrator
-// This needs to return the full API with el, map, etc.
-const createFullAPI: CreateAPIFn = (renderer, signalsApi) => {
-  const helpers = defaultHelpers(renderer, signalsApi);
+const createFullAPI: CreateAPIFn = () => {
+  const helpers = defaultHelpers(createDOMRenderer(), signals);
   const views = createApi(defaultExtensions<DOMRendererConfig>(), helpers);
   return {
-    ...signalsApi,
+    ...signals,
     ...views,
-  } as any;
+  } as ReturnType<CreateAPIFn>;
 };
 
 // Create hydrator with client-side API

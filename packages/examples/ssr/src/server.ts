@@ -132,6 +132,10 @@ const server = createServer((req, res) => {
     button:hover {
       background: #0056b3;
     }
+    .counter-value {
+      margin: 0 1rem;
+      display: inline-block;
+    }
     input {
       padding: 0.5rem;
       border: 1px solid #ddd;

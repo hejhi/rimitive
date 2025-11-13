@@ -1,8 +1,8 @@
 /**
  * TodoList Island - Interactive todo list
  */
-import { create } from '@lattice/view/component';
 import { island } from '@lattice/data/island';
+import { create } from '../api';
 
 export const TodoList = island(
   'todolist',
@@ -30,12 +30,12 @@ export const TodoList = island(
           onkeydown: (e: KeyboardEvent) => {
             if (e.key === 'Enter') addTodo();
           }
-        })(),
+        }),
         el('button', { onclick: addTodo })('Add')
-      )(),
+      ),
       el('ul')(
-        map(todos)(todo => el('li')(todo)())
-      )()
-    )();
+        map(todos)(todo => el('li')(todo))
+      )
+    );
   })
 );
