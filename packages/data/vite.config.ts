@@ -63,6 +63,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         types: resolve(__dirname, 'src/types.ts'),
+        'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
       },
       formats: ['es'],
     },
@@ -71,6 +72,11 @@ export default defineConfig({
         'vitest',
         /^vitest/,
         'node:test',
+        'node:async_hooks',
+        '@lattice/lattice',
+        '@lattice/signals',
+        '@lattice/view',
+        /^@lattice\/view\//,
       ],
       output: {
         entryFileNames: '[name].js',

@@ -38,3 +38,12 @@ export type {
 } from './types';
 
 export { HydrationMismatch, ISLAND_META } from './types';
+
+// SSR context management
+export {
+  createSSRContext,
+  runWithSSRContext,
+  getActiveSSRContext,
+  getIslandScripts,
+  registerIsland,
+} from './ssr-context';
