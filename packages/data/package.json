@@ -18,6 +18,10 @@
       "import": "./dist/island.js",
       "types": "./dist/island.d.ts"
     },
+    "./hydrators/dom": {
+      "import": "./dist/hydrators/dom.js",
+      "types": "./dist/hydrators/dom.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

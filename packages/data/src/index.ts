@@ -50,3 +50,11 @@ export {
 
 // Island wrapper
 export { island } from './island';
+
+// Hydrating API wrapper
+export { createHydratingApi } from './hydrating-api';
+export type { EffectAPI, HydratingAPIResult } from './hydrating-api';
+
+// Client-side hydrator
+export { createDOMIslandHydrator } from './hydrators/dom';
+export type { IslandRegistry, IslandHydrator, MountFn, CreateAPIFn } from './hydrators/dom';

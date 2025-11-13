@@ -48,7 +48,17 @@ function renderElementToString(elementRef: ElementRef<unknown>): string {
   const element = elementRef.element as unknown as { outerHTML?: string };
 
   if (typeof element.outerHTML === 'string') {
-    return element.outerHTML;
+    const html = element.outerHTML;
+
+    // Check if this element is marked as an island
+    const islandId = (elementRef as { __islandId?: string }).__islandId;
+
+    if (islandId) {
+      // Wrap island in container div for hydration targeting
+      return `<div id="${islandId}">${html}</div>`;
+    }
+
+    return html;
   }
 
   throw new Error('Element does not have outerHTML property. Are you using linkedom renderer?');
@@ -61,11 +71,23 @@ function renderFragmentToString(fragmentRef: FragmentRef<unknown>): string {
   const parts: string[] = [];
   let current = fragmentRef.firstChild;
 
+  // Check if this fragment is marked as an island
+  const islandId = (fragmentRef as { __islandId?: string }).__islandId;
+
+  if (islandId) {
+    // Mark fragment boundaries for hydration
+    parts.push(`<div id="${islandId}"><!--fragment-start-->`);
+  }
+
   while (current) {
     // firstChild and next are BaseRef, but at runtime they're always NodeRef
     // Safe to cast since fragments only contain element/fragment children
     parts.push(renderToString(current as NodeRef<unknown>));
     current = current.next;
+  }
+
+  if (islandId) {
+    parts.push('<!--fragment-end--></div>');
   }
 
   return parts.join('');

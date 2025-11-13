@@ -14,6 +14,10 @@
       "import": "./dist/renderers/linkedom.js",
       "types": "./dist/renderers/linkedom.d.ts"
     },
+    "./renderers/hydrating-dom": {
+      "import": "./dist/renderers/hydrating-dom.js",
+      "types": "./dist/renderers/hydrating-dom.d.ts"
+    },
     "./renderer": {
       "import": "./dist/renderer.js",
       "types": "./dist/renderer.d.ts"

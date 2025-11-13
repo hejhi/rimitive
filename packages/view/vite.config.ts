@@ -69,6 +69,7 @@ export default defineConfig({
         map: resolve(__dirname, 'src/map.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
         'renderers/linkedom': resolve(__dirname, 'src/renderers/linkedom.ts'),
+        'renderers/hydrating-dom': resolve(__dirname, 'src/renderers/hydrating-dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
         'helpers/processChildren': resolve(
           __dirname,
