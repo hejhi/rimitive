@@ -1,8 +1,11 @@
 /**
- * Island Wrapper
+ * Island Wrapper - Server version
  *
  * Marks components as islands - interactive regions that ship JavaScript to the client.
  * Static content remains as HTML without hydration overhead.
+ *
+ * This is the Node.js version that includes SSR context integration.
+ * For browser builds, island.browser.ts is used instead.
  */
 
 import type { SealedSpec } from '@lattice/view/types';
@@ -80,13 +83,16 @@ export function island<TProps>(
       // Server-side: Register island and tag nodeRef
       const instanceId = registerIsland(id, props);
 
-      // Wrap spec.create to tag the returned nodeRef
-      const originalCreate = spec.create.bind(spec);
-      spec.create = function(...args: unknown[]) {
-        const nodeRef = originalCreate(...args);
-        // Tag nodeRef with island ID for renderToString
-        (nodeRef as { __islandId?: string }).__islandId = instanceId;
-        return nodeRef;
+      // Return a new spec that tags the nodeRef
+      // Don't mutate the original spec to avoid recursion issues
+      return {
+        status: spec.status,
+        create(api?: unknown) {
+          const nodeRef = spec.create(api);
+          // Tag nodeRef with island ID for renderToString
+          (nodeRef as { __islandId?: string }).__islandId = instanceId;
+          return nodeRef;
+        }
       };
     }
 

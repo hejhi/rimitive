@@ -1,8 +1,8 @@
 /**
  * TodoList Island - Interactive todo list
  */
-import { create } from '../api';
-import { island } from '@lattice/data';
+import { create } from '@lattice/view/component';
+import { island } from '@lattice/data/island';
 
 export const TodoList = island(
   'todolist',

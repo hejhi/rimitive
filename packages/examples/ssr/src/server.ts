@@ -4,6 +4,9 @@
  * Demonstrates server-side rendering with islands hydration.
  */
 import { createServer } from 'node:http';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createSSRApi } from '@lattice/view/presets/ssr';
 import {
@@ -14,6 +17,9 @@ import {
 } from '@lattice/data';
 import { Counter } from './islands/Counter';
 import { TodoList } from './islands/TodoList';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
 // Create SSR rendering API
 const signals = createSignalsApi();
@@ -44,6 +50,19 @@ const App = create((api) => () => {
 
 // Create HTTP server
 const server = createServer((req, res) => {
+  // Serve client bundle
+  if (req.url === '/client.js') {
+    if (existsSync(clientBundlePath)) {
+      const bundle = readFileSync(clientBundlePath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end(bundle);
+    } else {
+      res.writeHead(404);
+      res.end('Client bundle not found. Run: pnpm build:client');
+    }
+    return;
+  }
+
   if (req.url === '/') {
     // Create SSR context for this request
     const ctx = createSSRContext();
@@ -139,11 +158,7 @@ const server = createServer((req, res) => {
 <body>
   ${html}
   ${scripts}
-  <script type="module">
-    // In production, this would be a separate bundled file
-    // For dev, we inline a simple module loader
-    console.log('Ready to hydrate - load client.js to activate islands');
-  </script>
+  <script type="module" src="/client.js"></script>
 </body>
 </html>
     `);
