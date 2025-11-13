@@ -6,9 +6,23 @@ import type { NodeRef, ElementRef, FragmentRef } from '../types';
 import { STATUS_ELEMENT } from '../types';
 
 /**
+ * Element wrapper function type
+ * Allows customizing how elements are wrapped in the output HTML
+ */
+export type ElementWrapper = (html: string, elementRef: ElementRef<unknown>) => string;
+
+/**
+ * Fragment wrapper function type
+ * Allows customizing how fragments are wrapped in the output HTML
+ */
+export type FragmentWrapper = (html: string, fragmentRef: FragmentRef<unknown>) => string;
+
+/**
  * Extract HTML string from a rendered element or fragment
  *
  * @param nodeRef - The rendered node reference from mount() or create()
+ * @param wrapElement - Optional function to wrap element HTML (e.g., for islands)
+ * @param wrapFragment - Optional function to wrap fragment HTML (e.g., for islands)
  * @returns HTML string representation
  *
  * @example
@@ -31,31 +45,35 @@ import { STATUS_ELEMENT } from '../types';
  * // html = '<div class="app"><h1>Hello SSR!</h1></div>'
  * ```
  */
-export function renderToString(nodeRef: NodeRef<unknown>): string {
+export function renderToString(
+  nodeRef: NodeRef<unknown>,
+  wrapElement?: ElementWrapper,
+  wrapFragment?: FragmentWrapper
+): string {
   if (nodeRef.status === STATUS_ELEMENT) {
-    return renderElementToString(nodeRef);
+    return renderElementToString(nodeRef, wrapElement);
   }
 
   // TypeScript knows this must be STATUS_FRAGMENT since NodeRef is a union
   // of ElementRef and FragmentRef only
-  return renderFragmentToString(nodeRef);
+  return renderFragmentToString(nodeRef, wrapElement, wrapFragment);
 }
 
 /**
  * Render an element ref to HTML string
  */
-function renderElementToString(elementRef: ElementRef<unknown>): string {
+function renderElementToString(
+  elementRef: ElementRef<unknown>,
+  wrapElement?: ElementWrapper
+): string {
   const element = elementRef.element as unknown as { outerHTML?: string };
 
   if (typeof element.outerHTML === 'string') {
     const html = element.outerHTML;
 
-    // Check if this element is marked as an island
-    const islandId = (elementRef as { __islandId?: string }).__islandId;
-
-    if (islandId) {
-      // Wrap island in container div for hydration targeting
-      return `<div id="${islandId}">${html}</div>`;
+    // Apply custom wrapper if provided
+    if (wrapElement) {
+      return wrapElement(html, elementRef);
     }
 
     return html;
@@ -67,28 +85,27 @@ function renderElementToString(elementRef: ElementRef<unknown>): string {
 /**
  * Render a fragment ref to HTML string by concatenating all children
  */
-function renderFragmentToString(fragmentRef: FragmentRef<unknown>): string {
+function renderFragmentToString(
+  fragmentRef: FragmentRef<unknown>,
+  wrapElement?: ElementWrapper,
+  wrapFragment?: FragmentWrapper
+): string {
   const parts: string[] = [];
   let current = fragmentRef.firstChild;
-
-  // Check if this fragment is marked as an island
-  const islandId = (fragmentRef as { __islandId?: string }).__islandId;
-
-  if (islandId) {
-    // Mark fragment boundaries for hydration
-    parts.push(`<div id="${islandId}"><!--fragment-start-->`);
-  }
 
   while (current) {
     // firstChild and next are BaseRef, but at runtime they're always NodeRef
     // Safe to cast since fragments only contain element/fragment children
-    parts.push(renderToString(current as NodeRef<unknown>));
+    parts.push(renderToString(current as NodeRef<unknown>, wrapElement, wrapFragment));
     current = current.next;
   }
 
-  if (islandId) {
-    parts.push('<!--fragment-end--></div>');
+  const html = parts.join('');
+
+  // Apply custom wrapper if provided
+  if (wrapFragment) {
+    return wrapFragment(html, fragmentRef);
   }
 
-  return parts.join('');
+  return html;
 }

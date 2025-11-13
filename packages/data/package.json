@@ -22,6 +22,10 @@
       "import": "./dist/hydrators/dom.js",
       "types": "./dist/hydrators/dom.d.ts"
     },
+    "./helpers/renderToString": {
+      "import": "./dist/helpers/renderToString.js",
+      "types": "./dist/helpers/renderToString.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

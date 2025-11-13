@@ -67,6 +67,7 @@ export default defineConfig({
         island: resolve(__dirname, 'src/island.ts'),
         'hydrating-api': resolve(__dirname, 'src/hydrating-api.ts'),
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
+        'helpers/renderToString': resolve(__dirname, 'src/helpers/renderToString.ts'),
       },
       formats: ['es'],
     },

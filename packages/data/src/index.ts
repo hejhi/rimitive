@@ -58,3 +58,6 @@ export type { EffectAPI, HydratingAPIResult } from './hydrating-api';
 // Client-side hydrator
 export { createDOMIslandHydrator } from './hydrators/dom';
 export type { IslandRegistry, IslandHydrator, MountFn, CreateAPIFn } from './hydrators/dom';
+
+// Island-aware renderToString
+export { renderToString } from './helpers/renderToString';
