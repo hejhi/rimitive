@@ -93,15 +93,70 @@ export const getActiveSSRContext = () => store.getStore();
 
 ### Island Wrapper
 
-Registers island during SSR, marks nodeRef for hydration.
+Registers island during SSR, marks nodeRef for hydration. Example approach:
+
+```ts
+export function island<TProps>(
+  id: string,
+  component: (props: TProps) => SealedSpec<unknown>
+) {
+  return (props: TProps) => {
+    const spec = component(props);
+    const ctx = getActiveSSRContext();
+
+    if (ctx) {
+      // Validate props are serializable
+      if (!isSerializable(props)) {
+        throw new Error(`Island "${id}" props must be JSON-serializable`);
+      }
+
+      const instanceId = `${id}-${ctx.counter++}`;
+      ctx.islands.push({ id: instanceId, type: id, props });
+
+      // Wrap spec.create to tag the resulting nodeRef
+      const originalCreate = spec.create;
+      spec.create = (api) => {
+        const nodeRef = originalCreate.call(spec, api);
+        nodeRef.__islandId = instanceId;
+        return nodeRef;
+      };
+    }
+
+    return spec;
+  };
+}
+```
 
 Props must be JSON-serializable (strings, numbers, booleans, arrays, plain objects).
 
 ### renderToString Integration
 
-Wrap islands in containers and emit inline scripts. Watch out for XSS vulnurabilities.
+Wrap islands in containers and emit inline scripts. Pattern for element islands:
 
-Scripts emit immediately after each island for parallel loading. HTML comments (`<!--f-->`) mark fragment boundaries.
+```ts
+function renderElementToString(elementRef: ElementRef<unknown>): string {
+  const element = elementRef.element as { outerHTML?: string };
+  const html = element.outerHTML;
+  const islandId = elementRef.__islandId;
+
+  if (islandId) {
+    const ctx = getActiveSSRContext();
+    const island = ctx.islands.find(i => i.id === islandId);
+
+    // XSS: Escape < and > in JSON to prevent script breakout
+    const propsJson = JSON.stringify(island.props)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e');
+
+    return `<div id="${islandId}">${html}</div>` +
+           `<script>__hydrate("${islandId}","${island.type}",${propsJson})</script>`;
+  }
+
+  return html;
+}
+```
+
+Scripts emit immediately after each island for parallel loading. HTML comments (`<!--f-->`, `<!--/f-->`) mark fragment boundaries (similar pattern).
 
 ### Hydration Strategy
 
@@ -151,7 +206,40 @@ export function createHydratingDOMRenderer(containerEl: HTMLElement) {
 
 During hydration, effects should not run (DOM already exists). Defer them until after hydration completes.
 
-**Important constraint**: signals and view packages should not be aware of hydration, islands, or ssr.
+**Constraint**: signals and view packages should not be aware of hydration, islands, or ssr.
+
+**Pattern** - intercept at the islands layer:
+
+```ts
+// @lattice/data/hydrating-api.ts
+export function createHydratingApi(baseApi) {
+  const pending = [];
+
+  return {
+    hydratingApi: {
+      ...baseApi,
+      // Queue effects instead of running them
+      effect: (fn) => {
+        pending.push(() => baseApi.effect(fn));
+        return () => {}; // No-op cleanup during hydration
+      },
+      // Also intercept scopedEffect if present
+      scopedEffect: baseApi.scopedEffect ? (fn) => {
+        pending.push(() => baseApi.scopedEffect(fn));
+        return () => {};
+      } : undefined,
+      // Signals work normally - reads are safe since no effects tracking yet
+    },
+    activate: () => {
+      // After successful hydration, flush all queued effects
+      pending.forEach(create => create());
+      pending.length = 0;
+    }
+  };
+}
+```
+
+This keeps the islands package decoupled - signals/view never know about hydration.
 
 ### Server Usage
 
