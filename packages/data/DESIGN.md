@@ -201,7 +201,7 @@ export function island<TProps>(
 
 ### renderToString Integration
 
-Update `@lattice/view/helpers/renderToString.ts` to wrap islands:
+Update `@lattice/view/helpers/renderToString.ts` to wrap islands and mark fragment boundaries:
 
 ```ts
 function renderElementToString(elementRef: ElementRef<unknown>): string {
@@ -219,7 +219,32 @@ function renderElementToString(elementRef: ElementRef<unknown>): string {
 
   throw new Error('Element does not have outerHTML property. Are you using linkedom renderer?');
 }
+
+function renderFragmentToString(fragmentRef: FragmentRef<unknown>): string {
+  const parts: string[] = [];
+  let current = fragmentRef.firstChild;
+
+  const islandId = (fragmentRef as any).__islandId;
+
+  if (islandId) {
+    // Mark fragment boundaries for hydration
+    parts.push(`<div id="${islandId}"><!--fragment-start-->`);
+  }
+
+  while (current) {
+    parts.push(renderToString(current as NodeRef<unknown>));
+    current = current.next;
+  }
+
+  if (islandId) {
+    parts.push('<!--fragment-end--></div>');
+  }
+
+  return parts.join('');
+}
 ```
+
+**Fragment boundaries**: HTML comments mark where fragments begin/end during hydration. The hydrating renderer uses these to track how many nodes belong to each fragment.
 
 ### Hydration Strategy
 
@@ -273,8 +298,23 @@ Returns existing DOM nodes instead of creating new ones:
 export function createHydratingDOMRenderer(containerEl: HTMLElement) {
   let currentNode: Node | null = containerEl.firstChild;
 
+  // Skip fragment boundary markers
+  const skipToNextRealNode = () => {
+    while (currentNode?.nodeType === 8) { // Comment node
+      const comment = currentNode as Comment;
+      if (comment.textContent === 'fragment-start' ||
+          comment.textContent === 'fragment-end') {
+        currentNode = currentNode.nextSibling;
+      } else {
+        break;
+      }
+    }
+  };
+
   return {
     createElement: (tag) => {
+      skipToNextRealNode();
+
       if (currentNode?.nodeType === 1 &&
           (currentNode as Element).tagName.toLowerCase() === tag) {
         const node = currentNode as HTMLElement;
@@ -285,6 +325,8 @@ export function createHydratingDOMRenderer(containerEl: HTMLElement) {
     },
 
     createTextNode: (text) => {
+      skipToNextRealNode();
+
       if (currentNode?.nodeType === 3) {
         const node = currentNode as Text;
         if (node.textContent !== text) node.textContent = text;
@@ -295,9 +337,9 @@ export function createHydratingDOMRenderer(containerEl: HTMLElement) {
     },
 
     setAttribute: (element, key, value) => Reflect.set(element, key, value),
-    appendChild: () => {},
-    removeChild: () => {},
-    insertBefore: () => {},
+    appendChild: () => {}, // No-op - already in DOM
+    removeChild: () => {}, // No-op during hydration
+    insertBefore: () => {}, // No-op during hydration
     isConnected: (element) => element.isConnected,
     addEventListener: (element, event, handler, options) => {
       element.addEventListener(event, handler, options);
@@ -307,7 +349,88 @@ export function createHydratingDOMRenderer(containerEl: HTMLElement) {
 }
 ```
 
-Components call `createElement()` in the same order on server and client. The hydrating renderer walks the existing DOM in parallel.
+**How it works**:
+- Components call `createElement()` in the same order on server and client
+- Hydrating renderer walks existing DOM in parallel, returning nodes instead of creating them
+- Fragment boundary comments (`<!--fragment-start-->`, `<!--fragment-end-->`) are skipped automatically
+- If structure mismatches, throws `HydrationMismatch` → triggers fallback to replacement
+
+### Inert Hydration Mode
+
+During hydration, signals and effects need special handling to prevent unwanted side effects:
+
+**Problem**: When component code runs during hydration:
+```ts
+const count = signal(props.initialCount);
+return el('button')(`Count: ${count()}`)(); // Reading count()
+```
+
+Reading `count()` during normal rendering would:
+- Track dependencies for reactivity
+- Run effects immediately
+- Subscribe to updates
+
+But during hydration, we want to:
+- ✅ Read current values
+- ❌ Don't track dependencies (we're matching existing DOM, not setting up reactivity yet)
+- ❌ Don't run effects (DOM already exists)
+
+**Solution**: Internal `__hydrating` flag passed through view context:
+
+```ts
+// Inside createDOMIslandHydrator
+const hydratingViews = createViewHelpers(hydratingRenderer, signals, {
+  __hydrating: true  // Internal flag
+});
+
+// Signal implementation checks this flag
+export function Signal() {
+  return {
+    create: (ctx) => (initialValue) => {
+      const s = signal(initialValue);
+
+      if (ctx.__hydrating) {
+        // Return untracked read during hydration
+        return () => s();
+      }
+
+      return s; // Normal reactive signal
+    }
+  };
+}
+
+// Effect implementation skips execution during hydration
+export function Effect() {
+  return {
+    create: (ctx) => (fn) => {
+      if (ctx.__hydrating) {
+        // Queue effect to run after hydration completes
+        return () => {}; // No-op cleanup
+      }
+
+      return effect(fn); // Normal effect
+    }
+  };
+}
+```
+
+After successful hydration, unwrap the container to reveal the hydrated DOM:
+
+```ts
+// 1. Hydrate with inert mode (match DOM structure)
+const hydratedNode = Component(props).create(hydratingViews);
+// Returns existing DOM nodes with event listeners attached
+// Signals were created but dependency tracking was disabled
+
+// 2. Success! Unwrap container div, preserving the hydrated nodes
+el.replaceWith(...el.childNodes);
+// Removes <div id="island-0">, leaves <button>Count: 5</button>
+
+// 3. The same DOM nodes remain in place with event listeners working
+//    Signals now track dependencies normally (inert mode complete)
+```
+
+**Alternative approach**: Batch all subscriptions and flush after hydration completes. This is more complex but allows effects to see the fully hydrated DOM.
 
 ### Client Hydrator
 
@@ -384,6 +507,56 @@ app.get('/page', async (req, res) => {
 });
 ```
 
+## Hydration Timing & Data Races
+
+**Critical understanding**: Hydration mismatches aren't always bugs.
+
+### Legitimate Data Races
+
+Data can change between server render and client hydration:
+
+```ts
+// Server renders at t=0: price = $100
+const Product = island('product',
+  create(({ el }) => (props: { price: number }) =>
+    el('div')(`Price: $${props.price}`)()
+  )
+);
+
+// Network delay...
+// Client hydrates at t=5: price = $120 (price changed in database)
+```
+
+**Result**: Hydration mismatch → try-with-fallback replaces with current data.
+
+**This is correct behavior**, not a bug. The alternative (showing stale $100) is worse.
+
+### When Mismatches Indicate Bugs
+
+Mismatches indicate bugs when:
+- Conditional rendering based on client-only state (window size, localStorage)
+- Random values or timestamps in SSR
+- Race conditions in data fetching
+
+```ts
+// ❌ Bug - client-only conditional
+const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+// Always false on server, might be true on client
+
+// ✅ Fix - pass as prop
+const Layout = island('layout', create(({ el }) => (props: { isMobile: boolean }) => ...));
+```
+
+### Monitoring Hydration Success
+
+Try-with-fallback logs warnings for mismatches. Use these to:
+- Track hydration success rate
+- Identify data race frequency
+- Find client-only conditional bugs
+
+High mismatch rate for rapidly changing data (stock prices, live scores) is expected.
+High mismatch rate for static content indicates bugs.
+
 ## Package Structure
 
 ```
@@ -398,7 +571,7 @@ app.get('/page', async (req, res) => {
 
 @lattice/view/
   ├── helpers/
-  │   └── renderToString.ts     # Update to wrap islands
+  │   └── renderToString.ts     # Update to wrap islands + fragments
   └── renderers/
       └── hydrating-dom.ts      # New
 ```
