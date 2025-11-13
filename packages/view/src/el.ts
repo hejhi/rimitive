@@ -177,10 +177,14 @@ export const El = create(
 
             createElementScope(element, () => {
               for (const [key, val] of Object.entries(props)) {
-                if (typeof val !== 'function') {
+                // Event handlers are functions but NOT reactive - treat as static
+                const isEventHandler = key.startsWith('on');
+
+                if (typeof val !== 'function' || isEventHandler) {
                   setAttribute(element, key, val);
                   continue;
                 }
+                // Reactive value - wrap in effect for updates
                 scopedEffect(() => setAttribute(element, key, (val as () => unknown)()));
               }
               processChildren(elRef, children, api);
