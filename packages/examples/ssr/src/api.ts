@@ -27,7 +27,7 @@ const createViewApi = () => {
     api,
     signals,
     views,
-    mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(views),
+    mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
     create: createComponent as ComponentFactory<typeof api>,
   };
 };

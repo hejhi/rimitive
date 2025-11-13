@@ -25,7 +25,7 @@ export const TodoList = island(
         el('input', {
           type: 'text',
           placeholder: 'Add a todo...',
-          value: input(),
+          value: () => input(),
           oninput: (e: Event) => input((e.target as HTMLInputElement).value),
           onkeydown: (e: KeyboardEvent) => {
             if (e.key === 'Enter') addTodo();
@@ -34,7 +34,7 @@ export const TodoList = island(
         el('button', { onclick: addTodo })('Add')
       )(),
       el('ul')(
-        map(todos())(todo => el('li')(todo)())
+        map(todos)(todo => el('li')(todo)())
       )()
     )();
   })

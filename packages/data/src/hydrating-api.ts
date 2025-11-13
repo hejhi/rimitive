@@ -28,8 +28,9 @@ export interface HydratingAPIResult<T extends EffectAPI> {
 
   /**
    * Activate all queued effects after successful hydration
+   * @param apiForEffects - Optional API to use when creating effects (e.g., with regular renderer instead of hydrating renderer)
    */
-  activate: () => void;
+  activate: (apiForEffects?: T) => void;
 }
 
 /**
@@ -58,7 +59,11 @@ export interface HydratingAPIResult<T extends EffectAPI> {
 export function createHydratingApi<T extends EffectAPI>(
   baseApi: T
 ): HydratingAPIResult<T> {
-  const pendingEffects: Array<() => () => void> = [];
+  // Store effect functions and their types
+  const pendingEffects: Array<{
+    type: 'effect' | 'scopedEffect';
+    fn: () => void | (() => void);
+  }> = [];
 
   // Create wrapped API
   const hydratingApi: T = {
@@ -68,8 +73,8 @@ export function createHydratingApi<T extends EffectAPI>(
   // Intercept effect if it exists
   if (baseApi.effect) {
     hydratingApi.effect = (fn: () => void | (() => void)) => {
-      // Queue effect creation for later
-      pendingEffects.push(() => baseApi.effect!(fn));
+      // Queue effect function for later
+      pendingEffects.push({ type: 'effect', fn });
       // Return no-op cleanup
       return () => {};
     };
@@ -78,16 +83,26 @@ export function createHydratingApi<T extends EffectAPI>(
   // Intercept scopedEffect if it exists
   if (baseApi.scopedEffect) {
     hydratingApi.scopedEffect = (fn: () => void | (() => void)) => {
-      // Queue scoped effect creation for later
-      pendingEffects.push(() => baseApi.scopedEffect!(fn));
+      // Queue scoped effect function for later
+      pendingEffects.push({ type: 'scopedEffect', fn });
       // Return no-op cleanup
       return () => {};
     };
   }
 
   // Activate function runs all queued effects
-  const activate = () => {
-    pendingEffects.forEach((createEffect) => createEffect());
+  // Can optionally use a different API (e.g., with regular renderer instead of hydrating renderer)
+  const activate = (apiForEffects?: T) => {
+    const api = apiForEffects || baseApi;
+
+    pendingEffects.forEach(({ type, fn }) => {
+      if (type === 'effect' && api.effect) {
+        api.effect(fn);
+      } else if (type === 'scopedEffect' && api.scopedEffect) {
+        api.scopedEffect(fn);
+      }
+    });
+
     pendingEffects.length = 0;
   };
 

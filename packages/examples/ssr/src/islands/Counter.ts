@@ -13,7 +13,7 @@ export const Counter = island(
 
       return el('div', { className: 'counter' })(
         el('button', { onclick: () => count(count() - 1) })('-'),
-        el('span', { style: 'margin: 0 1rem' })(`Count: ${count()}`),
+        el('span', { style: 'margin: 0 1rem' })(() => `Count: ${count()}`),
         el('button', { onclick: () => count(count() + 1) })('+')
       )();
     };

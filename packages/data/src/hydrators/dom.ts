@@ -12,6 +12,7 @@
 import type { IslandComponent, IslandMetaData } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
 import { createHydratingDOMRenderer } from '@lattice/view/renderers/hydrating-dom';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createHydratingApi } from '../hydrating-api';
 import type { EffectAPI } from '../hydrating-api';
 import type { SealedSpec } from '@lattice/view/types';
@@ -103,19 +104,27 @@ export function createDOMIslandHydrator(
         const strategy = meta?.strategy;
 
         try {
-          // Create hydrating renderer that returns existing nodes
+          // Create hydrating renderer with the wrapper container
+          // The renderer will start at el.firstChild and return it when component calls createElement()
+          // This matches our SSR structure: <div id="island-id"><div className="...">...</div></div>
           const hydratingRenderer = createHydratingDOMRenderer(el);
 
           // Create API with queued effects
-          const baseAPI = createAPI(hydratingRenderer, signals);
-          const { hydratingApi, activate } = createHydratingApi(baseAPI);
+          const hydratingAPI = createAPI(hydratingRenderer, signals);
+          const { hydratingApi, activate } = createHydratingApi(hydratingAPI);
 
           // Run component with hydrating API
           // Effects are queued, not executed
           Component(props).create(hydratingApi);
 
-          // Success! Activate queued effects
-          activate();
+          // Success! Hydration complete
+          // Now create a regular DOM renderer and API for activating effects
+          // This prevents effects from trying to use the hydrating renderer
+          const regularRenderer = createDOMRenderer();
+          const regularAPI = createAPI(regularRenderer, signals);
+
+          // Activate queued effects with regular DOM renderer
+          activate(regularAPI);
 
           // Unwrap container div, leaving hydrated content in place
           const children = Array.from(el.childNodes);

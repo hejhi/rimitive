@@ -52,6 +52,13 @@ export function createHydratingDOMRenderer(
   // Cursor tracks current position in DOM tree
   let currentNode: Node | null = containerEl.firstChild;
 
+  // Track parent context stack for proper nesting
+  // When we enter an element, we push it. When we're done, we pop it.
+  const parentStack: Array<{ parent: HTMLElement; nextNode: Node | null }> = [];
+
+  // Track last parent to detect when we switch contexts
+  let lastParent: HTMLElement | null = null;
+
   /**
    * Skip HTML comment nodes used as fragment boundaries
    * Comments like <!--fragment-start--> and <!--fragment-end--> mark
@@ -74,8 +81,8 @@ export function createHydratingDOMRenderer(
 
   return {
     /**
-     * Return existing element instead of creating new one
-     * Advances cursor to next sibling
+     * Return existing element and immediately enter it
+     * Push current context onto stack so we can return to it later
      */
     createElement: (tag) => {
       skipFragmentMarkers();
@@ -85,8 +92,33 @@ export function createHydratingDOMRenderer(
         (currentNode as Element).tagName.toLowerCase() === tag.toLowerCase()
       ) {
         const node = currentNode as HTMLElement;
-        currentNode = currentNode.nextSibling;
+        // Save current position so we can return to it after processing children
+        parentStack.push({ parent: node, nextNode: currentNode.nextSibling });
+        // Enter this element to position cursor for its children
+        currentNode = node.firstChild;
+        skipFragmentMarkers();
         return node;
+      }
+
+      // Mismatch - but if cursor is null and we have lastParent, try advancing to next sibling
+      // This handles fragment attachment in backward pass (e.g., map() creating sibling elements)
+      if ((currentNode === null || currentNode === undefined) && lastParent) {
+        // Try the next sibling of lastParent (for sequential fragment children)
+        currentNode = lastParent.nextSibling;
+        skipFragmentMarkers();
+
+        // Retry matching after advancing to sibling
+        if (
+          currentNode?.nodeType === 1 &&
+          (currentNode as Element).tagName.toLowerCase() === tag.toLowerCase()
+        ) {
+          const node = currentNode as HTMLElement;
+          // Save position and enter the element
+          parentStack.push({ parent: node, nextNode: currentNode.nextSibling });
+          currentNode = node.firstChild;
+          skipFragmentMarkers();
+          return node;
+        }
       }
 
       throw new HydrationMismatch(
@@ -133,9 +165,44 @@ export function createHydratingDOMRenderer(
     },
 
     /**
-     * No-op during hydration - elements already in correct positions
+     * Track appendChild calls to manage cursor position
+     *
+     * Pop from stack when we're done with an element's children and
+     * returning to its parent context
      */
-    appendChild: () => {},
+    appendChild: (parent, child) => {
+      // Check if we need to pop from stack (exiting child element context)
+      while (parentStack.length > 0) {
+        const top = parentStack[parentStack.length - 1]!;
+        if (top.parent === parent) {
+          // We're still in this parent's context, don't pop
+          break;
+        }
+        // Pop - we've finished with this element's children
+        const popped = parentStack.pop()!;
+        currentNode = popped.nextNode;
+        skipFragmentMarkers();
+      }
+
+      // Save previous parent for sibling advancement check
+      const prevParent = lastParent;
+
+      // Track the child element - it might need to be re-entered for fragments
+      // This handles the case where a fragment's children are rendered in backward pass
+      // Only track ELEMENT nodes (nodeType === 1), not text nodes
+      if (child && typeof child === 'object' && 'nodeType' in child && (child as Node).nodeType === 1) {
+        lastParent = child as HTMLElement;
+      } else {
+        lastParent = parent;
+      }
+
+      // Advance between siblings if same parent as before
+      if (parent === prevParent && currentNode) {
+        currentNode = currentNode.nextSibling;
+        skipFragmentMarkers();
+      }
+      // Regular appendChild - no-op during hydration
+    },
 
     /**
      * No-op during hydration - removal happens after hydration completes

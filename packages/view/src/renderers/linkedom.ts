@@ -27,12 +27,15 @@ export function createLinkedomRenderer(): Renderer<LinkedomRendererConfig> {
       // Skip event handlers during SSR (no interactivity on server)
       if (key.startsWith('on')) return;
 
+      // Map JSX-style props to HTML attributes
+      const attributeName = key === 'className' ? 'class' : key;
+
       // Use setAttribute for proper HTML attribute handling
       // linkedom automatically handles escaping and attribute normalization
       if (value != null && value !== false) {
         // Only stringify primitives, skip objects/functions
         if (typeof value !== 'object' && typeof value !== 'function') {
-          element.setAttribute(key, String(value as string | number | boolean));
+          element.setAttribute(attributeName, String(value as string | number | boolean));
         }
       }
     },
