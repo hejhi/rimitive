@@ -169,6 +169,16 @@ importers:
         version: 5.8.3
 
   packages/data:
+    dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
+      '@lattice/view':
+        specifier: workspace:*
+        version: link:../view
     devDependencies:
       '@types/node':
         specifier: ^22.10.2

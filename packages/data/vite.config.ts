@@ -62,7 +62,6 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        registry: resolve(__dirname, 'src/registry.ts'),
         types: resolve(__dirname, 'src/types.ts'),
       },
       formats: ['es'],

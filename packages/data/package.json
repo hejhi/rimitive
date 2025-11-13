@@ -9,14 +9,6 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./registry": {
-      "import": "./dist/registry.js",
-      "types": "./dist/registry.d.ts"
-    },
-    "./types": {
-      "import": "./dist/types.js",
-      "types": "./dist/types.d.ts"
     }
   },
   "files": [
@@ -33,7 +25,11 @@
     "check": "pnpm typecheck && pnpm test && pnpm lint",
     "test": "vitest run"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@lattice/lattice": "workspace:*",
+    "@lattice/signals": "workspace:*",
+    "@lattice/view": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "esbuild": "^0.25.8",
