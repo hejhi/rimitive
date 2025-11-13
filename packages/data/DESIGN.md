@@ -12,22 +12,22 @@ Data Islands provide automatic server-side rendering with client-side hydration 
 
 ## API Design
 
-### Basic Usage
+### Basic Usage (Non-Parameterized)
 
 ```ts
-import { createData } from '@lattice/view/islands';
+import { createData } from '@lattice/data';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createSSRApi } from '@lattice/view/presets/ssr';
 
-// Define data fetcher
+// Define data fetcher (no parameters)
 const withUserData = createData('user', async () => {
-  return await fetchUserFromDB(); // Server: runs, Client: reads serialized
+  return await fetchCurrentUser(); // Server: runs, Client: reads serialized
 });
 
-// Wrap component with data
-const Profile = withUserData((user, get) =>
+// Wrap component with data (creates a template)
+const ProfileTemplate = withUserData((user, get) =>
   // user: initial/stale data (instant display)
-  // get(): refetch function (client-only, returns fresh data)
+  // get(): refetch function (returns fresh data)
   create(({ el }) => () => {
     return el('div')(
       el('h1')(user.name)(),
@@ -36,26 +36,60 @@ const Profile = withUserData((user, get) =>
   })
 );
 
-// Use normally
-const App = create(({ el }) => () => {
-  return el('div')(
-    Profile() // user data is auto-injected
-  )();
+// Server route: load data and render
+app.get('/profile', async (req, res) => {
+  const Profile = await ProfileTemplate.load();
+  const html = renderToString(mount(Profile));
+  res.send(html + injectDataScript());
 });
 ```
+
+### Parameterized Usage (Recommended)
+
+For route-based data fetching with parameters:
+
+```ts
+// Define parameterized data fetcher
+const withUserData = createData('user', async (userId: string) => {
+  return await fetchUser(userId); // Fetcher accepts parameters
+});
+
+// Wrap component (creates a template)
+const ProfileTemplate = withUserData((user, get) =>
+  create(({ el }) => () => {
+    return el('div')(
+      el('h1')(user.name)(),
+      el('p')(user.bio)()
+    )();
+  })
+);
+
+// Server route: load with route params
+app.get('/profile/:id', async (req, res) => {
+  const Profile = await ProfileTemplate.load(req.params.id);
+  const html = renderToString(mount(Profile));
+  res.send(html + injectDataScript());
+});
+
+// Client: load with same params (data comes from serialized registry)
+const Profile = await ProfileTemplate.load(userId);
+mount(Profile);
+```
+
+**Key insight**: `.load(params)` fetches the data (server) or reads from registry (client) and returns the ready-to-use component.
 
 ### With Runtime Props
 
 Components can combine data island props with runtime props:
 
 ```ts
-const withCounterData = createData('counter', async () => {
-  return { initialCount: 10 };
+const withCounterData = createData('counter', async (initialValue: number) => {
+  return { initialCount: initialValue };
 });
 
-const Counter = withCounterData((data, get) =>
+const CounterTemplate = withCounterData((data, get) =>
   create(({ el, signal }) => (multiplier: number) => {
-    // data: from data island (initial value)
+    // data: from data island (fetched via .hydrate())
     // multiplier: from call site (runtime prop)
     const count = signal(data.initialCount * multiplier);
 
@@ -65,10 +99,13 @@ const Counter = withCounterData((data, get) =>
   })
 );
 
-// Usage
+// Server: load with param
+const Counter = await CounterTemplate.load(10);
+
+// Usage: pass runtime props
 const App = create(({ el }) => () => {
   return el('div')(
-    Counter(2),  // Pass multiplier, data auto-injected
+    Counter(2),  // Pass multiplier, data already fetched
     Counter(3)   // Same data, different multiplier
   )();
 });
@@ -79,10 +116,10 @@ const App = create(({ el }) => () => {
 Components can be wrapped with multiple data sources:
 
 ```ts
-const withUser = createData('user', fetchUser);
-const withTheme = createData('theme', fetchTheme);
+const withUser = createData('user', (userId: string) => fetchUser(userId));
+const withTheme = createData('theme', () => fetchTheme());
 
-const Header = withUser((user, getUser) =>
+const HeaderTemplate = withUser((user, getUser) =>
   withTheme((theme, getTheme) =>
     create(({ el }) => () => {
       return el('header', { className: theme.headerClass })(
@@ -91,21 +128,20 @@ const Header = withUser((user, getUser) =>
     })
   )
 );
+
+// Load nested islands - each .load() call is sequential
+app.get('/dashboard/:userId', async (req, res) => {
+  // Load outer island first (user)
+  const HeaderWithUser = await HeaderTemplate.load(req.params.userId);
+  // Load inner island (theme) - returns final component
+  const Header = await HeaderWithUser.load();
+
+  const html = renderToString(mount(Header));
+  res.send(html);
+});
 ```
 
-Or composed:
-
-```ts
-const withPageData = compose(
-  withUser,
-  withTheme,
-  withSettings
-);
-
-const Page = withPageData((user, theme, settings, getUser, getTheme, getSettings) =>
-  create(({ el }) => () => {...})
-);
-```
+**Note**: Nested islands require sequential `.load()` calls. For parallel fetching, use separate islands.
 
 ## Type Safety
 
@@ -242,36 +278,43 @@ class DataRegistry {
 ### createData Implementation
 
 ```ts
-export function createData<TData>(
+export function createData<TParams extends any[], TData>(
   key: string,
-  fetcher: () => Promise<TData>
-): <TComponent extends (...args: any[]) => any>(
-  factory: (data: TData, get: () => Promise<TData>) => TComponent
-) => TComponent {
-  return (factory) => {
-    return ((...runtimeArgs: unknown[]) => {
-      // Get data from registry (either fetched or rehydrated)
-      const data = getRegistry().get(key);
+  fetcher: (...params: TParams) => Promise<TData>
+) {
+  return <TComponent extends (...args: any[]) => any>(
+    factory: (data: TData, get: () => Promise<TData>) => TComponent
+  ) => {
+    return {
+      async load(...params: TParams): Promise<TComponent> {
+        // Generate unique key from params
+        const cacheKey = params.length > 0
+          ? `${key}-${JSON.stringify(params)}`
+          : key;
 
-      // Create refetch function
-      const get = async (): Promise<TData> => {
-        if (typeof window === 'undefined') {
-          // Server: return same data (no refetch)
-          return data;
+        // Fetch data if not in registry
+        let data = getRegistry().get<TData>(cacheKey);
+        if (!data) {
+          data = await getRegistry().register(cacheKey, () => fetcher(...params));
         }
 
-        // Client: actually refetch (no caching)
-        const fresh = await fetcher();
-        getRegistry().set(key, fresh); // Update registry
-        return fresh;
-      };
+        // Create refetch function
+        const get = async (): Promise<TData> => {
+          if (typeof window === 'undefined') {
+            // Server: return same data (no refetch)
+            return data!;
+          }
 
-      // Create component with injected data and get function
-      const component = factory(data, get);
+          // Client: actually refetch (no caching)
+          const fresh = await fetcher(...params);
+          getRegistry().set(cacheKey, fresh);
+          return fresh;
+        };
 
-      // Call component with runtime args
-      return component(...runtimeArgs);
-    }) as any;
+        // Create and return component with injected data
+        return factory(data, get);
+      }
+    };
   };
 }
 ```
@@ -550,19 +593,17 @@ const Profile = withUser((user, getUser) => {
 **Pros**: Both user and posts are serialized
 **Cons**: More complex, dynamic island creation
 
-### Solution 3: URL Parameters
+### Solution 3: URL Parameters (Recommended)
 
 Use route parameters instead of dependent data:
 
 ```ts
-// URL: /profile/123
-const userId = getRouteParam('userId');
+// Define parameterized islands
+const withUser = createData('user', (userId: string) => fetchUser(userId));
+const withPosts = createData('posts', (userId: string) => fetchPosts(userId));
 
-const withUser = createData('user', () => fetchUser(userId));
-const withPosts = createData('posts', () => fetchPosts(userId));
-
-// Both can run in parallel, both are serialized
-const Profile = withUser((user, getUser) =>
+// Create component template
+const ProfileTemplate = withUser((user, getUser) =>
   withPosts((posts, getPosts) =>
     create(({ el }) => () => {
       return el('div')(
@@ -572,10 +613,22 @@ const Profile = withUser((user, getUser) =>
     })
   )
 );
+
+// Server route: load both islands with same param
+app.get('/profile/:id', async (req, res) => {
+  const userId = req.params.id;
+
+  // Load both islands (fetches run in parallel internally)
+  const ProfileWithUser = await ProfileTemplate.load(userId);
+  const Profile = await ProfileWithUser.load(userId);
+
+  const html = renderToString(mount(Profile));
+  res.send(html + injectDataScript());
+});
 ```
 
-**Pros**: Clean, parallel fetching, both serialized
-**Cons**: Requires data to be derivable from URL
+**Pros**: Clean, both serialized, predictable
+**Cons**: Sequential load calls (parallel fetch optimization possible)
 
 ### Recommendation
 
@@ -595,15 +648,13 @@ For truly dependent data, **Solution 1 (Component-Level)** is simplest:
 ### Example: User Profile Page
 
 ```ts
-// From URL: /profile/123
-const userId = route.params.userId;
+// Define parameterized data islands
+const withUser = createData('user', (userId: string) => fetchUser(userId));
+const withPosts = createData('posts', (userId: string) => fetchPosts(userId));
+const withFollowers = createData('followers', (userId: string) => fetchFollowers(userId));
 
-// Independent data islands (run in parallel)
-const withUser = createData('user', () => fetchUser(userId));
-const withPosts = createData('posts', () => fetchPosts(userId));
-const withFollowers = createData('followers', () => fetchFollowers(userId));
-
-const ProfilePage = withUser((user, getUser) =>
+// Create component template with nested islands
+const ProfileTemplate = withUser((user, getUser) =>
   withPosts((posts, getPosts) =>
     withFollowers((followers, getFollowers) =>
       create(({ el }) => () => {
@@ -617,9 +668,20 @@ const ProfilePage = withUser((user, getUser) =>
   )
 );
 
-// All three fetches run in parallel
-// All three are serialized for hydration
+// Server route: load all islands sequentially
+app.get('/profile/:id', async (req, res) => {
+  const userId = req.params.id;
+
+  const step1 = await ProfileTemplate.load(userId); // Fetches user
+  const step2 = await step1.load(userId);           // Fetches posts
+  const Profile = await step2.load(userId);         // Fetches followers
+
+  const html = renderToString(mount(Profile));
+  res.send(html + injectDataScript());
+});
 ```
+
+**Note**: While load calls are sequential, the actual fetches can be parallelized internally by the registry (each unique key+params combination is fetched only once).
 
 This keeps islands independent while handling relational data naturally.
 
