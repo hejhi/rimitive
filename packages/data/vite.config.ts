@@ -64,6 +64,7 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
+        island: resolve(__dirname, 'src/island.ts'),
       },
       formats: ['es'],
     },

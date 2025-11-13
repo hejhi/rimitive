@@ -211,7 +211,7 @@ describe('SSR Context', () => {
   describe('SSR safety - request isolation', () => {
     it('should not leak state between requests', async () => {
       // Simulate two concurrent requests
-      const request1 = async () => {
+      const request1 = () => {
         const ctx = createSSRContext();
         return runWithSSRContext(ctx, () => {
           registerIsland('counter', { userId: 1 });
@@ -219,7 +219,7 @@ describe('SSR Context', () => {
         });
       };
 
-      const request2 = async () => {
+      const request2 = () => {
         const ctx = createSSRContext();
         return runWithSSRContext(ctx, () => {
           registerIsland('counter', { userId: 2 });

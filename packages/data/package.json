@@ -14,6 +14,10 @@
       "import": "./dist/ssr-context.js",
       "types": "./dist/ssr-context.d.ts"
     },
+    "./island": {
+      "import": "./dist/island.js",
+      "types": "./dist/island.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

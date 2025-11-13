@@ -47,3 +47,6 @@ export {
   getIslandScripts,
   registerIsland,
 } from './ssr-context';
+
+// Island wrapper
+export { island } from './island';
