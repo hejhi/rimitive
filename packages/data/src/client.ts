@@ -7,7 +7,7 @@
 
 // Client-side hydrator
 export { createDOMIslandHydrator } from './hydrators/dom';
-export type { IslandRegistry, IslandHydrator, MountFn, CreateAPIFn } from './hydrators/dom';
+export type { IslandRegistry, IslandHydrator, MountFn } from './hydrators/dom';
 
 // Hydrating API wrapper
 export { createHydratingApi } from './hydrating-api';

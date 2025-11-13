@@ -18,6 +18,10 @@
       "import": "./dist/renderers/hydrating-dom.js",
       "types": "./dist/renderers/hydrating-dom.d.ts"
     },
+    "./renderers/switchable-dom": {
+      "import": "./dist/renderers/switchable-dom.js",
+      "types": "./dist/renderers/switchable-dom.d.ts"
+    },
     "./renderer": {
       "import": "./dist/renderer.js",
       "types": "./dist/renderer.d.ts"

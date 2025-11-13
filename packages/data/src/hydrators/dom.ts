@@ -11,8 +11,7 @@
 
 import type { IslandComponent, IslandMetaData } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
-import { createHydratingDOMRenderer } from '@lattice/view/renderers/hydrating-dom';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import { createSwitchableDOMRenderer } from '@lattice/view/renderers/switchable-dom';
 import { createHydratingApi } from '../hydrating-api';
 import type { EffectAPI } from '../hydrating-api';
 import type { SealedSpec } from '@lattice/view/types';
@@ -40,16 +39,6 @@ export interface IslandHydrator {
 export type MountFn = (spec: SealedSpec<unknown>) => { element: unknown };
 
 /**
- * Create API helpers function type
- * Used to create both hydrating and regular APIs
- * Accepts any function that takes two parameters and returns an API object
- */
-export type CreateAPIFn = (
-  renderer: unknown,
-  signals: unknown
-) => EffectAPI & Record<string, unknown>;
-
-/**
  * Create a DOM island hydrator
  *
  * @param createAPI - Function to create API helpers (el, map, etc.)
@@ -72,9 +61,11 @@ export type CreateAPIFn = (
  * hydrator.hydrate({ counter: Counter });
  * ```
  */
-export function createDOMIslandHydrator(
-  createAPI: CreateAPIFn,
-  signals: unknown,
+export function createDOMIslandHydrator<
+  TSignals extends EffectAPI
+>(
+  createAPI: (renderer: ReturnType<typeof createSwitchableDOMRenderer>, signals: TSignals) => EffectAPI & Record<string, unknown>,
+  signals: TSignals,
   mount: MountFn
 ): IslandHydrator {
   return {
@@ -104,27 +95,25 @@ export function createDOMIslandHydrator(
         const strategy = meta?.strategy;
 
         try {
-          // Create hydrating renderer with the wrapper container
-          // The renderer will start at el.firstChild and return it when component calls createElement()
-          // This matches our SSR structure: <div id="island-id"><div className="...">...</div></div>
-          const hydratingRenderer = createHydratingDOMRenderer(el);
+          // Create switchable renderer that starts in hydration mode
+          // The renderer will match existing DOM during initial render,
+          // then switch to regular DOM creation for reactive updates
+          const renderer = createSwitchableDOMRenderer(el);
 
-          // Create API with queued effects
-          const hydratingAPI = createAPI(hydratingRenderer, signals);
-          const { hydratingApi, activate } = createHydratingApi(hydratingAPI);
+          // Create API with switchable renderer
+          const api = createAPI(renderer, signals);
+          const { hydratingApi, activate } = createHydratingApi(api);
 
           // Run component with hydrating API
-          // Effects are queued, not executed
+          // Effects are queued, not executed yet
           Component(props).create(hydratingApi);
 
           // Success! Hydration complete
-          // Now create a regular DOM renderer and API for activating effects
-          // This prevents effects from trying to use the hydrating renderer
-          const regularRenderer = createDOMRenderer();
-          const regularAPI = createAPI(regularRenderer, signals);
+          // Switch renderer to regular mode for future reactive updates
+          renderer.switchToRegularMode();
 
-          // Activate queued effects with regular DOM renderer
-          activate(regularAPI);
+          // Activate queued effects - they'll use regular mode now
+          activate();
 
           // Unwrap container div, leaving hydrated content in place
           const children = Array.from(el.childNodes);
