@@ -1,19 +1,29 @@
 /**
- * Hydrating DOM Renderer
+ * Coordinate-Based Hydrating DOM Renderer
  *
- * Returns existing DOM nodes instead of creating new ones.
- * Used during client-side hydration to match server-rendered HTML.
+ * Uses explicit tree coordinates and range tracking instead of
+ * imperative cursor manipulation. More algorithmic, easier to reason about.
  *
- * Walks the DOM tree in parallel with component rendering,
- * returning nodes instead of creating them. If structure mismatches,
- * throws HydrationMismatch to trigger fallback to client-side rendering.
+ * Key improvements:
+ * - Position is explicit TreePath + RangeStack, not implicit cursor state
+ * - appendChild uses DOM state to detect exit (child.parentNode check)
+ * - Fragment ranges are scanned and tracked explicitly
+ * - All position transformations are pure functions
  */
 
 import type { Renderer, RendererConfig } from '../renderer';
+import {
+  type Position,
+  type TreePath,
+  enterElement,
+  exitToParent,
+  advanceToSibling,
+  enterFragmentRange,
+  getCurrentPath,
+} from './hydrating-position';
 
 /**
  * Hydration mismatch error
- * Thrown when server-rendered HTML doesn't match client expectations
  */
 export class HydrationMismatch extends Error {
   constructor(message: string) {
@@ -29,123 +39,162 @@ export interface DOMRendererConfig extends RendererConfig {
   textNode: Text;
 }
 
+// ============================================================================
+// DOM Navigation Utilities
+// ============================================================================
+
 /**
- * Create a hydrating DOM renderer
- *
- * @param containerEl - Container element to hydrate (e.g., <div id="island-0">)
- * @returns Renderer that returns existing nodes instead of creating new ones
- *
- * @example
- * ```ts
- * const container = document.getElementById('counter-0');
- * const renderer = createHydratingDOMRenderer(container);
- *
- * // Component calls createElement('button')
- * // Renderer returns existing <button> from server HTML
- * const views = createSpec(renderer, signals);
- * const nodeRef = Counter(props).create(views);
- * ```
+ * Check if node is a fragment marker comment
  */
+function isFragmentMarker(node: Node): boolean {
+  if (node.nodeType !== 8) return false; // Not a comment
+  const comment = node as Comment;
+  return (
+    comment.textContent === 'fragment-start' ||
+    comment.textContent === 'fragment-end'
+  );
+}
+
+/**
+ * Get the Nth real child of a parent, skipping fragment markers
+ */
+function getNthRealChild(parent: Node, index: number): Node {
+  let count = 0;
+  let current = parent.firstChild;
+
+  while (current) {
+    if (!isFragmentMarker(current)) {
+      if (count === index) return current;
+      count++;
+    }
+    current = current.nextSibling;
+  }
+
+  throw new HydrationMismatch(
+    `Child at index ${index} not found (found ${count} children)`
+  );
+}
+
+/**
+ * Resolve a tree path to an actual DOM node
+ */
+function getNodeAtPath(root: HTMLElement, path: TreePath): Node {
+  let node: Node = root;
+
+  for (const index of path) {
+    node = getNthRealChild(node, index);
+  }
+
+  return node;
+}
+
+/**
+ * Scan forward from fragment-start marker to count range size
+ * Returns null if node is not a fragment-start marker
+ */
+function scanFragmentRange(node: Node): number | null {
+  if (node.nodeType !== 8 || (node as Comment).textContent !== 'fragment-start') {
+    return null;
+  }
+
+  let current = node.nextSibling;
+  let count = 0;
+
+  while (current) {
+    // Found end marker
+    if (current.nodeType === 8 && (current as Comment).textContent === 'fragment-end') {
+      return count;
+    }
+
+    // Count real nodes (skip other comments)
+    if (!isFragmentMarker(current)) {
+      count++;
+    }
+
+    current = current.nextSibling;
+  }
+
+  throw new HydrationMismatch('Fragment start marker without matching end marker');
+}
+
+// ============================================================================
+// Renderer Implementation
+// ============================================================================
+
 export function createHydratingDOMRenderer(
   containerEl: HTMLElement
 ): Renderer<DOMRendererConfig> {
-  // Cursor tracks current position in DOM tree
-  let currentNode: Node | null = containerEl.firstChild;
-
-  // Track parent context stack for proper nesting
-  // When we enter an element, we push it. When we're done, we pop it.
-  const parentStack: Array<{ parent: HTMLElement; nextNode: Node | null }> = [];
-
-  // Track last parent to detect when we switch contexts
-  let lastParent: HTMLElement | null = null;
-
-  /**
-   * Skip HTML comment nodes used as fragment boundaries
-   * Comments like <!--fragment-start--> and <!--fragment-end--> mark
-   * where fragments begin/end during SSR
-   */
-  const skipFragmentMarkers = () => {
-    while (currentNode?.nodeType === 8) {
-      // Node.COMMENT_NODE = 8
-      const comment = currentNode as Comment;
-      if (
-        comment.textContent === 'fragment-start' ||
-        comment.textContent === 'fragment-end'
-      ) {
-        currentNode = currentNode.nextSibling;
-      } else {
-        break;
-      }
-    }
-  };
+  // Position tracks where we are in the tree
+  let position: Position = { path: [], ranges: [] };
 
   return {
     /**
-     * Return existing element and immediately enter it
-     * Push current context onto stack so we can return to it later
+     * Return existing element and enter its children
      */
     createElement: (tag) => {
-      skipFragmentMarkers();
+      const node = getNodeAtPath(containerEl, getCurrentPath(position));
 
-      if (
-        currentNode?.nodeType === 1 && // Node.ELEMENT_NODE = 1
-        (currentNode as Element).tagName.toLowerCase() === tag.toLowerCase()
-      ) {
-        const node = currentNode as HTMLElement;
-        // Save current position so we can return to it after processing children
-        parentStack.push({ parent: node, nextNode: currentNode.nextSibling });
-        // Enter this element to position cursor for its children
-        currentNode = node.firstChild;
-        skipFragmentMarkers();
-        return node;
-      }
+      // Check if we're at a fragment marker
+      const rangeSize = scanFragmentRange(node);
+      if (rangeSize !== null) {
+        // Enter fragment range mode
+        position = enterFragmentRange(position, rangeSize);
 
-      // Mismatch - but if cursor is null and we have lastParent, try advancing to next sibling
-      // This handles fragment attachment in backward pass (e.g., map() creating sibling elements)
-      if ((currentNode === null || currentNode === undefined) && lastParent) {
-        // Try the next sibling of lastParent (for sequential fragment children)
-        currentNode = lastParent.nextSibling;
-        skipFragmentMarkers();
+        // Get first element in range
+        const firstNode = getNodeAtPath(containerEl, getCurrentPath(position));
 
-        // Retry matching after advancing to sibling
         if (
-          currentNode?.nodeType === 1 &&
-          (currentNode as Element).tagName.toLowerCase() === tag.toLowerCase()
+          firstNode.nodeType !== 1 ||
+          (firstNode as Element).tagName.toLowerCase() !== tag.toLowerCase()
         ) {
-          const node = currentNode as HTMLElement;
-          // Save position and enter the element
-          parentStack.push({ parent: node, nextNode: currentNode.nextSibling });
-          currentNode = node.firstChild;
-          skipFragmentMarkers();
-          return node;
+          throw new HydrationMismatch(
+            `Expected <${tag}> as first item in fragment, got <${(firstNode as Element).tagName}>`
+          );
         }
+
+        // Enter this element's children
+        position = enterElement(position);
+        return firstNode as HTMLElement;
       }
 
-      throw new HydrationMismatch(
-        `Expected <${tag}>, got ${currentNode ? `<${(currentNode as Element).tagName}>` : 'null'}`
-      );
+      // Regular element
+      if (
+        node.nodeType !== 1 ||
+        (node as Element).tagName.toLowerCase() !== tag.toLowerCase()
+      ) {
+        throw new HydrationMismatch(
+          `Expected <${tag}> at ${getCurrentPath(position).join('/')}, got <${(node as Element).tagName}>`
+        );
+      }
+
+      // Enter this element's children
+      position = enterElement(position);
+      return node as HTMLElement;
     },
 
     /**
-     * Return existing text node instead of creating new one
-     * Updates text content if it differs (handles dynamic content)
+     * Return existing text node and advance to next sibling
      */
     createTextNode: (text) => {
-      skipFragmentMarkers();
+      const node = getNodeAtPath(containerEl, getCurrentPath(position));
 
-      if (currentNode?.nodeType === 3) {
-        // Node.TEXT_NODE = 3
-        const node = currentNode as Text;
-        // Update text if it changed (e.g., data race between SSR and hydration)
-        if (node.textContent !== text) node.textContent = text;
-
-        currentNode = currentNode.nextSibling;
-        return node;
+      if (node.nodeType !== 3) {
+        throw new HydrationMismatch(
+          `Expected text node at ${getCurrentPath(position).join('/')}, got ${node.nodeName}`
+        );
       }
 
-      throw new HydrationMismatch(
-        `Expected text node, got ${currentNode?.nodeName || 'null'}`
-      );
+      const textNode = node as Text;
+
+      // Update text if it differs (handles data races)
+      if (textNode.textContent !== text) {
+        textNode.textContent = text;
+      }
+
+      // Advance to next sibling
+      position = advanceToSibling(position);
+
+      return textNode;
     },
 
     /**
@@ -157,50 +206,31 @@ export function createHydratingDOMRenderer(
 
     /**
      * Set attribute/property on element
-     * Uses Reflect.set for property assignment (same as DOM renderer)
      */
     setAttribute: (element, key, value) => {
       Reflect.set(element, key, value);
     },
 
     /**
-     * Track appendChild calls to manage cursor position
+     * Position bookkeeping - detects element exit by checking DOM state
      *
-     * Pop from stack when we're done with an element's children and
-     * returning to its parent context
+     * During hydration, child is already attached to parent.
+     * If we see appendChild(parent, element) where element.parentNode === parent,
+     * this signals we've finished processing that element's children.
      */
     appendChild: (parent, child) => {
-      // Check if we need to pop from stack (exiting child element context)
-      while (parentStack.length > 0) {
-        const top = parentStack[parentStack.length - 1]!;
-        if (top.parent === parent) {
-          // We're still in this parent's context, don't pop
-          break;
-        }
-        // Pop - we've finished with this element's children
-        const popped = parentStack.pop()!;
-        currentNode = popped.nextNode;
-        skipFragmentMarkers();
+      // Check if child is an element already attached to parent
+      if (
+        child &&
+        'nodeType' in child &&
+        (child as Node).nodeType === 1 && // Element node
+        (child as Node).parentNode === parent
+      ) {
+        // Element already in DOM - this is exit signal
+        position = exitToParent(position);
       }
 
-      // Save previous parent for sibling advancement check
-      const prevParent = lastParent;
-
-      // Track the child element - it might need to be re-entered for fragments
-      // This handles the case where a fragment's children are rendered in backward pass
-      // Only track ELEMENT nodes (nodeType === 1), not text nodes
-      if (child && typeof child === 'object' && 'nodeType' in child && (child as Node).nodeType === 1) {
-        lastParent = child as HTMLElement;
-      } else {
-        lastParent = parent;
-      }
-
-      // Advance between siblings if same parent as before
-      if (parent === prevParent && currentNode) {
-        currentNode = currentNode.nextSibling;
-        skipFragmentMarkers();
-      }
-      // Regular appendChild - no-op during hydration
+      // No actual DOM operation - child already in place
     },
 
     /**
@@ -220,7 +250,6 @@ export function createHydratingDOMRenderer(
 
     /**
      * Attach event listeners to hydrated elements
-     * This is where interactivity gets connected to existing DOM
      */
     addEventListener: (element, event, handler, options) => {
       element.addEventListener(event, handler, options);
