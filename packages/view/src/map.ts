@@ -4,8 +4,8 @@
 
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef } from './types';
-import { STATUS_ELEMENT } from './types';
+import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef, LifecycleCallback } from './types';
+import { STATUS_ELEMENT, STATUS_REF_SPEC } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
@@ -24,16 +24,16 @@ export type MapFactory<TBaseElement> = LatticeExtension<
     <T, TEl>(
       items: T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TBaseElement>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => RefSpec<TBaseElement>;
     <T, TEl>(
       items: Reactive<T[]>,
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TBaseElement>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => RefSpec<TBaseElement>;
     // Plain function that returns array
     <T, TEl>(
       items: () => T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => FragmentRef<TBaseElement>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => RefSpec<TBaseElement>;
   }
 >;
 
@@ -81,14 +81,48 @@ export const Map = create(
         getElementScope,
       });
 
+      /**
+       * Helper to create a RefSpec for fragments with lifecycle callback chaining
+       */
+      const createRefSpec = (
+        createFragmentRef: (callbacks: LifecycleCallback<TBaseElement>[], api?: unknown) => TFragRef
+      ): TRefSpec => {
+        const lifecycleCallbacks: LifecycleCallback<TBaseElement>[] = [];
+
+        const refSpec: TRefSpec = (
+          ...callbacks: LifecycleCallback<TBaseElement>[]
+        ) => {
+          lifecycleCallbacks.push(...callbacks);
+          return refSpec;
+        };
+
+        refSpec.status = STATUS_REF_SPEC;
+        refSpec.create = <TExt>(
+          api?: unknown,
+          extensions?: TExt
+        ) => {
+          const fragRef = createFragmentRef(lifecycleCallbacks, api);
+          // If no extensions, return the ref directly to preserve mutability
+          if (!extensions || Object.keys(extensions).length === 0) return fragRef;
+
+          return {
+            ...fragRef,
+            ...extensions,
+          };
+        };
+
+        return refSpec;
+      };
+
       function map<T>(
         items: T[] | (() => T[]) | Reactive<T[]>,
         keyFn?: (item: T) => string | number
-      ): (render: (itemSignal: Reactive<T>) => TSpec) => TFragRef {
+      ): (render: (itemSignal: Reactive<T>) => TSpec) => TRefSpec {
         type TRecNode = RecNode<T, TBaseElement>;
 
         return (render: (itemSignal: Reactive<T>) => TSpec) =>
-          createFragment((parent, nextSibling, api) => {
+          createRefSpec((lifecycleCallbacks, api) =>
+          createFragment((parent, nextSibling) => {
             const parentElement = parent.element;
             const nextSib = nextSibling as TRecNode | null | undefined;
 
@@ -156,6 +190,13 @@ export const Map = create(
               },
             });
 
+            // Execute lifecycle callbacks within parent's scope
+            const lifecycleCleanups: (() => void)[] = [];
+            for (const callback of lifecycleCallbacks) {
+              const cleanup = callback(parent.element);
+              if (cleanup) lifecycleCleanups.push(cleanup);
+            }
+
             // Create effect within parent's scope - auto-tracked!
             const effectDispose = scopedEffect(() => {
               // Get items - handle both array and function
@@ -175,8 +216,11 @@ export const Map = create(
               // Dispose all remaining items via reconciler
               // This calls onRemove hook for each tracked item
               dispose();
+
+              // Run lifecycle cleanups
+              for (const cleanup of lifecycleCleanups) cleanup();
             };
-          });
+          }));
       }
 
       const extension: MapFactory<TBaseElement> = {

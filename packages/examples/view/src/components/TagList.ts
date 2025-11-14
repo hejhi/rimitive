@@ -11,7 +11,7 @@ export const TagList = create((api) => {
     const tags = signal(props.tags);
 
     // Return fragment - multiple span elements without a wrapper
-    // map() returns a FragmentRef, which is now supported as a component return type
+    // map() returns a RefSpec that creates a FragmentRef when instantiated
     return map(tags)((tag) => {
       return el('span', {
         className: 'tag',

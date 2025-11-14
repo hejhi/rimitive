@@ -5,6 +5,7 @@
 import type { InstrumentationContext } from '@lattice/lattice';
 import type { MapFactory } from '../map';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive } from '../types';
+import { STATUS_REF_SPEC } from '../types';
 
 /**
  * Instrument a map factory to emit events
@@ -34,7 +35,7 @@ export function instrumentMap<TBaseElement>(
     const renderApplicator = method(items as () => T[], keyFn);
 
     // Wrap the render applicator
-    return (render: (itemSignal: Reactive<T>) => TSpec): FragmentRef<TBaseElement> => {
+    return (render: (itemSignal: Reactive<T>) => TSpec): RefSpec<TBaseElement> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -60,24 +61,39 @@ export function instrumentMap<TBaseElement>(
       };
 
       // Call base render applicator with instrumented render
-      const fragmentRef = renderApplicator(instrumentedRender);
+      const refSpec = renderApplicator(instrumentedRender);
 
-      // Wrap attach to track mount and reconciliation
-      const originalAttach = fragmentRef.attach;
+      // Wrap create to instrument the fragment ref creation
+      const originalCreate = refSpec.create.bind(refSpec);
 
-      fragmentRef.attach = (parent, nextSibling, api) => {
-        instrumentation.emit({
-          type: 'MAP_MOUNTED',
-          timestamp: Date.now(),
-          data: {
-            mapId,
-          },
-        });
-
-        return originalAttach.call(fragmentRef, parent, nextSibling, api);
+      const instrumentedRefSpec: RefSpec<TBaseElement> = (...callbacks) => {
+        refSpec(...callbacks);
+        return instrumentedRefSpec;
       };
 
-      return fragmentRef;
+      instrumentedRefSpec.status = STATUS_REF_SPEC;
+      instrumentedRefSpec.create = (api, extensions) => {
+        const fragmentRef = originalCreate(api, extensions) as FragmentRef<TBaseElement>;
+
+        // Wrap attach to track mount and reconciliation
+        const originalAttach = fragmentRef.attach.bind(fragmentRef);
+
+        fragmentRef.attach = (parent, nextSibling, attachApi) => {
+          instrumentation.emit({
+            type: 'MAP_MOUNTED',
+            timestamp: Date.now(),
+            data: {
+              mapId,
+            },
+          });
+
+          return originalAttach(parent, nextSibling, attachApi);
+        };
+
+        return fragmentRef;
+      };
+
+      return instrumentedRefSpec;
     };
   }
 

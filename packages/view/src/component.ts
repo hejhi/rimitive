@@ -52,10 +52,10 @@ export interface ElMethod<TConfig extends RendererConfig> {
  *
  * Generic over the actual API type - no prescriptive interface required.
  *
- * Supports both RefSpec (elements) and direct NodeRef returns (fragments from map()).
+ * All extensions (el, map, etc.) return RefSpec, which gets automatically instantiated.
  */
 export function create<TArgs extends unknown[], TApi = unknown>(
-  factory: (api: TApi) => (...args: TArgs) => RefSpec<unknown> | NodeRef<unknown>
+  factory: (api: TApi) => (...args: TArgs) => RefSpec<unknown>
 ) {
   return (...args: TArgs): SealedSpec<unknown> => {
     // Use lattice create for API injection
@@ -65,16 +65,9 @@ export function create<TArgs extends unknown[], TApi = unknown>(
     return {
       status: STATUS_SEALED_SPEC,
       create: (api: TApi): NodeRef<unknown> => {
-        const result = baseInstantiatable.create(api);
-
-        // Check if result is already a NodeRef (e.g., from map())
-        // NodeRefs don't have a create method
-        if (!('create' in result) || typeof result.create !== 'function') {
-          return result as NodeRef<unknown>;
-        }
-
-        // It's a RefSpec, call create again
-        return result.create(api) as NodeRef<unknown>;
+        const refSpec = baseInstantiatable.create(api);
+        // All extensions now return RefSpec, so we always call create
+        return refSpec.create(api) as NodeRef<unknown>;
       }
     };
   };
