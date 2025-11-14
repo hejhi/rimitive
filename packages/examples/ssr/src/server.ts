@@ -17,6 +17,7 @@ import {
 } from '@lattice/data';
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
+import { TagList } from './islands/TagList.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientBundlePath = join(__dirname, '../dist/client/client.js');
@@ -43,7 +44,12 @@ const App = create((api) => () => {
     el('section', { className: 'islands-section' })(
       el('h2')('Interactive Islands'),
       Counter({ initialCount: 0 }),
-      TodoList({ initialTodos: ['Learn Lattice', 'Build an app', 'Ship it!'] })
+      TodoList({ initialTodos: ['Learn Lattice', 'Build an app', 'Ship it!'] }),
+      el('div', { className: 'tag-container' })(
+        el('h3')('Interactive Tags (Fragment Island)'),
+        el('p')('Click tags to remove them. This island returns multiple elements without a root wrapper.'),
+        TagList({ tags: ['TypeScript', 'SSR', 'Islands', 'Hydration', 'Reactive'] })
+      )()
     )()
   )();
 });
@@ -151,6 +157,26 @@ const server = createServer((req, res) => {
       margin: 0.25rem 0;
       background: #f9f9f9;
       border-radius: 4px;
+    }
+    .tag-container {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+      border: 2px solid #e0e0e0;
+    }
+    .tag {
+      display: inline-block;
+      background: #007bff;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      margin: 0.25rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .tag:hover {
+      background: #0056b3;
     }
   </style>
   <script>

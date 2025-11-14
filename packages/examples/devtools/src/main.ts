@@ -46,4 +46,4 @@ const App = create(({ el, signal, computed, batch }) => () => {
 const app = mount(App());
 const container = document.querySelector('#app');
 
-container?.appendChild(app.element!);
+container?.appendChild(app.element as Node);

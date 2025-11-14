@@ -98,7 +98,7 @@ export function island<TProps>(
         // Tag nodeRef with island ID for renderToString
         nodeRef.__islandId = instanceId;
 
-        // Also set a DOM attribute so it's preserved in outerHTML
+        // For ElementRefs: also set a DOM attribute so it's preserved in outerHTML
         // This handles the case where renderToString uses outerHTML
         // and doesn't traverse the nodeRef tree
         if (
@@ -114,6 +114,9 @@ export function island<TProps>(
             element.setAttribute('data-island-id', instanceId);
           }
         }
+
+        // FragmentRefs don't need DOM attributes - __islandId is enough
+        // renderToString will detect the __islandId and wrap with fragment markers
 
         return nodeRef;
       },

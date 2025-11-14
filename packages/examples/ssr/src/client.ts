@@ -12,6 +12,7 @@ import { createSignalsApi } from '@lattice/signals/presets/core';
 import { signals, mount } from './api';
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
+import { TagList } from './islands/TagList.js';
 
 // Create API factory for hydrator
 function createFullAPI(
@@ -32,4 +33,4 @@ const hydrator = createDOMIslandHydrator(
 );
 
 // Hydrate all islands
-hydrator.hydrate(Counter, TodoList);
+hydrator.hydrate(Counter, TodoList, TagList);

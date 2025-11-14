@@ -51,21 +51,31 @@ export interface ElMethod<TConfig extends RendererConfig> {
  * Instead, they receive it when .create(api) is called, which returns a NodeRef.
  *
  * Generic over the actual API type - no prescriptive interface required.
+ *
+ * Supports both RefSpec (elements) and direct NodeRef returns (fragments from map()).
  */
-export function create<TArgs extends unknown[], TElement, TApi = unknown>(
-  factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement>
+export function create<TArgs extends unknown[], TApi = unknown>(
+  factory: (api: TApi) => (...args: TArgs) => RefSpec<unknown> | NodeRef<unknown>
 ) {
-  return (...args: TArgs): SealedSpec<TElement> => {
+  return (...args: TArgs): SealedSpec<unknown> => {
     // Use lattice create for API injection
     const baseInstantiatable = baseCreate(factory)(...args);
 
     // Return a SealedSpec that wraps the RefSpec's create
     return {
       status: STATUS_SEALED_SPEC,
-      create: (api: TApi): NodeRef<TElement> =>
-        baseInstantiatable
-          .create(api) // Step 1: Inject API to get RefSpec
-          .create(api) // Step 2: Call RefSpec's create, passing API for nested components
+      create: (api: TApi): NodeRef<unknown> => {
+        const result = baseInstantiatable.create(api);
+
+        // Check if result is already a NodeRef (e.g., from map())
+        // NodeRefs don't have a create method
+        if (!('create' in result) || typeof result.create !== 'function') {
+          return result as NodeRef<unknown>;
+        }
+
+        // It's a RefSpec, call create again
+        return result.create(api) as NodeRef<unknown>;
+      }
     };
   };
 }
