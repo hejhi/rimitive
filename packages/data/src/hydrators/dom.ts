@@ -5,10 +5,10 @@
  * 1. Finding islands by script tag marker
  *    - Element islands: script's previousElementSibling is island root
  *    - Fragment islands: script's parent is the wrapper div container
- * 2. For element islands: wrap in temporary div to isolate during hydration
+ * 2. For element islands: use the island's parent as the container
  * 3. Creating hydrating renderer targeting the container
  * 4. Running component with hydrating API (queued effects)
- * 5. On success: activate effects, remove script tag, unwrap temporary/fragment containers
+ * 5. On success: activate effects, remove script tag, unwrap fragment containers
  * 6. On failure: fallback to client-side render with regular API
  */
 
@@ -96,10 +96,9 @@ export function createDOMIslandHydrator<
         const islandElement = script.previousElementSibling as HTMLElement | null;
         const isFragment = !islandElement;
 
-        // For element islands, create a temporary wrapper to isolate it during hydration
+        // For element islands, use the island element itself as the container
         // For fragment islands, use the existing wrapper div
         let container: HTMLElement;
-        let tempWrapper: HTMLElement | null = null;
 
         if (isFragment) {
           container = script.parentElement as HTMLElement;
@@ -112,11 +111,8 @@ export function createDOMIslandHydrator<
             console.warn(`Island element for "${id}" not found`);
             return;
           }
-          // Create temporary wrapper and move island into it
-          tempWrapper = document.createElement('div');
-          islandElement.parentNode?.insertBefore(tempWrapper, islandElement);
-          tempWrapper.appendChild(islandElement);
-          container = tempWrapper;
+          // Use the island element itself as the container
+          container = islandElement;
         }
 
         // Look up island entry in registry
@@ -157,11 +153,9 @@ export function createDOMIslandHydrator<
 
           // Cleanup wrappers:
           // - For fragment islands: unwrap container div, leaving hydrated content in place
-          // - For element islands: unwrap temporary wrapper, leaving hydrated island
+          // - For element islands: no cleanup needed (island already in correct position)
           if (isFragment) {
             container.replaceWith(...Array.from(container.childNodes));
-          } else if (tempWrapper) {
-            tempWrapper.replaceWith(...Array.from(tempWrapper.childNodes));
           }
 
         } catch (error) {
@@ -182,16 +176,16 @@ export function createDOMIslandHydrator<
             );
 
             // Clear and remount:
-            // - For element islands: remove temp wrapper, island, and script, mount fresh
+            // - For element islands: remove island and script, mount fresh
             // - For fragment islands: clear the container div and mount fresh
             if (isFragment) {
               container.innerHTML = '';
               const instance = mount(Component(props));
               if (instance.element) container.appendChild(instance.element as Node);
             } else {
-              // Remove temporary wrapper, script tag, and mount fresh
-              const parent = tempWrapper?.parentNode || islandElement?.parentNode;
-              if (tempWrapper) tempWrapper.remove();
+              // Remove island element, script tag, and mount fresh
+              const parent = islandElement?.parentNode;
+              if (islandElement) islandElement.remove();
               script.remove();
               const instance = mount(Component(props));
               if (instance.element && parent) parent.appendChild(instance.element as Node);
