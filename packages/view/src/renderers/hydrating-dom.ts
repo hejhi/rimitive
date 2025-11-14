@@ -132,10 +132,7 @@ export function createHydratingDOMRenderer(
      * Return existing element and enter its children
      */
     createElement: (tag) => {
-      const currentPath = getCurrentPath(position);
-      console.log(`[HdadadsYDRATE] createElement(${tag}) at path [${currentPath.join(',')}]`);
       const node = getNodeAtPath(containerEl, getCurrentPath(position));
-      console.log(`[HYDRATE]   -> found node: ${node.nodeName}, ranges: ${position.ranges.length}`);
 
       // Check if we're at a fragment marker
       const rangeSize = scanFragmentRange(node);
@@ -157,7 +154,6 @@ export function createHydratingDOMRenderer(
 
         // Enter this element's children
         position = enterElement(position);
-        console.log(`[HYDRATE]   -> entered fragment element children, new path: [${getCurrentPath(position).join(',')}]`);
         return firstNode as HTMLElement;
       }
 
@@ -173,7 +169,6 @@ export function createHydratingDOMRenderer(
 
       // Enter this element's children
       position = enterElement(position);
-      console.log(`[HYDRATE]   -> entered element children, new path: [${getCurrentPath(position).join(',')}]`);
       return node as HTMLElement;
     },
 
@@ -224,8 +219,6 @@ export function createHydratingDOMRenderer(
      * this signals we've finished processing that element's children.
      */
     appendChild: (parent, child) => {
-      console.log(`[HYDRATEeeeee] appendChild(${(parent as Node).nodeName}, ${child ? (child as Node).nodeName : 'null'})`);
-      console.log(`[HYDRATE]   -> current path: [${getCurrentPath(position).join(',')}], ranges: ${position.ranges.length}`);
       // Check if child is an element already attached to parent
       if (
         child &&
@@ -234,10 +227,8 @@ export function createHydratingDOMRenderer(
         (child as Node).parentNode === parent
       ) {
         // Element already in DOM - this is exit signal
-        const oldPath = getCurrentPath(position);
         position = exitToParent(position);
         position = advanceToSibling(position);
-        console.log(`[HYDRATE]   -> exit to parent and advance: [${oldPath.join(',')}] -> [${getCurrentPath(position).join(',')}]`);
       }
 
       // No actual DOM operation - child already in place
@@ -249,9 +240,25 @@ export function createHydratingDOMRenderer(
     removeChild: () => {},
 
     /**
-     * No-op during hydration - elements already in correct positions
+     * Position bookkeeping during insertBefore
+     *
+     * Used by map() helper to insert elements. Like appendChild, we detect
+     * element boundaries by checking if child is already attached to parent.
      */
-    insertBefore: () => {},
+    insertBefore: (parent, child) => {
+      // Check if child is an element already attached to parent
+      if (
+        child &&
+        'nodeType' in child &&
+        (child as Node).nodeType === 1 && // Element node
+        (child as Node).parentNode === parent
+      ) {
+        position = exitToParent(position);
+        position = advanceToSibling(position);
+      }
+
+      // No actual DOM operation - child already in place
+    },
 
     /**
      * Check if element is connected to DOM
