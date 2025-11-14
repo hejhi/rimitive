@@ -8,10 +8,18 @@
  * For browser builds, island.browser.ts is used instead.
  */
 
-import type { SealedSpec } from '@lattice/view/types';
+import type { SealedSpec, NodeRef } from '@lattice/view/types';
 import type { IslandComponent, IslandStrategy } from './types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext, registerIsland } from './ssr-context';
+
+/**
+ * NodeRef tagged with island metadata for SSR
+ * @internal
+ */
+type IslandNodeRef<TElement> = NodeRef<TElement> & {
+  __islandId: string;
+};
 
 
 /**
@@ -85,10 +93,10 @@ export function island<TProps>(
     return {
       status: spec.status,
       create(api?: unknown) {
-        const nodeRef = spec.create(api);
+        const nodeRef = spec.create(api) as IslandNodeRef<unknown>;
 
         // Tag nodeRef with island ID for renderToString
-        (nodeRef as { __islandId?: string }).__islandId = instanceId;
+        nodeRef.__islandId = instanceId;
 
         // Also set a DOM attribute so it's preserved in outerHTML
         // This handles the case where renderToString uses outerHTML
