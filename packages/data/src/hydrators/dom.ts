@@ -9,7 +9,7 @@
  * 5. On failure: fallback to client-side render with regular API
  */
 
-import type { IslandComponent, IslandMetaData, IslandRegistryEntry } from '../types';
+import type { IslandMetaData, IslandRegistryEntry } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
 import { createHydratingRenderer } from '@lattice/view/renderers/switchable-dom';
 import { createHydratingDOMRenderer } from '@lattice/view/renderers/hydrating-dom';
@@ -19,10 +19,10 @@ import type { EffectAPI } from '../hydrating-api';
 import type { SealedSpec } from '@lattice/view/types';
 
 /**
- * Island registry - maps island type IDs to component functions
- * Generic to accept components with any specific prop types
+ * Island registry - array of island components
+ * Accepts components with any prop types (type safety enforced at island definition)
  */
-export type IslandRegistry = Record<string, IslandComponent>;
+export type IslandRegistry = ReadonlyArray<(props: never) => SealedSpec<unknown>>;
 
 /**
  * Hydrator interface
@@ -60,13 +60,13 @@ export function createDOMIslandHydrator<
       // Convert registry to structured entries by extracting and unwrapping metadata
       // Wrapper only exists until this point - original component flows through system
       const entries: Record<string, IslandRegistryEntry> = {};
-      for (const [type, wrapper] of Object.entries(registry)) {
+      for (const wrapper of registry) {
         const meta = (wrapper as { [ISLAND_META]?: IslandMetaData })[ISLAND_META];
         if (!meta) {
-          console.warn(`Island "${type}" missing metadata - skipping`);
+          console.warn('Island missing metadata - skipping');
           continue;
         }
-        entries[type] = {
+        entries[meta.id] = {
           component: meta.component,  // Unwrap: use original component, not wrapper
           id: meta.id,
           strategy: meta.strategy,

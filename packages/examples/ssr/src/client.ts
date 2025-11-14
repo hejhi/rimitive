@@ -35,9 +35,6 @@ const hydrator = createDOMIslandHydrator(
 );
 
 // Hydrate all islands
-hydrator.hydrate({
-  counter: Counter,
-  todolist: TodoList,
-} as IslandRegistry);
+hydrator.hydrate([Counter, TodoList]);
 
 console.log('Islands hydrated!');
