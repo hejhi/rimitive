@@ -6,7 +6,7 @@
  */
 
 import type { SealedSpec } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy, IslandMetaData } from './types';
+import type { IslandComponent, IslandStrategy } from './types';
 import { ISLAND_META } from './types';
 
 export function island<TProps>(
@@ -29,12 +29,12 @@ export function island<TProps>(
   const strategy = maybeComponent ? strategyOrComponent : undefined;
 
   // Create wrapper function instead of mutating the input component
-  const wrapper = ((props: TProps) => component(props)) as IslandComponent<TProps>;
+  const wrapper: IslandComponent<TProps> = (props: TProps) => component(props);
 
   // Attach metadata to wrapper (temporary - only for registry construction)
   // Includes component reference for unwrapping at registry boundary
   Object.defineProperty(wrapper, ISLAND_META, {
-    value: { id, strategy, component } as IslandMetaData<TProps>,
+    value: { id, strategy, component },
     enumerable: false,
   });
 
