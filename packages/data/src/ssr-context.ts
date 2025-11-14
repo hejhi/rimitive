@@ -131,11 +131,7 @@ export function registerIsland(type: string, props: unknown): string {
   }
 
   const instanceId = `${type}-${ctx.islandCounter++}`;
-  ctx.islands.push({
-    id: instanceId,
-    type,
-    props,
-  });
+  ctx.islands.push({ id: instanceId, type, props });
 
   return instanceId;
 }

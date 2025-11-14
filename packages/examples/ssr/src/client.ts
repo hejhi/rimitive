@@ -21,10 +21,7 @@ function createFullAPI(
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);
   const views = createApi(defaultExtensions<DOMRendererConfig>(), helpers);
 
-  return {
-    ...signalsApi,
-    ...views,
-  };
+  return { ...signalsApi, ...views };
 }
 
 // Create hydrator with client-side API
@@ -36,5 +33,3 @@ const hydrator = createDOMIslandHydrator(
 
 // Hydrate all islands
 hydrator.hydrate(Counter, TodoList);
-
-console.log('Islands hydrated!');

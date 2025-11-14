@@ -116,7 +116,7 @@ export function island<TProps>(
         return nodeRef;
       },
     };
-  }) as IslandComponent<TProps>;
+  });
 
   // Attach metadata for registry construction (includes component for unwrapping)
   Object.defineProperty(wrapper, ISLAND_META, {

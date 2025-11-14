@@ -137,9 +137,8 @@ export function createHydratingDOMRenderer(
         // Node.TEXT_NODE = 3
         const node = currentNode as Text;
         // Update text if it changed (e.g., data race between SSR and hydration)
-        if (node.textContent !== text) {
-          node.textContent = text;
-        }
+        if (node.textContent !== text) node.textContent = text;
+
         currentNode = currentNode.nextSibling;
         return node;
       }
