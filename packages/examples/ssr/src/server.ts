@@ -19,7 +19,7 @@ import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const clientBundlePath = join(__dirname, '../client/client.js');
+const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
 // Create SSR rendering API
 const signals = createSignalsApi();

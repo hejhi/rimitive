@@ -2,11 +2,14 @@
  * Client-Side DOM Island Hydrator
  *
  * Hydrates server-rendered islands by:
- * 1. Finding island containers by ID
- * 2. Creating hydrating renderer to match existing DOM
- * 3. Running component with hydrating API (queued effects)
- * 4. On success: activate effects, unwrap container
- * 5. On failure: fallback to client-side render with regular API
+ * 1. Finding islands by script tag marker
+ *    - Element islands: script's previousElementSibling is island root
+ *    - Fragment islands: script's parent is the wrapper div container
+ * 2. For element islands: wrap in temporary div to isolate during hydration
+ * 3. Creating hydrating renderer targeting the container
+ * 4. Running component with hydrating API (queued effects)
+ * 5. On success: activate effects, remove script tag, unwrap temporary/fragment containers
+ * 6. On failure: fallback to client-side render with regular API
  */
 
 import type { IslandMetaData, IslandRegistryEntry } from '../types';
@@ -87,11 +90,33 @@ export function createDOMIslandHydrator<
           return;
         }
 
-        // Get container (parent of script tag)
-        const el = script.parentElement as HTMLElement;
-        if (!el) {
-          console.warn(`Island container for "${id}" not found`);
-          return;
+        // Get island container and element:
+        // - For element islands: script's previous sibling is the island root
+        // - For fragment islands: script's parent is the container div
+        const islandElement = script.previousElementSibling as HTMLElement | null;
+        const isFragment = !islandElement;
+
+        // For element islands, create a temporary wrapper to isolate it during hydration
+        // For fragment islands, use the existing wrapper div
+        let container: HTMLElement;
+        let tempWrapper: HTMLElement | null = null;
+
+        if (isFragment) {
+          container = script.parentElement as HTMLElement;
+          if (!container) {
+            console.warn(`Island container for "${id}" not found`);
+            return;
+          }
+        } else {
+          if (!islandElement) {
+            console.warn(`Island element for "${id}" not found`);
+            return;
+          }
+          // Create temporary wrapper and move island into it
+          tempWrapper = document.createElement('div');
+          islandElement.parentNode?.insertBefore(tempWrapper, islandElement);
+          tempWrapper.appendChild(islandElement);
+          container = tempWrapper;
         }
 
         // Look up island entry in registry
@@ -109,7 +134,7 @@ export function createDOMIslandHydrator<
           // Create hydrating renderer that delegates to hydrating mode initially,
           // then switches to fallback mode for reactive updates
           const renderer = createHydratingRenderer(
-            createHydratingDOMRenderer(el),
+            createHydratingDOMRenderer(container),
             createDOMRenderer()
           );
 
@@ -130,15 +155,21 @@ export function createDOMIslandHydrator<
           // Remove script tag marker
           script.remove();
 
-          // Unwrap container div, leaving hydrated content in place
-          el.replaceWith(...Array.from(el.childNodes));
+          // Cleanup wrappers:
+          // - For fragment islands: unwrap container div, leaving hydrated content in place
+          // - For element islands: unwrap temporary wrapper, leaving hydrated island
+          if (isFragment) {
+            container.replaceWith(...Array.from(container.childNodes));
+          } else if (tempWrapper) {
+            tempWrapper.replaceWith(...Array.from(tempWrapper.childNodes));
+          }
 
         } catch (error) {
           // Hydration failed - check if it's a mismatch
           if (error instanceof HydrationMismatch) {
             // Call strategy handler if provided
             if (strategy?.onMismatch) {
-              const result = strategy.onMismatch(error, el, props, Component, mount);
+              const result = strategy.onMismatch(error, container, props, Component, mount);
               // If handler returns false, skip default fallback
               if (result === false) return;
             }
@@ -150,10 +181,21 @@ export function createDOMIslandHydrator<
               '\nFalling back to client-side render.'
             );
 
-            // Clear container and mount fresh
-            el.innerHTML = '';
-            const instance = mount(Component(props));
-            if (instance.element) el.appendChild(instance.element as Node);
+            // Clear and remount:
+            // - For element islands: remove temp wrapper, island, and script, mount fresh
+            // - For fragment islands: clear the container div and mount fresh
+            if (isFragment) {
+              container.innerHTML = '';
+              const instance = mount(Component(props));
+              if (instance.element) container.appendChild(instance.element as Node);
+            } else {
+              // Remove temporary wrapper, script tag, and mount fresh
+              const parent = tempWrapper?.parentNode || islandElement?.parentNode;
+              if (tempWrapper) tempWrapper.remove();
+              script.remove();
+              const instance = mount(Component(props));
+              if (instance.element && parent) parent.appendChild(instance.element as Node);
+            }
           } else throw error; // Not a hydration mismatch - re-throw
         }
       };

@@ -20,7 +20,7 @@ const terserMangleInternals = (): Plugin => {
           mangle: {
             toplevel: true,
             properties: {
-              regex: /^_/,
+              regex: /^_[^_]/,
               // Keep quoted properties as-is for safety
               keep_quoted: true,
             },
