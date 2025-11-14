@@ -9,15 +9,16 @@ import { renderToString as baseRenderToString } from '@lattice/view/helpers/rend
 import type { NodeRef, ElementRef, FragmentRef } from '@lattice/view/types';
 
 /**
- * Wrap island elements in container divs
+ * Wrap island elements in container divs with script tag markers
  *
- * Finds elements with data-island-id attribute and wraps them in container divs.
- * The data-island-id attribute is preserved for client-side hydration.
+ * Finds elements with data-island-id attribute (added during SSR) and wraps them
+ * in container divs. Removes the attribute from the inner element and adds a
+ * script tag marker for client-side hydration targeting.
  *
  * Uses a simple state machine to properly match opening and closing tags.
  *
  * @param html - HTML string to process
- * @returns HTML string with islands wrapped
+ * @returns HTML string with islands wrapped and marked with script tags
  */
 function wrapIslands(html: string): string {
   // Find all island elements and their positions
@@ -81,7 +82,11 @@ function wrapIslands(html: string): string {
   let result = html;
   for (const island of islands) {
     const elementHTML = result.substring(island.start, island.end);
-    const wrapped = `<div data-island-id="${island.id}">${elementHTML}</div>`;
+    // Remove data-island-id attribute from the island element itself
+    const cleanHTML = elementHTML.replace(/\s+data-island-id="[^"]+"/g, '');
+    // Add script tag with island ID for hydration
+    const scriptTag = `<script type="application/json" data-island="${island.id}"></script>`;
+    const wrapped = `<div id="${island.id}">${cleanHTML}${scriptTag}</div>`;
     result = result.substring(0, island.start) + wrapped + result.substring(island.end);
   }
 

@@ -34,8 +34,11 @@ export interface SSRContext {
 /**
  * Island metadata - describes a single island instance
  *
- * Emitted to client as data attributes for hydration:
- * <div data-island-id="counter-0">
+ * Emitted to client in container div with script tag marker:
+ * <div id="counter-0">
+ *   <!-- island content -->
+ *   <script type="application/json" data-island="counter-0"></script>
+ * </div>
  */
 export interface IslandMetadata {
   /**

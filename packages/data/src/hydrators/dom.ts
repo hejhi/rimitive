@@ -80,10 +80,17 @@ export function createDOMIslandHydrator<
         type: string,
         props: unknown
       ) => {
-        // Find island container
-        const el = document.querySelector(`[data-island-id="${id}"]`) as HTMLElement | null;
+        // Find island by script tag marker
+        const script = document.querySelector(`script[type="application/json"][data-island="${id}"]`);
+        if (!script) {
+          console.warn(`Island script tag [data-island="${id}"] not found`);
+          return;
+        }
+
+        // Get container (parent of script tag)
+        const el = script.parentElement as HTMLElement;
         if (!el) {
-          console.warn(`Island container [data-island-id="${id}"] not found`);
+          console.warn(`Island container for "${id}" not found`);
           return;
         }
 
@@ -119,6 +126,9 @@ export function createDOMIslandHydrator<
 
           // Activate queued effects - they'll use regular mode now
           activate();
+
+          // Remove script tag marker
+          script.remove();
 
           // Unwrap container div, leaving hydrated content in place
           el.replaceWith(...Array.from(el.childNodes));
