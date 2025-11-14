@@ -86,7 +86,7 @@ function wrapIslands(html: string): string {
     const cleanHTML = elementHTML.replace(/\s+data-island-id="[^"]+"/g, '');
     // Add script tag with island ID for hydration
     const scriptTag = `<script type="application/json" data-island="${island.id}"></script>`;
-    const wrapped = `<div id="${island.id}">${cleanHTML}${scriptTag}</div>`;
+    const wrapped = `<div>${cleanHTML}${scriptTag}</div>`;
     result = result.substring(0, island.start) + wrapped + result.substring(island.end);
   }
 
