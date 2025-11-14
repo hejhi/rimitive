@@ -19,10 +19,11 @@ import type { EffectAPI } from '../hydrating-api';
 import type { SealedSpec } from '@lattice/view/types';
 
 /**
- * Island registry - array of island components
- * Accepts components with any prop types (type safety enforced at island definition)
+ * Base island type for registration - accepts any object with island metadata
+ * This avoids TypeScript's strict contravariance rules for function parameters
+ * Uses `unknown` for the metadata type to allow heterogeneous island collections
  */
-export type IslandRegistry = ReadonlyArray<(props: never) => SealedSpec<unknown>>;
+type RegisterableIsland = { [ISLAND_META]?: unknown };
 
 /**
  * Hydrator interface
@@ -30,9 +31,9 @@ export type IslandRegistry = ReadonlyArray<(props: never) => SealedSpec<unknown>
 export interface IslandHydrator {
   /**
    * Hydrate all islands on the page
-   * @param registry - Map of island types to components
+   * @param islands - Island components to register (can have different prop types)
    */
-  hydrate<T extends IslandRegistry>(registry: T): void;
+  hydrate(...islands: RegisterableIsland[]): void;
 }
 
 /**
@@ -56,14 +57,14 @@ export function createDOMIslandHydrator<
   mount: MountFn
 ): IslandHydrator {
   return {
-    hydrate(registry: IslandRegistry) {
-      // Convert registry to structured entries by extracting and unwrapping metadata
+    hydrate(...islands: RegisterableIsland[]) {
+      // Build registry from island metadata - id comes from island() call
       // Wrapper only exists until this point - original component flows through system
       const entries: Record<string, IslandRegistryEntry> = {};
-      for (const wrapper of registry) {
+      for (const wrapper of islands) {
         const meta = (wrapper as { [ISLAND_META]?: IslandMetaData })[ISLAND_META];
         if (!meta) {
-          console.warn('Island missing metadata - skipping');
+          console.warn('Island missing metadata - skipping:', wrapper);
           continue;
         }
         entries[meta.id] = {
@@ -148,10 +149,10 @@ export function createDOMIslandHydrator<
       };
 
       // Process islands queued by inline scripts
-      const islands = (window as unknown as { __islands?: Array<{ i: string; t: string; p: unknown }> }).__islands;
+      const queuedIslands = (window as unknown as { __islands?: Array<{ i: string; t: string; p: unknown }> }).__islands;
 
-      if (!islands) return;
-      islands.forEach(({ i, t, p }) => {
+      if (!queuedIslands) return;
+      queuedIslands.forEach(({ i, t, p }) => {
         const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
         hydrateFn(i, t, p);
       });

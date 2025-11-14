@@ -3,7 +3,7 @@
  *
  * Loads island components and hydrates them from server-rendered HTML.
  */
-import { createDOMIslandHydrator, type IslandRegistry } from '@lattice/data/hydrators/dom';
+import { createDOMIslandHydrator } from '@lattice/data/hydrators/dom';
 import { createApi } from '@lattice/lattice';
 import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
@@ -35,6 +35,6 @@ const hydrator = createDOMIslandHydrator(
 );
 
 // Hydrate all islands
-hydrator.hydrate([Counter, TodoList]);
+hydrator.hydrate(Counter, TodoList);
 
 console.log('Islands hydrated!');

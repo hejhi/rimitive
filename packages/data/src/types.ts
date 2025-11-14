@@ -64,9 +64,11 @@ export interface IslandMetadata {
  * Components must accept JSON-serializable props only
  *
  * Note: This is a callable interface. The actual functions will satisfy this.
+ * The metadata symbol is added by the island() wrapper function.
  */
 export interface IslandComponent<TProps = unknown> {
   (props: TProps): SealedSpec<unknown>;
+  [ISLAND_META]?: IslandMetaData<TProps>;
 }
 
 /**

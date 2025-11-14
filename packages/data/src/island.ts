@@ -97,7 +97,7 @@ export function island<TProps>(
           // This handles the case where renderToString uses outerHTML
           // and doesn't traverse the nodeRef tree
           if ('element' in nodeRef && nodeRef.element && typeof nodeRef.element === 'object') {
-            const element = nodeRef.element as any;
+            const element = nodeRef.element as { setAttribute?: (name: string, value: string) => void };
             if (element.setAttribute) {
               element.setAttribute('data-island-id', instanceId);
             }
