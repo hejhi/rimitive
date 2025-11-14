@@ -35,7 +35,7 @@ export interface SSRContext {
  * Island metadata - describes a single island instance
  *
  * Emitted to client as data attributes for hydration:
- * <div id="counter-0" data-island-id="counter-0" data-island-type="counter" data-island-props='{"count":5}'>
+ * <div data-island-id="counter-0">
  */
 export interface IslandMetadata {
   /**

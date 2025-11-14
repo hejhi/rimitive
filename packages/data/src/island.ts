@@ -109,9 +109,8 @@ export function island<TProps>(
           const element = nodeRef.element as {
             setAttribute?: (name: string, value: string) => void;
           };
-          if (element.setAttribute) {
-            element.setAttribute('data-island-id', instanceId);
-          }
+
+          if (element.setAttribute) element.setAttribute('data-island-id', instanceId);
         }
 
         return nodeRef;

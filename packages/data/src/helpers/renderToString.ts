@@ -12,7 +12,7 @@ import type { NodeRef, ElementRef, FragmentRef } from '@lattice/view/types';
  * Wrap island elements in container divs
  *
  * Finds elements with data-island-id attribute and wraps them in container divs.
- * Removes the data-island-id attribute from the inner element.
+ * The data-island-id attribute is preserved for client-side hydration.
  *
  * Uses a simple state machine to properly match opening and closing tags.
  *
@@ -81,9 +81,7 @@ function wrapIslands(html: string): string {
   let result = html;
   for (const island of islands) {
     const elementHTML = result.substring(island.start, island.end);
-    // Remove data-island-id attribute
-    const cleanHTML = elementHTML.replace(/\s+data-island-id="[^"]+"/g, '');
-    const wrapped = `<div id="${island.id}">${cleanHTML}</div>`;
+    const wrapped = `<div data-island-id="${island.id}">${elementHTML}</div>`;
     result = result.substring(0, island.start) + wrapped + result.substring(island.end);
   }
 
@@ -120,7 +118,7 @@ function wrapIslands(html: string): string {
  * const html = runWithSSRContext(ctx, () =>
  *   renderToString(mount(Counter({ initialCount: 5 })))
  * );
- * // html = '<div id="counter-0"><button>Count: 5</button></div>'
+ * // html = '<div data-island-id="counter-0"><button>Count: 5</button></div>'
  * ```
  */
 export function renderToString(nodeRef: NodeRef<unknown>): string {
@@ -128,7 +126,7 @@ export function renderToString(nodeRef: NodeRef<unknown>): string {
   const wrapElement = (html: string, elementRef: ElementRef<unknown>) => {
     const islandId = (elementRef as ElementRef<unknown> & { __islandId?: string }).__islandId;
     if (islandId) {
-      return `<div id="${islandId}">${html}</div>`;
+      return `<div data-island-id="${islandId}">${html}</div>`;
     }
     return html;
   };
@@ -137,7 +135,7 @@ export function renderToString(nodeRef: NodeRef<unknown>): string {
   const wrapFragment = (html: string, fragmentRef: FragmentRef<unknown>) => {
     const islandId = (fragmentRef as FragmentRef<unknown> & { __islandId?: string }).__islandId;
     if (islandId) {
-      return `<div id="${islandId}"><!--fragment-start-->${html}<!--fragment-end--></div>`;
+      return `<div data-island-id="${islandId}"><!--fragment-start-->${html}<!--fragment-end--></div>`;
     }
     return html;
   };

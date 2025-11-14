@@ -81,9 +81,9 @@ export function createDOMIslandHydrator<
         props: unknown
       ) => {
         // Find island container
-        const el = document.getElementById(id);
+        const el = document.querySelector(`[data-island-id="${id}"]`) as HTMLElement | null;
         if (!el) {
-          console.warn(`Island container #${id} not found`);
+          console.warn(`Island container [data-island-id="${id}"] not found`);
           return;
         }
 
