@@ -9,7 +9,7 @@
  */
 
 import type { SealedSpec } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy, IslandMetaData } from './types';
+import type { IslandComponent, IslandStrategy } from './types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext, registerIsland } from './ssr-context';
 
@@ -73,48 +73,47 @@ export function island<TProps>(
 
   // Create wrapper function
   const wrapper = ((props: TProps) => {
-    // Get the component spec
-    const spec = component(props);
+    const spec = component(props); // Get the component spec
 
-    // Check if we're in SSR context
-    const ctx = getActiveSSRContext();
+    if (!getActiveSSRContext()) return spec;
 
-    if (ctx) {
-      // Server-side: Register island and tag nodeRef
-      const instanceId = registerIsland(id, props);
+    // Server-side: Register island and tag nodeRef
+    const instanceId = registerIsland(id, props);
 
-      // Return a new spec that tags the nodeRef
-      // Don't mutate the original spec to avoid recursion issues
-      return {
-        status: spec.status,
-        create(api?: unknown) {
-          const nodeRef = spec.create(api);
+    // Return a new spec that tags the nodeRef
+    // Don't mutate the original spec to avoid recursion issues
+    return {
+      status: spec.status,
+      create(api?: unknown) {
+        const nodeRef = spec.create(api);
 
-          // Tag nodeRef with island ID for renderToString
-          (nodeRef as { __islandId?: string }).__islandId = instanceId;
+        // Tag nodeRef with island ID for renderToString
+        (nodeRef as { __islandId?: string }).__islandId = instanceId;
 
-          // Also set a DOM attribute so it's preserved in outerHTML
-          // This handles the case where renderToString uses outerHTML
-          // and doesn't traverse the nodeRef tree
-          if ('element' in nodeRef && nodeRef.element && typeof nodeRef.element === 'object') {
-            const element = nodeRef.element as { setAttribute?: (name: string, value: string) => void };
-            if (element.setAttribute) {
-              element.setAttribute('data-island-id', instanceId);
-            }
+        // Also set a DOM attribute so it's preserved in outerHTML
+        // This handles the case where renderToString uses outerHTML
+        // and doesn't traverse the nodeRef tree
+        if (
+          'element' in nodeRef &&
+          nodeRef.element &&
+          typeof nodeRef.element === 'object'
+        ) {
+          const element = nodeRef.element as {
+            setAttribute?: (name: string, value: string) => void;
+          };
+          if (element.setAttribute) {
+            element.setAttribute('data-island-id', instanceId);
           }
-
-          return nodeRef;
         }
-      };
-    }
 
-    // Client-side or no SSR context: return spec as-is
-    return spec;
+        return nodeRef;
+      },
+    };
   }) as IslandComponent<TProps>;
 
   // Attach metadata for registry construction (includes component for unwrapping)
   Object.defineProperty(wrapper, ISLAND_META, {
-    value: { id, strategy, component } as IslandMetaData<TProps>,
+    value: { id, strategy, component },
     enumerable: false,
   });
 
