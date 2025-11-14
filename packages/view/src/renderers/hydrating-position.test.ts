@@ -104,12 +104,21 @@ function exitToParent(pos: Position): Position {
       // Check if we've exhausted this range
       if (nextIndex > range.endIndex) {
         // Exit range mode - pop this range and all deeper ranges from stack
-        const exitPath = [...range.parentPath];
-        exitPath[exitPath.length - 1]!++;
-        return {
-          path: exitPath,
-          ranges: pos.ranges.slice(0, i)  // Pop this and all deeper ranges
-        };
+        if (range.parentPath.length === 0) {
+          // Root-level range - position after range
+          return {
+            path: [range.endIndex + 1],
+            ranges: pos.ranges.slice(0, i)
+          };
+        } else {
+          // Nested range - advance past it in parent
+          const exitPath = [...range.parentPath];
+          exitPath[exitPath.length - 1]!++;
+          return {
+            path: exitPath,
+            ranges: pos.ranges.slice(0, i)
+          };
+        }
       }
 
       // Stay in range, advance to next item
@@ -564,25 +573,79 @@ describe('Tree Traversal Scenarios', () => {
     expect(getCurrentPath(pos)).toEqual([1, 0]);
   });
 
-  it.skip('should handle nested fragments (TODO: needs range stack)', () => {
+  it('should handle nested fragments', () => {
     // map(items)(item => el('div')(map(item.children)(child => el('span')(child))))
-    // Current design with single range cannot handle this - needs investigation
 
     let pos: Position = { path: [], ranges: [] };
 
-    // Enter outer fragment (3 items)
-    pos = enterFragmentRange(pos, 3);
+    // Enter outer fragment (2 items)
+    pos = enterFragmentRange(pos, 2);
     expect(getCurrentPath(pos)).toEqual([0]);
+    expect(pos.ranges.length).toBe(1);
 
     // First item: createElement('div')
     pos = enterElement(pos);
     expect(getCurrentPath(pos)).toEqual([0, 0]);
 
-    // Enter inner fragment (2 children)
-    // TODO: This would require range to be a stack, not a single context
-    // pos = enterFragmentRange(pos, 2);
+    // Enter inner fragment (2 children) - NESTED!
+    pos = enterFragmentRange(pos, 2);
+    expect(getCurrentPath(pos)).toEqual([0, 0, 0]);
+    expect(pos.ranges.length).toBe(2); // Two ranges on stack!
 
-    // For now, this test is skipped to flag the limitation
+    // First child: createElement('span')
+    pos = enterElement(pos);
+    expect(getCurrentPath(pos)).toEqual([0, 0, 0, 0]);
+
+    // createTextNode
+    pos = advanceToSibling(pos);
+    expect(getCurrentPath(pos)).toEqual([0, 0, 0, 1]);
+
+    // appendChild(span, text) - exit span
+    pos = exitToParent(pos);
+    expect(getCurrentPath(pos)).toEqual([0, 0, 1]); // Advance within inner range
+    expect(pos.ranges.length).toBe(2);
+
+    // Second child: createElement('span')
+    pos = enterElement(pos);
+    expect(getCurrentPath(pos)).toEqual([0, 0, 1, 0]);
+
+    // createTextNode
+    pos = advanceToSibling(pos);
+    expect(getCurrentPath(pos)).toEqual([0, 0, 1, 1]);
+
+    // appendChild(span, text) - exit span, should exhaust inner range
+    pos = exitToParent(pos);
+    expect(getCurrentPath(pos)).toEqual([0, 1]); // Exited inner range, back to outer
+    expect(pos.ranges.length).toBe(1); // Popped inner range!
+
+    // appendChild(div, innerFragment) - exit div, advance in outer range
+    pos = exitToParent(pos);
+    expect(getCurrentPath(pos)).toEqual([1]); // Second item of outer range
+    expect(pos.ranges.length).toBe(1);
+
+    // Second outer item: createElement('div')
+    pos = enterElement(pos);
+    expect(getCurrentPath(pos)).toEqual([1, 0]);
+
+    // Enter inner fragment again (2 children)
+    pos = enterFragmentRange(pos, 2);
+    expect(getCurrentPath(pos)).toEqual([1, 0, 0]);
+    expect(pos.ranges.length).toBe(2);
+
+    // Process inner items... (abbreviated)
+    pos = enterElement(pos); // span
+    pos = advanceToSibling(pos); // text
+    pos = exitToParent(pos); // exit span, advance in inner range
+    pos = enterElement(pos); // second span
+    pos = advanceToSibling(pos); // text
+    pos = exitToParent(pos); // exit span, exhaust inner range
+    expect(getCurrentPath(pos)).toEqual([1, 1]); // Back to div
+    expect(pos.ranges.length).toBe(1); // Popped inner range
+
+    // appendChild(div, innerFragment) - exit div, exhaust outer range
+    pos = exitToParent(pos);
+    expect(getCurrentPath(pos)).toEqual([2]); // Past outer range (endIndex was 1)
+    expect(pos.ranges.length).toBe(0); // Popped outer range!
   });
 });
 
