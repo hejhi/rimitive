@@ -14,10 +14,6 @@ export { createHydratingApi } from './hydrating-api';
 export type { EffectAPI, HydratingAPIResult } from './hydrating-api';
 
 // Types (safe - no runtime imports)
-export type {
-  IslandComponent,
-  IslandStrategy,
-  IslandMetaData,
-} from './types';
+export type { IslandComponent, IslandStrategy, IslandMetaData, IslandRegistryEntry } from './types';
 
 export { HydrationMismatch, ISLAND_META } from './types';

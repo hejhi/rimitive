@@ -2,7 +2,7 @@
  * Island Wrapper - Browser version
  *
  * Client-side version that skips SSR context logic entirely.
- * Just attaches metadata for the hydrator.
+ * Creates a wrapper with metadata for the hydrator.
  */
 
 import type { SealedSpec } from '@lattice/view/types';
@@ -26,15 +26,15 @@ export function island<TProps>(
   maybeComponent?: (props: TProps) => SealedSpec<unknown>
 ): IslandComponent<TProps> {
   const component = maybeComponent || (strategyOrComponent as (props: TProps) => SealedSpec<unknown>);
-  const strategy = maybeComponent ? (strategyOrComponent as IslandStrategy<TProps>) : undefined;
+  const strategy = maybeComponent ? strategyOrComponent : undefined;
 
-  // Browser version: just return the component with metadata
-  // No SSR context interaction
-  const wrapper = component as IslandComponent<TProps>;
+  // Create wrapper function instead of mutating the input component
+  const wrapper = ((props: TProps) => component(props)) as IslandComponent<TProps>;
 
-  // Attach metadata for hydrator
+  // Attach metadata to wrapper (temporary - only for registry construction)
+  // Includes component reference for unwrapping at registry boundary
   Object.defineProperty(wrapper, ISLAND_META, {
-    value: { id, strategy } as IslandMetaData<TProps>,
+    value: { id, strategy, component } as IslandMetaData<TProps>,
     enumerable: false,
   });
 

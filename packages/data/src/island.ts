@@ -112,9 +112,9 @@ export function island<TProps>(
     return spec;
   }) as IslandComponent<TProps>;
 
-  // Attach metadata for hydrator to read
+  // Attach metadata for registry construction (includes component for unwrapping)
   Object.defineProperty(wrapper, ISLAND_META, {
-    value: { id, strategy } as IslandMetaData<TProps>,
+    value: { id, strategy, component } as IslandMetaData<TProps>,
     enumerable: false,
   });
 

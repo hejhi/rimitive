@@ -9,7 +9,7 @@
  * 5. On failure: fallback to client-side render with regular API
  */
 
-import type { IslandComponent, IslandMetaData } from '../types';
+import type { IslandComponent, IslandMetaData, IslandRegistryEntry } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
 import { createHydratingRenderer } from '@lattice/view/renderers/switchable-dom';
 import { createHydratingDOMRenderer } from '@lattice/view/renderers/hydrating-dom';
@@ -47,21 +47,6 @@ export type MountFn = (spec: SealedSpec<unknown>) => { element: unknown };
  * @param signals - Signals API (for both hydrating and regular modes)
  * @param mount - Mount function for fallback client-side rendering
  * @returns Hydrator instance
- *
- * @example
- * ```ts
- * import { createDOMIslandHydrator } from '@lattice/data/hydrators/dom';
- * import { createSignalsApi } from '@lattice/signals/presets/core';
- * import { createSpec } from '@lattice/view/helpers';
- * import { createDOMRenderer } from '@lattice/view/renderers/dom';
- * import { Counter } from './islands/Counter';
- *
- * const signals = createSignalsApi();
- * const mount = (spec) => spec.create(createSpec(createDOMRenderer(), signals));
- *
- * const hydrator = createDOMIslandHydrator(createSpec, signals, mount);
- * hydrator.hydrate({ counter: Counter });
- * ```
  */
 export function createDOMIslandHydrator<
   TSignals extends EffectAPI
@@ -72,6 +57,22 @@ export function createDOMIslandHydrator<
 ): IslandHydrator {
   return {
     hydrate(registry: IslandRegistry) {
+      // Convert registry to structured entries by extracting and unwrapping metadata
+      // Wrapper only exists until this point - original component flows through system
+      const entries: Record<string, IslandRegistryEntry> = {};
+      for (const [type, wrapper] of Object.entries(registry)) {
+        const meta = (wrapper as { [ISLAND_META]?: IslandMetaData })[ISLAND_META];
+        if (!meta) {
+          console.warn(`Island "${type}" missing metadata - skipping`);
+          continue;
+        }
+        entries[type] = {
+          component: meta.component,  // Unwrap: use original component, not wrapper
+          id: meta.id,
+          strategy: meta.strategy,
+        };
+      }
+
       // Set up global __hydrate function that inline scripts will call
       (window as { __hydrate?: (id: string, type: string, props: unknown) => void }).__hydrate = (
         id: string,
@@ -85,16 +86,16 @@ export function createDOMIslandHydrator<
           return;
         }
 
-        // Look up component in registry
-        const Component = registry[type];
-        if (!Component) {
+        // Look up island entry in registry
+        const entry = entries[type];
+        if (!entry) {
           console.warn(`Island component "${type}" not found in registry`);
           return;
         }
 
-        // Get strategy from component metadata
-        const meta = (Component as { [ISLAND_META]?: IslandMetaData })[ISLAND_META];
-        const strategy = meta?.strategy;
+        // Extract component and strategy from registry entry
+        const Component = entry.component;
+        const strategy = entry.strategy;
 
         try {
           // Create hydrating renderer that delegates to hydrating mode initially,
@@ -105,8 +106,7 @@ export function createDOMIslandHydrator<
           );
 
           // Create API with hydrating renderer
-          const api = createAPI(renderer, signals);
-          const { hydratingApi, activate } = createHydratingApi(api);
+          const { hydratingApi, activate } = createHydratingApi(createAPI(renderer, signals));
 
           // Run component with hydrating API
           // Effects are queued, not executed yet
@@ -120,21 +120,14 @@ export function createDOMIslandHydrator<
           activate();
 
           // Unwrap container div, leaving hydrated content in place
-          const children = Array.from(el.childNodes);
-          el.replaceWith(...children);
+          el.replaceWith(...Array.from(el.childNodes));
 
         } catch (error) {
           // Hydration failed - check if it's a mismatch
           if (error instanceof HydrationMismatch) {
             // Call strategy handler if provided
             if (strategy?.onMismatch) {
-              const result = strategy.onMismatch(
-                error,
-                el,
-                props,
-                Component,
-                mount
-              );
+              const result = strategy.onMismatch(error, el, props, Component, mount);
               // If handler returns false, skip default fallback
               if (result === false) return;
             }
@@ -149,24 +142,19 @@ export function createDOMIslandHydrator<
             // Clear container and mount fresh
             el.innerHTML = '';
             const instance = mount(Component(props));
-            if (instance.element) {
-              el.appendChild(instance.element as Node);
-            }
-          } else {
-            // Not a hydration mismatch - re-throw
-            throw error;
-          }
+            if (instance.element) el.appendChild(instance.element as Node);
+          } else throw error; // Not a hydration mismatch - re-throw
         }
       };
 
       // Process islands queued by inline scripts
       const islands = (window as unknown as { __islands?: Array<{ i: string; t: string; p: unknown }> }).__islands;
-      if (islands) {
-        islands.forEach(({ i, t, p }) => {
-          const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
-          hydrateFn(i, t, p);
-        });
-      }
+
+      if (!islands) return;
+      islands.forEach(({ i, t, p }) => {
+        const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
+        hydrateFn(i, t, p);
+      });
     },
   };
 }

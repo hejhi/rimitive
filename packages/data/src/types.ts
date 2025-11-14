@@ -102,10 +102,21 @@ export interface IslandStrategy<TProps = unknown> {
 export const ISLAND_META = Symbol.for('lattice.island');
 
 /**
- * Island metadata stored on component functions
+ * Island metadata stored on component functions (temporary, only for registry construction)
  * @internal
  */
 export interface IslandMetaData<TProps = unknown> {
+  id: string;
+  strategy?: IslandStrategy<TProps>;
+  component: (props: TProps) => SealedSpec<unknown>;
+}
+
+/**
+ * Island registry entry - stores component and metadata together
+ * @internal
+ */
+export interface IslandRegistryEntry<TProps = unknown> {
+  component: IslandComponent<TProps>;
   id: string;
   strategy?: IslandStrategy<TProps>;
 }

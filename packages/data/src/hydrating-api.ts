@@ -66,9 +66,7 @@ export function createHydratingApi<T extends EffectAPI>(
   }> = [];
 
   // Create wrapped API
-  const hydratingApi: T = {
-    ...baseApi,
-  };
+  const hydratingApi: T = { ...baseApi };
 
   // Intercept effect if it exists
   if (baseApi.effect) {
@@ -106,8 +104,5 @@ export function createHydratingApi<T extends EffectAPI>(
     pendingEffects.length = 0;
   };
 
-  return {
-    hydratingApi,
-    activate,
-  };
+  return { hydratingApi, activate };
 }
