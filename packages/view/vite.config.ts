@@ -64,6 +64,7 @@ export default defineConfig({
         el: resolve(__dirname, 'src/el.ts'),
         match: resolve(__dirname, 'src/match.ts'),
         component: resolve(__dirname, 'src/component.ts'),
+        comment: resolve(__dirname, 'src/comment.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         renderer: resolve(__dirname, 'src/renderer.ts'),
         map: resolve(__dirname, 'src/map.ts'),

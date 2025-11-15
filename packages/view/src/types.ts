@@ -12,11 +12,12 @@ export const STATUS_ELEMENT = 1;      // 0001
 export const STATUS_FRAGMENT = 2;     // 0010
 export const STATUS_REF_SPEC = 4;     // 0100
 export const STATUS_SEALED_SPEC = 8;  // 1000
+export const STATUS_COMMENT = 16;     // 10000
 
 /**
  * Composite bit masks for checking types
  */
-export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT;     // 0011 (3)
+export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT | STATUS_COMMENT;     // 10011 (19)
 export const STATUS_SPEC_MASK = STATUS_REF_SPEC | STATUS_SEALED_SPEC; // 1100 (12)
 
 export interface BaseRef {
@@ -49,9 +50,17 @@ export interface FragmentRef<TElement> extends BaseRef {
 }
 
 /**
- * Ref node - union of element/fragment tracking nodes
+ * Comment ref node - wraps comment nodes for markers
  */
-export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
+export interface CommentRef extends BaseRef {
+  status: typeof STATUS_COMMENT;
+  data: string;
+}
+
+/**
+ * Ref node - union of element/fragment/comment tracking nodes
+ */
+export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement> | CommentRef;
 
 /**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times

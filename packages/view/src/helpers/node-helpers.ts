@@ -50,7 +50,8 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
         nextEl = nextSiblingNode.element;
       } else if (!nextSiblingNode) {
         // No immediate sibling - use boundary marker
-        nextEl = resolveNextRef(boundaryNextSibling)?.element ?? null;
+        const resolved = resolveNextRef(boundaryNextSibling);
+        nextEl = (resolved && resolved.status === STATUS_ELEMENT) ? resolved.element : null;
       }
 
       renderer.insertBefore(parentElement, node.element, nextEl);

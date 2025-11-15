@@ -38,6 +38,10 @@
       "import": "./dist/component.js",
       "types": "./dist/component.d.ts"
     },
+    "./comment": {
+      "import": "./dist/comment.js",
+      "types": "./dist/comment.d.ts"
+    },
     "./create": {
       "import": "./dist/create.js",
       "types": "./dist/create.d.ts"

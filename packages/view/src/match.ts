@@ -7,7 +7,7 @@ import type {
   FragmentRef,
   ElementRef,
 } from './types';
-import { STATUS_ELEMENT, STATUS_REF_SPEC } from './types';
+import { STATUS_ELEMENT, STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createFragmentHelpers } from './helpers/fragment';
@@ -167,6 +167,11 @@ export const Match = create(
 
                 // Create the element/fragment from the spec
                 const nodeRef = refSpec.create(api);
+
+                // Match only supports ElementRef and FragmentRef, not CommentRef
+                if (nodeRef.status !== STATUS_ELEMENT && nodeRef.status !== STATUS_FRAGMENT) {
+                  throw new Error('match() only supports ElementRef and FragmentRef, not CommentRef');
+                }
 
                 fragRef.firstChild = nodeRef;
                 currentNode = nodeRef;

@@ -56,7 +56,8 @@ export function createFragmentHelpers() {
     while (current) {
       if (current.status === STATUS_ELEMENT) return current;
 
-      const firstChild = current.firstChild;
+      // Only FragmentRef has firstChild, skip CommentRef
+      const firstChild = current.status === STATUS_FRAGMENT ? current.firstChild : undefined;
 
       // FragmentRef - try to get first child element
       if (firstChild) {

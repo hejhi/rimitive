@@ -3,7 +3,7 @@
  */
 
 import type { NodeRef, ElementRef, FragmentRef } from '../types';
-import { STATUS_ELEMENT } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '../types';
 
 /**
  * Element wrapper function type
@@ -54,9 +54,12 @@ export function renderToString(
     return renderElementToString(nodeRef, wrapElement);
   }
 
-  // TypeScript knows this must be STATUS_FRAGMENT since NodeRef is a union
-  // of ElementRef and FragmentRef only
-  return renderFragmentToString(nodeRef, wrapElement, wrapFragment);
+  if (nodeRef.status === STATUS_FRAGMENT) {
+    return renderFragmentToString(nodeRef, wrapElement, wrapFragment);
+  }
+
+  // CommentRef - not renderable, return empty string
+  return '';
 }
 
 /**
