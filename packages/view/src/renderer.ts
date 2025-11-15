@@ -18,11 +18,18 @@ export type Element = object;
 export type TextNode = object;
 
 /**
+ * Generic comment node interface
+ * Renderers can extend this with their own comment node types
+ */
+export type CommentNode = object;
+
+/**
  * RendererConfig defines the type-level contract for a renderer:
  * - elements: Maps tag names to their element types (e.g., 'div' -> HTMLDivElement)
  * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
  * - baseElement: Base element type for this renderer (e.g., HTMLElement)
  * - textNode: Text node type for this renderer (e.g., Text)
+ * - comment: Comment node type for this renderer (e.g., Comment)
  *
  * This allows the type system to provide full type safety while keeping
  * the renderer implementation simple and agnostic.
@@ -32,6 +39,7 @@ export interface RendererConfig {
   events: object;
   baseElement: object;
   textNode: object;
+  comment: object;
 }
 
 /**
@@ -52,6 +60,11 @@ export interface Renderer<TConfig extends RendererConfig> {
   createTextNode: (text: string) => TConfig['textNode'];
 
   /**
+   * Create a comment node with initial data
+   */
+  createComment: (data: string) => TConfig['comment'];
+
+  /**
    * Update a text node's content
    */
   updateTextNode: (node: TConfig['textNode'], text: string) => void;
@@ -70,7 +83,7 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   appendChild: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode']
+    child: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment']
   ) => void;
 
   /**
@@ -78,7 +91,7 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   removeChild: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode']
+    child: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment']
   ) => void;
 
   /**
@@ -86,8 +99,8 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   insertBefore: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode'],
-    reference: TConfig['baseElement'] | TConfig['textNode'] | null
+    child: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment'],
+    reference: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment'] | null
   ) => void;
 
   /**

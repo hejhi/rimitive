@@ -27,6 +27,7 @@ export function createHydratingRenderer(
   return {
     createElement: (tag) => getRenderer().createElement(tag),
     createTextNode: (text) => getRenderer().createTextNode(text),
+    createComment: (data) => getRenderer().createComment(data),
     updateTextNode: (node, text) => getRenderer().updateTextNode(node, text),
     setAttribute: (element, key, value) => getRenderer().setAttribute(element, key, value),
     appendChild: (parent, child) => getRenderer().appendChild(parent, child),

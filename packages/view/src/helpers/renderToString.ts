@@ -2,8 +2,8 @@
  * Server-side rendering utilities for extracting HTML from linkedom elements
  */
 
-import type { NodeRef, ElementRef, FragmentRef } from '../types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT } from '../types';
+import type { NodeRef, ElementRef, FragmentRef, CommentRef } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
 
 /**
  * Element wrapper function type
@@ -50,6 +50,10 @@ export function renderToString(
   wrapElement?: ElementWrapper,
   wrapFragment?: FragmentWrapper
 ): string {
+  if (nodeRef.status === STATUS_COMMENT) {
+    return `<!--${(nodeRef as CommentRef).data}-->`;
+  }
+
   if (nodeRef.status === STATUS_ELEMENT) {
     return renderElementToString(nodeRef, wrapElement);
   }
@@ -58,7 +62,7 @@ export function renderToString(
     return renderFragmentToString(nodeRef, wrapElement, wrapFragment);
   }
 
-  // CommentRef - not renderable, return empty string
+  // Unknown type - return empty string
   return '';
 }
 

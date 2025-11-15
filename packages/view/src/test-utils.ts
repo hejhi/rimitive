@@ -19,7 +19,7 @@ export class MockElement {
   id: string;
   tag: string;
   props: Record<string, unknown> = {};
-  children: Array<MockElement | MockText> = [];
+  children: Array<MockElement | MockText | MockComment> = [];
   parent: MockElement | null = null;
   connected: boolean = false;
   listeners: Map<string, (...args: unknown[]) => void> = new Map();
@@ -45,11 +45,11 @@ export class MockElement {
   }
 
   // DOM-like properties for reconcile.ts
-  get firstChild(): MockElement | MockText | null {
+  get firstChild(): MockElement | MockText | MockComment | null {
     return this.children[0] ?? null;
   }
 
-  get nextSibling(): MockElement | MockText | null {
+  get nextSibling(): MockElement | MockText | MockComment | null {
     if (!this.parent) return null;
     const index = this.parent.children.indexOf(this);
     return this.parent.children[index + 1] ?? null;
@@ -68,7 +68,26 @@ export class MockText {
     this.content = content;
   }
 
-  get nextSibling(): MockElement | MockText | null {
+  get nextSibling(): MockElement | MockText | MockComment | null {
+    if (!this.parent) return null;
+    const index = this.parent.children.indexOf(this);
+    return this.parent.children[index + 1] ?? null;
+  }
+}
+
+/**
+ * Mock comment node for testing comments
+ */
+export class MockComment {
+  type = 'comment' as const;
+  data: string;
+  parent: MockElement | null = null;
+
+  constructor(data: string) {
+    this.data = data;
+  }
+
+  get nextSibling(): MockElement | MockText | MockComment | null {
     if (!this.parent) return null;
     const index = this.parent.children.indexOf(this);
     return this.parent.children[index + 1] ?? null;
@@ -123,6 +142,7 @@ export interface MockRendererConfig extends RendererConfig {
   };
   baseElement: MockElement;
   textNode: MockText;
+  comment: MockComment;
 }
 
 /**
@@ -132,24 +152,25 @@ export function createMockRenderer() {
   const renderer: Renderer<MockRendererConfig> = {
     createElement: vi.fn((tag: string) => new MockElement(tag)),
     createTextNode: vi.fn((text: string) => new MockText(text)),
+    createComment: vi.fn((data: string) => new MockComment(data)),
     updateTextNode: vi.fn((node: MockText, text: string) => {
       node.content = text;
     }),
     setAttribute: vi.fn((element: MockElement, key: string, value: unknown) => {
       element.props[key] = value;
     }),
-    appendChild: vi.fn((parent: MockElement, child: MockElement | MockText) => {
+    appendChild: vi.fn((parent: MockElement, child: MockElement | MockText | MockComment) => {
       if (!parent.children.includes(child)) {
         parent.children.push(child);
       }
       child.parent = parent;
     }),
-    removeChild: vi.fn((parent: MockElement, child: MockElement | MockText) => {
+    removeChild: vi.fn((parent: MockElement, child: MockElement | MockText | MockComment) => {
       const index = parent.children.indexOf(child);
       if (index !== -1) parent.children.splice(index, 1);
       child.parent = null;
     }),
-    insertBefore: vi.fn((parent: MockElement, child: MockElement | MockText, ref: MockElement | MockText | null) => {
+    insertBefore: vi.fn((parent: MockElement, child: MockElement | MockText | MockComment, ref: MockElement | MockText | MockComment | null) => {
       // Remove from old position if already in parent
       const oldIndex = parent.children.indexOf(child);
       if (oldIndex !== -1) {
@@ -256,9 +277,12 @@ export function wrapElement<TElement>(element: TElement) {
 /**
  * Extracts text content from mock element tree (simulates innerText)
  */
-export function getTextContent(element: MockElement | MockText): string {
+export function getTextContent(element: MockElement | MockText | MockComment): string {
   if ('content' in element) {
     return element.content;
+  }
+  if ('data' in element) {
+    return ''; // Comments don't contribute to text content
   }
   if ('children' in element) {
     return element.children.map(getTextContent).join('');
