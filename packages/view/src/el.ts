@@ -172,6 +172,7 @@ export const El = create(
             const elRef: ElementRef<TBaseElement> = {
               status: STATUS_ELEMENT,
               element: element,
+              parent: null,
               prev: null,
               next: null,
             };

@@ -75,20 +75,15 @@ export function instrumentMap<TBaseElement>(
       instrumentedRefSpec.create = (api, extensions) => {
         const fragmentRef = originalCreate(api, extensions) as FragmentRef<TBaseElement>;
 
-        // Wrap attach to track mount and reconciliation
-        const originalAttach = fragmentRef.attach.bind(fragmentRef);
-
-        fragmentRef.attach = (parent, nextSibling, attachApi) => {
-          instrumentation.emit({
-            type: 'MAP_MOUNTED',
-            timestamp: Date.now(),
-            data: {
-              mapId,
-            },
-          });
-
-          return originalAttach(parent, nextSibling, attachApi);
-        };
+        // TODO: Add instrumentation for fragment initialization
+        // (fragments no longer have attach() - initialized in processChildren)
+        instrumentation.emit({
+          type: 'MAP_MOUNTED',
+          timestamp: Date.now(),
+          data: {
+            mapId,
+          },
+        });
 
         return fragmentRef;
       };

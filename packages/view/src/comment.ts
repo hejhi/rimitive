@@ -29,6 +29,7 @@ export function comment(data: string): SealedSpec<CommentRef> {
         status: STATUS_COMMENT,
         data,
         element: undefined as unknown, // Placeholder - needs renderer integration
+        parent: null,
         prev: null,
         next: null,
       };

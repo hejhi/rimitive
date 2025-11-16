@@ -3,9 +3,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestEnv, MockRendererConfig } from './test-utils';
+import { createTestEnv, MockRendererConfig, MockElement } from './test-utils';
 import { Match } from './match';
 import { El } from './el';
+import { createFragmentHelpers } from './helpers/fragment';
+import type { FragmentRef, ElementRef } from './types';
+import { STATUS_ELEMENT } from './types';
 
 describe('match() - reactive element switching', () => {
   function setup() {
@@ -32,6 +35,7 @@ describe('match() - reactive element switching', () => {
   describe('Untracked lifecycle callbacks', () => {
     it('should not track outer reactive state in lifecycle callbacks', () => {
       const { el, match, signal, renderer } = setup();
+      const { initializeFragment } = createFragmentHelpers();
 
       const showDiv = signal(true);
       const outerState = signal('outer-value');
@@ -54,11 +58,21 @@ describe('match() - reactive element switching', () => {
           : null;
       });
 
-      // Create parent and attach
+      // Create parent and initialize fragment
       const parent = renderer.createElement('div');
-      const parentRef = { status: 1 as const, element: parent, next: undefined };
-      const fragRef = spec.create();
-      (fragRef.attach as (parent: typeof parentRef, next: null) => void)(parentRef, null);
+      const parentRef: ElementRef<MockElement> = {
+        status: STATUS_ELEMENT,
+        element: parent,
+        parent: null,
+        prev: null,
+        next: null
+      };
+      const fragRef = spec.create() as FragmentRef<MockElement>;
+
+      // Set parent and initialize fragment
+      fragRef.parent = parentRef;
+      fragRef.next = null;
+      initializeFragment(fragRef);
 
       expect(matcherCallCount).toBe(1);  // Initial matcher call
       expect(lifecycleCallCount).toBe(1);  // Initial lifecycle

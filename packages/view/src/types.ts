@@ -25,50 +25,56 @@ export interface BaseRef {
 }
 
 /**
- * Linked nodes - actual DOM nodes that form doubly-linked list
- * Elements and Comments are in the list; Fragments are range markers
+ * Linked nodes - nodes that form doubly-linked lists
+ * Elements and Comments are actual DOM nodes in the list
+ * Fragments are logical nodes that own their own child lists
  */
-export type LinkedNode<TElement> = ElementRef<TElement> | CommentRef;
+export type LinkedNode<TElement> = ElementRef<TElement> | FragmentRef<TElement> | CommentRef;
 
 /**
- * Element ref node - wraps created elements for sibling tracking
- * Forms doubly-linked list with prev/next pointers for efficient traversal
+ * Element ref node - wraps created elements for tree structure
+ * Forms doubly-linked list with prev/next pointers for efficient sibling traversal
+ * Links to parent for tree traversal
  */
 export interface ElementRef<TElement> extends BaseRef {
   status: typeof STATUS_ELEMENT;
   element: TElement;
-  prev: LinkedNode<TElement> | null;  // Previous DOM node in doubly-linked list
-  next: LinkedNode<TElement> | null;  // Next DOM node in doubly-linked list
+  parent: ElementRef<unknown> | null;  // Parent element in tree
+  prev: LinkedNode<TElement> | null;   // Previous sibling in doubly-linked list
+  next: LinkedNode<TElement> | null;   // Next sibling in doubly-linked list
 }
 
 /**
- * Fragment ref node - wraps fragments (no DOM element)
+ * Fragment ref node - logical container in the tree (no DOM element)
  * Created by createFragment() - users don't construct this directly
- * Fragments are range markers that track firstChild/lastChild in the doubly-linked element list
+ * Fragments participate in parent's doubly-linked list and own their own child list
  */
 export interface FragmentRef<TElement> extends BaseRef {
   status: typeof STATUS_FRAGMENT;
-  element: TElement | null;
-  firstChild: LinkedNode<TElement> | undefined;  // First node in fragment's range
-  lastChild: LinkedNode<TElement> | undefined;   // Last node in fragment's range
-  // Bivariant function property with widened parameters for variance
-  // Parameters use 'unknown' to allow FragmentRef<T> to be assignable to FragmentRef<unknown>
-  // This is safe because at runtime all element types are compatible
-  attach: {
-    (parent: ElementRef<unknown>, nextSibling?: NodeRef<unknown> | null, api?: unknown): FragmentRef<TElement>;
-  };
+  element: null;
+
+  // Position in parent's doubly-linked list
+  parent: ElementRef<unknown> | null;
+  prev: NodeRef<unknown> | null;
+  next: NodeRef<unknown> | null;
+
+  // Own child list (nodes within this fragment)
+  firstChild: LinkedNode<TElement> | undefined;
+  lastChild: LinkedNode<TElement> | undefined;
 }
 
 /**
  * Comment ref node - wraps comment nodes for markers
  * Part of doubly-linked list with prev/next pointers
+ * Links to parent for tree traversal
  */
 export interface CommentRef extends BaseRef {
   status: typeof STATUS_COMMENT;
   data: string;
   element: unknown;  // The actual DOM comment node (renderer-specific type)
-  prev: LinkedNode<unknown> | null;  // Previous DOM node in doubly-linked list
-  next: LinkedNode<unknown> | null;  // Next DOM node in doubly-linked list
+  parent: ElementRef<unknown> | null;  // Parent element in tree
+  prev: LinkedNode<unknown> | null;    // Previous sibling in doubly-linked list
+  next: LinkedNode<unknown> | null;    // Next sibling in doubly-linked list
 }
 
 /**

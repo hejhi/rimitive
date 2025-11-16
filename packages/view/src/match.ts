@@ -6,6 +6,7 @@ import type {
   Reactive,
   FragmentRef,
   ElementRef,
+  NodeRef,
 } from './types';
 import { STATUS_ELEMENT, STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Renderer, RendererConfig } from './renderer';
@@ -123,6 +124,9 @@ export const Match = create(
           extensions?: TExt
         ) => {
           const fragRef = createFragmentFn(lifecycleCallbacks, api);
+          // If no extensions, return the ref directly to preserve mutability
+          if (!extensions || Object.keys(extensions).length === 0) return fragRef as FragmentRef<TElement> & TExt;
+
           return {
             ...fragRef,
             ...extensions
@@ -137,7 +141,9 @@ export const Match = create(
       ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement> {
         return (matcher: (value: T) => RefSpec<TElement> | null) => {
           return createMatchSpec<TElement>((lifecycleCallbacks, api) => {
-            const fragRef = createFragment<TBaseElement>((parent, nextSibling) => {
+            const fragRef = createFragment<TBaseElement>((fragment) => {
+              const parent = fragment.parent! as ElementRef<TBaseElement>;
+              const nextSibling = fragment.next as NodeRef<TBaseElement> | null;
               let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
 
               // Run lifecycle callbacks for element

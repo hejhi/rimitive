@@ -1,19 +1,21 @@
 /**
- * Process children into linked list and attach fragments
+ * Process children into linked list and initialize fragments
  *
- * Two-pass algorithm:
- * 1. Forward pass: Build intrusive linked list, append element children (skip fragments)
- * 2. Backward pass: Attach fragments with correct insertion points
+ * Single-pass algorithm:
+ * 1. Forward pass: Build doubly-linked list including fragments
+ * 2. Initialize fragments after all refs are linked
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK, STATUS_COMMENT } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
+import { createFragmentHelpers } from './fragment';
 
+const { initializeFragment } = createFragmentHelpers();
 
 export function createProcessChildren<
   TConfig extends RendererConfig,
-  >(opts: { 
+  >(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
   }) {
@@ -58,7 +60,10 @@ export function createProcessChildren<
       // RefSpec or SealedSpec - both have .create() method
       if (spec.status & STATUS_SPEC_MASK) {
         const childRef = spec.create(api);
-        if (childRef.status === STATUS_ELEMENT) renderer.appendChild(element, childRef.element as TConfig['baseElement']);
+        // Only append actual DOM nodes (elements), not fragments
+        if (childRef.status === STATUS_ELEMENT) {
+          renderer.appendChild(element, childRef.element as TConfig['baseElement']);
+        }
         return childRef;
       }
     }
@@ -79,40 +84,37 @@ export function createProcessChildren<
     children: ElRefSpecChild[],
     api?: unknown
   ): void => {
-    // Map to track which child produced which NodeRef
-    const childNodes = new Map<number, NodeRef<TElement>>();
+    const childRefs: NodeRef<TElement>[] = [];
     let lastChildRef: NodeRef<TElement> | undefined;
 
-    // Forward pass: build intrusive linked list (skip fragment factories)
+    // Forward pass: create refs and build doubly-linked list (including fragments)
     for (let i = 0; i < children.length; i++) {
       const refNode = handleChild(parent, children[i]!, api);
 
       if (!refNode) continue;
 
-      childNodes.set(i, refNode);
+      // Set parent and link into doubly-linked list
+      refNode.parent = parent;
+      refNode.prev = lastChildRef ?? null;
 
-      if (lastChildRef && lastChildRef.status !== STATUS_FRAGMENT &&
-          refNode.status !== STATUS_FRAGMENT) {
+      if (lastChildRef) {
         lastChildRef.next = refNode;
-        refNode.prev = lastChildRef;
       }
 
+      childRefs.push(refNode);
       lastChildRef = refNode;
     }
 
-    // Backward pass: attach fragments with correct insertion points
-    let nextRef: NodeRef<TElement> | null = null;
+    // Set last child's next to null
+    if (lastChildRef) {
+      lastChildRef.next = null;
+    }
 
-    for (let i = children.length - 1; i >= 0; i--) {
-      const nodeRef = childNodes.get(i);
-      if (!nodeRef) continue;
-      const status = nodeRef.status;
-
-      // Fragment ref - call attach with parent, nextSibling, and api for SealedSpec support
-      if (status === STATUS_FRAGMENT) nodeRef.attach(parent, nextRef, api);
-
-      // Update insertion point for next fragment (elements and comments are in doubly-linked list)
-      if (status === STATUS_ELEMENT || status === STATUS_COMMENT) { nextRef = nodeRef };
+    // Initialize all fragments now that parent/next are set
+    for (const ref of childRefs) {
+      if (ref.status === STATUS_FRAGMENT) {
+        initializeFragment(ref as FragmentRef<TElement>, api);
+      }
     }
   };
 

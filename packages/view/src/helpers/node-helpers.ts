@@ -5,11 +5,14 @@
  * used across map, match, and other reactive primitives.
  */
 
-import type { NodeRef, ElementRef, LinkedNode } from '../types';
+import type { NodeRef, ElementRef, LinkedNode, FragmentRef } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 import type { CreateScopes } from './scope';
 import { linkBefore, unlink } from './linked-list';
+import { createFragmentHelpers } from './fragment';
+
+const { initializeFragment } = createFragmentHelpers();
 
 export interface NodeHelperOpts<TConfig extends RendererConfig> {
   renderer: Renderer<TConfig>;
@@ -61,14 +64,29 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
         nextEl
       );
     } else if (node.status === STATUS_FRAGMENT) {
-      // Fragment handles its own insertion
+      // Link fragment into parent's doubly-linked list
       const parentRef: ElementRef<TElement> = {
         status: STATUS_ELEMENT,
         element: parentElement,
+        parent: null,
         prev: null,
         next: null,
       };
-      node.attach(parentRef, nextSiblingNode ?? boundaryNextSibling, api);
+
+      node.parent = parentRef;
+
+      // Determine next sibling for fragment
+      const nextSib = nextSiblingNode ?? boundaryNextSibling ?? null;
+
+      // Link fragment into parent's list
+      let nextLinked: LinkedNode<TElement> | undefined | null;
+      if (nextSib && nextSib.status !== STATUS_FRAGMENT) {
+        nextLinked = nextSib as LinkedNode<TElement>;
+      }
+      linkBefore(node as LinkedNode<TElement>, nextLinked);
+
+      // Initialize fragment (sets up children)
+      initializeFragment(node as FragmentRef<TElement>, api);
     }
   }
 
@@ -96,11 +114,15 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       // Remove from DOM
       renderer.removeChild(parentElement, node.element as TElement | TConfig['comment']);
     } else if (node.status === STATUS_FRAGMENT) {
+      // Unlink fragment from parent's list
+      unlink(node as LinkedNode<TElement>);
+
+      // Remove all children in fragment's own list
       let current = node.firstChild;
       while (current) {
         const next = current.next;
 
-        // Unlink from doubly-linked list
+        // Unlink child from fragment's list
         unlink(current);
 
         // Dispose and remove from DOM

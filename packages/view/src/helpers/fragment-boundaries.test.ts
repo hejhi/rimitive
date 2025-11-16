@@ -18,6 +18,7 @@ function createElementRef<T>(element: T): ElementRef<T> {
   return {
     status: STATUS_ELEMENT,
     element,
+    parent: null,
     prev: null,
     next: null,
   };
@@ -28,6 +29,7 @@ function createCommentRef(data: string): CommentRef {
     status: STATUS_COMMENT,
     data,
     element: { comment: data },
+    parent: null,
     prev: null,
     next: null,
   };
@@ -37,11 +39,11 @@ function createFragmentRef<T>(): FragmentRef<T> {
   return {
     status: STATUS_FRAGMENT,
     element: null,
+    parent: null,
+    prev: null,
+    next: null,
     firstChild: undefined,
     lastChild: undefined,
-    attach: () => {
-      throw new Error('Not implemented in test');
-    },
   };
 }
 
