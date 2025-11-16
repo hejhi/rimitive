@@ -9,9 +9,6 @@
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
-import { createFragmentHelpers } from './fragment';
-
-const { attachFragment } = createFragmentHelpers();
 
 export function createProcessChildren<
   TConfig extends RendererConfig,
@@ -113,7 +110,7 @@ export function createProcessChildren<
     // Attach all fragments now that parent/next are set
     for (const ref of childRefs) {
       if (ref.status === STATUS_FRAGMENT) {
-        attachFragment(ref, api);
+        ref.attach(ref, api);
       }
     }
   };

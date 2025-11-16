@@ -62,7 +62,7 @@ export interface FragmentRef<TElement> extends BaseRef {
   lastChild: LinkedNode<unknown> | undefined;
 
   // Attach function - called when fragment is attached to the tree
-  attach?: (fragment: FragmentRef<TElement>, api?: unknown) => void | (() => void);
+  attach: (fragment: FragmentRef<TElement>, api?: unknown) => void | (() => void);
 }
 
 /**

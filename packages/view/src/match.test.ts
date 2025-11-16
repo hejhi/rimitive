@@ -6,7 +6,6 @@ import { describe, it, expect } from 'vitest';
 import { createTestEnv, MockRendererConfig, MockElement } from './test-utils';
 import { Match } from './match';
 import { El } from './el';
-import { createFragmentHelpers } from './helpers/fragment';
 import type { FragmentRef, ElementRef } from './types';
 import { STATUS_ELEMENT } from './types';
 
@@ -35,7 +34,6 @@ describe('match() - reactive element switching', () => {
   describe('Untracked lifecycle callbacks', () => {
     it('should not track outer reactive state in lifecycle callbacks', () => {
       const { el, match, signal, renderer } = setup();
-      const { attachFragment } = createFragmentHelpers();
 
       const showDiv = signal(true);
       const outerState = signal('outer-value');
@@ -72,7 +70,7 @@ describe('match() - reactive element switching', () => {
       // Set parent and attach fragment
       fragRef.parent = parentRef;
       fragRef.next = null;
-      attachFragment(fragRef);
+      fragRef.attach(fragRef);
 
       expect(matcherCallCount).toBe(1);  // Initial matcher call
       expect(lifecycleCallCount).toBe(1);  // Initial lifecycle

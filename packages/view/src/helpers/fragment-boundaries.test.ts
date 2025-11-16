@@ -44,6 +44,7 @@ function createFragmentRef<T>(): FragmentRef<T> {
     next: null,
     firstChild: undefined,
     lastChild: undefined,
+    attach: () => {},
   };
 }
 

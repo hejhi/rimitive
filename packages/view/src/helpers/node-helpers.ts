@@ -10,9 +10,6 @@ import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 import type { CreateScopes } from './scope';
 import { linkBefore, unlink } from './linked-list';
-import { createFragmentHelpers } from './fragment';
-
-const { attachFragment } = createFragmentHelpers();
 
 export interface NodeHelperOpts<TConfig extends RendererConfig> {
   renderer: Renderer<TConfig>;
@@ -86,7 +83,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       linkBefore(node, nextLinked);
 
       // Attach fragment (sets up children)
-      attachFragment(node, api);
+      node.attach(node, api);
     }
   }
 
