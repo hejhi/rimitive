@@ -53,16 +53,18 @@ export interface FragmentRef<TElement> extends BaseRef {
   element: null;
 
   // Position in parent's doubly-linked list
+  // Uses 'unknown' for variance - allows FragmentRef<T> to be assignable to FragmentRef<unknown>
   parent: ElementRef<unknown> | null;
   prev: NodeRef<unknown> | null;
   next: NodeRef<unknown> | null;
 
   // Own child list (nodes within this fragment)
-  firstChild: LinkedNode<unknown> | undefined;
-  lastChild: LinkedNode<unknown> | undefined;
+  firstChild: LinkedNode<TElement> | undefined;
+  lastChild: LinkedNode<TElement> | undefined;
 
-  // Attach function - called when fragment is attached to the tree
-  attach: (fragment: FragmentRef<TElement>, api?: unknown) => void | (() => void);
+  // Attach method - called when fragment is attached to the tree
+  // Method syntax (not property) is bivariant, allowing proper typing while maintaining variance
+  attach(parent: ElementRef<TElement>, nextSibling: NodeRef<TElement> | null, api?: unknown): void | (() => void);
 }
 
 /**

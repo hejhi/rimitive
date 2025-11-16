@@ -83,7 +83,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       linkBefore(node, nextLinked);
 
       // Attach fragment (sets up children)
-      node.attach(node, api);
+      node.attach(parentRef, nextSib, api);
     }
   }
 
@@ -124,10 +124,9 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
         // Dispose and remove from DOM
         if (current.status === STATUS_ELEMENT) {
-          const elementRef = current as ElementRef<TElement>;
-          const scope = getElementScope(elementRef.element);
+          const scope = getElementScope(current.element);
           if (scope) disposeScope(scope);
-          renderer.removeChild(parentElement, elementRef.element);
+          renderer.removeChild(parentElement, current.element);
         } else if (current.status === STATUS_COMMENT) {
           renderer.removeChild(parentElement, current.element as TConfig['comment']);
         }

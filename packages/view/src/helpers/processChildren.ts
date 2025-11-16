@@ -110,7 +110,7 @@ export function createProcessChildren<
     // Attach all fragments now that parent/next are set
     for (const ref of childRefs) {
       if (ref.status === STATUS_FRAGMENT) {
-        ref.attach(ref, api);
+        ref.attach(parent, ref.next as NodeRef<TElement> | null, api);
       }
     }
   };

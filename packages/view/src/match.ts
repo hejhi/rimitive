@@ -6,7 +6,6 @@ import type {
   Reactive,
   FragmentRef,
   ElementRef,
-  NodeRef,
 } from './types';
 import { STATUS_ELEMENT, STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Renderer, RendererConfig } from './renderer';
@@ -137,7 +136,7 @@ export const Match = create(
         reactive: Reactive<T>
       ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement> {
         return (matcher: (value: T) => RefSpec<TElement> | null) => {
-          return createMatchSpec<TElement>((lifecycleCallbacks, api) => {
+          return createMatchSpec<TElement>((lifecycleCallbacks) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -146,10 +145,7 @@ export const Match = create(
               next: null,
               firstChild: undefined,
               lastChild: undefined,
-              attach: () => {
-                const parent = fragment.parent! as ElementRef<TBaseElement>;
-                const nextSibling =
-                  fragment.next as NodeRef<TBaseElement> | null;
+              attach(parent, nextSibling, api) {
                 let currentNode:
                   | ElementRef<TBaseElement>
                   | TFragRef

@@ -70,7 +70,7 @@ describe('match() - reactive element switching', () => {
       // Set parent and attach fragment
       fragRef.parent = parentRef;
       fragRef.next = null;
-      fragRef.attach(fragRef);
+      fragRef.attach(parentRef, null);
 
       expect(matcherCallCount).toBe(1);  // Initial matcher call
       expect(lifecycleCallCount).toBe(1);  // Initial lifecycle

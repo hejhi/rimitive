@@ -4,7 +4,7 @@
 
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef, NodeRef, LifecycleCallback } from './types';
+import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef, LifecycleCallback } from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
@@ -128,10 +128,7 @@ export const Map = create(
               next: null,
               firstChild: undefined,
               lastChild: undefined,
-              attach: () => {
-                const parent = fragment.parent! as ElementRef<TBaseElement>;
-                const nextSibling =
-                  fragment.next as NodeRef<TBaseElement> | null;
+              attach(parent, nextSibling) {
                 const parentElement = parent.element;
 
                 // nextSibling from fragment can be NodeRef (element/comment/fragment), but map only uses elements
