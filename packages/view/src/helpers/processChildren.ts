@@ -81,12 +81,11 @@ export function createProcessChildren<
     children: ElRefSpecChild[],
     api?: unknown
   ): void => {
-    const childRefs: NodeRef<TElement>[] = [];
-    let lastChildRef: NodeRef<TElement> | undefined;
+    let lastChildRef: NodeRef<TElement> | null = null;
 
     // Forward pass: create refs and build doubly-linked list (including fragments)
-    for (let i = 0; i < children.length; i++) {
-      const refNode = handleChild(parent, children[i]!, api);
+    for (const child of children) {
+      const refNode = handleChild(parent, child, api);
 
       if (!refNode) continue;
 
@@ -98,20 +97,18 @@ export function createProcessChildren<
         lastChildRef.next = refNode;
       }
 
-      childRefs.push(refNode);
       lastChildRef = refNode;
     }
 
     // Set last child's next to null
-    if (lastChildRef) {
-      lastChildRef.next = null;
-    }
+    if (lastChildRef) lastChildRef.next = null;
 
-    // Attach all fragments now that parent/next are set
-    for (const ref of childRefs) {
-      if (ref.status === STATUS_FRAGMENT) {
-        ref.attach(parent, ref.next as NodeRef<TElement> | null, api);
+    // Unwind: walk backwards attaching fragments
+    while (lastChildRef) {
+      if (lastChildRef.status === STATUS_FRAGMENT) {
+        lastChildRef.attach(parent, lastChildRef.next as NodeRef<TElement> | null, api);
       }
+      lastChildRef = lastChildRef.prev as NodeRef<TElement> | null;
     }
   };
 
