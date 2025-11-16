@@ -11,10 +11,7 @@ import type {
 import { STATUS_ELEMENT, STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
-import { createFragmentHelpers } from './helpers/fragment';
 import { createNodeHelpers } from './helpers/node-helpers';
-
-const { createFragment } = createFragmentHelpers();
 
 /**
  * Options passed to Match factory
@@ -141,81 +138,100 @@ export const Match = create(
       ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement> {
         return (matcher: (value: T) => RefSpec<TElement> | null) => {
           return createMatchSpec<TElement>((lifecycleCallbacks, api) => {
-            const fragRef = createFragment<TBaseElement>((fragment) => {
-              const parent = fragment.parent! as ElementRef<TBaseElement>;
-              const nextSibling = fragment.next as NodeRef<TBaseElement> | null;
-              let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
+            const fragment: FragmentRef<TBaseElement> = {
+              status: STATUS_FRAGMENT,
+              element: null,
+              parent: null,
+              prev: null,
+              next: null,
+              firstChild: undefined,
+              lastChild: undefined,
+              attach: () => {
+                const parent = fragment.parent! as ElementRef<TBaseElement>;
+                const nextSibling =
+                  fragment.next as NodeRef<TBaseElement> | null;
+                let currentNode:
+                  | ElementRef<TBaseElement>
+                  | TFragRef
+                  | undefined;
 
-              // Run lifecycle callbacks for element
-              const runLifecycleCallbacks = (element: TElement) => {
-                createElementScope(element, () => {
-                  for (const callback of lifecycleCallbacks) {
-                    const cleanup = callback(element);
-                    if (cleanup) onCleanup(cleanup);
+                // Run lifecycle callbacks for element
+                const runLifecycleCallbacks = (element: TElement) => {
+                  createElementScope(element, () => {
+                    for (const callback of lifecycleCallbacks) {
+                      const cleanup = callback(element);
+                      if (cleanup) onCleanup(cleanup);
+                    }
+                  });
+                };
+
+                // Update function - called when reactive value changes
+                const updateElement = (value: T) => {
+                  // Clean up old element or fragment
+                  if (currentNode) removeNode(parent.element, currentNode);
+
+                  // Get RefSpec from matcher (pure function call)
+                  const refSpec = matcher(value);
+
+                  if (refSpec === null) {
+                    fragment.firstChild = undefined;
+                    fragment.lastChild = undefined;
+                    currentNode = undefined;
+                    return;
                   }
+
+                  // Create the element/fragment from the spec
+                  const nodeRef = refSpec.create(api);
+
+                  if (
+                    nodeRef.status !== STATUS_ELEMENT &&
+                    nodeRef.status !== STATUS_FRAGMENT
+                  ) {
+                    throw new Error(
+                      'match() only supports ElementRef and FragmentRef, not CommentRef'
+                    );
+                  }
+
+                  if (nodeRef.status === STATUS_FRAGMENT) {
+                    fragment.firstChild = nodeRef.firstChild;
+                    fragment.lastChild = nodeRef.lastChild;
+                  } else {
+                    fragment.firstChild = nodeRef;
+                    fragment.lastChild = nodeRef;
+                  }
+
+                  currentNode = nodeRef;
+
+                  // Execute lifecycle callbacks from match level
+                  if (nodeRef.status === STATUS_ELEMENT) {
+                    runLifecycleCallbacks(
+                      (nodeRef as ElementRef<TElement>).element
+                    );
+                  }
+
+                  // Insert into DOM
+                  insertNodeBefore(
+                    api,
+                    parent.element,
+                    nodeRef,
+                    undefined,
+                    nextSibling
+                  );
+                };
+
+                // Effect only tracks the reactive value, then calls updateElement
+                // Use nested effect to isolate updateElement from tracking
+                // The inner effect creates a tracking boundary, then we dispose it
+                return scopedEffect(() => {
+                  const value = reactive();
+                  const isolate = scopedEffect(() => {
+                    updateElement(value);
+                  });
+                  isolate(); // Dispose immediately after it runs
                 });
-              };
-
-              // Update function - called when reactive value changes
-              const updateElement = (value: T) => {
-                // Clean up old element or fragment
-                if (currentNode) removeNode(parent.element, currentNode);
-
-                // Get RefSpec from matcher (pure function call)
-                const refSpec = matcher(value);
-
-                if (refSpec === null) {
-                  fragRef.firstChild = undefined;
-                  fragRef.lastChild = undefined;
-                  currentNode = undefined;
-                  return;
-                }
-
-                // Create the element/fragment from the spec
-                const nodeRef = refSpec.create(api);
-
-                if (nodeRef.status !== STATUS_ELEMENT && nodeRef.status !== STATUS_FRAGMENT) {
-                  throw new Error('match() only supports ElementRef and FragmentRef, not CommentRef');
-                }
-
-                if (nodeRef.status === STATUS_FRAGMENT) {
-                  fragRef.firstChild = nodeRef.firstChild;
-                  fragRef.lastChild = nodeRef.lastChild;
-                } else {
-                  fragRef.firstChild = nodeRef;
-                  fragRef.lastChild = nodeRef;
-                }
-
-                currentNode = nodeRef;
-
-                // Execute lifecycle callbacks from match level
-                if (nodeRef.status === STATUS_ELEMENT) {
-                  runLifecycleCallbacks((nodeRef as ElementRef<TElement>).element);
-                }
-
-                // Insert into DOM
-                insertNodeBefore(
-                  api,
-                  parent.element,
-                  nodeRef,
-                  undefined,
-                  nextSibling
-                );
-              };
-
-              // Effect only tracks the reactive value, then calls updateElement
-              // Use nested effect to isolate updateElement from tracking
-              // The inner effect creates a tracking boundary, then we dispose it
-              return scopedEffect(() => {
-                const value = reactive();
-                const isolate = scopedEffect(() => {
-                  updateElement(value);
-                });
-                isolate(); // Dispose immediately after it runs
-              });
-            });
-
-            return fragRef;
+              }
+            };
+            return fragment;
           });
         };
       }

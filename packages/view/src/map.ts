@@ -5,15 +5,12 @@
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef, NodeRef, LifecycleCallback } from './types';
-import { STATUS_ELEMENT, STATUS_REF_SPEC } from './types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
-import { createFragmentHelpers } from './helpers/fragment';
 import { createNodeHelpers } from './helpers/node-helpers';
 import { removeFromFragment } from './helpers/fragment-boundaries';
-
-const { createFragment } = createFragmentHelpers();
 
 /**
  * Map factory type - curried for element builder pattern
@@ -123,128 +120,139 @@ export const Map = create(
 
         return (render: (itemSignal: Reactive<T>) => TSpec) =>
           createRefSpec((lifecycleCallbacks, api) => {
-          const fragRef = createFragment((fragment) => {
-            const parent = fragment.parent! as ElementRef<TBaseElement>;
-            const nextSibling = fragment.next as NodeRef<TBaseElement> | null;
-            const parentElement = parent.element;
+            const fragment: FragmentRef<TBaseElement> = {
+              status: STATUS_FRAGMENT,
+              element: null,
+              parent: null,
+              prev: null,
+              next: null,
+              firstChild: undefined,
+              lastChild: undefined,
+              attach: () => {
+                const parent = fragment.parent! as ElementRef<TBaseElement>;
+                const nextSibling =
+                  fragment.next as NodeRef<TBaseElement> | null;
+                const parentElement = parent.element;
 
-            // nextSibling from fragment can be NodeRef (element/comment/fragment), but map only uses elements
-            // Filter to element refs only for reconciliation
-            const nextElementSibling = (nextSibling && nextSibling.status === STATUS_ELEMENT)
-              ? (nextSibling as TRecNode)
-              : undefined;
+                // nextSibling from fragment can be NodeRef (element/comment/fragment), but map only uses elements
+                // Filter to element refs only for reconciliation
+                const nextElementSibling =
+                  nextSibling && nextSibling.status === STATUS_ELEMENT
+                    ? (nextSibling as TRecNode)
+                    : undefined;
 
-            // Create reconciler with internal state management and hooks
-            const { reconcile, dispose } = createReconciler<
-              T,
-              TBaseElement,
-              TRecNode
-            >({
-              parentElement,
-              parentRef: parent,
-              nextSibling: nextElementSibling,
+                // Create reconciler with internal state management and hooks
+                const { reconcile, dispose } = createReconciler<
+                  T,
+                  TBaseElement,
+                  TRecNode
+                >({
+                  parentElement,
+                  parentRef: parent,
+                  nextSibling: nextElementSibling,
 
-              onCreate: (item) => {
-                // Use nested effect to isolate render callback and lifecycle from tracking
-                // This prevents signals read in render/lifecycle from being tracked by map's effect
-                let elRef: TRecNode;
+                  onCreate: (item) => {
+                    // Use nested effect to isolate render callback and lifecycle from tracking
+                    // This prevents signals read in render/lifecycle from being tracked by map's effect
+                    let elRef: TRecNode;
 
-                const isolate = scopedEffect(() => {
-                  const itemSignal = signal(item);
+                    const isolate = scopedEffect(() => {
+                      const itemSignal = signal(item);
 
-                  // Render the item - this creates an element with its own scope
-                  // Pass api for SealedSpec components created with create()
-                  elRef = render(itemSignal).create(api) as TRecNode;
+                      // Render the item - this creates an element with its own scope
+                      // Pass api for SealedSpec components created with create()
+                      elRef = render(itemSignal).create(api) as TRecNode;
 
-                  // Insert into DOM
-                  insertNodeBefore(
-                    api,
-                    parentElement,
-                    elRef,
-                    undefined,
-                    nextSibling
-                  );
+                      // Insert into DOM
+                      insertNodeBefore(
+                        api,
+                        parentElement,
+                        elRef,
+                        undefined,
+                        nextSibling
+                      );
 
-                  // Update fragment boundaries (items are appended at end before nextSibling)
-                  if (!fragRef.firstChild) {
-                    // First item in fragment
-                    fragRef.firstChild = elRef;
-                    fragRef.lastChild = elRef;
-                  } else {
-                    // Appending at end - update lastChild
-                    fragRef.lastChild = elRef;
-                  }
+                      // Update fragment boundaries (items are appended at end before nextSibling)
+                      if (!fragment.firstChild) {
+                        // First item in fragment
+                        fragment.firstChild = elRef;
+                        fragment.lastChild = elRef;
+                      } else {
+                        // Appending at end - update lastChild
+                        fragment.lastChild = elRef;
+                      }
 
-                  elRef.data = itemSignal;
+                      elRef.data = itemSignal;
+                    });
+
+                    isolate(); // Dispose immediately after it runs
+
+                    // Attach the signal to the node ref for updates
+                    return elRef!;
+                  },
+
+                  // onUpdate: called when existing item's data should be updated
+                  onUpdate(item, node) {
+                    node.data(item);
+                  },
+
+                  // onMove: called when item needs repositioning
+                  onMove(node, nextSiblingNode) {
+                    if (node.status !== STATUS_ELEMENT) return;
+                    insertNodeBefore(
+                      api,
+                      parentElement,
+                      node,
+                      nextSiblingNode,
+                      nextSibling
+                    );
+                  },
+
+                  // onRemove: called when item is being removed
+                  onRemove(node) {
+                    if (node.status !== STATUS_ELEMENT) return;
+
+                    // Update fragment boundaries if removing a boundary node
+                    removeFromFragment(fragment, node);
+
+                    removeNode(parentElement, node);
+                  },
                 });
 
-                isolate(); // Dispose immediately after it runs
+                // Execute lifecycle callbacks within parent's scope
+                const lifecycleCleanups: (() => void)[] = [];
+                for (const callback of lifecycleCallbacks) {
+                  const cleanup = callback(parentElement);
+                  if (cleanup) lifecycleCleanups.push(cleanup);
+                }
 
-                // Attach the signal to the node ref for updates
-                return elRef!;
+                // Create effect within parent's scope - auto-tracked!
+                const effectDispose = scopedEffect(() => {
+                  // Get items - handle both array and function
+                  const itemsArray =
+                    typeof items === 'function' ? items() : items;
+
+                  // Reconcile with just items and key function
+                  reconcile(itemsArray, (item) =>
+                    keyFn ? keyFn(item) : (item as string | number)
+                  );
+                });
+
+                // Return cleanup function
+                return () => {
+                  // Dispose the effect
+                  effectDispose();
+
+                  // Dispose all remaining items via reconciler
+                  // This calls onRemove hook for each tracked item
+                  dispose();
+
+                  // Run lifecycle cleanups
+                  for (const cleanup of lifecycleCleanups) cleanup();
+                };
               },
-
-              // onUpdate: called when existing item's data should be updated
-              onUpdate(item, node) {
-                node.data(item);
-              },
-
-              // onMove: called when item needs repositioning
-              onMove(node, nextSiblingNode) {
-                if (node.status !== STATUS_ELEMENT) return;
-                insertNodeBefore(
-                  api,
-                  parentElement,
-                  node,
-                  nextSiblingNode,
-                  nextSibling
-                );
-              },
-
-              // onRemove: called when item is being removed
-              onRemove(node) {
-                if (node.status !== STATUS_ELEMENT) return;
-
-                // Update fragment boundaries if removing a boundary node
-                removeFromFragment(fragRef, node);
-
-                removeNode(parentElement, node);
-              },
-            });
-
-            // Execute lifecycle callbacks within parent's scope
-            const lifecycleCleanups: (() => void)[] = [];
-            for (const callback of lifecycleCallbacks) {
-              const cleanup = callback(parentElement);
-              if (cleanup) lifecycleCleanups.push(cleanup);
-            }
-
-            // Create effect within parent's scope - auto-tracked!
-            const effectDispose = scopedEffect(() => {
-              // Get items - handle both array and function
-              const itemsArray = typeof items === 'function' ? items() : items;
-
-              // Reconcile with just items and key function
-              reconcile(itemsArray, (item) =>
-                keyFn ? keyFn(item) : (item as string | number)
-              );
-            });
-
-            // Return cleanup function
-            return () => {
-              // Dispose the effect
-              effectDispose();
-
-              // Dispose all remaining items via reconciler
-              // This calls onRemove hook for each tracked item
-              dispose();
-
-              // Run lifecycle cleanups
-              for (const cleanup of lifecycleCleanups) cleanup();
             };
-          }) as TFragRef;
-
-          return fragRef;
+            return fragment;
         });
       }
 

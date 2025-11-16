@@ -46,7 +46,6 @@ export interface ElementRef<TElement> extends BaseRef {
 
 /**
  * Fragment ref node - logical container in the tree (no DOM element)
- * Created by createFragment() - users don't construct this directly
  * Fragments participate in parent's doubly-linked list and own their own child list
  */
 export interface FragmentRef<TElement> extends BaseRef {
