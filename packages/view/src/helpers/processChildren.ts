@@ -7,7 +7,7 @@
  */
 
 import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK, STATUS_COMMENT } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 
 
@@ -91,7 +91,11 @@ export function createProcessChildren<
 
       childNodes.set(i, refNode);
 
-      if (lastChildRef) lastChildRef.next = refNode;
+      if (lastChildRef && lastChildRef.status !== STATUS_FRAGMENT &&
+          refNode.status !== STATUS_FRAGMENT) {
+        lastChildRef.next = refNode;
+        refNode.prev = lastChildRef;
+      }
 
       lastChildRef = refNode;
     }
@@ -107,8 +111,8 @@ export function createProcessChildren<
       // Fragment ref - call attach with parent, nextSibling, and api for SealedSpec support
       if (status === STATUS_FRAGMENT) nodeRef.attach(parent, nextRef, api);
 
-      // Update insertion point for next fragment
-      if (status === STATUS_ELEMENT) { nextRef = nodeRef };
+      // Update insertion point for next fragment (elements and comments are in doubly-linked list)
+      if (status === STATUS_ELEMENT || status === STATUS_COMMENT) { nextRef = nodeRef };
     }
   };
 

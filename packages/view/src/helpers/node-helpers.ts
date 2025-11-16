@@ -5,13 +5,11 @@
  * used across map, match, and other reactive primitives.
  */
 
-import type { NodeRef, ElementRef, FragmentRef } from '../types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT } from '../types';
+import type { NodeRef, ElementRef, LinkedNode } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 import type { CreateScopes } from './scope';
-import { createFragmentHelpers } from './fragment';
-
-const { resolveNextRef } = createFragmentHelpers();
+import { linkBefore, unlink } from './linked-list';
 
 export interface NodeHelperOpts<TConfig extends RendererConfig> {
   renderer: Renderer<TConfig>;
@@ -27,40 +25,48 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
   /**
    * Insert a node before a reference node in the DOM.
-   * Handles both ElementRef and FragmentRef correctly.
+   * Handles ElementRef, CommentRef, and FragmentRef correctly.
    *
    * @param parentElement - Parent DOM element
-   * @param node - Node to insert (element or fragment)
-   * @param nextSiblingNode - Next sibling node (can be element, fragment, or undefined)
+   * @param node - Node to insert (element, comment, or fragment)
+   * @param nextSiblingNode - Next sibling node (can be element, comment, fragment, or undefined)
    * @param boundaryNextSibling - Boundary marker for fragments (e.g., from parent fragment)
    * @param api - API context for fragment attachment
    */
   function insertNodeBefore(
     api: unknown,
     parentElement: TElement,
-    node: ElementRef<TElement> | FragmentRef<TElement>,
+    node: NodeRef<TElement>,
     nextSiblingNode?: NodeRef<TElement> | null,
     boundaryNextSibling?: NodeRef<TElement> | null,
   ): void {
-    if (node.status === STATUS_ELEMENT) {
-      // Resolve the actual DOM element to insert before
-      let nextEl: TElement | null = null;
-
-      if (nextSiblingNode && nextSiblingNode.status === STATUS_ELEMENT) {
-        nextEl = nextSiblingNode.element;
-      } else if (!nextSiblingNode) {
-        // No immediate sibling - use boundary marker
-        const resolved = resolveNextRef(boundaryNextSibling);
-        nextEl = (resolved && resolved.status === STATUS_ELEMENT) ? resolved.element : null;
+    if (node.status === STATUS_ELEMENT || node.status === STATUS_COMMENT) {
+      // Determine the next linked node for doubly-linked list
+      // nextSiblingNode if it's a linked node, otherwise boundaryNextSibling
+      let nextLinked: LinkedNode<TElement> | undefined | null;
+      if (nextSiblingNode && nextSiblingNode.status !== STATUS_FRAGMENT) {
+        nextLinked = nextSiblingNode as LinkedNode<TElement>;
+      } else if (boundaryNextSibling && boundaryNextSibling.status !== STATUS_FRAGMENT) {
+        nextLinked = boundaryNextSibling as LinkedNode<TElement>;
       }
 
-      renderer.insertBefore(parentElement, node.element, nextEl);
+      // Link into doubly-linked list
+      linkBefore(node as LinkedNode<TElement>, nextLinked);
+
+      // Insert into DOM - use the element from nextLinked if available
+      const nextEl = (nextLinked?.element as TElement | TConfig['comment'] | null | undefined) ?? null;
+      renderer.insertBefore(
+        parentElement,
+        node.element as TElement | TConfig['comment'],
+        nextEl
+      );
     } else if (node.status === STATUS_FRAGMENT) {
       // Fragment handles its own insertion
       const parentRef: ElementRef<TElement> = {
         status: STATUS_ELEMENT,
         element: parentElement,
-        next: undefined,
+        prev: null,
+        next: null,
       };
       node.attach(parentRef, nextSiblingNode ?? boundaryNextSibling, api);
     }
@@ -68,30 +74,46 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
   /**
    * Remove a node from the DOM and dispose its scope.
-   * Handles both ElementRef and FragmentRef correctly.
+   * Handles ElementRef, CommentRef, and FragmentRef correctly.
    *
    * @param parentElement - Parent DOM element
-   * @param node - Node to remove (element or fragment)
+   * @param node - Node to remove (element, comment, or fragment)
    */
   function removeNode(
     parentElement: TElement,
-    node: ElementRef<TElement> | FragmentRef<TElement>
+    node: NodeRef<TElement>
   ): void {
-    if (node.status === STATUS_ELEMENT) {
-      const scope = getElementScope(node.element);
-      if (scope) disposeScope(scope);
-      renderer.removeChild(parentElement, node.element);
+    if (node.status === STATUS_ELEMENT || node.status === STATUS_COMMENT) {
+      // Unlink from doubly-linked list
+      unlink(node as LinkedNode<TElement>);
+
+      // Dispose scope if element
+      if (node.status === STATUS_ELEMENT) {
+        const scope = getElementScope(node.element);
+        if (scope) disposeScope(scope);
+      }
+
+      // Remove from DOM
+      renderer.removeChild(parentElement, node.element as TElement | TConfig['comment']);
     } else if (node.status === STATUS_FRAGMENT) {
-      // Dispose all elements in fragment
       let current = node.firstChild;
       while (current) {
+        const next = current.next;
+
+        // Unlink from doubly-linked list
+        unlink(current);
+
+        // Dispose and remove from DOM
         if (current.status === STATUS_ELEMENT) {
-          const elementRef = current as ElementRef<TElement>;
-          const scope = getElementScope(elementRef.element);
+          const scope = getElementScope(current.element);
           if (scope) disposeScope(scope);
-          renderer.removeChild(parentElement, elementRef.element);
+          renderer.removeChild(parentElement, current.element);
+        } else if (current.status === STATUS_COMMENT) {
+          renderer.removeChild(parentElement, current.element as TConfig['comment']);
         }
-        current = current.next;
+
+        if (current === node.lastChild) break;
+        current = (next ?? undefined) as typeof current;
       }
     }
   }

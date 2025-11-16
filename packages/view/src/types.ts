@@ -22,25 +22,35 @@ export const STATUS_SPEC_MASK = STATUS_REF_SPEC | STATUS_SEALED_SPEC; // 1100 (1
 
 export interface BaseRef {
   status: number;
-  next?: BaseRef;
 }
 
 /**
+ * Linked nodes - actual DOM nodes that form doubly-linked list
+ * Elements and Comments are in the list; Fragments are range markers
+ */
+export type LinkedNode<TElement> = ElementRef<TElement> | CommentRef;
+
+/**
  * Element ref node - wraps created elements for sibling tracking
+ * Forms doubly-linked list with prev/next pointers for efficient traversal
  */
 export interface ElementRef<TElement> extends BaseRef {
   status: typeof STATUS_ELEMENT;
   element: TElement;
+  prev: LinkedNode<TElement> | null;  // Previous DOM node in doubly-linked list
+  next: LinkedNode<TElement> | null;  // Next DOM node in doubly-linked list
 }
 
 /**
  * Fragment ref node - wraps fragments (no DOM element)
  * Created by createFragment() - users don't construct this directly
+ * Fragments are range markers that track firstChild/lastChild in the doubly-linked element list
  */
 export interface FragmentRef<TElement> extends BaseRef {
   status: typeof STATUS_FRAGMENT;
   element: TElement | null;
-  firstChild?: BaseRef;
+  firstChild: LinkedNode<TElement> | undefined;  // First node in fragment's range
+  lastChild: LinkedNode<TElement> | undefined;   // Last node in fragment's range
   // Bivariant function property with widened parameters for variance
   // Parameters use 'unknown' to allow FragmentRef<T> to be assignable to FragmentRef<unknown>
   // This is safe because at runtime all element types are compatible
@@ -51,10 +61,14 @@ export interface FragmentRef<TElement> extends BaseRef {
 
 /**
  * Comment ref node - wraps comment nodes for markers
+ * Part of doubly-linked list with prev/next pointers
  */
 export interface CommentRef extends BaseRef {
   status: typeof STATUS_COMMENT;
   data: string;
+  element: unknown;  // The actual DOM comment node (renderer-specific type)
+  prev: LinkedNode<unknown> | null;  // Previous DOM node in doubly-linked list
+  next: LinkedNode<unknown> | null;  // Next DOM node in doubly-linked list
 }
 
 /**

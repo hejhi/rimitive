@@ -23,10 +23,14 @@ export function comment(data: string): SealedSpec<CommentRef> {
   return {
     status: STATUS_SEALED_SPEC,
     create(): CommentRef {
+      // TODO: Properly integrate with renderer to create actual DOM comment node
+      // Currently comment() is not renderer-aware - needs refactoring
       return {
         status: STATUS_COMMENT,
         data,
-        next: undefined,
+        element: undefined as unknown, // Placeholder - needs renderer integration
+        prev: null,
+        next: null,
       };
     }
   };

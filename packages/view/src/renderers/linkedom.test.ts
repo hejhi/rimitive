@@ -45,7 +45,7 @@ describe('linkedom renderer', () => {
     renderer.setAttribute(button, 'className', 'btn');
 
     expect(button.hasAttribute('onclick')).toBe(false);
-    expect(button.getAttribute('className')).toBe('btn');
+    expect(button.getAttribute('class')).toBe('btn');  // className is mapped to class
   });
 
   it('should escape HTML in text content', () => {

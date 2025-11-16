@@ -11,6 +11,7 @@ import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
 import { createFragmentHelpers } from './helpers/fragment';
 import { createNodeHelpers } from './helpers/node-helpers';
+import { removeFromFragment } from './helpers/fragment-boundaries';
 
 const { createFragment } = createFragmentHelpers();
 
@@ -121,10 +122,15 @@ export const Map = create(
         type TRecNode = RecNode<T, TBaseElement>;
 
         return (render: (itemSignal: Reactive<T>) => TSpec) =>
-          createRefSpec((lifecycleCallbacks, api) =>
-          createFragment((parent, nextSibling) => {
+          createRefSpec((lifecycleCallbacks, api) => {
+          const fragRef = createFragment((parent, nextSibling) => {
             const parentElement = parent.element;
-            const nextSib = nextSibling as TRecNode | null | undefined;
+
+            // nextSibling from fragment can be NodeRef (element/comment), but map only uses elements
+            // Filter to element refs only for reconciliation
+            const nextElementSibling = (nextSibling && nextSibling.status === STATUS_ELEMENT)
+              ? (nextSibling as TRecNode)
+              : undefined;
 
             // Create reconciler with internal state management and hooks
             const { reconcile, dispose } = createReconciler<
@@ -134,7 +140,7 @@ export const Map = create(
             >({
               parentElement,
               parentRef: parent,
-              nextSibling: nextSib ?? undefined,
+              nextSibling: nextElementSibling,
 
               onCreate: (item) => {
                 // Use nested effect to isolate render callback and lifecycle from tracking
@@ -156,6 +162,16 @@ export const Map = create(
                     undefined,
                     nextSibling
                   );
+
+                  // Update fragment boundaries (items are appended at end before nextSibling)
+                  if (!fragRef.firstChild) {
+                    // First item in fragment
+                    fragRef.firstChild = elRef;
+                    fragRef.lastChild = elRef;
+                  } else {
+                    // Appending at end - update lastChild
+                    fragRef.lastChild = elRef;
+                  }
 
                   elRef.data = itemSignal;
                 });
@@ -186,6 +202,10 @@ export const Map = create(
               // onRemove: called when item is being removed
               onRemove(node) {
                 if (node.status !== STATUS_ELEMENT) return;
+
+                // Update fragment boundaries if removing a boundary node
+                removeFromFragment(fragRef, node);
+
                 removeNode(parentElement, node);
               },
             });
@@ -193,7 +213,7 @@ export const Map = create(
             // Execute lifecycle callbacks within parent's scope
             const lifecycleCleanups: (() => void)[] = [];
             for (const callback of lifecycleCallbacks) {
-              const cleanup = callback(parent.element);
+              const cleanup = callback(parentElement);
               if (cleanup) lifecycleCleanups.push(cleanup);
             }
 
@@ -220,7 +240,10 @@ export const Map = create(
               // Run lifecycle cleanups
               for (const cleanup of lifecycleCleanups) cleanup();
             };
-          }));
+          }) as TFragRef;
+
+          return fragRef;
+        });
       }
 
       const extension: MapFactory<TBaseElement> = {

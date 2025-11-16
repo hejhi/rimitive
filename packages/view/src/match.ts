@@ -158,9 +158,9 @@ export const Match = create(
                 // Get RefSpec from matcher (pure function call)
                 const refSpec = matcher(value);
 
-                // Handle null - conditional rendering (no element)
                 if (refSpec === null) {
                   fragRef.firstChild = undefined;
+                  fragRef.lastChild = undefined;
                   currentNode = undefined;
                   return;
                 }
@@ -168,12 +168,18 @@ export const Match = create(
                 // Create the element/fragment from the spec
                 const nodeRef = refSpec.create(api);
 
-                // Match only supports ElementRef and FragmentRef, not CommentRef
                 if (nodeRef.status !== STATUS_ELEMENT && nodeRef.status !== STATUS_FRAGMENT) {
                   throw new Error('match() only supports ElementRef and FragmentRef, not CommentRef');
                 }
 
-                fragRef.firstChild = nodeRef;
+                if (nodeRef.status === STATUS_FRAGMENT) {
+                  fragRef.firstChild = nodeRef.firstChild;
+                  fragRef.lastChild = nodeRef.lastChild;
+                } else {
+                  fragRef.firstChild = nodeRef;
+                  fragRef.lastChild = nodeRef;
+                }
+
                 currentNode = nodeRef;
 
                 // Execute lifecycle callbacks from match level

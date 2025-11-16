@@ -2,7 +2,7 @@
  * Server-side rendering utilities for extracting HTML from linkedom elements
  */
 
-import type { NodeRef, ElementRef, FragmentRef, CommentRef } from '../types';
+import type { NodeRef, ElementRef, FragmentRef } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
 
 /**
@@ -51,7 +51,7 @@ export function renderToString(
   wrapFragment?: FragmentWrapper
 ): string {
   if (nodeRef.status === STATUS_COMMENT) {
-    return `<!--${(nodeRef as CommentRef).data}-->`;
+    return `<!--${(nodeRef).data}-->`;
   }
 
   if (nodeRef.status === STATUS_ELEMENT) {
@@ -73,7 +73,7 @@ function renderElementToString(
   elementRef: ElementRef<unknown>,
   wrapElement?: ElementWrapper
 ): string {
-  const element = elementRef.element as unknown as { outerHTML?: string };
+  const element = elementRef.element as { outerHTML?: string };
 
   if (typeof element.outerHTML === 'string') {
     const html = element.outerHTML;
@@ -101,10 +101,10 @@ function renderFragmentToString(
   let current = fragmentRef.firstChild;
 
   while (current) {
-    // firstChild and next are BaseRef, but at runtime they're always NodeRef
-    // Safe to cast since fragments only contain element/fragment children
     parts.push(renderToString(current as NodeRef<unknown>, wrapElement, wrapFragment));
-    current = current.next;
+
+    if (current === fragmentRef.lastChild) break;
+    current = current.next ?? undefined;
   }
 
   const html = parts.join('');

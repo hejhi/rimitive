@@ -36,7 +36,8 @@ describe('reconcileWithKeys', () => {
         return {
           status: 1,
           element: li,
-          next: undefined,
+          prev: null,
+          next: null,
         } as ElementRef<MockElement> & ReconcileNode;
       },
       onUpdate: (item: Item, node) => {
@@ -659,7 +660,8 @@ describe('reconcileWithKeys', () => {
           return {
             status: 1,
             element: li,
-            next: undefined,
+            prev: null,
+            next: null,
           } as ElementRef<MockElement> & ReconcileNode;
         },
         onUpdate() {},

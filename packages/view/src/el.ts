@@ -172,7 +172,8 @@ export const El = create(
             const elRef: ElementRef<TBaseElement> = {
               status: STATUS_ELEMENT,
               element: element,
-              next: undefined,
+              prev: null,
+              next: null,
             };
 
             createElementScope(element, () => {
