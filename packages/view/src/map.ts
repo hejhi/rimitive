@@ -126,8 +126,8 @@ export const Map = create(
               parent: null,
               prev: null,
               next: null,
-              firstChild: undefined,
-              lastChild: undefined,
+              firstChild: null,
+              lastChild: null,
               attach(parent, nextSibling) {
                 const parentElement = parent.element;
 

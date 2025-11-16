@@ -42,8 +42,8 @@ function createFragmentRef<T>(): FragmentRef<T> {
     parent: null,
     prev: null,
     next: null,
-    firstChild: undefined,
-    lastChild: undefined,
+    firstChild: null,
+    lastChild: null,
     attach: () => {},
   };
 }
@@ -130,8 +130,8 @@ describe('removeFromFragment', () => {
 
     removeFromFragment(fragment, node);
 
-    expect(fragment.firstChild).toBe(undefined);
-    expect(fragment.lastChild).toBe(undefined);
+    expect(fragment.firstChild).toBe(null);
+    expect(fragment.lastChild).toBe(null);
   });
 
   it('should remove first node from multi-node fragment', () => {
@@ -143,8 +143,8 @@ describe('removeFromFragment', () => {
     ];
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[2];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[2]!;
 
     removeFromFragment(fragment, nodes[0]!);
 
@@ -161,8 +161,8 @@ describe('removeFromFragment', () => {
     ];
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[2];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[2]!;
 
     removeFromFragment(fragment, nodes[2]!);
 
@@ -179,8 +179,8 @@ describe('removeFromFragment', () => {
     ];
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[2];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[2]!;
 
     removeFromFragment(fragment, nodes[1]!);
 
@@ -212,8 +212,8 @@ describe('removeFromFragment', () => {
 
     removeFromFragment(fragment, node);
 
-    expect(fragment.firstChild).toBe(undefined);
-    expect(fragment.lastChild).toBe(undefined);
+    expect(fragment.firstChild).toBe(null);
+    expect(fragment.lastChild).toBe(null);
   });
 });
 
@@ -244,8 +244,8 @@ describe('isInFragmentRange', () => {
     ];
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[2];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[2]!;
 
     expect(isInFragmentRange(fragment, nodes[0]!)).toBe(true);
   });
@@ -259,8 +259,8 @@ describe('isInFragmentRange', () => {
     ];
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[2];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[2]!;
 
     expect(isInFragmentRange(fragment, nodes[1]!)).toBe(true);
   });
@@ -274,8 +274,8 @@ describe('isInFragmentRange', () => {
     ];
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[2];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[2]!;
 
     expect(isInFragmentRange(fragment, nodes[2]!)).toBe(true);
   });
@@ -290,8 +290,8 @@ describe('isInFragmentRange', () => {
     const outsideNode = createElementRef('d');
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[2];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[2]!;
 
     expect(isInFragmentRange(fragment, outsideNode)).toBe(false);
   });
@@ -419,8 +419,8 @@ describe('countFragmentNodes', () => {
     ];
 
     linkNodes(nodes);
-    fragment.firstChild = nodes[0];
-    fragment.lastChild = nodes[3];
+    fragment.firstChild = nodes[0]!;
+    fragment.lastChild = nodes[3]!;
 
     expect(countFragmentNodes(fragment)).toBe(4);
   });
@@ -452,8 +452,8 @@ describe('countFragmentNodes', () => {
     linkNodes(nodes);
 
     // Fragment only contains middle 3 nodes
-    fragment.firstChild = nodes[1];
-    fragment.lastChild = nodes[3];
+    fragment.firstChild = nodes[1]!;
+    fragment.lastChild = nodes[3]!;
 
     expect(countFragmentNodes(fragment)).toBe(3);
   });
@@ -528,11 +528,11 @@ describe('integration tests', () => {
     // Setup outer fragment: outer-1 -> inner-1 -> inner-2 -> outer-2
     linkNodes([outerNodes[0]!, ...innerNodes, outerNodes[1]!]);
 
-    outerFragment.firstChild = outerNodes[0];
-    outerFragment.lastChild = outerNodes[1];
+    outerFragment.firstChild = outerNodes[0]!;
+    outerFragment.lastChild = outerNodes[1]!;
 
-    innerFragment.firstChild = innerNodes[0];
-    innerFragment.lastChild = innerNodes[1];
+    innerFragment.firstChild = innerNodes[0]!;
+    innerFragment.lastChild = innerNodes[1]!;
 
     expect(countFragmentNodes(outerFragment)).toBe(4);
     expect(countFragmentNodes(innerFragment)).toBe(2);

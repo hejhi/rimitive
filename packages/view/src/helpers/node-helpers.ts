@@ -132,7 +132,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
         }
 
         if (current === node.lastChild) break;
-        current = (next ?? undefined) as typeof current;
+        current = next as typeof current;
       }
     }
   }

@@ -143,8 +143,8 @@ export const Match = create(
               parent: null,
               prev: null,
               next: null,
-              firstChild: undefined,
-              lastChild: undefined,
+              firstChild: null,
+              lastChild: null,
               attach(parent, nextSibling, api) {
                 let currentNode:
                   | ElementRef<TBaseElement>
@@ -170,8 +170,8 @@ export const Match = create(
                   const refSpec = matcher(value);
 
                   if (refSpec === null) {
-                    fragment.firstChild = undefined;
-                    fragment.lastChild = undefined;
+                    fragment.firstChild = null;
+                    fragment.lastChild = null;
                     currentNode = undefined;
                     return;
                   }
@@ -225,7 +225,7 @@ export const Match = create(
                   });
                   isolate(); // Dispose immediately after it runs
                 });
-              }
+              },
             };
             return fragment;
           });

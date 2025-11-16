@@ -104,7 +104,7 @@ function renderFragmentToString(
     parts.push(renderToString(current as NodeRef<unknown>, wrapElement, wrapFragment));
 
     if (current === fragmentRef.lastChild) break;
-    current = current.next ?? undefined;
+    current = current.next;
   }
 
   const html = parts.join('');
