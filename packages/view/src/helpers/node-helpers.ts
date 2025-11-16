@@ -5,14 +5,14 @@
  * used across map, match, and other reactive primitives.
  */
 
-import type { NodeRef, ElementRef, LinkedNode, FragmentRef } from '../types';
+import type { NodeRef, ElementRef, LinkedNode } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 import type { CreateScopes } from './scope';
 import { linkBefore, unlink } from './linked-list';
 import { createFragmentHelpers } from './fragment';
 
-const { initializeFragment } = createFragmentHelpers();
+const { attachFragment } = createFragmentHelpers();
 
 export interface NodeHelperOpts<TConfig extends RendererConfig> {
   renderer: Renderer<TConfig>;
@@ -83,10 +83,10 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       if (nextSib && nextSib.status !== STATUS_FRAGMENT) {
         nextLinked = nextSib as LinkedNode<TElement>;
       }
-      linkBefore(node as LinkedNode<TElement>, nextLinked);
+      linkBefore(node, nextLinked);
 
-      // Initialize fragment (sets up children)
-      initializeFragment(node as FragmentRef<TElement>, api);
+      // Attach fragment (sets up children)
+      attachFragment(node, api);
     }
   }
 
@@ -127,9 +127,10 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
         // Dispose and remove from DOM
         if (current.status === STATUS_ELEMENT) {
-          const scope = getElementScope(current.element);
+          const elementRef = current as ElementRef<TElement>;
+          const scope = getElementScope(elementRef.element);
           if (scope) disposeScope(scope);
-          renderer.removeChild(parentElement, current.element);
+          renderer.removeChild(parentElement, elementRef.element);
         } else if (current.status === STATUS_COMMENT) {
           renderer.removeChild(parentElement, current.element as TConfig['comment']);
         }

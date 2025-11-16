@@ -35,7 +35,7 @@ describe('match() - reactive element switching', () => {
   describe('Untracked lifecycle callbacks', () => {
     it('should not track outer reactive state in lifecycle callbacks', () => {
       const { el, match, signal, renderer } = setup();
-      const { initializeFragment } = createFragmentHelpers();
+      const { attachFragment } = createFragmentHelpers();
 
       const showDiv = signal(true);
       const outerState = signal('outer-value');
@@ -69,10 +69,10 @@ describe('match() - reactive element switching', () => {
       };
       const fragRef = spec.create() as FragmentRef<MockElement>;
 
-      // Set parent and initialize fragment
+      // Set parent and attach fragment
       fragRef.parent = parentRef;
       fragRef.next = null;
-      initializeFragment(fragRef);
+      attachFragment(fragRef);
 
       expect(matcherCallCount).toBe(1);  // Initial matcher call
       expect(lifecycleCallCount).toBe(1);  // Initial lifecycle

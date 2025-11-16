@@ -40,8 +40,8 @@ export interface ElementRef<TElement> extends BaseRef {
   status: typeof STATUS_ELEMENT;
   element: TElement;
   parent: ElementRef<unknown> | null;  // Parent element in tree
-  prev: LinkedNode<TElement> | null;   // Previous sibling in doubly-linked list
-  next: LinkedNode<TElement> | null;   // Next sibling in doubly-linked list
+  prev: LinkedNode<unknown> | null;    // Previous sibling in doubly-linked list
+  next: LinkedNode<unknown> | null;    // Next sibling in doubly-linked list
 }
 
 /**
@@ -59,8 +59,11 @@ export interface FragmentRef<TElement> extends BaseRef {
   next: NodeRef<unknown> | null;
 
   // Own child list (nodes within this fragment)
-  firstChild: LinkedNode<TElement> | undefined;
-  lastChild: LinkedNode<TElement> | undefined;
+  firstChild: LinkedNode<unknown> | undefined;
+  lastChild: LinkedNode<unknown> | undefined;
+
+  // Attach function - called when fragment is attached to the tree
+  attach?: (fragment: FragmentRef<TElement>, api?: unknown) => void | (() => void);
 }
 
 /**
