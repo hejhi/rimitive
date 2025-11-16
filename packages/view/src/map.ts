@@ -129,7 +129,9 @@ export const Map = create(
               firstChild: null,
               lastChild: null,
               attach(parent, nextSibling) {
-                const parentElement = parent.element;
+                // Don't capture parent.element - always dereference it at call time
+                // This allows the parent element to be updated (e.g., after unwrapping fragment containers)
+                // and have the reconciler pick up the new value
 
                 // nextSibling from fragment can be NodeRef (element/comment/fragment), but map only uses elements
                 // Filter to element refs only for reconciliation
@@ -144,7 +146,7 @@ export const Map = create(
                   TBaseElement,
                   TRecNode
                 >({
-                  parentElement,
+                  parentElement: parent.element,
                   parentRef: parent,
                   nextSibling: nextElementSibling,
 
@@ -160,22 +162,32 @@ export const Map = create(
                       // Pass api for SealedSpec components created with create()
                       elRef = render(itemSignal).create(api) as TRecNode;
 
-                      // Insert into DOM
+                      // Insert into DOM - use parent.element directly
                       insertNodeBefore(
                         api,
-                        parentElement,
+                        parent.element,
                         elRef,
                         undefined,
                         nextSibling
                       );
 
-                      // Update fragment boundaries (items are appended at end before nextSibling)
+                      // Update fragment boundaries and link items
+                      // insertNodeBefore may not link items when there's no boundary nextSibling,
+                      // so we manually maintain the doubly-linked list within the fragment
                       if (!fragment.firstChild) {
                         // First item in fragment
                         fragment.firstChild = elRef;
                         fragment.lastChild = elRef;
+                        elRef.prev = null;
+                        elRef.next = null;
                       } else {
-                        // Appending at end - update lastChild
+                        // Appending at end - link to previous lastChild
+                        const prevLast = fragment.lastChild;
+                        if (prevLast) {
+                          prevLast.next = elRef;
+                          elRef.prev = prevLast;
+                        }
+                        elRef.next = null;
                         fragment.lastChild = elRef;
                       }
 
@@ -198,7 +210,7 @@ export const Map = create(
                     if (node.status !== STATUS_ELEMENT) return;
                     insertNodeBefore(
                       api,
-                      parentElement,
+                      parent.element,
                       node,
                       nextSiblingNode,
                       nextSibling
@@ -212,14 +224,14 @@ export const Map = create(
                     // Update fragment boundaries if removing a boundary node
                     removeFromFragment(fragment, node);
 
-                    removeNode(parentElement, node);
+                    removeNode(parent.element, node);
                   },
                 });
 
                 // Execute lifecycle callbacks within parent's scope
                 const lifecycleCleanups: (() => void)[] = [];
                 for (const callback of lifecycleCallbacks) {
-                  const cleanup = callback(parentElement);
+                  const cleanup = callback(parent.element);
                   if (cleanup) lifecycleCleanups.push(cleanup);
                 }
 

@@ -55,7 +55,7 @@ export function renderToString(
   }
 
   if (nodeRef.status === STATUS_ELEMENT) {
-    return renderElementToString(nodeRef, wrapElement);
+    return renderElementToString(nodeRef, wrapElement, wrapFragment);
   }
 
   if (nodeRef.status === STATUS_FRAGMENT) {
@@ -67,26 +67,81 @@ export function renderToString(
 }
 
 /**
+ * Check if element or any descendant has fragment children (recursive check)
+ */
+function hasFragmentDescendants(elementRef: ElementRef<unknown>): boolean {
+  if (!elementRef.firstChild) return false;
+
+  let current: typeof elementRef.firstChild | null = elementRef.firstChild;
+
+  while (current) {
+    // Direct fragment child found
+    if (current.status === STATUS_FRAGMENT) return true;
+
+    // Check descendants recursively for elements
+    if (current.status === STATUS_ELEMENT && hasFragmentDescendants(current as ElementRef<unknown>)) {
+      return true;
+    }
+
+    if (current === elementRef.lastChild) break;
+    current = current.next as typeof elementRef.firstChild | null;
+  }
+
+  return false;
+}
+
+/**
  * Render an element ref to HTML string
+ *
+ * Only walks the NodeRef tree if there are fragment descendants.
+ * Otherwise uses outerHTML to preserve all DOM content including text nodes.
  */
 function renderElementToString(
   elementRef: ElementRef<unknown>,
-  wrapElement?: ElementWrapper
+  wrapElement?: ElementWrapper,
+  wrapFragment?: FragmentWrapper
 ): string {
   const element = elementRef.element as { outerHTML?: string };
 
-  if (typeof element.outerHTML === 'string') {
-    const html = element.outerHTML;
-
-    // Apply custom wrapper if provided
-    if (wrapElement) {
-      return wrapElement(html, elementRef);
-    }
-
-    return html;
+  if (typeof element.outerHTML !== 'string') {
+    throw new Error('Element does not have outerHTML property. Are you using linkedom renderer?');
   }
 
-  throw new Error('Element does not have outerHTML property. Are you using linkedom renderer?');
+  // If no fragment descendants anywhere, use outerHTML (fastest, preserves all DOM content)
+  if (!hasFragmentDescendants(elementRef)) {
+    const html = element.outerHTML;
+    return wrapElement ? wrapElement(html, elementRef) : html;
+  }
+
+  // Has fragment descendants - need to walk tree to wrap them properly
+  const childParts: string[] = [];
+  let current: typeof elementRef.firstChild | null = elementRef.firstChild;
+
+  while (current) {
+    if (current.status === STATUS_FRAGMENT) {
+      childParts.push(renderFragmentToString(current as FragmentRef<unknown>, wrapElement, wrapFragment));
+    } else {
+      childParts.push(renderToString(current, wrapElement, wrapFragment));
+    }
+
+    if (current === elementRef.lastChild) break;
+    current = current.next as typeof elementRef.firstChild | null;
+  }
+
+  // Rebuild element HTML with processed children
+  const outerHTML = element.outerHTML;
+  const openTagEnd = outerHTML.indexOf('>');
+
+  if (openTagEnd === -1 || outerHTML.endsWith('/>')) {
+    // Self-closing or malformed
+    return wrapElement ? wrapElement(outerHTML, elementRef) : outerHTML;
+  }
+
+  const openingTag = outerHTML.substring(0, openTagEnd + 1);
+  const closingTag = outerHTML.substring(outerHTML.lastIndexOf('</'));
+  const html = openingTag + childParts.join('') + closingTag;
+
+  return wrapElement ? wrapElement(html, elementRef) : html;
 }
 
 /**

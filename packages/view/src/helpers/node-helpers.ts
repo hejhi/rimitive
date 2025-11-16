@@ -68,6 +68,8 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
         parent: null,
         prev: null,
         next: null,
+        firstChild: null,
+        lastChild: null,
       };
 
       node.parent = parentRef;

@@ -19,7 +19,8 @@ import { createHydratingDOMRenderer } from '@lattice/view/renderers/hydrating-do
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createHydratingApi } from '../hydrating-api';
 import type { EffectAPI } from '../hydrating-api';
-import type { SealedSpec } from '@lattice/view/types';
+import type { SealedSpec, ElementRef } from '@lattice/view/types';
+import { STATUS_ELEMENT } from '@lattice/view/types';
 
 /**
  * Base island type for registration - accepts any object with island metadata
@@ -90,29 +91,15 @@ export function createDOMIslandHydrator<
           return;
         }
 
-        // Get island container and element:
-        // - For element islands: script's previous sibling is the island root
-        // - For fragment islands: script's parent is the container div
+        // Get potential island element (previous sibling, skipping comments)
         const islandElement = script.previousElementSibling as HTMLElement | null;
-        const isFragment = !islandElement;
 
-        // For element islands, use the island element itself as the container
-        // For fragment islands, use the existing wrapper div
-        let container: HTMLElement;
-
-        if (isFragment) {
-          container = script.parentElement as HTMLElement;
-          if (!container) {
-            console.warn(`Island container for "${id}" not found`);
-            return;
-          }
-        } else {
-          if (!islandElement) {
-            console.warn(`Island element for "${id}" not found`);
-            return;
-          }
-          // Use the island element itself as the container
-          container = islandElement;
+        // We'll determine if it's a fragment after creating the component
+        // For now, use parent as potential container for fragments
+        const potentialContainer = script.parentElement as HTMLElement;
+        if (!potentialContainer) {
+          console.warn(`Island container for "${id}" not found`);
+          return;
         }
 
         // Look up island entry in registry
@@ -126,27 +113,78 @@ export function createDOMIslandHydrator<
         const Component = entry.component;
         const strategy = entry.strategy;
 
+        // Variables that need to be accessible in catch block
+        let isFragment = false;
+        let container: HTMLElement = potentialContainer;
+        let fragmentParentRef: ElementRef<unknown> | null = null;
+
         try {
-          // Create hydrating renderer that delegates to hydrating mode initially,
-          // then switches to fallback mode for reactive updates
+          // Create component first to determine if it's a fragment
+          // Use a temporary renderer just for component creation
+          const tempRenderer = createHydratingRenderer(
+            createHydratingDOMRenderer(islandElement || potentialContainer),
+            createDOMRenderer()
+          );
+
+          // Create API with temporary renderer just to get the nodeRef type
+          const tempApi = createAPI(tempRenderer, signals);
+
+          // Run component to get nodeRef and determine type
+          const nodeRef = Component(props).create(tempApi);
+
+          // Determine if fragment based on NodeRef, not DOM structure
+          // STATUS_FRAGMENT = 2
+          isFragment = nodeRef.status === 2;
+
+          // Now create the actual renderer with the correct container
+          container = isFragment ? potentialContainer : (islandElement || potentialContainer);
+
           const renderer = createHydratingRenderer(
             createHydratingDOMRenderer(container),
             createDOMRenderer()
           );
 
-          // Create API with hydrating renderer
+          // Create API with actual renderer
           const { hydratingApi, activate } = createHydratingApi(createAPI(renderer, signals));
 
-          // Run component with hydrating API
-          // Effects are queued, not executed yet
-          Component(props).create(hydratingApi);
+          // Re-create component with the actual hydrating API
+          const actualNodeRef = Component(props).create(hydratingApi);
+
+          // For fragment islands, call attach() and activate while in hydrating mode
+          // attach() is where map() creates the reconciler and binds event handlers
+          if (isFragment && 'attach' in actualNodeRef && typeof actualNodeRef.attach === 'function') {
+            // CRITICAL: Enter the container's children first
+            // The hydrating renderer starts at position [] (the container itself)
+            // We need to advance to position [0], [1], etc. (inside the container)
+            // Calling createElement('div') matches the container and enters its children
+            renderer.createElement('div');
+
+            // Create a parent ref for the wrapper div (needed for hydration to work)
+            // Save it so we can update it later before unwrapping
+            fragmentParentRef = {
+              status: STATUS_ELEMENT,
+              element: container,
+              parent: null,
+              prev: null,
+              next: null,
+              firstChild: null,
+              lastChild: null,
+            };
+
+            actualNodeRef.attach(fragmentParentRef, null, hydratingApi);
+
+            // Activate effects WHILE STILL IN HYDRATING MODE
+            // This ensures children are hydrated, not created fresh
+            activate();
+          }
 
           // Success! Hydration complete
           // Switch renderer to fallback mode for future reactive updates
           renderer.switchToFallback();
 
-          // Activate queued effects - they'll use regular mode now
-          activate();
+          // Activate remaining queued effects (for element islands)
+          // Fragment islands already activated above
+          if (!isFragment) activate();
 
           // Remove script tag marker
           script.remove();
@@ -155,6 +193,20 @@ export function createDOMIslandHydrator<
           // - For fragment islands: unwrap container div, leaving hydrated content in place
           // - For element islands: no cleanup needed (island already in correct position)
           if (isFragment) {
+            // Get the actual parent element before unwrapping
+            const actualParent = container.parentElement;
+            if (!actualParent) {
+              throw new Error(`Fragment island "${id}" container has no parent element`);
+            }
+
+            // Update the parent element reference BEFORE unwrapping
+            // The reconciler in map() now uses parent.element directly (not a captured copy)
+            // so updating this reference will fix all future DOM operations
+            if (fragmentParentRef) {
+              fragmentParentRef.element = actualParent;
+            }
+
+            // Now unwrap the container - the parent reference is already updated
             container.replaceWith(...Array.from(container.childNodes));
           }
 

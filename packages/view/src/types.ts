@@ -35,6 +35,7 @@ export type LinkedNode<TElement> = ElementRef<TElement> | FragmentRef<TElement> 
  * Element ref node - wraps created elements for tree structure
  * Forms doubly-linked list with prev/next pointers for efficient sibling traversal
  * Links to parent for tree traversal
+ * Tracks child NodeRefs for tree walking (needed for SSR fragment detection)
  */
 export interface ElementRef<TElement> extends BaseRef {
   status: typeof STATUS_ELEMENT;
@@ -42,6 +43,10 @@ export interface ElementRef<TElement> extends BaseRef {
   parent: ElementRef<unknown> | null;  // Parent element in tree
   prev: LinkedNode<unknown> | null;    // Previous sibling in doubly-linked list
   next: LinkedNode<unknown> | null;    // Next sibling in doubly-linked list
+
+  // Child list (nodes within this element) - using LinkedNode for fragments
+  firstChild: LinkedNode<unknown> | null;
+  lastChild: LinkedNode<unknown> | null;
 }
 
 /**

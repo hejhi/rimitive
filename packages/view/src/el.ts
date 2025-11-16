@@ -175,6 +175,8 @@ export const El = create(
               parent: null,
               prev: null,
               next: null,
+              firstChild: null,
+              lastChild: null,
             };
 
             createElementScope(element, () => {

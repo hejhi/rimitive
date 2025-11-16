@@ -21,6 +21,8 @@ function createElementRef<T>(element: T): ElementRef<T> {
     parent: null,
     prev: null,
     next: null,
+    firstChild: null,
+    lastChild: null,
   };
 }
 

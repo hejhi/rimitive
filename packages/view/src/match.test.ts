@@ -63,7 +63,9 @@ describe('match() - reactive element switching', () => {
         element: parent,
         parent: null,
         prev: null,
-        next: null
+        next: null,
+        firstChild: null,
+        lastChild: null,
       };
       const fragRef = spec.create() as FragmentRef<MockElement>;
 
