@@ -13,6 +13,7 @@ import type {
   RouteFactory,
   ComputedFunction,
   RouteMatch,
+  RouteParams,
 } from './types';
 import { STATUS_ROUTE_SPEC as STATUS_ROUTE_SPEC_CONST } from './types';
 
@@ -163,40 +164,55 @@ export const createRouteFactory = create(
             return null;
           });
 
-          // Create the base RefSpec from match(...)
+          // Cache component per match session - created once per continuous match period
+          // Component is recreated when route transitions from unmatched -> matched
+          // but persists when route stays matched (e.g., when navigating between child routes)
+          let cachedComponent: RefSpec<TConfig['baseElement']> | null = null;
+          let cachedParams: ComputedFunction<RouteParams> | null = null;
+          let cachedOutlet: (() => RefSpec<TConfig['baseElement']> | null) | null = null;
+
+          // Use match() to control component lifecycle and visibility
           const baseRefSpec = match(shouldRender)((pathMatch) => {
             if (pathMatch === null) {
+              // Route unmatched - clear cache to allow recreation on next match
+              cachedComponent = null;
+              cachedParams = null;
+              cachedOutlet = null;
               return null;
             }
 
-            // Create params signal from the matched path
-            const params = computed(() => {
-              const match = shouldRender();
-              return match?.params ?? {};
-            });
-
-            // Create outlet function that renders the matched child
-            const outlet = (): RefSpec<TConfig['baseElement']> | null => {
-              // If there are no children, outlet returns null
-              if (processedChildren.length === 0) {
-                return null;
-              }
-
-              // Wrap children in a match() to make them reactive
-              // This allows the outlet to update when the path changes
-              return match(shouldRender)(() => {
-                // Find the first child that's currently matched
-                // Since processedChildren are already wrapped in match(),
-                // they will handle their own visibility
-                // We just need to render all of them and let them decide
-                return el('div' as never)(...processedChildren) as RefSpec<TConfig['baseElement']>;
+            // Route matched - create component if not already cached
+            if (cachedComponent === null) {
+              // Create params signal from the matched path (reactive, updates automatically)
+              cachedParams = computed(() => {
+                const match = shouldRender();
+                return match?.params ?? {};
               });
-            };
 
-            // Render component with outlet function and navigate
-            const componentResult = component({ el, params, outlet, navigate });
+              // Create outlet function that renders the matched child
+              cachedOutlet = (): RefSpec<TConfig['baseElement']> | null => {
+                // If there are no children, outlet returns null
+                if (processedChildren.length === 0) {
+                  return null;
+                }
 
-            return componentResult;
+                // Wrap children in a match() to make them reactive
+                // This allows the outlet to update when the path changes
+                return match(shouldRender)(() => {
+                  // Find the first child that's currently matched
+                  // Since processedChildren are already wrapped in match(),
+                  // they will handle their own visibility
+                  // We just need to render all of them and let them decide
+                  return el('div' as never)(...processedChildren) as RefSpec<TConfig['baseElement']>;
+                });
+              };
+
+              // Create component - runs once per match session
+              // Component functions should only run once per component instance
+              cachedComponent = component({ el, params: cachedParams, outlet: cachedOutlet, navigate });
+            }
+
+            return cachedComponent;
           });
 
           // Create true wrapper that delegates to baseRefSpec via closure
