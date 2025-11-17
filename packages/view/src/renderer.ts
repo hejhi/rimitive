@@ -126,7 +126,7 @@ export interface Renderer<TConfig extends RendererConfig> {
    * Optional: Decorate an element with SSR markers (e.g., island script tags)
    *
    * Called after an element has been created and attached to the DOM.
-   * Used by SSR renderers (linkedom-island) to insert hydration markers
+   * Used by SSR renderers to insert hydration markers
    * for island components. Not needed for client-side rendering.
    *
    * @param elementRef - The element reference (unknown type to avoid circular deps)

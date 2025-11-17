@@ -3,9 +3,6 @@
  *
  * Marks components as islands - interactive regions that ship JavaScript to the client.
  * Static content remains as HTML without hydration overhead.
- *
- * This is the Node.js version that includes SSR context integration.
- * For browser builds, island.browser.ts is used instead.
  */
 
 import type { SealedSpec, NodeRef } from '@lattice/view/types';
@@ -48,7 +45,7 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
  * const html = renderToString(mount(Counter({ initialCount: 5 })));
  *
  * // Client: hydrates from existing HTML
- * const hydrator = createDOMIslandHydrator();
+ * const hydrator = createDOMHydrator();
  * hydrator.hydrate({ counter: Counter });
  * ```
  */

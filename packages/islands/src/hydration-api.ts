@@ -20,7 +20,7 @@ export interface EffectAPI {
 /**
  * Result of creating hydrating API wrapper
  */
-export interface HydratingAPIResult<T extends EffectAPI> {
+export interface HydrationAPIResult<T extends EffectAPI> {
   /**
    * API with effects intercepted - use this during hydration
    */
@@ -47,7 +47,7 @@ export interface HydratingAPIResult<T extends EffectAPI> {
  * const signals = createSignalsApi();
  * const views = createViewHelpers(hydratingRenderer, signals);
  *
- * const { hydratingApi, activate } = createHydratingApi({ ...signals, ...views });
+ * const { hydratingApi, activate } = createHydrationApi({ ...signals, ...views });
  *
  * // Use hydratingApi during hydration - effects are queued
  * const nodeRef = Counter(props).create(hydratingApi);
@@ -56,9 +56,9 @@ export interface HydratingAPIResult<T extends EffectAPI> {
  * activate();
  * ```
  */
-export function createHydratingApi<T extends EffectAPI>(
+export function createHydrationApi<T extends EffectAPI>(
   baseApi: T
-): HydratingAPIResult<T> {
+): HydrationAPIResult<T> {
   // Store effect functions and their types
   const pendingEffects: Array<{
     type: 'effect' | 'scopedEffect';

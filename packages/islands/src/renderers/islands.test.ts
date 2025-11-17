@@ -7,15 +7,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createHydratingRenderer } from './switchable-dom';
-import { createHydratingDOMRenderer } from './hydrating-dom';
+import { createIslandsRenderer } from './islands';
+import { createDOMHydrationRenderer } from './dom-hydration';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 
 describe('createHydratingRenderer', () => {
   it('should expose switchToFallback method', () => {
     const container = document.createElement('div');
-    const renderer = createHydratingRenderer(
-      createHydratingDOMRenderer(container),
+    const renderer = createIslandsRenderer(
+      createDOMHydrationRenderer(container),
       createDOMRenderer()
     );
 
@@ -24,8 +24,8 @@ describe('createHydratingRenderer', () => {
 
   it('should create elements after switching to fallback', () => {
     const container = document.createElement('div');
-    const renderer = createHydratingRenderer(
-      createHydratingDOMRenderer(container),
+    const renderer = createIslandsRenderer(
+      createDOMHydrationRenderer(container),
       createDOMRenderer()
     );
 
@@ -40,8 +40,8 @@ describe('createHydratingRenderer', () => {
 
   it('should create text nodes after switching to fallback', () => {
     const container = document.createElement('div');
-    const renderer = createHydratingRenderer(
-      createHydratingDOMRenderer(container),
+    const renderer = createIslandsRenderer(
+      createDOMHydrationRenderer(container),
       createDOMRenderer()
     );
 
@@ -56,8 +56,8 @@ describe('createHydratingRenderer', () => {
 
   it('should maintain the same renderer API across mode switch', () => {
     const container = document.createElement('div');
-    const renderer = createHydratingRenderer(
-      createHydratingDOMRenderer(container),
+    const renderer = createIslandsRenderer(
+      createDOMHydrationRenderer(container),
       createDOMRenderer()
     );
 
@@ -77,8 +77,8 @@ describe('createHydratingRenderer', () => {
 
   it('should allow multiple switches to fallback (idempotent)', () => {
     const container = document.createElement('div');
-    const renderer = createHydratingRenderer(
-      createHydratingDOMRenderer(container),
+    const renderer = createIslandsRenderer(
+      createDOMHydrationRenderer(container),
       createDOMRenderer()
     );
 

@@ -20,7 +20,7 @@ import {
   advanceToSibling,
   enterFragmentRange,
   getCurrentPath,
-} from './hydrating-position';
+} from '../helpers/hydrate-dom';
 
 /**
  * Hydration mismatch error
@@ -122,7 +122,7 @@ function scanFragmentRange(node: Node): number | null {
 // Renderer Implementation
 // ============================================================================
 
-export function createHydratingDOMRenderer(
+export function createDOMHydrationRenderer(
   containerEl: HTMLElement
 ): Renderer<DOMRendererConfig> {
   // Position tracks where we are in the tree

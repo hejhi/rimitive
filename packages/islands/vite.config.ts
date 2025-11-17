@@ -66,12 +66,21 @@ export default defineConfig({
         'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
         island: resolve(__dirname, 'src/island.ts'),
         'island.browser': resolve(__dirname, 'src/island.browser.ts'),
-        'hydrating-api': resolve(__dirname, 'src/hydrating-api.ts'),
+        'hydration-api': resolve(__dirname, 'src/hydration-api.ts'),
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
-        'helpers/renderToString': resolve(__dirname, 'src/helpers/renderToString.ts'),
-        'renderers/linkedom-island': resolve(__dirname, 'src/renderers/linkedom-island.ts'),
-        'renderers/hydrating-dom': resolve(__dirname, 'src/renderers/hydrating-dom.ts'),
-        'renderers/switchable-dom': resolve(__dirname, 'src/renderers/switchable-dom.ts'),
+        'helpers/renderToString': resolve(
+          __dirname,
+          'src/helpers/renderToString.ts'
+        ),
+        'renderers/dom-server': resolve(
+          __dirname,
+          'src/renderers/dom-server.ts'
+        ),
+        'renderers/dom-hydration': resolve(
+          __dirname,
+          'src/renderers/dom-hydration.ts'
+        ),
+        'renderers/islands': resolve(__dirname, 'src/renderers/islands.ts'),
         'presets/island-ssr': resolve(__dirname, 'src/presets/island-ssr.ts'),
       },
       formats: ['es'],

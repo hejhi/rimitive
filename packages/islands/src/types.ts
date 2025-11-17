@@ -6,7 +6,7 @@
  */
 
 import type { SealedSpec } from '@lattice/view/types';
-import { HydrationMismatch } from './renderers/hydrating-dom';
+import { HydrationMismatch } from './renderers/dom-hydration';
 
 // Re-export HydrationMismatch for convenience
 export { HydrationMismatch };

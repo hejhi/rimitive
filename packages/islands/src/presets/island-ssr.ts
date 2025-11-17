@@ -10,7 +10,10 @@ import { createApi } from '@lattice/lattice';
 import { defaultExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import { create as createComponent } from '@lattice/view/component';
-import { createLinkedomIslandRenderer, type LinkedomRendererConfig } from '../renderers/linkedom-island';
+import {
+  createDOMServerRenderer,
+  type DOMServerRendererConfig,
+} from '../renderers/dom-server';
 import type { SealedSpec } from '@lattice/view/types';
 import type { ComponentFactory } from '@lattice/view/presets/core';
 
@@ -46,9 +49,9 @@ export const createIslandSSRApi = (signals: {
   effect: (fn: () => void | (() => void)) => () => void;
   batch: <T>(fn: () => T) => T;
 }) => {
-  const renderer = createLinkedomIslandRenderer();
+  const renderer = createDOMServerRenderer();
   const viewHelpers = createSpec(renderer, signals);
-  const views = createApi(defaultExtensions<LinkedomRendererConfig>(), viewHelpers);
+  const views = createApi(defaultExtensions<DOMServerRendererConfig>(), viewHelpers);
 
   const api = {
     ...signals,

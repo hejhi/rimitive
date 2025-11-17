@@ -14,11 +14,11 @@
 
 import type { IslandMetaData, IslandRegistryEntry } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
-import { createHydratingRenderer } from '../renderers/switchable-dom';
-import { createHydratingDOMRenderer } from '../renderers/hydrating-dom';
+import { createIslandsRenderer } from '../renderers/islands';
+import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
-import { createHydratingApi } from '../hydrating-api';
-import type { EffectAPI } from '../hydrating-api';
+import { createHydrationApi } from '../hydration-api';
+import type { EffectAPI } from '../hydration-api';
 import type { SealedSpec, ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT } from '@lattice/view/types';
 
@@ -53,10 +53,11 @@ export type MountFn = (spec: SealedSpec<unknown>) => { element: unknown };
  * @param mount - Mount function for fallback client-side rendering
  * @returns Hydrator instance
  */
-export function createDOMIslandHydrator<
-  TSignals extends EffectAPI
->(
-  createAPI: (renderer: ReturnType<typeof createHydratingRenderer>, signals: TSignals) => EffectAPI & Record<string, unknown>,
+export function createDOMHydrator<TSignals extends EffectAPI>(
+  createAPI: (
+    renderer: ReturnType<typeof createIslandsRenderer>,
+    signals: TSignals
+  ) => EffectAPI & Record<string, unknown>,
   signals: TSignals,
   mount: MountFn
 ): IslandHydrator {
@@ -66,33 +67,38 @@ export function createDOMIslandHydrator<
       // Wrapper only exists until this point - original component flows through system
       const entries: Record<string, IslandRegistryEntry> = {};
       for (const wrapper of islands) {
-        const meta = (wrapper as { [ISLAND_META]?: IslandMetaData })[ISLAND_META];
+        const meta = (wrapper as { [ISLAND_META]?: IslandMetaData })[
+          ISLAND_META
+        ];
         if (!meta) {
           console.warn('Island missing metadata - skipping:', wrapper);
           continue;
         }
         entries[meta.id] = {
-          component: meta.component,  // Unwrap: use original component, not wrapper
+          component: meta.component, // Unwrap: use original component, not wrapper
           id: meta.id,
           strategy: meta.strategy,
         };
       }
 
       // Set up global __hydrate function that inline scripts will call
-      (window as { __hydrate?: (id: string, type: string, props: unknown) => void }).__hydrate = (
-        id: string,
-        type: string,
-        props: unknown
-      ) => {
+      (
+        window as {
+          __hydrate?: (id: string, type: string, props: unknown) => void;
+        }
+      ).__hydrate = (id: string, type: string, props: unknown) => {
         // Find island by script tag marker
-        const script = document.querySelector(`script[type="application/json"][data-island="${id}"]`);
+        const script = document.querySelector(
+          `script[type="application/json"][data-island="${id}"]`
+        );
         if (!script) {
           console.warn(`Island script tag [data-island="${id}"] not found`);
           return;
         }
 
         // Get potential island element (previous sibling, skipping comments)
-        const islandElement = script.previousElementSibling as HTMLElement | null;
+        const islandElement =
+          script.previousElementSibling as HTMLElement | null;
 
         // We'll determine if it's a fragment after creating the component
         // For now, use parent as potential container for fragments
@@ -121,8 +127,8 @@ export function createDOMIslandHydrator<
         try {
           // Create component first to determine if it's a fragment
           // Use a temporary renderer just for component creation
-          const tempRenderer = createHydratingRenderer(
-            createHydratingDOMRenderer(islandElement || potentialContainer),
+          const tempRenderer = createIslandsRenderer(
+            createDOMHydrationRenderer(islandElement || potentialContainer),
             createDOMRenderer()
           );
 
@@ -137,22 +143,30 @@ export function createDOMIslandHydrator<
           isFragment = nodeRef.status === 2;
 
           // Now create the actual renderer with the correct container
-          container = isFragment ? potentialContainer : (islandElement || potentialContainer);
+          container = isFragment
+            ? potentialContainer
+            : islandElement || potentialContainer;
 
-          const renderer = createHydratingRenderer(
-            createHydratingDOMRenderer(container),
+          const renderer = createIslandsRenderer(
+            createDOMHydrationRenderer(container),
             createDOMRenderer()
           );
 
           // Create API with actual renderer
-          const { hydratingApi, activate } = createHydratingApi(createAPI(renderer, signals));
+          const { hydratingApi, activate } = createHydrationApi(
+            createAPI(renderer, signals)
+          );
 
           // Re-create component with the actual hydrating API
           const actualNodeRef = Component(props).create(hydratingApi);
 
           // For fragment islands, call attach() and activate while in hydrating mode
           // attach() is where map() creates the reconciler and binds event handlers
-          if (isFragment && 'attach' in actualNodeRef && typeof actualNodeRef.attach === 'function') {
+          if (
+            isFragment &&
+            'attach' in actualNodeRef &&
+            typeof actualNodeRef.attach === 'function'
+          ) {
             // CRITICAL: Enter the container's children first
             // The hydrating renderer starts at position [] (the container itself)
             // We need to advance to position [0], [1], etc. (inside the container)
@@ -196,7 +210,9 @@ export function createDOMIslandHydrator<
             // Get the actual parent element before unwrapping
             const actualParent = container.parentElement;
             if (!actualParent) {
-              throw new Error(`Fragment island "${id}" container has no parent element`);
+              throw new Error(
+                `Fragment island "${id}" container has no parent element`
+              );
             }
 
             // Update the parent element reference BEFORE unwrapping
@@ -209,13 +225,18 @@ export function createDOMIslandHydrator<
             // Now unwrap the container - the parent reference is already updated
             container.replaceWith(...Array.from(container.childNodes));
           }
-
         } catch (error) {
           // Hydration failed - check if it's a mismatch
           if (error instanceof HydrationMismatch) {
             // Call strategy handler if provided
             if (strategy?.onMismatch) {
-              const result = strategy.onMismatch(error, container, props, Component, mount);
+              const result = strategy.onMismatch(
+                error,
+                container,
+                props,
+                Component,
+                mount
+              );
               // If handler returns false, skip default fallback
               if (result === false) return;
             }
@@ -233,25 +254,35 @@ export function createDOMIslandHydrator<
             if (isFragment) {
               container.innerHTML = '';
               const instance = mount(Component(props));
-              if (instance.element) container.appendChild(instance.element as Node);
+              if (instance.element)
+                container.appendChild(instance.element as Node);
             } else {
               // Remove island element, script tag, and mount fresh
               const parent = islandElement?.parentNode;
               if (islandElement) islandElement.remove();
               script.remove();
               const instance = mount(Component(props));
-              if (instance.element && parent) parent.appendChild(instance.element as Node);
+              if (instance.element && parent)
+                parent.appendChild(instance.element as Node);
             }
           } else throw error; // Not a hydration mismatch - re-throw
         }
       };
 
       // Process islands queued by inline scripts
-      const queuedIslands = (window as unknown as { __islands?: Array<{ i: string; t: string; p: unknown }> }).__islands;
+      const queuedIslands = (
+        window as unknown as {
+          __islands?: Array<{ i: string; t: string; p: unknown }>;
+        }
+      ).__islands;
 
       if (!queuedIslands) return;
       queuedIslands.forEach(({ i, t, p }) => {
-        const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
+        const hydrateFn = (
+          window as unknown as {
+            __hydrate: (id: string, type: string, props: unknown) => void;
+          }
+        ).__hydrate;
         hydrateFn(i, t, p);
       });
     },

@@ -9,12 +9,12 @@
  */
 
 import type { Renderer } from '@lattice/view/types';
-import type { DOMRendererConfig } from './hydrating-dom';
+import type { DOMRendererConfig } from './dom-hydration';
 
 /**
  * Create a hydrating renderer that switches to a fallback after hydration is complete
  */
-export function createHydratingRenderer(
+export function createIslandsRenderer(
   hydrateRenderer: Renderer<DOMRendererConfig>,
   fallbackRenderer: Renderer<DOMRendererConfig>
 ): Renderer<DOMRendererConfig> & { switchToFallback: () => void } {

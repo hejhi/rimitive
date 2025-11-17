@@ -21,9 +21,9 @@
  * const html = runWithSSRContext(ctx, () => renderToString(mount(Counter({ initialCount: 5 }))));
  *
  * // Client-side
- * import { createDOMIslandHydrator } from '@lattice/islands';
+ * import { createDOMHydrator } from '@lattice/islands';
  *
- * const hydrator = createDOMIslandHydrator();
+ * const hydrator = createDOMHydrator();
  * hydrator.hydrate({ counter: Counter });
  * ```
  */
@@ -51,18 +51,14 @@ export {
 // Island wrapper
 export { island } from './island';
 
-// Hydrating API wrapper
-export { createHydratingApi } from './hydrating-api';
-export type { EffectAPI, HydratingAPIResult } from './hydrating-api';
-
 // Client-side hydrator
-export { createDOMIslandHydrator } from './hydrators/dom';
+export { createDOMHydrator } from './hydrators/dom';
 export type { IslandHydrator, MountFn } from './hydrators/dom';
 
 // Island-aware renderToString
 export { renderToString } from './helpers/renderToString';
 
 // Island-aware renderer and SSR API
-export { createLinkedomIslandRenderer } from './renderers/linkedom-island';
+export { createDOMServerRenderer } from './renderers/dom-server';
 export { createIslandSSRApi } from './presets/island-ssr';
 export type { IslandSSRApi, IslandSSRViews } from './presets/island-ssr';

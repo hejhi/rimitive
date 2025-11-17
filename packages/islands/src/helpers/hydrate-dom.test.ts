@@ -20,7 +20,7 @@ import {
   isInRange,
   getCurrentPath,
   getDepth,
-} from './hydrating-position';
+} from './hydrate-dom';
 
 // ============================================================================
 // Tests: Point Position Transformations

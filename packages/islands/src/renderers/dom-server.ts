@@ -9,7 +9,7 @@ import type { Renderer, RendererConfig } from '@lattice/view/types';
 import type { FragmentRef, NodeRef } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 
-export interface LinkedomRendererConfig extends RendererConfig {
+export interface DOMServerRendererConfig extends RendererConfig {
   elements: HTMLElementTagNameMap;
   events: HTMLElementEventMap;
   baseElement: HTMLElement;
@@ -51,7 +51,7 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
  * Create an island-aware linkedom renderer that decorates island fragments
  * with script tags for hydration
  */
-export function createLinkedomIslandRenderer(): Renderer<LinkedomRendererConfig> {
+export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
