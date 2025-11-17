@@ -78,12 +78,11 @@ export default defineConfig({
           __dirname,
           'src/helpers/addEventListener.ts'
         ),
-        'helpers/renderToString': resolve(
+        'helpers/index': resolve(
           __dirname,
-          'src/helpers/renderToString.ts'
+          'src/helpers/index.ts'
         ),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
-        'presets/ssr': resolve(__dirname, 'src/presets/ssr.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),
       },
       formats: ['es'],

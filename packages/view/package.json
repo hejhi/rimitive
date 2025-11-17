@@ -50,6 +50,10 @@
       "import": "./dist/helpers/addEventListener.js",
       "types": "./dist/helpers/addEventListener.d.ts"
     },
+    "./helpers": {
+      "import": "./dist/helpers/index.js",
+      "types": "./dist/helpers/index.d.ts"
+    },
     "./map": {
       "import": "./dist/map.js",
       "types": "./dist/map.d.ts"
@@ -61,14 +65,6 @@
     "./presets/core": {
       "import": "./dist/presets/core.js",
       "types": "./dist/presets/core.d.ts"
-    },
-    "./presets/ssr": {
-      "import": "./dist/presets/ssr.js",
-      "types": "./dist/presets/ssr.d.ts"
-    },
-    "./helpers/renderToString": {
-      "import": "./dist/helpers/renderToString.js",
-      "types": "./dist/helpers/renderToString.d.ts"
     },
     "./devtools": {
       "import": "./dist/devtools/index.js",

@@ -34,6 +34,10 @@
       "import": "./dist/renderers/linkedom-island.js",
       "types": "./dist/renderers/linkedom-island.d.ts"
     },
+    "./presets/island-ssr": {
+      "import": "./dist/presets/island-ssr.js",
+      "types": "./dist/presets/island-ssr.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
