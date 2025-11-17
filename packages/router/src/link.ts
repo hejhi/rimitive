@@ -27,22 +27,10 @@ export const createLinkFactory = create(
           };
 
           // Type guard for onClick function
-          type ClickHandler = (event: {
-            preventDefault: () => void;
-            metaKey: boolean;
-            ctrlKey: boolean;
-            shiftKey: boolean;
-            button: number;
-          }) => void;
+          type ClickHandler = (event: MouseEvent) => void | boolean;
 
           // Navigation click handler
-          const handleClick = (event: {
-            preventDefault: () => void;
-            metaKey: boolean;
-            ctrlKey: boolean;
-            shiftKey: boolean;
-            button: number;
-          }): void => {
+          const handleClick = (event: MouseEvent): void => {
             // Call user's onClick if provided
             if (userOnClick && typeof userOnClick === 'function') {
               (userOnClick as ClickHandler)(event);
@@ -64,15 +52,25 @@ export const createLinkFactory = create(
 
             // Intercept and navigate
             event.preventDefault();
+            event.stopPropagation();
             navigate(href);
           };
 
           // Create anchor element with merged props
+          // Use a lifecycle callback to add the event listener properly
           return el('a' as never, {
             ...restProps,
             href,
-            onClick: handleClick,
-          })(...children) as RefSpec<TConfig['elements'][Tag]>;
+          })(...children)((element) => {
+            // Add event listener to ensure it runs before default action
+            const anchorElement = element as unknown as HTMLAnchorElement;
+            anchorElement.addEventListener('click', handleClick as EventListener, false);
+
+            // Return cleanup function
+            return () => {
+              anchorElement.removeEventListener('click', handleClick as EventListener, false);
+            };
+          }) as RefSpec<TConfig['elements'][Tag]>;
         };
       }
 

@@ -10,7 +10,7 @@ const products = [
   { id: '5', name: 'Strawberry', description: 'Berry delicious', price: '$3.99' },
 ];
 
-export const Products: RouteComponent<DOMRendererConfig> = ({ el }) => {
+export const Products: RouteComponent<DOMRendererConfig> = ({ el, outlet }) => {
   return el('div', { className: 'page' })(
     el('h2')('Products'),
     el('p')('Click on a product to view details with route parameters.'),
@@ -24,6 +24,8 @@ export const Products: RouteComponent<DOMRendererConfig> = ({ el }) => {
           )
         )()
       )
-    )
+    ),
+    // Render child route (Product detail) here
+    outlet()
   )();
 };

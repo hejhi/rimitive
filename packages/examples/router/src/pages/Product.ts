@@ -1,3 +1,4 @@
+import { api } from '../api';
 import type { RouteComponent } from '@lattice/router';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 
@@ -35,49 +36,29 @@ const products: Record<string, { name: string; description: string; price: strin
 };
 
 export const Product: RouteComponent<DOMRendererConfig> = ({ el, params, navigate }) => {
-  // Reactively access the :id parameter
-  const productId = () => params().id || '';
+  const id = api.computed(() => params().id || '');
+  const productData = api.computed(() => products[id()]);
 
-  // Get product data based on the ID
-  const product = () => products[productId()];
-
-  return el('div', { className: 'page' })(
-    () => {
-      const p = product();
-
-      if (!p) {
-        return el('div', { className: 'not-found-content' })(
-          el('h2')('Product Not Found'),
-          el('p')(`No product found with ID: ${productId()}`),
-          el('button', {
-            className: 'secondary-btn',
-            onclick: () => navigate('/products')
-          })('← Back to Products')
-        )();
-      }
-
-      return el('div', { className: 'product-detail' })(
-        el('h2')(p.name),
-        el('div', { className: 'product-meta' })(
-          el('span', { className: 'product-id' })(`Product ID: ${productId()}`),
-          el('span', { className: 'product-price-large' })(p.price)
-        ),
-        el('p', { className: 'product-description-large' })(p.description),
-        el('div', { className: 'card' })(
-          el('h3')('Details'),
-          el('p')(p.details)
-        ),
-        el('div', { className: 'button-group' })(
-          el('button', {
-            className: 'secondary-btn',
-            onclick: () => navigate('/products')
-          })('← Back to Products'),
-          el('button', {
-            className: 'primary-btn',
-            onclick: () => navigate('/')
-          })('Home')
-        )
-      )();
-    }
+  return el('div', { className: 'product-detail' })(
+    el('h2')(api.computed(() => productData()?.name || 'Product Not Found')),
+    el('div', { className: 'product-meta' })(
+      el('span', { className: 'product-id' })(api.computed(() => `Product ID: ${id()}`)),
+      el('span', { className: 'product-price-large' })(api.computed(() => productData()?.price || 'N/A'))
+    ),
+    el('p', { className: 'product-description-large' })(api.computed(() => productData()?.description || 'No description available')),
+    el('div', { className: 'card' })(
+      el('h3')('Details'),
+      el('p')(api.computed(() => productData()?.details || 'No details available'))
+    ),
+    el('div', { className: 'button-group' })(
+      el('button', {
+        className: 'secondary-btn',
+        onclick: () => navigate('/products')
+      })('← Back to Products'),
+      el('button', {
+        className: 'primary-btn',
+        onclick: () => navigate('/')
+      })('Home')
+    )
   )();
 };
