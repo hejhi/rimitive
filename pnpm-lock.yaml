@@ -346,6 +346,28 @@ importers:
         specifier: ^6.0.5
         version: 6.3.5(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
+  packages/examples/router:
+    dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../../lattice
+      '@lattice/router':
+        specifier: workspace:*
+        version: link:../../router
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../../signals
+      '@lattice/view':
+        specifier: workspace:*
+        version: link:../../view
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.5
+        version: 6.4.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
   packages/examples/ssr:
     dependencies:
       '@lattice/islands':

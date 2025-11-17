@@ -63,6 +63,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         route: resolve(__dirname, 'src/route.ts'),
+        link: resolve(__dirname, 'src/link.ts'),
         types: resolve(__dirname, 'src/types.ts'),
       },
       formats: ['es'],
