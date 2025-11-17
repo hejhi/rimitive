@@ -8,7 +8,7 @@
  * use the hydrating renderer, causing HydrationMismatch errors.
  */
 
-import type { Renderer } from '../renderer';
+import type { Renderer } from '@lattice/view/types';
 import type { DOMRendererConfig } from './hydrating-dom';
 
 /**

@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { createHydratingRenderer } from './switchable-dom';
 import { createHydratingDOMRenderer } from './hydrating-dom';
-import { createDOMRenderer } from './dom';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
 
 describe('createHydratingRenderer', () => {
   it('should expose switchToFallback method', () => {

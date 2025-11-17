@@ -67,8 +67,6 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types.ts'),
         map: resolve(__dirname, 'src/map.ts'),
         'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
-        'renderers/hydrating-dom': resolve(__dirname, 'src/renderers/hydrating-dom.ts'),
-        'renderers/switchable-dom': resolve(__dirname, 'src/renderers/switchable-dom.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
         'helpers/processChildren': resolve(
           __dirname,

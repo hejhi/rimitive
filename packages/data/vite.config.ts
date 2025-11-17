@@ -70,6 +70,8 @@ export default defineConfig({
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
         'helpers/renderToString': resolve(__dirname, 'src/helpers/renderToString.ts'),
         'renderers/linkedom-island': resolve(__dirname, 'src/renderers/linkedom-island.ts'),
+        'renderers/hydrating-dom': resolve(__dirname, 'src/renderers/hydrating-dom.ts'),
+        'renderers/switchable-dom': resolve(__dirname, 'src/renderers/switchable-dom.ts'),
         'presets/island-ssr': resolve(__dirname, 'src/presets/island-ssr.ts'),
       },
       formats: ['es'],

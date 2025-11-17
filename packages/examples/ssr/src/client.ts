@@ -7,7 +7,7 @@ import { createDOMIslandHydrator } from '@lattice/data/hydrators/dom';
 import { createApi } from '@lattice/lattice';
 import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { createHydratingRenderer } from '@lattice/view/renderers/switchable-dom';
+import { createHydratingRenderer } from '@lattice/data/renderers/switchable-dom';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { signals, mount } from './api';
 import { Counter } from './islands/Counter.js';

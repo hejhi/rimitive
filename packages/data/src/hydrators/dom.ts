@@ -14,8 +14,8 @@
 
 import type { IslandMetaData, IslandRegistryEntry } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
-import { createHydratingRenderer } from '@lattice/view/renderers/switchable-dom';
-import { createHydratingDOMRenderer } from '@lattice/view/renderers/hydrating-dom';
+import { createHydratingRenderer } from '../renderers/switchable-dom';
+import { createHydratingDOMRenderer } from '../renderers/hydrating-dom';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createHydratingApi } from '../hydrating-api';
 import type { EffectAPI } from '../hydrating-api';

@@ -11,7 +11,7 @@
  * - All position transformations are pure functions
  */
 
-import type { Renderer, RendererConfig } from '../renderer';
+import type { Renderer, RendererConfig } from '@lattice/view/types';
 import {
   type Position,
   type TreePath,
