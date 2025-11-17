@@ -3,247 +3,25 @@
  */
 
 import { create } from '@lattice/lattice';
-import type { LatticeExtension } from '@lattice/lattice';
-import type { RendererConfig, Renderer, RefSpec, Reactive, LifecycleCallback } from '@lattice/view/types';
-import type { CreateScopes } from '@lattice/view/helpers/scope';
+import type { RendererConfig, RefSpec, LifecycleCallback } from '@lattice/view/types';
 
-// Re-export types from ./types for backward compatibility
-export type { RouteParams, RouteMatch } from './types';
-import type { RouteMatch as RouteMatchType } from './types';
+// Import types
+import type {
+  RouteSpec,
+  RouteOpts,
+  RouteComponent,
+  RouteFactory,
+  ComputedFunction,
+  RouteMatch,
+} from './types';
+import { STATUS_ROUTE_SPEC as STATUS_ROUTE_SPEC_CONST } from './types';
 
-/**
- * Status bit for route specs - next power of 2 after STATUS_COMMENT (16)
- */
-const STATUS_ROUTE_SPEC = 32; // 100000
+// Import matching utilities
+import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
 
-/**
- * Route-specific metadata
- */
-interface RouteMetadata<TConfig extends RendererConfig> {
-  relativePath: string;
-  rebuild: (parentPath: string) => RouteSpec<TConfig['baseElement']>;
-}
-
-/**
- * RouteSpec wraps a RefSpec with routing metadata
- * Uses true wrapper pattern - delegates to internal RefSpec via closure
- * Status is ONLY STATUS_ROUTE_SPEC (32) - not combined with STATUS_REF_SPEC
- * The wrapped RefSpec is kept internal and accessed via delegation
- *
- * Note: Does not extend RefSpec to avoid status type conflict.
- * Instead, provides same callable/create interface through delegation.
- */
-interface RouteSpec<TElement> {
-  status: typeof STATUS_ROUTE_SPEC;
-  routeMetadata: RouteMetadata<RendererConfig>;
-  // Unwrap method to get the inner RefSpec for renderer
-  unwrap(): RefSpec<TElement>;
-  (...lifecycleCallbacks: import('@lattice/view/types').LifecycleCallback<TElement>[]): RouteSpec<TElement>;
-  create<TExt = Record<string, unknown>>(
-    api?: unknown,
-    extensions?: TExt
-  ): import('@lattice/view/types').NodeRef<TElement> & TExt;
-}
-
-/**
- * Compose a parent path with a child path
- *
- * @param parentPath - Parent route path (e.g., '/', '/products')
- * @param childPath - Child route path (e.g., 'about', ':id')
- * @returns Combined path (e.g., '/about', '/products/:id')
- */
-const composePath = (parentPath: string, childPath: string): string => {
-  // If parent is root, just add a leading slash to child
-  if (parentPath === '/') {
-    return `/${childPath}`;
-  }
-
-  // Otherwise combine with a slash
-  return `${parentPath}/${childPath}`;
-};
-
-/**
- * Matches a URL path against a route pattern (exact match)
- *
- * Supports exact string matching and path parameters using :paramName syntax
- *
- * @param pattern - Route pattern (e.g., '/', '/about', '/products/:id')
- * @param path - URL path to match against
- * @returns RouteMatch if matched, null otherwise
- */
-export const matchPath = (pattern: string, path: string): RouteMatchType | null => {
-  // Exact match (no parameters)
-  if (pattern === path) {
-    return {
-      path,
-      params: {},
-    };
-  }
-
-  // Split into segments
-  const patternSegments = pattern.split('/');
-  const pathSegments = path.split('/');
-
-  // Must have same number of segments
-  if (patternSegments.length !== pathSegments.length) {
-    return null;
-  }
-
-  const params: Record<string, string> = {};
-
-  // Match each segment
-  for (let i = 0; i < patternSegments.length; i++) {
-    const patternSegment = patternSegments[i];
-    const pathSegment = pathSegments[i];
-
-    if (patternSegment === undefined || pathSegment === undefined) {
-      return null;
-    }
-
-    // Parameter segment (starts with :)
-    if (patternSegment.startsWith(':')) {
-      const paramName = patternSegment.slice(1);
-      params[paramName] = pathSegment;
-    } else if (patternSegment !== pathSegment) {
-      // Static segment must match exactly
-      return null;
-    }
-  }
-
-  return {
-    path,
-    params,
-  };
-};
-
-/**
- * Matches a URL path against a route pattern (prefix match for parent routes)
- *
- * Used for routes with children - matches if the path starts with the pattern
- *
- * @param pattern - Route pattern (e.g., '/', '/products', '/users/:id')
- * @param path - URL path to match against
- * @returns RouteMatch if matched, null otherwise
- */
-const matchPathPrefix = (pattern: string, path: string): RouteMatchType | null => {
-  // Exact match
-  if (pattern === path) {
-    return {
-      path,
-      params: {},
-    };
-  }
-
-  // For root pattern, it matches any path
-  if (pattern === '/') {
-    return {
-      path,
-      params: {},
-    };
-  }
-
-  // Split into segments for comparison
-  const patternSegments = pattern.split('/');
-  const pathSegments = path.split('/');
-
-  // Path must have at least as many segments as pattern (prefix match)
-  if (pathSegments.length < patternSegments.length) {
-    return null;
-  }
-
-  const params: Record<string, string> = {};
-
-  // Match each segment of the pattern against the path
-  for (let i = 0; i < patternSegments.length; i++) {
-    const patternSegment = patternSegments[i];
-    const pathSegment = pathSegments[i];
-
-    if (patternSegment === undefined || pathSegment === undefined) {
-      return null;
-    }
-
-    if (patternSegment.startsWith(':')) {
-      // Parameter segment - extract the value
-      const paramName = patternSegment.slice(1);
-      params[paramName] = pathSegment;
-    } else if (patternSegment !== pathSegment) {
-      // Static segment must match exactly
-      return null;
-    }
-  }
-
-  // All pattern segments matched
-  return {
-    path,
-    params,
-  };
-};
-
-/**
- * Signal function with both getter and setter
- */
-export interface SignalFunction<T> {
-  (): T;
-  (value: T): void;
-  peek(): T;
-}
-
-/**
- * Computed function (read-only reactive)
- */
-export interface ComputedFunction<T> {
-  (): T;
-  peek(): T;
-}
-
-/**
- * Match function type
- */
-export interface MatchFunction<TBaseElement> {
-  <T, TElement extends TBaseElement>(
-    reactive: Reactive<T>
-  ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement>;
-}
-
-/**
- * Options passed to route factory
- */
-export type RouteOpts<TConfig extends RendererConfig> = {
-  signal: <T>(value: T) => SignalFunction<T>;
-  computed: <T>(fn: () => T) => ComputedFunction<T>;
-  el: <Tag extends string & keyof TConfig['elements']>(
-    tag: Tag,
-    props?: Record<string, unknown>
-  ) => (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]>;
-  match: MatchFunction<TConfig['baseElement']>;
-  currentPath: Reactive<string>;
-  scopedEffect: CreateScopes['scopedEffect'];
-  renderer: Renderer<TConfig>;
-  createElementScope: CreateScopes['createElementScope'];
-  onCleanup: CreateScopes['onCleanup'];
-};
-
-/**
- * Component that receives the API
- */
-export type RouteComponent<TConfig extends RendererConfig> = (api: {
-  el: RouteOpts<TConfig>['el'];
-  params: ComputedFunction<import('./types').RouteParams>;
-}) => RefSpec<TConfig['baseElement']>;
-
-
-/**
- * Route factory type
- */
-export type RouteFactory<TConfig extends RendererConfig> = LatticeExtension<
-  'route',
-  {
-    (
-      path: string,
-      component: RouteComponent<TConfig>
-    ): (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => RouteSpec<TConfig['baseElement']>;
-  }
->;
+// Re-export for backward compatibility and public API
+export { matchPath } from './helpers/matching';
+export type { RouteOpts, RouteComponent, RouteFactory } from './types';
 
 /**
  * Create route factory that handles route matching and rendering
@@ -261,7 +39,7 @@ export const createRouteFactory = create(
       let activeRouteGroup: Array<{
         id: string;
         pathPattern: string;
-        matchedPath: ComputedFunction<RouteMatchType | null>;
+        matchedPath: ComputedFunction<RouteMatch | null>;
       }> | null = null;
       let groupCreationDepth = 0;
 
@@ -288,7 +66,7 @@ export const createRouteFactory = create(
 
             for (const child of _children) {
               // Check if this child is a RouteSpec using status bit
-              const isRouteSpec = (child.status & STATUS_ROUTE_SPEC) === STATUS_ROUTE_SPEC;
+              const isRouteSpec = (child.status & STATUS_ROUTE_SPEC_CONST) === STATUS_ROUTE_SPEC_CONST;
 
               if (isRouteSpec) {
                 const routeSpec = child as RouteSpec<TConfig['baseElement']>;
@@ -335,7 +113,7 @@ export const createRouteFactory = create(
           const myRoutes = activeRouteGroup as Array<{
             id: string;
             pathPattern: string;
-            matchedPath: ComputedFunction<RouteMatchType | null>;
+            matchedPath: ComputedFunction<RouteMatch | null>;
           }>;
 
           // Compute whether this route matches
@@ -420,7 +198,7 @@ export const createRouteFactory = create(
           };
 
           // Set properties - no mutation, we own this object
-          routeSpec.status = STATUS_ROUTE_SPEC;
+          routeSpec.status = STATUS_ROUTE_SPEC_CONST;
           routeSpec.routeMetadata = {
             relativePath,
             rebuild: (parentPath: string) => route(parentPath, component)(..._children),
