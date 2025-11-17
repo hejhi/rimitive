@@ -18,12 +18,19 @@ export type ElementWrapper = (html: string, elementRef: ElementRef<unknown>) => 
 export type FragmentWrapper = (html: string, fragmentRef: FragmentRef<unknown>) => string;
 
 /**
+ * Options for renderToString
+ */
+export interface RenderToStringOptions<TElement = unknown> {
+  renderer: { serializeElement: (element: TElement, childrenHTML: string) => string };
+  wrapElement?: ElementWrapper;
+  wrapFragment?: FragmentWrapper;
+}
+
+/**
  * Extract HTML string from a rendered element or fragment
  *
  * @param nodeRef - The rendered node reference from mount() or create()
- * @param wrapElement - Optional function to wrap element HTML (e.g., for islands)
- * @param wrapFragment - Optional function to wrap fragment HTML (e.g., for islands)
- * @param renderer - Optional renderer for serialization (uses serializeElement method)
+ * @param options - Rendering options (renderer, wrapElement, wrapFragment)
  * @returns HTML string representation
  *
  * @example
@@ -33,7 +40,7 @@ export type FragmentWrapper = (html: string, fragmentRef: FragmentRef<unknown>) 
  * import { renderToString } from '@lattice/view/helpers/renderToString';
  *
  * const signals = createSignalsApi();
- * const { api, mount, create } = createSSRApi(signals);
+ * const { api, mount, create, renderer } = createSSRApi(signals);
  *
  * const App = create(({ el }) => () => {
  *   return el('div', { className: 'app' })(
@@ -42,26 +49,24 @@ export type FragmentWrapper = (html: string, fragmentRef: FragmentRef<unknown>) 
  * });
  *
  * const rendered = mount(App());
- * const html = renderToString(rendered);
+ * const html = renderToString(rendered, { renderer });
  * // html = '<div class="app"><h1>Hello SSR!</h1></div>'
  * ```
  */
 export function renderToString<TElement = unknown>(
   nodeRef: NodeRef<unknown>,
-  wrapElement?: ElementWrapper,
-  wrapFragment?: FragmentWrapper,
-  renderer?: { serializeElement: (element: TElement, childrenHTML: string) => string }
+  options: RenderToStringOptions<TElement>
 ): string {
   if (nodeRef.status === STATUS_COMMENT) {
     return `<!--${(nodeRef).data}-->`;
   }
 
   if (nodeRef.status === STATUS_ELEMENT) {
-    return renderElementToString(nodeRef, wrapElement, wrapFragment, renderer);
+    return renderElementToString(nodeRef, options);
   }
 
   if (nodeRef.status === STATUS_FRAGMENT) {
-    return renderFragmentToString(nodeRef, wrapElement, wrapFragment, renderer);
+    return renderFragmentToString(nodeRef, options);
   }
 
   // Unknown type - return empty string
@@ -100,10 +105,9 @@ function hasFragmentDescendants(elementRef: ElementRef<unknown>): boolean {
  */
 function renderElementToString<TElement = unknown>(
   elementRef: ElementRef<unknown>,
-  wrapElement?: ElementWrapper,
-  wrapFragment?: FragmentWrapper,
-  renderer?: { serializeElement: (element: TElement, childrenHTML: string) => string }
+  options: RenderToStringOptions<TElement>
 ): string {
+  const { renderer, wrapElement } = options;
   const element = elementRef.element as { outerHTML?: string };
 
   if (typeof element.outerHTML !== 'string') {
@@ -122,9 +126,9 @@ function renderElementToString<TElement = unknown>(
 
   while (current) {
     if (current.status === STATUS_FRAGMENT) {
-      childParts.push(renderFragmentToString(current, wrapElement, wrapFragment, renderer));
+      childParts.push(renderFragmentToString(current, options));
     } else {
-      childParts.push(renderToString(current, wrapElement, wrapFragment, renderer));
+      childParts.push(renderToString(current, options));
     }
 
     if (current === elementRef.lastChild) break;
@@ -132,10 +136,6 @@ function renderElementToString<TElement = unknown>(
   }
 
   // Use renderer to serialize element with walked children
-  if (!renderer) {
-    throw new Error('Renderer required for elements with fragment descendants');
-  }
-
   const html = renderer.serializeElement(element as TElement, childParts.join(''));
   return wrapElement ? wrapElement(html, elementRef) : html;
 }
@@ -145,22 +145,14 @@ function renderElementToString<TElement = unknown>(
  */
 function renderFragmentToString<TElement = unknown>(
   fragmentRef: FragmentRef<unknown>,
-  wrapElement?: ElementWrapper,
-  wrapFragment?: FragmentWrapper,
-  renderer?: { serializeElement: (element: TElement, childrenHTML: string) => string }
+  options: RenderToStringOptions<TElement>
 ): string {
+  const { wrapFragment } = options;
   const parts: string[] = [];
   let current = fragmentRef.firstChild;
 
   while (current) {
-    parts.push(
-      renderToString(
-        current,
-        wrapElement,
-        wrapFragment,
-        renderer
-      )
-    );
+    parts.push(renderToString(current, options));
 
     if (current === fragmentRef.lastChild) break;
     current = current.next;

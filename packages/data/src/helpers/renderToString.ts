@@ -113,7 +113,7 @@ function addIslandScriptTags(html: string): string {
 
 export function renderToString<TElement = unknown>(
   nodeRef: NodeRef<unknown>,
-  renderer?: { serializeElement: (element: TElement, childrenHTML: string) => string }
+  renderer: { serializeElement: (element: TElement, childrenHTML: string) => string }
 ): string {
   // Fragment wrapper - wraps island fragments with boundary markers and script tag in container div
   const wrapFragment = (html: string, fragmentRef: FragmentRef<unknown>) => {
@@ -125,6 +125,6 @@ export function renderToString<TElement = unknown>(
     return html;
   };
 
-  const html = baseRenderToString(nodeRef, undefined, wrapFragment, renderer);
+  const html = baseRenderToString(nodeRef, { renderer, wrapFragment });
   return addIslandScriptTags(html);
 }
