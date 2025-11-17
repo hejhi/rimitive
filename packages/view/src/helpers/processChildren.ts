@@ -60,6 +60,8 @@ export function createProcessChildren<
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
           renderer.appendChild(element, childRef.element as TConfig['baseElement']);
+          // Decorate element if renderer supports it (e.g., add island markers)
+          renderer.decorateElement?.(childRef, childRef.element as TConfig['baseElement']);
         }
         return childRef;
       }
@@ -113,6 +115,8 @@ export function createProcessChildren<
     while (lastChildRef) {
       if (lastChildRef.status === STATUS_FRAGMENT) {
         lastChildRef.attach(parent, lastChildRef.next as NodeRef<TElement> | null, api);
+        // Decorate fragment with SSR markers if renderer supports it
+        renderer.decorateFragment?.(lastChildRef, parent.element);
       }
       lastChildRef = lastChildRef.prev as NodeRef<TElement> | null;
     }

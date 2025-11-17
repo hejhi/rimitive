@@ -30,6 +30,10 @@
       "import": "./dist/helpers/renderToString.js",
       "types": "./dist/helpers/renderToString.d.ts"
     },
+    "./renderers/linkedom-island": {
+      "import": "./dist/renderers/linkedom-island.js",
+      "types": "./dist/renderers/linkedom-island.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

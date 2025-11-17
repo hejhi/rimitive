@@ -22,6 +22,7 @@ export type { ComponentFactory } from './core';
  * Create an SSR-ready view API with linkedom renderer
  *
  * @param signals - Signals API (from @lattice/signals/presets/core)
+ * @param renderer - Optional custom linkedom renderer (defaults to createLinkedomRenderer())
  * @returns API object with el, map, match, and mount
  *
  * @example
@@ -42,13 +43,16 @@ export type { ComponentFactory } from './core';
  * const html = rendered.element.outerHTML;
  * ```
  */
-export const createSSRApi = (signals: {
-  signal: <T>(value: T) => () => T;
-  effect: (fn: () => void | (() => void)) => () => void;
-  batch: <T>(fn: () => T) => T;
-}) => {
-  const renderer = createLinkedomRenderer();
-  const viewHelpers = createSpec(renderer, signals);
+export const createSSRApi = (
+  signals: {
+    signal: <T>(value: T) => () => T;
+    effect: (fn: () => void | (() => void)) => () => void;
+    batch: <T>(fn: () => T) => T;
+  },
+  renderer?: ReturnType<typeof createLinkedomRenderer>
+)=> {
+  const ssrRenderer = renderer ?? createLinkedomRenderer();
+  const viewHelpers = createSpec(ssrRenderer, signals);
   const views = createApi(defaultViewExtensions<LinkedomRendererConfig>(), viewHelpers);
 
   const api = {
@@ -60,7 +64,7 @@ export const createSSRApi = (signals: {
     api,
     signals,
     views,
-    renderer,
+    renderer: ssrRenderer,
     mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
     create: createComponent as ComponentFactory<typeof api>,
   };

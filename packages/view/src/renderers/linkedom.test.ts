@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createLinkedomRenderer } from './linkedom';
+import { STATUS_FRAGMENT, STATUS_ELEMENT } from '../types';
+import type { FragmentRef, ElementRef } from '../types';
 
 describe('linkedom renderer', () => {
   it('should create elements', () => {
@@ -140,5 +142,68 @@ describe('linkedom renderer', () => {
 
     // linkedom elements are not connected until appended to document
     expect(renderer.isConnected(div)).toBe(false);
+  });
+
+  it('should decorate fragments with comment markers', () => {
+    const renderer = createLinkedomRenderer();
+
+    // Create parent element
+    const parent = renderer.createElement('div');
+
+    // Create fragment children
+    const span1 = renderer.createElement('span');
+    const span1Text = renderer.createTextNode('First');
+    renderer.appendChild(span1, span1Text);
+
+    const span2 = renderer.createElement('span');
+    const span2Text = renderer.createTextNode('Second');
+    renderer.appendChild(span2, span2Text);
+
+    // Append children to parent
+    renderer.appendChild(parent, span1);
+    renderer.appendChild(parent, span2);
+
+    // Create fragment refs
+    const span1Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span1,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const span2Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span2,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const fragment: FragmentRef<HTMLElement> = {
+      status: STATUS_FRAGMENT,
+      element: null,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: span1Ref,
+      lastChild: span2Ref,
+      attach: () => {},
+    };
+
+    // Decorate the fragment
+    renderer.decorateFragment?.(fragment, parent);
+
+    // Check that comment markers were inserted
+    const html = parent.innerHTML;
+    expect(html).toContain('<!--fragment-start-->');
+    expect(html).toContain('<!--fragment-end-->');
+
+    // Verify order: start comment, children, end comment
+    expect(html).toMatch(/<!--fragment-start--><span>First<\/span><span>Second<\/span><!--fragment-end-->/);
   });
 });

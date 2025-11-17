@@ -61,3 +61,8 @@ export type { IslandHydrator, MountFn } from './hydrators/dom';
 
 // Island-aware renderToString
 export { renderToString } from './helpers/renderToString';
+
+// Island-aware renderer and SSR API
+export { createLinkedomIslandRenderer } from './renderers/linkedom-island';
+export { createIslandSSRApi } from './presets/island-ssr';
+export type { IslandSSRApi, IslandSSRViews } from './presets/island-ssr';

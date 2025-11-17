@@ -20,8 +20,7 @@ export type FragmentWrapper = (html: string, fragmentRef: FragmentRef<unknown>) 
 /**
  * Options for renderToString
  */
-export interface RenderToStringOptions<TElement = unknown> {
-  renderer: { serializeElement: (element: TElement, childrenHTML: string) => string };
+export interface RenderToStringOptions {
   wrapElement?: ElementWrapper;
   wrapFragment?: FragmentWrapper;
 }
@@ -30,12 +29,12 @@ export interface RenderToStringOptions<TElement = unknown> {
  * Extract HTML string from a rendered element or fragment
  *
  * @param nodeRef - The rendered node reference from mount() or create()
- * @param options - Rendering options (renderer, wrapElement, wrapFragment)
+ * @param options - Rendering options (wrapElement, wrapFragment)
  * @returns HTML string representation
  */
-export function renderToString<TElement = unknown>(
+export function renderToString(
   nodeRef: NodeRef<unknown>,
-  options: RenderToStringOptions<TElement>
+  options: RenderToStringOptions = {}
 ): string {
   if (nodeRef.status === STATUS_COMMENT) return `<!--${(nodeRef).data}-->`;
   if (nodeRef.status === STATUS_ELEMENT) return renderElementToString(nodeRef, options);
@@ -46,73 +45,35 @@ export function renderToString<TElement = unknown>(
 }
 
 /**
- * Check if element or any descendant has fragment children (recursive check)
- */
-function hasFragmentDescendants(elementRef: ElementRef<unknown>): boolean {
-  if (!elementRef.firstChild) return false;
-
-  let current: typeof elementRef.firstChild | null = elementRef.firstChild;
-
-  while (current) {
-    if (current.status === STATUS_FRAGMENT) return true;
-    if (current.status === STATUS_ELEMENT && hasFragmentDescendants(current)) return true;
-    if (current === elementRef.lastChild) break;
-
-    current = current.next;
-  }
-
-  return false;
-}
-
-/**
  * Render an element ref to HTML string
  *
- * Only walks the NodeRef tree if there are fragment descendants.
- * Otherwise uses outerHTML to preserve all DOM content including text nodes.
+ * With fragments now decorated in the DOM (via decorateFragment), we can simply
+ * use outerHTML - fragment boundaries are already marked with HTML comments.
  */
-function renderElementToString<TElement = unknown>(
+function renderElementToString(
   elementRef: ElementRef<unknown>,
-  options: RenderToStringOptions<TElement>
+  options: RenderToStringOptions
 ): string {
-  const { renderer, wrapElement } = options;
+  const { wrapElement } = options;
   const element = elementRef.element as { outerHTML?: string };
 
   if (typeof element.outerHTML !== 'string') {
     throw new Error('Element does not have outerHTML property. Are you using linkedom renderer?');
   }
 
-  // If no fragment descendants anywhere, use outerHTML (fastest, preserves all DOM content)
-  if (!hasFragmentDescendants(elementRef)) {
-    const html = element.outerHTML;
-    return wrapElement ? wrapElement(html, elementRef) : html;
-  }
-
-  // Has fragment descendants - need to walk tree to wrap them properly
-  const childParts: string[] = [];
-  let current: typeof elementRef.firstChild | null = elementRef.firstChild;
-
-  while (current) {
-    if (current.status === STATUS_FRAGMENT) {
-      childParts.push(renderFragmentToString(current, options));
-    } else {
-      childParts.push(renderToString(current, options));
-    }
-
-    if (current === elementRef.lastChild) break;
-    current = current.next;
-  }
-
-  // Use renderer to serialize element with walked children
-  const html = renderer.serializeElement(element as TElement, childParts.join(''));
+  const html = element.outerHTML;
   return wrapElement ? wrapElement(html, elementRef) : html;
 }
 
 /**
  * Render a fragment ref to HTML string by concatenating all children
+ *
+ * Fragments don't have a DOM element, so we walk their children and concatenate.
+ * Fragment boundaries are already marked in the DOM with comments (via decorateFragment).
  */
-function renderFragmentToString<TElement = unknown>(
+function renderFragmentToString(
   fragmentRef: FragmentRef<unknown>,
-  options: RenderToStringOptions<TElement>
+  options: RenderToStringOptions
 ): string {
   const { wrapFragment } = options;
   const parts: string[] = [];

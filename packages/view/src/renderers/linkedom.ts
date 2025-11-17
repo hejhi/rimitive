@@ -4,6 +4,8 @@
 
 import { parseHTML } from 'linkedom';
 import type { Renderer, RendererConfig } from '../renderer';
+import type { FragmentRef, NodeRef } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
 
 export interface LinkedomRendererConfig extends RendererConfig {
   elements: HTMLElementTagNameMap;
@@ -11,6 +13,42 @@ export interface LinkedomRendererConfig extends RendererConfig {
   baseElement: HTMLElement;
   textNode: Text;
   comment: Comment;
+}
+
+/**
+ * Get the first DOM node from a NodeRef (recursively traversing fragments)
+ */
+function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
+  if (nodeRef.status === STATUS_ELEMENT) {
+    return nodeRef.element as Node;
+  }
+  if (nodeRef.status === STATUS_COMMENT) {
+    return (nodeRef as { data: string; element?: Node }).element ?? null;
+  }
+  if (nodeRef.status === STATUS_FRAGMENT) {
+    if (nodeRef.firstChild) {
+      return getFirstDOMNode(nodeRef.firstChild);
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the last DOM node from a NodeRef (recursively traversing fragments)
+ */
+function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
+  if (nodeRef.status === STATUS_ELEMENT) {
+    return nodeRef.element as Node;
+  }
+  if (nodeRef.status === STATUS_COMMENT) {
+    return (nodeRef as { data: string; element?: Node }).element ?? null;
+  }
+  if (nodeRef.status === STATUS_FRAGMENT) {
+    if (nodeRef.lastChild) {
+      return getLastDOMNode(nodeRef.lastChild);
+    }
+  }
+  return null;
 }
 
 /**
@@ -62,6 +100,27 @@ export function createLinkedomRenderer(): Renderer<LinkedomRendererConfig> {
       clone.innerHTML = childrenHTML;
       // Return serialized HTML
       return clone.outerHTML;
+    },
+
+    decorateFragment: (fragmentRef, parentElement) => {
+      const fragment = fragmentRef as FragmentRef<unknown>;
+
+      // Skip if fragment has no children
+      if (!fragment.firstChild || !fragment.lastChild) return;
+
+      // Find first and last actual DOM nodes
+      const firstNode = getFirstDOMNode(fragment.firstChild);
+      const lastNode = getLastDOMNode(fragment.lastChild);
+
+      if (!firstNode || !lastNode) return;
+
+      // Insert fragment-start comment before first child
+      const startComment = document.createComment('fragment-start');
+      parentElement.insertBefore(startComment, firstNode);
+
+      // Insert fragment-end comment after last child
+      const endComment = document.createComment('fragment-end');
+      parentElement.insertBefore(endComment, lastNode.nextSibling);
     },
   };
 }

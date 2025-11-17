@@ -60,6 +60,9 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
         node.element as TElement | TConfig['comment'],
         nextEl
       );
+
+      // Decorate element if renderer supports it (e.g., add island markers)
+      renderer.decorateElement?.(node, node.element as TConfig['baseElement']);
     } else if (node.status === STATUS_FRAGMENT) {
       // Link fragment into parent's doubly-linked list
       const parentRef: ElementRef<TElement> = {
@@ -86,6 +89,9 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
       // Attach fragment (sets up children)
       node.attach(parentRef, nextSib, api);
+
+      // Decorate fragment with SSR markers if renderer supports it
+      renderer.decorateFragment?.(node, parentElement);
     }
   }
 

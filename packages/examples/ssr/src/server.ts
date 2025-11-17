@@ -8,12 +8,12 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createSSRApi } from '@lattice/view/presets/ssr';
 import {
   createSSRContext,
   runWithSSRContext,
   getIslandScripts,
   renderToString,
+  createIslandSSRApi,
 } from '@lattice/data';
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
@@ -22,9 +22,9 @@ import { TagList } from './islands/TagList.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
-// Create SSR rendering API
+// Create island-aware SSR API
 const signals = createSignalsApi();
-const { mount, create, renderer } = createSSRApi(signals);
+const { mount, create } = createIslandSSRApi(signals);
 
 // Define the app component
 const App = create((api) => () => {
@@ -76,7 +76,7 @@ const server = createServer((req, res) => {
     // Render app to HTML within SSR context
     const html = runWithSSRContext(ctx, () => {
       const rendered = mount(App());
-      return renderToString(rendered, renderer);
+      return renderToString(rendered);
     });
 
     // Get island hydration scripts

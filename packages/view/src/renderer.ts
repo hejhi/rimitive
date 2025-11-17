@@ -133,4 +133,34 @@ export interface Renderer<TConfig extends RendererConfig> {
     element: TConfig['baseElement'],
     childrenHTML: string
   ) => string;
+
+  /**
+   * Optional: Decorate an element with SSR markers (e.g., island script tags)
+   *
+   * Called after an element has been created and attached to the DOM.
+   * Used by SSR renderers (linkedom-island) to insert hydration markers
+   * for island components. Not needed for client-side rendering.
+   *
+   * @param elementRef - The element reference (unknown type to avoid circular deps)
+   * @param element - The actual DOM element
+   */
+  decorateElement?: (
+    elementRef: unknown,
+    element: TConfig['baseElement']
+  ) => void;
+
+  /**
+   * Optional: Decorate a fragment with SSR markers (e.g., comment nodes)
+   *
+   * Called after a fragment's children have been attached to the DOM.
+   * Used by SSR renderers (linkedom) to insert fragment boundary markers
+   * for hydration. Not needed for client-side rendering.
+   *
+   * @param fragmentRef - The fragment reference (unknown type to avoid circular deps)
+   * @param parentElement - The parent element containing the fragment's children
+   */
+  decorateFragment?: (
+    fragmentRef: unknown,
+    parentElement: TConfig['baseElement']
+  ) => void;
 }
