@@ -3,7 +3,7 @@
  */
 
 import type { NodeRef, ElementRef, FragmentRef } from '../types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '../types';
 
 /**
  * Element wrapper function type
@@ -36,7 +36,6 @@ export function renderToString(
   nodeRef: NodeRef<unknown>,
   options: RenderToStringOptions = {}
 ): string {
-  if (nodeRef.status === STATUS_COMMENT) return `<!--${(nodeRef).data}-->`;
   if (nodeRef.status === STATUS_ELEMENT) return renderElementToString(nodeRef, options);
   if (nodeRef.status === STATUS_FRAGMENT) return renderFragmentToString(nodeRef, options);
 

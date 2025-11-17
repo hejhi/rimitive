@@ -4,9 +4,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { linkBefore, unlink, getNextElement, getPrevElement } from './linked-list';
-import { STATUS_ELEMENT, STATUS_COMMENT } from '../types';
-import type { ElementRef, CommentRef } from '../types';
-import { validateLinkedList, linkedListToArray, countLinkedNodes } from '../test-helpers';
+import { STATUS_ELEMENT } from '../types';
+import type { ElementRef } from '../types';
+import { validateLinkedList, countLinkedNodes } from '../test-helpers';
 
 // Test helpers to create mock nodes
 function createElementRef<T>(element: T): ElementRef<T> {
@@ -18,17 +18,6 @@ function createElementRef<T>(element: T): ElementRef<T> {
     next: null,
     firstChild: null,
     lastChild: null,
-  };
-}
-
-function createCommentRef(data: string): CommentRef {
-  return {
-    status: STATUS_COMMENT,
-    data,
-    element: { comment: data },
-    parent: null,
-    prev: null,
-    next: null,
   };
 }
 
@@ -99,30 +88,6 @@ describe('linkBefore', () => {
     expect(node3.prev).toBe(node2);
     expect(validateLinkedList(node1)).toBe(true);
     expect(countLinkedNodes(node1)).toBe(3);
-  });
-
-  it('should handle linking comments and elements', () => {
-    const elem1 = createElementRef('div');
-    const comment = createCommentRef('marker');
-    const elem2 = createElementRef('span');
-
-    // Create list: elem1 -> comment -> elem2
-    linkBefore(elem1, null);
-    linkBefore(comment, null);
-    linkBefore(elem2, null);
-
-    elem1.next = comment;
-    comment.prev = elem1;
-    comment.next = elem2;
-    elem2.prev = comment;
-
-    expect(validateLinkedList(elem1)).toBe(true);
-    expect(countLinkedNodes(elem1)).toBe(3);
-
-    const allNodes = linkedListToArray(elem1);
-    expect(allNodes[0]!.status).toBe(STATUS_ELEMENT);
-    expect(allNodes[1]!.status).toBe(STATUS_COMMENT);
-    expect(allNodes[2]!.status).toBe(STATUS_ELEMENT);
   });
 
   it('should handle linking with undefined nextNode', () => {
@@ -275,31 +240,6 @@ describe('getNextElement', () => {
 
     expect(getNextElement(elem)).toBe(elem);
   });
-
-  it('should skip comments and find next element', () => {
-    const elem1 = createElementRef('div');
-    const comment1 = createCommentRef('marker1');
-    const comment2 = createCommentRef('marker2');
-    const elem2 = createElementRef('span');
-
-    // Create list: elem1 -> comment1 -> comment2 -> elem2
-    elem1.next = comment1;
-    comment1.prev = elem1;
-    comment1.next = comment2;
-    comment2.prev = comment1;
-    comment2.next = elem2;
-    elem2.prev = comment2;
-
-    expect(getNextElement(elem1)).toBe(elem1);
-    expect(getNextElement(comment1)).toBe(elem2);
-    expect(getNextElement(comment2)).toBe(elem2);
-  });
-
-  it('should return undefined when no element found', () => {
-    const comment = createCommentRef('marker');
-
-    expect(getNextElement(comment)).toBe(undefined);
-  });
 });
 
 describe('getPrevElement', () => {
@@ -312,31 +252,6 @@ describe('getPrevElement', () => {
     const elem = createElementRef('div');
 
     expect(getPrevElement(elem)).toBe(elem);
-  });
-
-  it('should skip comments and find previous element', () => {
-    const elem1 = createElementRef('div');
-    const comment1 = createCommentRef('marker1');
-    const comment2 = createCommentRef('marker2');
-    const elem2 = createElementRef('span');
-
-    // Create list: elem1 -> comment1 -> comment2 -> elem2
-    elem1.next = comment1;
-    comment1.prev = elem1;
-    comment1.next = comment2;
-    comment2.prev = comment1;
-    comment2.next = elem2;
-    elem2.prev = comment2;
-
-    expect(getPrevElement(elem2)).toBe(elem2);
-    expect(getPrevElement(comment2)).toBe(elem1);
-    expect(getPrevElement(comment1)).toBe(elem1);
-  });
-
-  it('should return undefined when no element found', () => {
-    const comment = createCommentRef('marker');
-
-    expect(getPrevElement(comment)).toBe(undefined);
   });
 });
 
@@ -382,40 +297,4 @@ describe('integration tests', () => {
     expect(node2?.next).toBe(nodes[3]);
   });
 
-  it('should handle mixed element and comment lists', () => {
-    const elem1 = createElementRef('div');
-    const comment1 = createCommentRef('start');
-    const elem2 = createElementRef('span');
-    const comment2 = createCommentRef('end');
-
-    // Build: elem1 -> comment1 -> elem2 -> comment2
-    linkBefore(elem1, null);
-    linkBefore(comment1, null);
-    linkBefore(elem2, null);
-    linkBefore(comment2, null);
-
-    elem1.next = comment1;
-    comment1.prev = elem1;
-    comment1.next = elem2;
-    elem2.prev = comment1;
-    elem2.next = comment2;
-    comment2.prev = elem2;
-
-    expect(validateLinkedList(elem1)).toBe(true);
-    expect(countLinkedNodes(elem1)).toBe(4);
-
-    // Find next element from comment1
-    expect(getNextElement(comment1)).toBe(elem2);
-
-    // Find prev element from comment2
-    expect(getPrevElement(comment2)).toBe(elem2);
-
-    // Unlink elem2
-    unlink(elem2);
-
-    expect(validateLinkedList(elem1)).toBe(true);
-    expect(comment1.next).toBe(comment2);
-    expect(comment2.prev).toBe(comment1);
-    expect(getNextElement(comment1)).toBe(undefined);
-  });
 });

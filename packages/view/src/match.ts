@@ -179,15 +179,6 @@ export const Match = create(
                   // Create the element/fragment from the spec
                   const nodeRef = refSpec.create(api);
 
-                  if (
-                    nodeRef.status !== STATUS_ELEMENT &&
-                    nodeRef.status !== STATUS_FRAGMENT
-                  ) {
-                    throw new Error(
-                      'match() only supports ElementRef and FragmentRef, not CommentRef'
-                    );
-                  }
-
                   if (nodeRef.status === STATUS_FRAGMENT) {
                     fragment.firstChild = nodeRef.firstChild;
                     fragment.lastChild = nodeRef.lastChild;

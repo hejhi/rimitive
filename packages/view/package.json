@@ -10,10 +10,6 @@
       "import": "./dist/renderers/dom.js",
       "types": "./dist/renderers/dom.d.ts"
     },
-    "./renderers/linkedom": {
-      "import": "./dist/renderers/linkedom.js",
-      "types": "./dist/renderers/linkedom.d.ts"
-    },
     "./renderers/hydrating-dom": {
       "import": "./dist/renderers/hydrating-dom.js",
       "types": "./dist/renderers/hydrating-dom.d.ts"
@@ -21,10 +17,6 @@
     "./renderers/switchable-dom": {
       "import": "./dist/renderers/switchable-dom.js",
       "types": "./dist/renderers/switchable-dom.d.ts"
-    },
-    "./renderer": {
-      "import": "./dist/renderer.js",
-      "types": "./dist/renderer.d.ts"
     },
     "./el": {
       "import": "./dist/el.js",
@@ -37,10 +29,6 @@
     "./component": {
       "import": "./dist/component.js",
       "types": "./dist/component.d.ts"
-    },
-    "./comment": {
-      "import": "./dist/comment.js",
-      "types": "./dist/comment.d.ts"
     },
     "./create": {
       "import": "./dist/create.js",
@@ -103,8 +91,7 @@
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "linkedom": "^0.18.12"
+    "@lattice/signals": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -2,6 +2,9 @@
  * Core types for @lattice/view
  */
 
+// Re-export renderer types so they're available from @lattice/view/types
+export type { Renderer, RendererConfig } from './renderer';
+
 import type { Instantiatable } from '@lattice/lattice';
 
 /**
@@ -17,7 +20,7 @@ export const STATUS_COMMENT = 16;     // 10000
 /**
  * Composite bit masks for checking types
  */
-export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT | STATUS_COMMENT;     // 10011 (19)
+export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT;     // 0011 (3)
 export const STATUS_SPEC_MASK = STATUS_REF_SPEC | STATUS_SEALED_SPEC; // 1100 (12)
 
 export interface BaseRef {
@@ -26,10 +29,10 @@ export interface BaseRef {
 
 /**
  * Linked nodes - nodes that form doubly-linked lists
- * Elements and Comments are actual DOM nodes in the list
+ * Elements are actual DOM nodes in the list
  * Fragments are logical nodes that own their own child lists
  */
-export type LinkedNode<TElement> = ElementRef<TElement> | FragmentRef<TElement> | CommentRef;
+export type LinkedNode<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
  * Element ref node - wraps created elements for tree structure
@@ -77,23 +80,9 @@ export interface FragmentRef<TElement> extends BaseRef {
 }
 
 /**
- * Comment ref node - wraps comment nodes for markers
- * Part of doubly-linked list with prev/next pointers
- * Links to parent for tree traversal
+ * Ref node - union of element/fragment tracking nodes
  */
-export interface CommentRef extends BaseRef {
-  status: typeof STATUS_COMMENT;
-  data: string;
-  element: unknown;  // The actual DOM comment node (renderer-specific type)
-  parent: ElementRef<unknown> | null;  // Parent element in tree
-  prev: LinkedNode<unknown> | null;    // Previous sibling in doubly-linked list
-  next: LinkedNode<unknown> | null;    // Next sibling in doubly-linked list
-}
-
-/**
- * Ref node - union of element/fragment/comment tracking nodes
- */
-export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement> | CommentRef;
+export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times

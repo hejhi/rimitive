@@ -1,23 +1,103 @@
 /**
  * Island-aware linkedom renderer for SSR
  *
- * Extends the base linkedom renderer to decorate island fragments with script tags
+ * Standalone linkedom renderer with island support and fragment decoration
  */
 
-import {
-  createLinkedomRenderer,
-} from '@lattice/view/renderers/linkedom';
-import type { FragmentRef } from '@lattice/view/types';
+import { parseHTML } from 'linkedom';
+import type { Renderer, RendererConfig } from '@lattice/view/types';
+import type { FragmentRef, NodeRef } from '@lattice/view/types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+
+export interface LinkedomRendererConfig extends RendererConfig {
+  elements: HTMLElementTagNameMap;
+  events: HTMLElementEventMap;
+  baseElement: HTMLElement;
+  textNode: Text;
+  comment: Comment;
+}
+
+/**
+ * Get the first DOM node from a NodeRef (recursively traversing fragments)
+ */
+function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
+  if (nodeRef.status === STATUS_ELEMENT) {
+    return nodeRef.element as Node;
+  }
+  if (nodeRef.status === STATUS_FRAGMENT) {
+    if (nodeRef.firstChild) {
+      return getFirstDOMNode(nodeRef.firstChild);
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the last DOM node from a NodeRef (recursively traversing fragments)
+ */
+function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
+  if (nodeRef.status === STATUS_ELEMENT) {
+    return nodeRef.element as Node;
+  }
+  if (nodeRef.status === STATUS_FRAGMENT) {
+    if (nodeRef.lastChild) {
+      return getLastDOMNode(nodeRef.lastChild);
+    }
+  }
+  return null;
+}
 
 /**
  * Create an island-aware linkedom renderer that decorates island fragments
  * with script tags for hydration
  */
-export function createLinkedomIslandRenderer(): ReturnType<typeof createLinkedomRenderer> {
-  const baseRenderer = createLinkedomRenderer();
+export function createLinkedomIslandRenderer(): Renderer<LinkedomRendererConfig> {
+  // Create a document context for element creation
+  const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
   return {
-    ...baseRenderer,
+    createElement: (tag) => document.createElement(tag),
+    createTextNode: (text) => document.createTextNode(text),
+    createComment: (data) => document.createComment(data),
+    updateTextNode: (node, text) => (node.textContent = text),
+    setAttribute: (element, key, value) => {
+      // Skip event handlers during SSR (no interactivity on server)
+      if (key.startsWith('on')) return;
+
+      // Map JSX-style props to HTML attributes
+      const attributeName = key === 'className' ? 'class' : key;
+
+      // Use setAttribute for proper HTML attribute handling
+      // linkedom automatically handles escaping and attribute normalization
+      if (value != null && value !== false) {
+        // Only stringify primitives, skip objects/functions
+        if (typeof value !== 'object' && typeof value !== 'function') {
+          element.setAttribute(attributeName, String(value as string | number | boolean));
+        }
+      }
+    },
+    appendChild: (parent, child) => parent.appendChild(child),
+    removeChild: (parent, child) => parent.removeChild(child),
+    insertBefore: (parent, child, reference) =>
+      parent.insertBefore(child, reference),
+    // In linkedom, elements are always "connected" to the document
+    isConnected: (element) => element.isConnected,
+    // No-op for SSR - events aren't meaningful on the server
+    // Return empty cleanup function
+    addEventListener: () => () => () => {},
+    serializeElement: (element, childrenHTML) => {
+      // Create a clone with the same tag and attributes
+      const clone = document.createElement(element.tagName);
+      // Copy all attributes
+      for (let i = 0; i < element.attributes.length; i++) {
+        const attr = element.attributes[i];
+        if (attr) clone.setAttribute(attr.name, attr.value);
+      }
+      // Set the custom children HTML
+      clone.innerHTML = childrenHTML;
+      // Return serialized HTML
+      return clone.outerHTML;
+    },
 
     /**
      * Decorate elements with island script tags
@@ -46,37 +126,29 @@ export function createLinkedomIslandRenderer(): ReturnType<typeof createLinkedom
      * Decorate fragments with island markers and wrapper div
      *
      * For island fragments (those with __islandId):
-     * 1. Inserts fragment-start/end comments (via base renderer)
+     * 1. Inserts fragment-start/end comments
      * 2. Wraps the fragment and comments in a container div
      * 3. Adds script tag marker inside the wrapper div
      *
      * Structure: <div><!--fragment-start-->...children...<!--fragment-end--><script data-island="..."></script></div>
+     *
+     * For non-island fragments:
+     * Just adds fragment-start/end comments without wrapper
      */
     decorateFragment: (fragmentRef: unknown, parentElement: HTMLElement) => {
-      // Check if this is an island fragment BEFORE decoration
+      // Check if this is an island fragment
       const islandId = (fragmentRef as FragmentRef<unknown> & { __islandId?: string }).__islandId;
 
       if (islandId) {
         const parent = parentElement;
         const frag = fragmentRef as FragmentRef<unknown>;
 
-        // Get first and last DOM nodes of the fragment
-        const getFirstNode = (ref: typeof frag.firstChild): Node | null => {
-          if (!ref) return null;
-          if ('element' in ref && ref.element) return ref.element as Node;
-          if ('firstChild' in ref && ref.firstChild) return getFirstNode(ref.firstChild);
-          return null;
-        };
+        // Skip if fragment has no children
+        if (!frag.firstChild || !frag.lastChild) return;
 
-        const getLastNode = (ref: typeof frag.lastChild): Node | null => {
-          if (!ref) return null;
-          if ('element' in ref && ref.element) return ref.element as Node;
-          if ('lastChild' in ref && ref.lastChild) return getLastNode(ref.lastChild);
-          return null;
-        };
-
-        const firstNode = getFirstNode(frag.firstChild);
-        const lastNode = getLastNode(frag.lastChild);
+        // Find first and last actual DOM nodes
+        const firstNode = getFirstDOMNode(frag.firstChild);
+        const lastNode = getLastDOMNode(frag.lastChild);
 
         if (!firstNode || !lastNode) return;
 
@@ -111,8 +183,25 @@ export function createLinkedomIslandRenderer(): ReturnType<typeof createLinkedom
         wrapper.appendChild(scriptTag);
       } else {
         // Non-island fragment - just add comment markers (no wrapper)
-        baseRenderer.decorateFragment?.(fragmentRef, parentElement);
+        const fragment = fragmentRef as FragmentRef<unknown>;
+
+        // Skip if fragment has no children
+        if (!fragment.firstChild || !fragment.lastChild) return;
+
+        // Find first and last actual DOM nodes
+        const firstNode = getFirstDOMNode(fragment.firstChild);
+        const lastNode = getLastDOMNode(fragment.lastChild);
+
+        if (!firstNode || !lastNode) return;
+
+        // Insert fragment-start comment before first child
+        const startComment = document.createComment('fragment-start');
+        parentElement.insertBefore(startComment, firstNode);
+
+        // Insert fragment-end comment after last child
+        const endComment = document.createComment('fragment-end');
+        parentElement.insertBefore(endComment, lastNode.nextSibling);
       }
-    }
+    },
   };
 }

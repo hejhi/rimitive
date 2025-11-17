@@ -10,8 +10,8 @@ import {
   updateBoundariesAfterInsert,
   countFragmentNodes,
 } from './fragment-boundaries';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
-import type { ElementRef, FragmentRef, CommentRef } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '../types';
+import type { ElementRef, FragmentRef } from '../types';
 
 // Test helpers to create mock nodes
 function createElementRef<T>(element: T): ElementRef<T> {
@@ -23,17 +23,6 @@ function createElementRef<T>(element: T): ElementRef<T> {
     next: null,
     firstChild: null,
     lastChild: null,
-  };
-}
-
-function createCommentRef(data: string): CommentRef {
-  return {
-    status: STATUS_COMMENT,
-    data,
-    element: { comment: data },
-    parent: null,
-    prev: null,
-    next: null,
   };
 }
 
@@ -51,7 +40,7 @@ function createFragmentRef<T>(): FragmentRef<T> {
 }
 
 // Helper to link nodes together
-function linkNodes<T>(nodes: (ElementRef<T> | CommentRef)[]): void {
+function linkNodes<T>(nodes: ElementRef<T>[]): void {
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]!;
     const nextNode = nodes[i + 1];
@@ -297,21 +286,6 @@ describe('isInFragmentRange', () => {
 
     expect(isInFragmentRange(fragment, outsideNode)).toBe(false);
   });
-
-  it('should handle mixed element and comment nodes', () => {
-    const fragment = createFragmentRef<unknown>();
-    const elem1 = createElementRef('div');
-    const comment = createCommentRef('marker');
-    const elem2 = createElementRef('span');
-
-    linkNodes([elem1, comment, elem2]);
-    fragment.firstChild = elem1;
-    fragment.lastChild = elem2;
-
-    expect(isInFragmentRange(fragment, elem1)).toBe(true);
-    expect(isInFragmentRange(fragment, comment)).toBe(true);
-    expect(isInFragmentRange(fragment, elem2)).toBe(true);
-  });
 });
 
 describe('updateBoundariesAfterInsert', () => {
@@ -423,20 +397,6 @@ describe('countFragmentNodes', () => {
     linkNodes(nodes);
     fragment.firstChild = nodes[0]!;
     fragment.lastChild = nodes[3]!;
-
-    expect(countFragmentNodes(fragment)).toBe(4);
-  });
-
-  it('should count mixed element and comment nodes', () => {
-    const fragment = createFragmentRef<unknown>();
-    const elem1 = createElementRef('div');
-    const comment1 = createCommentRef('marker1');
-    const elem2 = createElementRef('span');
-    const comment2 = createCommentRef('marker2');
-
-    linkNodes([elem1, comment1, elem2, comment2]);
-    fragment.firstChild = elem1;
-    fragment.lastChild = comment2;
 
     expect(countFragmentNodes(fragment)).toBe(4);
   });

@@ -6,7 +6,7 @@
  */
 
 import type { NodeRef, ElementRef, LinkedNode } from '../types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_COMMENT } from '../types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 import type { CreateScopes } from './scope';
 import { linkBefore, unlink } from './linked-list';
@@ -25,11 +25,11 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
   /**
    * Insert a node before a reference node in the DOM.
-   * Handles ElementRef, CommentRef, and FragmentRef correctly.
+   * Handles ElementRef and FragmentRef correctly.
    *
    * @param parentElement - Parent DOM element
-   * @param node - Node to insert (element, comment, or fragment)
-   * @param nextSiblingNode - Next sibling node (can be element, comment, fragment, or undefined)
+   * @param node - Node to insert (element or fragment)
+   * @param nextSiblingNode - Next sibling node (can be element, fragment, or undefined)
    * @param boundaryNextSibling - Boundary marker for fragments (e.g., from parent fragment)
    * @param api - API context for fragment attachment
    */
@@ -40,7 +40,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
     nextSiblingNode?: NodeRef<TElement> | null,
     boundaryNextSibling?: NodeRef<TElement> | null,
   ): void {
-    if (node.status === STATUS_ELEMENT || node.status === STATUS_COMMENT) {
+    if (node.status === STATUS_ELEMENT) {
       // Determine the next linked node for doubly-linked list
       // nextSiblingNode if it's a linked node, otherwise boundaryNextSibling
       let nextLinked: LinkedNode<TElement> | undefined | null;
@@ -54,10 +54,10 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       linkBefore(node as LinkedNode<TElement>, nextLinked);
 
       // Insert into DOM - use the element from nextLinked if available
-      const nextEl = (nextLinked?.element as TElement | TConfig['comment'] | null | undefined) ?? null;
+      const nextEl = (nextLinked?.element as TElement | null | undefined) ?? null;
       renderer.insertBefore(
         parentElement,
-        node.element as TElement | TConfig['comment'],
+        node.element,
         nextEl
       );
 
@@ -97,27 +97,25 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
   /**
    * Remove a node from the DOM and dispose its scope.
-   * Handles ElementRef, CommentRef, and FragmentRef correctly.
+   * Handles ElementRef and FragmentRef correctly.
    *
    * @param parentElement - Parent DOM element
-   * @param node - Node to remove (element, comment, or fragment)
+   * @param node - Node to remove (element or fragment)
    */
   function removeNode(
     parentElement: TElement,
     node: NodeRef<TElement>
   ): void {
-    if (node.status === STATUS_ELEMENT || node.status === STATUS_COMMENT) {
+    if (node.status === STATUS_ELEMENT) {
       // Unlink from doubly-linked list
       unlink(node as LinkedNode<TElement>);
 
-      // Dispose scope if element
-      if (node.status === STATUS_ELEMENT) {
-        const scope = getElementScope(node.element);
-        if (scope) disposeScope(scope);
-      }
+      // Dispose scope
+      const scope = getElementScope(node.element);
+      if (scope) disposeScope(scope);
 
       // Remove from DOM
-      renderer.removeChild(parentElement, node.element as TElement | TConfig['comment']);
+      renderer.removeChild(parentElement, node.element);
     } else if (node.status === STATUS_FRAGMENT) {
       // Unlink fragment from parent's list
       unlink(node as LinkedNode<TElement>);
@@ -135,8 +133,6 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
           const scope = getElementScope(current.element);
           if (scope) disposeScope(scope);
           renderer.removeChild(parentElement, current.element);
-        } else if (current.status === STATUS_COMMENT) {
-          renderer.removeChild(parentElement, current.element as TConfig['comment']);
         }
 
         if (current === node.lastChild) break;

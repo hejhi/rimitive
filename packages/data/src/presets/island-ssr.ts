@@ -6,7 +6,7 @@
  */
 
 import { createSSRApi } from '@lattice/view/presets/ssr';
-import { createLinkedomIslandRenderer } from '../renderers/linkedom-island';
+import { createLinkedomIslandRenderer, type LinkedomRendererConfig } from '../renderers/linkedom-island';
 
 /**
  * Create an island-aware SSR API
@@ -21,9 +21,9 @@ export const createIslandSSRApi = (signals: {
   signal: <T>(value: T) => () => T;
   effect: (fn: () => void | (() => void)) => () => void;
   batch: <T>(fn: () => T) => T;
-}): ReturnType<typeof createSSRApi> => {
+}): ReturnType<typeof createSSRApi<LinkedomRendererConfig>> => {
   const renderer = createLinkedomIslandRenderer();
-  return createSSRApi(signals, renderer);
+  return createSSRApi<LinkedomRendererConfig>(signals, renderer);
 };
 
 export type IslandSSRApi = ReturnType<typeof createIslandSSRApi>['api'];
