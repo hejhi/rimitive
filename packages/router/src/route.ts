@@ -4,17 +4,66 @@
 
 import { create } from '@lattice/lattice';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { RefSpec, Reactive } from '@lattice/view/types';
-import type { RendererConfig } from '../../view/src/renderer';
-import type { Renderer } from '../../view/src/renderer';
-import type { CreateScopes } from '../../view/src/helpers/scope';
+import type { RendererConfig, Renderer, RefSpec, Reactive, LifecycleCallback } from '@lattice/view/types';
+import type { CreateScopes } from '@lattice/view/helpers/scope';
 
 // Re-export types from ./types for backward compatibility
 export type { RouteParams, RouteMatch } from './types';
 import type { RouteMatch as RouteMatchType } from './types';
 
 /**
- * Matches a URL path against a route pattern
+ * Status bit for route specs - next power of 2 after STATUS_COMMENT (16)
+ */
+const STATUS_ROUTE_SPEC = 32; // 100000
+
+/**
+ * Route-specific metadata
+ */
+interface RouteMetadata<TConfig extends RendererConfig> {
+  relativePath: string;
+  rebuild: (parentPath: string) => RouteSpec<TConfig['baseElement']>;
+}
+
+/**
+ * RouteSpec wraps a RefSpec with routing metadata
+ * Uses true wrapper pattern - delegates to internal RefSpec via closure
+ * Status is ONLY STATUS_ROUTE_SPEC (32) - not combined with STATUS_REF_SPEC
+ * The wrapped RefSpec is kept internal and accessed via delegation
+ *
+ * Note: Does not extend RefSpec to avoid status type conflict.
+ * Instead, provides same callable/create interface through delegation.
+ */
+interface RouteSpec<TElement> {
+  status: typeof STATUS_ROUTE_SPEC;
+  routeMetadata: RouteMetadata<RendererConfig>;
+  // Unwrap method to get the inner RefSpec for renderer
+  unwrap(): RefSpec<TElement>;
+  (...lifecycleCallbacks: import('@lattice/view/types').LifecycleCallback<TElement>[]): RouteSpec<TElement>;
+  create<TExt = Record<string, unknown>>(
+    api?: unknown,
+    extensions?: TExt
+  ): import('@lattice/view/types').NodeRef<TElement> & TExt;
+}
+
+/**
+ * Compose a parent path with a child path
+ *
+ * @param parentPath - Parent route path (e.g., '/', '/products')
+ * @param childPath - Child route path (e.g., 'about', ':id')
+ * @returns Combined path (e.g., '/about', '/products/:id')
+ */
+const composePath = (parentPath: string, childPath: string): string => {
+  // If parent is root, just add a leading slash to child
+  if (parentPath === '/') {
+    return `/${childPath}`;
+  }
+
+  // Otherwise combine with a slash
+  return `${parentPath}/${childPath}`;
+};
+
+/**
+ * Matches a URL path against a route pattern (exact match)
  *
  * Supports exact string matching and path parameters using :paramName syntax
  *
@@ -61,6 +110,69 @@ export const matchPath = (pattern: string, path: string): RouteMatchType | null 
     }
   }
 
+  return {
+    path,
+    params,
+  };
+};
+
+/**
+ * Matches a URL path against a route pattern (prefix match for parent routes)
+ *
+ * Used for routes with children - matches if the path starts with the pattern
+ *
+ * @param pattern - Route pattern (e.g., '/', '/products', '/users/:id')
+ * @param path - URL path to match against
+ * @returns RouteMatch if matched, null otherwise
+ */
+const matchPathPrefix = (pattern: string, path: string): RouteMatchType | null => {
+  // Exact match
+  if (pattern === path) {
+    return {
+      path,
+      params: {},
+    };
+  }
+
+  // For root pattern, it matches any path
+  if (pattern === '/') {
+    return {
+      path,
+      params: {},
+    };
+  }
+
+  // Split into segments for comparison
+  const patternSegments = pattern.split('/');
+  const pathSegments = path.split('/');
+
+  // Path must have at least as many segments as pattern (prefix match)
+  if (pathSegments.length < patternSegments.length) {
+    return null;
+  }
+
+  const params: Record<string, string> = {};
+
+  // Match each segment of the pattern against the path
+  for (let i = 0; i < patternSegments.length; i++) {
+    const patternSegment = patternSegments[i];
+    const pathSegment = pathSegments[i];
+
+    if (patternSegment === undefined || pathSegment === undefined) {
+      return null;
+    }
+
+    if (patternSegment.startsWith(':')) {
+      // Parameter segment - extract the value
+      const paramName = patternSegment.slice(1);
+      params[paramName] = pathSegment;
+    } else if (patternSegment !== pathSegment) {
+      // Static segment must match exactly
+      return null;
+    }
+  }
+
+  // All pattern segments matched
   return {
     path,
     params,
@@ -129,7 +241,7 @@ export type RouteFactory<TConfig extends RendererConfig> = LatticeExtension<
     (
       path: string,
       component: RouteComponent<TConfig>
-    ): (...children: RefSpec<TConfig['baseElement']>[]) => RefSpec<TConfig['baseElement']>;
+    ): (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => RouteSpec<TConfig['baseElement']>;
   }
 >;
 
@@ -156,8 +268,56 @@ export const createRouteFactory = create(
       function route(
         path: string,
         component: RouteComponent<TConfig>
-      ): (...children: RefSpec<TConfig['baseElement']>[]) => RefSpec<TConfig['baseElement']> {
-        return (..._children: RefSpec<TConfig['baseElement']>[]) => {
+      ): (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => RouteSpec<TConfig['baseElement']> {
+        return (..._children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => {
+          // Store the original path before processing
+          const relativePath = path;
+
+          // Only process children if this route's path starts with '/' (it's been composed)
+          // Otherwise, store them unprocessed for later rebuilding by parent
+          const isComposedRoute = path.startsWith('/');
+
+          const processedChildren: RefSpec<TConfig['baseElement']>[] = [];
+
+          if (isComposedRoute) {
+            // This route has been composed by a parent, so process its children
+            // Save and reset route group context to prevent children from being
+            // siblings with the parent route
+            const savedRouteGroup = activeRouteGroup;
+            const savedGroupDepth = groupCreationDepth;
+
+            for (const child of _children) {
+              // Check if this child is a RouteSpec using status bit
+              const isRouteSpec = (child.status & STATUS_ROUTE_SPEC) === STATUS_ROUTE_SPEC;
+
+              if (isRouteSpec) {
+                const routeSpec = child as RouteSpec<TConfig['baseElement']>;
+                const metadata = routeSpec.routeMetadata;
+
+                // Reset route group so children form their own group
+                activeRouteGroup = null;
+                groupCreationDepth = 0;
+
+                // This is a route child - rebuild with composed path, then unwrap
+                const composedPath = composePath(path, metadata.relativePath);
+                const rebuiltRouteSpec = metadata.rebuild(composedPath);
+                // Unwrap to get the inner RefSpec for the renderer
+                processedChildren.push(rebuiltRouteSpec.unwrap());
+              } else {
+                // Regular child (not a route) - keep as-is
+                // TypeScript doesn't narrow the union here, so cast to RefSpec
+                processedChildren.push(child as RefSpec<TConfig['baseElement']>);
+              }
+            }
+
+            // Restore the route group
+            activeRouteGroup = savedRouteGroup;
+            groupCreationDepth = savedGroupDepth;
+          }
+
+          // Determine if this route has children
+          const hasChildren = isComposedRoute && processedChildren.length > 0;
+
           // Determine if this route is part of a group or standalone
           const isFirstInGroup = activeRouteGroup === null;
 
@@ -179,9 +339,10 @@ export const createRouteFactory = create(
           }>;
 
           // Compute whether this route matches
+          // Use prefix matching if route has children, exact matching otherwise
           const matchedPath = computed(() => {
             const current = currentPath();
-            return matchPath(path, current);
+            return hasChildren ? matchPathPrefix(path, current) : matchPath(path, current);
           });
 
           // Register this route in the group
@@ -218,7 +379,8 @@ export const createRouteFactory = create(
             return null;
           });
 
-          return match(shouldRender)((pathMatch) => {
+          // Create the base RefSpec from match(...)
+          const baseRefSpec = match(shouldRender)((pathMatch) => {
             if (pathMatch === null) {
               return null;
             }
@@ -229,8 +391,53 @@ export const createRouteFactory = create(
               return match?.params ?? {};
             });
 
-            return component({ el, params });
+            // Render component with processed children
+            const componentResult = component({ el, params });
+
+            // If there are children, we need to compose them with the component result
+            if (processedChildren.length > 0) {
+              // The component should render, and children should be included in the tree
+              // For now, we'll assume the component handles children via its own rendering
+              // But we need to make sure children are part of the render tree
+              // This is a bit tricky - we need to combine the component with its nested children
+
+              // Return a fragment-like structure that includes both component and children
+              // We'll use el() to wrap them if needed
+              return el('div' as never)(componentResult, ...processedChildren) as RefSpec<TConfig['baseElement']>;
+            }
+
+            return componentResult;
           });
+
+          // Create true wrapper that delegates to baseRefSpec via closure
+          // No mutation - full ownership through closure
+          const routeSpec: RouteSpec<TConfig['baseElement']> = (
+            ...lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[]
+          ) => {
+            // Delegate to base spec and return this wrapper for chaining
+            baseRefSpec(...lifecycleCallbacks);
+            return routeSpec;
+          };
+
+          // Set properties - no mutation, we own this object
+          routeSpec.status = STATUS_ROUTE_SPEC;
+          routeSpec.routeMetadata = {
+            relativePath,
+            rebuild: (parentPath: string) => route(parentPath, component)(..._children),
+          };
+
+          // Unwrap method returns the wrapped RefSpec
+          routeSpec.unwrap = () => baseRefSpec;
+
+          // Delegate create method to base spec
+          routeSpec.create = <TExt = Record<string, unknown>>(
+            api?: unknown,
+            extensions?: TExt
+          ) => {
+            return baseRefSpec.create(api, extensions);
+          };
+
+          return routeSpec;
         };
       }
 

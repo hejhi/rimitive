@@ -139,7 +139,7 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/', HomeComponent)();
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toBe('Home Page');
   });
 
@@ -154,7 +154,7 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/about', AboutComponent)();
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toBe('About Page');
   });
 
@@ -169,7 +169,7 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/about', AboutComponent)();
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(parent.children.length).toBe(0);
   });
 
@@ -182,7 +182,7 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/', HomeComponent)();
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toBe('Home Page');
 
     currentPath('/about');
@@ -202,7 +202,7 @@ describe('route() - single route rendering', () => {
     // Route without children can be used directly as a RefSpec
     const routeSpec = route('/', HomeComponent)();
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toBe('Home Page');
   });
 });
@@ -294,9 +294,9 @@ describe('multiple routes - reactive switching', () => {
       elFn('div')('Products') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
-      route('/', Home)(),
-      route('/about', About)(),
-      route('/products', Products)()
+      route('/', Home)().unwrap(),
+      route('/about', About)().unwrap(),
+      route('/products', Products)().unwrap()
     );
 
     const parent = mountRoute(routesSpec, renderer);
@@ -313,8 +313,8 @@ describe('multiple routes - reactive switching', () => {
       elFn('div')('About') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
-      route('/', Home)(),
-      route('/about', About)()
+      route('/', Home)().unwrap(),
+      route('/about', About)().unwrap()
     );
 
     const parent = mountRoute(routesSpec, renderer);
@@ -334,8 +334,8 @@ describe('multiple routes - reactive switching', () => {
       elFn('div')('About') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
-      route('/', Home)(),
-      route('/about', About)()
+      route('/', Home)().unwrap(),
+      route('/about', About)().unwrap()
     );
 
     const parent = mountRoute(routesSpec, renderer);
@@ -357,8 +357,8 @@ describe('multiple routes - reactive switching', () => {
     currentPath('/test');
 
     const routesSpec = el.method('div')(
-      route('/test', First)(),
-      route('/test', Second)()
+      route('/test', First)().unwrap(),
+      route('/test', Second)().unwrap()
     );
 
     const parent = mountRoute(routesSpec, renderer);
@@ -378,9 +378,9 @@ describe('multiple routes - reactive switching', () => {
       elFn('div')('Products') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
-      route('/', Home)(),
-      route('/about', About)(),
-      route('/products', Products)()
+      route('/', Home)().unwrap(),
+      route('/about', About)().unwrap(),
+      route('/products', Products)().unwrap()
     );
 
     const parent = mountRoute(routesSpec, renderer);
@@ -480,7 +480,7 @@ describe('params - component access to route parameters', () => {
       elFn('div')(computed(() => `Product: ${params().id}`)) as RefSpec<MockElement>;
 
     const routeSpec = route('/products/:id', Product)();
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
 
     expect(getTextContent(parent)).toBe('Product: 123');
   });
@@ -494,7 +494,7 @@ describe('params - component access to route parameters', () => {
       elFn('div')(computed(() => `User ${params().userId}, Post ${params().postId}`)) as RefSpec<MockElement>;
 
     const routeSpec = route('/users/:userId/posts/:postId', UserPost)();
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
 
     expect(getTextContent(parent)).toBe('User 42, Post 99');
   });
@@ -508,7 +508,7 @@ describe('params - component access to route parameters', () => {
       elFn('div')(computed(() => `Params: ${JSON.stringify(params())}`)) as RefSpec<MockElement>;
 
     const routeSpec = route('/about', About)();
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
 
     expect(getTextContent(parent)).toBe('Params: {}');
   });
@@ -522,7 +522,7 @@ describe('params - component access to route parameters', () => {
       elFn('div')(computed(() => `Product: ${params().id}`)) as RefSpec<MockElement>;
 
     const routeSpec = route('/products/:id', Product)();
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
 
     expect(getTextContent(parent)).toBe('Product: 123');
 
@@ -624,7 +624,7 @@ describe('nested routes - structure and path composition', () => {
       route('about', About)()
     );
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toContain('About');
   });
 
@@ -649,7 +649,7 @@ describe('nested routes - structure and path composition', () => {
       )
     );
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toContain('Product');
   });
 
@@ -684,7 +684,7 @@ describe('nested routes - structure and path composition', () => {
       )
     );
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toContain('Settings');
   });
 
@@ -709,7 +709,7 @@ describe('nested routes - structure and path composition', () => {
       )
     );
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     const content = getTextContent(parent);
 
     // Both parent layouts and child content should be present
@@ -739,7 +739,7 @@ describe('nested routes - structure and path composition', () => {
       )
     );
 
-    const parent = mountRoute(routeSpec, renderer);
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
     const content = getTextContent(parent);
 
     expect(content).toContain('User: 42');
