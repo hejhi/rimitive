@@ -166,12 +166,10 @@ function renderFragmentToString<TElement = unknown>(
     current = current.next;
   }
 
-  const html = parts.join('');
+  const stringified = parts.join('');
 
   // Apply custom wrapper if provided
-  if (wrapFragment) {
-    return wrapFragment(html, fragmentRef);
-  }
+  if (wrapFragment) return wrapFragment(stringified, fragmentRef);
 
-  return html;
+  return stringified;
 }
