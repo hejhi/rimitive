@@ -199,33 +199,6 @@ export function createHydratingDOMRenderer(
     },
 
     /**
-     * Return existing comment node and advance to next sibling
-     */
-    createComment: (data) => {
-      const node = getNodeAtPath(containerEl, getCurrentPath(position));
-
-      if (node.nodeType !== 8) {
-        throw new HydrationMismatch(
-          `Expected comment node at ${getCurrentPath(position).join('/')}, got ${node.nodeName}`
-        );
-      }
-
-      const commentNode = node as Comment;
-
-      // Verify comment data matches (skip fragment markers)
-      if (!isFragmentMarker(commentNode) && commentNode.textContent !== data) {
-        throw new HydrationMismatch(
-          `Comment data mismatch at ${getCurrentPath(position).join('/')}: expected "${data}", got "${commentNode.textContent}"`
-        );
-      }
-
-      // Advance to next sibling
-      position = advanceToSibling(position);
-
-      return commentNode;
-    },
-
-    /**
      * Update text node content
      */
     updateTextNode: (node, text) => {

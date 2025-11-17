@@ -18,12 +18,6 @@ export type Element = object;
 export type TextNode = object;
 
 /**
- * Generic comment node interface
- * Renderers can extend this with their own comment node types
- */
-export type CommentNode = object;
-
-/**
  * RendererConfig defines the type-level contract for a renderer:
  * - elements: Maps tag names to their element types (e.g., 'div' -> HTMLDivElement)
  * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
@@ -39,7 +33,6 @@ export interface RendererConfig {
   events: object;
   baseElement: object;
   textNode: object;
-  comment: object;
 }
 
 /**
@@ -60,11 +53,6 @@ export interface Renderer<TConfig extends RendererConfig> {
   createTextNode: (text: string) => TConfig['textNode'];
 
   /**
-   * Create a comment node with initial data
-   */
-  createComment: (data: string) => TConfig['comment'];
-
-  /**
    * Update a text node's content
    */
   updateTextNode: (node: TConfig['textNode'], text: string) => void;
@@ -83,7 +71,7 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   appendChild: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment']
+    child: TConfig['baseElement'] | TConfig['textNode']
   ) => void;
 
   /**
@@ -91,7 +79,7 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   removeChild: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment']
+    child: TConfig['baseElement'] | TConfig['textNode']
   ) => void;
 
   /**
@@ -99,8 +87,8 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   insertBefore: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment'],
-    reference: TConfig['baseElement'] | TConfig['textNode'] | TConfig['comment'] | null
+    child: TConfig['baseElement'] | TConfig['textNode'],
+    reference: TConfig['baseElement'] | TConfig['textNode'] | null
   ) => void;
 
   /**

@@ -15,7 +15,6 @@ export function createDOMRenderer(): Renderer<DOMRendererConfig> {
   return {
     createElement: (tag) => document.createElement(tag),
     createTextNode: (text) => document.createTextNode(text),
-    createComment: (data) => document.createComment(data),
     updateTextNode: (node, text) => (node.textContent = text),
     setAttribute: (element, key, value) => {
       Reflect.set(element, key, value);

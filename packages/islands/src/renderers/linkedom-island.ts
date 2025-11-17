@@ -58,7 +58,6 @@ export function createLinkedomIslandRenderer(): Renderer<LinkedomRendererConfig>
   return {
     createElement: (tag) => document.createElement(tag),
     createTextNode: (text) => document.createTextNode(text),
-    createComment: (data) => document.createComment(data),
     updateTextNode: (node, text) => (node.textContent = text),
     setAttribute: (element, key, value) => {
       // Skip event handlers during SSR (no interactivity on server)
