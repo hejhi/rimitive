@@ -35,6 +35,7 @@ export function createHydratingRenderer(
     insertBefore: (parent, newNode, refNode) => getRenderer().insertBefore(parent, newNode, refNode),
     isConnected: (element) => getRenderer().isConnected(element),
     addEventListener: (element, event, handler, options) => getRenderer().addEventListener(element, event, handler, options),
+    serializeElement: (element, childrenHTML) => getRenderer().serializeElement(element, childrenHTML),
     switchToFallback,
   };
 }

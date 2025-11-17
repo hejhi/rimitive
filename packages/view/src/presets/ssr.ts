@@ -60,6 +60,7 @@ export const createSSRApi = (signals: {
     api,
     signals,
     views,
+    renderer,
     mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
     create: createComponent as ComponentFactory<typeof api>,
   };

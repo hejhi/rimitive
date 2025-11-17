@@ -121,4 +121,16 @@ export interface Renderer<TConfig extends RendererConfig> {
     handler: (event: unknown) => void,
     options?: TOpts
   ) => () => void;
+
+  /**
+   * Serialize an element to HTML string with custom children HTML
+   *
+   * @param element - The element to serialize
+   * @param childrenHTML - The HTML string to use for children (instead of element's DOM children)
+   * @returns HTML string representation of the element with the provided children
+   */
+  serializeElement: (
+    element: TConfig['baseElement'],
+    childrenHTML: string
+  ) => string;
 }

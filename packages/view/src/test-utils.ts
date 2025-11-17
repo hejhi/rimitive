@@ -195,6 +195,13 @@ export function createMockRenderer() {
       element.listeners.set(event, handler);
       return () => element.listeners.delete(event);
     }),
+    serializeElement: vi.fn((element: MockElement, childrenHTML: string) => {
+      // Simple mock serialization for testing
+      const attrs = Object.entries(element.props)
+        .map(([key, value]) => ` ${key}="${value as string}"`)
+        .join('');
+      return `<${element.tag}${attrs}>${childrenHTML}</${element.tag}>`;
+    }),
   };
 
   return { renderer };

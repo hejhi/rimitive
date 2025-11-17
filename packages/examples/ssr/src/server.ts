@@ -24,7 +24,7 @@ const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
 // Create SSR rendering API
 const signals = createSignalsApi();
-const { mount, create } = createSSRApi(signals);
+const { mount, create, renderer } = createSSRApi(signals);
 
 // Define the app component
 const App = create((api) => () => {
@@ -76,7 +76,7 @@ const server = createServer((req, res) => {
     // Render app to HTML within SSR context
     const html = runWithSSRContext(ctx, () => {
       const rendered = mount(App());
-      return renderToString(rendered);
+      return renderToString(rendered, renderer);
     });
 
     // Get island hydration scripts

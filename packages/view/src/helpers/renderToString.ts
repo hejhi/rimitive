@@ -23,6 +23,7 @@ export type FragmentWrapper = (html: string, fragmentRef: FragmentRef<unknown>) 
  * @param nodeRef - The rendered node reference from mount() or create()
  * @param wrapElement - Optional function to wrap element HTML (e.g., for islands)
  * @param wrapFragment - Optional function to wrap fragment HTML (e.g., for islands)
+ * @param renderer - Optional renderer for serialization (uses serializeElement method)
  * @returns HTML string representation
  *
  * @example
@@ -45,21 +46,22 @@ export type FragmentWrapper = (html: string, fragmentRef: FragmentRef<unknown>) 
  * // html = '<div class="app"><h1>Hello SSR!</h1></div>'
  * ```
  */
-export function renderToString(
+export function renderToString<TElement = unknown>(
   nodeRef: NodeRef<unknown>,
   wrapElement?: ElementWrapper,
-  wrapFragment?: FragmentWrapper
+  wrapFragment?: FragmentWrapper,
+  renderer?: { serializeElement: (element: TElement, childrenHTML: string) => string }
 ): string {
   if (nodeRef.status === STATUS_COMMENT) {
     return `<!--${(nodeRef).data}-->`;
   }
 
   if (nodeRef.status === STATUS_ELEMENT) {
-    return renderElementToString(nodeRef, wrapElement, wrapFragment);
+    return renderElementToString(nodeRef, wrapElement, wrapFragment, renderer);
   }
 
   if (nodeRef.status === STATUS_FRAGMENT) {
-    return renderFragmentToString(nodeRef, wrapElement, wrapFragment);
+    return renderFragmentToString(nodeRef, wrapElement, wrapFragment, renderer);
   }
 
   // Unknown type - return empty string
@@ -79,12 +81,12 @@ function hasFragmentDescendants(elementRef: ElementRef<unknown>): boolean {
     if (current.status === STATUS_FRAGMENT) return true;
 
     // Check descendants recursively for elements
-    if (current.status === STATUS_ELEMENT && hasFragmentDescendants(current as ElementRef<unknown>)) {
+    if (current.status === STATUS_ELEMENT && hasFragmentDescendants(current)) {
       return true;
     }
 
     if (current === elementRef.lastChild) break;
-    current = current.next as typeof elementRef.firstChild | null;
+    current = current.next;
   }
 
   return false;
@@ -96,10 +98,11 @@ function hasFragmentDescendants(elementRef: ElementRef<unknown>): boolean {
  * Only walks the NodeRef tree if there are fragment descendants.
  * Otherwise uses outerHTML to preserve all DOM content including text nodes.
  */
-function renderElementToString(
+function renderElementToString<TElement = unknown>(
   elementRef: ElementRef<unknown>,
   wrapElement?: ElementWrapper,
-  wrapFragment?: FragmentWrapper
+  wrapFragment?: FragmentWrapper,
+  renderer?: { serializeElement: (element: TElement, childrenHTML: string) => string }
 ): string {
   const element = elementRef.element as { outerHTML?: string };
 
@@ -119,44 +122,45 @@ function renderElementToString(
 
   while (current) {
     if (current.status === STATUS_FRAGMENT) {
-      childParts.push(renderFragmentToString(current as FragmentRef<unknown>, wrapElement, wrapFragment));
+      childParts.push(renderFragmentToString(current, wrapElement, wrapFragment, renderer));
     } else {
-      childParts.push(renderToString(current, wrapElement, wrapFragment));
+      childParts.push(renderToString(current, wrapElement, wrapFragment, renderer));
     }
 
     if (current === elementRef.lastChild) break;
     current = current.next as typeof elementRef.firstChild | null;
   }
 
-  // Rebuild element HTML with processed children
-  const outerHTML = element.outerHTML;
-  const openTagEnd = outerHTML.indexOf('>');
-
-  if (openTagEnd === -1 || outerHTML.endsWith('/>')) {
-    // Self-closing or malformed
-    return wrapElement ? wrapElement(outerHTML, elementRef) : outerHTML;
+  // Use renderer to serialize element with walked children
+  if (!renderer) {
+    throw new Error('Renderer required for elements with fragment descendants');
   }
 
-  const openingTag = outerHTML.substring(0, openTagEnd + 1);
-  const closingTag = outerHTML.substring(outerHTML.lastIndexOf('</'));
-  const html = openingTag + childParts.join('') + closingTag;
-
+  const html = renderer.serializeElement(element as TElement, childParts.join(''));
   return wrapElement ? wrapElement(html, elementRef) : html;
 }
 
 /**
  * Render a fragment ref to HTML string by concatenating all children
  */
-function renderFragmentToString(
+function renderFragmentToString<TElement = unknown>(
   fragmentRef: FragmentRef<unknown>,
   wrapElement?: ElementWrapper,
-  wrapFragment?: FragmentWrapper
+  wrapFragment?: FragmentWrapper,
+  renderer?: { serializeElement: (element: TElement, childrenHTML: string) => string }
 ): string {
   const parts: string[] = [];
   let current = fragmentRef.firstChild;
 
   while (current) {
-    parts.push(renderToString(current as NodeRef<unknown>, wrapElement, wrapFragment));
+    parts.push(
+      renderToString(
+        current,
+        wrapElement,
+        wrapFragment,
+        renderer
+      )
+    );
 
     if (current === fragmentRef.lastChild) break;
     current = current.next;
