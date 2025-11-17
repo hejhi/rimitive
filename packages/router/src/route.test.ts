@@ -938,16 +938,17 @@ describe('programmatic navigation', () => {
     expect(getTextContent(parent)).toBe('Home');
   });
 
-  it('navigate is reactive - triggers route re-render', () => {
+  it('components are created once and not recreated on navigation', () => {
     const { route, el, renderer, computed } = setup();
 
     let navigateFn: ((path: string) => void) | undefined;
-    let renderCount = 0;
+    let componentCreationCount = 0;
 
     const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+      // Component body runs once
+      componentCreationCount++;
       navigateFn = navigate;
       return elFn('div')(computed(() => {
-        renderCount++;
         return 'Home';
       })) as RefSpec<MockElement>;
     };
@@ -961,14 +962,16 @@ describe('programmatic navigation', () => {
     );
 
     const parent = mountRoute(routesSpec, renderer);
-    const initialRenderCount = renderCount;
+    expect(componentCreationCount).toBe(1); // Created once on initial render
 
     if (!navigateFn) throw new Error('navigate not set');
     navigateFn('/about');
     expect(getTextContent(parent)).toBe('About');
+    expect(componentCreationCount).toBe(1); // Still 1, not recreated
 
     navigateFn('/');
-    expect(renderCount).toBeGreaterThan(initialRenderCount);
+    expect(getTextContent(parent)).toBe('Home');
+    expect(componentCreationCount).toBe(1); // Still 1, not recreated
   });
 });
 
