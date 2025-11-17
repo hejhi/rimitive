@@ -613,8 +613,8 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/about');
 
-    const App = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('App') as RefSpec<MockElement>;
+    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
     const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
       elFn('div')('About') as RefSpec<MockElement>;
@@ -633,11 +633,11 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/products/123');
 
-    const App = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('App') as RefSpec<MockElement>;
+    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Products') as RefSpec<MockElement>;
+    const Products = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('Products', outlet()) as RefSpec<MockElement>;
 
     const Product = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
       elFn('div')('Product') as RefSpec<MockElement>;
@@ -658,17 +658,17 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/admin/users/42/settings');
 
-    const App = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('App') as RefSpec<MockElement>;
+    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const Admin = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Admin') as RefSpec<MockElement>;
+    const Admin = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('Admin', outlet()) as RefSpec<MockElement>;
 
-    const Users = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Users') as RefSpec<MockElement>;
+    const Users = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('Users', outlet()) as RefSpec<MockElement>;
 
-    const UserDetail = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('UserDetail') as RefSpec<MockElement>;
+    const UserDetail = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('UserDetail', outlet()) as RefSpec<MockElement>;
 
     const Settings = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
       elFn('div')('Settings') as RefSpec<MockElement>;
@@ -693,11 +693,11 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/products/123');
 
-    const App = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('App-Layout') as RefSpec<MockElement>;
+    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('App-Layout', outlet()) as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Products-Layout') as RefSpec<MockElement>;
+    const Products = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('Products-Layout', outlet()) as RefSpec<MockElement>;
 
     const Product = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
       elFn('div')('Product-Content') as RefSpec<MockElement>;
@@ -723,11 +723,11 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/users/42/posts/99');
 
-    const App = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('App') as RefSpec<MockElement>;
+    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const Users = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `User: ${params().userId}`)) as RefSpec<MockElement>;
+    const Users = ({ el: elFn, params, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string>; outlet: () => unknown }) =>
+      elFn('div')(computed(() => `User: ${params().userId}`), outlet()) as RefSpec<MockElement>;
 
     const Posts = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
       elFn('div')(computed(() => `Post: ${params().postId}`)) as RefSpec<MockElement>;
@@ -744,5 +744,477 @@ describe('nested routes - structure and path composition', () => {
 
     expect(content).toContain('User: 42');
     expect(content).toContain('Post: 99');
+  });
+});
+
+describe('programmatic navigation', () => {
+  function setup() {
+    const env = createTestEnv();
+    const el = El<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      onCleanup: env.onCleanup,
+    });
+
+    const match = Match<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
+    const currentPath = env.signal('/');
+
+    const computed = <T>(fn: () => T) => {
+      const s = env.signal(fn());
+      env.effect(() => {
+        s(fn());
+      });
+      const result = (() => s()) as { (): T; peek: () => T };
+      result.peek = () => s.peek();
+      return result;
+    };
+
+    const route = createRouteFactory<MockRendererConfig>().create({
+      signal: env.signal,
+      computed,
+      el: el.method as never,
+      match: match.method,
+      currentPath,
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      onCleanup: env.onCleanup,
+    });
+
+    return { ...env, el, route: route.method, currentPath, computed };
+  }
+
+  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+    const parent = renderer.createElement('div');
+    const parentRef: ElementRef<MockElement> = {
+      status: STATUS_ELEMENT,
+      element: parent,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const nodeRef = spec.create();
+
+    if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+    } else if ('element' in nodeRef) {
+      const elementRef = nodeRef as ElementRef<MockElement>;
+      elementRef.parent = parentRef;
+      elementRef.next = null;
+      parent.children.push(elementRef.element);
+    }
+
+    return parent;
+  };
+
+  it('navigate updates current route', () => {
+    const { route, el, renderer } = setup();
+
+    let navigateFn: ((path: string) => void) | undefined;
+
+    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+      navigateFn = navigate;
+      return elFn('div')('Home') as RefSpec<MockElement>;
+    };
+
+    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('About') as RefSpec<MockElement>;
+
+    const routesSpec = el.method('div')(
+      route('/', Home)().unwrap(),
+      route('/about', About)().unwrap()
+    );
+
+    const parent = mountRoute(routesSpec, renderer);
+    expect(getTextContent(parent)).toBe('Home');
+
+    if (!navigateFn) throw new Error('navigate not set');
+    navigateFn('/about');
+    expect(getTextContent(parent)).toBe('About');
+  });
+
+  it('navigate works with parameterized paths', () => {
+    const { route, el, renderer, computed } = setup();
+
+    let navigateFn: ((path: string) => void) | undefined;
+
+    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+      navigateFn = navigate;
+      return elFn('div')('Home') as RefSpec<MockElement>;
+    };
+
+    const Product = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
+      elFn('div')(computed(() => `Product: ${params().id}`)) as RefSpec<MockElement>;
+
+    const routesSpec = el.method('div')(
+      route('/', Home)().unwrap(),
+      route('/products/:id', Product)().unwrap()
+    );
+
+    const parent = mountRoute(routesSpec, renderer);
+    expect(getTextContent(parent)).toBe('Home');
+
+    if (!navigateFn) throw new Error('navigate not set');
+    navigateFn('/products/123');
+    expect(getTextContent(parent)).toBe('Product: 123');
+  });
+
+  it('navigate updates browser history', () => {
+    const { route, renderer } = setup();
+
+    const pushStateSpy = { calls: [] as Array<[unknown, string, string]> };
+    const originalPushState = window.history.pushState.bind(window.history);
+    window.history.pushState = function(state: unknown, title: string, url: string) {
+      pushStateSpy.calls.push([state, title, url]);
+      return originalPushState(state, title, url);
+    };
+
+    let navigateFn: ((path: string) => void) | undefined;
+
+    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+      navigateFn = navigate;
+      return elFn('div')('Home') as RefSpec<MockElement>;
+    };
+
+    const routeSpec = route('/', Home)();
+    mountRoute(routeSpec.unwrap(), renderer);
+
+    if (!navigateFn) throw new Error('navigate not set');
+    navigateFn('/about');
+
+    expect(pushStateSpy.calls.length).toBe(1);
+    expect(pushStateSpy.calls[0]?.[2]).toBe('/about');
+
+    window.history.pushState = originalPushState;
+  });
+
+  it('multiple navigations work correctly', () => {
+    const { route, el, renderer } = setup();
+
+    let navigateFn: ((path: string) => void) | undefined;
+
+    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+      navigateFn = navigate;
+      return elFn('div')('Home') as RefSpec<MockElement>;
+    };
+
+    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('About') as RefSpec<MockElement>;
+
+    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Products') as RefSpec<MockElement>;
+
+    const routesSpec = el.method('div')(
+      route('/', Home)().unwrap(),
+      route('/about', About)().unwrap(),
+      route('/products', Products)().unwrap()
+    );
+
+    const parent = mountRoute(routesSpec, renderer);
+    expect(getTextContent(parent)).toBe('Home');
+
+    if (!navigateFn) throw new Error('navigate not set');
+    navigateFn('/about');
+    expect(getTextContent(parent)).toBe('About');
+
+    navigateFn('/products');
+    expect(getTextContent(parent)).toBe('Products');
+
+    navigateFn('/');
+    expect(getTextContent(parent)).toBe('Home');
+  });
+
+  it('navigate is reactive - triggers route re-render', () => {
+    const { route, el, renderer, computed } = setup();
+
+    let navigateFn: ((path: string) => void) | undefined;
+    let renderCount = 0;
+
+    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+      navigateFn = navigate;
+      return elFn('div')(computed(() => {
+        renderCount++;
+        return 'Home';
+      })) as RefSpec<MockElement>;
+    };
+
+    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('About') as RefSpec<MockElement>;
+
+    const routesSpec = el.method('div')(
+      route('/', Home)().unwrap(),
+      route('/about', About)().unwrap()
+    );
+
+    const parent = mountRoute(routesSpec, renderer);
+    const initialRenderCount = renderCount;
+
+    if (!navigateFn) throw new Error('navigate not set');
+    navigateFn('/about');
+    expect(getTextContent(parent)).toBe('About');
+
+    navigateFn('/');
+    expect(renderCount).toBeGreaterThan(initialRenderCount);
+  });
+});
+
+describe('outlet - parent components render matched children', () => {
+  function setup() {
+    const env = createTestEnv();
+    const el = El<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      onCleanup: env.onCleanup,
+    });
+
+    const match = Match<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
+    const currentPath = env.signal('/');
+
+    const computed = <T>(fn: () => T) => {
+      const s = env.signal(fn());
+      env.effect(() => {
+        s(fn());
+      });
+      const result = (() => s()) as { (): T; peek: () => T };
+      result.peek = () => s.peek();
+      return result;
+    };
+
+    const route = createRouteFactory<MockRendererConfig>().create({
+      signal: env.signal,
+      computed,
+      el: el.method as never,
+      match: match.method,
+      currentPath,
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      onCleanup: env.onCleanup,
+    });
+
+    return { ...env, el, route: route.method, currentPath, computed };
+  }
+
+  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+    const parent = renderer.createElement('div');
+    const parentRef: ElementRef<MockElement> = {
+      status: STATUS_ELEMENT,
+      element: parent,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const nodeRef = spec.create();
+
+    if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+    } else if ('element' in nodeRef) {
+      const elementRef = nodeRef as ElementRef<MockElement>;
+      elementRef.parent = parentRef;
+      elementRef.next = null;
+      parent.children.push(elementRef.element);
+    }
+
+    return parent;
+  };
+
+  it('layout renders matched child via outlet', () => {
+    const { route, currentPath, renderer } = setup();
+
+    currentPath('/about');
+
+    const Layout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')(
+        elFn('header')('Header'),
+        outlet(),
+        elFn('footer')('Footer')
+      ) as RefSpec<MockElement>;
+
+    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('About Page') as RefSpec<MockElement>;
+
+    const routeSpec = route('/', Layout)(
+      route('about', About)()
+    );
+
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const content = getTextContent(parent);
+
+    expect(content).toContain('Header');
+    expect(content).toContain('About Page');
+    expect(content).toContain('Footer');
+  });
+
+  it('outlet switches child when path changes', () => {
+    const { route, currentPath, renderer } = setup();
+
+    currentPath('/about');
+
+    const Layout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')(
+        elFn('header')('Header'),
+        outlet(),
+        elFn('footer')('Footer')
+      ) as RefSpec<MockElement>;
+
+    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('About Page') as RefSpec<MockElement>;
+
+    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Products Page') as RefSpec<MockElement>;
+
+    const routeSpec = route('/', Layout)(
+      route('about', About)(),
+      route('products', Products)()
+    );
+
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    expect(getTextContent(parent)).toContain('About Page');
+    expect(getTextContent(parent)).not.toContain('Products Page');
+
+    currentPath('/products');
+    expect(getTextContent(parent)).toContain('Products Page');
+    expect(getTextContent(parent)).not.toContain('About Page');
+
+    currentPath('/about');
+    expect(getTextContent(parent)).toContain('About Page');
+    expect(getTextContent(parent)).not.toContain('Products Page');
+  });
+
+  it('outlet renders nothing when no child matches', () => {
+    const { route, currentPath, renderer } = setup();
+
+    currentPath('/unknown');
+
+    const Layout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')(
+        elFn('header')('Header'),
+        outlet(),
+        elFn('footer')('Footer')
+      ) as RefSpec<MockElement>;
+
+    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('About Page') as RefSpec<MockElement>;
+
+    const routeSpec = route('/', Layout)(
+      route('about', About)()
+    );
+
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const content = getTextContent(parent);
+
+    expect(content).toContain('Header');
+    expect(content).toContain('Footer');
+    expect(content).not.toContain('About Page');
+  });
+
+  it('multiple outlet levels work', () => {
+    const { route, currentPath, renderer } = setup();
+
+    currentPath('/admin/users/settings');
+
+    const AppLayout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')(
+        elFn('nav')('Main Nav'),
+        outlet()
+      ) as RefSpec<MockElement>;
+
+    const AdminLayout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')(
+        elFn('aside')('Admin Sidebar'),
+        outlet()
+      ) as RefSpec<MockElement>;
+
+    const UsersLayout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')(
+        elFn('h1')('Users'),
+        outlet()
+      ) as RefSpec<MockElement>;
+
+    const Settings = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Settings Page') as RefSpec<MockElement>;
+
+    const routeSpec = route('/', AppLayout)(
+      route('admin', AdminLayout)(
+        route('users', UsersLayout)(
+          route('settings', Settings)()
+        )
+      )
+    );
+
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const content = getTextContent(parent);
+
+    expect(content).toContain('Main Nav');
+    expect(content).toContain('Admin Sidebar');
+    expect(content).toContain('Users');
+    expect(content).toContain('Settings Page');
+  });
+
+  it('outlet child receives composed params from all parent routes', () => {
+    const { route, currentPath, renderer, computed } = setup();
+
+    currentPath('/users/42/posts/99/edit');
+
+    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')(outlet()) as RefSpec<MockElement>;
+
+    const UserSection = ({ el: elFn, params, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string>; outlet: () => unknown }) =>
+      elFn('div')(
+        computed(() => `User: ${params().userId}`),
+        outlet()
+      ) as RefSpec<MockElement>;
+
+    const PostSection = ({ el: elFn, params, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string>; outlet: () => unknown }) =>
+      elFn('div')(
+        computed(() => `Post: ${params().postId}`),
+        outlet()
+      ) as RefSpec<MockElement>;
+
+    const EditPage = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
+      elFn('div')(computed(() => `Editing User ${params().userId}, Post ${params().postId}`)) as RefSpec<MockElement>;
+
+    const routeSpec = route('/', App)(
+      route('users/:userId', UserSection)(
+        route('posts/:postId', PostSection)(
+          route('edit', EditPage)()
+        )
+      )
+    );
+
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const content = getTextContent(parent);
+
+    expect(content).toContain('User: 42');
+    expect(content).toContain('Post: 99');
+    expect(content).toContain('Editing User 42, Post 99');
   });
 });

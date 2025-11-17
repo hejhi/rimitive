@@ -34,6 +34,12 @@ export const createRouteFactory = create(
     currentPath,
   }: RouteOpts<TConfig>) =>
     () => {
+      // Create navigate function that updates path and history
+      const navigate = (path: string): void => {
+        currentPath(path);
+        window.history.pushState({}, '', path);
+      };
+
       // Shared state for tracking route groups
       // Routes created in the same synchronous tick are considered siblings
       let activeRouteGroup: Array<{
@@ -169,20 +175,26 @@ export const createRouteFactory = create(
               return match?.params ?? {};
             });
 
-            // Render component with processed children
-            const componentResult = component({ el, params });
+            // Create outlet function that renders the matched child
+            const outlet = (): RefSpec<TConfig['baseElement']> | null => {
+              // If there are no children, outlet returns null
+              if (processedChildren.length === 0) {
+                return null;
+              }
 
-            // If there are children, we need to compose them with the component result
-            if (processedChildren.length > 0) {
-              // The component should render, and children should be included in the tree
-              // For now, we'll assume the component handles children via its own rendering
-              // But we need to make sure children are part of the render tree
-              // This is a bit tricky - we need to combine the component with its nested children
+              // Wrap children in a match() to make them reactive
+              // This allows the outlet to update when the path changes
+              return match(shouldRender)(() => {
+                // Find the first child that's currently matched
+                // Since processedChildren are already wrapped in match(),
+                // they will handle their own visibility
+                // We just need to render all of them and let them decide
+                return el('div' as never)(...processedChildren) as RefSpec<TConfig['baseElement']>;
+              });
+            };
 
-              // Return a fragment-like structure that includes both component and children
-              // We'll use el() to wrap them if needed
-              return el('div' as never)(componentResult, ...processedChildren) as RefSpec<TConfig['baseElement']>;
-            }
+            // Render component with outlet function and navigate
+            const componentResult = component({ el, params, outlet, navigate });
 
             return componentResult;
           });

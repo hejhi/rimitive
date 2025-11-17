@@ -100,6 +100,8 @@ export type RouteOpts<TConfig extends RendererConfig> = {
 export type RouteComponent<TConfig extends RendererConfig> = (api: {
   el: RouteOpts<TConfig>['el'];
   params: ComputedFunction<RouteParams>;
+  outlet: () => RefSpec<TConfig['baseElement']> | null;
+  navigate: (path: string) => void;
 }) => RefSpec<TConfig['baseElement']>;
 
 /**
