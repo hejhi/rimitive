@@ -6,24 +6,27 @@ Minimal client-side routing for Lattice applications.
 
 🚧 **In Development** - API is being designed and implemented
 
-## Planned API
+## API
+
+### Route Definition
 
 ```ts
 import { createApi } from '@lattice/lattice';
-import { createRouteFactory } from '@lattice/router';
+import { createRouteFactory, createLinkFactory } from '@lattice/router';
 
 const api = createApi({
   signal: createSignalFactory,
   computed: createComputedFactory,
   el: createElFactory,
   route: createRouteFactory,
+  Link: createLinkFactory,
 });
 
-const { route, mount } = api;
+const { route, Link, mount } = api;
 
-const routes = route('/', App)()(
+const routes = route('/', App)(
   route('about', About)(),
-  route('products', Products)()(
+  route('products', Products)(
     route(':id', Product)()
   )
 );
@@ -31,13 +34,43 @@ const routes = route('/', App)()(
 mount(routes);
 ```
 
-## Features (Planned)
+### Navigation with Link
+
+The `Link` component provides declarative SPA navigation with automatic click interception:
+
+```ts
+const Nav = create((api) => () => {
+  const { el, Link } = api;
+
+  return el('nav')(
+    Link({ href: '/', className: 'nav-link' })(
+      'Home'
+    ),
+    Link({ href: '/about' })(
+      'About Us'
+    ),
+    Link({ href: '/products/123' })(
+      'View Product'
+    )
+  );
+});
+```
+
+**Features:**
+- Intercepts clicks for internal links (prevents full page reload)
+- Allows right-click and cmd/ctrl+click for opening in new tabs
+- Does not intercept external links (http://, https://)
+- Accepts standard anchor attributes (className, id, etc.)
+- Merges with user-provided onClick handlers
+- Supports lifecycle callbacks like `el()`
+
+## Features
 
 - ✅ Nested route composition
 - ✅ Path parameter extraction (`:id`)
 - ✅ Reactive current route
-- ✅ Link interception
-- ✅ Programmatic navigation
+- ✅ Declarative Link component for SPA navigation
+- ✅ Programmatic navigation via `navigate()`
 - ✅ Outlet pattern for nested routes
 
 ## Design Principles

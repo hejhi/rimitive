@@ -116,3 +116,30 @@ export type RouteFactory<TConfig extends RendererConfig> = LatticeExtension<
     ): (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => RouteSpec<TConfig['baseElement']>;
   }
 >;
+
+/**
+ * Options passed to Link factory
+ */
+export type LinkOpts<TConfig extends RendererConfig> = {
+  el: <Tag extends string & keyof TConfig['elements']>(
+    tag: Tag,
+    props?: Record<string, unknown>
+  ) => (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]>;
+  navigate: (path: string) => void;
+  scopedEffect: CreateScopes['scopedEffect'];
+  renderer: import('@lattice/view/types').Renderer<TConfig>;
+  createElementScope: CreateScopes['createElementScope'];
+  onCleanup: CreateScopes['onCleanup'];
+};
+
+/**
+ * Link factory type
+ */
+export type LinkFactory<TConfig extends RendererConfig> = LatticeExtension<
+  'Link',
+  {
+    <Tag extends string & keyof TConfig['elements']>(
+      props: Record<string, unknown> & { href: string }
+    ): (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]>;
+  }
+>;
