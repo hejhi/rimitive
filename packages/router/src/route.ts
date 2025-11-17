@@ -10,7 +10,7 @@ import type { Renderer } from '../../view/src/renderer';
 import type { CreateScopes } from '../../view/src/helpers/scope';
 
 // Re-export types from ./types for backward compatibility
-export type { RouteParams, RouteMatch, RouteConfig } from './types';
+export type { RouteParams, RouteMatch } from './types';
 import type { RouteMatch as RouteMatchType } from './types';
 
 /**
@@ -116,12 +116,9 @@ export type RouteOpts<TConfig extends RendererConfig> = {
  */
 export type RouteComponent<TConfig extends RendererConfig> = (api: {
   el: RouteOpts<TConfig>['el'];
+  params: ComputedFunction<import('./types').RouteParams>;
 }) => RefSpec<TConfig['baseElement']>;
 
-/**
- * Route configuration options
- */
-export type RouteConfigOptions = import('./types').RouteConfig;
 
 /**
  * Route factory type
@@ -132,7 +129,7 @@ export type RouteFactory<TConfig extends RendererConfig> = LatticeExtension<
     (
       path: string,
       component: RouteComponent<TConfig>
-    ): (config?: RouteConfigOptions) => RefSpec<TConfig['baseElement']>;
+    ): (...children: RefSpec<TConfig['baseElement']>[]) => RefSpec<TConfig['baseElement']>;
   }
 >;
 
@@ -159,8 +156,8 @@ export const createRouteFactory = create(
       function route(
         path: string,
         component: RouteComponent<TConfig>
-      ): (config?: RouteConfigOptions) => RefSpec<TConfig['baseElement']> {
-        return () => {
+      ): (...children: RefSpec<TConfig['baseElement']>[]) => RefSpec<TConfig['baseElement']> {
+        return (..._children: RefSpec<TConfig['baseElement']>[]) => {
           // Determine if this route is part of a group or standalone
           const isFirstInGroup = activeRouteGroup === null;
 
@@ -225,7 +222,14 @@ export const createRouteFactory = create(
             if (pathMatch === null) {
               return null;
             }
-            return component({ el });
+
+            // Create params signal from the matched path
+            const params = computed(() => {
+              const match = shouldRender();
+              return match?.params ?? {};
+            });
+
+            return component({ el, params });
           });
         };
       }

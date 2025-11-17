@@ -12,8 +12,4 @@ export interface RouteMatch {
   params: RouteParams;
 }
 
-/**
- * Route configuration options
- */
-export type RouteConfig = Record<string, never>;
-// Future: guards, meta, etc.
+// RouteConfig removed - was unused placeholder

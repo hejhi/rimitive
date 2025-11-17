@@ -8,7 +8,6 @@ export { matchPath, createRouteFactory } from './route';
 export type {
   RouteParams,
   RouteMatch,
-  RouteConfig,
 } from './types';
 export type {
   RouteOpts,
