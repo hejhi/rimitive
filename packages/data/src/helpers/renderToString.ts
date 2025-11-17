@@ -17,30 +17,6 @@ import type { NodeRef, FragmentRef } from '@lattice/view/types';
  *
  * @param nodeRef - The rendered node reference from mount() or create()
  * @returns HTML string with islands wrapped
- *
- * @example
- * ```ts
- * import { island, createSSRContext, runWithSSRContext } from '@lattice/data';
- * import { renderToString } from '@lattice/data/helpers/renderToString';
- * import { createSSRApi } from '@lattice/view/presets/ssr';
- * import { createSignalsApi } from '@lattice/signals/presets/core';
- *
- * const Counter = island('counter', create(({ el, signal }) => (props) => {
- *   const count = signal(props.initialCount);
- *   return el('button', { onClick: () => count(count() + 1) })(
- *     `Count: ${count()}`
- *   )();
- * }));
- *
- * const signals = createSignalsApi();
- * const { mount } = createSSRApi(signals);
- *
- * const ctx = createSSRContext();
- * const html = runWithSSRContext(ctx, () =>
- *   renderToString(mount(Counter({ initialCount: 5 })))
- * );
- * // html = '<div class="counter"><button>Count: 5</button></div><script type="application/json" data-island="counter-0"></script>'
- * ```
  */
 /**
  * Process HTML to add script tag markers after island elements

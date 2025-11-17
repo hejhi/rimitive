@@ -32,42 +32,14 @@ export interface RenderToStringOptions<TElement = unknown> {
  * @param nodeRef - The rendered node reference from mount() or create()
  * @param options - Rendering options (renderer, wrapElement, wrapFragment)
  * @returns HTML string representation
- *
- * @example
- * ```ts
- * import { createSignalsApi } from '@lattice/signals/presets/core';
- * import { createSSRApi } from '@lattice/view/presets/ssr';
- * import { renderToString } from '@lattice/view/helpers/renderToString';
- *
- * const signals = createSignalsApi();
- * const { api, mount, create, renderer } = createSSRApi(signals);
- *
- * const App = create(({ el }) => () => {
- *   return el('div', { className: 'app' })(
- *     el('h1')('Hello SSR!')
- *   )();
- * });
- *
- * const rendered = mount(App());
- * const html = renderToString(rendered, { renderer });
- * // html = '<div class="app"><h1>Hello SSR!</h1></div>'
- * ```
  */
 export function renderToString<TElement = unknown>(
   nodeRef: NodeRef<unknown>,
   options: RenderToStringOptions<TElement>
 ): string {
-  if (nodeRef.status === STATUS_COMMENT) {
-    return `<!--${(nodeRef).data}-->`;
-  }
-
-  if (nodeRef.status === STATUS_ELEMENT) {
-    return renderElementToString(nodeRef, options);
-  }
-
-  if (nodeRef.status === STATUS_FRAGMENT) {
-    return renderFragmentToString(nodeRef, options);
-  }
+  if (nodeRef.status === STATUS_COMMENT) return `<!--${(nodeRef).data}-->`;
+  if (nodeRef.status === STATUS_ELEMENT) return renderElementToString(nodeRef, options);
+  if (nodeRef.status === STATUS_FRAGMENT) return renderFragmentToString(nodeRef, options);
 
   // Unknown type - return empty string
   return '';
@@ -82,15 +54,10 @@ function hasFragmentDescendants(elementRef: ElementRef<unknown>): boolean {
   let current: typeof elementRef.firstChild | null = elementRef.firstChild;
 
   while (current) {
-    // Direct fragment child found
     if (current.status === STATUS_FRAGMENT) return true;
-
-    // Check descendants recursively for elements
-    if (current.status === STATUS_ELEMENT && hasFragmentDescendants(current)) {
-      return true;
-    }
-
+    if (current.status === STATUS_ELEMENT && hasFragmentDescendants(current)) return true;
     if (current === elementRef.lastChild) break;
+
     current = current.next;
   }
 
@@ -132,7 +99,7 @@ function renderElementToString<TElement = unknown>(
     }
 
     if (current === elementRef.lastChild) break;
-    current = current.next as typeof elementRef.firstChild | null;
+    current = current.next;
   }
 
   // Use renderer to serialize element with walked children
