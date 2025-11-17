@@ -1,0 +1,531 @@
+/**
+ * Tests for DOM Server Renderer (Island-aware SSR with linkedom)
+ *
+ * This test suite validates SSR-specific behaviors:
+ * - Fragment decoration with HTML comments
+ * - Island decoration with script tags
+ * - Attribute handling for SSR
+ */
+
+import { describe, it, expect } from 'vitest';
+import { createDOMServerRenderer } from './dom-server';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+import type { ElementRef, FragmentRef } from '@lattice/view/types';
+
+// ============================================================================
+// Tests: Basic DOM Operations
+// ============================================================================
+
+describe('Basic DOM Operations', () => {
+  it('should create elements with correct tag names', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    const span = renderer.createElement('span');
+
+    expect(div.tagName.toLowerCase()).toBe('div');
+    expect(span.tagName.toLowerCase()).toBe('span');
+  });
+
+  it('should create text nodes with correct content', () => {
+    const renderer = createDOMServerRenderer();
+
+    const text = renderer.createTextNode('Hello');
+
+    expect(text.textContent).toBe('Hello');
+  });
+
+  it('should append children to parent', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    const span = renderer.createElement('span');
+
+    renderer.appendChild(div, span);
+
+    expect(div.children.length).toBe(1);
+    expect(div.children[0]).toBe(span);
+  });
+
+  it('should insert child before reference node', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    const first = renderer.createTextNode('first');
+    const second = renderer.createTextNode('second');
+
+    renderer.appendChild(div, second);
+    renderer.insertBefore(div, first, second);
+
+    expect(div.childNodes[0]).toBe(first);
+    expect(div.childNodes[1]).toBe(second);
+  });
+
+  it('should update text node content', () => {
+    const renderer = createDOMServerRenderer();
+
+    const text = renderer.createTextNode('before');
+    renderer.updateTextNode(text, 'after');
+
+    expect(text.textContent).toBe('after');
+  });
+});
+
+// ============================================================================
+// Tests: Attribute Handling for SSR
+// ============================================================================
+
+describe('Attribute Handling', () => {
+  it('should skip event handler attributes', () => {
+    const renderer = createDOMServerRenderer();
+
+    const button = renderer.createElement('button');
+    renderer.setAttribute(button, 'onClick', () => {});
+
+    expect(button.hasAttribute('onClick')).toBe(false);
+    expect(button.hasAttribute('onclick')).toBe(false);
+  });
+
+  it('should map className to class attribute', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    renderer.setAttribute(div, 'className', 'container');
+
+    expect(div.getAttribute('class')).toBe('container');
+    expect(div.hasAttribute('className')).toBe(false);
+  });
+
+  it('should stringify primitive values', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    renderer.setAttribute(div, 'data-count', 42);
+    renderer.setAttribute(div, 'data-active', true);
+
+    expect(div.getAttribute('data-count')).toBe('42');
+    expect(div.getAttribute('data-active')).toBe('true');
+  });
+
+  it('should skip object values', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    renderer.setAttribute(div, 'data-config', { foo: 'bar' });
+
+    expect(div.hasAttribute('data-config')).toBe(false);
+  });
+
+  it('should skip function values', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    renderer.setAttribute(div, 'ref', () => {});
+
+    expect(div.hasAttribute('ref')).toBe(false);
+  });
+
+  it('should skip null and false values', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    renderer.setAttribute(div, 'disabled', null);
+    renderer.setAttribute(div, 'hidden', false);
+
+    expect(div.hasAttribute('disabled')).toBe(false);
+    expect(div.hasAttribute('hidden')).toBe(false);
+  });
+});
+
+// ============================================================================
+// Tests: Fragment Decoration (Non-Island)
+// ============================================================================
+
+describe('Fragment Decoration (Non-Island)', () => {
+  it('should add fragment-start and fragment-end comments', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+    const child1 = renderer.createElement('span');
+    const child2 = renderer.createElement('span');
+
+    renderer.appendChild(container, child1);
+    renderer.appendChild(container, child2);
+
+    const child1Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: child1,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const child2Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: child2,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const fragment: FragmentRef<HTMLElement> = {
+      status: STATUS_FRAGMENT,
+      element: null,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: child1Ref,
+      lastChild: child2Ref,
+      attach: () => {},
+    };
+
+    renderer.decorateFragment?.(fragment, container);
+
+    const html = container.innerHTML;
+    expect(html).toContain('<!--fragment-start-->');
+    expect(html).toContain('<!--fragment-end-->');
+  });
+
+  it('should place comments around fragment children', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+    const span1 = renderer.createElement('span');
+    const span2 = renderer.createElement('span');
+
+    span1.textContent = 'first';
+    span2.textContent = 'second';
+
+    renderer.appendChild(container, span1);
+    renderer.appendChild(container, span2);
+
+    const span1Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span1,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const span2Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span2,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const fragment: FragmentRef<HTMLElement> = {
+      status: STATUS_FRAGMENT,
+      element: null,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: span1Ref,
+      lastChild: span2Ref,
+      attach: () => {},
+    };
+
+    renderer.decorateFragment?.(fragment, container);
+
+    const html = container.innerHTML;
+    expect(html).toMatch(/<!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end-->/);
+  });
+
+  it('should skip empty fragments', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+
+    const fragment: FragmentRef<HTMLElement> = {
+      status: STATUS_FRAGMENT,
+      element: null,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+      attach: () => {},
+    };
+
+    renderer.decorateFragment?.(fragment, container);
+
+    const html = container.innerHTML;
+    expect(html).not.toContain('<!--fragment-start-->');
+    expect(html).not.toContain('<!--fragment-end-->');
+  });
+});
+
+// ============================================================================
+// Tests: Island Decoration (Fragment Islands)
+// ============================================================================
+
+describe('Fragment Island Decoration', () => {
+  it('should wrap island fragment in div with script tag', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+    const span = renderer.createElement('span');
+    span.textContent = 'island content';
+
+    renderer.appendChild(container, span);
+
+    const spanRef: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const fragment: FragmentRef<HTMLElement> & { __islandId?: string } = {
+      status: STATUS_FRAGMENT,
+      element: null,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: spanRef,
+      lastChild: spanRef,
+      attach: () => {},
+      __islandId: 'test-island',
+    };
+
+    renderer.decorateFragment?.(fragment, container);
+
+    const html = container.innerHTML;
+    expect(html).toContain('<div>');
+    expect(html).toContain('<!--fragment-start-->');
+    expect(html).toContain('<!--fragment-end-->');
+    expect(html).toContain('data-island="test-island"');
+    expect(html).toContain('type="application/json"');
+    expect(html).toContain('<script');
+    expect(html).toContain('</div>');
+  });
+
+  it('should preserve fragment children inside island wrapper', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+    const span1 = renderer.createElement('span');
+    const span2 = renderer.createElement('span');
+
+    span1.textContent = 'first';
+    span2.textContent = 'second';
+
+    renderer.appendChild(container, span1);
+    renderer.appendChild(container, span2);
+
+    const span1Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span1,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const span2Ref: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span2,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const fragment: FragmentRef<HTMLElement> & { __islandId?: string } = {
+      status: STATUS_FRAGMENT,
+      element: null,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: span1Ref,
+      lastChild: span2Ref,
+      attach: () => {},
+      __islandId: 'multi-island',
+    };
+
+    renderer.decorateFragment?.(fragment, container);
+
+    const html = container.innerHTML;
+    expect(html).toContain('<span>first</span>');
+    expect(html).toContain('<span>second</span>');
+    // Check order: div, comment, children, comment, script, close div
+    expect(html).toMatch(/<div><!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end--><script[^>]*><\/script><\/div>/);
+  });
+});
+
+// ============================================================================
+// Tests: Island Decoration (Element Islands)
+// ============================================================================
+
+describe('Element Island Decoration', () => {
+  it('should add script tag after island element', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+    const button = renderer.createElement('button');
+    button.textContent = 'Click me';
+
+    renderer.appendChild(container, button);
+
+    const buttonRef: ElementRef<HTMLElement> & { __islandId?: string } = {
+      status: STATUS_ELEMENT,
+      element: button,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+      __islandId: 'button-island',
+    };
+
+    renderer.decorateElement?.(buttonRef, button);
+
+    const html = container.innerHTML;
+    expect(html).toContain('<button>Click me</button>');
+    expect(html).toContain('data-island="button-island"');
+    expect(html).toContain('type="application/json"');
+    expect(html).toContain('<script');
+  });
+
+  it('should place script tag as next sibling of element', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+    const div = renderer.createElement('div');
+    const after = renderer.createTextNode('after');
+
+    renderer.appendChild(container, div);
+    renderer.appendChild(container, after);
+
+    const divRef: ElementRef<HTMLElement> & { __islandId?: string } = {
+      status: STATUS_ELEMENT,
+      element: div,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+      __islandId: 'div-island',
+    };
+
+    renderer.decorateElement?.(divRef, div);
+
+    // Script should be between div and "after" text
+    const children = Array.from(container.childNodes);
+    expect(children[0]).toBe(div);
+    expect(children[1]?.nodeName).toBe('SCRIPT');
+    expect(children[2]).toBe(after);
+  });
+
+  it('should skip decoration for non-island elements', () => {
+    const renderer = createDOMServerRenderer();
+
+    const container = renderer.createElement('div');
+    const span = renderer.createElement('span');
+
+    renderer.appendChild(container, span);
+
+    const spanRef: ElementRef<HTMLElement> = {
+      status: STATUS_ELEMENT,
+      element: span,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    renderer.decorateElement?.(spanRef, span);
+
+    const html = container.innerHTML;
+    expect(html).not.toContain('<script');
+  });
+});
+
+// ============================================================================
+// Tests: Serialization
+// ============================================================================
+
+describe('Element Serialization', () => {
+  it('should serialize element with custom children HTML', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    div.setAttribute('class', 'container');
+
+    const html = renderer.serializeElement(div, '<p>Custom child</p>');
+
+    // linkedom uses uppercase tag names and lowercases content
+    expect(html.toLowerCase()).toBe('<div class="container"><p>custom child</p></div>');
+  });
+
+  it('should preserve all attributes during serialization', () => {
+    const renderer = createDOMServerRenderer();
+
+    const button = renderer.createElement('button');
+    button.setAttribute('type', 'submit');
+    button.setAttribute('class', 'btn');
+    button.setAttribute('data-id', '123');
+
+    const html = renderer.serializeElement(button, 'Submit');
+
+    expect(html).toContain('type="submit"');
+    expect(html).toContain('class="btn"');
+    expect(html).toContain('data-id="123"');
+    expect(html.toLowerCase()).toContain('>submit</button>');
+  });
+});
+
+// ============================================================================
+// Tests: SSR-Specific Behaviors
+// ============================================================================
+
+describe('SSR-Specific Behaviors', () => {
+  it('should return no-op cleanup for addEventListener', () => {
+    const renderer = createDOMServerRenderer();
+
+    const button = renderer.createElement('button');
+    const cleanup = renderer.addEventListener(button, 'click', () => {}, {});
+
+    // Should return a function that returns a function (no-op chain)
+    expect(typeof cleanup).toBe('function');
+    expect(typeof cleanup()).toBe('function');
+  });
+
+  it('should check element connection status', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+
+    // In linkedom, elements aren't connected until added to document
+    // but isConnected method works correctly
+    expect(typeof renderer.isConnected(div)).toBe('boolean');
+  });
+
+  it('should generate valid HTML from DOM tree', () => {
+    const renderer = createDOMServerRenderer();
+
+    const div = renderer.createElement('div');
+    const h1 = renderer.createElement('h1');
+    const text = renderer.createTextNode('Hello World');
+
+    renderer.appendChild(h1, text);
+    renderer.appendChild(div, h1);
+
+    expect(div.outerHTML).toBe('<div><h1>Hello World</h1></div>');
+  });
+});
