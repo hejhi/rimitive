@@ -11,7 +11,6 @@
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
-    "composite": true,
     "lib": ["ES2022", "DOM"],
     "types": [
       "vitest/importMeta"
@@ -21,5 +20,5 @@
     "src/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts"
-  ],
+  ]
 }
