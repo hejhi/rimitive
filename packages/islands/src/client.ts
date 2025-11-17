@@ -1,5 +1,5 @@
 /**
- * @lattice/data/client - Client-safe exports
+ * @lattice/islands/client - Client-safe exports
  *
  * Only includes exports that work in the browser.
  * Does NOT include SSR context or server-only utilities.

@@ -26,7 +26,7 @@ import type { ComponentFactory } from '@lattice/view/presets/core';
  * @example
  * ```ts
  * import { createSignalsApi } from '@lattice/signals/presets/core';
- * import { createIslandSSRApi } from '@lattice/data/presets/island-ssr';
+ * import { createIslandSSRApi } from '@lattice/islands/presets/island-ssr';
  *
  * const signals = createSignalsApi();
  * const { api, mount, create } = createIslandSSRApi(signals);

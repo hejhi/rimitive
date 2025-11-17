@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/data": "workspace:*",
+    "@lattice/islands": "workspace:*",
     "@lattice/lattice": "workspace:*",
     "@lattice/signals": "workspace:*",
     "@lattice/view": "workspace:*"

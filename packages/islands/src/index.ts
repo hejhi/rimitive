@@ -1,5 +1,5 @@
 /**
- * @lattice/data - Islands Architecture for Server-Side Rendering
+ * @lattice/islands - Islands Architecture for Server-Side Rendering
  *
  * Provides fine-grained hydration for Lattice applications.
  * Only interactive components ("islands") ship JavaScript to the client.
@@ -7,7 +7,7 @@
  * @example
  * ```ts
  * // Server-side
- * import { island, createSSRContext, runWithSSRContext } from '@lattice/data';
+ * import { island, createSSRContext, runWithSSRContext } from '@lattice/islands';
  * import { renderToString } from '@lattice/view/helpers/renderToString';
  *
  * const Counter = island('counter', create(({ el, signal }) => (props) => {
@@ -21,7 +21,7 @@
  * const html = runWithSSRContext(ctx, () => renderToString(mount(Counter({ initialCount: 5 }))));
  *
  * // Client-side
- * import { createDOMIslandHydrator } from '@lattice/data';
+ * import { createDOMIslandHydrator } from '@lattice/islands';
  *
  * const hydrator = createDOMIslandHydrator();
  * hydrator.hydrate({ counter: Counter });

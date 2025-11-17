@@ -3,11 +3,11 @@
  *
  * Loads island components and hydrates them from server-rendered HTML.
  */
-import { createDOMIslandHydrator } from '@lattice/data/hydrators/dom';
+import { createDOMIslandHydrator } from '@lattice/islands/hydrators/dom';
 import { createApi } from '@lattice/lattice';
 import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { createHydratingRenderer } from '@lattice/data/renderers/switchable-dom';
+import { createHydratingRenderer } from '@lattice/islands/renderers/switchable-dom';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { signals, mount } from './api';
 import { Counter } from './islands/Counter.js';

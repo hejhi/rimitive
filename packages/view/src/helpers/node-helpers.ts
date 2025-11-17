@@ -54,7 +54,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       linkBefore(node as LinkedNode<TElement>, nextLinked);
 
       // Insert into DOM - use the element from nextLinked if available
-      const nextEl = (nextLinked?.element as TElement | null | undefined) ?? null;
+      const nextEl = nextLinked?.element ?? null;
       renderer.insertBefore(
         parentElement,
         node.element,

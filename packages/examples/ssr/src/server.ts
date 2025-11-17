@@ -14,7 +14,7 @@ import {
   getIslandScripts,
   renderToString,
   createIslandSSRApi,
-} from '@lattice/data';
+} from '@lattice/islands';
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
 import { TagList } from './islands/TagList.js';

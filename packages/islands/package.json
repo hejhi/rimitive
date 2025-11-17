@@ -1,7 +1,7 @@
 {
-  "name": "@lattice/data",
+  "name": "@lattice/islands",
   "version": "0.0.1",
-  "description": "Data islands for server-side rendering with Lattice",
+  "description": "Islands architecture for server-side rendering with Lattice",
   "author": "Lattice Team",
   "license": "MIT",
   "type": "module",

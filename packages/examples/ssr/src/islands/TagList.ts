@@ -3,7 +3,7 @@
  *
  * This tests fragment island hydration using map() to return multiple siblings
  */
-import { island } from '@lattice/data/island';
+import { island } from '@lattice/islands/island';
 import { create } from '../api.js';
 
 export const TagList = island(
