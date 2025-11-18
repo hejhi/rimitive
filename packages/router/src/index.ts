@@ -6,6 +6,7 @@
 
 export { createRouteFactory } from './route';
 export { createLinkFactory } from './link';
+export { createLocationFactory } from './location';
 export { matchPath } from './helpers/matching';
 export type {
   RouteParams,
@@ -15,4 +16,7 @@ export type {
   RouteFactory,
   LinkOpts,
   LinkFactory,
+  LocationAPI,
+  LocationOpts,
+  LocationFactory,
 } from './types';

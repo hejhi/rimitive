@@ -145,3 +145,32 @@ export type LinkFactory = LatticeExtension<
     ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
   }
 >;
+
+/**
+ * Location API - reactive access to URL components
+ */
+export interface LocationAPI {
+  pathname: ComputedFunction<string>;
+  search: ComputedFunction<string>;
+  hash: ComputedFunction<string>;
+  query: ComputedFunction<Record<string, string>>;
+}
+
+/**
+ * Options passed to location factory
+ */
+export type LocationOpts = {
+  signal: <T>(value: T) => SignalFunction<T>;
+  computed: <T>(fn: () => T) => ComputedFunction<T>;
+  currentPath: Reactive<string>;
+};
+
+/**
+ * Location factory type
+ */
+export type LocationFactory = LatticeExtension<
+  'location',
+  {
+    (): LocationAPI;
+  }
+>;
