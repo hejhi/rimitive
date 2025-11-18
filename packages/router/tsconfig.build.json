@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "exclude": [
     "src/**/*.test.ts",
+    "src/presets/server.ts",
     "vite.config.ts",
     "vitest.config.ts"
   ]

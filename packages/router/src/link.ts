@@ -7,6 +7,7 @@ import type { RefSpec, ElRefSpecChild } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { ElementProps } from '@lattice/view/el';
 import type { LinkOpts, LinkFactory } from './types';
+import { getActiveRouterContext } from './ssr-context';
 
 /**
  * Create Link factory that renders anchor elements with SPA navigation
@@ -25,6 +26,14 @@ export const createLinkFactory = create(
       ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement> {
         return (...children: ElRefSpecChild[]) => {
           const { href, onclick: userOnClick, ...restProps } = props;
+
+          const ssrContext = getActiveRouterContext();
+          if (ssrContext) {
+            // SERVER: Plain anchor, no click interception
+            return el('a', { ...restProps, href, onclick: userOnClick })(...children);
+          }
+
+          // CLIENT: Add navigation handler
 
           // Helper to check if link is external
           const isExternal = (url: string): boolean => {

@@ -19,6 +19,9 @@ import { STATUS_ROUTE_SPEC as STATUS_ROUTE_SPEC_CONST } from './types';
 // Import matching utilities
 import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
 
+// Import SSR context for environment detection
+import { getActiveRouterContext } from './ssr-context';
+
 // Re-export for backward compatibility and public API
 export { matchPath } from './helpers/matching';
 export type { RouteOpts, RouteComponent, RouteFactory } from './types';
@@ -38,7 +41,13 @@ export const createRouteFactory = create(
       // Create navigate function that updates path and history
       const navigate = (path: string): void => {
         currentPath(path);
-        window.history.pushState({}, '', path);
+
+        const ssrContext = getActiveRouterContext();
+        if (!ssrContext) {
+          // Client only: update browser history
+          window.history.pushState({}, '', path);
+        }
+        // Server: no-op for history (currentPath already updated)
       };
 
       // Shared state for tracking route groups

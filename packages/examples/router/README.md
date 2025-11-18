@@ -125,10 +125,44 @@ el('button', { onClick: () => navigate('/') })('Home')
 
 ## API Setup Pattern
 
-The `api.ts` file follows the same pattern as the view example:
-- Creates signals API
-- Creates DOM renderer
-- Adds route and Link to the view helpers
-- Exports unified API, mount, and create functions
+The `api.ts` file demonstrates the universal routing API:
 
-This ensures all components have access to the same routing capabilities.
+### Environment-Aware Current Path
+Uses `createCurrentPathSignal` helper for automatic environment detection:
+
+```ts
+import { createCurrentPathSignal } from '@lattice/router/helpers/currentPath';
+
+// Automatically initializes from:
+// - window.location on the client
+// - SSR context on the server (for future SSR support)
+const currentPath = createCurrentPathSignal(signals.signal);
+```
+
+### Popstate Listener
+Sets up browser back/forward navigation handling:
+
+```ts
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    const fullPath = window.location.pathname +
+                     window.location.search +
+                     window.location.hash;
+    currentPath(fullPath);
+  });
+}
+```
+
+### Navigate Function
+Provides programmatic navigation with environment awareness:
+
+```ts
+const navigate = (path: string): void => {
+  currentPath(path);
+  if (typeof window !== 'undefined') {
+    window.history.pushState({}, '', path);
+  }
+};
+```
+
+This setup is **client-side only** for now, but uses the universal API to prepare for SSR support in the future. The same code will work on both client and server when SSR is implemented.

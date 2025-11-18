@@ -21,6 +21,14 @@
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
+    },
+    "./ssr-context": {
+      "import": "./dist/ssr-context.js",
+      "types": "./dist/ssr-context.d.ts"
+    },
+    "./helpers/currentPath": {
+      "import": "./dist/helpers/currentPath.js",
+      "types": "./dist/helpers/currentPath.d.ts"
     }
   },
   "files": [

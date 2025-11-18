@@ -65,6 +65,8 @@ export default defineConfig({
         route: resolve(__dirname, 'src/route.ts'),
         link: resolve(__dirname, 'src/link.ts'),
         types: resolve(__dirname, 'src/types.ts'),
+        'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
+        'helpers/currentPath': resolve(__dirname, 'src/helpers/currentPath.ts'),
       },
       formats: ['es'],
     },

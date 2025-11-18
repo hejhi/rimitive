@@ -18,24 +18,35 @@ import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouteFactory } from '@lattice/router';
 import { createLinkFactory } from '@lattice/router';
+import { createCurrentPathSignal } from '@lattice/router/helpers/currentPath';
 
 const createViewApi = () => {
   const signals = createSignalsApi();
   const renderer = createDOMRenderer();
   const viewHelpers = defaultViewHelpers(renderer, signals);
 
-  // Create currentPath signal for routing
-  const currentPath = signals.signal(window.location.pathname);
+  // Create environment-aware currentPath signal
+  // This automatically initializes from:
+  // - window.location on the client
+  // - SSR context on the server (for future SSR support)
+  const currentPath = createCurrentPathSignal(signals.signal);
 
   // Set up popstate listener for browser back/forward buttons
-  window.addEventListener('popstate', () => {
-    currentPath(window.location.pathname);
-  });
+  // Only runs on the client since window is only available in the browser
+  if (typeof window !== 'undefined') {
+    window.addEventListener('popstate', () => {
+      const fullPath = window.location.pathname + window.location.search + window.location.hash;
+      currentPath(fullPath);
+    });
+  }
 
-  // Create navigate function (same as in route factory)
+  // Create navigate function for programmatic navigation
   const navigate = (path: string): void => {
     currentPath(path);
-    window.history.pushState({}, '', path);
+    // Only push to history on the client
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', path);
+    }
   };
 
   // First create base extensions to get el, match, and show
@@ -47,7 +58,7 @@ const createViewApi = () => {
     {
       ...baseExtensions,
       route: createRouteFactory<DOMRendererConfig>(),
-      Link: createLinkFactory<DOMRendererConfig>(),
+      Link: createLinkFactory(),
     },
     {
       ...viewHelpers,
