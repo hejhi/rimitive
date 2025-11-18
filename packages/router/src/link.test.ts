@@ -21,13 +21,9 @@ describe('Link component - basic rendering', () => {
       window.history.pushState({}, '', path);
     };
 
-    const Link = createLinkFactory<MockRendererConfig>().create({
+    const Link = createLinkFactory().create({
       el: el.method as never,
       navigate,
-      scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
-      createElementScope: env.createElementScope,
-      onCleanup: env.onCleanup,
     });
 
     return { ...env, el, Link: Link.method, navigate, currentPath };
@@ -116,13 +112,9 @@ describe('Link component - click handling', () => {
       window.history.pushState({}, '', path);
     };
 
-    const Link = createLinkFactory<MockRendererConfig>().create({
+    const Link = createLinkFactory().create({
       el: el.method as never,
       navigate,
-      scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
-      createElementScope: env.createElementScope,
-      onCleanup: env.onCleanup,
     });
 
     return { ...env, el, Link: Link.method, navigate, currentPath, navigateCalls };
@@ -165,7 +157,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onClick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
 
     expect(event.defaultPrevented).toBe(true);
     expect(navigateCalls).toEqual(['/about']);
@@ -188,7 +180,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onClick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -211,7 +203,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onClick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -234,7 +226,7 @@ describe('Link component - click handling', () => {
       button: 2, // Right click
     };
 
-    (anchor?.props.onClick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -257,7 +249,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onClick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -280,19 +272,19 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onClick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
   });
 
-  it('merges user onClick with navigation handler', () => {
+  it('merges user onclick with navigation handler', () => {
     const { Link, renderer, navigateCalls } = setup();
 
     const userClicks: string[] = [];
     const linkSpec = Link({
       href: '/about',
-      onClick: () => { userClicks.push('clicked'); }
+      onclick: () => { userClicks.push('clicked'); }
     })('About');
 
     const parent = mountElement(linkSpec, renderer);
@@ -308,7 +300,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onClick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
 
     expect(userClicks).toEqual(['clicked']);
     expect(navigateCalls).toEqual(['/about']);
@@ -331,13 +323,9 @@ describe('Link component - lifecycle callbacks', () => {
       window.history.pushState({}, '', path);
     };
 
-    const Link = createLinkFactory<MockRendererConfig>().create({
+    const Link = createLinkFactory().create({
       el: el.method as never,
       navigate,
-      scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
-      createElementScope: env.createElementScope,
-      onCleanup: env.onCleanup,
     });
 
     return { ...env, el, Link: Link.method, navigate, currentPath };
@@ -368,7 +356,7 @@ describe('Link component - lifecycle callbacks', () => {
 
     const mountedElements: MockElement[] = [];
     const linkSpec = Link({ href: '/about' })('About')((element) => {
-      mountedElements.push(element);
+      mountedElements.push(element as unknown as MockElement);
     });
 
     mountElement(linkSpec, renderer);

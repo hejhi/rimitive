@@ -3,23 +3,28 @@
  */
 
 import { create } from '@lattice/lattice';
-import type { RendererConfig, RefSpec } from '@lattice/view/types';
+import type { RefSpec, ElRefSpecChild } from '@lattice/view/types';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { ElementProps } from '@lattice/view/el';
 import type { LinkOpts, LinkFactory } from './types';
 
 /**
  * Create Link factory that renders anchor elements with SPA navigation
+ *
+ * Link is inherently DOM-coupled (uses window.history, MouseEvent, href, onclick).
+ * Routers are web browser concepts - no need for renderer abstraction here.
  */
 export const createLinkFactory = create(
-  <TConfig extends RendererConfig>({
+  ({
     el,
     navigate,
-  }: LinkOpts<TConfig>) =>
+  }: LinkOpts) =>
     () => {
-      function Link<Tag extends string & keyof TConfig['elements']>(
-        props: Record<string, unknown> & { href: string }
-      ): (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]> {
-        return (...children: unknown[]) => {
-          const { href, onClick: userOnClick, ...restProps } = props;
+      function Link(
+        props: ElementProps<DOMRendererConfig, 'a'> & { href: string }
+      ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement> {
+        return (...children: ElRefSpecChild[]) => {
+          const { href, onclick: userOnClick, ...restProps } = props;
 
           // Helper to check if link is external
           const isExternal = (url: string): boolean => {
@@ -28,8 +33,14 @@ export const createLinkFactory = create(
 
           // Navigation click handler
           const handleClick = (event: MouseEvent): void => {
-            // Call user's onClick if provided
-            if (userOnClick && typeof userOnClick === 'function') userOnClick(event);
+            // Call user's onclick if provided (handle both static and reactive)
+            if (userOnClick) {
+              const onClick = typeof userOnClick === 'function' && userOnClick.length === 0
+                ? (userOnClick as () => ((e: MouseEvent) => unknown))()
+                : userOnClick as (e: MouseEvent) => unknown;
+
+              if (onClick) onClick(event);
+            }
 
             // Don't intercept if:
             // - Modifier keys are pressed (allow opening in new tab)
@@ -51,16 +62,16 @@ export const createLinkFactory = create(
             navigate(href);
           };
 
-          // Create anchor element with onClick handler merged with user's onClick
-          return el('a' as never, {
+          // Create anchor element with onclick handler merged with user's onclick
+          return el('a', {
             ...restProps,
             href,
-            onClick: handleClick,
+            onclick: handleClick,
           })(...children);
         };
       }
 
-      const extension: LinkFactory<TConfig> = {
+      const extension: LinkFactory = {
         name: 'Link' as const,
         method: Link,
       };

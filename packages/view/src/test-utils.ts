@@ -35,6 +35,7 @@ export class MockElement {
   disabled?: boolean;
   checked?: boolean;
   name?: string;
+  onclick?: ((event: MouseEvent) => unknown);
 
   // Custom test data - used to verify element reuse/preservation in tests
   __customState?: string;

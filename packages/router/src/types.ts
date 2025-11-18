@@ -1,7 +1,10 @@
-import type { RendererConfig, RefSpec, Reactive, LifecycleCallback } from '@lattice/view/types';
+import type { RendererConfig, RefSpec, Reactive, LifecycleCallback, ElRefSpecChild } from '@lattice/view/types';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { CreateScopes } from '@lattice/view/helpers/scope';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { ShowFactory } from '@lattice/view/show';
+import type { ElementProps } from '@lattice/view/el';
+import { ElMethod } from '@lattice/view/component';
 
 /**
  * Route parameter map extracted from path patterns
@@ -121,27 +124,24 @@ export type RouteFactory<TConfig extends RendererConfig> = LatticeExtension<
 
 /**
  * Options passed to Link factory
+ *
+ * Link is DOM-only - routing with window.history is a web browser concept
  */
-export type LinkOpts<TConfig extends RendererConfig> = {
-  el: <Tag extends string & keyof TConfig['elements']>(
-    tag: Tag,
-    props?: Record<string, unknown>
-  ) => (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]>;
+export type LinkOpts = {
+  el: ElMethod<DOMRendererConfig>;
   navigate: (path: string) => void;
-  scopedEffect: CreateScopes['scopedEffect'];
-  renderer: import('@lattice/view/types').Renderer<TConfig>;
-  createElementScope: CreateScopes['createElementScope'];
-  onCleanup: CreateScopes['onCleanup'];
 };
 
 /**
  * Link factory type
+ *
+ * Link is DOM-only - no need for generic renderer abstraction
  */
-export type LinkFactory<TConfig extends RendererConfig> = LatticeExtension<
+export type LinkFactory = LatticeExtension<
   'Link',
   {
-    <Tag extends string & keyof TConfig['elements']>(
-      props: Record<string, unknown> & { href: string }
-    ): (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]>;
+    (
+      props: ElementProps<DOMRendererConfig, 'a'> & { href: string }
+    ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
   }
 >;
