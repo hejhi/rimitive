@@ -31,6 +31,7 @@ export const createRouteFactory = create(
     computed,
     el,
     match,
+    show,
     currentPath,
   }: RouteOpts<TConfig>) =>
     () => {
@@ -191,13 +192,12 @@ export const createRouteFactory = create(
           // Component functions should only run once per component instance
           const componentRef = component({ el, params, outlet, navigate });
 
-          // Use match() to control component visibility based on route match
-          const baseRefSpec = match(shouldRender)((pathMatch) => {
-            if (pathMatch === null) {
-              return null;
-            }
-            return componentRef;
-          });
+          // Use show() to control component visibility based on route match
+          // show() creates once and toggles visibility (no recreation)
+          const baseRefSpec = show(
+            computed(() => shouldRender() !== null),
+            componentRef
+          );
 
           // Create true wrapper that delegates to baseRefSpec via closure
           // No mutation - full ownership through closure

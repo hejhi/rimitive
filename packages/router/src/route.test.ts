@@ -3,6 +3,7 @@ import { matchPath, createRouteFactory } from './route';
 import { createTestEnv, type MockRendererConfig, type MockElement, getTextContent } from '../../view/src/test-utils';
 import { El } from '@lattice/view/el';
 import { Match } from '@lattice/view/match';
+import { Show } from '@lattice/view/show';
 import type { ElementRef, RefSpec } from '@lattice/view/types';
 import { STATUS_ELEMENT } from '@lattice/view/types';
 
@@ -71,6 +72,15 @@ describe('route() - single route rendering', () => {
       getElementScope: env.getElementScope,
     });
 
+    const show = Show<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
     const currentPath = env.signal('/');
 
     // Create a simple computed implementation
@@ -90,6 +100,7 @@ describe('route() - single route rendering', () => {
       computed,
       el: el.method as never,
       match: match.method,
+      show: show.method,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -226,6 +237,15 @@ describe('multiple routes - reactive switching', () => {
       getElementScope: env.getElementScope,
     });
 
+    const show = Show<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
     const currentPath = env.signal('/');
 
     const computed = <T>(fn: () => T) => {
@@ -243,6 +263,7 @@ describe('multiple routes - reactive switching', () => {
       computed,
       el: el.method as never,
       match: match.method,
+      show: show.method,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -416,6 +437,15 @@ describe('params - component access to route parameters', () => {
       getElementScope: env.getElementScope,
     });
 
+    const show = Show<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
     const currentPath = env.signal('/');
 
     const computed = <T>(fn: () => T) => {
@@ -433,6 +463,7 @@ describe('params - component access to route parameters', () => {
       computed,
       el: el.method as never,
       match: match.method,
+      show: show.method,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -553,6 +584,15 @@ describe('nested routes - structure and path composition', () => {
       getElementScope: env.getElementScope,
     });
 
+    const show = Show<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
     const currentPath = env.signal('/');
 
     const computed = <T>(fn: () => T) => {
@@ -570,6 +610,7 @@ describe('nested routes - structure and path composition', () => {
       computed,
       el: el.method as never,
       match: match.method,
+      show: show.method,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -766,6 +807,15 @@ describe('programmatic navigation', () => {
       getElementScope: env.getElementScope,
     });
 
+    const show = Show<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
     const currentPath = env.signal('/');
 
     const computed = <T>(fn: () => T) => {
@@ -783,6 +833,7 @@ describe('programmatic navigation', () => {
       computed,
       el: el.method as never,
       match: match.method,
+      show: show.method,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -994,6 +1045,15 @@ describe('outlet - parent components render matched children', () => {
       getElementScope: env.getElementScope,
     });
 
+    const show = Show<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
     const currentPath = env.signal('/');
 
     const computed = <T>(fn: () => T) => {
@@ -1011,6 +1071,7 @@ describe('outlet - parent components render matched children', () => {
       computed,
       el: el.method as never,
       match: match.method,
+      show: show.method,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,

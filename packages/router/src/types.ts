@@ -1,6 +1,7 @@
 import type { RendererConfig, RefSpec, Reactive, LifecycleCallback } from '@lattice/view/types';
 import type { CreateScopes } from '@lattice/view/helpers/scope';
 import type { LatticeExtension } from '@lattice/lattice';
+import type { ShowFactory } from '@lattice/view/show';
 
 /**
  * Route parameter map extracted from path patterns
@@ -87,6 +88,7 @@ export type RouteOpts<TConfig extends RendererConfig> = {
     props?: Record<string, unknown>
   ) => (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]>;
   match: MatchFunction<TConfig['baseElement']>;
+  show: ShowFactory<TConfig['baseElement']>['method'];
   currentPath: Reactive<string>;
   scopedEffect: CreateScopes['scopedEffect'];
   renderer: import('@lattice/view/types').Renderer<TConfig>;

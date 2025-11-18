@@ -38,7 +38,7 @@ const createViewApi = () => {
     window.history.pushState({}, '', path);
   };
 
-  // First create base extensions to get el and match
+  // First create base extensions to get el, match, and show
   const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
   const baseViews = createApi(baseExtensions, viewHelpers);
 
@@ -54,6 +54,7 @@ const createViewApi = () => {
       computed: signals.computed,
       el: baseViews.el, // Pass el to route factory
       match: baseViews.match, // Pass match to route factory
+      show: baseViews.show, // Pass show to route factory
       currentPath,
       navigate,
     }
