@@ -141,15 +141,6 @@ export const createRouteFactory = create(
             matchedPath,
           });
 
-          // Reset group after this synchronous call stack completes
-          // but only if this was the first route in the group
-          if (isFirstInGroup) {
-            queueMicrotask(() => {
-              activeRouteGroup = null;
-              groupCreationDepth = 0;
-            });
-          }
-
           // Compute whether this route should render
           // Only renders if it's the first matching route in its group
           // Wildcards are always checked last
