@@ -157,6 +157,7 @@ describe('Link component - click handling', () => {
 
     const event = {
       preventDefault: () => { event.defaultPrevented = true; },
+      stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
       ctrlKey: false,
@@ -179,6 +180,7 @@ describe('Link component - click handling', () => {
 
     const event = {
       preventDefault: () => { event.defaultPrevented = true; },
+      stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: true,
       ctrlKey: false,
@@ -201,6 +203,7 @@ describe('Link component - click handling', () => {
 
     const event = {
       preventDefault: () => { event.defaultPrevented = true; },
+      stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
       ctrlKey: true,
@@ -223,6 +226,7 @@ describe('Link component - click handling', () => {
 
     const event = {
       preventDefault: () => { event.defaultPrevented = true; },
+      stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
       ctrlKey: false,
@@ -245,6 +249,7 @@ describe('Link component - click handling', () => {
 
     const event = {
       preventDefault: () => { event.defaultPrevented = true; },
+      stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
       ctrlKey: false,
@@ -267,6 +272,7 @@ describe('Link component - click handling', () => {
 
     const event = {
       preventDefault: () => { event.defaultPrevented = true; },
+      stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
       ctrlKey: false,
@@ -294,6 +300,7 @@ describe('Link component - click handling', () => {
 
     const event = {
       preventDefault: () => { event.defaultPrevented = true; },
+      stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
       ctrlKey: false,

@@ -8,10 +8,15 @@ import type { RouteMatch } from '../types';
  * Compose a parent path with a child path
  *
  * @param parentPath - Parent route path (e.g., '/', '/products')
- * @param childPath - Child route path (e.g., 'about', ':id')
- * @returns Combined path (e.g., '/about', '/products/:id')
+ * @param childPath - Child route path (e.g., 'about', ':id', '*')
+ * @returns Combined path (e.g., '/about', '/products/:id', '*')
  */
 export const composePath = (parentPath: string, childPath: string): string => {
+  // Wildcard stays as wildcard, regardless of parent
+  if (childPath === '*') {
+    return '*';
+  }
+
   // If parent is root, just add a leading slash to child
   if (parentPath === '/') {
     return `/${childPath}`;
@@ -24,13 +29,21 @@ export const composePath = (parentPath: string, childPath: string): string => {
 /**
  * Matches a URL path against a route pattern (exact match)
  *
- * Supports exact string matching and path parameters using :paramName syntax
+ * Supports exact string matching, path parameters using :paramName syntax, and wildcard '*' for catch-all
  *
- * @param pattern - Route pattern (e.g., '/', '/about', '/products/:id')
+ * @param pattern - Route pattern (e.g., '/', '/about', '/products/:id', '*')
  * @param path - URL path to match against
  * @returns RouteMatch if matched, null otherwise
  */
 export const matchPath = (pattern: string, path: string): RouteMatch | null => {
+  // Wildcard matches any path
+  if (pattern === '*') {
+    return {
+      path,
+      params: {},
+    };
+  }
+
   // Exact match (no parameters)
   if (pattern === path) {
     return {
@@ -80,11 +93,19 @@ export const matchPath = (pattern: string, path: string): RouteMatch | null => {
  *
  * Used for routes with children - matches if the path starts with the pattern
  *
- * @param pattern - Route pattern (e.g., '/', '/products', '/users/:id')
+ * @param pattern - Route pattern (e.g., '/', '/products', '/users/:id', '*')
  * @param path - URL path to match against
  * @returns RouteMatch if matched, null otherwise
  */
 export const matchPathPrefix = (pattern: string, path: string): RouteMatch | null => {
+  // Wildcard matches any path
+  if (pattern === '*') {
+    return {
+      path,
+      params: {},
+    };
+  }
+
   // Exact match
   if (pattern === path) {
     return {

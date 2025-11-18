@@ -148,16 +148,42 @@ export const createRouteFactory = create(
 
           // Compute whether this route should render
           // Only renders if it's the first matching route in its group
+          // Wildcards are always checked last
           const shouldRender = computed(() => {
             // Trigger reactivity on path changes
             currentPath();
 
-            // Find the first matching route
+            // Separate routes into wildcard and non-wildcard
+            const wildcardRoutes: typeof myRoutes = [];
+            const normalRoutes: typeof myRoutes = [];
+
             for (const r of myRoutes) {
+              if (r.pathPattern === '*') {
+                wildcardRoutes.push(r);
+              } else {
+                normalRoutes.push(r);
+              }
+            }
+
+            // Check if any normal route matches
+            let normalRouteMatched = false;
+            for (const r of normalRoutes) {
               const match = r.matchedPath.peek();
               if (match !== null) {
+                normalRouteMatched = true;
                 // Only render if this is THE matching route
                 return r.id === routeId ? match : null;
+              }
+            }
+
+            // Only check wildcard routes if no normal route matched
+            if (!normalRouteMatched) {
+              for (const r of wildcardRoutes) {
+                const match = r.matchedPath.peek();
+                if (match !== null) {
+                  // Only render if this is THE matching wildcard route
+                  return r.id === routeId ? match : null;
+                }
               }
             }
 

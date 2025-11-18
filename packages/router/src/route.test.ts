@@ -1026,6 +1026,174 @@ describe('programmatic navigation', () => {
   });
 });
 
+describe('wildcard routes - catch-all behavior', () => {
+  function setup() {
+    const env = createTestEnv();
+    const el = El<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      onCleanup: env.onCleanup,
+    });
+
+    const match = Match<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
+    const show = Show<MockRendererConfig>().create({
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      disposeScope: env.disposeScope,
+      onCleanup: env.onCleanup,
+      getElementScope: env.getElementScope,
+    });
+
+    const currentPath = env.signal('/');
+
+    const computed = <T>(fn: () => T) => {
+      const s = env.signal(fn());
+      env.effect(() => {
+        s(fn());
+      });
+      const result = (() => s()) as { (): T; peek: () => T };
+      result.peek = () => s.peek();
+      return result;
+    };
+
+    const route = createRouteFactory<MockRendererConfig>().create({
+      signal: env.signal,
+      computed,
+      el: el.method as never,
+      match: match.method,
+      show: show.method,
+      currentPath,
+      scopedEffect: env.scopedEffect,
+      renderer: env.renderer,
+      createElementScope: env.createElementScope,
+      onCleanup: env.onCleanup,
+    });
+
+    return { ...env, el, route: route.method, currentPath };
+  }
+
+  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+    const parent = renderer.createElement('div');
+    const parentRef: ElementRef<MockElement> = {
+      status: STATUS_ELEMENT,
+      element: parent,
+      parent: null,
+      prev: null,
+      next: null,
+      firstChild: null,
+      lastChild: null,
+    };
+
+    const nodeRef = spec.create();
+
+    if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
+      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+    } else if ('element' in nodeRef) {
+      const elementRef = nodeRef as ElementRef<MockElement>;
+      elementRef.parent = parentRef;
+      elementRef.next = null;
+      parent.children.push(elementRef.element);
+    }
+
+    return parent;
+  };
+
+  it('wildcard matches any path when no other route matches', () => {
+    const { route, el, currentPath, renderer } = setup();
+
+    currentPath('/unknown');
+
+    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Home') as RefSpec<MockElement>;
+
+    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Not Found') as RefSpec<MockElement>;
+
+    const routesSpec = el.method('div')(
+      route('/', Home)().unwrap(),
+      route('*', NotFound)().unwrap()
+    );
+
+    const parent = mountRoute(routesSpec, renderer);
+    expect(getTextContent(parent)).toBe('Not Found');
+  });
+
+  it('wildcard does not match when earlier route matches', () => {
+    const { route, el, currentPath, renderer } = setup();
+
+    currentPath('/about');
+
+    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('About') as RefSpec<MockElement>;
+
+    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Not Found') as RefSpec<MockElement>;
+
+    const routesSpec = el.method('div')(
+      route('/about', About)().unwrap(),
+      route('*', NotFound)().unwrap()
+    );
+
+    const parent = mountRoute(routesSpec, renderer);
+    expect(getTextContent(parent)).toBe('About');
+  });
+
+  it('wildcard works with nested routes', () => {
+    const { route, currentPath, renderer } = setup();
+
+    currentPath('/unknown');
+
+    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+      elFn('div')('App', outlet()) as RefSpec<MockElement>;
+
+    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Home') as RefSpec<MockElement>;
+
+    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Not Found') as RefSpec<MockElement>;
+
+    const routeSpec = route('/', App)(
+      route('', Home)(),
+      route('*', NotFound)()
+    );
+
+    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    expect(getTextContent(parent)).toContain('Not Found');
+  });
+
+  it('wildcard matches multi-segment paths', () => {
+    const { route, el, currentPath, renderer } = setup();
+
+    currentPath('/some/deep/unknown/path');
+
+    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Home') as RefSpec<MockElement>;
+
+    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
+      elFn('div')('Not Found') as RefSpec<MockElement>;
+
+    const routesSpec = el.method('div')(
+      route('/', Home)().unwrap(),
+      route('*', NotFound)().unwrap()
+    );
+
+    const parent = mountRoute(routesSpec, renderer);
+    expect(getTextContent(parent)).toBe('Not Found');
+  });
+});
+
 describe('outlet - parent components render matched children', () => {
   function setup() {
     const env = createTestEnv();
