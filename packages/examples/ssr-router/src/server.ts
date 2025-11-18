@@ -22,9 +22,10 @@ import {
 import { Home } from './pages/Home.js';
 import { About } from './pages/About.js';
 import { Products } from './pages/Products.js';
+import { Navigation } from './islands/Navigation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const clientBundlePath = join(__dirname, '../dist/client/client.js');
+const clientBundlePath = join(__dirname, '../client/client.js');
 
 // Create island-aware SSR API
 const signals = createSignalsApi();
@@ -51,11 +52,7 @@ const App = create((api) => (props: { path: string }) => {
       el('div', { className: 'nav-brand' })(
         el('h1')('🧩 Lattice SSR + Router')
       ),
-      el('div', { className: 'nav-links' })(
-        el('a', { href: '/', className: 'nav-link' })('Home'),
-        el('a', { href: '/about', className: 'nav-link' })('About'),
-        el('a', { href: '/products', className: 'nav-link' })('Products')
-      )
+      Navigation({ currentPath: path })
     ),
     el('main', { className: 'main-content' })(
       pageContent
