@@ -53,8 +53,8 @@ export const createRouteFactory = create(
       function route(
         path: string,
         component: RouteComponent<TConfig>
-      ): (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => RouteSpec<TConfig['baseElement']> {
-        return (..._children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => {
+      ) {
+        return (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => {
           // Store the original path before processing
           const relativePath = path;
 
@@ -71,9 +71,11 @@ export const createRouteFactory = create(
             const savedRouteGroup = activeRouteGroup;
             const savedGroupDepth = groupCreationDepth;
 
-            for (const child of _children) {
+            for (const child of children) {
               // Check if this child is a RouteSpec using status bit
-              const isRouteSpec = (child.status & STATUS_ROUTE_SPEC_CONST) === STATUS_ROUTE_SPEC_CONST;
+              const isRouteSpec =
+                (child.status & STATUS_ROUTE_SPEC_CONST) ===
+                STATUS_ROUTE_SPEC_CONST;
 
               if (isRouteSpec) {
                 const routeSpec = child as RouteSpec<TConfig['baseElement']>;
@@ -91,7 +93,9 @@ export const createRouteFactory = create(
               } else {
                 // Regular child (not a route) - keep as-is
                 // TypeScript doesn't narrow the union here, so cast to RefSpec
-                processedChildren.push(child as RefSpec<TConfig['baseElement']>);
+                processedChildren.push(
+                  child as RefSpec<TConfig['baseElement']>
+                );
               }
             }
 
@@ -239,7 +243,8 @@ export const createRouteFactory = create(
           routeSpec.status = STATUS_ROUTE_SPEC_CONST;
           routeSpec.routeMetadata = {
             relativePath,
-            rebuild: (parentPath: string) => route(parentPath, component)(..._children),
+            rebuild: (parentPath: string) =>
+              route(parentPath, component)(...children),
           };
 
           // Unwrap method returns the wrapped RefSpec
