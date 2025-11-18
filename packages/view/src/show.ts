@@ -101,7 +101,10 @@ export const Show = create(
 
           // Remove from DOM only
           renderer.removeChild(parentElement, node.element);
-        } else if (node.status === STATUS_FRAGMENT) {
+          return;
+        }
+
+        if (node.status === STATUS_FRAGMENT) {
           // Unlink fragment from parent's list
           unlink(node);
 
@@ -166,6 +169,16 @@ export const Show = create(
         content: RefSpec<TElement>
       ): RefSpec<TElement> {
         return createShowSpec<TElement>((lifecycleCallbacks, api) => {
+          // Run lifecycle callbacks for element
+          const runLifecycleCallbacks = (element: TElement) => {
+            createElementScope(element, () => {
+              for (const callback of lifecycleCallbacks) {
+                const cleanup = callback(element);
+                if (cleanup) onCleanup(cleanup);
+              }
+            });
+          };
+          
           const fragment: FragmentRef<TBaseElement> = {
             status: STATUS_FRAGMENT,
             element: null,
@@ -175,82 +188,8 @@ export const Show = create(
             firstChild: null,
             lastChild: null,
             attach(parent, nextSibling, apiArg) {
-              let currentNode:
-                | ElementRef<TBaseElement>
-                | TFragRef
-                | undefined;
+              let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
               let isAttached = false;
-
-              // Run lifecycle callbacks for element
-              const runLifecycleCallbacks = (element: TElement) => {
-                createElementScope(element, () => {
-                  for (const callback of lifecycleCallbacks) {
-                    const cleanup = callback(element);
-                    if (cleanup) onCleanup(cleanup);
-                  }
-                });
-              };
-
-              // Update visibility based on condition
-              const updateVisibility = (isVisible: boolean) => {
-                // Create the element once and cache it
-                if (!currentNode) {
-                  // Create the element/fragment from the spec
-                  const nodeRef = content.create(api ?? apiArg);
-
-                  if (nodeRef.status === STATUS_FRAGMENT) {
-                    fragment.firstChild = nodeRef.firstChild;
-                    fragment.lastChild = nodeRef.lastChild;
-                  } else {
-                    fragment.firstChild = nodeRef;
-                    fragment.lastChild = nodeRef;
-                  }
-
-                  currentNode = nodeRef;
-
-                  // Execute lifecycle callbacks from show level
-                  if (nodeRef.status === STATUS_ELEMENT) {
-                    runLifecycleCallbacks(nodeRef.element);
-                  }
-                }
-
-                if (isVisible) {
-                  // Only attach if not already attached
-                  if (isAttached) return;
-
-                  // Update fragment references to show the element
-                  if (currentNode.status === STATUS_FRAGMENT) {
-                    fragment.firstChild = currentNode.firstChild;
-                    fragment.lastChild = currentNode.lastChild;
-                  } else {
-                    fragment.firstChild = currentNode;
-                    fragment.lastChild = currentNode;
-                  }
-
-                  // Attach to DOM
-                  insertNodeBefore(
-                    api ?? apiArg,
-                    parent.element,
-                    currentNode,
-                    undefined,
-                    nextSibling
-                  );
-                  isAttached = true;
-
-                  return;
-                }
-
-                // Only detach if currently attached
-                if (!isAttached) return;
-
-                // Detach from DOM (but keep in memory and preserve scope)
-                detachNode(parent.element, currentNode);
-
-                // Clear fragment references when hidden
-                fragment.firstChild = null;
-                fragment.lastChild = null;
-                isAttached = false;
-              };
 
               // Effect tracks the condition signal and updates visibility
               // Use nested effect to isolate updateVisibility from tracking
@@ -258,7 +197,63 @@ export const Show = create(
                 const isVisible = condition();
 
                 // Dispose immediately after it runs
-                scopedEffect(() => updateVisibility(isVisible))();
+                scopedEffect(() => {
+                  // Create the element once and cache it
+                  if (!currentNode) {
+                    // Create the element/fragment from the spec
+                    const nodeRef = content.create(api ?? apiArg);
+
+                    if (nodeRef.status === STATUS_FRAGMENT) {
+                      fragment.firstChild = nodeRef.firstChild;
+                      fragment.lastChild = nodeRef.lastChild;
+                    } else {
+                      fragment.firstChild = nodeRef;
+                      fragment.lastChild = nodeRef;
+                    }
+
+                    currentNode = nodeRef;
+
+                    // Execute lifecycle callbacks from show level
+                    if (nodeRef.status === STATUS_ELEMENT) runLifecycleCallbacks(nodeRef.element);
+                  }
+
+                  if (isVisible) {
+                    // Only attach if not already attached
+                    if (isAttached) return;
+
+                    // Update fragment references to show the element
+                    if (currentNode.status === STATUS_FRAGMENT) {
+                      fragment.firstChild = currentNode.firstChild;
+                      fragment.lastChild = currentNode.lastChild;
+                    } else {
+                      fragment.firstChild = currentNode;
+                      fragment.lastChild = currentNode;
+                    }
+
+                    // Attach to DOM
+                    insertNodeBefore(
+                      api ?? apiArg,
+                      parent.element,
+                      currentNode,
+                      undefined,
+                      nextSibling
+                    );
+                    isAttached = true;
+
+                    return;
+                  }
+
+                  // Only detach if currently attached
+                  if (!isAttached) return;
+
+                  // Detach from DOM (but keep in memory and preserve scope)
+                  detachNode(parent.element, currentNode);
+
+                  // Clear fragment references when hidden
+                  fragment.firstChild = null;
+                  fragment.lastChild = null;
+                  isAttached = false;
+                })();
               });
             },
           };
