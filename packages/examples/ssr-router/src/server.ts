@@ -36,15 +36,19 @@ const App = create((api) => (props: { path: string }) => {
   const { el } = api;
   const { path } = props;
 
-  // Create a noop navigate function for SSR
-  const navigate = (): void => {};
+  // Build route context for connected components
+  const routeContext = {
+    children: null,
+    params: signals.computed(() => ({})),
+  };
 
   // Determine which page to render based on path
+  // Connected components need: call with user props first, then route context
   const pageContent = path === '/about'
-    ? About({ ...api, navigate })
+    ? About()(routeContext)
     : path === '/products'
-    ? Products({ ...api, navigate })
-    : Home({ ...api, navigate });
+    ? Products()(routeContext)
+    : Home()(routeContext);
 
   // Wrap in app layout
   return el('div', { className: 'app' })(

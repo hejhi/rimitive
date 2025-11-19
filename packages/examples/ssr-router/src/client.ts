@@ -83,21 +83,25 @@ if (mainContent) {
   signals.effect(() => {
     const path = currentPath();
 
+    // Build route context for connected components
+    const routeContext = {
+      children: null,
+      params: signals.computed(() => ({})),
+    };
+
     // Determine which page to render
+    // Connected components need: call with user props first, then route context
     const pageSpec = path === '/about'
-      ? About(pageApi)
+      ? About()(routeContext)
       : path === '/products'
-      ? Products(pageApi)
-      : Home(pageApi);
+      ? Products()(routeContext)
+      : Home()(routeContext);
 
     // Clear and re-render main content
     mainContent.innerHTML = '';
     const pageNode = pageSpec.create(pageApi);
     // NodeRef has 'element' property for element nodes
-    const element = 'element' in pageNode ? pageNode.element : (pageNode as { node: Node }).node;
-    if (element) {
-      mainContent.appendChild(element);
-    }
+    mainContent.appendChild(pageNode.element);
   });
 }
 

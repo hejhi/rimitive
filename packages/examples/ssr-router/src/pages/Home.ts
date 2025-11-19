@@ -29,4 +29,4 @@ export const Home = router.connect(({ navigate }) =>
       )
     );
   })
-); ;
+);

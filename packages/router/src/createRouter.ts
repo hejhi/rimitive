@@ -64,8 +64,8 @@ export type ConnectMethod<TConfig extends RendererConfig> = <
   wrapper: (
     routeApi: RouteApi,
     routeContext: RouteContext<TConfig>
-  ) => (userProps: TUserProps) => SealedSpec<TConfig['baseElement']>
-) => (userProps: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>;
+  ) => (userProps?: TUserProps) => SealedSpec<TConfig['baseElement']>
+) => (userProps?: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>;
 
 /**
  * Route method signature
@@ -371,9 +371,9 @@ export function createRouter<TConfig extends RendererConfig>(
     wrapper: (
       routeApi: RouteApi,
       routeContext: RouteContext<TConfig>
-    ) => (userProps: TUserProps) => SealedSpec<TConfig['baseElement']>
-  ): (userProps: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']> {
-    return (userProps: TUserProps) => (routeContext: RouteContext<TConfig>) => {
+    ) => (userProps?: TUserProps) => SealedSpec<TConfig['baseElement']>
+  ): (userProps?: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']> {
+    return (userProps?: TUserProps) => (routeContext: RouteContext<TConfig>) => {
       const routeApi: RouteApi = { navigate, currentPath };
       const componentFactory = wrapper(routeApi, routeContext);
       return componentFactory(userProps);

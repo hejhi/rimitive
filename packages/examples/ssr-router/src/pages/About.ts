@@ -43,6 +43,6 @@ export const About = router.connect(() =>
           'This about page is completely static - no JavaScript shipped for this content.'
         )
       )
-    )();
+    );
   })
 );
