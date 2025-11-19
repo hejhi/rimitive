@@ -6,6 +6,7 @@
  */
 import { island } from '@lattice/islands/island';
 import { create } from '../api.js';
+import { Reactive } from '@lattice/view/types';
 
 interface Product {
   id: number;
@@ -55,20 +56,7 @@ export const ProductFilter = island(
       ),
 
       el('div', { className: 'products-grid' })(
-        map(
-          filteredProducts,
-          (p) => p.id
-        )((product) =>
-          el('div', { className: 'product-card' })(
-            el('h4')(computed(() => product().name)),
-            el('p', { className: 'category' })(
-              computed(() => product().category)
-            ),
-            el('p', { className: 'price' })(
-              computed(() => `$${product().price}`)
-            )
-          )
-        )
+        map(filteredProducts, (p) => p.id)((product) => ProductCard(product))
       ),
 
       el('p', { className: 'count' })(
@@ -79,4 +67,17 @@ export const ProductFilter = island(
       )
     );
   })
+);
+
+const ProductCard = create(
+  ({ el, computed }) =>
+    (product: Reactive<Product>) => {
+      return el('div', { className: 'product-card' })(
+        el('h4')(computed(() => product().name)),
+        el('p', { className: 'category' })(
+          computed(() => product().category)
+        ),
+        el('p', { className: 'price' })(computed(() => `$${product().price}`))
+      );
+    }
 );
