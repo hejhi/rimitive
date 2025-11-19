@@ -16,25 +16,56 @@ interface NavigationProps {
 export const Navigation = island(
   'Navigation',
   create((api) => (props: NavigationProps) => {
-    const { el } = api;
+    const { el, computed } = api;
 
-    // Check if we're on the client and have Link component
-    // Link is added to the API on the client only
-    type LinkFunction = (props: { href: string; className: string }) => (...children: string[]) => RefSpec<HTMLAnchorElement>;
-    const Link: LinkFunction | null = 'Link' in api ? (api as typeof api & { Link: LinkFunction }).Link : null;
+    // Check if we're on the client and have Link component and currentPath signal
+    // These are added to the API on the client only
+    type ComputedValue<T> = { (): T; peek(): T };
+    type LinkFunction = (props: {
+      href: string;
+      className: string | ComputedValue<string>;
+    }) => (...children: string[]) => RefSpec<HTMLAnchorElement>;
+    type CurrentPathSignal = {
+      (): string;
+      (value: string): void;
+      peek(): string;
+    };
+
+    const Link: LinkFunction | null =
+      'Link' in api ? (api as typeof api & { Link: LinkFunction }).Link : null;
+    const currentPathSignal: CurrentPathSignal | null =
+      'currentPath' in api
+        ? (api as typeof api & { currentPath: CurrentPathSignal }).currentPath
+        : null;
 
     // Helper to create a nav link
     const navLink = (href: string, label: string) => {
-      const isActive = props.currentPath === href;
-      const className = isActive ? 'nav-link active' : 'nav-link';
-
       if (Link) {
         // CLIENT: Use Link component for SPA navigation
+        if (currentPathSignal) {
+          // With reactive className using computed
+          return Link({
+            href,
+            className: computed(() => {
+              const path = currentPathSignal();
+              const isActive = path === href;
+              return isActive ? 'nav-link active' : 'nav-link';
+            }),
+          })(label);
+        }
+
+        // Without reactive className (fallback during hydration)
+        const path = props.currentPath;
+        const isActive = path === href;
+        const className = isActive ? 'nav-link active' : 'nav-link';
         return Link({ href, className })(label);
-      } else {
-        // SERVER: Render plain anchor tag
-        return el('a', { href, className })(label);
       }
+
+      // SERVER: Render plain anchor tag with static className
+      const path = props.currentPath;
+      const isActive = path === href;
+      const className = isActive ? 'nav-link active' : 'nav-link';
+      return el('a', { href, className })(label);
     };
 
     return el('div', { className: 'nav-links' })(

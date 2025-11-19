@@ -46,15 +46,17 @@ function createFullAPI(
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);
   const views = createApi(defaultExtensions<DOMRendererConfig>(), helpers);
 
-  // Add Link extension that uses our navigate function
+  // Add Link extension and currentPath signal that islands can use
   const linkApi = createApi({ Link: createLinkFactory() }, {
     ...helpers,
     ...views,
     el: views.el,
     navigate,
+    currentPath,
   });
 
-  return { ...signalsApi, ...views, ...linkApi };
+  // Explicitly add navigate and currentPath to the API
+  return { ...signalsApi, ...views, ...linkApi, navigate, currentPath };
 }
 
 // Mount function for fallback rendering
