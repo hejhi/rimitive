@@ -11,7 +11,6 @@ import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createDOMHydrationRenderer } from '@lattice/islands/renderers/dom-hydration';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createLinkFactory } from '@lattice/router/link';
 import { signals } from './api.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
@@ -38,7 +37,7 @@ window.addEventListener('popstate', () => {
   currentPath(window.location.pathname);
 });
 
-// Create API factory for hydrator (includes Link extension)
+// Create API factory for hydrator (includes navigate and currentPath for islands)
 function createFullAPI(
   renderer: ReturnType<typeof createIslandsRenderer>,
   signalsApi: ReturnType<typeof createSignalsApi>
@@ -46,21 +45,12 @@ function createFullAPI(
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);
   const views = createApi(defaultExtensions<DOMRendererConfig>(), helpers);
 
-  // Add Link extension and currentPath signal that islands can use
-  const linkApi = createApi({ Link: createLinkFactory() }, {
-    ...helpers,
-    ...views,
-    el: views.el,
-    navigate,
-    currentPath,
-  });
-
-  // Explicitly add navigate and currentPath to the API
-  return { ...signalsApi, ...views, ...linkApi, navigate, currentPath };
+  // Add navigate and currentPath to the API so islands and Link can use them
+  return { ...signalsApi, ...views, navigate, currentPath };
 }
 
 // Mount function for fallback rendering
-function mount<T>(spec: { create: (api: unknown) => T }): T {
+function mount<T>(spec: { create: (api: ReturnType<typeof createFullAPI>) => T }): T {
   const renderer = createIslandsRenderer(
     createDOMHydrationRenderer(document.body),
     createDOMRenderer()
@@ -94,22 +84,19 @@ if (mainContent) {
     const path = currentPath();
 
     // Determine which page to render
-    let pageSpec;
-    if (path === '/about') {
-      pageSpec = About(pageApi);
-    } else if (path === '/products') {
-      pageSpec = Products(pageApi);
-    } else {
-      pageSpec = Home(pageApi);
-    }
+    const pageSpec = path === '/about'
+      ? About(pageApi)
+      : path === '/products'
+      ? Products(pageApi)
+      : Home(pageApi);
 
     // Clear and re-render main content
     mainContent.innerHTML = '';
     const pageNode = pageSpec.create(pageApi);
     // NodeRef has 'element' property for element nodes
-    const element = 'element' in pageNode ? pageNode.element : pageNode.node;
+    const element = 'element' in pageNode ? pageNode.element : (pageNode as { node: Node }).node;
     if (element) {
-      mainContent.appendChild(element as Node);
+      mainContent.appendChild(element);
     }
   });
 }

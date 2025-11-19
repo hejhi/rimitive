@@ -1,6 +1,6 @@
-import { api } from '../api';
 import type { RouteComponent } from '@lattice/router';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { Link } from '@lattice/router/link';
 
 const products = [
   { id: '1', name: 'Apple', description: 'Fresh and crispy', price: '$1.99' },
@@ -17,7 +17,7 @@ export const Products: RouteComponent<DOMRendererConfig> = ({ el, outlet }) => {
     el('div', { className: 'product-grid' })(
       ...products.map(product =>
         el('div', { className: 'product-card' })(
-          api.Link({ href: `/products/${product.id}`, className: 'product-link' })(
+          Link({ href: `/products/${product.id}`, className: 'product-link' })(
             el('h3')(product.name),
             el('p', { className: 'product-description' })(product.description),
             el('div', { className: 'product-price' })(product.price)

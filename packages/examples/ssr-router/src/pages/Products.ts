@@ -4,9 +4,9 @@
  * This page includes an interactive island component.
  */
 import { ProductFilter } from '../islands/ProductFilter.js';
+import type { Api } from '../api.js';
 
-// eslint-disable-next-line
-export const Products = ({ el }: any) => {
+export const Products = ({ el }: Api) => {
   return el('div', { className: 'page products-page' })(
     el('h2')('Products'),
 

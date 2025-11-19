@@ -17,7 +17,6 @@ import type { ElementRef } from '@lattice/view/types';
 import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouteFactory } from '@lattice/router';
-import { createLinkFactory } from '@lattice/router';
 import { createCurrentPathSignal } from '@lattice/router/helpers/currentPath';
 
 const createViewApi = () => {
@@ -58,7 +57,6 @@ const createViewApi = () => {
     {
       ...baseExtensions,
       route: createRouteFactory<DOMRendererConfig>(),
-      Link: createLinkFactory(),
     },
     {
       ...viewHelpers,

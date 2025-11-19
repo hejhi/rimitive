@@ -36,15 +36,15 @@ const App = create((api) => (props: { path: string }) => {
   const { el } = api;
   const { path } = props;
 
+  // Create a noop navigate function for SSR
+  const navigate = (): void => {};
+
   // Determine which page to render based on path
-  let pageContent;
-  if (path === '/about') {
-    pageContent = About({ ...api, navigate: () => {} });
-  } else if (path === '/products') {
-    pageContent = Products({ ...api, navigate: () => {} });
-  } else {
-    pageContent = Home({ ...api, navigate: () => {} });
-  }
+  const pageContent = path === '/about'
+    ? About({ ...api, navigate })
+    : path === '/products'
+    ? Products({ ...api, navigate })
+    : Home({ ...api, navigate });
 
   // Wrap in app layout
   return el('div', { className: 'app' })(

@@ -6,8 +6,8 @@
  * On the client, intercepts clicks for SPA-style navigation.
  */
 import { island } from '@lattice/islands/island';
+import { Link } from '@lattice/router/link';
 import { create } from '../api.js';
-import type { RefSpec } from '@lattice/view/types';
 
 interface NavigationProps {
   currentPath: string;
@@ -18,21 +18,14 @@ export const Navigation = island(
   create((api) => (props: NavigationProps) => {
     const { el, computed } = api;
 
-    // Check if we're on the client and have Link component and currentPath signal
-    // These are added to the API on the client only
-    type ComputedValue<T> = { (): T; peek(): T };
-    type LinkFunction = (props: {
-      href: string;
-      className: string | ComputedValue<string>;
-    }) => (...children: string[]) => RefSpec<HTMLAnchorElement>;
+    // Check if we're on the client and have currentPath signal
+    // This is added to the API on the client only
     type CurrentPathSignal = {
       (): string;
       (value: string): void;
       peek(): string;
     };
 
-    const Link: LinkFunction | null =
-      'Link' in api ? (api as typeof api & { Link: LinkFunction }).Link : null;
     const currentPathSignal: CurrentPathSignal | null =
       'currentPath' in api
         ? (api as typeof api & { currentPath: CurrentPathSignal }).currentPath
@@ -40,32 +33,24 @@ export const Navigation = island(
 
     // Helper to create a nav link
     const navLink = (href: string, label: string) => {
-      if (Link) {
-        // CLIENT: Use Link component for SPA navigation
-        if (currentPathSignal) {
-          // With reactive className using computed
-          return Link({
-            href,
-            className: computed(() => {
-              const path = currentPathSignal();
-              const isActive = path === href;
-              return isActive ? 'nav-link active' : 'nav-link';
-            }),
-          })(label);
-        }
-
-        // Without reactive className (fallback during hydration)
-        const path = props.currentPath;
-        const isActive = path === href;
-        const className = isActive ? 'nav-link active' : 'nav-link';
-        return Link({ href, className })(label);
+      if (currentPathSignal) {
+        // CLIENT: Use Link component with reactive className using computed
+        return Link({
+          href,
+          className: computed(() => {
+            const path = currentPathSignal();
+            const isActive = path === href;
+            return isActive ? 'nav-link active' : 'nav-link';
+          }),
+        })(label);
       }
 
-      // SERVER: Render plain anchor tag with static className
+      // SERVER: Use Link component with static className
+      // Link will render as plain anchor on server
       const path = props.currentPath;
       const isActive = path === href;
       const className = isActive ? 'nav-link active' : 'nav-link';
-      return el('a', { href, className })(label);
+      return Link({ href, className })(label);
     };
 
     return el('div', { className: 'nav-links' })(

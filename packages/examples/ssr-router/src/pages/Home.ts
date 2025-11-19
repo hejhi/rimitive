@@ -3,8 +3,9 @@
  *
  * This page is purely static - no interactivity needed.
  */
-// eslint-disable-next-line
-export const Home = ({ el, navigate }: any) => {
+import type { Api } from '../api.js';
+
+export const Home = ({ el, navigate }: Api & { navigate: (path: string) => void }) => {
   return el('div', { className: 'page home-page' })(
     el('h2')('Welcome to SSR + Router'),
     el('p', { className: 'lead' })(

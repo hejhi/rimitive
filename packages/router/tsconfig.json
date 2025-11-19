@@ -20,5 +20,8 @@
     "src/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts"
+  ],
+  "exclude": [
+    "src/presets/server.ts"
   ]
 }

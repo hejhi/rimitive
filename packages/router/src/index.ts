@@ -5,7 +5,7 @@
  */
 
 export { createRouteFactory } from './route';
-export { createLinkFactory } from './link';
+export { Link } from './link';
 export { createLocationFactory } from './location';
 export { matchPath } from './helpers/matching';
 export type {

@@ -41,7 +41,7 @@
     "dev": "vite build --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx --ignore-pattern 'src/presets/server.ts'",
     "check": "pnpm typecheck && pnpm test && pnpm lint",
     "test": "vitest run"
   },

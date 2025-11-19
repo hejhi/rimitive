@@ -1,5 +1,5 @@
 import { api } from '../api';
-import type { RouteComponent } from '@lattice/router';
+import { Link, type RouteComponent } from '@lattice/router';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 
 export const AppLayout: RouteComponent<DOMRendererConfig> = ({ el, outlet }) => {
@@ -13,15 +13,15 @@ export const AppLayout: RouteComponent<DOMRendererConfig> = ({ el, outlet }) => 
         el('h1')('🧩 Lattice Router')
       ),
       el('div', { className: 'nav-links' })(
-        api.Link({
+        Link({
           href: '/',
           className: () => isActive('/') ? 'nav-link active' : 'nav-link'
         })('Home'),
-        api.Link({
+        Link({
           href: '/about',
           className: () => isActive('/about') ? 'nav-link active' : 'nav-link'
         })('About'),
-        api.Link({
+        Link({
           href: '/products',
           className: () => api.currentPath().startsWith('/products') ? 'nav-link active' : 'nav-link'
         })('Products')

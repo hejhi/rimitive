@@ -3,8 +3,9 @@
  *
  * Another static page with no interactivity.
  */
-// eslint-disable-next-line
-export const About = ({ el }: any) => {
+import type { Api } from '../api.js';
+
+export const About = ({ el }: Api) => {
   return el('div', { className: 'page about-page' })(
     el('h2')('About This Example'),
 
