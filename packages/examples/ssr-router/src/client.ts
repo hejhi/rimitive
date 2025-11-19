@@ -11,31 +11,15 @@ import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createDOMHydrationRenderer } from '@lattice/islands/renderers/dom-hydration';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { signals } from './api.js';
+import { signals, router } from './api.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 import { Home } from './pages/Home.js';
 import { About } from './pages/About.js';
 import { Products } from './pages/Products.js';
 
-// Create client-side current path signal
-const currentPath = signals.signal(window.location.pathname);
-
-// Navigate function that updates URL and current path
-const navigate = (path: string) => {
-  if (path === currentPath()) return;
-
-  // Update browser URL
-  window.history.pushState(null, '', path);
-
-  // Update reactive signal (this triggers page re-render)
-  currentPath(path);
-};
-
-// Listen for browser back/forward buttons
-window.addEventListener('popstate', () => {
-  currentPath(window.location.pathname);
-});
+// Use router's navigation system (no need to create our own)
+const { currentPath, navigate } = router;
 
 // Create API factory for hydrator (includes navigate and currentPath for islands)
 function createFullAPI(
@@ -104,5 +88,3 @@ if (mainContent) {
     mainContent.appendChild(pageNode.element!);
   });
 }
-
-console.log('Client hydrated with routing! Navigation works without page refreshes.');

@@ -162,6 +162,19 @@ export function createRouter<TConfig extends RendererConfig>(
     }
   }
 
+  // Set up popstate listener for browser back/forward buttons
+  // This updates currentPath without calling pushState
+  if (typeof window !== 'undefined') {
+    window.addEventListener('popstate', () => {
+      const fullPath =
+        window.location.pathname +
+        window.location.search +
+        window.location.hash;
+      // Only update signal, don't call pushState
+      currentPathSignal(fullPath);
+    });
+  }
+
   // Shared state for tracking route groups
   // Routes created in the same synchronous tick are considered siblings
   let activeRouteGroup: Array<{

@@ -1,4 +1,4 @@
-import { create, router } from "../api";
+import { create, router } from "../api.js";
 
 export const About = router.connect(() =>
   create(({ el }) => () => {

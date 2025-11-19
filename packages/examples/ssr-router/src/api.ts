@@ -35,6 +35,7 @@ const createViewApi = () => {
   });
 
   // Create router using view API (needs signal and computed from signals)
+  // Router handles popstate internally
   const router = createRouter(
     {
       ...views,
@@ -50,17 +51,6 @@ const createViewApi = () => {
           : '/',
     }
   );
-
-  // Set up popstate listener for browser back/forward buttons
-  if (typeof window !== 'undefined') {
-    window.addEventListener('popstate', () => {
-      const fullPath =
-        window.location.pathname +
-        window.location.search +
-        window.location.hash;
-      router.navigate(fullPath);
-    });
-  }
 
   const api = {
     ...signals,

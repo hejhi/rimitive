@@ -27,34 +27,17 @@ const createViewApi = () => {
   const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
 
   // Create the views API (without route - that's separate now)
-  const views = createApi(
-    baseExtensions,
-    {
-      ...viewHelpers,
-    }
-  );
+  const views = createApi(baseExtensions, viewHelpers);
 
   // Create router using view API (needs signal and computed from signals)
   const router = createRouter(
-    {
-      ...views,
-      signal: signals.signal,
-      computed: signals.computed,
-    },
+    { ...views, ...signals },
     {
       initialPath: typeof window !== 'undefined'
         ? window.location.pathname + window.location.search + window.location.hash
         : '/'
     }
   );
-
-  // Set up popstate listener for browser back/forward buttons
-  if (typeof window !== 'undefined') {
-    window.addEventListener('popstate', () => {
-      const fullPath = window.location.pathname + window.location.search + window.location.hash;
-      router.navigate(fullPath);
-    });
-  }
 
   const api = {
     ...signals,
