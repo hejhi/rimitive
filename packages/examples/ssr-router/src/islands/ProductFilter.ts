@@ -56,7 +56,7 @@ export const ProductFilter = island(
       ),
 
       el('div', { className: 'products-grid' })(
-        map(filteredProducts, (p) => p.id)((product) => ProductCard(product))
+        map(filteredProducts, (p) => p.id)(ProductCard)
       ),
 
       el('p', { className: 'count' })(
