@@ -20,14 +20,14 @@ interface ProductFilterProps {
 
 export const ProductFilter = island(
   'ProductFilter',
-  create(({ el, signal, computed }) => (props: ProductFilterProps) => {
+  create(({ el, signal, computed, map }) => (props: ProductFilterProps) => {
     // State
     const selectedCategory = signal<string>('all');
 
     // Derived state
     const filteredProducts = computed(() => {
       const category = selectedCategory();
-      if (category === 'all') return props.products;
+      // if (category === 'all') return props.products;
       return props.products.filter(p => p.category === category);
     });
 
@@ -46,27 +46,27 @@ export const ProductFilter = island(
             selectedCategory(target.value);
           }
         })(
-          () => categories().map(cat =>
-            el('option', { value: cat })(
-              cat.charAt(0).toUpperCase() + cat.slice(1)
-            )()
+          map(categories)((cat) =>
+            el('option', { value: cat() })(
+              computed(() => cat().charAt(0).toUpperCase() + cat().slice(1))
+            )
           )
         )
       ),
 
       el('div', { className: 'products-grid' })(
-        () => filteredProducts().map(product =>
+        map(filteredProducts)((product) =>
           el('div', { className: 'product-card' })(
-            el('h4')(product.name),
-            el('p', { className: 'category' })(product.category),
-            el('p', { className: 'price' })(`$${product.price}`)
-          )()
+            el('h4')(computed(() => product().name)),
+            el('p', { className: 'category' })(computed(() => product().category)),
+            el('p', { className: 'price' })(computed(() => `$${product().price}`))
+          )
         )
       ),
 
       el('p', { className: 'count' })(
-        () => `Showing ${filteredProducts().length} of ${props.products.length} products`
+        computed(() => `Showing ${filteredProducts().length} of ${props.products.length} products`)
       )
-    )();
+    );
   })
 );

@@ -34,29 +34,22 @@ const createViewApi = () => {
     ...viewHelpers,
   });
 
-  // Create router using view API (needs signal and computed from signals)
-  // Router handles popstate internally
-  const router = createRouter(
-    {
-      ...views,
-      signal: signals.signal,
-      computed: signals.computed,
-    },
-    {
-      initialPath:
-        typeof window !== 'undefined'
-          ? window.location.pathname +
-            window.location.search +
-            window.location.hash
-          : '/',
-    }
-  );
-
   const api = {
     ...signals,
     ...views,
     addEventListener: createAddEventListener(viewHelpers.batch),
   };
+
+  // Create router using view API (needs signal and computed from signals)
+  // Router handles popstate internally
+  const router = createRouter(api, {
+    initialPath:
+      typeof window !== 'undefined'
+        ? window.location.pathname +
+          window.location.search +
+          window.location.hash
+        : '/',
+  });
 
   // Helper to mount a spec to a container element
   // Handles both FragmentRef and ElementRef properly
