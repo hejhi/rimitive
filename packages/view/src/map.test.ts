@@ -1052,11 +1052,13 @@ describe('map() - User-facing behavior', () => {
       // Signal passed to inner element (not called) for reactivity
       const view = el.method('div')(
         map(
-          () => [{ id: 1 }]
+          () => [{ id: 1 }],
+          (item) => item.id
         )(() =>
             el.method('div')(
               map(
-                () => [{ id: 1 }]
+                () => [{ id: 1 }],
+                (item) => item.id
               )(() => el.method('span')(displayValue))
             ))
       );
@@ -1083,15 +1085,18 @@ describe('map() - User-facing behavior', () => {
       // Triple nested map to test deep nesting
       const view = el.method('div')(
         map(
-          () => [{ id: 1 }]
+          () => [{ id: 1 }],
+          (item) => item.id
         )(() =>
             el.method('section')(
               map(
-                () => [{ id: 1 }]
+                () => [{ id: 1 }],
+                (item) => item.id
               )(() =>
                   el.method('article')(
                     map(
-                      () => [{ id: 1 }]
+                      () => [{ id: 1 }],
+                      (item) => item.id
                     )(() => el.method('span')(value))
                   ))
             ))
@@ -1192,6 +1197,62 @@ describe('map() - User-facing behavior', () => {
       ]);
       expect(renderCount).toBe(2);  // Only new item rendered
       expect(lifecycleCallCount).toBe(2);  // Only new item's lifecycle
+    });
+  });
+
+  describe('Validation', () => {
+    it('should throw error when mapping objects without key function', () => {
+      const { signal, el, map } = setup();
+
+      // Create array of objects without key function
+      const items = signal([
+        { id: 1, name: 'Item 1' },
+        { id: 2, name: 'Item 2' },
+      ]);
+
+      const container = el.method('div')(
+        map(items)((item) =>
+          el.method('div')(`Item ${item().name}`)
+        )
+      );
+
+      // Should throw when trying to create and attach (which runs the effect)
+      expect(() => container.create()).toThrow(
+        'map() requires a key function when mapping over objects'
+      );
+    });
+
+    it('should NOT throw when mapping primitives without key function', () => {
+      const { signal, el, map } = setup();
+
+      const items = signal([1, 2, 3]);
+
+      const container = el.method('div')(
+        map(items)((item) =>
+          el.method('div')(`Item ${item()}`)
+        )
+      );
+
+      // Should NOT throw - primitives are valid keys
+      expect(() => container.create()).not.toThrow();
+    });
+
+    it('should NOT throw when mapping objects WITH key function', () => {
+      const { signal, el, map } = setup();
+
+      const items = signal([
+        { id: 1, name: 'Item 1' },
+        { id: 2, name: 'Item 2' },
+      ]);
+
+      const container = el.method('div')(
+        map(items, (item) => item.id)((item) =>
+          el.method('div')(`Item ${item().name}`)
+        )
+      );
+
+      // Should NOT throw - key function provided
+      expect(() => container.create()).not.toThrow();
     });
   });
 });

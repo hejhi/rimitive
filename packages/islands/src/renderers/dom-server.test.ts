@@ -11,6 +11,9 @@ import { describe, it, expect } from 'vitest';
 import { createDOMServerRenderer } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef } from '@lattice/view/types';
+import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createIslandSSRApi } from '../presets/island-ssr';
+import { renderToString } from '../helpers/renderToString';
 
 // ============================================================================
 // Tests: Basic DOM Operations
@@ -527,5 +530,76 @@ describe('SSR-Specific Behaviors', () => {
     renderer.appendChild(div, h1);
 
     expect(div.outerHTML).toBe('<div><h1>Hello World</h1></div>');
+  });
+});
+
+// ============================================================================
+// Tests: Full SSR Integration with map()
+// ============================================================================
+
+describe('Full SSR Integration', () => {
+  it('should render all items in map() during SSR', () => {
+    // Create SSR API
+    const signals = createSignalsApi();
+    const { mount, create } = createIslandSSRApi(signals);
+
+    // Create component with map() that renders 6 items
+    const App = create((api) => () => {
+      const { el, map, signal } = api;
+      const items = signal([1, 2, 3, 4, 5, 6]);
+
+      return el('div', { className: 'container' })(
+        map(items)((item) =>
+          el('div', { className: 'item' })(`Item ${item()}`)
+        )
+      )();
+    });
+
+    // Render to string
+    const rendered = mount(App());
+    const html = renderToString(rendered);
+
+    // Debug: Log the actual HTML output
+    console.log('Rendered HTML:', html);
+
+    // Assert ALL items appear in the output
+    // This test should FAIL, demonstrating the bug where only function code renders
+    expect(html).toContain('Item 1');
+    expect(html).toContain('Item 2');
+    expect(html).toContain('Item 3');
+    expect(html).toContain('Item 4');
+    expect(html).toContain('Item 5');
+    expect(html).toContain('Item 6');
+  });
+
+  it('should render all items when map() uses computed', () => {
+    const signals = createSignalsApi();
+    const { mount, create } = createIslandSSRApi(signals);
+
+    const App = create((api) => () => {
+      const { el, map, computed } = api;
+
+      // Use computed() like ProductFilter does
+      const items = computed(() => [1, 2, 3, 4, 5, 6]);
+
+      return el('div', { className: 'container' })(
+        map(items)((item) =>
+          el('div', { className: 'item' })(`Item ${item()}`)
+        )
+      )();
+    });
+
+    const rendered = mount(App());
+    const html = renderToString(rendered);
+
+    // Debug: Log the actual HTML output
+    console.log('Rendered HTML with computed:', html);
+
+    expect(html).toContain('Item 1');
+    expect(html).toContain('Item 2');
+    expect(html).toContain('Item 3');
+    expect(html).toContain('Item 4');
+    expect(html).toContain('Item 5');
+    expect(html).toContain('Item 6');
   });
 });

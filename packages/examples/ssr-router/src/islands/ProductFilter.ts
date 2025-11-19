@@ -27,7 +27,7 @@ export const ProductFilter = island(
     // Derived state
     const filteredProducts = computed(() => {
       const category = selectedCategory();
-      // if (category === 'all') return props.products;
+      if (category === 'all') return props.products;
       return props.products.filter(p => p.category === category);
     });
 
@@ -44,7 +44,7 @@ export const ProductFilter = island(
           onchange: (e: Event) => {
             const target = e.target as HTMLSelectElement;
             selectedCategory(target.value);
-          }
+          },
         })(
           map(categories)((cat) =>
             el('option', { value: cat() })(
@@ -55,17 +55,27 @@ export const ProductFilter = island(
       ),
 
       el('div', { className: 'products-grid' })(
-        map(filteredProducts)((product) =>
+        map(
+          filteredProducts,
+          (p) => p.id
+        )((product) =>
           el('div', { className: 'product-card' })(
             el('h4')(computed(() => product().name)),
-            el('p', { className: 'category' })(computed(() => product().category)),
-            el('p', { className: 'price' })(computed(() => `$${product().price}`))
+            el('p', { className: 'category' })(
+              computed(() => product().category)
+            ),
+            el('p', { className: 'price' })(
+              computed(() => `$${product().price}`)
+            )
           )
         )
       ),
 
       el('p', { className: 'count' })(
-        computed(() => `Showing ${filteredProducts().length} of ${props.products.length} products`)
+        computed(
+          () =>
+            `Showing ${filteredProducts().length} of ${props.products.length} products`
+        )
       )
     );
   })

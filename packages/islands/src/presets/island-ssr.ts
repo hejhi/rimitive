@@ -16,6 +16,7 @@ import {
 } from '../renderers/dom-server';
 import type { SealedSpec } from '@lattice/view/types';
 import type { ComponentFactory } from '@lattice/view/presets/core';
+import { ReactiveAdapter } from '../../../view/dist/src/reactive-adapter';
 
 /**
  * Create an island-aware SSR API
@@ -44,11 +45,7 @@ import type { ComponentFactory } from '@lattice/view/presets/core';
  * const html = rendered.element.outerHTML;
  * ```
  */
-export const createIslandSSRApi = (signals: {
-  signal: <T>(value: T) => () => T;
-  effect: (fn: () => void | (() => void)) => () => void;
-  batch: <T>(fn: () => T) => T;
-}) => {
+export const createIslandSSRApi = <T extends ReactiveAdapter>(signals: T) => {
   const renderer = createDOMServerRenderer();
   const viewHelpers = createSpec(renderer, signals);
   const views = createApi(defaultExtensions<DOMServerRendererConfig>(), viewHelpers);

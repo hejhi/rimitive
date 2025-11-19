@@ -241,6 +241,23 @@ export const Map = create(
                   const itemsArray =
                     typeof items === 'function' ? items() : items;
 
+                  // Validate: require key function when mapping over objects
+                  if (!keyFn && itemsArray.length > 0) {
+                    const firstItem = itemsArray[0];
+                    // Check if it's an object (not null, not array, not primitive)
+                    if (
+                      firstItem !== null &&
+                      typeof firstItem === 'object' &&
+                      !Array.isArray(firstItem)
+                    ) {
+                      throw new Error(
+                        'map() requires a key function when mapping over objects. ' +
+                        'Without a key function, all objects become "[object Object]" which breaks reconciliation. ' +
+                        'Example: map(items, (item) => item.id)((item) => ...)'
+                      );
+                    }
+                  }
+
                   // Reconcile with just items and key function
                   reconcile(itemsArray, (item) =>
                     keyFn ? keyFn(item) : (item as string | number)
