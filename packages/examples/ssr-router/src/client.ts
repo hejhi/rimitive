@@ -18,10 +18,10 @@ import { Home } from './pages/Home.js';
 import { About } from './pages/About.js';
 import { Products } from './pages/Products.js';
 
-// Use router's navigation system (no need to create our own)
+// Use router's navigation system
 const { currentPath, navigate } = router;
 
-// Create API factory for hydrator (includes navigate and currentPath for islands)
+// Create API factory for hydrator
 function createFullAPI(
   renderer: ReturnType<typeof createIslandsRenderer>,
   signalsApi: ReturnType<typeof createSignalsApi>
@@ -29,8 +29,8 @@ function createFullAPI(
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);
   const views = createApi(defaultExtensions<DOMRendererConfig>(), helpers);
 
-  // Add navigate and currentPath to the API so islands and Link can use them
-  return { ...signalsApi, ...views, navigate, currentPath };
+  // Add navigate to the API for Link component to use
+  return { ...signalsApi, ...views, navigate };
 }
 
 // Mount function for fallback rendering
