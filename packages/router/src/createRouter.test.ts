@@ -173,14 +173,10 @@ describe('createRouter', () => {
     it('should accept a path and connected component', () => {
       const router = createRouter(mockViewApi, { initialPath: '/' });
 
-      const mockConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig, Record<string, never>> = {
-        _isConnected: true,
-        userProps: {},
-        instantiate: () => ({
-          status: STATUS_SEALED_SPEC,
-          create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
-        })
-      };
+      const mockConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig> = () => ({
+        status: STATUS_SEALED_SPEC,
+        create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
+      });
 
       const routeFactory = router.route('/', mockConnected);
       expect(typeof routeFactory).toBe('function');
@@ -195,16 +191,12 @@ describe('createRouter', () => {
 
       let capturedParams: Record<string, string> = {};
 
-      const mockConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig, Record<string, never>> = {
-        _isConnected: true,
-        userProps: {},
-        instantiate: (routeContext) => {
-          capturedParams = routeContext.params();
-          return {
-            status: STATUS_SEALED_SPEC,
-            create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
-          };
-        }
+      const mockConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig> = (routeContext: RouteContext<DOMRendererConfig>) => {
+        capturedParams = routeContext.params();
+        return {
+          status: STATUS_SEALED_SPEC,
+          create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
+        };
       };
 
       const routeFactory = router.route('/users/:id', mockConnected);
@@ -218,16 +210,12 @@ describe('createRouter', () => {
 
       let capturedChildren: unknown = undefined;
 
-      const mockConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig, Record<string, never>> = {
-        _isConnected: true,
-        userProps: {},
-        instantiate: (routeContext) => {
-          capturedChildren = routeContext.children;
-          return {
-            status: STATUS_SEALED_SPEC,
-            create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
-          };
-        }
+      const mockConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig> = (routeContext: RouteContext<DOMRendererConfig>) => {
+        capturedChildren = routeContext.children;
+        return {
+          status: STATUS_SEALED_SPEC,
+          create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
+        };
       };
 
       const routeFactory = router.route('/', mockConnected);
@@ -241,27 +229,19 @@ describe('createRouter', () => {
 
       let childParams: Record<string, string> = {};
 
-      const childConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig, Record<string, never>> = {
-        _isConnected: true,
-        userProps: {},
-        instantiate: (routeContext) => {
-          childParams = routeContext.params();
-          return {
-            status: STATUS_SEALED_SPEC,
-            create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
-          };
-        }
+      const childConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig> = (routeContext: RouteContext<DOMRendererConfig>) => {
+        childParams = routeContext.params();
+        return {
+          status: STATUS_SEALED_SPEC,
+          create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
+        };
       };
 
-      const parentConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig, Record<string, never>> = {
-        _isConnected: true,
-        userProps: {},
-        instantiate: () => {
-          return {
-            status: STATUS_SEALED_SPEC,
-            create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
-          };
-        }
+      const parentConnected: import('./createRouter').ConnectedComponent<DOMRendererConfig> = () => {
+        return {
+          status: STATUS_SEALED_SPEC,
+          create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
+        };
       };
 
       const childRoute = router.route(':id', childConnected)();
@@ -300,11 +280,7 @@ describe('createRouter', () => {
       const connectedFactory = router.connect(wrapper);
       const connected = connectedFactory({ theme: 'dark' });
 
-      expect(connected).toHaveProperty('_isConnected', true);
-      expect(connected).toHaveProperty('userProps');
-      expect(connected.userProps).toEqual({ theme: 'dark' });
-      expect(connected).toHaveProperty('instantiate');
-      expect(typeof connected.instantiate).toBe('function');
+      expect(typeof connected).toBe('function');
     });
 
     it('should provide route API to wrapper function', () => {
@@ -321,7 +297,7 @@ describe('createRouter', () => {
 
       // Instantiate to trigger wrapper call
       const mockParams = createMockComputed(() => ({}));
-      connected.instantiate({ children: null, params: mockParams });
+      connected({ children: null, params: mockParams });
 
       // TypeScript assertion - we know this will be set after instantiate
       expect(capturedRouteApi).not.toBeNull();
@@ -353,7 +329,7 @@ describe('createRouter', () => {
         params: mockParams
       };
 
-      connected.instantiate(routeContext);
+      connected(routeContext);
 
       // TypeScript assertion - we know this will be set after instantiate
       expect(capturedRouteContext).not.toBeNull();
@@ -378,7 +354,7 @@ describe('createRouter', () => {
       const connected = connectedFactory({ theme: 'dark', title: 'App' });
 
       const mockParams = createMockComputed(() => ({}));
-      connected.instantiate({ children: null, params: mockParams });
+      connected({ children: null, params: mockParams });
 
       expect(capturedUserProps).toEqual({ theme: 'dark', title: 'App' });
     });
@@ -395,7 +371,7 @@ describe('createRouter', () => {
       const connectedFactory = router.connect(wrapper);
       const connected = connectedFactory({});
       const mockParams = createMockComputed(() => ({}));
-      const result = connected.instantiate({ children: null, params: mockParams });
+      const result = connected({ children: null, params: mockParams });
 
       expect(result).toBe(mockSealedSpec);
     });
@@ -425,11 +401,10 @@ describe('createRouter', () => {
       const connectedFactory = router.connect(wrapper);
       const AppLayout = connectedFactory({ theme: 'dark', title: 'My App' });
 
-      expect(AppLayout._isConnected).toBe(true);
-      expect(AppLayout.userProps).toEqual({ theme: 'dark', title: 'My App' });
+      expect(typeof AppLayout).toBe('function');
 
       const mockParams = createMockComputed(() => ({ id: '1' }));
-      const sealedSpec = AppLayout.instantiate({ children: null, params: mockParams });
+      const sealedSpec = AppLayout({ children: null, params: mockParams });
       expect(sealedSpec.status).toBe(STATUS_SEALED_SPEC);
       expect(typeof sealedSpec.create).toBe('function');
     });
@@ -453,7 +428,7 @@ describe('createRouter', () => {
       const connectedFactory = router.connect(wrapper);
       const connected = connectedFactory({});
       const mockParams = createMockComputed(() => ({}));
-      connected.instantiate({ children: null, params: mockParams });
+      connected({ children: null, params: mockParams });
 
       expect(usedNavigate).toBe(true);
       expect(readPath).toBe('/initial');

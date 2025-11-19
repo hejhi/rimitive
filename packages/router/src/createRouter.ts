@@ -52,29 +52,30 @@ export type RouteContext<TConfig extends RendererConfig> = {
 /**
  * A connected component that can be instantiated with route context
  */
-export type ConnectedComponent<TConfig extends RendererConfig, TUserProps> = {
-  _isConnected: true;
-  userProps: TUserProps;
-  instantiate: (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>;
-};
+export type ConnectedComponent<TConfig extends RendererConfig> =
+  (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>;
 
 /**
  * The connect method signature
  */
-export type ConnectMethod<TConfig extends RendererConfig> = <TUserProps extends Record<string, unknown>>(
+export type ConnectMethod<TConfig extends RendererConfig> = <
+  TUserProps extends Record<string, unknown>,
+>(
   wrapper: (
     routeApi: RouteApi,
     routeContext: RouteContext<TConfig>
   ) => (userProps: TUserProps) => SealedSpec<TConfig['baseElement']>
-) => (userProps: TUserProps) => ConnectedComponent<TConfig, TUserProps>;
+) => (userProps: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>;
 
 /**
  * Route method signature
  */
-export type RouteMethod<TConfig extends RendererConfig> = <TUserProps extends Record<string, unknown>>(
+export type RouteMethod<TConfig extends RendererConfig> = (
   path: string,
-  connectedComponent: ConnectedComponent<TConfig, TUserProps>
-) => (...children: RouteSpec<TConfig['baseElement']>[]) => RouteSpec<TConfig['baseElement']>;
+  connectedComponent: (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>
+) => (
+  ...children: RouteSpec<TConfig['baseElement']>[]
+) => RouteSpec<TConfig['baseElement']>;
 
 /**
  * Router object returned by createRouter
@@ -167,9 +168,9 @@ export function createRouter<TConfig extends RendererConfig>(
   /**
    * Route method - defines a route with path pattern and connected component
    */
-  function route<TUserProps extends Record<string, unknown>>(
+  function route(
     path: string,
-    connectedComponent: ConnectedComponent<TConfig, TUserProps>
+    connectedComponent: (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>
   ) {
     return (...children: RouteSpec<TConfig['baseElement']>[]) => {
       // Store the original path before processing
@@ -235,7 +236,9 @@ export function createRouter<TConfig extends RendererConfig>(
       // Use prefix matching if route has children, exact matching otherwise
       const matchedPath = viewApi.computed(() => {
         const current = currentPath();
-        return hasChildren ? matchPathPrefix(path, current) : matchPath(path, current);
+        return hasChildren
+          ? matchPathPrefix(path, current)
+          : matchPath(path, current);
       });
 
       // Register this route in the group
@@ -292,14 +295,15 @@ export function createRouter<TConfig extends RendererConfig>(
       // Build RouteContext to pass to connected component
       const routeContext: RouteContext<TConfig> = {
         children: processedChildren.length > 0 ? processedChildren : null,
-        params: viewApi.computed(() => shouldRender()?.params ?? {})
+        params: viewApi.computed(() => shouldRender()?.params ?? {}),
       };
 
       // Instantiate the connected component with route context
-      const sealedSpec = connectedComponent.instantiate(routeContext);
+      const sealedSpec = connectedComponent(routeContext);
 
       // Wrap sealedSpec in lifecycle callback collector for show()
-      const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] = [];
+      const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] =
+        [];
 
       const componentRefSpec: RefSpec<TConfig['baseElement']> = (
         ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
@@ -368,17 +372,11 @@ export function createRouter<TConfig extends RendererConfig>(
       routeApi: RouteApi,
       routeContext: RouteContext<TConfig>
     ) => (userProps: TUserProps) => SealedSpec<TConfig['baseElement']>
-  ): (userProps: TUserProps) => ConnectedComponent<TConfig, TUserProps> {
-    return (userProps: TUserProps) => {
-      return {
-        _isConnected: true as const,
-        userProps,
-        instantiate: (routeContext: RouteContext<TConfig>) => {
-          const routeApi: RouteApi = { navigate, currentPath };
-          const componentFactory = wrapper(routeApi, routeContext);
-          return componentFactory(userProps);
-        }
-      };
+  ): (userProps: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']> {
+    return (userProps: TUserProps) => (routeContext: RouteContext<TConfig>) => {
+      const routeApi: RouteApi = { navigate, currentPath };
+      const componentFactory = wrapper(routeApi, routeContext);
+      return componentFactory(userProps);
     };
   }
 
