@@ -24,9 +24,10 @@ export const defaultExtensions = <TConfig extends RendererConfig>() => ({
 /**
  * Component factory type - dynamically typed based on actual API
  * Supports both RefSpec (elements) and NodeRef (fragments) returns
+ * Preserves element type inference through TElement generic
  */
-export type ComponentFactory<TApi> = <TArgs extends unknown[]>(
-  factory: (api: TApi) => (...args: TArgs) => RefSpec<unknown> | NodeRef<unknown>
-) => (...args: TArgs) => SealedSpec<unknown>;
+export type ComponentFactory<TApi> = <TArgs extends unknown[], TElement>(
+  factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement> | NodeRef<TElement>
+) => (...args: TArgs) => SealedSpec<TElement>;
 
 export const defaultHelpers = createSpec;

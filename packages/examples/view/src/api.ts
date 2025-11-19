@@ -6,9 +6,9 @@
  */
 import { createApi } from '@lattice/lattice';
 import {
-  ComponentFactory,
   defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers
+  defaultHelpers as defaultViewHelpers,
+  type ComponentFactory
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';

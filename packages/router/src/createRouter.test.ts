@@ -406,8 +406,10 @@ describe('createRouter', () => {
       // Simulate the create() pattern from the requirements
       const wrapper = (
         { currentPath }: RouteApi,
-        _routeContext: RouteContext<DOMRendererConfig>
+        routeContext: RouteContext<DOMRendererConfig>
       ): ((userProps: { theme: string; title: string }) => SealedSpec<HTMLElement>) => {
+        // Acknowledge routeContext for type checking (void ensures it's "used")
+        void routeContext.children;
         return (userProps: { theme: string; title: string }) => ({
           status: STATUS_SEALED_SPEC,
           create: () => {

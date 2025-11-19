@@ -54,20 +54,20 @@ export interface ElMethod<TConfig extends RendererConfig> {
  *
  * All extensions (el, map, etc.) return RefSpec, which gets automatically instantiated.
  */
-export function create<TArgs extends unknown[], TApi = unknown>(
-  factory: (api: TApi) => (...args: TArgs) => RefSpec<unknown>
+export function create<TArgs extends unknown[], TElement, TApi = unknown>(
+  factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement>
 ) {
-  return (...args: TArgs): SealedSpec<unknown> => {
+  return (...args: TArgs): SealedSpec<TElement> => {
     // Use lattice create for API injection
     const baseInstantiatable = baseCreate(factory)(...args);
 
     // Return a SealedSpec that wraps the RefSpec's create
     return {
       status: STATUS_SEALED_SPEC,
-      create: (api: TApi): NodeRef<unknown> => {
+      create: (api: TApi): NodeRef<TElement> => {
         const refSpec = baseInstantiatable.create(api);
         // All extensions now return RefSpec, so we always call create
-        return refSpec.create(api) as NodeRef<unknown>;
+        return refSpec.create(api) as NodeRef<TElement>;
       }
     };
   };
