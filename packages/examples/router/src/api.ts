@@ -16,65 +16,50 @@ import { SealedSpec, RefSpec, STATUS_ELEMENT } from '@lattice/view/types';
 import type { ElementRef } from '@lattice/view/types';
 import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { createRouteFactory } from '@lattice/router';
-import { createCurrentPathSignal } from '@lattice/router/helpers/currentPath';
+import { createRouter } from '@lattice/router';
 
 const createViewApi = () => {
   const signals = createSignalsApi();
   const renderer = createDOMRenderer();
   const viewHelpers = defaultViewHelpers(renderer, signals);
 
-  // Create environment-aware currentPath signal
-  // This automatically initializes from:
-  // - window.location on the client
-  // - SSR context on the server (for future SSR support)
-  const currentPath = createCurrentPathSignal(signals.signal);
+  // Create base extensions
+  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
+
+  // Create the views API (without route - that's separate now)
+  const views = createApi(
+    baseExtensions,
+    {
+      ...viewHelpers,
+    }
+  );
+
+  // Create router using view API (needs signal and computed from signals)
+  const router = createRouter(
+    {
+      ...views,
+      signal: signals.signal,
+      computed: signals.computed,
+    },
+    {
+      initialPath: typeof window !== 'undefined'
+        ? window.location.pathname + window.location.search + window.location.hash
+        : '/'
+    }
+  );
 
   // Set up popstate listener for browser back/forward buttons
-  // Only runs on the client since window is only available in the browser
   if (typeof window !== 'undefined') {
     window.addEventListener('popstate', () => {
       const fullPath = window.location.pathname + window.location.search + window.location.hash;
-      currentPath(fullPath);
+      router.navigate(fullPath);
     });
   }
-
-  // Create navigate function for programmatic navigation
-  const navigate = (path: string): void => {
-    currentPath(path);
-    // Only push to history on the client
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', path);
-    }
-  };
-
-  // First create base extensions to get el, match, and show
-  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
-  const baseViews = createApi(baseExtensions, viewHelpers);
-
-  // Create the complete views API with route and Link included
-  const views = createApi(
-    {
-      ...baseExtensions,
-      route: createRouteFactory<DOMRendererConfig>(),
-    },
-    {
-      ...viewHelpers,
-      computed: signals.computed,
-      el: baseViews.el, // Pass el to route factory
-      match: baseViews.match, // Pass match to route factory
-      show: baseViews.show, // Pass show to route factory
-      currentPath,
-      navigate,
-    }
-  );
 
   const api = {
     ...signals,
     ...views,
     addEventListener: createAddEventListener(viewHelpers.batch),
-    navigate,
-    currentPath,
   };
 
   // Helper to mount a spec to a container element
@@ -109,13 +94,14 @@ const createViewApi = () => {
     api,
     signals,
     views,
+    router,
     mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
     mountToContainer,
     create: createComponent as ComponentFactory<typeof api>,
   };
 }
 
-export const { api, signals, mount, mountToContainer, create, views } = createViewApi();
+export const { api, signals, mount, mountToContainer, create, views, router } = createViewApi();
 
 export type Signals = typeof signals;
 export type DOMViews = typeof views;

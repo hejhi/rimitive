@@ -1,4 +1,4 @@
-import { createRouteComponent } from '@lattice/router';
+import { router, create } from '../api';
 
 const products: Record<string, { name: string; description: string; price: string; details: string }> = {
   '1': {
@@ -33,30 +33,33 @@ const products: Record<string, { name: string; description: string; price: strin
   },
 };
 
-export const Product = createRouteComponent(({ el, params, navigate, computed }) => () => {
-  const id = computed(() => params().id || '');
-  const productData = computed(() => products[id()]);
+export const Product = router.connect(
+  ({ navigate }, { params }) =>
+    create(({ el, computed }) => () => {
+      const id = computed(() => params().id || '');
+      const productData = computed(() => products[id()]);
 
-  return el('div', { className: 'product-detail' })(
-    el('h2')(computed(() => productData()?.name || 'Product Not Found')),
-    el('div', { className: 'product-meta' })(
-      el('span', { className: 'product-id' })(computed(() => `Product ID: ${id()}`)),
-      el('span', { className: 'product-price-large' })(computed(() => productData()?.price || 'N/A'))
-    ),
-    el('p', { className: 'product-description-large' })(computed(() => productData()?.description || 'No description available')),
-    el('div', { className: 'card' })(
-      el('h3')('Details'),
-      el('p')(computed(() => productData()?.details || 'No details available'))
-    ),
-    el('div', { className: 'button-group' })(
-      el('button', {
-        className: 'secondary-btn',
-        onclick: () => navigate('/products')
-      })('← Back to Products'),
-      el('button', {
-        className: 'primary-btn',
-        onclick: () => navigate('/')
-      })('Home')
-    )
-  );
-})();
+      return el('div', { className: 'product-detail' })(
+        el('h2')(computed(() => productData()?.name || 'Product Not Found')),
+        el('div', { className: 'product-meta' })(
+          el('span', { className: 'product-id' })(computed(() => `Product ID: ${id()}`)),
+          el('span', { className: 'product-price-large' })(computed(() => productData()?.price || 'N/A'))
+        ),
+        el('p', { className: 'product-description-large' })(computed(() => productData()?.description || 'No description available')),
+        el('div', { className: 'card' })(
+          el('h3')('Details'),
+          el('p')(computed(() => productData()?.details || 'No details available'))
+        ),
+        el('div', { className: 'button-group' })(
+          el('button', {
+            className: 'secondary-btn',
+            onclick: () => navigate('/products')
+          })('← Back to Products'),
+          el('button', {
+            className: 'primary-btn',
+            onclick: () => navigate('/')
+          })('Home')
+        )
+      );
+    })
+);

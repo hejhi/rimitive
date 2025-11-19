@@ -4,7 +4,7 @@ import type { CreateScopes } from '@lattice/view/helpers/scope';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { ShowFactory } from '@lattice/view/show';
 import type { ElementProps } from '@lattice/view/el';
-import { ElMethod } from '@lattice/view/component';
+import type { ElMethod } from '@lattice/view/component';
 
 /**
  * Route parameter map extracted from path patterns
@@ -81,7 +81,9 @@ export interface MatchFunction<TBaseElement> {
 }
 
 /**
- * Options passed to route factory
+ * @internal
+ * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
+ * Options passed to old route factory
  */
 export type RouteOpts<TConfig extends RendererConfig> = {
   signal: <T>(value: T) => SignalFunction<T>;
@@ -100,12 +102,22 @@ export type RouteOpts<TConfig extends RendererConfig> = {
 };
 
 /**
+ * @internal
+ * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
  * Component that receives the API
- * Should be created using create() which returns a SealedSpec
+ * Supports both SealedSpec (from createRouteComponent) and plain functions (backwards compatibility)
  */
-export type RouteComponent<TConfig extends RendererConfig> = SealedSpec<TConfig['baseElement']>;
+export type RouteComponent<TConfig extends RendererConfig> =
+  | SealedSpec<TConfig['baseElement']>
+  | ((api: RouteOpts<TConfig> & {
+      params: ComputedFunction<RouteParams>;
+      outlet: () => RefSpec<TConfig['baseElement']> | null;
+      navigate: (path: string) => void;
+    }) => RefSpec<TConfig['baseElement']>);
 
 /**
+ * @internal
+ * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
  * Route factory type
  */
 export type RouteFactory<TConfig extends RendererConfig> = LatticeExtension<

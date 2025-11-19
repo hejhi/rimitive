@@ -25,7 +25,6 @@ import { getActiveRouterContext } from './ssr-context';
 
 // Re-export for backward compatibility and public API
 export { matchPath } from './helpers/matching';
-export type { RouteOpts, RouteComponent, RouteFactory } from './types';
 
 /**
  * Create route factory that handles route matching and rendering
