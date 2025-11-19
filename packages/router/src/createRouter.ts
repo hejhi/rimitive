@@ -59,13 +59,19 @@ export type ConnectedComponent<TConfig extends RendererConfig> =
  * The connect method signature
  */
 export type ConnectMethod<TConfig extends RendererConfig> = <
-  TUserProps extends Record<string, unknown>,
+  TElement extends TConfig['baseElement'],
+  TUserProps = {},
 >(
   wrapper: (
     routeApi: RouteApi,
     routeContext: RouteContext<TConfig>
-  ) => (userProps?: TUserProps) => SealedSpec<TConfig['baseElement']>
-) => (userProps?: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>;
+  ) => (userProps: TUserProps) => SealedSpec<TElement>
+) => (
+  // Make userProps optional when it's empty {}, required otherwise
+  ...args: TUserProps extends Record<string, never>
+    ? [userProps?: TUserProps]
+    : [userProps: TUserProps]
+) => (routeContext: RouteContext<TConfig>) => SealedSpec<TElement>;
 
 /**
  * Route method signature
@@ -367,15 +373,24 @@ export function createRouter<TConfig extends RendererConfig>(
    * and returns a function that can be called with user props to create
    * a connected component.
    */
-  function connect<TUserProps extends Record<string, unknown>>(
+  function connect<
+    TElement extends TConfig['baseElement'],
+    TUserProps = {}
+  >(
     wrapper: (
       routeApi: RouteApi,
       routeContext: RouteContext<TConfig>
-    ) => (userProps?: TUserProps) => SealedSpec<TConfig['baseElement']>
-  ): (userProps?: TUserProps) => (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']> {
-    return (userProps?: TUserProps) => (routeContext: RouteContext<TConfig>) => {
+    ) => (userProps: TUserProps) => SealedSpec<TElement>
+  ): (
+    ...args: TUserProps extends Record<string, never>
+      ? [userProps?: TUserProps]
+      : [userProps: TUserProps]
+  ) => (routeContext: RouteContext<TConfig>) => SealedSpec<TElement> {
+    return (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => {
       const routeApi: RouteApi = { navigate, currentPath };
       const componentFactory = wrapper(routeApi, routeContext);
+      // Use empty object as default if no props provided
+      const userProps = args[0] ?? ({} as TUserProps);
       return componentFactory(userProps);
     };
   }

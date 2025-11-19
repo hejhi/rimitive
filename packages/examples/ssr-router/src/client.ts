@@ -101,7 +101,7 @@ if (mainContent) {
     mainContent.innerHTML = '';
     const pageNode = pageSpec.create(pageApi);
     // NodeRef has 'element' property for element nodes
-    mainContent.appendChild(pageNode.element);
+    mainContent.appendChild(pageNode.element!);
   });
 }
 
