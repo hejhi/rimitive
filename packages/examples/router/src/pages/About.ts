@@ -1,7 +1,6 @@
-import type { RouteComponent } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { createRouteComponent } from '@lattice/router';
 
-export const About: RouteComponent<DOMRendererConfig> = ({ el, navigate }) => {
+export const About = createRouteComponent(({ el, navigate }) => () => {
   return el('div', { className: 'page' })(
     el('h2')('About Lattice Router'),
     el('p')(
@@ -42,5 +41,5 @@ export const About: RouteComponent<DOMRendererConfig> = ({ el, navigate }) => {
       className: 'secondary-btn',
       onclick: () => navigate('/')
     })('← Back to Home')
-  )();
-};
+  );
+})();

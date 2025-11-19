@@ -1,6 +1,4 @@
-import { api } from '../api';
-import type { RouteComponent } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { createRouteComponent } from '@lattice/router';
 
 const products: Record<string, { name: string; description: string; price: string; details: string }> = {
   '1': {
@@ -35,20 +33,20 @@ const products: Record<string, { name: string; description: string; price: strin
   },
 };
 
-export const Product: RouteComponent<DOMRendererConfig> = ({ el, params, navigate }) => {
-  const id = api.computed(() => params().id || '');
-  const productData = api.computed(() => products[id()]);
+export const Product = createRouteComponent(({ el, params, navigate, computed }) => () => {
+  const id = computed(() => params().id || '');
+  const productData = computed(() => products[id()]);
 
   return el('div', { className: 'product-detail' })(
-    el('h2')(api.computed(() => productData()?.name || 'Product Not Found')),
+    el('h2')(computed(() => productData()?.name || 'Product Not Found')),
     el('div', { className: 'product-meta' })(
-      el('span', { className: 'product-id' })(api.computed(() => `Product ID: ${id()}`)),
-      el('span', { className: 'product-price-large' })(api.computed(() => productData()?.price || 'N/A'))
+      el('span', { className: 'product-id' })(computed(() => `Product ID: ${id()}`)),
+      el('span', { className: 'product-price-large' })(computed(() => productData()?.price || 'N/A'))
     ),
-    el('p', { className: 'product-description-large' })(api.computed(() => productData()?.description || 'No description available')),
+    el('p', { className: 'product-description-large' })(computed(() => productData()?.description || 'No description available')),
     el('div', { className: 'card' })(
       el('h3')('Details'),
-      el('p')(api.computed(() => productData()?.details || 'No details available'))
+      el('p')(computed(() => productData()?.details || 'No details available'))
     ),
     el('div', { className: 'button-group' })(
       el('button', {
@@ -60,5 +58,5 @@ export const Product: RouteComponent<DOMRendererConfig> = ({ el, params, navigat
         onclick: () => navigate('/')
       })('Home')
     )
-  )();
-};
+  );
+})();

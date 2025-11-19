@@ -1,7 +1,6 @@
-import type { RouteComponent } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { createRouteComponent } from '@lattice/router';
 
-export const NotFound: RouteComponent<DOMRendererConfig> = ({ el, navigate }) => {
+export const NotFound = createRouteComponent(({ el, navigate }) => () => {
   return el('div', { className: 'page not-found' })(
     el('div', { className: 'not-found-content' })(
       el('h1', { className: 'not-found-title' })('404'),
@@ -12,5 +11,5 @@ export const NotFound: RouteComponent<DOMRendererConfig> = ({ el, navigate }) =>
         onclick: () => navigate('/')
       })('← Go Home')
     )
-  )();
-};
+  );
+})();

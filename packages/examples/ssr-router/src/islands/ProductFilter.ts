@@ -20,9 +20,7 @@ interface ProductFilterProps {
 
 export const ProductFilter = island(
   'ProductFilter',
-  create((api) => (props: ProductFilterProps) => {
-    const { el, signal, computed } = api;
-
+  create(({ el, signal, computed }) => (props: ProductFilterProps) => {
     // State
     const selectedCategory = signal<string>('all');
 

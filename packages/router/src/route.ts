@@ -4,6 +4,7 @@
 
 import { create } from '@lattice/lattice';
 import type { RendererConfig, RefSpec, LifecycleCallback } from '@lattice/view/types';
+import { STATUS_REF_SPEC } from '@lattice/view/types';
 
 // Import types
 import type {
@@ -30,14 +31,15 @@ export type { RouteOpts, RouteComponent, RouteFactory } from './types';
  * Create route factory that handles route matching and rendering
  */
 export const createRouteFactory = create(
-  <TConfig extends RendererConfig>({
-    computed,
-    el,
-    match,
-    show,
-    currentPath,
-  }: RouteOpts<TConfig>) =>
+  <TConfig extends RendererConfig>(routeOpts: RouteOpts<TConfig>) =>
     () => {
+      const {
+        computed,
+        el,
+        match,
+        show,
+        currentPath,
+      } = routeOpts;
       // Create navigate function that updates path and history
       const navigate = (path: string): void => {
         currentPath(path);
@@ -218,15 +220,51 @@ export const createRouteFactory = create(
             });
           };
 
+          // Create component API that includes all helpers plus route-specific additions
+          // This allows components to use create() and receive a properly typed API
+          const componentApi = {
+            ...routeOpts,
+            params,
+            outlet,
+            navigate,
+          };
+
           // Create component ONCE - runs only when route is defined, not on every navigation
-          // Component functions should only run once per component instance
-          const componentRef = component({ el, params, outlet, navigate });
+          // Support both SealedSpec (from createRouteComponent) and plain functions (for backwards compatibility)
+          let componentRefSpec: RefSpec<TConfig['baseElement']>;
+
+          if ('create' in component && typeof component.create === 'function') {
+            // SealedSpec pattern - component.create() returns a NodeRef, but show() expects a RefSpec
+            const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] = [];
+
+            const refSpec: RefSpec<TConfig['baseElement']> = (
+              ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
+            ) => {
+              lifecycleCallbacks.push(...callbacks);
+              return refSpec;
+            };
+
+            refSpec.status = STATUS_REF_SPEC;
+            refSpec.create = <TExt>() => {
+              const nodeRef = component.create(componentApi);
+              // Apply lifecycle callbacks
+              for (const callback of lifecycleCallbacks) {
+                callback(nodeRef);
+              }
+              return nodeRef as typeof nodeRef & TExt;
+            };
+
+            componentRefSpec = refSpec;
+          } else {
+            // Plain function pattern (backwards compatibility) - call it directly
+            componentRefSpec = (component as unknown as (api: typeof componentApi) => RefSpec<TConfig['baseElement']>)(componentApi);
+          }
 
           // Use show() to control component visibility based on route match
           // show() creates once and toggles visibility (no recreation)
           const baseRefSpec = show(
             computed(() => shouldRender() !== null),
-            componentRef
+            componentRefSpec
           );
 
           // Create true wrapper that delegates to baseRefSpec via closure

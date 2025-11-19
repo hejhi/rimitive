@@ -1,5 +1,4 @@
-import type { RouteComponent } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { createRouteComponent } from '@lattice/router';
 import { Link } from '@lattice/router/link';
 
 const products = [
@@ -10,7 +9,7 @@ const products = [
   { id: '5', name: 'Strawberry', description: 'Berry delicious', price: '$3.99' },
 ];
 
-export const Products: RouteComponent<DOMRendererConfig> = ({ el, outlet }) => {
+export const Products = createRouteComponent(({ el, outlet }) => () => {
   return el('div', { className: 'page' })(
     el('h2')('Products'),
     el('p')('Click on a product to view details with route parameters.'),
@@ -27,5 +26,5 @@ export const Products: RouteComponent<DOMRendererConfig> = ({ el, outlet }) => {
     ),
     // Render child route (Product detail) here
     outlet()
-  )();
-};
+  );
+})();
