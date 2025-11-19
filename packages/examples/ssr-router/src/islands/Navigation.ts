@@ -34,7 +34,6 @@ export const Navigation = island(
     // Helper to create a nav link
     const navLink = (href: string, label: string) => {
       if (currentPathSignal) {
-        // CLIENT: Use Link component with reactive className using computed
         return Link({
           href,
           className: computed(() => {
@@ -54,6 +53,7 @@ export const Navigation = island(
     };
 
     return el('div', { className: 'nav-links' })(
+      // Remember, these are in the component closure, so they only run once!
       navLink('/', 'Home'),
       navLink('/about', 'About'),
       navLink('/products', 'Products')
