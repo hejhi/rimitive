@@ -42,7 +42,7 @@ export const ProductFilter = island(
       el('div', { className: 'filter-controls' })(
         el('label')('Filter by category: '),
         el('select', {
-          value: () => selectedCategory(),
+          value: computed(() => selectedCategory()),
           onchange: (e: Event) => {
             const target = e.target as HTMLSelectElement;
             selectedCategory(target.value);
