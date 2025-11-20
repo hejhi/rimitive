@@ -66,12 +66,7 @@ export type ConnectMethod<TConfig extends RendererConfig> = <
     routeApi: RouteApi,
     routeContext: RouteContext<TConfig>
   ) => (userProps: TUserProps) => RefSpec<TElement>
-) => (
-  // Make userProps optional when it's empty {}, required otherwise
-  ...args: TUserProps extends Record<string, never>
-    ? [userProps?: TUserProps]
-    : [userProps: TUserProps]
-) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
+) => (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
 
 /**
  * Route method signature
@@ -79,9 +74,7 @@ export type ConnectMethod<TConfig extends RendererConfig> = <
 export type RouteMethod<TConfig extends RendererConfig> = (
   path: string,
   connectedComponent: (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>
-) => (
-  ...children: RouteSpec<TConfig['baseElement']>[]
-) => RouteSpec<TConfig['baseElement']>;
+) => (...children: RouteSpec<TConfig['baseElement']>[]) => RouteSpec<TConfig['baseElement']>;
 
 /**
  * Router object returned by createRouter
@@ -407,11 +400,7 @@ export function createRouter<TConfig extends RendererConfig>(
       routeApi: RouteApi,
       routeContext: RouteContext<TConfig>
     ) => (userProps: TUserProps) => RefSpec<TElement>
-  ): (
-    ...args: TUserProps extends Record<string, never>
-      ? [userProps?: TUserProps]
-      : [userProps: TUserProps]
-  ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
+  ): (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
     return (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => {
       const routeApi: RouteApi = { navigate, currentPath };
       const componentFactory = wrapper(routeApi, routeContext);
