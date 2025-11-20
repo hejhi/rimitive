@@ -5,7 +5,6 @@
  * eliminating the need to pass API as a parameter through every component.
  */
 
-import { create as baseCreate } from '@lattice/lattice';
 import { type RefSpec, type SealedSpec, type Reactive, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
 import type { ElementProps as ElElementProps } from './el';
 import type { RendererConfig } from './renderer';
@@ -57,18 +56,12 @@ export interface ElMethod<TConfig extends RendererConfig> {
 export function create<TArgs extends unknown[], TElement, TApi = unknown>(
   factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement>
 ) {
-  return (...args: TArgs): SealedSpec<TElement> => {
-    // Use lattice create for API injection
-    const baseInstantiatable = baseCreate(factory)(...args);
-
-    // Return a SealedSpec that wraps the RefSpec's create
-    return {
-      status: STATUS_SEALED_SPEC,
-      create: (api: TApi): NodeRef<TElement> => {
-        const refSpec = baseInstantiatable.create(api);
-        // All extensions now return RefSpec, so we always call create
-        return refSpec.create(api) as NodeRef<TElement>;
-      }
-    };
-  };
+  return (...args: TArgs): SealedSpec<TElement> => ({
+    status: STATUS_SEALED_SPEC,
+    create: (api: TApi): NodeRef<TElement> => {
+      const componentFactory = factory(api);
+      const refSpec = componentFactory(...args);
+      return refSpec.create(api) as NodeRef<TElement>;
+    }
+  });
 }

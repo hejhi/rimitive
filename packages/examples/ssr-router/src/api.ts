@@ -82,6 +82,8 @@ const createViewApi = () => {
     return nodeRef;
   };
 
+  type ApiType = typeof api;
+
   return {
     api,
     signals,
@@ -89,11 +91,14 @@ const createViewApi = () => {
     router,
     mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
     mountToContainer,
-    create: createComponent as ComponentFactory<typeof api>,
+    create: createComponent as ComponentFactory<ApiType>,
+    use: <TReturn>(
+      fn: (api: ApiType) => TReturn
+    ): TReturn => fn(api),
   };
 };
 
-export const { api, signals, mount, mountToContainer, create, views, router } =
+export const { api, signals, mount, mountToContainer, create, views, router, use } =
   createViewApi();
 
 export type Signals = typeof signals;

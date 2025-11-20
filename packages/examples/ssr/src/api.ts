@@ -23,15 +23,20 @@ const createViewApi = () => {
     ...views,
   };
 
+  type ApiType = typeof api;
+
   return {
     api,
     signals,
     views,
     mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
-    create: createComponent as ComponentFactory<typeof api>,
+    create: createComponent as ComponentFactory<ApiType>,
+    use: <TReturn>(
+      fn: (api: ApiType) => TReturn
+    ): TReturn => fn(api),
   };
 };
 
-export const { api, signals, views, mount, create } = createViewApi();
+export const { api, signals, views, mount, create, use } = createViewApi();
 
 export type Api = typeof api;
