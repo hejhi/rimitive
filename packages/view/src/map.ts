@@ -4,7 +4,7 @@
 
 import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { RefSpec, SealedSpec, FragmentRef, Reactive, ElementRef, LifecycleCallback } from './types';
+import type { RefSpec, FragmentRef, Reactive, ElementRef, LifecycleCallback } from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
@@ -22,16 +22,16 @@ export type MapFactory<TBaseElement> = LatticeExtension<
     <T, TEl>(
       items: T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => RefSpec<TBaseElement>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) => RefSpec<TBaseElement>;
     <T, TEl>(
       items: Reactive<T[]>,
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => RefSpec<TBaseElement>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) => RefSpec<TBaseElement>;
     // Plain function that returns array
     <T, TEl>(
       items: () => T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl> | SealedSpec<TEl>) => RefSpec<TBaseElement>;
+    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) => RefSpec<TBaseElement>;
   }
 >;
 
@@ -68,9 +68,7 @@ export const Map = create(
     (props?: MapProps<TConfig['baseElement']>) => {
       type TBaseElement = TConfig['baseElement'];
       type TFragRef = FragmentRef<TBaseElement>;
-      type TRefSpec = RefSpec<TBaseElement>;
-      type TSealedSpec = SealedSpec<TBaseElement>;
-      type TSpec = TRefSpec | TSealedSpec;
+      type TSpec = RefSpec<TBaseElement>;
 
       const { instrument } = props ?? {};
       const { insertNodeBefore, removeNode } = createNodeHelpers({
@@ -84,10 +82,10 @@ export const Map = create(
        */
       const createRefSpec = (
         createFragmentRef: (callbacks: LifecycleCallback<TBaseElement>[], api?: unknown) => TFragRef
-      ): TRefSpec => {
+      ): RefSpec<TBaseElement> => {
         const lifecycleCallbacks: LifecycleCallback<TBaseElement>[] = [];
 
-        const refSpec: TRefSpec = (
+        const refSpec: RefSpec<TBaseElement> = (
           ...callbacks: LifecycleCallback<TBaseElement>[]
         ) => {
           lifecycleCallbacks.push(...callbacks);
@@ -115,7 +113,7 @@ export const Map = create(
       function map<T>(
         items: T[] | (() => T[]) | Reactive<T[]>,
         keyFn?: (item: T) => string | number
-      ): (render: (itemSignal: Reactive<T>) => TSpec) => TRefSpec {
+      ): (render: (itemSignal: Reactive<T>) => TSpec) => RefSpec<TBaseElement> {
         type TRecNode = RecNode<T, TBaseElement>;
 
         return (render: (itemSignal: Reactive<T>) => TSpec) =>

@@ -2,20 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { island } from './island';
 import { createSSRContext, runWithSSRContext } from './ssr-context';
 import { ISLAND_META } from './types';
-import type { SealedSpec } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
 
 // Mock component factory
 function mockComponent<TProps>() {
-  return (props: TProps): SealedSpec<unknown> => {
+  return (props: TProps): RefSpec<unknown> => {
     const nodeRef = {
       status: 8, // STATUS_SEALED_SPEC
       element: { tag: 'div', props },
     };
 
     return {
-      status: 8,
+      status: 4,
       create: () => nodeRef,
-    } as SealedSpec<unknown>;
+    } as RefSpec<unknown>;
   };
 }
 
@@ -163,7 +163,10 @@ describe('Island Wrapper', () => {
     });
 
     it('should return spec from underlying component', () => {
-      const expectedSpec = { status: 8, create: () => ({}) } as SealedSpec<unknown>;
+      const expectedSpec = {
+        status: 4,
+        create: () => ({}),
+      } as RefSpec<unknown>;
       const component = () => expectedSpec;
 
       const Island = island('test', component);

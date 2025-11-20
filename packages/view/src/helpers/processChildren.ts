@@ -6,7 +6,7 @@
  * 2. Initialize fragments after all refs are linked
  */
 
-import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec, SealedSpec } from '../types';
+import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 
@@ -17,7 +17,7 @@ export function createProcessChildren<
   renderer: Renderer<TConfig>;
   }) {
   type TElement = TConfig['baseElement'];
-  type ViewChild = RefSpec<TElement> | FragmentRef<TElement> | SealedSpec<TElement>;
+  type ViewChild = RefSpec<TElement> | FragmentRef<TElement>;
 
   const { scopedEffect, renderer } = opts;
   const createTextEffect =

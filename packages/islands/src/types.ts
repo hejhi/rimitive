@@ -5,11 +5,20 @@
  * Only interactive components ship JavaScript to the client.
  */
 
-import type { SealedSpec } from '@lattice/view/types';
+import type { NodeRef } from '@lattice/view/types';
 import { HydrationMismatch } from './renderers/dom-hydration';
 
 // Re-export HydrationMismatch for convenience
 export { HydrationMismatch };
+
+/**
+ * Minimal spec interface for islands - just status and create
+ * Islands don't need lifecycle callbacks, so we use a simpler interface than RefSpec
+ */
+export interface IslandSpec {
+  status: number;
+  create(api?: unknown): NodeRef<unknown>;
+}
 
 /**
  * SSR Context - tracks islands during server-side rendering
@@ -70,7 +79,7 @@ export interface IslandMetadata {
  * The metadata symbol is added by the island() wrapper function.
  */
 export interface IslandComponent<TProps = unknown> {
-  (props: TProps): SealedSpec<unknown>;
+  (props: TProps): IslandSpec;
   [ISLAND_META]?: IslandMetaData<TProps>;
 }
 
@@ -96,7 +105,7 @@ export interface IslandStrategy<TProps = unknown> {
     containerEl: HTMLElement,
     props: TProps,
     Component: IslandComponent<TProps>,
-    mount: (spec: SealedSpec<unknown>) => { element: unknown }
+    mount: (spec: IslandSpec) => { element: unknown }
   ) => boolean | void;
 }
 
@@ -113,7 +122,7 @@ export const ISLAND_META = Symbol.for('lattice.island');
 export interface IslandMetaData<TProps = unknown> {
   id: string;
   strategy?: IslandStrategy<TProps>;
-  component: (props: TProps) => SealedSpec<unknown>;
+  component: (props: TProps) => IslandSpec;
 }
 
 /**

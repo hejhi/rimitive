@@ -5,8 +5,8 @@
  * Static content remains as HTML without hydration overhead.
  */
 
-import type { SealedSpec, NodeRef } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy } from './types';
+import type { NodeRef } from '@lattice/view/types';
+import type { IslandComponent, IslandStrategy, IslandSpec } from './types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext, registerIsland } from './ssr-context';
 
@@ -27,17 +27,17 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
  * On the client, islands hydrate from server-rendered HTML.
  *
  * @param id - Unique island type identifier (e.g., "counter", "cart")
- * @param component - Component function that returns a SealedSpec
+ * @param component - Component function that returns a RefSpec (from el, map, etc.)
  * @returns Wrapped component with island metadata
  *
  * @example
  * ```ts
  * const Counter = island('counter',
- *   create(({ el, signal }) => (props: { initialCount: number }) => {
+ *   use(({ el, signal }) => (props: { initialCount: number }) => {
  *     const count = signal(props.initialCount);
  *     return el('button', { onClick: () => count(count() + 1) })(
  *       `Count: ${count()}`
- *     )();
+ *     );
  *   })
  * );
  *
@@ -51,7 +51,7 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
  */
 export function island<TProps>(
   id: string,
-  component: (props: TProps) => SealedSpec<unknown>
+  component: (props: TProps) => IslandSpec
 ): IslandComponent<TProps>;
 
 /**
@@ -64,16 +64,18 @@ export function island<TProps>(
 export function island<TProps>(
   id: string,
   strategy: IslandStrategy<TProps>,
-  component: (props: TProps) => SealedSpec<unknown>
+  component: (props: TProps) => IslandSpec
 ): IslandComponent<TProps>;
 
 export function island<TProps>(
   id: string,
-  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => SealedSpec<unknown>),
-  maybeComponent?: (props: TProps) => SealedSpec<unknown>
+  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => IslandSpec),
+  maybeComponent?: (props: TProps) => IslandSpec
 ): IslandComponent<TProps> {
   // Determine if second arg is strategy or component
-  const component = maybeComponent || (strategyOrComponent as (props: TProps) => SealedSpec<unknown>);
+  const component =
+    maybeComponent ||
+    (strategyOrComponent as (props: TProps) => IslandSpec);
   const strategy = maybeComponent ? (strategyOrComponent as IslandStrategy<TProps>) : undefined;
 
   // Create wrapper function

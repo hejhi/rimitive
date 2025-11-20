@@ -9,13 +9,11 @@
 import { createApi } from '@lattice/lattice';
 import { defaultExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
-import { create as createComponent } from '@lattice/view/component';
 import {
   createDOMServerRenderer,
   type DOMServerRendererConfig,
 } from '../renderers/dom-server';
-import type { SealedSpec } from '@lattice/view/types';
-import type { ComponentFactory } from '@lattice/view/presets/core';
+import type { RefSpec } from '@lattice/view/types';
 import { ReactiveAdapter } from '../../../view/dist/src/reactive-adapter';
 
 /**
@@ -55,13 +53,15 @@ export const createIslandSSRApi = <T extends ReactiveAdapter>(signals: T) => {
     ...views,
   };
 
+  type ApiType = typeof api;
+
   return {
     api,
     signals,
     views,
     renderer,
-    mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
-    create: createComponent as ComponentFactory<typeof api>,
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
+    create: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
 };
 

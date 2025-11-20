@@ -12,14 +12,14 @@
  * 6. On failure: fallback to client-side render with regular API
  */
 
-import type { IslandMetaData, IslandRegistryEntry } from '../types';
+import type { IslandMetaData, IslandRegistryEntry, IslandSpec } from '../types';
 import { HydrationMismatch, ISLAND_META } from '../types';
 import { createIslandsRenderer } from '../renderers/islands';
 import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createHydrationApi } from '../hydration-api';
 import type { EffectAPI } from '../hydration-api';
-import type { SealedSpec, ElementRef } from '@lattice/view/types';
+import type { ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT } from '@lattice/view/types';
 
 /**
@@ -43,7 +43,7 @@ export interface IslandHydrator {
 /**
  * Mount function type for client-side rendering fallback
  */
-export type MountFn = (spec: SealedSpec<unknown>) => { element: unknown };
+export type MountFn = (spec: IslandSpec) => { element: unknown };
 
 /**
  * Create a DOM island hydrator

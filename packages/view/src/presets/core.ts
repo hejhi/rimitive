@@ -6,7 +6,7 @@ import { createSpec } from '../helpers';
 import type {
   RendererConfig,
 } from '../renderer';
-import type { RefSpec, SealedSpec, NodeRef } from '../types';
+import type { RefSpec, NodeRef } from '../types';
 
 export type { ElementProps, ChildrenApplicator } from '../el';
 export type { ElFactory } from '../el';
@@ -28,6 +28,6 @@ export const defaultExtensions = <TConfig extends RendererConfig>() => ({
  */
 export type ComponentFactory<TApi> = <TArgs extends unknown[], TElement>(
   factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement> | NodeRef<TElement>
-) => (...args: TArgs) => SealedSpec<TElement>;
+) => (...args: TArgs) => RefSpec<TElement>;
 
 export const defaultHelpers = createSpec;

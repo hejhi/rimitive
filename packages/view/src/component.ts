@@ -5,7 +5,7 @@
  * eliminating the need to pass API as a parameter through every component.
  */
 
-import { type RefSpec, type SealedSpec, type Reactive, type ElRefSpecChild, type NodeRef, STATUS_SEALED_SPEC } from './types';
+import { type RefSpec, type Reactive, type ElRefSpecChild } from './types';
 import type { ElementProps as ElElementProps } from './el';
 import type { RendererConfig } from './renderer';
 
@@ -41,27 +41,4 @@ export interface ElMethod<TConfig extends RendererConfig> {
     reactive: Reactive<Tag | null>,
     props?: Record<string, unknown>
   ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['baseElement']>;
-}
-
-/**
- * Create a component that receives API at instantiation time
- *
- * Components defined with create() don't need the API passed as a parameter.
- * Instead, they receive it when .create(api) is called, which returns a NodeRef.
- *
- * Generic over the actual API type - no prescriptive interface required.
- *
- * All extensions (el, map, etc.) return RefSpec, which gets automatically instantiated.
- */
-export function create<TArgs extends unknown[], TElement, TApi = unknown>(
-  factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement>
-) {
-  return (...args: TArgs): SealedSpec<TElement> => ({
-    status: STATUS_SEALED_SPEC,
-    create: (api: TApi): NodeRef<TElement> => {
-      const componentFactory = factory(api);
-      const refSpec = componentFactory(...args);
-      return refSpec.create(api) as NodeRef<TElement>;
-    }
-  });
 }

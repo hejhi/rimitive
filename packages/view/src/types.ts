@@ -14,14 +14,13 @@ import type { Instantiatable } from '@lattice/lattice';
 export const STATUS_ELEMENT = 1;      // 0001
 export const STATUS_FRAGMENT = 2;     // 0010
 export const STATUS_REF_SPEC = 4;     // 0100
-export const STATUS_SEALED_SPEC = 8;  // 1000
 export const STATUS_COMMENT = 16;     // 10000
 
 /**
  * Composite bit masks for checking types
  */
 export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT;     // 0011 (3)
-export const STATUS_SPEC_MASK = STATUS_REF_SPEC | STATUS_SEALED_SPEC; // 1100 (12)
+export const STATUS_SPEC_MASK = STATUS_REF_SPEC;                      // 0100 (4)
 
 export interface BaseRef {
   status: number;
@@ -100,15 +99,6 @@ export interface RefSpec<TElement> extends Instantiatable<NodeRef<TElement>, unk
 }
 
 /**
- * Sealed spec - a specification created with create() that doesn't support lifecycle callbacks
- * Simpler than RefSpec - just has status and create, no callable signature
- */
-export interface SealedSpec<TElement> extends Instantiatable<NodeRef<TElement>, unknown> {
-  status: typeof STATUS_SEALED_SPEC;
-  create(api?: unknown): NodeRef<TElement>;
-}
-
-/**
  * A reactive value that can be read as a signal or computed
  */
 export interface Readable<T> {
@@ -142,7 +132,6 @@ export type ElRefSpecChild =
   | boolean
   | null
   | RefSpec<unknown>
-  | SealedSpec<unknown>
   | Reactive<unknown>
   | FragmentRef<unknown>;
 

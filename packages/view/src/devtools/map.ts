@@ -4,7 +4,7 @@
 
 import type { InstrumentationContext } from '@lattice/lattice';
 import type { MapFactory } from '../map';
-import type { RefSpec, SealedSpec, FragmentRef, Reactive } from '../types';
+import type { RefSpec, FragmentRef, Reactive } from '../types';
 import { STATUS_REF_SPEC } from '../types';
 
 /**
@@ -14,7 +14,7 @@ export function instrumentMap<TBaseElement>(
   method: MapFactory<TBaseElement>['method'],
   instrumentation: InstrumentationContext
 ): MapFactory<TBaseElement>['method'] {
-  type TSpec = RefSpec<TBaseElement> | SealedSpec<TBaseElement>;
+  type TSpec = RefSpec<TBaseElement>;
 
   function instrumentedMap<T>(
     items: T[] | (() => T[]) | Reactive<T[]>,

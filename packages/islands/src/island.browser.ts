@@ -5,27 +5,29 @@
  * Creates a wrapper with metadata for the hydrator.
  */
 
-import type { SealedSpec } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
 import type { IslandComponent, IslandStrategy } from './types';
 import { ISLAND_META } from './types';
 
 export function island<TProps>(
   id: string,
-  component: (props: TProps) => SealedSpec<unknown>
+  component: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 export function island<TProps>(
   id: string,
   strategy: IslandStrategy<TProps>,
-  component: (props: TProps) => SealedSpec<unknown>
+  component: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 export function island<TProps>(
   id: string,
-  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => SealedSpec<unknown>),
-  maybeComponent?: (props: TProps) => SealedSpec<unknown>
+  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => RefSpec<unknown>),
+  maybeComponent?: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
-  const component = maybeComponent || (strategyOrComponent as (props: TProps) => SealedSpec<unknown>);
+  const component =
+    maybeComponent ||
+    (strategyOrComponent as (props: TProps) => RefSpec<unknown>);
   const strategy = maybeComponent ? strategyOrComponent : undefined;
 
   // Create wrapper function instead of mutating the input component
