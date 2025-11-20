@@ -1,25 +1,17 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true,
-    "lib": ["ES2022", "DOM"],
-    "types": [
-      "vitest/importMeta"
-    ]
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["vitest/importMeta"],
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "emitDeclarationOnly": true
   },
-  "include": [
-    "src/**/*.ts",
-    "vite.config.ts",
-    "vitest.config.ts"
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../lattice" },
+    { "path": "../signals" },
+    { "path": "../view" }
   ],
 }

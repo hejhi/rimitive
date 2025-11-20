@@ -1,11 +1,13 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "rootDir": ".",
     "outDir": "dist",
     "types": ["vitest/globals", "node"],
-    "jsx": "react-jsx"
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "jsx": "react-jsx",
+    "emitDeclarationOnly": true
   },
-  "include": ["src", "scripts", "vitest.config.ts", "frameworks/lattice-keyed/src"],
-  "exclude": ["dist", "node_modules", "frameworks/lattice-keyed/dist"]
+  "include": ["src/**/*"]
 }

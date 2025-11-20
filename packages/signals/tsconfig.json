@@ -1,24 +1,15 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "declaration": true,
-    "declarationMap": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true,
-    "composite": true,
-    "types": [
-      "vitest/importMeta"
-    ]
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["vitest/importMeta"],
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "emitDeclarationOnly": true
   },
-  "include": [
-    "src/**/*.ts",
-    "vite.config.ts",
-    "vitest.config.ts"
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../lattice" }
   ],
 }
