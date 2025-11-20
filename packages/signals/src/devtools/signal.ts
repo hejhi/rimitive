@@ -12,9 +12,15 @@ export function instrumentSignal(
   method: <T>(value: T) => SignalFunction<T>,
   instrumentation: InstrumentationContext
 ) {
-  return function instrumentedCreateSignal<T>(initialValue: T): SignalFunction<T> {
+  return function instrumentedCreateSignal<T>(
+    initialValue: T
+  ): SignalFunction<T> {
     const signal = method(initialValue);
-    const { id } = instrumentation.register(signal, 'signal', `Signal<${typeof initialValue}>`);
+    const { id } = instrumentation.register(
+      signal,
+      'signal',
+      `Signal<${typeof initialValue}>`
+    );
 
     // Wrap the signal to emit events
     function instrumentedSignal(value?: T): T | void {

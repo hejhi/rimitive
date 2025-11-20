@@ -1,8 +1,6 @@
 import { Badge } from '../../src/components/ui/badge';
 import { X } from 'lucide-react';
-import type {
-  LogEntry,
-} from './store/types';
+import type { LogEntry } from './store/types';
 import { getCategoryColors } from './store/eventTypeManager';
 
 interface TransactionDetailProps {
@@ -10,9 +8,12 @@ interface TransactionDetailProps {
   onClose?: () => void;
 }
 
-export function TransactionDetail({ transaction, onClose }: TransactionDetailProps) {
+export function TransactionDetail({
+  transaction,
+  onClose,
+}: TransactionDetailProps) {
   const colors = getCategoryColors(transaction.category);
-  
+
   return (
     <div className="h-full flex flex-col relative">
       {onClose && (

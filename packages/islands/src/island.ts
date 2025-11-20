@@ -19,7 +19,6 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
   __islandId: string;
 };
 
-
 /**
  * Mark a component as an island
  *
@@ -70,17 +69,21 @@ export function island<TProps>(
 
 export function island<TProps>(
   id: string,
-  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => RefSpec<unknown>),
+  strategyOrComponent:
+    | IslandStrategy<TProps>
+    | ((props: TProps) => RefSpec<unknown>),
   maybeComponent?: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
   // Determine if second arg is strategy or component
   const component =
     maybeComponent ||
     (strategyOrComponent as (props: TProps) => RefSpec<unknown>);
-  const strategy = maybeComponent ? (strategyOrComponent as IslandStrategy<TProps>) : undefined;
+  const strategy = maybeComponent
+    ? (strategyOrComponent as IslandStrategy<TProps>)
+    : undefined;
 
   // Create wrapper function
-  const wrapper = ((props: TProps): RefSpec<unknown> => {
+  const wrapper = (props: TProps): RefSpec<unknown> => {
     const spec = component(props); // Get the component spec
 
     if (!getActiveSSRContext()) return spec;
@@ -124,7 +127,7 @@ export function island<TProps>(
     );
 
     return wrapper;
-  });
+  };
 
   // Attach metadata for registry construction (includes component for unwrapping)
   Object.defineProperty(wrapper, ISLAND_META, {

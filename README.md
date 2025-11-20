@@ -163,7 +163,7 @@ theme.subscribe(() => updateTheme());
 // Update nested data immutably
 state.value = {
   ...state.value,
-  user: { ...state.value.user, name: 'Bob' }
+  user: { ...state.value.user, name: 'Bob' },
 };
 ```
 

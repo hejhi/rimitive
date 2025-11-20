@@ -37,7 +37,6 @@ function createConsumer(): ConsumerNode {
   };
 }
 
-
 // Helper to verify list integrity invariant
 function assertListIntegrity(node: ConsumerNode | ProducerNode): void {
   if ('dependencies' in node) {

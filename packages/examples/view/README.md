@@ -7,10 +7,12 @@ This example demonstrates how to build reactive UI applications using `@lattice/
 ### 1. **Component Pattern** (Framework-Agnostic Behaviors)
 
 See `src/behaviors/`:
+
 - `counter.ts` - Simple counter logic
 - `todo-list.ts` - Complex stateful todo list
 
 These are **headless components** - pure logic with no UI concerns. They can be:
+
 - Used with any renderer (view, React, Vue, Svelte)
 - Tested without any framework
 - Shared across applications
@@ -19,11 +21,13 @@ These are **headless components** - pure logic with no UI concerns. They can be:
 ### 2. **View Primitives** (Reactive DOM)
 
 See `src/components/`:
+
 - `Counter.ts` - Uses `el()` for reactive elements
 - `TodoList.ts` - Uses `el()` and `map()` for reactive lists
 - `ConditionalExample.ts` - Uses `el()` with conditional rendering (reactive specs)
 
 The view primitives provide:
+
 - **No virtual DOM** - direct DOM manipulation
 - **Fine-grained reactivity** - only update what changed
 - **No compilation** - pure TypeScript/JavaScript
@@ -32,6 +36,7 @@ The view primitives provide:
 ### 3. **Push-Pull FRP Algorithm**
 
 Under the hood, `@lattice/view` uses the same push-pull algorithm as `@lattice/signals`:
+
 - **Push phase**: Shallow propagation to mark dirty nodes
 - **Pull phase**: Lazy evaluation only when values are read
 - **Efficient updates**: Skip unnecessary recomputations
@@ -51,7 +56,7 @@ el({
     () => counter.doubled(),
     ')',
   ],
-})
+});
 ```
 
 - Children can be strings, functions (reactive), or other elements
@@ -63,14 +68,15 @@ el({
 ```typescript
 map(
   () => todoList.filteredTodos(), // Source signal
-  (todoSignal) => {                // Render function
+  (todoSignal) => {
+    // Render function
     return el({
       tag: 'div',
       children: [() => todoSignal().text],
     });
   },
-  (todo) => todo.id                // Key function (identity-based)
-)
+  (todo) => todo.id // Key function (identity-based)
+);
 ```
 
 - Efficiently reconciles list changes (add, remove, reorder)
@@ -86,7 +92,7 @@ el(
     if (!showMessage()) return null;
     return ['div', { className: 'message' }, 'Hello!'];
   })
-)
+);
 
 // Switch between different element types
 el(
@@ -97,7 +103,7 @@ el(
       return ['span', {}, editText];
     }
   })
-)
+);
 ```
 
 - Pass a `Reactive<ElRefSpec | null>` instead of a static spec

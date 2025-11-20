@@ -44,15 +44,13 @@ describe('match() - reactive element switching', () => {
       const spec = match(showDiv)((show) => {
         matcherCallCount++;
         return show
-          ? el.method('div')('Content')(
-              () => {
-                lifecycleCallCount++;
-                // This read should NOT become a dependency of match's effect
-                const value = outerState();
-                // Just read it to test tracking - don't need to use it
-                void value;
-              }
-            )
+          ? el.method('div')('Content')(() => {
+              lifecycleCallCount++;
+              // This read should NOT become a dependency of match's effect
+              const value = outerState();
+              // Just read it to test tracking - don't need to use it
+              void value;
+            })
           : null;
       });
 
@@ -74,23 +72,23 @@ describe('match() - reactive element switching', () => {
       fragRef.next = null;
       fragRef.attach(parentRef, null);
 
-      expect(matcherCallCount).toBe(1);  // Initial matcher call
-      expect(lifecycleCallCount).toBe(1);  // Initial lifecycle
+      expect(matcherCallCount).toBe(1); // Initial matcher call
+      expect(lifecycleCallCount).toBe(1); // Initial lifecycle
 
       // Change outerState - should NOT trigger match's effect or recreate element
       outerState('changed-value');
-      expect(matcherCallCount).toBe(1);  // Still 1 - matcher not called again
-      expect(lifecycleCallCount).toBe(1);  // Still 1 - lifecycle not re-run
+      expect(matcherCallCount).toBe(1); // Still 1 - matcher not called again
+      expect(lifecycleCallCount).toBe(1); // Still 1 - lifecycle not re-run
 
       // Change showDiv - SHOULD trigger match's effect
       showDiv(false);
-      expect(matcherCallCount).toBe(2);  // Matcher called for null case
-      expect(lifecycleCallCount).toBe(1);  // No new element, so no new lifecycle
+      expect(matcherCallCount).toBe(2); // Matcher called for null case
+      expect(lifecycleCallCount).toBe(1); // No new element, so no new lifecycle
 
       // Change back to true
       showDiv(true);
-      expect(matcherCallCount).toBe(3);  // Matcher called again
-      expect(lifecycleCallCount).toBe(2);  // New element created, new lifecycle
+      expect(matcherCallCount).toBe(3); // Matcher called again
+      expect(lifecycleCallCount).toBe(2); // New element created, new lifecycle
     });
   });
 });

@@ -94,7 +94,7 @@ describe('scoped-effect', () => {
       // Dispose scope - all cleanups should run
       disposeScope(scope!);
 
-      cleanups.forEach(cleanup => expect(cleanup).toHaveBeenCalledOnce());
+      cleanups.forEach((cleanup) => expect(cleanup).toHaveBeenCalledOnce());
     });
   });
 });

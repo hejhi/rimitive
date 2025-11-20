@@ -12,7 +12,11 @@ export function randomInt(min: number, max: number): number {
 /**
  * Generate an array of random integers
  */
-export function randomIntArray(length: number, min: number, max: number): number[] {
+export function randomIntArray(
+  length: number,
+  min: number,
+  max: number
+): number[] {
   return Array.from({ length }, () => randomInt(min, max));
 }
 

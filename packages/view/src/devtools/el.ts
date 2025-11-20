@@ -35,7 +35,9 @@ export function instrumentEl<TConfig extends RendererConfig>(
     const childrenApplicator = method(tag, props);
 
     // Wrap the children applicator to intercept RefSpec creation
-    return (...children: ElRefSpecChild[]): RefSpec<TConfig['elements'][Tag]> => {
+    return (
+      ...children: ElRefSpecChild[]
+    ): RefSpec<TConfig['elements'][Tag]> => {
       instrumentation.emit({
         type: 'EL_CHILDREN_APPLIED',
         timestamp: Date.now(),

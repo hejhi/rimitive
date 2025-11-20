@@ -83,9 +83,8 @@ group('Diamond Scaling', () => {
             void bottom();
           }
         };
-      })
-      .args('diamonds', [1, 2, 3, 4]);
-    
+      }).args('diamonds', [1, 2, 3, 4]);
+
       bench('Preact - $diamonds diamonds', function* (state: BenchState) {
         const diamondCount = state.get('diamonds');
 
@@ -133,9 +132,8 @@ group('Diamond Scaling', () => {
             void bottom.value;
           }
         };
-      })
-      .args('diamonds', [1, 2, 3, 4]);
-    
+      }).args('diamonds', [1, 2, 3, 4]);
+
       bench('Alien - $diamonds diamonds', function* (state: BenchState) {
         const diamondCount = state.get('diamonds');
 
@@ -183,8 +181,7 @@ group('Diamond Scaling', () => {
             void bottom();
           }
         };
-      })
-      .args('diamonds', [1, 2, 3, 4]);
+      }).args('diamonds', [1, 2, 3, 4]);
     });
   });
 });

@@ -3,7 +3,11 @@
  */
 
 import { create } from '@lattice/lattice';
-import type { RendererConfig, RefSpec, LifecycleCallback } from '@lattice/view/types';
+import type {
+  RendererConfig,
+  RefSpec,
+  LifecycleCallback,
+} from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 
 // Import types
@@ -32,13 +36,7 @@ export { matchPath } from './helpers/matching';
 export const createRouteFactory = create(
   <TConfig extends RendererConfig>(routeOpts: RouteOpts<TConfig>) =>
     () => {
-      const {
-        computed,
-        el,
-        match,
-        show,
-        currentPath,
-      } = routeOpts;
+      const { computed, el, match, show, currentPath } = routeOpts;
       // Create navigate function that updates path and history
       const navigate = (path: string): void => {
         currentPath(path);
@@ -60,11 +58,13 @@ export const createRouteFactory = create(
       }> | null = null;
       let groupCreationDepth = 0;
 
-      function route(
-        path: string,
-        component: RouteComponent<TConfig>
-      ) {
-        return (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => {
+      function route(path: string, component: RouteComponent<TConfig>) {
+        return (
+          ...children: (
+            | RefSpec<TConfig['baseElement']>
+            | RouteSpec<TConfig['baseElement']>
+          )[]
+        ) => {
           // Store the original path before processing
           const relativePath = path;
 
@@ -141,7 +141,9 @@ export const createRouteFactory = create(
           // Use prefix matching if route has children, exact matching otherwise
           const matchedPath = computed(() => {
             const current = currentPath();
-            return hasChildren ? matchPathPrefix(path, current) : matchPath(path, current);
+            return hasChildren
+              ? matchPathPrefix(path, current)
+              : matchPath(path, current);
           });
 
           // Register this route in the group
@@ -215,7 +217,9 @@ export const createRouteFactory = create(
               // Since processedChildren are already wrapped in match(),
               // they will handle their own visibility
               // We just need to render all of them and let them decide
-              return el('div' as never)(...processedChildren) as RefSpec<TConfig['baseElement']>;
+              return el('div' as never)(...processedChildren) as RefSpec<
+                TConfig['baseElement']
+              >;
             });
           };
 
@@ -232,7 +236,9 @@ export const createRouteFactory = create(
           let componentRefSpec: RefSpec<TConfig['baseElement']>;
 
           if ('create' in component && typeof component.create === 'function') {
-            const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] = [];
+            const lifecycleCallbacks: LifecycleCallback<
+              TConfig['baseElement']
+            >[] = [];
 
             const refSpec: RefSpec<TConfig['baseElement']> = (
               ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
@@ -254,7 +260,11 @@ export const createRouteFactory = create(
             componentRefSpec = refSpec;
           } else {
             // Plain function pattern (backwards compatibility) - call it directly
-            componentRefSpec = (component as unknown as (api: typeof componentApi) => RefSpec<TConfig['baseElement']>)(componentApi);
+            componentRefSpec = (
+              component as unknown as (
+                api: typeof componentApi
+              ) => RefSpec<TConfig['baseElement']>
+            )(componentApi);
           }
 
           // Use show() to control component visibility based on route match

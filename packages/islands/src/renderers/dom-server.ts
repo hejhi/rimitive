@@ -71,7 +71,10 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
       if (value != null && value !== false) {
         // Only stringify primitives, skip objects/functions
         if (typeof value !== 'object' && typeof value !== 'function') {
-          element.setAttribute(attributeName, String(value as string | number | boolean));
+          element.setAttribute(
+            attributeName,
+            String(value as string | number | boolean)
+          );
         }
       }
     },
@@ -136,7 +139,9 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
      */
     decorateFragment: (fragmentRef: unknown, parentElement: HTMLElement) => {
       // Check if this is an island fragment
-      const islandId = (fragmentRef as FragmentRef<unknown> & { __islandId?: string }).__islandId;
+      const islandId = (
+        fragmentRef as FragmentRef<unknown> & { __islandId?: string }
+      ).__islandId;
 
       if (islandId) {
         const parent = parentElement;
@@ -155,7 +160,8 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
         const wrapper = parent.ownerDocument.createElement('div');
 
         // Create comment markers
-        const startComment = parent.ownerDocument.createComment('fragment-start');
+        const startComment =
+          parent.ownerDocument.createComment('fragment-start');
         const endComment = parent.ownerDocument.createComment('fragment-end');
 
         // Create script tag

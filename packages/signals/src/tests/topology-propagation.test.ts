@@ -39,11 +39,11 @@ describe('Error Handling', () => {
   it('should keep graph consistent on errors during activation', () => {
     const a = signal(0);
     const b = computed(() => {
-      throw new Error("fail");
+      throw new Error('fail');
     });
     const c = computed(() => a());
 
-    expect(() => b()).toThrow("fail");
+    expect(() => b()).toThrow('fail');
 
     a(1);
     expect(c()).toBe(1);
@@ -52,7 +52,7 @@ describe('Error Handling', () => {
   it('should keep graph consistent on errors in computeds', () => {
     const a = signal(0);
     const b = computed(() => {
-      if (a() === 1) throw new Error("fail");
+      if (a() === 1) throw new Error('fail');
       return a();
     });
     const c = computed(() => b());
@@ -60,7 +60,7 @@ describe('Error Handling', () => {
     expect(c()).toBe(0);
 
     a(1);
-    expect(() => b()).toThrow("fail");
+    expect(() => b()).toThrow('fail');
 
     a(2);
     expect(c()).toBe(2);

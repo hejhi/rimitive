@@ -19,7 +19,11 @@ import { instrumentSignal } from '@lattice/signals/devtools/signal';
 import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import { devtoolsProvider, createInstrumentation, createApi } from '@lattice/lattice';
+import {
+  devtoolsProvider,
+  createInstrumentation,
+  createApi,
+} from '@lattice/lattice';
 
 // Import our React-compatible components
 import { useCounter } from './components/useCounter';
@@ -59,7 +63,9 @@ function StepCounter() {
   return (
     <div className="example-section">
       <h2>Step Counter</h2>
-      <p>Using <code>createCounter</code> to build a step-by-step wizard</p>
+      <p>
+        Using <code>createCounter</code> to build a step-by-step wizard
+      </p>
 
       <div className="counter-display">Step {step} / 5</div>
 
@@ -74,7 +80,8 @@ function StepCounter() {
       </div>
 
       <p>
-        Current step is: <span className="computed-value">{isEven ? 'Even' : 'Odd'}</span>
+        Current step is:{' '}
+        <span className="computed-value">{isEven ? 'Even' : 'Odd'}</span>
       </p>
     </div>
   );
@@ -100,7 +107,9 @@ function SlideCarousel() {
   return (
     <div className="example-section">
       <h2>Slide Carousel</h2>
-      <p>Same <code>createCounter</code> component, different use case</p>
+      <p>
+        Same <code>createCounter</code> component, different use case
+      </p>
 
       <div
         style={{
@@ -122,7 +131,10 @@ function SlideCarousel() {
         <span style={{ margin: '0 1rem' }}>
           Slide {current + 1} / {slides.length}
         </span>
-        <button onClick={() => counter.increment()} disabled={current >= slides.length - 1}>
+        <button
+          onClick={() => counter.increment()}
+          disabled={current >= slides.length - 1}
+        >
           →
         </button>
       </div>
@@ -167,7 +179,8 @@ function TodoApp() {
     <div className="example-section">
       <h2>Todo Application</h2>
       <p>
-        Composing <code>createTodoList</code> + <code>createFilter</code> components
+        Composing <code>createTodoList</code> + <code>createFilter</code>{' '}
+        components
       </p>
 
       <div style={{ marginBottom: '1rem' }}>
@@ -181,19 +194,25 @@ function TodoApp() {
       <div style={{ marginBottom: '1rem' }}>
         <button
           onClick={() => filter.setFilter('all')}
-          style={{ background: currentFilter === 'all' ? '#007bff' : '#6c757d' }}
+          style={{
+            background: currentFilter === 'all' ? '#007bff' : '#6c757d',
+          }}
         >
           All
         </button>
         <button
           onClick={() => filter.setFilter('active')}
-          style={{ background: currentFilter === 'active' ? '#007bff' : '#6c757d' }}
+          style={{
+            background: currentFilter === 'active' ? '#007bff' : '#6c757d',
+          }}
         >
           Active
         </button>
         <button
           onClick={() => filter.setFilter('completed')}
-          style={{ background: currentFilter === 'completed' ? '#007bff' : '#6c757d' }}
+          style={{
+            background: currentFilter === 'completed' ? '#007bff' : '#6c757d',
+          }}
         >
           Completed
         </button>
@@ -248,7 +267,13 @@ function FineGrainedReactivityDemo() {
     renderCounts.current.userName++;
     const name = useSubscribe(appState.userName);
     return (
-      <div style={{ padding: '0.5rem', background: '#e7f3ff', borderRadius: '4px' }}>
+      <div
+        style={{
+          padding: '0.5rem',
+          background: '#e7f3ff',
+          borderRadius: '4px',
+        }}
+      >
         <strong>User Name:</strong> {name}
         <div style={{ fontSize: '0.8rem', color: '#666' }}>
           Renders: {renderCounts.current.userName}
@@ -261,7 +286,13 @@ function FineGrainedReactivityDemo() {
     renderCounts.current.userEmail++;
     const email = useSubscribe(appState.userEmail);
     return (
-      <div style={{ padding: '0.5rem', background: '#fff3cd', borderRadius: '4px' }}>
+      <div
+        style={{
+          padding: '0.5rem',
+          background: '#fff3cd',
+          borderRadius: '4px',
+        }}
+      >
         <strong>User Email:</strong> {email}
         <div style={{ fontSize: '0.8rem', color: '#666' }}>
           Renders: {renderCounts.current.userEmail}
@@ -274,7 +305,13 @@ function FineGrainedReactivityDemo() {
     renderCounts.current.theme++;
     const theme = useSubscribe(appState.theme);
     return (
-      <div style={{ padding: '0.5rem', background: '#d4edda', borderRadius: '4px' }}>
+      <div
+        style={{
+          padding: '0.5rem',
+          background: '#d4edda',
+          borderRadius: '4px',
+        }}
+      >
         <strong>Theme:</strong> {theme}
         <div style={{ fontSize: '0.8rem', color: '#666' }}>
           Renders: {renderCounts.current.theme}
@@ -287,7 +324,13 @@ function FineGrainedReactivityDemo() {
     renderCounts.current.clicks++;
     const clicks = useSubscribe(appState.clickCount);
     return (
-      <div style={{ padding: '0.5rem', background: '#f8d7da', borderRadius: '4px' }}>
+      <div
+        style={{
+          padding: '0.5rem',
+          background: '#f8d7da',
+          borderRadius: '4px',
+        }}
+      >
         <strong>Click Count:</strong> {clicks}
         <div style={{ fontSize: '0.8rem', color: '#666' }}>
           Renders: {renderCounts.current.clicks}
@@ -300,11 +343,20 @@ function FineGrainedReactivityDemo() {
     <div className="example-section">
       <h2>Fine-Grained Reactivity Demo</h2>
       <p>
-        Watch the render counts below. Unlike React Context, <strong>only the component
-        subscribed to a changed signal will re-render!</strong>
+        Watch the render counts below. Unlike React Context,{' '}
+        <strong>
+          only the component subscribed to a changed signal will re-render!
+        </strong>
       </p>
 
-      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr', marginBottom: '1rem' }}>
+      <div
+        style={{
+          display: 'grid',
+          gap: '1rem',
+          gridTemplateColumns: '1fr 1fr',
+          marginBottom: '1rem',
+        }}
+      >
         <UserNameDisplay />
         <UserEmailDisplay />
         <ThemeDisplay />
@@ -312,24 +364,40 @@ function FineGrainedReactivityDemo() {
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <button onClick={() => appState.setUserName(`User${Math.floor(Math.random() * 100)}`)}>
+        <button
+          onClick={() =>
+            appState.setUserName(`User${Math.floor(Math.random() * 100)}`)
+          }
+        >
           Change User Name
         </button>
-        <button onClick={() => appState.setUserEmail(`user${Math.floor(Math.random() * 100)}@example.com`)}>
+        <button
+          onClick={() =>
+            appState.setUserEmail(
+              `user${Math.floor(Math.random() * 100)}@example.com`
+            )
+          }
+        >
           Change Email
         </button>
-        <button onClick={() => appState.toggleTheme()}>
-          Toggle Theme
-        </button>
+        <button onClick={() => appState.toggleTheme()}>Toggle Theme</button>
         <button onClick={() => appState.incrementClicks()}>
           Increment Clicks
         </button>
       </div>
 
-      <div style={{ marginTop: '1rem', padding: '1rem', background: '#e7f3ff', borderRadius: '4px' }}>
-        <strong>🎯 Key Point:</strong> With traditional React Context, changing any value would
-        cause ALL four components to re-render. With Lattice signals, only the specific component
-        subscribed to the changed signal re-renders. This is <strong>fine-grained reactivity</strong>!
+      <div
+        style={{
+          marginTop: '1rem',
+          padding: '1rem',
+          background: '#e7f3ff',
+          borderRadius: '4px',
+        }}
+      >
+        <strong>🎯 Key Point:</strong> With traditional React Context, changing
+        any value would cause ALL four components to re-render. With Lattice
+        signals, only the specific component subscribed to the changed signal
+        re-renders. This is <strong>fine-grained reactivity</strong>!
       </div>
     </div>
   );
@@ -400,9 +468,9 @@ function DesignSystemDemo() {
         <strong>Key Pattern:</strong> Each <code>{'<Modal>'}</code> creates its
         own signal instance via <code>useComponent(createModal)</code>, giving
         it isolated state. All modals share the parent's reactive infrastructure
-        (context, scheduler). This is like React's <code>useState</code>{' '}
-        - each component gets isolated state, but all use the same React
-        reconciliation system. Perfect for reusable design system components!
+        (context, scheduler). This is like React's <code>useState</code> - each
+        component gets isolated state, but all use the same React reconciliation
+        system. Perfect for reusable design system components!
       </div>
     </div>
   );

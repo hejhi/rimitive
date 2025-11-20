@@ -4,7 +4,7 @@ import { createScopes } from './scope';
 import type { RenderScope } from '../types';
 
 // Status constants for RenderScope disposal tracking (matches scope.ts)
-const DISPOSED = 1 << 2;  // Bit 2: disposed state
+const DISPOSED = 1 << 2; // Bit 2: disposed state
 
 /**
  * Best-in-class TDD tests for scope management
@@ -159,13 +159,14 @@ describe('Scope Management', () => {
       });
 
       disposeScope(rootScope!);
-      cleanups.forEach(cleanup => expect(cleanup).toHaveBeenCalledOnce());
+      cleanups.forEach((cleanup) => expect(cleanup).toHaveBeenCalledOnce());
     });
   });
 
   describe('scopedEffect', () => {
     it('registers effect cleanup in active scope', () => {
-      const { createElementScope, scopedEffect, disposeScope } = createTestEnv();
+      const { createElementScope, scopedEffect, disposeScope } =
+        createTestEnv();
       const element = createMockElement();
       const effectCleanup = vi.fn();
 
@@ -182,7 +183,8 @@ describe('Scope Management', () => {
     });
 
     it('runs effect immediately and tracks cleanup', () => {
-      const { createElementScope, scopedEffect, disposeScope, baseEffect } = createTestEnv();
+      const { createElementScope, scopedEffect, disposeScope, baseEffect } =
+        createTestEnv();
       const element = createMockElement();
 
       const scope = createElementScope(element, () => {
@@ -196,7 +198,8 @@ describe('Scope Management', () => {
     });
 
     it('combines multiple effects in same scope', () => {
-      const { createElementScope, scopedEffect, disposeScope } = createTestEnv();
+      const { createElementScope, scopedEffect, disposeScope } =
+        createTestEnv();
       const element = createMockElement();
 
       const cleanup1 = vi.fn();
@@ -249,7 +252,8 @@ describe('Scope Management', () => {
 
   describe('element-scope mapping', () => {
     it('maps element to scope when cleanup is registered', () => {
-      const { createElementScope, onCleanup, getElementScope } = createTestEnv();
+      const { createElementScope, onCleanup, getElementScope } =
+        createTestEnv();
       const element = createMockElement();
 
       const scope = createElementScope(element, () => {
@@ -271,7 +275,8 @@ describe('Scope Management', () => {
     });
 
     it('removes element mapping after disposal', () => {
-      const { createElementScope, onCleanup, disposeScope, getElementScope } = createTestEnv();
+      const { createElementScope, onCleanup, disposeScope, getElementScope } =
+        createTestEnv();
       const element = createMockElement();
 
       const scope = createElementScope(element, () => {
@@ -288,7 +293,8 @@ describe('Scope Management', () => {
 
   describe('mixed cleanup types', () => {
     it('disposes both onCleanup and scopedEffect in same scope', () => {
-      const { createElementScope, onCleanup, scopedEffect, disposeScope } = createTestEnv();
+      const { createElementScope, onCleanup, scopedEffect, disposeScope } =
+        createTestEnv();
       const element = createMockElement();
 
       const cleanup1 = vi.fn();
@@ -310,7 +316,9 @@ describe('Scope Management', () => {
       const element = createMockElement();
 
       const cleanup1 = vi.fn();
-      const cleanup2 = vi.fn(() => { throw new Error('cleanup error'); });
+      const cleanup2 = vi.fn(() => {
+        throw new Error('cleanup error');
+      });
       const cleanup3 = vi.fn();
 
       const scope = createElementScope(element, () => {
@@ -374,7 +382,7 @@ describe('Scope Management', () => {
       disposeScope(rootScope!);
 
       // All children disposed
-      cleanups.forEach(cleanup => expect(cleanup).toHaveBeenCalledOnce());
+      cleanups.forEach((cleanup) => expect(cleanup).toHaveBeenCalledOnce());
     });
   });
 });

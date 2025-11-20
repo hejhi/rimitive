@@ -13,14 +13,31 @@ import { createPushPullSchedule } from '../helpers';
 import { createApi, type InstantiableExtension } from '@lattice/lattice';
 
 // Re-export types so they're part of the public API
-export type { SubscribeFactory, SubscribeOpts, SubscribeProps, SubscribeFunction } from '../subscribe';
-export type { SignalFactory, SignalOpts, SignalProps, SignalFunction } from '../signal';
-export type { ComputedFactory, ComputedOpts, ComputedProps, ComputedFunction } from '../computed';
+export type {
+  SubscribeFactory,
+  SubscribeOpts,
+  SubscribeProps,
+  SubscribeFunction,
+} from '../subscribe';
+export type {
+  SignalFactory,
+  SignalOpts,
+  SignalProps,
+  SignalFunction,
+} from '../signal';
+export type {
+  ComputedFactory,
+  ComputedOpts,
+  ComputedProps,
+  ComputedFunction,
+} from '../computed';
 export type { EffectFactory, EffectOpts, EffectProps } from '../effect';
 export type { BatchFactory, BatchOpts, BatchProps } from '../batch';
 export type { InstantiableExtension } from '@lattice/lattice';
 
-export const defaultExtensions = <T extends Record<string, InstantiableExtension>>(
+export const defaultExtensions = <
+  T extends Record<string, InstantiableExtension>,
+>(
   extensions?: T
 ) => ({
   signal: Signal(),
@@ -32,4 +49,5 @@ export const defaultExtensions = <T extends Record<string, InstantiableExtension
 });
 
 export const defaultHelpers = createPushPullSchedule;
-export const createSignalsApi = () => createApi(defaultExtensions(), defaultHelpers());
+export const createSignalsApi = () =>
+  createApi(defaultExtensions(), defaultHelpers());

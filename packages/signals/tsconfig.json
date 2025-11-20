@@ -9,7 +9,5 @@
     "emitDeclarationOnly": true
   },
   "include": ["src/**/*"],
-  "references": [
-    { "path": "../lattice" }
-  ],
+  "references": [{ "path": "../lattice" }]
 }

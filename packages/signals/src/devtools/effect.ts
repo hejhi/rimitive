@@ -11,7 +11,9 @@ export function instrumentEffect(
   method: (fn: () => void | (() => void)) => () => void,
   instrumentation: InstrumentationContext
 ) {
-  return function instrumentedCreateEffect(fn: () => void | (() => void)): () => void {
+  return function instrumentedCreateEffect(
+    fn: () => void | (() => void)
+  ): () => void {
     const effectId = crypto.randomUUID();
     instrumentation.register(fn, 'effect', 'Effect');
 

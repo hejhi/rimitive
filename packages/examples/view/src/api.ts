@@ -10,14 +10,20 @@ import {
   defaultHelpers as defaultViewHelpers,
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
+import {
+  createDOMRenderer,
+  DOMRendererConfig,
+} from '@lattice/view/renderers/dom';
 import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
 const createViewApi = () => {
   const signals = createSignalsApi();
   const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
-  const views = createApi(defaultViewExtensions<DOMRendererConfig>(), viewHelpers);
+  const views = createApi(
+    defaultViewExtensions<DOMRendererConfig>(),
+    viewHelpers
+  );
   const api = {
     ...signals,
     ...views,
@@ -32,7 +38,7 @@ const createViewApi = () => {
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
     use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
-}
+};
 
 export const { api, signals, mount, use, views } = createViewApi();
 

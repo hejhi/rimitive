@@ -5,10 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     includeSource: ['./src/**/*.{js,ts}'],
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-    ],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     // Prefer threads to avoid child-process kill in constrained sandbox
     pool: 'threads',
     poolOptions: {
@@ -16,6 +13,6 @@ export default defineConfig({
         singleThread: true,
       },
     },
-    reporters: ['default']
+    reporters: ['default'],
   },
 });

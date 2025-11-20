@@ -21,17 +21,17 @@ describe('Subscription Management', () => {
     //    *A
     //   /   \
     // *B     C <- we don't listen to C
-    const a = signal("a");
+    const a = signal('a');
 
     const b = computed(() => a());
     const spy = vi.fn(() => a());
     computed(spy);
 
-    expect(b()).toBe("a");
+    expect(b()).toBe('a');
     expect(spy).not.toHaveBeenCalled();
 
-    a("aa");
-    expect(b()).toBe("aa");
+    a('aa');
+    expect(b()).toBe('aa');
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -44,7 +44,7 @@ describe('Subscription Management', () => {
     // *B     D <- we don't listen to C
     //  |
     // *C
-    const a = signal("a");
+    const a = signal('a');
     const spyB = vi.fn(() => a());
     const b = computed(spyB);
 
@@ -53,23 +53,23 @@ describe('Subscription Management', () => {
 
     const d = computed(() => a());
 
-    let result = "";
+    let result = '';
     const unsub = effect(() => {
       result = c();
     });
 
-    expect(result).toBe("a");
-    expect(d()).toBe("a");
+    expect(result).toBe('a');
+    expect(d()).toBe('a');
 
     spyB.mockClear();
     spyC.mockClear();
     unsub();
 
-    a("aa");
+    a('aa');
 
     expect(spyB).not.toHaveBeenCalled();
     expect(spyC).not.toHaveBeenCalled();
-    expect(d()).toBe("aa");
+    expect(d()).toBe('aa');
   });
 });
 
@@ -88,21 +88,21 @@ describe('Unmarking Logic', () => {
     //  B     *C <- returns same value every time
     //   \   /
     //     D
-    const a = signal("a");
+    const a = signal('a');
     const b = computed(() => a());
     const c = computed(() => {
       a();
-      return "c";
+      return 'c';
     });
-    const spy = vi.fn(() => b() + " " + c());
+    const spy = vi.fn(() => b() + ' ' + c());
     const d = computed(spy);
 
-    expect(d()).toBe("a c");
+    expect(d()).toBe('a c');
     spy.mockClear();
 
-    a("aa");
+    a('aa');
     d();
-    expect(spy).toHaveReturnedWith("aa c");
+    expect(spy).toHaveReturnedWith('aa c');
   });
 
   it('should ensure subs update even if two deps unmark it', () => {
@@ -114,25 +114,25 @@ describe('Unmarking Logic', () => {
     //  B *C *D
     //   \ | /
     //     E
-    const a = signal("a");
+    const a = signal('a');
     const b = computed(() => a());
     const c = computed(() => {
       a();
-      return "c";
+      return 'c';
     });
     const d = computed(() => {
       a();
-      return "d";
+      return 'd';
     });
-    const spy = vi.fn(() => b() + " " + c() + " " + d());
+    const spy = vi.fn(() => b() + ' ' + c() + ' ' + d());
     const e = computed(spy);
 
-    expect(e()).toBe("a c d");
+    expect(e()).toBe('a c d');
     spy.mockClear();
 
-    a("aa");
+    a('aa');
     e();
-    expect(spy).toHaveReturnedWith("aa c d");
+    expect(spy).toHaveReturnedWith('aa c d');
   });
 
   it('should not update a sub if all deps unmark it', () => {
@@ -143,22 +143,22 @@ describe('Unmarking Logic', () => {
     // *B     *C
     //   \   /
     //     D
-    const a = signal("a");
+    const a = signal('a');
     const b = computed(() => {
       a();
-      return "b";
+      return 'b';
     });
     const c = computed(() => {
       a();
-      return "c";
+      return 'c';
     });
-    const spy = vi.fn(() => b() + " " + c());
+    const spy = vi.fn(() => b() + ' ' + c());
     const d = computed(spy);
 
-    expect(d()).toBe("b c");
+    expect(d()).toBe('b c');
     spy.mockClear();
 
-    a("aa");
+    a('aa');
     expect(spy).not.toHaveBeenCalled();
   });
 });

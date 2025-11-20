@@ -22,12 +22,12 @@ export function createUntracked(opts: UntrackedOpts) {
 
   return function untrack<T>(fn: () => T): T {
     const prevConsumer = consumer.active;
-    consumer.active = null;  // Disable tracking
+    consumer.active = null; // Disable tracking
 
     try {
       return fn();
     } finally {
-      consumer.active = prevConsumer;  // Restore previous tracking context
+      consumer.active = prevConsumer; // Restore previous tracking context
     }
   };
 }

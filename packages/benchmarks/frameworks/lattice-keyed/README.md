@@ -9,6 +9,7 @@ This directory contains the Lattice implementation for the [js-framework-benchma
 - **pnpm** (for Lattice workspace dependencies)
 
 Verify your setup:
+
 ```bash
 node --version  # Should be >= v20.9.0
 npm --version   # Should be >= 10.1.0
@@ -20,6 +21,7 @@ pnpm --version
 ### 1. Clone Both Repositories
 
 Clone the Lattice repo (if you haven't already):
+
 ```bash
 cd ~/repos  # or wherever you keep your projects
 git clone https://github.com/hejhi/lattice.git
@@ -28,6 +30,7 @@ pnpm install
 ```
 
 Clone the js-framework-benchmark repo:
+
 ```bash
 cd ~/repos  # same parent directory recommended
 git clone https://github.com/krausest/js-framework-benchmark.git
@@ -37,6 +40,7 @@ cd js-framework-benchmark
 ### 2. Set Up js-framework-benchmark
 
 Install the benchmark infrastructure:
+
 ```bash
 # From js-framework-benchmark root
 npm ci
@@ -44,6 +48,7 @@ npm run install-local
 ```
 
 This installs:
+
 - Root dependencies
 - Benchmark driver (webdriver-ts)
 - Results viewer (webdriver-ts-results)
@@ -52,6 +57,7 @@ This installs:
 ### 3. Create the Symlink
 
 Link your Lattice implementation into the benchmark directory:
+
 ```bash
 # From js-framework-benchmark root
 # Adjust paths if your repos are in different locations
@@ -59,6 +65,7 @@ ln -s ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed frameworks/ke
 ```
 
 Verify the symlink works:
+
 ```bash
 ls -la frameworks/keyed/lattice  # Should show the directory contents
 ```
@@ -66,6 +73,7 @@ ls -la frameworks/keyed/lattice  # Should show the directory contents
 ### 4. Build Lattice Implementation
 
 Since Lattice uses pnpm workspaces, build from the Lattice repo:
+
 ```bash
 # From the lattice repo root
 cd ~/repos/lattice
@@ -74,6 +82,7 @@ pnpm run build  # or your build command
 ```
 
 Or build just the benchmark package:
+
 ```bash
 cd ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed
 pnpm run build-prod
@@ -105,6 +114,7 @@ npm run bench -- --framework keyed/lattice
 ```
 
 This will:
+
 - Open Chrome automatically
 - Run all benchmark operations multiple times
 - Take several minutes to complete
@@ -137,6 +147,7 @@ When making changes to the Lattice implementation:
 1. **Edit code** in `~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed/src/`
 
 2. **Rebuild** from the Lattice repo:
+
    ```bash
    cd ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed
    pnpm run build-prod
@@ -144,10 +155,12 @@ When making changes to the Lattice implementation:
    ```
 
 3. **Test manually** at http://localhost:8080/frameworks/keyed/lattice/
+
    - Click buttons to verify functionality
    - Check browser console for errors
 
 4. **Run benchmarks** to measure performance:
+
    ```bash
    cd ~/repos/js-framework-benchmark
    npm run bench -- --framework keyed/lattice
@@ -160,6 +173,7 @@ When making changes to the Lattice implementation:
 ### Broken Symlink
 
 If you see "broken symbolic link" errors:
+
 ```bash
 cd ~/repos/js-framework-benchmark
 rm frameworks/keyed/lattice
@@ -169,6 +183,7 @@ ln -s ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed frameworks/ke
 ### Build Errors
 
 Since Lattice uses workspace dependencies (`workspace:*`), **don't run `npm ci`** in the lattice directory. Instead, build from the Lattice repo root:
+
 ```bash
 cd ~/repos/lattice
 pnpm install
@@ -178,6 +193,7 @@ pnpm run build
 ### Server Port Already in Use
 
 If port 8080 is already taken:
+
 ```bash
 # Kill the existing server
 pkill -f "npm start"

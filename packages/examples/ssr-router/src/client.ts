@@ -34,7 +34,9 @@ function createFullAPI(
 }
 
 // Mount function for fallback rendering
-function mount<T>(spec: { create: (api: ReturnType<typeof createFullAPI>) => T }): T {
+function mount<T>(spec: {
+  create: (api: ReturnType<typeof createFullAPI>) => T;
+}): T {
   const renderer = createIslandsRenderer(
     createDOMHydrationRenderer(document.body),
     createDOMRenderer()
@@ -56,7 +58,10 @@ if (mainContent) {
   // Create a client-side renderer for page navigation
   const pageRenderer = createDOMRenderer();
   const pageHelpers = defaultHelpers<DOMRendererConfig>(pageRenderer, signals);
-  const pageViews = createApi(defaultExtensions<DOMRendererConfig>(), pageHelpers);
+  const pageViews = createApi(
+    defaultExtensions<DOMRendererConfig>(),
+    pageHelpers
+  );
   const pageApi = {
     ...signals,
     ...pageViews,
@@ -75,11 +80,12 @@ if (mainContent) {
 
     // Determine which page to render
     // Connected components need: call with user props first, then route context
-    const pageSpec = path === '/about'
-      ? About()(routeContext)
-      : path === '/products'
-      ? Products()(routeContext)
-      : Home()(routeContext);
+    const pageSpec =
+      path === '/about'
+        ? About()(routeContext)
+        : path === '/products'
+          ? Products()(routeContext)
+          : Home()(routeContext);
 
     // Clear and re-render main content
     mainContent.innerHTML = '';

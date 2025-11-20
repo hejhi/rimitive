@@ -16,12 +16,14 @@ If the current workflow step or next direction is not provided, use the workflow
 1. **Load Workflow Definition**: Look for `.claude/workflows/$ARGUMENTS.md` file
 
 2. **Parse Workflow**: Extract YAML frontmatter containing:
+
    - Workflow name and description
    - Slash command for you to run in order to enter the step
 
 3. **Check Progress**: Examine project files to determine which workflow steps have been completed based on typical outputs from each slash command
 
 4. **Present Status**: Show progress with indicators:
+
    - ✅ Completed steps
    - ⏳ Current/ready step
    - ⏭️ Future steps
@@ -29,6 +31,7 @@ If the current workflow step or next direction is not provided, use the workflow
    - ❓ Uncertain
 
 5. **Guide User**:
+
    - Explain what the workflow does
    - Determine and show current position, and explain what's next
    - Provide instructions to the user on how to run the next applicable step

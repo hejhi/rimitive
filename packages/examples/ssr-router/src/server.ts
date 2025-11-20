@@ -44,11 +44,12 @@ const App = create((api) => (props: { path: string }) => {
 
   // Determine which page to render based on path
   // Connected components need: call with user props first, then route context
-  const pageContent = path === '/about'
-    ? About()(routeContext)
-    : path === '/products'
-    ? Products()(routeContext)
-    : Home()(routeContext);
+  const pageContent =
+    path === '/about'
+      ? About()(routeContext)
+      : path === '/products'
+        ? Products()(routeContext)
+        : Home()(routeContext);
 
   // Wrap in app layout
   return el('div', { className: 'app' })(
@@ -58,9 +59,7 @@ const App = create((api) => (props: { path: string }) => {
       ),
       Navigation({ currentPath: path })
     ),
-    el('main', { className: 'main-content' })(
-      pageContent
-    )
+    el('main', { className: 'main-content' })(pageContent)
   )();
 });
 
@@ -288,6 +287,8 @@ server.listen(PORT, () => {
   console.log('Try these URLs:');
   console.log(`  http://localhost:${PORT}/       - Home page (static)`);
   console.log(`  http://localhost:${PORT}/about  - About page (static)`);
-  console.log(`  http://localhost:${PORT}/products - Products page (with island)`);
+  console.log(
+    `  http://localhost:${PORT}/products - Products page (with island)`
+  );
   console.log('Press Ctrl+C to stop');
 });

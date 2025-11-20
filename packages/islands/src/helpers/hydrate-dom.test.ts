@@ -74,109 +74,125 @@ describe('Fragment Range Transformations', () => {
 
     expect(result).toEqual({
       path: [0, 1, 0],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 0,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 0,
+          depth: 0,
+        },
+      ],
     });
   });
 
   it('should advance within fragment range', () => {
     const pos: Position = {
       path: [0, 1, 0],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 0,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 0,
+          depth: 0,
+        },
+      ],
     };
     const result = advanceToSibling(pos);
 
     expect(result).toEqual({
       path: [0, 1, 1],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 1,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 1,
+          depth: 0,
+        },
+      ],
     });
   });
 
   it('should enter element within fragment range', () => {
     const pos: Position = {
       path: [0, 1, 1],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 1,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 1,
+          depth: 0,
+        },
+      ],
     };
     const result = enterElement(pos);
 
     expect(result).toEqual({
       path: [0, 1, 1, 0],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 1,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 1,
+          depth: 0,
+        },
+      ],
     });
   });
 
   it('should exit element within fragment range and advance', () => {
     const pos: Position = {
       path: [0, 1, 1, 0],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 1,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 1,
+          depth: 0,
+        },
+      ],
     };
     const result = exitToParent(pos);
 
     // Should exit to range level and advance to next item
     expect(result).toEqual({
       path: [0, 1, 2],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 2,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 2,
+          depth: 0,
+        },
+      ],
     });
   });
 
   it('should auto-exit range when past end', () => {
     const pos: Position = {
       path: [0, 1, 2, 0],
-      ranges: [{
-        parentPath: [0, 1],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 2,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0, 1],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 2,
+          depth: 0,
+        },
+      ],
     };
     const result = exitToParent(pos);
 
     // Exiting last item should advance past range end and auto-exit
     expect(result).toEqual({
       path: [0, 2],
-      ranges: []
+      ranges: [],
     });
   });
 });
@@ -189,13 +205,15 @@ describe('Position Queries', () => {
   it('should detect range start', () => {
     const pos: Position = {
       path: [0, 0],
-      ranges: [{
-        parentPath: [0],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 0,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 0,
+          depth: 0,
+        },
+      ],
     };
 
     expect(isAtRangeStart(pos)).toBe(true);
@@ -204,13 +222,15 @@ describe('Position Queries', () => {
   it('should detect range end', () => {
     const pos: Position = {
       path: [0, 2],
-      ranges: [{
-        parentPath: [0],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 2,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 2,
+          depth: 0,
+        },
+      ],
     };
 
     expect(isAtRangeEnd(pos)).toBe(true);
@@ -219,13 +239,15 @@ describe('Position Queries', () => {
   it('should detect in range', () => {
     const pos: Position = {
       path: [0, 1],
-      ranges: [{
-        parentPath: [0],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 1,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 1,
+          depth: 0,
+        },
+      ],
     };
 
     expect(isInRange(pos)).toBe(true);
@@ -234,13 +256,15 @@ describe('Position Queries', () => {
   it('should detect past range end', () => {
     const pos: Position = {
       path: [0, 3],
-      ranges: [{
-        parentPath: [0],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 3,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 3,
+          depth: 0,
+        },
+      ],
     };
 
     expect(isPastRangeEnd(pos)).toBe(true);
@@ -510,13 +534,15 @@ describe('Position Transformation Invariants', () => {
   it('should satisfy: range context is preserved during descent', () => {
     const pos: Position = {
       path: [0, 1],
-      ranges: [{
-        parentPath: [0],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 1,
-        depth: 0
-      }]
+      ranges: [
+        {
+          parentPath: [0],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 1,
+          depth: 0,
+        },
+      ],
     };
     const result = enterElement(pos);
 
@@ -525,14 +551,16 @@ describe('Position Transformation Invariants', () => {
 
   it('should satisfy: auto-exit range when currentIndex exceeds endIndex', () => {
     const pos: Position = {
-      path: [0, 2, 0],  // Inside last element
-      ranges: [{
-        parentPath: [0],
-        startIndex: 0,
-        endIndex: 2,
-        currentIndex: 2,
-        depth: 0
-      }]
+      path: [0, 2, 0], // Inside last element
+      ranges: [
+        {
+          parentPath: [0],
+          startIndex: 0,
+          endIndex: 2,
+          currentIndex: 2,
+          depth: 0,
+        },
+      ],
     };
     const result = exitToParent(pos);
 

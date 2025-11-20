@@ -15,13 +15,16 @@ const COLOR_PALETTE = [
 ];
 
 // Track discovered event types
-const eventTypeMap = new Map<string, { category: string; colorIndex: number }>();
+const eventTypeMap = new Map<
+  string,
+  { category: string; colorIndex: number }
+>();
 let nextColorIndex = 0;
 
 // Create a signal to track available event types for filtering
-export const availableEventTypes = devtoolsContext.signal<Array<{ value: string; label: string }>>([
-  { value: 'all', label: 'All Types' },
-]);
+export const availableEventTypes = devtoolsContext.signal<
+  Array<{ value: string; label: string }>
+>([{ value: 'all', label: 'All Types' }]);
 
 /**
  * Get category for an event type - just use the event type as-is
@@ -52,14 +55,17 @@ export function inferCategory(eventType: string): string {
 /**
  * Get colors for a specific category
  */
-export function getCategoryColors(category: string): { main: string; secondary: string } {
+export function getCategoryColors(category: string): {
+  main: string;
+  secondary: string;
+} {
   // Find any event type that maps to this category
   for (const [, mapping] of eventTypeMap) {
     if (mapping.category === category) {
       return COLOR_PALETTE[mapping.colorIndex];
     }
   }
-  
+
   // Default gray for unknown categories
   return { main: 'text-gray-500', secondary: 'text-gray-400' };
 }
@@ -69,7 +75,7 @@ export function getCategoryColors(category: string): { main: string; secondary: 
  */
 function updateAvailableEventTypes(category: string) {
   const currentTypes = availableEventTypes();
-  const exists = currentTypes.some(type => type.value === category);
+  const exists = currentTypes.some((type) => type.value === category);
 
   if (!exists) {
     availableEventTypes([
@@ -93,7 +99,5 @@ function formatCategoryLabel(category: string): string {
 export function resetEventTypes() {
   eventTypeMap.clear();
   nextColorIndex = 0;
-  availableEventTypes([
-    { value: 'all', label: 'All Types' },
-  ]);
+  availableEventTypes([{ value: 'all', label: 'All Types' }]);
 }

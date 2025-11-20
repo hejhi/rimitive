@@ -68,9 +68,7 @@ export const selectedTransactionData = devtoolsContext.computed(() => {
   const selectedId = devtoolsState.selectedTransaction();
   if (!selectedId) return null;
 
-  return (
-    filteredTransactions().find((log) => log.id === selectedId) || null
-  );
+  return filteredTransactions().find((log) => log.id === selectedId) || null;
 });
 
 export const filteredLogEntries = devtoolsContext.computed(() => {

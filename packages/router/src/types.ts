@@ -1,4 +1,10 @@
-import type { RendererConfig, RefSpec, Reactive, LifecycleCallback, ElRefSpecChild } from '@lattice/view/types';
+import type {
+  RendererConfig,
+  RefSpec,
+  Reactive,
+  LifecycleCallback,
+  ElRefSpecChild,
+} from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { CreateScopes } from '@lattice/view/helpers/scope';
 import type { LatticeExtension } from '@lattice/lattice';
@@ -108,11 +114,13 @@ export type RouteOpts<TConfig extends RendererConfig> = {
  */
 export type RouteComponent<TConfig extends RendererConfig> =
   | RefSpec<TConfig['baseElement']>
-  | ((api: RouteOpts<TConfig> & {
-      params: ComputedFunction<RouteParams>;
-      outlet: () => RefSpec<TConfig['baseElement']> | null;
-      navigate: (path: string) => void;
-    }) => RefSpec<TConfig['baseElement']>);
+  | ((
+      api: RouteOpts<TConfig> & {
+        params: ComputedFunction<RouteParams>;
+        outlet: () => RefSpec<TConfig['baseElement']> | null;
+        navigate: (path: string) => void;
+      }
+    ) => RefSpec<TConfig['baseElement']>);
 
 /**
  * @internal
@@ -125,7 +133,12 @@ export type RouteFactory<TConfig extends RendererConfig> = LatticeExtension<
     (
       path: string,
       component: RouteComponent<TConfig>
-    ): (...children: (RefSpec<TConfig['baseElement']> | RouteSpec<TConfig['baseElement']>)[]) => RouteSpec<TConfig['baseElement']>;
+    ): (
+      ...children: (
+        | RefSpec<TConfig['baseElement']>
+        | RouteSpec<TConfig['baseElement']>
+      )[]
+    ) => RouteSpec<TConfig['baseElement']>;
   }
 >;
 

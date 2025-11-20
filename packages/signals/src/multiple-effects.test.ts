@@ -16,18 +16,17 @@ describe('multiple effects on signal change', () => {
   });
 
   it('should run all effects when signal changes', () => {
-
     // State setup similar to devtools example
     const count = signal(0);
     const todos = signal([
       { id: 1, text: 'Learn Lattice', completed: false },
-      { id: 2, text: 'Build an app', completed: false }
+      { id: 2, text: 'Build an app', completed: false },
     ]);
 
     const doubled = computed(() => count() * 2);
     const isEven = computed(() => count() % 2 === 0);
-    const completedCount = computed(() =>
-      todos().filter(todo => todo.completed).length
+    const completedCount = computed(
+      () => todos().filter((todo) => todo.completed).length
     );
 
     // Track which effects run
@@ -56,7 +55,9 @@ describe('multiple effects on signal change', () => {
       const d = doubled();
       const e = isEven();
       const t = todos();
-      runs.push(`effect3: count=${c}, doubled=${d}, isEven=${e}, todos=${t.length}`);
+      runs.push(
+        `effect3: count=${c}, doubled=${d}, isEven=${e}, todos=${t.length}`
+      );
     });
 
     // So todos.subscribers should be: completedCount -> effect1 -> effect2 -> effect3
@@ -76,15 +77,14 @@ describe('multiple effects on signal change', () => {
   });
 
   it('should run all effects when count changes after todos was updated', () => {
-
     const count = signal(0);
     const todos = signal([
       { id: 1, text: 'Learn Lattice', completed: false },
-      { id: 2, text: 'Build an app', completed: false }
+      { id: 2, text: 'Build an app', completed: false },
     ]);
 
     computed(() => count() * 2);
-    computed(() => todos().filter(todo => todo.completed).length);
+    computed(() => todos().filter((todo) => todo.completed).length);
 
     const runs: string[] = [];
 

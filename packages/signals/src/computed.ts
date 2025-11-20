@@ -1,12 +1,16 @@
 /**
  * ALGORITHM: Lazy Computed Values with Push-Pull Reactivity
- * 
+ *
  * Computed values are the heart of the reactive system.
  */
 
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
-import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import type {
+  LatticeExtension,
+  InstrumentationContext,
+  ExtensionContext,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import { GraphEdges, Consumer } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
@@ -53,85 +57,93 @@ const COMPUTED_CLEAN = COMPUTED | CLEAN;
 const COMPUTED_DIRTY = COMPUTED | DIRTY;
 
 // Export the factory return type for better type inference
-export type ComputedFactory = LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
+export type ComputedFactory = LatticeExtension<
+  'computed',
+  <T>(compute: () => T) => ComputedFunction<T>
+>;
 
-export const Computed = create(({
+export const Computed = create(
+  ({
     consumer,
     trackDependency,
     pullUpdates,
     track,
     shallowPropagate,
-  }: ComputedOpts) => (props?: ComputedProps): ComputedFactory => {
-  const { instrument } = props ?? {};
+  }: ComputedOpts) =>
+    (props?: ComputedProps): ComputedFactory => {
+      const { instrument } = props ?? {};
 
-  // Shared computed function - uses `this` binding
-  function computedImpl<T>(this: ComputedNode<T>): T {
-    const status = this.status;
-    const isPending = status & PENDING;
+      // Shared computed function - uses `this` binding
+      function computedImpl<T>(this: ComputedNode<T>): T {
+        const status = this.status;
+        const isPending = status & PENDING;
 
-    // Check if we need to pull updates
-    update: if (status & DIRTY || (isPending && pullUpdates(this))) {
-      // Recompute the value
-      const prev = this.value;
-      this.value = track(this, this.compute);
+        // Check if we need to pull updates
+        update: if (status & DIRTY || (isPending && pullUpdates(this))) {
+          // Recompute the value
+          const prev = this.value;
+          this.value = track(this, this.compute);
 
-      // Propagate if value changed and there are multiple subscribers
-      if (prev === this.value) break update;
+          // Propagate if value changed and there are multiple subscribers
+          if (prev === this.value) break update;
 
-      const subs = this.subscribers;
-      if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
-    } else if (isPending) this.status = COMPUTED_CLEAN;
+          const subs = this.subscribers;
+          if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
+        } else if (isPending) this.status = COMPUTED_CLEAN;
 
-    // Track dependency AFTER pulling updates
-    const activeConsumer = consumer.active;
-    if (activeConsumer) trackDependency(this, activeConsumer);
+        // Track dependency AFTER pulling updates
+        const activeConsumer = consumer.active;
+        if (activeConsumer) trackDependency(this, activeConsumer);
 
-    return this.value;
-  }
+        return this.value;
+      }
 
-  // Shared peek function - uses `this` binding
-  function peekImpl<T>(this: ComputedNode<T>): T {
-    // Save and clear consumer to prevent tracking
-    const prevConsumer = consumer.active;
-    consumer.active = null;
+      // Shared peek function - uses `this` binding
+      function peekImpl<T>(this: ComputedNode<T>): T {
+        // Save and clear consumer to prevent tracking
+        const prevConsumer = consumer.active;
+        consumer.active = null;
 
-    try {
-      const status = this.status;
-      const isPending = status & PENDING;
+        try {
+          const status = this.status;
+          const isPending = status & PENDING;
 
-      if (status & DIRTY || (isPending && pullUpdates(this))) {
-        this.value = track(this, this.compute);
-      } else if (isPending) this.status = COMPUTED_CLEAN;
+          if (status & DIRTY || (isPending && pullUpdates(this))) {
+            this.value = track(this, this.compute);
+          } else if (isPending) this.status = COMPUTED_CLEAN;
 
-      return this.value;
-    } finally {
-      consumer.active = prevConsumer;
+          return this.value;
+        } finally {
+          consumer.active = prevConsumer;
+        }
+      }
+
+      function createComputed<T>(compute: () => T): ComputedFunction<T> {
+        const node: ComputedNode<T> = {
+          __type: 'computed' as const,
+          value: undefined as T,
+          subscribers: undefined,
+          subscribersTail: undefined,
+          dependencies: undefined,
+          dependencyTail: undefined,
+          status: COMPUTED_DIRTY,
+          trackingVersion: 0,
+          compute,
+        };
+
+        // Bind shared functions to this node
+        const computed = computedImpl.bind(
+          node
+        ) as unknown as ComputedFunction<T>;
+        computed.peek = peekImpl.bind(node) as () => T;
+
+        return computed;
+      }
+
+      return {
+        name: 'computed',
+        method: createComputed,
+        ...(instrument && { instrument }),
+      };
     }
-  }
-
-  function createComputed<T>(compute: () => T): ComputedFunction<T> {
-    const node: ComputedNode<T> = {
-      __type: 'computed' as const,
-      value: undefined as T,
-      subscribers: undefined,
-      subscribersTail: undefined,
-      dependencies: undefined,
-      dependencyTail: undefined,
-      status: COMPUTED_DIRTY,
-      trackingVersion: 0,
-      compute,
-    };
-
-    // Bind shared functions to this node
-    const computed = computedImpl.bind(node) as unknown as ComputedFunction<T>;
-    computed.peek = peekImpl.bind(node) as () => T;
-
-    return computed;
-  }
-
-  return {
-    name: 'computed',
-    method: createComputed,
-    ...(instrument && { instrument }),
-  };
-});
+);

@@ -28,13 +28,17 @@ export function createIslandsRenderer(
     createElement: (tag) => getRenderer().createElement(tag),
     createTextNode: (text) => getRenderer().createTextNode(text),
     updateTextNode: (node, text) => getRenderer().updateTextNode(node, text),
-    setAttribute: (element, key, value) => getRenderer().setAttribute(element, key, value),
+    setAttribute: (element, key, value) =>
+      getRenderer().setAttribute(element, key, value),
     appendChild: (parent, child) => getRenderer().appendChild(parent, child),
     removeChild: (parent, child) => getRenderer().removeChild(parent, child),
-    insertBefore: (parent, newNode, refNode) => getRenderer().insertBefore(parent, newNode, refNode),
+    insertBefore: (parent, newNode, refNode) =>
+      getRenderer().insertBefore(parent, newNode, refNode),
     isConnected: (element) => getRenderer().isConnected(element),
-    addEventListener: (element, event, handler, options) => getRenderer().addEventListener(element, event, handler, options),
-    serializeElement: (element, childrenHTML) => getRenderer().serializeElement(element, childrenHTML),
+    addEventListener: (element, event, handler, options) =>
+      getRenderer().addEventListener(element, event, handler, options),
+    serializeElement: (element, childrenHTML) =>
+      getRenderer().serializeElement(element, childrenHTML),
     switchToFallback,
   };
 }

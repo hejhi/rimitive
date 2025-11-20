@@ -1,11 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { El } from './el';
-import { createTestEnv, getTextContent, createMockRenderer, createSignal, MockElement, MockRendererConfig } from './test-utils';
+import {
+  createTestEnv,
+  getTextContent,
+  createMockRenderer,
+  createSignal,
+  MockElement,
+  MockRendererConfig,
+} from './test-utils';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
 
 // Helper to extract element from NodeRef
-const asElement = <T>(nodeRef: NodeRef<T>): T => (nodeRef as ElementRef<T>).element;
+const asElement = <T>(nodeRef: NodeRef<T>): T =>
+  (nodeRef as ElementRef<T>).element;
 
 // Helper to create test environment for tests that need custom effect
 function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
@@ -13,7 +21,7 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
   const { createElementScope, onCleanup } = createTestScopes();
 
   // Create scopedEffect that wraps the custom effect and registers cleanup
-  const scopedEffect = (fn: () => void | (() => void)): () => void => {
+  const scopedEffect = (fn: () => void | (() => void)): (() => void) => {
     // Run the effect and capture its cleanup
     const dispose = effectFn(fn as () => void);
 
@@ -25,18 +33,20 @@ function createCustomTestEnv(effectFn: (fn: () => void) => () => void) {
     return dispose;
   };
 
-  return { renderer, effect: effectFn, scopedEffect, createElementScope, onCleanup };
+  return {
+    renderer,
+    effect: effectFn,
+    scopedEffect,
+    createElementScope,
+    onCleanup,
+  };
 }
 
 describe('el primitive', () => {
   describe('static content', () => {
     it('renders static content', () => {
-      const {
-        renderer,
-        scopedEffect,
-        createElementScope,
-        onCleanup,
-      } = createTestEnv();
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
       const el = El<MockRendererConfig>().create({
         scopedEffect,
         renderer,
@@ -53,12 +63,8 @@ describe('el primitive', () => {
     });
 
     it('nests elements', () => {
-      const {
-        renderer,
-        scopedEffect,
-        createElementScope,
-        onCleanup,
-        } = createTestEnv();
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
       const el = El<MockRendererConfig>().create({
         scopedEffect,
         renderer,
@@ -66,7 +72,9 @@ describe('el primitive', () => {
         onCleanup,
       }).method;
 
-      const child = el('span')('nested content') as unknown as RefSpec<MockElement>;
+      const child = el('span')(
+        'nested content'
+      ) as unknown as RefSpec<MockElement>;
       const parent = el('div')(child); // Pass blueprint - will be instantiated
 
       // Create parent instance (which instantiates child)
@@ -81,17 +89,17 @@ describe('el primitive', () => {
 
   describe('reactive content', () => {
     it('renders reactive text children', () => {
-      const { read: text, write: setText, subscribers } = createSignal('initial');
       const {
-        renderer,
-        scopedEffect,
-        createElementScope,
-        onCleanup,
-      } = createCustomTestEnv((fn: () => void) => {
-        subscribers.add(fn);
-        fn();
-        return () => subscribers.delete(fn);
-      });
+        read: text,
+        write: setText,
+        subscribers,
+      } = createSignal('initial');
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createCustomTestEnv((fn: () => void) => {
+          subscribers.add(fn);
+          fn();
+          return () => subscribers.delete(fn);
+        });
       const el = El<MockRendererConfig>().create({
         scopedEffect,
         renderer,
@@ -111,20 +119,18 @@ describe('el primitive', () => {
     });
 
     it('updates reactive props', () => {
-      const { read: className, write: setClassName, subscribers } = createSignal('foo');
       const {
-
-        renderer,
-        scopedEffect,
-        createElementScope,
-        onCleanup,
-      } = createCustomTestEnv((fn: () => void) => {
-        subscribers.add(fn);
-        fn();
-        return () => subscribers.delete(fn);
-      });
+        read: className,
+        write: setClassName,
+        subscribers,
+      } = createSignal('foo');
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createCustomTestEnv((fn: () => void) => {
+          subscribers.add(fn);
+          fn();
+          return () => subscribers.delete(fn);
+        });
       const el = El<MockRendererConfig>().create({
-
         scopedEffect,
         renderer,
         createElementScope,
@@ -144,19 +150,13 @@ describe('el primitive', () => {
 
     it('handles mixed static and reactive content', () => {
       const { read: count, write: setCount, subscribers } = createSignal(0);
-      const {
-
-        renderer,
-        scopedEffect,
-        createElementScope,
-        onCleanup,
-      } = createCustomTestEnv((fn: () => void) => {
-        subscribers.add(fn);
-        fn();
-        return () => subscribers.delete(fn);
-      });
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createCustomTestEnv((fn: () => void) => {
+          subscribers.add(fn);
+          fn();
+          return () => subscribers.delete(fn);
+        });
       const el = El<MockRendererConfig>().create({
-
         scopedEffect,
         renderer,
         createElementScope,
@@ -176,19 +176,13 @@ describe('el primitive', () => {
 
     it('cleans up effects on disconnect', () => {
       const { read: text, subscribers } = createSignal('initial');
-      const {
-
-        renderer,
-        scopedEffect,
-        createElementScope,
-        onCleanup,
-      } = createCustomTestEnv((fn: () => void) => {
-        subscribers.add(fn);
-        fn();
-        return () => subscribers.delete(fn);
-      });
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createCustomTestEnv((fn: () => void) => {
+          subscribers.add(fn);
+          fn();
+          return () => subscribers.delete(fn);
+        });
       const el = El<MockRendererConfig>().create({
-
         scopedEffect,
         renderer,
         createElementScope,
@@ -210,15 +204,9 @@ describe('el primitive', () => {
     });
 
     it('calls lifecycle cleanup function', () => {
-      const {
-
-        renderer,
-        scopedEffect,
-        createElementScope,
-        onCleanup,
-        } = createTestEnv();
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
       const el = El<MockRendererConfig>().create({
-
         scopedEffect,
         renderer,
         createElementScope,

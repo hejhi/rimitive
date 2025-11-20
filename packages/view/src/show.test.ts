@@ -235,14 +235,12 @@ describe('show() - conditional visibility without recreation', () => {
 
     const spec = show(
       shouldShow,
-      el.method('div')('Content')(
-        () => {
-          lifecycleCallCount++;
-          return () => {
-            cleanupCallCount++;
-          };
-        }
-      )
+      el.method('div')('Content')(() => {
+        lifecycleCallCount++;
+        return () => {
+          cleanupCallCount++;
+        };
+      })
     );
 
     const parent = renderer.createElement('section');
@@ -289,11 +287,12 @@ describe('show() - conditional visibility without recreation', () => {
     const shouldShow = signal(true);
     let showLevelCallCount = 0;
 
-    const spec = show(shouldShow, el.method('div')('Content'))(
-      () => {
-        showLevelCallCount++;
-      }
-    );
+    const spec = show(
+      shouldShow,
+      el.method('div')('Content')
+    )(() => {
+      showLevelCallCount++;
+    });
 
     const parent = renderer.createElement('section');
     const parentRef: ElementRef<MockElement> = {

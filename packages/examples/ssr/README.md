@@ -30,12 +30,15 @@ pnpm dev
 ## Islands
 
 ### Counter
+
 Interactive counter with increment/decrement buttons.
 
 ### TodoList
+
 Todo list with add/remove functionality.
 
 Both islands:
+
 - Render to HTML on server
 - Ship minimal JS (~1kb each)
 - Hydrate from existing DOM

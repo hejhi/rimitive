@@ -3,7 +3,7 @@ import type { RenderScope } from '../types';
 // Status constants for RenderScope disposal tracking
 // Note: RenderScope is not a reactive node - these are just for lifecycle management
 const CLEAN = 0;
-const DISPOSED = 1 << 2;  // Bit 2: disposed state
+const DISPOSED = 1 << 2; // Bit 2: disposed state
 const RENDER_SCOPE_CLEAN = CLEAN;
 
 /**
@@ -41,7 +41,9 @@ export type CreateScopes = {
    * Get the scope associated with an element, if one exists.
    * Used during disposal to look up scopes when removing elements.
    */
-  getElementScope: <TElement extends object>(element: TElement) => RenderScope<TElement> | undefined;
+  getElementScope: <TElement extends object>(
+    element: TElement
+  ) => RenderScope<TElement> | undefined;
 };
 
 export function createScopes({
@@ -125,7 +127,11 @@ export function createScopes({
           // Process next sibling if exists
           if (nextSibling !== undefined) {
             // Re-push parent since we're not done with all its children
-            stack = { parent, nextSibling: nextSibling.nextSibling, prev: stack };
+            stack = {
+              parent,
+              nextSibling: nextSibling.nextSibling,
+              prev: stack,
+            };
             scope = nextSibling;
             continue descent;
           }

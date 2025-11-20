@@ -2,9 +2,17 @@
  * Router API - separate app-level API for routing
  */
 
-import type { RendererConfig, RefSpec, LifecycleCallback } from '@lattice/view/types';
+import type {
+  RendererConfig,
+  RefSpec,
+  LifecycleCallback,
+} from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
-import type { ElMethod, SignalFunction, ComputedFunction } from '@lattice/view/component';
+import type {
+  ElMethod,
+  SignalFunction,
+  ComputedFunction,
+} from '@lattice/view/component';
 import type { MatchFactory } from '@lattice/view/match';
 import type { ShowFactory } from '@lattice/view/show';
 import type { RouteParams, RouteSpec, RouteMatch } from './types';
@@ -52,8 +60,9 @@ export type RouteContext<TConfig extends RendererConfig> = {
 /**
  * A connected component that can be instantiated with route context
  */
-export type ConnectedComponent<TConfig extends RendererConfig> =
-  (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>;
+export type ConnectedComponent<TConfig extends RendererConfig> = (
+  routeContext: RouteContext<TConfig>
+) => RefSpec<TConfig['baseElement']>;
 
 /**
  * The connect method signature
@@ -66,15 +75,21 @@ export type ConnectMethod<TConfig extends RendererConfig> = <
     routeApi: RouteApi,
     routeContext: RouteContext<TConfig>
   ) => (userProps: TUserProps) => RefSpec<TElement>
-) => (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
+) => (
+  ...args: [TUserProps?]
+) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
 
 /**
  * Route method signature
  */
 export type RouteMethod<TConfig extends RendererConfig> = (
   path: string,
-  connectedComponent: (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>
-) => (...children: RouteSpec<TConfig['baseElement']>[]) => RouteSpec<TConfig['baseElement']>;
+  connectedComponent: (
+    routeContext: RouteContext<TConfig>
+  ) => RefSpec<TConfig['baseElement']>
+) => (
+  ...children: RouteSpec<TConfig['baseElement']>[]
+) => RouteSpec<TConfig['baseElement']>;
 
 /**
  * Router object returned by createRouter
@@ -131,7 +146,9 @@ function getInitialPath(config: RouterConfig): string {
 
   // Browser environment - read from window.location
   if (typeof window !== 'undefined' && window.location) {
-    return window.location.pathname + window.location.search + window.location.hash;
+    return (
+      window.location.pathname + window.location.search + window.location.hash
+    );
   }
 
   // Default to root path (SSR or non-browser environment)
@@ -195,7 +212,9 @@ export function createRouter<TConfig extends RendererConfig>(
    */
   function route(
     path: string,
-    connectedComponent: (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>
+    connectedComponent: (
+      routeContext: RouteContext<TConfig>
+    ) => RefSpec<TConfig['baseElement']>
   ) {
     return (...children: RouteSpec<TConfig['baseElement']>[]) => {
       // Store the original path before processing
@@ -394,20 +413,23 @@ export function createRouter<TConfig extends RendererConfig>(
    */
   function connect<
     TElement extends TConfig['baseElement'],
-    TUserProps = Record<string, unknown>
+    TUserProps = Record<string, unknown>,
   >(
     wrapper: (
       routeApi: RouteApi,
       routeContext: RouteContext<TConfig>
     ) => (userProps: TUserProps) => RefSpec<TElement>
-  ): (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
-    return (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => {
-      const routeApi: RouteApi = { navigate, currentPath };
-      const componentFactory = wrapper(routeApi, routeContext);
-      // Use empty object as default if no props provided
-      const userProps = args[0] ?? ({} as TUserProps);
-      return componentFactory(userProps);
-    };
+  ): (
+    ...args: [TUserProps?]
+  ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
+    return (...args: [TUserProps?]) =>
+      (routeContext: RouteContext<TConfig>) => {
+        const routeApi: RouteApi = { navigate, currentPath };
+        const componentFactory = wrapper(routeApi, routeContext);
+        // Use empty object as default if no props provided
+        const userProps = args[0] ?? ({} as TUserProps);
+        return componentFactory(userProps);
+      };
   }
 
   /**
@@ -419,7 +441,9 @@ export function createRouter<TConfig extends RendererConfig>(
    * @returns A computed signal containing the current path
    */
   function useCurrentPath(initialPath: string): ComputedFunction<string> {
-    return viewApi.computed(() => typeof window === 'undefined' ? initialPath : currentPath());
+    return viewApi.computed(() =>
+      typeof window === 'undefined' ? initialPath : currentPath()
+    );
   }
 
   // Return the router object

@@ -12,7 +12,9 @@ export function instrumentComputed(
   method: <T>(compute: () => T) => ComputedFunction<T>,
   instrumentation: InstrumentationContext
 ) {
-  return function instrumentedCreateComputed<T>(compute: () => T): ComputedFunction<T> {
+  return function instrumentedCreateComputed<T>(
+    compute: () => T
+  ): ComputedFunction<T> {
     const computed = method(compute);
     const { id } = instrumentation.register(computed, 'computed', 'Computed');
 

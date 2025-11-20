@@ -45,9 +45,9 @@ interface BenchState {
 
 // Size configurations: [width, depth]
 const SIZES: Record<string, [number, number]> = {
-  small: [2, 3],   // 8 total nodes
-  medium: [3, 4],  // 40 total nodes
-  large: [4, 4],   // 85 total nodes
+  small: [2, 3], // 8 total nodes
+  medium: [3, 4], // 40 total nodes
+  large: [4, 4], // 85 total nodes
 };
 
 group('Deep & Wide Tree Scaling', () => {
@@ -89,9 +89,8 @@ group('Deep & Wide Tree Scaling', () => {
             void targetNode();
           }
         };
-      })
-      .args('size', ['small', 'medium', 'large']);
-    
+      }).args('size', ['small', 'medium', 'large']);
+
       bench('Preact - $size tree', function* (state: BenchState) {
         const sizeKey = state.get('size');
         const [WIDTH, DEPTH] = SIZES[sizeKey]!;
@@ -128,9 +127,8 @@ group('Deep & Wide Tree Scaling', () => {
             void targetNode.value;
           }
         };
-      })
-      .args('size', ['small', 'medium', 'large']);
-    
+      }).args('size', ['small', 'medium', 'large']);
+
       bench('Alien - $size tree', function* (state: BenchState) {
         const sizeKey = state.get('size');
         const [WIDTH, DEPTH] = SIZES[sizeKey]!;
@@ -167,8 +165,7 @@ group('Deep & Wide Tree Scaling', () => {
             void targetNode();
           }
         };
-      })
-      .args('size', ['small', 'medium', 'large']);
+      }).args('size', ['small', 'medium', 'large']);
     });
   });
 });

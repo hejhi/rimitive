@@ -19,8 +19,5 @@ export const createApi = () => {
     detachAll,
   };
 
-  return createLatticeContext(
-    Signal().create(opts),
-    Effect().create(opts)
-  );
-}
+  return createLatticeContext(Signal().create(opts), Effect().create(opts));
+};

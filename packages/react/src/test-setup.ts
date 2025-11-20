@@ -5,7 +5,10 @@ import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { SignalProvider } from './signals/context';
 import { createApi } from '@lattice/lattice';
-import { defaultExtensions, defaultHelpers } from '@lattice/signals/presets/core';
+import {
+  defaultExtensions,
+  defaultHelpers,
+} from '@lattice/signals/presets/core';
 
 const createSignals = () => createApi(defaultExtensions(), defaultHelpers());
 

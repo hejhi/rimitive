@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, effect, batch, computed, resetGlobalState } from './test-setup';
+import {
+  signal,
+  effect,
+  batch,
+  computed,
+  resetGlobalState,
+} from './test-setup';
 
 describe('Batch', () => {
   beforeEach(() => {

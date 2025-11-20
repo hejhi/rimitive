@@ -26,9 +26,7 @@ const { route, Link, mount } = api;
 
 const routes = route('/', App)(
   route('about', About)(),
-  route('products', Products)(
-    route(':id', Product)()
-  )
+  route('products', Products)(route(':id', Product)())
 );
 
 mount(routes);
@@ -43,20 +41,15 @@ const Nav = create((api) => () => {
   const { el, Link } = api;
 
   return el('nav')(
-    Link({ href: '/', className: 'nav-link' })(
-      'Home'
-    ),
-    Link({ href: '/about' })(
-      'About Us'
-    ),
-    Link({ href: '/products/123' })(
-      'View Product'
-    )
+    Link({ href: '/', className: 'nav-link' })('Home'),
+    Link({ href: '/about' })('About Us'),
+    Link({ href: '/products/123' })('View Product')
   );
 });
 ```
 
 **Features:**
+
 - Intercepts clicks for internal links (prevents full page reload)
 - Allows right-click and cmd/ctrl+click for opening in new tabs
 - Does not intercept external links (http://, https://)

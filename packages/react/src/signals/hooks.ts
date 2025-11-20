@@ -1,9 +1,4 @@
-import {
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-  useCallback,
-} from 'react';
+import { useMemo, useRef, useSyncExternalStore, useCallback } from 'react';
 import { useSignalAPI } from './context';
 import type { SignalFunction } from '@lattice/signals/signal';
 import type { ComputedFunction } from '@lattice/signals/computed';
@@ -23,7 +18,9 @@ import type { SignalSetter } from './types';
  * }
  * ```
  */
-export function useSubscribe<T>(signal: SignalFunction<T> | ComputedFunction<T>): T {
+export function useSubscribe<T>(
+  signal: SignalFunction<T> | ComputedFunction<T>
+): T {
   const api = useSignalAPI();
 
   // Create stable subscription using effect
@@ -71,7 +68,7 @@ export function useSignal<T>(
   initialValue: T | (() => T)
 ): [T, SignalSetter<T>] {
   const api = useSignalAPI();
-  
+
   // Use ref to store the signal instance - created only once
   const signalRef = useRef<SignalFunction<T> | null>(null);
 
@@ -103,7 +100,6 @@ export function useSignal<T>(
   return [value, setter];
 }
 
-
 /**
  * Subscribe to a signal value using a selector function.
  * Only re-renders when the selected value changes.
@@ -121,16 +117,16 @@ export function useSelector<T, R>(
   selector: (value: T) => R
 ): R {
   const api = useSignalAPI();
-  
+
   // We need to update the selector ref on each render to ensure
   // the computed always uses the latest selector function
   const selectorRef = useRef(selector);
   selectorRef.current = selector;
-  
+
   // Create a computed value that applies the selector
   // We use a ref to maintain the same computed instance across renders
   const computedRef = useRef<ComputedFunction<R> | null>(null);
-  
+
   // Only create the computed once, but use selectorRef.current
   // to ensure it always uses the latest selector
   if (computedRef.current === null) {

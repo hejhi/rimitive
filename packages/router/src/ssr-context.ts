@@ -55,7 +55,7 @@ function createNoOpStore(): ContextStore {
     },
     getStore(): RouterSSRContext | undefined {
       return undefined;
-    }
+    },
   };
 }
 

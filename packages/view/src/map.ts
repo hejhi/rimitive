@@ -2,9 +2,19 @@
  * User-space map() helper using stable signal pattern
  */
 
-import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import type {
+  LatticeExtension,
+  InstrumentationContext,
+  ExtensionContext,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
-import type { RefSpec, FragmentRef, Reactive, ElementRef, LifecycleCallback } from './types';
+import type {
+  RefSpec,
+  FragmentRef,
+  Reactive,
+  ElementRef,
+  LifecycleCallback,
+} from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Renderer, RendererConfig } from './renderer';
 import type { CreateScopes } from './helpers/scope';
@@ -22,16 +32,22 @@ export type MapFactory<TBaseElement> = LatticeExtension<
     <T, TEl>(
       items: T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) => RefSpec<TBaseElement>;
+    ): (
+      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+    ) => RefSpec<TBaseElement>;
     <T, TEl>(
       items: Reactive<T[]>,
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) => RefSpec<TBaseElement>;
+    ): (
+      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+    ) => RefSpec<TBaseElement>;
     // Plain function that returns array
     <T, TEl>(
       items: () => T[],
       keyFn?: (item: T) => string | number
-    ): (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) => RefSpec<TBaseElement>;
+    ): (
+      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+    ) => RefSpec<TBaseElement>;
   }
 >;
 
@@ -51,7 +67,8 @@ export interface MapProps<TBaseElement> {
   ) => MapFactory<TBaseElement>['method'];
 }
 
-type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<(value: T) => void>;
+type RecNode<T, TElement> = ElementRef<TElement> &
+  ReconcileNode<(value: T) => void>;
 
 /**
  * Map primitive - instantiatable extension using the create pattern
@@ -81,7 +98,10 @@ export const Map = create(
        * Helper to create a RefSpec for fragments with lifecycle callback chaining
        */
       const createRefSpec = (
-        createFragmentRef: (callbacks: LifecycleCallback<TBaseElement>[], api?: unknown) => TFragRef
+        createFragmentRef: (
+          callbacks: LifecycleCallback<TBaseElement>[],
+          api?: unknown
+        ) => TFragRef
       ): RefSpec<TBaseElement> => {
         const lifecycleCallbacks: LifecycleCallback<TBaseElement>[] = [];
 
@@ -93,13 +113,11 @@ export const Map = create(
         };
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(
-          api?: unknown,
-          extensions?: TExt
-        ) => {
+        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
           const fragRef = createFragmentRef(lifecycleCallbacks, api);
           // If no extensions, return the ref directly to preserve mutability
-          if (!extensions || Object.keys(extensions).length === 0) return fragRef;
+          if (!extensions || Object.keys(extensions).length === 0)
+            return fragRef;
 
           return {
             ...fragRef,
@@ -249,8 +267,8 @@ export const Map = create(
                     ) {
                       throw new Error(
                         'map() requires a key function when mapping over objects. ' +
-                        'Without a key function, all objects become "[object Object]" which breaks reconciliation. ' +
-                        'Example: map(items, (item) => item.id)((item) => ...)'
+                          'Without a key function, all objects become "[object Object]" which breaks reconciliation. ' +
+                          'Example: map(items, (item) => item.id)((item) => ...)'
                       );
                     }
                   }
@@ -276,7 +294,7 @@ export const Map = create(
               },
             };
             return fragment;
-        });
+          });
       }
 
       const extension: MapFactory<TBaseElement> = {

@@ -13,7 +13,5 @@ export const createApi = () => {
     propagate,
   };
 
-  return createLatticeContext(
-    Signal().create(opts)
-  );
+  return createLatticeContext(Signal().create(opts));
 };

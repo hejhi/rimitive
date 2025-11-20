@@ -1,11 +1,11 @@
 /**
  * ALGORITHM: Reactive Dependency Graph
- * 
+ *
  * This file defines the core data structures for implementing a push-pull reactive system.
  * The system uses a directed acyclic graph (DAG) where:
  * - Nodes represent reactive values (signals, computed, effects)
  * - Edges represent dependencies between nodes
- * 
+ *
  * Key algorithmic insights:
  * 1. Push-Pull Algorithm: Combines eager notification (push) with lazy evaluation (pull)
  * 2. Version-based tracking: Avoids redundant computations
@@ -27,7 +27,7 @@ export interface Readable<T> {
 }
 
 export interface Writable<T> extends Readable<T> {
-  (value: T): void;  // Function call with argument for write
+  (value: T): void; // Function call with argument for write
 }
 
 // ALGORITHM: Producer-Consumer Pattern
@@ -96,7 +96,6 @@ export interface Dependency {
   // Version tracking for efficient dependency pruning
   version: number; // Consumer's trackingVersion when this dependency was created
 }
-
 
 // Ensure module is not tree-shaken
 export const __types = true;

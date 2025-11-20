@@ -83,8 +83,7 @@ group('Fan-In Convergence Scaling', () => {
             void fanIn();
           }
         };
-      })
-      .args('sources', [10, 25, 50, 100]);
+      }).args('sources', [10, 25, 50, 100]);
 
       bench('Preact - $sources sources', function* (state: BenchState) {
         const sourceCount = state.get('sources');
@@ -127,8 +126,7 @@ group('Fan-In Convergence Scaling', () => {
             void fanIn.value;
           }
         };
-      })
-      .args('sources', [10, 25, 50, 100]);
+      }).args('sources', [10, 25, 50, 100]);
 
       bench('Alien - $sources sources', function* (state: BenchState) {
         const sourceCount = state.get('sources');
@@ -171,8 +169,7 @@ group('Fan-In Convergence Scaling', () => {
             void fanIn();
           }
         };
-      })
-      .args('sources', [10, 25, 50, 100]);
+      }).args('sources', [10, 25, 50, 100]);
     });
   });
 });

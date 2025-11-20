@@ -25,7 +25,7 @@ export function createPushPull() {
   return {
     track,
     ...restPush,
-    ...createPullPropagator({ track })
+    ...createPullPropagator({ track }),
   };
 }
 

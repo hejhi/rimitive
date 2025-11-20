@@ -6,23 +6,26 @@
  * 2. Initialize fragments after all refs are linked
  */
 
-import type { NodeRef, ElementRef, ElRefSpecChild, FragmentRef, RefSpec } from '../types';
+import type {
+  NodeRef,
+  ElementRef,
+  ElRefSpecChild,
+  FragmentRef,
+  RefSpec,
+} from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
 
-export function createProcessChildren<
-  TConfig extends RendererConfig,
-  >(opts: {
+export function createProcessChildren<TConfig extends RendererConfig>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
-  }) {
+}) {
   type TElement = TConfig['baseElement'];
   type ViewChild = RefSpec<TElement> | FragmentRef<TElement>;
 
   const { scopedEffect, renderer } = opts;
   const createTextEffect =
-    (child: () => string | number, text: TConfig['textNode']) =>
-    () => {
+    (child: () => string | number, text: TConfig['textNode']) => () => {
       const value = child();
       const stringValue = value == null ? '' : String(value);
       renderer.updateTextNode(text, stringValue);
@@ -41,7 +44,9 @@ export function createProcessChildren<
 
     // Static primitive (string, number)
     if (childType === 'string' || childType === 'number') {
-      const textNode = renderer.createTextNode(String(child as string | number));
+      const textNode = renderer.createTextNode(
+        String(child as string | number)
+      );
       renderer.appendChild(element, textNode);
       return null; // Text nodes don't participate in ref node chain
     }
@@ -58,9 +63,15 @@ export function createProcessChildren<
         const childRef = spec.create(api);
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
-          renderer.appendChild(element, childRef.element as TConfig['baseElement']);
+          renderer.appendChild(
+            element,
+            childRef.element as TConfig['baseElement']
+          );
           // Decorate element if renderer supports it (e.g., add island markers)
-          renderer.decorateElement?.(childRef, childRef.element as TConfig['baseElement']);
+          renderer.decorateElement?.(
+            childRef,
+            childRef.element as TConfig['baseElement']
+          );
         }
         return childRef;
       }
@@ -75,7 +86,7 @@ export function createProcessChildren<
     }
 
     return null; // Default case
-  }
+  };
 
   const processChildren = (
     parent: ElementRef<TElement>,
@@ -113,7 +124,11 @@ export function createProcessChildren<
     // Unwind: walk backwards attaching fragments
     while (lastChildRef) {
       if (lastChildRef.status === STATUS_FRAGMENT) {
-        lastChildRef.attach(parent, lastChildRef.next as NodeRef<TElement> | null, api);
+        lastChildRef.attach(
+          parent,
+          lastChildRef.next as NodeRef<TElement> | null,
+          api
+        );
         // Decorate fragment with SSR markers if renderer supports it
         renderer.decorateFragment?.(lastChildRef, parent.element);
       }
@@ -123,6 +138,6 @@ export function createProcessChildren<
 
   return {
     processChildren,
-    handleChild
-  }
+    handleChild,
+  };
 }

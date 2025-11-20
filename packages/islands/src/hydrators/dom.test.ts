@@ -99,7 +99,9 @@ describe('Island Registry Building', () => {
     const validIsland = createMockIsland('counter');
     const invalidIsland = {}; // Missing ISLAND_META
 
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
 
     const { createAPI, signals, mount } = createMocks();
     const hydrator = createDOMHydrator(createAPI, signals, mount);
@@ -138,18 +140,26 @@ describe('Script Tag Finding', () => {
 
   it('should warn when script tag not found', () => {
     const island = createMockIsland('counter');
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
 
     const { createAPI, signals, mount } = createMocks();
     const hydrator = createDOMHydrator(createAPI, signals, mount);
     hydrator.hydrate(island);
 
     // Trigger hydration for non-existent island
-    const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
+    const hydrateFn = (
+      window as unknown as {
+        __hydrate: (id: string, type: string, props: unknown) => void;
+      }
+    ).__hydrate;
     hydrateFn('missing-island-id', 'counter', {});
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Island script tag [data-island="missing-island-id"] not found')
+      expect.stringContaining(
+        'Island script tag [data-island="missing-island-id"] not found'
+      )
     );
 
     consoleWarnSpy.mockRestore();
@@ -188,18 +198,26 @@ describe('Component Registry Lookup', () => {
     setupIslandDOM('test-island');
     const island = createMockIsland('todo'); // Different type!
 
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
 
     const { createAPI, signals, mount } = createMocks();
     const hydrator = createDOMHydrator(createAPI, signals, mount);
     hydrator.hydrate(island);
 
     // Trigger hydration for unregistered type
-    const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
+    const hydrateFn = (
+      window as unknown as {
+        __hydrate: (id: string, type: string, props: unknown) => void;
+      }
+    ).__hydrate;
     hydrateFn('test-island', 'counter', {}); // 'counter' not in registry
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Island component "counter" not found in registry')
+      expect.stringContaining(
+        'Island component "counter" not found in registry'
+      )
     );
 
     consoleWarnSpy.mockRestore();
@@ -209,14 +227,20 @@ describe('Component Registry Lookup', () => {
     setupIslandDOM('test-island');
     const island = createMockIsland('counter'); // Matching type
 
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
 
     const { createAPI, signals, mount } = createMocks();
     const hydrator = createDOMHydrator(createAPI, signals, mount);
     hydrator.hydrate(island);
 
     // This will still fail due to missing renderer mocks, but shouldn't warn about registry
-    const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
+    const hydrateFn = (
+      window as unknown as {
+        __hydrate: (id: string, type: string, props: unknown) => void;
+      }
+    ).__hydrate;
 
     try {
       hydrateFn('test-island', 'counter', {});
@@ -329,7 +353,9 @@ describe('Global __hydrate Function', () => {
     // After hydrate
     hydrator.hydrate(island);
     expect((window as { __hydrate?: unknown }).__hydrate).toBeDefined();
-    expect(typeof (window as { __hydrate?: unknown }).__hydrate).toBe('function');
+    expect(typeof (window as { __hydrate?: unknown }).__hydrate).toBe(
+      'function'
+    );
   });
 
   it('should accept island ID, type, and props parameters', () => {
@@ -340,9 +366,15 @@ describe('Global __hydrate Function', () => {
     const hydrator = createDOMHydrator(createAPI, signals, mount);
     hydrator.hydrate(island);
 
-    const hydrateFn = (window as unknown as { __hydrate: (id: string, type: string, props: unknown) => void }).__hydrate;
+    const hydrateFn = (
+      window as unknown as {
+        __hydrate: (id: string, type: string, props: unknown) => void;
+      }
+    ).__hydrate;
 
     // Should accept parameters without throwing
-    expect(() => hydrateFn('test-island', 'counter', { initialCount: 5 })).not.toThrow();
+    expect(() =>
+      hydrateFn('test-island', 'counter', { initialCount: 5 })
+    ).not.toThrow();
   });
 });

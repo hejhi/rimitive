@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, effect, computed, resetGlobalState, setCurrentConsumer, getCurrentConsumer } from '../test-setup';
+import {
+  signal,
+  effect,
+  computed,
+  resetGlobalState,
+  setCurrentConsumer,
+  getCurrentConsumer,
+} from '../test-setup';
 
 /**
  * Tests adapted from alien-signals untrack tests

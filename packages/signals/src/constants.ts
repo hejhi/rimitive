@@ -5,9 +5,9 @@ export const DIRTY = 1 << 1;
 export const DISPOSED = 1 << 2;
 
 // === Type Flags (bits 6-8) ===
-export const PRODUCER = 1 << 6;  // Can be depended on
-export const CONSUMER = 1 << 7;  // Depends on others
-export const SCHEDULED = 1 << 8;  // Scheduled node
+export const PRODUCER = 1 << 6; // Can be depended on
+export const CONSUMER = 1 << 7; // Depends on others
+export const SCHEDULED = 1 << 8; // Scheduled node
 
 // === Masks ===
 export const STATE_MASK = PENDING | DIRTY | DISPOSED;

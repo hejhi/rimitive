@@ -101,7 +101,10 @@ No manual environment checks needed!
 ### Router SSR Context
 
 ```ts
-import { createRouterContext, runWithRouterContext } from '@lattice/router/ssr-context';
+import {
+  createRouterContext,
+  runWithRouterContext,
+} from '@lattice/router/ssr-context';
 
 const ctx = createRouterContext('/products');
 const html = runWithRouterContext(ctx, () => {
@@ -122,12 +125,14 @@ This gives you fine-grained control over your JavaScript bundle size.
 ## Comparison with CSR Router Example
 
 **CSR Router Example** (`/examples/router`):
+
 - Client-side only
 - Uses DOM renderer
 - All pages are interactive
 - Navigation updates browser URL
 
 **SSR Router Example** (this example):
+
 - Server-side rendering first
 - Uses SSR renderer for initial render
 - Mix of static and interactive content

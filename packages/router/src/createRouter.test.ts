@@ -4,7 +4,12 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createRouter } from './createRouter';
-import type { ViewApi, RouteApi, RouteContext, ConnectedComponent } from './createRouter';
+import type {
+  ViewApi,
+  RouteApi,
+  RouteContext,
+  ConnectedComponent,
+} from './createRouter';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { RefSpec, STATUS_REF_SPEC } from '@lattice/view/types';
 
@@ -28,7 +33,9 @@ describe('createRouter', () => {
     originalHistory = globalThis.window?.history;
 
     // Create mock signal and computed with proper typing
-    const mockSignal = <T>(value: T): ReturnType<ViewApi<DOMRendererConfig>['signal']> => {
+    const mockSignal = <T>(
+      value: T
+    ): ReturnType<ViewApi<DOMRendererConfig>['signal']> => {
       let current = value;
       const fn = ((newValue?: T) => {
         if (newValue !== undefined) {
@@ -40,8 +47,12 @@ describe('createRouter', () => {
       return fn;
     };
 
-    const mockComputed = <T>(fn: () => T): ReturnType<ViewApi<DOMRendererConfig>['computed']> => {
-      const computedFn = (() => fn()) as ReturnType<ViewApi<DOMRendererConfig>['computed']>;
+    const mockComputed = <T>(
+      fn: () => T
+    ): ReturnType<ViewApi<DOMRendererConfig>['computed']> => {
+      const computedFn = (() => fn()) as ReturnType<
+        ViewApi<DOMRendererConfig>['computed']
+      >;
       computedFn.peek = fn;
       return computedFn;
     };
@@ -163,21 +174,18 @@ describe('createRouter', () => {
   describe('route method', () => {
     beforeEach(() => {
       // Mock show() to return a simple RefSpec wrapper
-      mockViewApi.show = ((
-        _condition: unknown,
-        refSpec: unknown
-      ) => refSpec) as unknown as ViewApi<DOMRendererConfig>['show'];
+      mockViewApi.show = ((_condition: unknown, refSpec: unknown) =>
+        refSpec) as unknown as ViewApi<DOMRendererConfig>['show'];
 
       // Mock match() - not used in route() but needed for type safety
-      mockViewApi.match = (() => {}) as unknown as ViewApi<DOMRendererConfig>['match'];
+      mockViewApi.match =
+        (() => {}) as unknown as ViewApi<DOMRendererConfig>['match'];
     });
 
     it('should accept a path and connected component', () => {
       const router = createRouter(mockViewApi, { initialPath: '/' });
 
-      const mockConnected: ConnectedComponent<
-        DOMRendererConfig
-      > = () =>
+      const mockConnected: ConnectedComponent<DOMRendererConfig> = () =>
         ({
           status: STATUS_REF_SPEC,
           create: () => ({
@@ -208,7 +216,15 @@ describe('createRouter', () => {
         capturedParams = routeContext.params();
         return {
           status: STATUS_REF_SPEC,
-          create: () => ({ status: 1, element: document.createElement('div'), parent: null, prev: null, next: null, firstChild: null, lastChild: null })
+          create: () => ({
+            status: 1,
+            element: document.createElement('div'),
+            parent: null,
+            prev: null,
+            next: null,
+            firstChild: null,
+            lastChild: null,
+          }),
         } as RefSpec<HTMLElement>;
       };
 
@@ -223,7 +239,9 @@ describe('createRouter', () => {
 
       let capturedChildren: unknown = undefined;
 
-      const mockConnected: ConnectedComponent<DOMRendererConfig> = (routeContext: RouteContext<DOMRendererConfig>) => {
+      const mockConnected: ConnectedComponent<DOMRendererConfig> = (
+        routeContext: RouteContext<DOMRendererConfig>
+      ) => {
         capturedChildren = routeContext.children;
         return {
           status: STATUS_REF_SPEC,
@@ -246,11 +264,15 @@ describe('createRouter', () => {
     });
 
     it('should compose nested route paths', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/products/123' });
+      const router = createRouter(mockViewApi, {
+        initialPath: '/products/123',
+      });
 
       let childParams: Record<string, string> = {};
 
-      const childConnected: ConnectedComponent<DOMRendererConfig> = (routeContext: RouteContext<DOMRendererConfig>) => {
+      const childConnected: ConnectedComponent<DOMRendererConfig> = (
+        routeContext: RouteContext<DOMRendererConfig>
+      ) => {
         childParams = routeContext.params();
         return {
           status: STATUS_REF_SPEC,
@@ -282,7 +304,10 @@ describe('createRouter', () => {
       };
 
       const childRoute = router.route(':id', childConnected)();
-      const parentRoute = router.route('/products', parentConnected)(childRoute);
+      const parentRoute = router.route(
+        '/products',
+        parentConnected
+      )(childRoute);
 
       expect(parentRoute).toBeDefined();
       expect(childParams).toEqual({ id: '123' });
@@ -308,7 +333,9 @@ describe('createRouter', () => {
     it('should return a function that accepts user props', () => {
       const router = createRouter(mockViewApi);
 
-      const wrapper = (): ((_userProps: { theme: string }) => RefSpec<HTMLElement>) => {
+      const wrapper = (): ((_userProps: {
+        theme: string;
+      }) => RefSpec<HTMLElement>) => {
         return () => createMockRefSpec();
       };
 
@@ -319,7 +346,9 @@ describe('createRouter', () => {
     it('should return a ConnectedComponent when called with user props', () => {
       const router = createRouter(mockViewApi);
 
-      const wrapper = (): ((_userProps: { theme: string }) => RefSpec<HTMLElement>) => {
+      const wrapper = (): ((_userProps: {
+        theme: string;
+      }) => RefSpec<HTMLElement>) => {
         return () => createMockRefSpec();
       };
 
@@ -372,14 +401,15 @@ describe('createRouter', () => {
       const mockParams = createMockComputed(() => ({ id: '123' }));
       const routeContext: RouteContext<DOMRendererConfig> = {
         children: null,
-        params: mockParams
+        params: mockParams,
       };
 
       connected(routeContext);
 
       // TypeScript assertion - we know this will be set after instantiate
       expect(capturedRouteContext).not.toBeNull();
-      const context = capturedRouteContext as unknown as RouteContext<DOMRendererConfig>;
+      const context =
+        capturedRouteContext as unknown as RouteContext<DOMRendererConfig>;
       expect(context).toHaveProperty('children', null);
       expect(context).toHaveProperty('params');
       expect(context.params()).toEqual({ id: '123' });
@@ -389,7 +419,9 @@ describe('createRouter', () => {
       const router = createRouter(mockViewApi);
       let capturedUserProps: Record<string, unknown> | null = null;
 
-      const wrapper = (): ((userProps: Record<string, unknown>) => RefSpec<HTMLElement>) => {
+      const wrapper = (): ((
+        userProps: Record<string, unknown>
+      ) => RefSpec<HTMLElement>) => {
         return (userProps: Record<string, unknown>) => {
           capturedUserProps = userProps;
           return createMockRefSpec();
@@ -429,7 +461,10 @@ describe('createRouter', () => {
       const wrapper = (
         { currentPath }: RouteApi,
         routeContext: RouteContext<DOMRendererConfig>
-      ): ((userProps: { theme: string; title: string }) => RefSpec<HTMLElement>) => {
+      ): ((userProps: {
+        theme: string;
+        title: string;
+      }) => RefSpec<HTMLElement>) => {
         // Acknowledge routeContext for type checking (void ensures it's "used")
         void routeContext.children;
         return (userProps: { theme: string; title: string }) =>
@@ -469,9 +504,10 @@ describe('createRouter', () => {
       let usedNavigate = false;
       let readPath = '';
 
-      const wrapper = (
-        { navigate, currentPath }: RouteApi
-      ): (() => RefSpec<HTMLElement>) => {
+      const wrapper = ({
+        navigate,
+        currentPath,
+      }: RouteApi): (() => RefSpec<HTMLElement>) => {
         return () => {
           readPath = currentPath();
           navigate('/new-path');

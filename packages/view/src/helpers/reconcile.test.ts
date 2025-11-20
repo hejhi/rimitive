@@ -14,7 +14,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { createReconciler, ReconcileNode } from './reconcile';
-import { createTestEnv, MockElement, MockText, getTextContent } from '../test-utils';
+import {
+  createTestEnv,
+  MockElement,
+  MockText,
+  getTextContent,
+} from '../test-utils';
 import type { ElementRef } from '../types';
 
 describe('reconcileWithKeys', () => {
@@ -25,7 +30,11 @@ describe('reconcileWithKeys', () => {
     const parent = env.renderer.createElement('ul');
 
     // Create reconciler instance with hooks
-    const reconciler = createReconciler<Item, MockElement, ElementRef<MockElement> & ReconcileNode>({
+    const reconciler = createReconciler<
+      Item,
+      MockElement,
+      ElementRef<MockElement> & ReconcileNode
+    >({
       parentElement: parent,
       onCreate: (item: Item) => {
         const li = env.renderer.createElement('li');
@@ -49,7 +58,9 @@ describe('reconcileWithKeys', () => {
       },
       onMove: (node, nextSibling) => {
         const li = (node as ElementRef<MockElement>).element;
-        const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
+        const nextEl = nextSibling
+          ? (nextSibling as ElementRef<MockElement>).element
+          : null;
         env.renderer.insertBefore(parent, li, nextEl);
       },
       onRemove: (node) => {
@@ -649,7 +660,11 @@ describe('reconcileWithKeys', () => {
       const parent = env.renderer.createElement('ul');
 
       // Create reconciler that uses index as key
-      const reconciler = createReconciler<{ text: string }, MockElement, ElementRef<MockElement> & ReconcileNode>({
+      const reconciler = createReconciler<
+        { text: string },
+        MockElement,
+        ElementRef<MockElement> & ReconcileNode
+      >({
         parentElement: parent,
         onCreate: (item: { text: string }) => {
           const li = env.renderer.createElement('li');
@@ -667,7 +682,9 @@ describe('reconcileWithKeys', () => {
         onUpdate() {},
         onMove: (node, nextSibling) => {
           const li = (node as ElementRef<MockElement>).element;
-          const nextEl = nextSibling ? (nextSibling as ElementRef<MockElement>).element : null;
+          const nextEl = nextSibling
+            ? (nextSibling as ElementRef<MockElement>).element
+            : null;
           env.renderer.insertBefore(parent, li, nextEl);
         },
         onRemove: (node) => {
@@ -680,11 +697,7 @@ describe('reconcileWithKeys', () => {
         reconciler.reconcile(items, (_item, index) => String(index)); // Use index as key
       };
 
-      reconcile([
-        { text: 'A' },
-        { text: 'B' },
-        { text: 'C' },
-      ]);
+      reconcile([{ text: 'A' }, { text: 'B' }, { text: 'C' }]);
 
       expect(parent.children.length).toBe(3);
       expect(getTextContent(parent.children[0] as MockElement)).toBe('A');
@@ -692,11 +705,7 @@ describe('reconcileWithKeys', () => {
       expect(getTextContent(parent.children[2] as MockElement)).toBe('C');
 
       // Reconcile again - should reuse based on index keys
-      reconcile([
-        { text: 'A' },
-        { text: 'B' },
-        { text: 'C' },
-      ]);
+      reconcile([{ text: 'A' }, { text: 'B' }, { text: 'C' }]);
 
       expect(parent.children.length).toBe(3);
     });
@@ -715,7 +724,9 @@ describe('reconcileWithKeys', () => {
 
       expect(parent.children.length).toBe(100);
       expect(getTextContent(parent.children[0] as MockElement)).toBe('Item 0');
-      expect(getTextContent(parent.children[99] as MockElement)).toBe('Item 99');
+      expect(getTextContent(parent.children[99] as MockElement)).toBe(
+        'Item 99'
+      );
 
       // Reverse large list
       reconcile([...items].reverse());

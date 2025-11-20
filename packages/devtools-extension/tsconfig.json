@@ -12,16 +12,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".wxt/wxt.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".output",
-    "dist",
-    "public",
-    "demo"
-  ],
+  "include": ["**/*.ts", "**/*.tsx", ".wxt/wxt.d.ts"],
+  "exclude": ["node_modules", ".output", "dist", "public", "demo"]
 }

@@ -35,7 +35,7 @@ export interface GraphTraversal {
  * Traverse dependency graph depth-first, marking nodes as invalidated.
  * Calls visitor function for each leaf node (nodes without subscribers).
  * Uses alien-signals pattern: follow chains naturally, stack only at branch points.
-*/
+ */
 const withVisitor =
   (visit: Visit | null = null) =>
   (consumers: Dependency): void => {
@@ -96,7 +96,7 @@ const withVisitor =
 
       return;
     }
-};
+  };
 
 export function createGraphTraversal(): GraphTraversal {
   return {

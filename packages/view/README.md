@@ -38,31 +38,38 @@ Reactive DOM primitives for building UIs with push-pull FRP.
 Creates real DOM elements with automatic reactivity detection.
 
 ```ts
-el(['tag', { props }, ...children])
+el(['tag', { props }, ...children]);
 ```
 
 **Features:**
+
 - Auto-detects reactive values (signals/computeds) in props and children
 - Creates effects automatically for reactive bindings
 - Each element gets its own disposal scope
 - Cleanup happens automatically when elements are removed
 
 **Example:**
+
 ```ts
 const count = signal(0);
 
-el(['div',
+el([
+  'div',
   { className: 'counter' },
 
   // Reactive text
   el(['h1', computed(() => `Count: ${count()}`)]),
 
   // Reactive prop
-  el(['button', {
-    className: computed(() => count() > 10 ? 'high' : 'low'),
-    onClick: () => count(count() + 1)
-  }, 'Increment'])
-])
+  el([
+    'button',
+    {
+      className: computed(() => (count() > 10 ? 'high' : 'low')),
+      onClick: () => count(count() + 1),
+    },
+    'Increment',
+  ]),
+]);
 ```
 
 ### `map(itemsSignal, renderFn, keyFn?)` - Reactive lists
@@ -71,39 +78,42 @@ Renders lists efficiently without explicit keys.
 
 ```ts
 map(
-  itemsSignal,           // Signal<T[]>
-  (itemSignal) => el,    // Render function receiving Signal<T>
-  (item) => item.id      // Optional key extractor
-)
+  itemsSignal, // Signal<T[]>
+  (itemSignal) => el, // Render function receiving Signal<T>
+  (item) => item.id // Optional key extractor
+);
 ```
 
 **Features:**
+
 - Uses object identity by default (no keys needed)
 - Optional key function for immutable data patterns
 - Efficient reconciliation (add/remove/move detection)
 - Each item gets its own reactive scope
 
 **Example:**
+
 ```ts
 const todos = signal([
   { id: 1, text: 'Learn FRP', done: false },
-  { id: 2, text: 'Build UI', done: false }
+  { id: 2, text: 'Build UI', done: false },
 ]);
 
-el(['ul',
+el([
+  'ul',
   map(
     todos,
-    (todoSignal) => el(['li',
-      {
-        className: computed(() =>
-          todoSignal().done ? 'done' : 'active'
-        )
-      },
-      computed(() => todoSignal().text)
-    ]),
-    (todo) => todo.id  // Optional key
-  )
-])
+    (todoSignal) =>
+      el([
+        'li',
+        {
+          className: computed(() => (todoSignal().done ? 'done' : 'active')),
+        },
+        computed(() => todoSignal().text),
+      ]),
+    (todo) => todo.id // Optional key
+  ),
+]);
 ```
 
 ### `on(element, event, handler)` - Event listeners with automatic batching
@@ -120,12 +130,14 @@ on(
 ```
 
 **Features:**
+
 - Automatic batching: Multiple signal updates trigger one re-render
 - Returns cleanup function for manual removal
 - Integrates with element lifecycle callbacks
 - Type-safe event inference
 
 **Example:**
+
 ```ts
 import { createOnFactory } from '@lattice/view/on';
 
@@ -149,6 +161,7 @@ button((element) => {
 ```
 
 **Without batching:**
+
 ```
 User clicks → count updates → re-render
            → lastUpdated updates → re-render
@@ -156,6 +169,7 @@ Result: 2 re-renders per click 😱
 ```
 
 **With batching:**
+
 ```
 User clicks → startBatch()
            → count updates (marks dirty)
@@ -172,15 +186,20 @@ Unlike React or Vue, component functions execute **once**:
 
 ```ts
 function Counter() {
-  const count = signal(0);  // Runs once
+  const count = signal(0); // Runs once
 
-  return el(['div',          // Runs once
-    el(['button', {          // Runs once
-      onClick: () => count(count() + 1)
-    }]),
+  return el([
+    'div', // Runs once
+    el([
+      'button',
+      {
+        // Runs once
+        onClick: () => count(count() + 1),
+      },
+    ]),
 
     // Only this computed re-runs when count changes
-    computed(() => `Count: ${count()}`)
+    computed(() => `Count: ${count()}`),
   ]);
 }
 ```
@@ -190,15 +209,17 @@ function Counter() {
 Each element creates a disposal scope for its reactive subscriptions:
 
 ```ts
-el(['div',
+el([
+  'div',
   // This computed is scoped to the div
   computed(() => state()),
 
-  el(['span',
+  el([
+    'span',
     // This computed is scoped to the span
-    computed(() => otherState())
-  ])
-])
+    computed(() => otherState()),
+  ]),
+]);
 ```
 
 When an element is removed from the DOM, its scope automatically disposes all subscriptions.
@@ -211,10 +232,10 @@ Lists track items by object reference, not explicit keys:
 const item1 = { id: 1, text: 'A' };
 const item2 = { id: 2, text: 'B' };
 
-todos([item1, item2]);  // Initial render
-todos([item1, item2]);  // No-op (same references)
-todos([item2, item1]);  // Reorder DOM nodes
-todos([item2]);         // Remove item1's DOM node
+todos([item1, item2]); // Initial render
+todos([item1, item2]); // No-op (same references)
+todos([item2, item1]); // Reorder DOM nodes
+todos([item2]); // Remove item1's DOM node
 ```
 
 **Key insight:** If you maintain stable object references, you don't need explicit keys!
@@ -225,8 +246,8 @@ For immutable patterns, provide a key function:
 map(
   todos,
   renderFn,
-  (todo) => todo.id  // Use id as key
-)
+  (todo) => todo.id // Use id as key
+);
 ```
 
 ## Complete Example
@@ -267,17 +288,21 @@ function createContext() {
 const context = createContext();
 
 // Create API with view primitives
-const api = createApi({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-  effect: createEffectFactory,
-  el: (ctx) => createElFactory({ ctx: context.viewCtx, effect: ctx.effect }),
-  map: (ctx) => createElMapFactory({
-    ctx: context.viewCtx,
-    signal: ctx.signal,
-    effect: ctx.effect
-  }),
-}, context);
+const api = createApi(
+  {
+    signal: createSignalFactory,
+    computed: createComputedFactory,
+    effect: createEffectFactory,
+    el: (ctx) => createElFactory({ ctx: context.viewCtx, effect: ctx.effect }),
+    map: (ctx) =>
+      createElMapFactory({
+        ctx: context.viewCtx,
+        signal: ctx.signal,
+        effect: ctx.effect,
+      }),
+  },
+  context
+);
 
 function TodoApp() {
   const { signal, computed, el, map } = api;
@@ -287,47 +312,61 @@ function TodoApp() {
 
   const filteredTodos = computed(() => {
     const f = filter();
-    return todos().filter(t =>
-      f === 'all' ||
-      (f === 'active' && !t.done) ||
-      (f === 'done' && t.done)
+    return todos().filter(
+      (t) =>
+        f === 'all' || (f === 'active' && !t.done) || (f === 'done' && t.done)
     );
   });
 
-  return el(['div',
-    el(['input', {
-      placeholder: 'Add todo...',
-      onKeypress: (e) => {
-        if (e.key === 'Enter') {
-          todos([...todos(), {
-            id: Date.now(),
-            text: e.target.value,
-            done: false
-          }]);
-          e.target.value = '';
-        }
-      }
-    }]),
+  return el([
+    'div',
+    el([
+      'input',
+      {
+        placeholder: 'Add todo...',
+        onKeypress: (e) => {
+          if (e.key === 'Enter') {
+            todos([
+              ...todos(),
+              {
+                id: Date.now(),
+                text: e.target.value,
+                done: false,
+              },
+            ]);
+            e.target.value = '';
+          }
+        },
+      },
+    ]),
 
-    el(['ul',
+    el([
+      'ul',
       map(
         filteredTodos,
-        (todoSignal) => el(['li',
-          el(['input', {
-            type: 'checkbox',
-            checked: computed(() => todoSignal().done),
-            onChange: () => {
-              const todo = todoSignal();
-              todos(todos().map(t =>
-                t.id === todo.id ? { ...t, done: !t.done } : t
-              ));
-            }
-          }]),
-          computed(() => todoSignal().text)
-        ]),
+        (todoSignal) =>
+          el([
+            'li',
+            el([
+              'input',
+              {
+                type: 'checkbox',
+                checked: computed(() => todoSignal().done),
+                onChange: () => {
+                  const todo = todoSignal();
+                  todos(
+                    todos().map((t) =>
+                      t.id === todo.id ? { ...t, done: !t.done } : t
+                    )
+                  );
+                },
+              },
+            ]),
+            computed(() => todoSignal().text),
+          ]),
         (todo) => todo.id
-      )
-    ])
+      ),
+    ]),
   ]);
 }
 
@@ -336,13 +375,13 @@ document.body.appendChild(TodoApp());
 
 ## Comparison
 
-| Feature | @lattice/view | React | Vue | Solid |
-|---------|---------------|-------|-----|-------|
-| Compilation | ❌ No | ⚠️ Optional JSX | ⚠️ SFC | ⚠️ JSX |
-| VDOM | ❌ No | ✅ Yes | ✅ Yes | ❌ No |
-| Keys for lists | ⚠️ Optional | ✅ Required | ✅ Required | ✅ Required |
-| Component re-runs | ❌ Once | ✅ Every render | ⚠️ Once (setup) | ❌ Once |
-| Fine-grained reactivity | ✅ Yes | ❌ No | ⚠️ Composition | ✅ Yes |
+| Feature                 | @lattice/view | React           | Vue             | Solid       |
+| ----------------------- | ------------- | --------------- | --------------- | ----------- |
+| Compilation             | ❌ No         | ⚠️ Optional JSX | ⚠️ SFC          | ⚠️ JSX      |
+| VDOM                    | ❌ No         | ✅ Yes          | ✅ Yes          | ❌ No       |
+| Keys for lists          | ⚠️ Optional   | ✅ Required     | ✅ Required     | ✅ Required |
+| Component re-runs       | ❌ Once       | ✅ Every render | ⚠️ Once (setup) | ❌ Once     |
+| Fine-grained reactivity | ✅ Yes        | ❌ No           | ⚠️ Composition  | ✅ Yes      |
 
 ## Implementation Details
 

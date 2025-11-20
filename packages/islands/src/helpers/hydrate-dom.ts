@@ -43,7 +43,7 @@ export interface Position {
 export function enterElement(pos: Position): Position {
   return {
     path: [...pos.path, 0],
-    ranges: pos.ranges
+    ranges: pos.ranges,
   };
 }
 
@@ -63,12 +63,12 @@ export function advanceToSibling(pos: Position): Position {
       const newRanges = [...pos.ranges];
       newRanges[i] = {
         ...range,
-        currentIndex: range.currentIndex + 1
+        currentIndex: range.currentIndex + 1,
       };
 
       return {
         path: [...range.parentPath, range.currentIndex + 1],
-        ranges: newRanges
+        ranges: newRanges,
       };
     }
   }
@@ -104,7 +104,7 @@ export function exitToParent(pos: Position): Position {
           // Root-level range - position after range
           return {
             path: [range.endIndex + 1],
-            ranges: pos.ranges.slice(0, i)
+            ranges: pos.ranges.slice(0, i),
           };
         } else {
           // Nested range - advance past it in parent
@@ -112,7 +112,7 @@ export function exitToParent(pos: Position): Position {
           exitPath[exitPath.length - 1]!++;
           return {
             path: exitPath,
-            ranges: pos.ranges.slice(0, i)
+            ranges: pos.ranges.slice(0, i),
           };
         }
       }
@@ -123,7 +123,7 @@ export function exitToParent(pos: Position): Position {
 
       return {
         path: [...range.parentPath, nextIndex],
-        ranges: newRanges
+        ranges: newRanges,
       };
     }
   }
@@ -137,21 +137,18 @@ export function exitToParent(pos: Position): Position {
  *
  * Pushes new range onto stack and positions at first item
  */
-export function enterFragmentRange(
-  pos: Position,
-  rangeSize: number
-): Position {
+export function enterFragmentRange(pos: Position, rangeSize: number): Position {
   const newRange: RangeContext = {
     parentPath: pos.path,
     startIndex: 0,
     endIndex: rangeSize - 1,
     currentIndex: 0,
-    depth: pos.ranges.length
+    depth: pos.ranges.length,
   };
 
   return {
     path: [...pos.path, 0],
-    ranges: [...pos.ranges, newRange]  // Push onto stack
+    ranges: [...pos.ranges, newRange], // Push onto stack
   };
 }
 

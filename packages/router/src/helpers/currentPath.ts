@@ -51,9 +51,7 @@ export function createCurrentPathSignal(
     // CLIENT: Read from window.location
     // In the browser, get the full current URL path including search and hash
     const fullPath =
-      window.location.pathname +
-      window.location.search +
-      window.location.hash;
+      window.location.pathname + window.location.search + window.location.hash;
     return signalFactory(fullPath);
   }
 }

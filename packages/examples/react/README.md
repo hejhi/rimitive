@@ -7,6 +7,7 @@ This example demonstrates the **component pattern** in React with DevTools integ
 ### 1. Framework-Agnostic Components
 
 The example uses components from `src/components/`:
+
 - **Counter** - Simple reactive state with derived values
 - **TodoList** - Managing collections
 - **Filter** - Composable filtering behavior
@@ -19,7 +20,9 @@ These component behaviors work in any framework - React, Vue, Svelte, or vanilla
 Three examples show different use cases:
 
 #### StepCounter
+
 Uses `createCounter` for a multi-step wizard:
+
 ```tsx
 const counter = useComponent(createCounter);
 const step = useSubscribe(counter.count);
@@ -28,7 +31,9 @@ return <button onClick={counter.increment}>Step {step}</button>;
 ```
 
 #### SlideCarousel
+
 **Same `createCounter` component**, different UI:
+
 ```tsx
 const counter = useComponent(createCounter);
 const current = useSubscribe(counter.count);
@@ -37,7 +42,9 @@ return <div>Slide {current + 1}</div>;
 ```
 
 #### TodoApp
+
 Composes `createTodoList` + `createFilter` together:
+
 ```tsx
 const todoList = useComponent(createTodoList, initialTodos);
 const filter = useComponent(createFilter);
@@ -47,6 +54,7 @@ const filteredTodos = filter.filterTodos(todoList.todos());
 ### 3. DevTools Integration
 
 The app is wrapped in `<SignalProvider>` which:
+
 - Creates an instrumented signal API
 - Enables the Chrome DevTools "Lattice" tab
 - Shows all reactive state changes in real-time
@@ -62,15 +70,14 @@ export function Modal({ title, children }: ModalProps) {
 
   return (
     <SignalProvider api={api}>
-      <ModalContent title={title}>
-        {children}
-      </ModalContent>
+      <ModalContent title={title}>{children}</ModalContent>
     </SignalProvider>
   );
 }
 ```
 
 This pattern is similar to how Chakra UI components manage internal state:
+
 - ✅ Each instance has completely isolated state
 - ✅ No state pollution between instances
 - ✅ Still integrates with DevTools for debugging
@@ -144,11 +151,12 @@ export function Modal({ children }: ModalProps) {
 Creates a component instance scoped to the React component lifecycle:
 
 ```tsx
-const counter = useComponent(createCounter);        // No args
+const counter = useComponent(createCounter); // No args
 const todoList = useComponent(createTodoList, []); // With args
 ```
 
 The hook:
+
 - ✅ Creates the component once on mount
 - ✅ Passes the signal API automatically
 - ✅ Handles cleanup on unmount (via SignalProvider)
@@ -181,17 +189,20 @@ const filteredTodos = filter.filterTodos(todoList.todos());
 ### Shared Context Examples
 
 The same `createCounter` component is used for:
+
 1. **StepCounter** - Multi-step wizard navigation
 2. **SlideCarousel** - Slideshow with previous/next
 
 ### Encapsulated Context Examples
 
 Multiple `Modal` instances, each with isolated state:
+
 1. **Settings Modal** - Has its own open/close state
 2. **Confirmation Modal** - Completely separate state
 3. **Help Modal** - Independent from the others
 
 This demonstrates the power of the pattern:
+
 - Write behavior once, use in multiple contexts
 - Choose shared or isolated state per use case
 - Test without frameworks

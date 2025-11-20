@@ -5,7 +5,7 @@
 export type {
   InstrumentationEvent,
   InstrumentationProvider,
-  InstrumentationConfig
+  InstrumentationConfig,
 } from './types';
 
 export { withInstrumentation } from './with-instrumentation';

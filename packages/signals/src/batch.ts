@@ -1,4 +1,8 @@
-import type { ExtensionContext, InstrumentationContext, LatticeExtension } from '@lattice/lattice';
+import type {
+  ExtensionContext,
+  InstrumentationContext,
+  LatticeExtension,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import { Scheduler } from './helpers/scheduler';
 
@@ -15,7 +19,7 @@ export type BatchProps = {
     instrumentation: InstrumentationContext,
     context: ExtensionContext
   ) => <T>(fn: () => T) => T;
-}; 
+};
 
 // BatchFactory uses SignalContext which includes all helpers
 export const Batch = create(

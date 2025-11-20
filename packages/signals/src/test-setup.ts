@@ -92,17 +92,17 @@ export const computed = <T>(fn: () => T): ComputedFunction<T> =>
 export const effect = (fn: () => void | (() => void)): (() => void) =>
   defaultInstance.effect(fn);
 
-export const batch = <T>(fn: () => T): T =>
-  defaultInstance.batch(fn);
+export const batch = <T>(fn: () => T): T => defaultInstance.batch(fn);
 
-export const subscribe = <T>(fn: () => T, cb: SubscribeCallback<T>): (() => void) =>
-  defaultInstance.subscribe(fn, cb);
+export const subscribe = <T>(
+  fn: () => T,
+  cb: SubscribeCallback<T>
+): (() => void) => defaultInstance.subscribe(fn, cb);
 
 // Context control exports
 export const setCurrentConsumer = (consumer: ConsumerNode | null) =>
   defaultInstance.setCurrentConsumer(consumer);
-export const getCurrentConsumer = () =>
-  defaultInstance.getCurrentConsumer();
+export const getCurrentConsumer = () => defaultInstance.getCurrentConsumer();
 
 // Global state reset
 export function resetGlobalState() {

@@ -60,8 +60,8 @@ export function TimelineView({
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={isNarrowViewport ? 30 : 40} minSize={20}>
             <div className="h-full overflow-hidden bg-muted/20">
-              <TransactionDetail 
-                transaction={transaction} 
+              <TransactionDetail
+                transaction={transaction}
                 onClose={() => onTransactionSelect(null)}
               />
             </div>
@@ -105,10 +105,7 @@ function TransactionItem({
               })
             : 'N/A'}
         </span>
-        <Badge
-          variant="outline"
-          className={`text-xs ${colors.main}`}
-        >
+        <Badge variant="outline" className={`text-xs ${colors.main}`}>
           {tx.eventType}
         </Badge>
         <div className="flex-1 font-mono text-xs overflow-ellipsis overflow-hidden whitespace-nowrap">

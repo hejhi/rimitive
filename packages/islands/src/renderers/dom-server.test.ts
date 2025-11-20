@@ -240,7 +240,9 @@ describe('Fragment Decoration (Non-Island)', () => {
     renderer.decorateFragment?.(fragment, container);
 
     const html = container.innerHTML;
-    expect(html).toMatch(/<!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end-->/);
+    expect(html).toMatch(
+      /<!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end-->/
+    );
   });
 
   it('should skip empty fragments', () => {
@@ -366,7 +368,9 @@ describe('Fragment Island Decoration', () => {
     expect(html).toContain('<span>first</span>');
     expect(html).toContain('<span>second</span>');
     // Check order: div, comment, children, comment, script, close div
-    expect(html).toMatch(/<div><!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end--><script[^>]*><\/script><\/div>/);
+    expect(html).toMatch(
+      /<div><!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end--><script[^>]*><\/script><\/div>/
+    );
   });
 });
 
@@ -473,7 +477,9 @@ describe('Element Serialization', () => {
     const html = renderer.serializeElement(div, '<p>Custom child</p>');
 
     // linkedom uses uppercase tag names and lowercases content
-    expect(html.toLowerCase()).toBe('<div class="container"><p>custom child</p></div>');
+    expect(html.toLowerCase()).toBe(
+      '<div class="container"><p>custom child</p></div>'
+    );
   });
 
   it('should preserve all attributes during serialization', () => {
@@ -549,9 +555,7 @@ describe('Full SSR Integration', () => {
       const items = signal([1, 2, 3, 4, 5, 6]);
 
       return el('div', { className: 'container' })(
-        map(items)((item) =>
-          el('div', { className: 'item' })(`Item ${item()}`)
-        )
+        map(items)((item) => el('div', { className: 'item' })(`Item ${item()}`))
       )();
     });
 
@@ -583,9 +587,7 @@ describe('Full SSR Integration', () => {
       const items = computed(() => [1, 2, 3, 4, 5, 6]);
 
       return el('div', { className: 'container' })(
-        map(items)((item) =>
-          el('div', { className: 'item' })(`Item ${item()}`)
-        )
+        map(items)((item) => el('div', { className: 'item' })(`Item ${item()}`))
       )();
     });
 

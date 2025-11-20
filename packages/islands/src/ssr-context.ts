@@ -126,7 +126,7 @@ export function registerIsland(type: string, props: unknown): string {
   if (!ctx) {
     throw new Error(
       `Cannot register island "${type}" outside of SSR context. ` +
-      `Did you forget to wrap your render in runWithSSRContext()?`
+        `Did you forget to wrap your render in runWithSSRContext()?`
     );
   }
 

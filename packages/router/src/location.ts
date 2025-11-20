@@ -40,7 +40,11 @@ function parseQueryString(search: string): Record<string, string> {
 /**
  * Parse URL into components
  */
-function parseURL(url: string): { pathname: string; search: string; hash: string } {
+function parseURL(url: string): {
+  pathname: string;
+  search: string;
+  hash: string;
+} {
   // Find hash first (everything after #)
   const hashIndex = url.indexOf('#');
   const hash = hashIndex !== -1 ? url.slice(hashIndex) : '';
@@ -49,7 +53,8 @@ function parseURL(url: string): { pathname: string; search: string; hash: string
   // Find query string (everything after ?)
   const searchIndex = urlWithoutHash.indexOf('?');
   const search = searchIndex !== -1 ? urlWithoutHash.slice(searchIndex) : '';
-  const pathname = searchIndex !== -1 ? urlWithoutHash.slice(0, searchIndex) : urlWithoutHash;
+  const pathname =
+    searchIndex !== -1 ? urlWithoutHash.slice(0, searchIndex) : urlWithoutHash;
 
   return { pathname, search, hash };
 }

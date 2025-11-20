@@ -7,7 +7,10 @@ import {
   defaultHelpers as defaultViewHelpers,
 } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
+import {
+  createDOMRenderer,
+  DOMRendererConfig,
+} from '@lattice/view/renderers/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
 import { createApi } from '@lattice/lattice';
 
@@ -169,20 +172,14 @@ const select = (id: number) => {
 // Components
 // ============================================================================
 
-const Button = (
-  id: string,
-  label: string
-) =>
+const Button = (id: string, label: string) =>
   el('button', {
     className: 'btn btn-primary btn-block col-sm-6 smallpad',
     type: 'button',
-    id
+    id,
   })(label)();
 
-const Row = (
-  data: Reactive<RowData>,
-  children: ElRefSpecChild[] = []
-) => {
+const Row = (data: Reactive<RowData>, children: ElRefSpecChild[] = []) => {
   const id = data().id;
   const label = data().label;
   const rowClass = computed(() => (selected() === id ? 'danger' : ''));
@@ -213,9 +210,15 @@ const App = () => {
         el('div', { className: 'col-md-6' })(
           el('div', { className: 'row' })(
             Button('run', 'Create 1,000 rows')(addEventListener('click', run)),
-            Button('runlots', 'Create 10,000 rows')(addEventListener('click', runLots)),
+            Button(
+              'runlots',
+              'Create 10,000 rows'
+            )(addEventListener('click', runLots)),
             Button('add', 'Append 1,000 rows')(addEventListener('click', add)),
-            Button('update', 'Update every 10th row')(addEventListener('click', update)),
+            Button(
+              'update',
+              'Update every 10th row'
+            )(addEventListener('click', update)),
             Button('clear', 'Clear')(addEventListener('click', clear)),
             Button('swaprows', 'Swap Rows')(addEventListener('click', swapRows))
           )()

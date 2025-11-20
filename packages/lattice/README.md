@@ -25,13 +25,13 @@ const counterExtension: LatticeExtension<'counter', () => number> = {
   method: (() => {
     let count = 0;
     return () => ++count;
-  })()
+  })(),
 };
 
 // A logger extension
 const loggerExtension: LatticeExtension<'log', (msg: string) => void> = {
   name: 'log',
-  method: (msg) => console.log(`[${new Date().toISOString()}] ${msg}`)
+  method: (msg) => console.log(`[${new Date().toISOString()}] ${msg}`),
 };
 
 // Create a context with these extensions
@@ -51,16 +51,16 @@ Extensions can hook into lifecycle events for setup and cleanup:
 const databaseExtension: LatticeExtension<'db', Database> = {
   name: 'db',
   method: new Database(),
-  
+
   init(context) {
     console.log('Database extension initialized');
     this.method.connect();
   },
-  
+
   destroy(context) {
     console.log('Cleaning up database connection');
     this.method.disconnect();
-  }
+  },
 };
 
 const ctx = createContext(databaseExtension);
@@ -78,7 +78,7 @@ Extensions can be wrapped to add context awareness:
 const apiExtension: LatticeExtension<'api', ApiClient> = {
   name: 'api',
   method: new ApiClient(),
-  
+
   adapt(client, context) {
     // Prevent usage after disposal
     return new Proxy(client, {
@@ -87,9 +87,9 @@ const apiExtension: LatticeExtension<'api', ApiClient> = {
           throw new Error('Cannot use API after context disposal');
         }
         return target[prop];
-      }
+      },
     });
-  }
+  },
 };
 ```
 
@@ -103,7 +103,7 @@ import { withInstrumentation, devtoolsProvider } from '@lattice/lattice';
 const ctx = withInstrumentation(
   {
     providers: [devtoolsProvider()],
-    enabled: true
+    enabled: true,
   },
   httpExtension,
   cacheExtension,
@@ -121,7 +121,7 @@ const ctx = withInstrumentation(
 const httpExtension: LatticeExtension<'http', HttpClient> = {
   name: 'http',
   method: new HttpClient(),
-  
+
   instrument(client, instrumentation) {
     return new Proxy(client, {
       get(target, prop) {
@@ -129,13 +129,13 @@ const httpExtension: LatticeExtension<'http', HttpClient> = {
           return async (...args) => {
             instrumentation.emit('HTTP_REQUEST', { url: args[0] });
             const start = performance.now();
-            
+
             try {
               const result = await target[prop](...args);
-              instrumentation.emit('HTTP_RESPONSE', { 
+              instrumentation.emit('HTTP_RESPONSE', {
                 url: args[0],
                 status: result.status,
-                duration: performance.now() - start
+                duration: performance.now() - start,
               });
               return result;
             } catch (error) {
@@ -145,9 +145,9 @@ const httpExtension: LatticeExtension<'http', HttpClient> = {
           };
         }
         return target[prop];
-      }
+      },
     });
-  }
+  },
 };
 ```
 
@@ -157,29 +157,29 @@ const httpExtension: LatticeExtension<'http', HttpClient> = {
 const eventBusExtension: LatticeExtension<'events', EventEmitter> = {
   name: 'events',
   method: new EventEmitter(),
-  
+
   adapt(emitter, context) {
     const listeners = new Set<{ event: string; handler: Function }>();
-    
+
     return new Proxy(emitter, {
       get(target, prop) {
         if (prop === 'on' || prop === 'once') {
           return (event: string, handler: Function) => {
             const result = target[prop](event, handler);
             listeners.add({ event, handler });
-            
+
             // Auto-cleanup on disposal
             context.destroy(() => {
               target.off(event, handler);
             });
-            
+
             return result;
           };
         }
         return target[prop];
-      }
+      },
     });
-  }
+  },
 };
 ```
 
@@ -189,31 +189,31 @@ const eventBusExtension: LatticeExtension<'events', EventEmitter> = {
 const websocketExtension: LatticeExtension<'ws', WebSocketManager> = {
   name: 'ws',
   method: new WebSocketManager(),
-  
+
   init(context) {
     // Initialize connection pool
     this.method.initialize();
   },
-  
+
   destroy() {
     // Close all connections
     this.method.closeAll();
   },
-  
+
   instrument(manager, instrumentation) {
     const original = manager.connect;
     manager.connect = (url: string) => {
       instrumentation.emit('WS_CONNECT', { url });
       const socket = original.call(manager, url);
-      
+
       socket.on('message', (data) => {
         instrumentation.emit('WS_MESSAGE', { url, data });
       });
-      
+
       return socket;
     };
     return manager;
-  }
+  },
 };
 ```
 
@@ -246,7 +246,7 @@ Creates an instrumented context for debugging and monitoring.
 const ctx = withInstrumentation(
   {
     providers: [devtoolsProvider(), performanceProvider()],
-    enabled: process.env.NODE_ENV === 'development'
+    enabled: process.env.NODE_ENV === 'development',
   },
   ...extensions
 );
@@ -256,12 +256,12 @@ const ctx = withInstrumentation(
 
 ```typescript
 interface LatticeExtension<TName extends string, TMethod> {
-  name: TName;                    // Unique extension name
-  method: TMethod;                 // The functionality to provide
+  name: TName; // Unique extension name
+  method: TMethod; // The functionality to provide
   wrap?(method, context): TMethod; // Optional context wrapper
   instrument?(method, instrumentation, context): TMethod; // Optional instrumentation
-  init?(context): void;        // Called on creation
-  destroy?(context): void;       // Called on disposal
+  init?(context): void; // Called on creation
+  destroy?(context): void; // Called on disposal
 }
 ```
 

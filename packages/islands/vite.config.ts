@@ -36,9 +36,7 @@ const terserMangleInternals = (): Plugin => {
 };
 
 export default defineConfig({
-  plugins: [
-    terserMangleInternals(),
-  ],
+  plugins: [terserMangleInternals()],
   esbuild: {
     minifyIdentifiers: true,
     minifySyntax: true,

@@ -29,7 +29,11 @@ import { createApi } from './helpers/signal-computed-effect';
 
 const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
 const latticeAPI = createApi();
-const { signal: latticeSignal, computed: latticeComputed, effect: latticeEffect } = latticeAPI;
+const {
+  signal: latticeSignal,
+  computed: latticeComputed,
+  effect: latticeEffect,
+} = latticeAPI;
 
 interface BenchState {
   get(name: 'sources'): number;
@@ -38,7 +42,6 @@ interface BenchState {
 
 group('Fan-out Scaling - Single Source to Many', () => {
   summary(() => {
-    
     barplot(() => {
       bench('Lattice - $sources subscribers', function* (state: BenchState) {
         const subscriberCount = state.get('sources');
@@ -72,7 +75,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
         // Warmup
         source(1);
 
-        const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
+        const iterations =
+          ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
         yield () => {
           for (let i = 0; i < iterations; i++) {
             source(i);
@@ -81,8 +85,7 @@ group('Fan-out Scaling - Single Source to Many', () => {
         };
 
         disposers.forEach((d) => d());
-      })
-      .args('sources', [10, 25, 50, 100, 200]);
+      }).args('sources', [10, 25, 50, 100, 200]);
 
       bench('Preact - $sources subscribers', function* (state: BenchState) {
         const subscriberCount = state.get('sources');
@@ -104,7 +107,9 @@ group('Fan-out Scaling - Single Source to Many', () => {
         );
 
         // Effects that consume the computeds
-        const counters = Array.from({ length: subscriberCount }, () => ({ value: 0 }));
+        const counters = Array.from({ length: subscriberCount }, () => ({
+          value: 0,
+        }));
         const disposers = computeds.map((c, i) =>
           preactEffect(() => {
             counters[i]!.value += c.value;
@@ -114,7 +119,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
         // Warmup
         source.value = 1;
 
-        const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
+        const iterations =
+          ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
         yield () => {
           for (let i = 0; i < iterations; i++) {
             source.value = i;
@@ -122,9 +128,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
           return do_not_optimize(counters[0]!.value);
         };
 
-        disposers.forEach(d => d());
-      })
-      .args('sources', [10, 25, 50, 100, 200]);
+        disposers.forEach((d) => d());
+      }).args('sources', [10, 25, 50, 100, 200]);
 
       bench('Alien - $sources subscribers', function* (state: BenchState) {
         const subscriberCount = state.get('sources');
@@ -158,7 +163,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
         // Warmup
         source(1);
 
-        const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
+        const iterations =
+          ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
 
         yield () => {
           for (let i = 0; i < iterations; i++) {

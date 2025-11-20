@@ -2,8 +2,10 @@ import type { SignalFunction } from '@lattice/signals/signal';
 import type { ContextInfo, LogEntry } from './types';
 
 import { createApi } from '@lattice/lattice';
-import { defaultExtensions, defaultHelpers } from '@lattice/signals/presets/core';
-
+import {
+  defaultExtensions,
+  defaultHelpers,
+} from '@lattice/signals/presets/core';
 
 // Create a Lattice context for the devtools panel itself
 export const devtoolsContext = createApi(defaultExtensions(), defaultHelpers());

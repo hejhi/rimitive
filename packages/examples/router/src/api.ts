@@ -7,10 +7,13 @@
 import { createApi } from '@lattice/lattice';
 import {
   defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers
+  defaultHelpers as defaultViewHelpers,
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
+import {
+  createDOMRenderer,
+  DOMRendererConfig,
+} from '@lattice/view/renderers/dom';
 import { RefSpec, STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
@@ -81,9 +84,10 @@ const createViewApi = () => {
     mountToContainer,
     use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
-}
+};
 
-export const { api, signals, mount, mountToContainer, use, views, router } = createViewApi();
+export const { api, signals, mount, mountToContainer, use, views, router } =
+  createViewApi();
 
 export type Signals = typeof signals;
 export type DOMViews = typeof views;

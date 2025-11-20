@@ -21,11 +21,22 @@ export function createDOMRenderer(): Renderer<DOMRendererConfig> {
     },
     appendChild: (parent, child) => parent.appendChild(child),
     removeChild: (parent, child) => parent.removeChild(child),
-    insertBefore: (parent, child, reference) => parent.insertBefore(child, reference),
+    insertBefore: (parent, child, reference) =>
+      parent.insertBefore(child, reference),
     isConnected: (element) => element.isConnected,
-    addEventListener: (element, event, handler, options?: AddEventListenerOptions) => {
+    addEventListener: (
+      element,
+      event,
+      handler,
+      options?: AddEventListenerOptions
+    ) => {
       element.addEventListener(event, handler, options);
-      return () => element.removeEventListener(event, handler, options as AddEventListenerOptions);
+      return () =>
+        element.removeEventListener(
+          event,
+          handler,
+          options as AddEventListenerOptions
+        );
     },
     serializeElement: (element, childrenHTML) => {
       // Create a clone with the same tag and attributes

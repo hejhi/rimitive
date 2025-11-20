@@ -18,6 +18,7 @@ pnpm changeset
 ```
 
 This will prompt you to:
+
 1. Select which packages have changed
 2. Choose the type of change (major, minor, patch)
 3. Write a summary of your changes
@@ -73,6 +74,7 @@ Releases are automated through GitHub Actions:
 ## Commit Messages
 
 We follow conventional commits. PR titles should use the format:
+
 - `fix: description` - Bug fixes
 - `feat: description` - New features
 - `docs: description` - Documentation changes

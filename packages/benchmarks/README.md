@@ -5,8 +5,9 @@ Benchmarks for Lattice signals and related libraries.
 ## Quick Start
 
 - Run all benches (builds workspaces first):
+
   - `pnpm --filter @lattice/benchmarks bench:dev`
- 
+
 - Node flags recommended for memory-oriented benches:
   - `node --expose-gc` (already used by `bench` script)
 

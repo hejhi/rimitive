@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { matchPath, createRouteFactory } from './route';
-import { createTestEnv, type MockRendererConfig, type MockElement, getTextContent } from '../../view/src/test-utils';
+import {
+  createTestEnv,
+  type MockRendererConfig,
+  type MockElement,
+  getTextContent,
+} from '../../view/src/test-utils';
 import { El } from '@lattice/view/el';
 import { Match } from '@lattice/view/match';
 import { Show } from '@lattice/view/show';
@@ -37,7 +42,10 @@ describe('matchPath - path parameters', () => {
   });
 
   it('extracts multiple parameters', () => {
-    const result = matchPath('/users/:userId/posts/:postId', '/users/42/posts/99');
+    const result = matchPath(
+      '/users/:userId/posts/:postId',
+      '/users/42/posts/99'
+    );
     expect(result).not.toBeNull();
     expect(result?.params).toEqual({ userId: '42', postId: '99' });
   });
@@ -112,7 +120,10 @@ describe('route() - single route rendering', () => {
   }
 
   // Helper to create and mount a route spec
-  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountRoute = (
+    spec: RefSpec<MockElement>,
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -128,9 +139,27 @@ describe('route() - single route rendering', () => {
 
     // Handle both element refs and fragment refs
     if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).parent = parentRef;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).next = null;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).attach(parentRef, null);
     } else if ('element' in nodeRef) {
       const elementRef = nodeRef as ElementRef<MockElement>;
       elementRef.parent = parentRef;
@@ -144,7 +173,14 @@ describe('route() - single route rendering', () => {
   it('renders component when path matches', () => {
     const { route, renderer } = setup();
 
-    const HomeComponent = ({ el: elFn }: { el: (tag: string, props?: Record<string, unknown>) => (...children: unknown[]) => unknown }): RefSpec<MockElement> => {
+    const HomeComponent = ({
+      el: elFn,
+    }: {
+      el: (
+        tag: string,
+        props?: Record<string, unknown>
+      ) => (...children: unknown[]) => unknown;
+    }): RefSpec<MockElement> => {
       return elFn('div')('Home Page') as RefSpec<MockElement>;
     };
 
@@ -157,7 +193,14 @@ describe('route() - single route rendering', () => {
   it('renders component for non-root path when path matches', () => {
     const { route, currentPath, renderer } = setup();
 
-    const AboutComponent = ({ el: elFn }: { el: (tag: string, props?: Record<string, unknown>) => (...children: unknown[]) => unknown }): RefSpec<MockElement> => {
+    const AboutComponent = ({
+      el: elFn,
+    }: {
+      el: (
+        tag: string,
+        props?: Record<string, unknown>
+      ) => (...children: unknown[]) => unknown;
+    }): RefSpec<MockElement> => {
       return elFn('div')('About Page') as RefSpec<MockElement>;
     };
 
@@ -172,7 +215,14 @@ describe('route() - single route rendering', () => {
   it('renders nothing when path does not match', () => {
     const { route, currentPath, renderer } = setup();
 
-    const AboutComponent = ({ el: elFn }: { el: (tag: string, props?: Record<string, unknown>) => (...children: unknown[]) => unknown }): RefSpec<MockElement> => {
+    const AboutComponent = ({
+      el: elFn,
+    }: {
+      el: (
+        tag: string,
+        props?: Record<string, unknown>
+      ) => (...children: unknown[]) => unknown;
+    }): RefSpec<MockElement> => {
       return elFn('div')('About Page') as RefSpec<MockElement>;
     };
 
@@ -187,7 +237,14 @@ describe('route() - single route rendering', () => {
   it('reactively updates when path changes', () => {
     const { route, currentPath, renderer } = setup();
 
-    const HomeComponent = ({ el: elFn }: { el: (tag: string, props?: Record<string, unknown>) => (...children: unknown[]) => unknown }): RefSpec<MockElement> => {
+    const HomeComponent = ({
+      el: elFn,
+    }: {
+      el: (
+        tag: string,
+        props?: Record<string, unknown>
+      ) => (...children: unknown[]) => unknown;
+    }): RefSpec<MockElement> => {
       return elFn('div')('Home Page') as RefSpec<MockElement>;
     };
 
@@ -206,7 +263,14 @@ describe('route() - single route rendering', () => {
   it('route with no children works as RefSpec', () => {
     const { route, renderer } = setup();
 
-    const HomeComponent = ({ el: elFn }: { el: (tag: string, props?: Record<string, unknown>) => (...children: unknown[]) => unknown }): RefSpec<MockElement> => {
+    const HomeComponent = ({
+      el: elFn,
+    }: {
+      el: (
+        tag: string,
+        props?: Record<string, unknown>
+      ) => (...children: unknown[]) => unknown;
+    }): RefSpec<MockElement> => {
       return elFn('div')('Home Page') as RefSpec<MockElement>;
     };
 
@@ -274,7 +338,10 @@ describe('multiple routes - reactive switching', () => {
     return { ...env, el, route: route.method, currentPath };
   }
 
-  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountRoute = (
+    spec: RefSpec<MockElement>,
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -289,9 +356,27 @@ describe('multiple routes - reactive switching', () => {
     const nodeRef = spec.create();
 
     if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).parent = parentRef;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).next = null;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).attach(parentRef, null);
     } else if ('element' in nodeRef) {
       const elementRef = nodeRef as ElementRef<MockElement>;
       elementRef.parent = parentRef;
@@ -305,14 +390,23 @@ describe('multiple routes - reactive switching', () => {
   it('only renders the matched route', () => {
     const { route, el, renderer } = setup();
 
-    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Home') as RefSpec<MockElement>;
+    const Home = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Home') as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Products') as RefSpec<MockElement>;
+    const Products = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Products') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -327,11 +421,17 @@ describe('multiple routes - reactive switching', () => {
   it('switches from Home to About when path changes', () => {
     const { route, el, currentPath, renderer } = setup();
 
-    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Home') as RefSpec<MockElement>;
+    const Home = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Home') as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -348,11 +448,17 @@ describe('multiple routes - reactive switching', () => {
   it('renders nothing when path matches no routes', () => {
     const { route, el, currentPath, renderer } = setup();
 
-    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Home') as RefSpec<MockElement>;
+    const Home = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Home') as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -369,11 +475,17 @@ describe('multiple routes - reactive switching', () => {
   it('first matching route wins when multiple routes match', () => {
     const { route, el, currentPath, renderer } = setup();
 
-    const First = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('First') as RefSpec<MockElement>;
+    const First = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('First') as RefSpec<MockElement>;
 
-    const Second = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Second') as RefSpec<MockElement>;
+    const Second = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Second') as RefSpec<MockElement>;
 
     currentPath('/test');
 
@@ -389,14 +501,23 @@ describe('multiple routes - reactive switching', () => {
   it('switches between all routes as path changes', () => {
     const { route, el, currentPath, renderer } = setup();
 
-    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Home') as RefSpec<MockElement>;
+    const Home = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Home') as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Products') as RefSpec<MockElement>;
+    const Products = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Products') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -474,7 +595,10 @@ describe('params - component access to route parameters', () => {
     return { ...env, el, route: route.method, currentPath, computed };
   }
 
-  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountRoute = (
+    spec: RefSpec<MockElement>,
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -489,9 +613,27 @@ describe('params - component access to route parameters', () => {
     const nodeRef = spec.create();
 
     if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).parent = parentRef;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).next = null;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).attach(parentRef, null);
     } else if ('element' in nodeRef) {
       const elementRef = nodeRef as ElementRef<MockElement>;
       elementRef.parent = parentRef;
@@ -507,8 +649,16 @@ describe('params - component access to route parameters', () => {
 
     currentPath('/products/123');
 
-    const Product = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `Product: ${params().id}`)) as RefSpec<MockElement>;
+    const Product = ({
+      el: elFn,
+      params,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+    }) =>
+      elFn('div')(
+        computed(() => `Product: ${params().id}`)
+      ) as RefSpec<MockElement>;
 
     const routeSpec = route('/products/:id', Product)();
     const parent = mountRoute(routeSpec.unwrap(), renderer);
@@ -521,8 +671,16 @@ describe('params - component access to route parameters', () => {
 
     currentPath('/users/42/posts/99');
 
-    const UserPost = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `User ${params().userId}, Post ${params().postId}`)) as RefSpec<MockElement>;
+    const UserPost = ({
+      el: elFn,
+      params,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+    }) =>
+      elFn('div')(
+        computed(() => `User ${params().userId}, Post ${params().postId}`)
+      ) as RefSpec<MockElement>;
 
     const routeSpec = route('/users/:userId/posts/:postId', UserPost)();
     const parent = mountRoute(routeSpec.unwrap(), renderer);
@@ -535,8 +693,16 @@ describe('params - component access to route parameters', () => {
 
     currentPath('/about');
 
-    const About = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `Params: ${JSON.stringify(params())}`)) as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+      params,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+    }) =>
+      elFn('div')(
+        computed(() => `Params: ${JSON.stringify(params())}`)
+      ) as RefSpec<MockElement>;
 
     const routeSpec = route('/about', About)();
     const parent = mountRoute(routeSpec.unwrap(), renderer);
@@ -549,8 +715,16 @@ describe('params - component access to route parameters', () => {
 
     currentPath('/products/123');
 
-    const Product = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `Product: ${params().id}`)) as RefSpec<MockElement>;
+    const Product = ({
+      el: elFn,
+      params,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+    }) =>
+      elFn('div')(
+        computed(() => `Product: ${params().id}`)
+      ) as RefSpec<MockElement>;
 
     const routeSpec = route('/products/:id', Product)();
     const parent = mountRoute(routeSpec.unwrap(), renderer);
@@ -621,7 +795,10 @@ describe('nested routes - structure and path composition', () => {
     return { ...env, el, route: route.method, currentPath, computed };
   }
 
-  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountRoute = (
+    spec: RefSpec<MockElement>,
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -636,9 +813,27 @@ describe('nested routes - structure and path composition', () => {
     const nodeRef = spec.create();
 
     if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).parent = parentRef;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).next = null;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).attach(parentRef, null);
     } else if ('element' in nodeRef) {
       const elementRef = nodeRef as ElementRef<MockElement>;
       elementRef.parent = parentRef;
@@ -654,16 +849,22 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/about');
 
-    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('App', outlet()) as RefSpec<MockElement>;
+    const App = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
     // Parent receives result of calling child route (leaf has no children)
-    const routeSpec = route('/', App)(
-      route('about', About)()
-    );
+    const routeSpec = route('/', App)(route('about', About)());
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toContain('About');
@@ -674,21 +875,33 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/products/123');
 
-    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('App', outlet()) as RefSpec<MockElement>;
+    const App = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('Products', outlet()) as RefSpec<MockElement>;
+    const Products = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('Products', outlet()) as RefSpec<MockElement>;
 
-    const Product = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Product') as RefSpec<MockElement>;
+    const Product = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Product') as RefSpec<MockElement>;
 
     // Nested routes - each level calls its builder with children
-    const routeSpec = route('/', App)(
-      route('products', Products)(
-        route(':id', Product)()
-      )
-    );
+    const routeSpec = route(
+      '/',
+      App
+    )(route('products', Products)(route(':id', Product)()));
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);
     expect(getTextContent(parent)).toContain('Product');
@@ -699,29 +912,57 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/admin/users/42/settings');
 
-    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('App', outlet()) as RefSpec<MockElement>;
+    const App = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const Admin = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('Admin', outlet()) as RefSpec<MockElement>;
+    const Admin = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('Admin', outlet()) as RefSpec<MockElement>;
 
-    const Users = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('Users', outlet()) as RefSpec<MockElement>;
+    const Users = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('Users', outlet()) as RefSpec<MockElement>;
 
-    const UserDetail = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('UserDetail', outlet()) as RefSpec<MockElement>;
+    const UserDetail = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('UserDetail', outlet()) as RefSpec<MockElement>;
 
-    const Settings = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Settings') as RefSpec<MockElement>;
+    const Settings = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Settings') as RefSpec<MockElement>;
 
     // Deep nesting - each level builds its children
-    const routeSpec = route('/', App)(
-      route('admin', Admin)(
-        route('users', Users)(
-          route(':userId', UserDetail)(
-            route('settings', Settings)()
-          )
-        )
+    const routeSpec = route(
+      '/',
+      App
+    )(
+      route(
+        'admin',
+        Admin
+      )(
+        route(
+          'users',
+          Users
+        )(route(':userId', UserDetail)(route('settings', Settings)()))
       )
     );
 
@@ -734,21 +975,33 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/products/123');
 
-    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('App-Layout', outlet()) as RefSpec<MockElement>;
+    const App = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('App-Layout', outlet()) as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('Products-Layout', outlet()) as RefSpec<MockElement>;
+    const Products = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('Products-Layout', outlet()) as RefSpec<MockElement>;
 
-    const Product = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Product-Content') as RefSpec<MockElement>;
+    const Product = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Product-Content') as RefSpec<MockElement>;
 
     // Nested routes - parents should match when child is active
-    const routeSpec = route('/', App)(
-      route('products', Products)(
-        route(':id', Product)()
-      )
-    );
+    const routeSpec = route(
+      '/',
+      App
+    )(route('products', Products)(route(':id', Product)()));
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);
     const content = getTextContent(parent);
@@ -764,21 +1017,44 @@ describe('nested routes - structure and path composition', () => {
 
     currentPath('/users/42/posts/99');
 
-    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('App', outlet()) as RefSpec<MockElement>;
+    const App = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const Users = ({ el: elFn, params, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string>; outlet: () => unknown }) =>
-      elFn('div')(computed(() => `User: ${params().userId}`), outlet()) as RefSpec<MockElement>;
+    const Users = ({
+      el: elFn,
+      params,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+      outlet: () => unknown;
+    }) =>
+      elFn('div')(
+        computed(() => `User: ${params().userId}`),
+        outlet()
+      ) as RefSpec<MockElement>;
 
-    const Posts = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `Post: ${params().postId}`)) as RefSpec<MockElement>;
+    const Posts = ({
+      el: elFn,
+      params,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+    }) =>
+      elFn('div')(
+        computed(() => `Post: ${params().postId}`)
+      ) as RefSpec<MockElement>;
 
     // Nested parameterized routes
-    const routeSpec = route('/', App)(
-      route('users/:userId', Users)(
-        route('posts/:postId', Posts)()
-      )
-    );
+    const routeSpec = route(
+      '/',
+      App
+    )(route('users/:userId', Users)(route('posts/:postId', Posts)()));
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);
     const content = getTextContent(parent);
@@ -844,7 +1120,10 @@ describe('programmatic navigation', () => {
     return { ...env, el, route: route.method, currentPath, computed };
   }
 
-  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountRoute = (
+    spec: RefSpec<MockElement>,
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -859,9 +1138,27 @@ describe('programmatic navigation', () => {
     const nodeRef = spec.create();
 
     if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).parent = parentRef;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).next = null;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).attach(parentRef, null);
     } else if ('element' in nodeRef) {
       const elementRef = nodeRef as ElementRef<MockElement>;
       elementRef.parent = parentRef;
@@ -877,13 +1174,22 @@ describe('programmatic navigation', () => {
 
     let navigateFn: ((path: string) => void) | undefined;
 
-    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+    const Home = ({
+      el: elFn,
+      navigate,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      navigate: (path: string) => void;
+    }) => {
       navigateFn = navigate;
       return elFn('div')('Home') as RefSpec<MockElement>;
     };
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -903,13 +1209,27 @@ describe('programmatic navigation', () => {
 
     let navigateFn: ((path: string) => void) | undefined;
 
-    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+    const Home = ({
+      el: elFn,
+      navigate,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      navigate: (path: string) => void;
+    }) => {
       navigateFn = navigate;
       return elFn('div')('Home') as RefSpec<MockElement>;
     };
 
-    const Product = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `Product: ${params().id}`)) as RefSpec<MockElement>;
+    const Product = ({
+      el: elFn,
+      params,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+    }) =>
+      elFn('div')(
+        computed(() => `Product: ${params().id}`)
+      ) as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -929,14 +1249,24 @@ describe('programmatic navigation', () => {
 
     const pushStateSpy = { calls: [] as Array<[unknown, string, string]> };
     const originalPushState = window.history.pushState.bind(window.history);
-    window.history.pushState = function(state: unknown, title: string, url: string) {
+    window.history.pushState = function (
+      state: unknown,
+      title: string,
+      url: string
+    ) {
       pushStateSpy.calls.push([state, title, url]);
       return originalPushState(state, title, url);
     };
 
     let navigateFn: ((path: string) => void) | undefined;
 
-    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+    const Home = ({
+      el: elFn,
+      navigate,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      navigate: (path: string) => void;
+    }) => {
       navigateFn = navigate;
       return elFn('div')('Home') as RefSpec<MockElement>;
     };
@@ -958,16 +1288,28 @@ describe('programmatic navigation', () => {
 
     let navigateFn: ((path: string) => void) | undefined;
 
-    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+    const Home = ({
+      el: elFn,
+      navigate,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      navigate: (path: string) => void;
+    }) => {
       navigateFn = navigate;
       return elFn('div')('Home') as RefSpec<MockElement>;
     };
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Products') as RefSpec<MockElement>;
+    const Products = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Products') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -995,17 +1337,28 @@ describe('programmatic navigation', () => {
     let navigateFn: ((path: string) => void) | undefined;
     let componentCreationCount = 0;
 
-    const Home = ({ el: elFn, navigate }: { el: (tag: string) => (...children: unknown[]) => unknown; navigate: (path: string) => void }) => {
+    const Home = ({
+      el: elFn,
+      navigate,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      navigate: (path: string) => void;
+    }) => {
       // Component body runs once
       componentCreationCount++;
       navigateFn = navigate;
-      return elFn('div')(computed(() => {
-        return 'Home';
-      })) as RefSpec<MockElement>;
+      return elFn('div')(
+        computed(() => {
+          return 'Home';
+        })
+      ) as RefSpec<MockElement>;
     };
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -1082,7 +1435,10 @@ describe('wildcard routes - catch-all behavior', () => {
     return { ...env, el, route: route.method, currentPath };
   }
 
-  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountRoute = (
+    spec: RefSpec<MockElement>,
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -1097,9 +1453,27 @@ describe('wildcard routes - catch-all behavior', () => {
     const nodeRef = spec.create();
 
     if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).parent = parentRef;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).next = null;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).attach(parentRef, null);
     } else if ('element' in nodeRef) {
       const elementRef = nodeRef as ElementRef<MockElement>;
       elementRef.parent = parentRef;
@@ -1115,11 +1489,17 @@ describe('wildcard routes - catch-all behavior', () => {
 
     currentPath('/unknown');
 
-    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Home') as RefSpec<MockElement>;
+    const Home = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Home') as RefSpec<MockElement>;
 
-    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Not Found') as RefSpec<MockElement>;
+    const NotFound = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Not Found') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -1135,11 +1515,17 @@ describe('wildcard routes - catch-all behavior', () => {
 
     currentPath('/about');
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Not Found') as RefSpec<MockElement>;
+    const NotFound = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Not Found') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/about', About)().unwrap(),
@@ -1155,14 +1541,25 @@ describe('wildcard routes - catch-all behavior', () => {
 
     currentPath('/unknown');
 
-    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')('App', outlet()) as RefSpec<MockElement>;
+    const App = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')('App', outlet()) as RefSpec<MockElement>;
 
-    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Home') as RefSpec<MockElement>;
+    const Home = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Home') as RefSpec<MockElement>;
 
-    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Not Found') as RefSpec<MockElement>;
+    const NotFound = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Not Found') as RefSpec<MockElement>;
 
     const routeSpec = route('/', App)(
       route('', Home)(),
@@ -1178,11 +1575,17 @@ describe('wildcard routes - catch-all behavior', () => {
 
     currentPath('/some/deep/unknown/path');
 
-    const Home = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Home') as RefSpec<MockElement>;
+    const Home = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Home') as RefSpec<MockElement>;
 
-    const NotFound = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Not Found') as RefSpec<MockElement>;
+    const NotFound = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Not Found') as RefSpec<MockElement>;
 
     const routesSpec = el.method('div')(
       route('/', Home)().unwrap(),
@@ -1250,7 +1653,10 @@ describe('outlet - parent components render matched children', () => {
     return { ...env, el, route: route.method, currentPath, computed };
   }
 
-  const mountRoute = (spec: RefSpec<MockElement>, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountRoute = (
+    spec: RefSpec<MockElement>,
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -1265,9 +1671,27 @@ describe('outlet - parent components render matched children', () => {
     const nodeRef = spec.create();
 
     if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).parent = parentRef;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).next = null;
-      (nodeRef as { parent: unknown; next: unknown; attach: (parent: unknown, next: unknown) => void }).attach(parentRef, null);
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).parent = parentRef;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).next = null;
+      (
+        nodeRef as {
+          parent: unknown;
+          next: unknown;
+          attach: (parent: unknown, next: unknown) => void;
+        }
+      ).attach(parentRef, null);
     } else if ('element' in nodeRef) {
       const elementRef = nodeRef as ElementRef<MockElement>;
       elementRef.parent = parentRef;
@@ -1283,19 +1707,26 @@ describe('outlet - parent components render matched children', () => {
 
     currentPath('/about');
 
-    const Layout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+    const Layout = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) =>
       elFn('div')(
         elFn('header')('Header'),
         outlet(),
         elFn('footer')('Footer')
       ) as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About Page') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About Page') as RefSpec<MockElement>;
 
-    const routeSpec = route('/', Layout)(
-      route('about', About)()
-    );
+    const routeSpec = route('/', Layout)(route('about', About)());
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);
     const content = getTextContent(parent);
@@ -1310,18 +1741,30 @@ describe('outlet - parent components render matched children', () => {
 
     currentPath('/about');
 
-    const Layout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+    const Layout = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) =>
       elFn('div')(
         elFn('header')('Header'),
         outlet(),
         elFn('footer')('Footer')
       ) as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About Page') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About Page') as RefSpec<MockElement>;
 
-    const Products = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Products Page') as RefSpec<MockElement>;
+    const Products = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Products Page') as RefSpec<MockElement>;
 
     const routeSpec = route('/', Layout)(
       route('about', About)(),
@@ -1346,19 +1789,26 @@ describe('outlet - parent components render matched children', () => {
 
     currentPath('/unknown');
 
-    const Layout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+    const Layout = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) =>
       elFn('div')(
         elFn('header')('Header'),
         outlet(),
         elFn('footer')('Footer')
       ) as RefSpec<MockElement>;
 
-    const About = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('About Page') as RefSpec<MockElement>;
+    const About = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('About Page') as RefSpec<MockElement>;
 
-    const routeSpec = route('/', Layout)(
-      route('about', About)()
-    );
+    const routeSpec = route('/', Layout)(route('about', About)());
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);
     const content = getTextContent(parent);
@@ -1373,33 +1823,49 @@ describe('outlet - parent components render matched children', () => {
 
     currentPath('/admin/users/settings');
 
-    const AppLayout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')(
-        elFn('nav')('Main Nav'),
-        outlet()
-      ) as RefSpec<MockElement>;
+    const AppLayout = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) =>
+      elFn('div')(elFn('nav')('Main Nav'), outlet()) as RefSpec<MockElement>;
 
-    const AdminLayout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
+    const AdminLayout = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) =>
       elFn('div')(
         elFn('aside')('Admin Sidebar'),
         outlet()
       ) as RefSpec<MockElement>;
 
-    const UsersLayout = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')(
-        elFn('h1')('Users'),
-        outlet()
-      ) as RefSpec<MockElement>;
+    const UsersLayout = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')(elFn('h1')('Users'), outlet()) as RefSpec<MockElement>;
 
-    const Settings = ({ el: elFn }: { el: (tag: string) => (...children: unknown[]) => unknown }) =>
-      elFn('div')('Settings Page') as RefSpec<MockElement>;
+    const Settings = ({
+      el: elFn,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+    }) => elFn('div')('Settings Page') as RefSpec<MockElement>;
 
-    const routeSpec = route('/', AppLayout)(
-      route('admin', AdminLayout)(
-        route('users', UsersLayout)(
-          route('settings', Settings)()
-        )
-      )
+    const routeSpec = route(
+      '/',
+      AppLayout
+    )(
+      route(
+        'admin',
+        AdminLayout
+      )(route('users', UsersLayout)(route('settings', Settings)()))
     );
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);
@@ -1416,30 +1882,63 @@ describe('outlet - parent components render matched children', () => {
 
     currentPath('/users/42/posts/99/edit');
 
-    const App = ({ el: elFn, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; outlet: () => unknown }) =>
-      elFn('div')(outlet()) as RefSpec<MockElement>;
+    const App = ({
+      el: elFn,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      outlet: () => unknown;
+    }) => elFn('div')(outlet()) as RefSpec<MockElement>;
 
-    const UserSection = ({ el: elFn, params, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string>; outlet: () => unknown }) =>
+    const UserSection = ({
+      el: elFn,
+      params,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+      outlet: () => unknown;
+    }) =>
       elFn('div')(
         computed(() => `User: ${params().userId}`),
         outlet()
       ) as RefSpec<MockElement>;
 
-    const PostSection = ({ el: elFn, params, outlet }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string>; outlet: () => unknown }) =>
+    const PostSection = ({
+      el: elFn,
+      params,
+      outlet,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+      outlet: () => unknown;
+    }) =>
       elFn('div')(
         computed(() => `Post: ${params().postId}`),
         outlet()
       ) as RefSpec<MockElement>;
 
-    const EditPage = ({ el: elFn, params }: { el: (tag: string) => (...children: unknown[]) => unknown; params: () => Record<string, string> }) =>
-      elFn('div')(computed(() => `Editing User ${params().userId}, Post ${params().postId}`)) as RefSpec<MockElement>;
-
-    const routeSpec = route('/', App)(
-      route('users/:userId', UserSection)(
-        route('posts/:postId', PostSection)(
-          route('edit', EditPage)()
+    const EditPage = ({
+      el: elFn,
+      params,
+    }: {
+      el: (tag: string) => (...children: unknown[]) => unknown;
+      params: () => Record<string, string>;
+    }) =>
+      elFn('div')(
+        computed(
+          () => `Editing User ${params().userId}, Post ${params().postId}`
         )
-      )
+      ) as RefSpec<MockElement>;
+
+    const routeSpec = route(
+      '/',
+      App
+    )(
+      route(
+        'users/:userId',
+        UserSection
+      )(route('posts/:postId', PostSection)(route('edit', EditPage)()))
     );
 
     const parent = mountRoute(routeSpec.unwrap(), renderer);

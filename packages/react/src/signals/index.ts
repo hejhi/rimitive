@@ -1,20 +1,7 @@
-export {
-  useSubscribe,
-  useSignal,
-  useSelector,
-  useComponent,
-} from './hooks';
+export { useSubscribe, useSignal, useSelector, useComponent } from './hooks';
 
-export {
-  SignalProvider,
-  useSignalAPI,
-} from './context';
+export { SignalProvider, useSignalAPI } from './context';
 
-export type {
-  SignalValue,
-  SignalSetter,
-} from './types';
+export type { SignalValue, SignalSetter } from './types';
 
-export type {
-  SignalProviderProps,
-} from './context';
+export type { SignalProviderProps } from './context';

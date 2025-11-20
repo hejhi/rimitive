@@ -175,7 +175,7 @@ describe('Effect', () => {
       source(2);
 
       // Dispose all
-      disposals.forEach(d => d());
+      disposals.forEach((d) => d());
 
       // Signal should still be usable after all effects disposed
       source(3);
@@ -212,7 +212,7 @@ describe('Effect', () => {
       }
 
       // Cleanup remaining
-      effects.forEach(d => d());
+      effects.forEach((d) => d());
     });
   });
 });

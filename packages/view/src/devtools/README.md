@@ -5,6 +5,7 @@ This directory contains instrumentation wrappers for view extensions (`el`, `map
 ## Overview
 
 The instrumentation follows the same pattern as signals instrumentation:
+
 - Each extension has a corresponding `instrument*` function
 - The function wraps the base method to emit events at key lifecycle points
 - Events are emitted through the `InstrumentationContext`
@@ -16,6 +17,7 @@ The instrumentation follows the same pattern as signals instrumentation:
 Tracks element creation, mounting, and unmounting for both static and reactive elements.
 
 **Events emitted:**
+
 - `EL_STATIC_CREATED` - Static element blueprint created
 - `EL_CHILDREN_APPLIED` - Children applied to static element
 - `EL_STATIC_MOUNTED` - Static element mounted to DOM
@@ -29,6 +31,7 @@ Tracks element creation, mounting, and unmounting for both static and reactive e
 Tracks list reconciliation operations and item lifecycle.
 
 **Events emitted:**
+
 - `MAP_CREATED` - Map helper created
 - `MAP_RENDER_ATTACHED` - Render function attached to map
 - `MAP_ITEM_RENDER` - Individual item rendered
@@ -40,6 +43,7 @@ Tracks list reconciliation operations and item lifecycle.
 Tracks event listener attachment, event fires, and detachment.
 
 **Events emitted:**
+
 - `ON_CREATED` - Event listener configuration created
 - `ON_ATTACHED` - Event listener attached to element
 - `ON_EVENT_FIRED` - Event fired and handler called
@@ -73,7 +77,11 @@ import { createContext } from '@lattice/lattice';
 import { El } from '@lattice/view';
 import { Map } from '@lattice/view/map';
 import { On } from '@lattice/view/on';
-import { instrumentEl, instrumentMap, instrumentOn } from '@lattice/view/devtools';
+import {
+  instrumentEl,
+  instrumentMap,
+  instrumentOn,
+} from '@lattice/view/devtools';
 
 // Create instrumentation context
 const instrumentation = createInstrumentation({
@@ -85,17 +93,17 @@ const instrumentation = createInstrumentation({
 const viewApi = {
   el: El().create({
     /* ctx, renderer, etc. */
-    instrument: instrumentEl
+    instrument: instrumentEl,
   }).method,
 
   map: Map().create({
     /* ctx, signal, etc. */
-    instrument: instrumentMap
+    instrument: instrumentMap,
   }).method,
 
   on: On().create({
     /* startBatch, endBatch */
-    instrument: instrumentOn
+    instrument: instrumentOn,
   }).method,
 };
 
@@ -109,8 +117,8 @@ All events follow this structure:
 
 ```typescript
 interface InstrumentationEvent {
-  type: string;           // Event type (e.g., 'EL_STATIC_CREATED')
-  timestamp: number;      // Event timestamp
+  type: string; // Event type (e.g., 'EL_STATIC_CREATED')
+  timestamp: number; // Event timestamp
   data: {
     [key: string]: unknown; // Event-specific data
   };
@@ -120,6 +128,7 @@ interface InstrumentationEvent {
 ## Integration with Signal Instrumentation
 
 View instrumentation works alongside signal instrumentation. When both are enabled, you can track:
+
 - Signal reads/writes triggering element updates
 - Event handlers updating signals
 - Map reconciliation triggered by signal changes

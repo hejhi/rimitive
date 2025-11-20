@@ -11,16 +11,16 @@ import type { Instantiatable } from '@lattice/lattice';
  * Status bits for node ref type discrimination
  * Using powers of 2 for bitwise operations
  */
-export const STATUS_ELEMENT = 1;      // 0001
-export const STATUS_FRAGMENT = 2;     // 0010
-export const STATUS_REF_SPEC = 4;     // 0100
-export const STATUS_COMMENT = 16;     // 10000
+export const STATUS_ELEMENT = 1; // 0001
+export const STATUS_FRAGMENT = 2; // 0010
+export const STATUS_REF_SPEC = 4; // 0100
+export const STATUS_COMMENT = 16; // 10000
 
 /**
  * Composite bit masks for checking types
  */
-export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT;     // 0011 (3)
-export const STATUS_SPEC_MASK = STATUS_REF_SPEC;                      // 0100 (4)
+export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT; // 0011 (3)
+export const STATUS_SPEC_MASK = STATUS_REF_SPEC; // 0100 (4)
 
 export interface BaseRef {
   status: number;
@@ -42,9 +42,9 @@ export type LinkedNode<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 export interface ElementRef<TElement> extends BaseRef {
   status: typeof STATUS_ELEMENT;
   element: TElement;
-  parent: ElementRef<unknown> | null;  // Parent element in tree
-  prev: LinkedNode<unknown> | null;    // Previous sibling in doubly-linked list
-  next: LinkedNode<unknown> | null;    // Next sibling in doubly-linked list
+  parent: ElementRef<unknown> | null; // Parent element in tree
+  prev: LinkedNode<unknown> | null; // Previous sibling in doubly-linked list
+  next: LinkedNode<unknown> | null; // Next sibling in doubly-linked list
 
   // Child list (nodes within this element) - using LinkedNode for fragments
   firstChild: LinkedNode<unknown> | null;
@@ -87,7 +87,8 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  * Extends Instantiatable to provide uniform context injection pattern
  */
-export interface RefSpec<TElement> extends Instantiatable<NodeRef<TElement>, unknown> {
+export interface RefSpec<TElement>
+  extends Instantiatable<NodeRef<TElement>, unknown> {
   status: typeof STATUS_REF_SPEC;
   (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
@@ -114,7 +115,9 @@ export type Reactive<T> = Readable<T> | Writable<T>;
 /**
  * Lifecycle callback for element connection/disconnection
  */
-export type LifecycleCallback<TElement> = (element: TElement) => void | (() => void);
+export type LifecycleCallback<TElement> = (
+  element: TElement
+) => void | (() => void);
 
 /**
  * Valid child types for an element
@@ -161,4 +164,3 @@ export interface DisposableNode {
   dispose: () => void;
   next: DisposableNode | undefined;
 }
-

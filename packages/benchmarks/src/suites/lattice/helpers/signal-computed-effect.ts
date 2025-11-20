@@ -28,4 +28,4 @@ export const createApi = () => {
     Computed().create(opts),
     Effect().create(opts)
   );
-}
+};

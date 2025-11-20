@@ -13,7 +13,6 @@ const { CLEAN, PENDING, DIRTY, PRODUCER, CONSUMER, STATE_MASK } = CONSTANTS;
  */
 
 describe('Graph Traversal Algorithm', () => {
-
   // Helper to create a node (derived/computed node with PRODUCER and CONSUMER flags)
   function createNode(state: number = CLEAN): DerivedNode {
     return {
@@ -231,7 +230,7 @@ describe('Graph Traversal Algorithm', () => {
       }).not.toThrow();
 
       // All marked
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         expect(node.status & STATE_MASK).toBe(PENDING);
       });
     });
@@ -258,7 +257,7 @@ describe('Graph Traversal Algorithm', () => {
       propagate(a.subscribers!);
 
       // All marked
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         expect(node.status & STATE_MASK).toBe(PENDING);
       });
     });

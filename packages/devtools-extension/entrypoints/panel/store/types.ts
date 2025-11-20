@@ -34,4 +34,3 @@ export interface DevToolsState {
   };
   logEntries: LogEntry[];
 }
-

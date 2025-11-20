@@ -38,7 +38,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
     parentElement: TElement,
     node: NodeRef<TElement>,
     nextSiblingNode?: NodeRef<TElement> | null,
-    boundaryNextSibling?: NodeRef<TElement> | null,
+    boundaryNextSibling?: NodeRef<TElement> | null
   ): void {
     if (node.status === STATUS_ELEMENT) {
       // Determine the next linked node for doubly-linked list
@@ -46,7 +46,10 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       let nextLinked: LinkedNode<TElement> | undefined | null;
       if (nextSiblingNode && nextSiblingNode.status !== STATUS_FRAGMENT) {
         nextLinked = nextSiblingNode as LinkedNode<TElement>;
-      } else if (boundaryNextSibling && boundaryNextSibling.status !== STATUS_FRAGMENT) {
+      } else if (
+        boundaryNextSibling &&
+        boundaryNextSibling.status !== STATUS_FRAGMENT
+      ) {
         nextLinked = boundaryNextSibling as LinkedNode<TElement>;
       }
 
@@ -55,11 +58,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
       // Insert into DOM - use the element from nextLinked if available
       const nextEl = nextLinked?.element ?? null;
-      renderer.insertBefore(
-        parentElement,
-        node.element,
-        nextEl
-      );
+      renderer.insertBefore(parentElement, node.element, nextEl);
 
       // Decorate element if renderer supports it (e.g., add island markers)
       renderer.decorateElement?.(node, node.element as TConfig['baseElement']);
@@ -102,10 +101,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
    * @param parentElement - Parent DOM element
    * @param node - Node to remove (element or fragment)
    */
-  function removeNode(
-    parentElement: TElement,
-    node: NodeRef<TElement>
-  ): void {
+  function removeNode(parentElement: TElement, node: NodeRef<TElement>): void {
     if (node.status === STATUS_ELEMENT) {
       // Unlink from doubly-linked list
       unlink(node as LinkedNode<TElement>);

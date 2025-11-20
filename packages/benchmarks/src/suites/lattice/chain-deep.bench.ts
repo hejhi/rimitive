@@ -39,8 +39,8 @@ group('Computed Chain - Variable Depth', () => {
       bench('Lattice - $depth levels', function* (state: BenchState) {
         const depth = state.get('depth');
         const source = latticeSignal(0);
-        let last: (() => number) = source;
-        
+        let last: () => number = source;
+
         // Build chain with non-trivial computations
         for (let i = 0; i < depth; i++) {
           const prev = last;
@@ -50,31 +50,30 @@ group('Computed Chain - Variable Depth', () => {
             // Non-trivial computation at each level
             let result = val;
             for (let j = 0; j < 3; j++) {
-              result = ((result * 31) + level + j) % 1000007;
+              result = (result * 31 + level + j) % 1000007;
             }
             return result;
           });
         }
         const final = last;
-        
+
         // Warmup to establish dependencies
         source(1);
         void final();
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source(i);
             void final();
           }
         };
-      })
-      .args('depth', [10, 20, 50, 100]);
-    
+      }).args('depth', [10, 20, 50, 100]);
+
       bench('Preact - $depth levels', function* (state: BenchState) {
         const depth = state.get('depth');
         const source = preactSignal(0);
         let last = source;
-        
+
         for (let i = 0; i < depth; i++) {
           const prev = last;
           const level = i;
@@ -82,31 +81,30 @@ group('Computed Chain - Variable Depth', () => {
             const val = prev.value;
             let result = val;
             for (let j = 0; j < 3; j++) {
-              result = ((result * 31) + level + j) % 1000007;
+              result = (result * 31 + level + j) % 1000007;
             }
             return result;
           });
         }
         const final = last;
-        
+
         // Warmup
         source.value = 1;
         void final.value;
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source.value = i;
             void final.value;
           }
         };
-      })
-      .args('depth', [10, 20, 50, 100]);
-    
+      }).args('depth', [10, 20, 50, 100]);
+
       bench('Alien - $depth levels', function* (state: BenchState) {
         const depth = state.get('depth');
         const source = alienSignal(0);
         let last = source;
-        
+
         for (let i = 0; i < depth; i++) {
           const prev = last;
           const level = i;
@@ -114,25 +112,24 @@ group('Computed Chain - Variable Depth', () => {
             const val = prev();
             let result = val;
             for (let j = 0; j < 3; j++) {
-              result = ((result * 31) + level + j) % 1000007;
+              result = (result * 31 + level + j) % 1000007;
             }
             return result;
           });
         }
         const final = last;
-        
+
         // Warmup
         source(1);
         void final();
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source(i);
             void final();
           }
         };
-      })
-      .args('depth', [10, 20, 50, 100]);
+      }).args('depth', [10, 20, 50, 100]);
     });
   });
 });

@@ -8,17 +8,17 @@
  * Signal function with both getter and setter
  */
 export interface SignalFunction<T> {
-  (): T;                    // Read operation
-  (value: T): void;         // Write operation
-  peek(): T;                // Non-tracking read
+  (): T; // Read operation
+  (value: T): void; // Write operation
+  peek(): T; // Non-tracking read
 }
 
 /**
  * Computed function (read-only)
  */
 export interface ComputedFunction<T> {
-  (): T;                    // Read operation
-  peek(): T;                // Non-tracking read
+  (): T; // Read operation
+  peek(): T; // Non-tracking read
 }
 
 /**

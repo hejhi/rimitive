@@ -107,9 +107,9 @@ const unsub = todos.subscribe(() => {
 Use `computed` values to create derived subscribables with transformations:
 
 ```typescript
-const state = signal({ 
+const state = signal({
   user: { name: 'Alice', age: 30 },
-  preferences: { theme: 'dark' }
+  preferences: { theme: 'dark' },
 });
 
 // Create a derived value that only updates when name changes
@@ -144,7 +144,7 @@ const state = signal({
 // Update nested property
 state.value = {
   ...state.value,
-  user: { ...state.value.user, name: 'Bob' }
+  user: { ...state.value.user, name: 'Bob' },
 };
 
 // Update deeply nested property
@@ -152,8 +152,8 @@ state.value = {
   ...state.value,
   user: {
     ...state.value.user,
-    settings: { ...state.value.user.settings, theme: 'light' }
-  }
+    settings: { ...state.value.user.settings, theme: 'light' },
+  },
 };
 ```
 

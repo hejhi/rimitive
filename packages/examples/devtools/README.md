@@ -1,6 +1,7 @@
 # Lattice DevTools Example
 
 This example demonstrates:
+
 1. **The Component Pattern** - Building reusable, framework-agnostic UI behaviors
 2. **DevTools Integration** - Debugging reactive state with Chrome DevTools
 3. **Component Composition** - Combining multiple components together
@@ -16,6 +17,7 @@ The example is structured around **three portable components**:
 - **Filter** (`src/components/filter.ts`) - Composable filtering behavior
 
 Each component:
+
 - ✅ Accepts a signal API
 - ✅ Returns a clean public API
 - ✅ Works in any framework
@@ -24,6 +26,7 @@ Each component:
 ### DevTools Integration
 
 The example shows how to:
+
 - Set up instrumentation with `devtoolsProvider`
 - Pass instrument functions to signal/computed/effect factories
 - Debug reactive state changes in real-time
@@ -63,6 +66,7 @@ pnpm --filter @lattice/examples dev
 4. Watch reactive events flow through in real-time
 
 You'll see:
+
 - `SIGNAL_READ` - When a signal is read
 - `SIGNAL_WRITE` - When a signal is updated
 - `COMPUTED_READ` - When a computed value is accessed
@@ -72,13 +76,17 @@ You'll see:
 ## The Component Pattern in Action
 
 ### Before (inline signals):
+
 ```typescript
 const count = signal(0);
 const doubled = computed(() => count() * 2);
-function increment() { count(count() + 1); }
+function increment() {
+  count(count() + 1);
+}
 ```
 
 ### After (component):
+
 ```typescript
 // Define once
 export function createCounter(api) {
@@ -98,6 +106,7 @@ counter.increment();
 ```
 
 ### Benefits:
+
 1. **Testable** - Test `createCounter` without any framework
 2. **Reusable** - Use in React, Vue, Svelte, or vanilla JS
 3. **Composable** - Combine with other components

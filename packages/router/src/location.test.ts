@@ -217,7 +217,9 @@ describe('location() - query parsing edge cases', () => {
   }
 
   it('handles multiple query params', () => {
-    const { location } = setup('/search?q=test&category=books&sort=recent&page=3');
+    const { location } = setup(
+      '/search?q=test&category=books&sort=recent&page=3'
+    );
     const loc = location();
 
     expect(loc.query()).toEqual({

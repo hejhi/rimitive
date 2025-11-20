@@ -10,9 +10,7 @@ import { NotFound } from './pages/NotFound';
 const App = router.route('/', AppLayout())(
   router.route('', Home())(),
   router.route('about', About())(),
-  router.route('products', Products())(
-    router.route(':id', Product())()
-  ),
+  router.route('products', Products())(router.route(':id', Product())()),
   // Catch-all route for 404
   router.route('*', NotFound())()
 );

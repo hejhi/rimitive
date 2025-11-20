@@ -93,9 +93,10 @@ export default defineBackground(() => {
 
   // Clear detection on navigation
   chrome.webNavigation.onBeforeNavigate.addListener((details) => {
-    if (details.frameId === 0) { // Main frame only
+    if (details.frameId === 0) {
+      // Main frame only
       latticeDetectedTabs.delete(details.tabId);
-      
+
       // Notify devtools panel about navigation
       const port = devtoolsConnections.get(details.tabId);
       if (port) {

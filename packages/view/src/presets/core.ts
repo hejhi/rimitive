@@ -3,9 +3,7 @@ import { Map } from '../map';
 import { Match } from '../match';
 import { Show } from '../show';
 import { createSpec } from '../helpers';
-import type {
-  RendererConfig,
-} from '../renderer';
+import type { RendererConfig } from '../renderer';
 import type { RefSpec, NodeRef } from '../types';
 
 export type { ElementProps, ChildrenApplicator } from '../el';
@@ -27,7 +25,9 @@ export const defaultExtensions = <TConfig extends RendererConfig>() => ({
  * Preserves element type inference through TElement generic
  */
 export type ComponentFactory<TApi> = <TArgs extends unknown[], TElement>(
-  factory: (api: TApi) => (...args: TArgs) => RefSpec<TElement> | NodeRef<TElement>
+  factory: (
+    api: TApi
+  ) => (...args: TArgs) => RefSpec<TElement> | NodeRef<TElement>
 ) => (...args: TArgs) => RefSpec<TElement>;
 
 export const defaultHelpers = createSpec;

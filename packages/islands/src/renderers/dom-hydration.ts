@@ -94,7 +94,10 @@ function getNodeAtPath(root: HTMLElement, path: TreePath): Node {
  * Returns null if node is not a fragment-start marker
  */
 function scanFragmentRange(node: Node): number | null {
-  if (node.nodeType !== 8 || (node as Comment).textContent !== 'fragment-start') {
+  if (
+    node.nodeType !== 8 ||
+    (node as Comment).textContent !== 'fragment-start'
+  ) {
     return null;
   }
 
@@ -103,7 +106,10 @@ function scanFragmentRange(node: Node): number | null {
 
   while (current) {
     // Found end marker
-    if (current.nodeType === 8 && (current as Comment).textContent === 'fragment-end') {
+    if (
+      current.nodeType === 8 &&
+      (current as Comment).textContent === 'fragment-end'
+    ) {
       return count;
     }
 
@@ -115,7 +121,9 @@ function scanFragmentRange(node: Node): number | null {
     current = current.nextSibling;
   }
 
-  throw new HydrationMismatch('Fragment start marker without matching end marker');
+  throw new HydrationMismatch(
+    'Fragment start marker without matching end marker'
+  );
 }
 
 // ============================================================================

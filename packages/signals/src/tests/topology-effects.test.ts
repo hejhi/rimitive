@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, effect, computed, batch, resetGlobalState, getCurrentConsumer, setCurrentConsumer } from '../test-setup';
+import {
+  signal,
+  effect,
+  computed,
+  batch,
+  resetGlobalState,
+  getCurrentConsumer,
+  setCurrentConsumer,
+} from '../test-setup';
 
 /**
  * Effect behavior in complex topologies

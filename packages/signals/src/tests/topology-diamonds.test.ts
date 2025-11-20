@@ -28,11 +28,11 @@ describe('Diamond Dependencies', () => {
     const b = computed(() => a() - 1);
     const c = computed(() => a() + b());
 
-    const compute = vi.fn(() => "d: " + c());
+    const compute = vi.fn(() => 'd: ' + c());
     const d = computed(compute);
 
     // Trigger read
-    expect(d()).toBe("d: 3");
+    expect(d()).toBe('d: 3');
     expect(compute).toHaveBeenCalledOnce();
     compute.mockClear();
 
@@ -50,18 +50,18 @@ describe('Diamond Dependencies', () => {
     //   \   /
     //     D
 
-    const a = signal("a");
+    const a = signal('a');
     const b = computed(() => a());
     const c = computed(() => a());
 
-    const spy = vi.fn(() => b() + " " + c());
+    const spy = vi.fn(() => b() + ' ' + c());
     const d = computed(spy);
 
-    expect(d()).toBe("a a");
+    expect(d()).toBe('a a');
     expect(spy).toHaveBeenCalledOnce();
 
-    a("aa");
-    expect(d()).toBe("aa aa");
+    a('aa');
+    expect(d()).toBe('aa aa');
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
@@ -75,40 +75,40 @@ describe('Diamond Dependencies', () => {
     //     |
     //     E
 
-    const a = signal("a");
+    const a = signal('a');
     const b = computed(() => a());
     const c = computed(() => a());
 
-    const d = computed(() => b() + " " + c());
+    const d = computed(() => b() + ' ' + c());
 
     const spy = vi.fn(() => d());
     const e = computed(spy);
 
-    expect(e()).toBe("a a");
+    expect(e()).toBe('a a');
     expect(spy).toHaveBeenCalledOnce();
 
-    a("aa");
-    expect(e()).toBe("aa aa");
+    a('aa');
+    expect(e()).toBe('aa aa');
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
   it('should bail out if result is the same', () => {
     // Bail out if value of "B" never changes
     // A->B->C
-    const a = signal("a");
+    const a = signal('a');
     const b = computed(() => {
       a();
-      return "foo";
+      return 'foo';
     });
 
     const spy = vi.fn(() => b());
     const c = computed(spy);
 
-    expect(c()).toBe("foo");
+    expect(c()).toBe('foo');
     expect(spy).toHaveBeenCalledOnce();
 
-    a("aa");
-    expect(c()).toBe("foo");
+    a('aa');
+    expect(c()).toBe('foo');
     expect(spy).toHaveBeenCalledOnce();
   });
 });
@@ -129,14 +129,14 @@ describe('Jagged Diamond Dependencies', () => {
     //     E
     //   /   \
     //  F     G
-    const a = signal("a");
+    const a = signal('a');
 
     const b = computed(() => a());
     const c = computed(() => a());
 
     const d = computed(() => c());
 
-    const eSpy = vi.fn(() => b() + " " + d());
+    const eSpy = vi.fn(() => b() + ' ' + d());
     const e = computed(eSpy);
 
     const fSpy = vi.fn(() => e());
@@ -144,40 +144,40 @@ describe('Jagged Diamond Dependencies', () => {
     const gSpy = vi.fn(() => e());
     const g = computed(gSpy);
 
-    expect(f()).toBe("a a");
+    expect(f()).toBe('a a');
     expect(fSpy).toHaveBeenCalledTimes(1);
 
-    expect(g()).toBe("a a");
+    expect(g()).toBe('a a');
     expect(gSpy).toHaveBeenCalledTimes(1);
 
     eSpy.mockClear();
     fSpy.mockClear();
     gSpy.mockClear();
 
-    a("b");
+    a('b');
 
-    expect(e()).toBe("b b");
+    expect(e()).toBe('b b');
     expect(eSpy).toHaveBeenCalledTimes(1);
 
-    expect(f()).toBe("b b");
+    expect(f()).toBe('b b');
     expect(fSpy).toHaveBeenCalledTimes(1);
 
-    expect(g()).toBe("b b");
+    expect(g()).toBe('b b');
     expect(gSpy).toHaveBeenCalledTimes(1);
 
     eSpy.mockClear();
     fSpy.mockClear();
     gSpy.mockClear();
 
-    a("c");
+    a('c');
 
-    expect(e()).toBe("c c");
+    expect(e()).toBe('c c');
     expect(eSpy).toHaveBeenCalledTimes(1);
 
-    expect(f()).toBe("c c");
+    expect(f()).toBe('c c');
     expect(fSpy).toHaveBeenCalledTimes(1);
 
-    expect(g()).toBe("c c");
+    expect(g()).toBe('c c');
     expect(gSpy).toHaveBeenCalledTimes(1);
   });
 });

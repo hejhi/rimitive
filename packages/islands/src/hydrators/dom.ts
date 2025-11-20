@@ -163,10 +163,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
 
           // For fragment islands, call attach() and activate while in hydrating mode
           // attach() is where map() creates the reconciler and binds event handlers
-          if (
-            isFragment &&
-            actualNodeRef.status === STATUS_FRAGMENT
-          ) {
+          if (isFragment && actualNodeRef.status === STATUS_FRAGMENT) {
             // CRITICAL: Enter the container's children first
             // The hydrating renderer starts at position [] (the container itself)
             // We need to advance to position [0], [1], etc. (inside the container)

@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { type SignalFunction } from './signal';
-import { signal, effect, batch, computed, resetGlobalState } from './test-setup';
+import {
+  signal,
+  effect,
+  batch,
+  computed,
+  resetGlobalState,
+} from './test-setup';
 
 describe('Computed - Push-Pull Optimization', () => {
   beforeEach(() => {
@@ -8,15 +14,15 @@ describe('Computed - Push-Pull Optimization', () => {
   });
 
   describe('Lazy Dirty Checking', () => {
-    // Push-pull optimization: When signals change, all dependent computeds are marked as 
-    // "notified" but not "outdated". When read, computeds check if their sources actually 
-    // changed values. If not, they skip recomputation. This is most beneficial for 
-    // downstream computeds - if an upstream computed's value doesn't change, all 
+    // Push-pull optimization: When signals change, all dependent computeds are marked as
+    // "notified" but not "outdated". When read, computeds check if their sources actually
+    // changed values. If not, they skip recomputation. This is most beneficial for
+    // downstream computeds - if an upstream computed's value doesn't change, all
     // downstream computeds can skip recomputation entirely.
     it('should recompute to check values but not increment version when output remains same', () => {
       const source = signal(1);
       let computeCount = 0;
-      
+
       const filtered = computed(() => {
         computeCount++;
         const value = source();
@@ -53,15 +59,15 @@ describe('Computed - Push-Pull Optimization', () => {
       // This should trigger recomputation through the chain
       // Expected: (2 * 2 + 1) * 3 = 15
       expect(computed3()).toBe(15);
-    })
+    });
 
     it('should handle very deep chains efficiently', () => {
       const source = signal(1);
-      
+
       // Create a chain of 10 computeds
       let current = source;
       const computeds: SignalFunction<number>[] = [];
-      
+
       for (let i = 0; i < 10; i++) {
         const prev = current;
         current = computed(() => prev() + 1);
@@ -76,10 +82,10 @@ describe('Computed - Push-Pull Optimization', () => {
 
       // Should propagate through entire chain
       expect(current()).toBe(15); // 5 + 10
-    })
+    });
 
     it('should handle diamond dependencies correctly with detailed tracking', () => {
-      // Create a diamond: 
+      // Create a diamond:
       //       source
       //      /      \
       //   left     right
@@ -94,12 +100,12 @@ describe('Computed - Push-Pull Optimization', () => {
         leftComputeCount++;
         return source() * 2;
       });
-      
+
       const right = computed(() => {
         rightComputeCount++;
         return source() + 5;
       });
-      
+
       const bottom = computed(() => {
         bottomComputeCount++;
         return left() + right();
@@ -143,7 +149,7 @@ describe('Computed - Push-Pull Optimization', () => {
 
       // Change to another even number
       source(4);
-      
+
       // computed1 should recompute but return same value (0)
       // computed2 should NOT recompute since computed1's value didn't change
       expect(computed2()).toBe('even');
@@ -224,7 +230,7 @@ describe('Computed - Push-Pull Optimization', () => {
       source(2);
       expect(computeCount).toBe(2); // Must recompute to check if output changed
       expect(effectCount).toBe(2); // Effect runs due to simplified flag system
-      
+
       // Change to negative - computed value changes, effect should run
       source(-1);
       expect(computeCount).toBe(3);

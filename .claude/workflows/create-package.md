@@ -1,14 +1,14 @@
 ---
-name: "Lattice Monorepo Package Creation"
-description: "Complete workflow for creating a new package in the Lattice monorepo with proper setup and configuration"
+name: 'Lattice Monorepo Package Creation'
+description: 'Complete workflow for creating a new package in the Lattice monorepo with proper setup and configuration'
 stages:
-  - name: "Package Scaffolding"
-    command: "/scaffold-package"
-    description: "Create initial package structure, such as package.json and basic files"
+  - name: 'Package Scaffolding'
+    command: '/scaffold-package'
+    description: 'Create initial package structure, such as package.json and basic files'
 
-  - name: "Build Configuration"
-    command: "/setup-build-config"
-    description: "Set up package configuration files, such as configs, dotfiles, etc"
+  - name: 'Build Configuration'
+    command: '/setup-build-config'
+    description: 'Set up package configuration files, such as configs, dotfiles, etc'
 ---
 
 # Lattice Monorepo Package Creation Workflow
@@ -37,6 +37,7 @@ The process involves 3 main stages that ensure proper monorepo integration:
 Use the format: `@lattice/package-name`
 
 Examples:
+
 - `@lattice/ui-components`
 - `@lattice/islands`
 - `@lattice/validation`

@@ -38,14 +38,14 @@ group('Conditional Dependencies - Branch Pruning', () => {
       bench('Lattice - $branches branches', function* (state: BenchState) {
         const branchCount = state.get('branches');
         const condition = latticeSignal(0);
-        
+
         // Create multiple branches with expensive computations
-        const branches = Array.from({ length: branchCount }, (_, i) => 
+        const branches = Array.from({ length: branchCount }, (_, i) =>
           latticeSignal(i)
         );
-        
+
         // Expensive computations for each branch
-        const computedBranches = branches.map((branch) => 
+        const computedBranches = branches.map((branch) =>
           latticeComputed(() => {
             const val = branch();
             // Expensive computation that should be skipped for inactive branches
@@ -56,13 +56,13 @@ group('Conditional Dependencies - Branch Pruning', () => {
             return result;
           })
         );
-        
+
         // Conditional that selects active branch
         const result = latticeComputed(() => {
           const idx = condition() % branchCount;
           return computedBranches[idx]!();
         });
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             // Change active branch periodically
@@ -74,18 +74,17 @@ group('Conditional Dependencies - Branch Pruning', () => {
             void result();
           }
         };
-      })
-      .args('branches', [2, 4, 8]);
-    
+      }).args('branches', [2, 4, 8]);
+
       bench('Preact - $branches branches', function* (state: BenchState) {
         const branchCount = state.get('branches');
         const condition = preactSignal(0);
-        
-        const branches = Array.from({ length: branchCount }, (_, i) => 
+
+        const branches = Array.from({ length: branchCount }, (_, i) =>
           preactSignal(i)
         );
-        
-        const computedBranches = branches.map((branch) => 
+
+        const computedBranches = branches.map((branch) =>
           preactComputed(() => {
             const val = branch.value;
             let result = val;
@@ -95,33 +94,32 @@ group('Conditional Dependencies - Branch Pruning', () => {
             return result;
           })
         );
-        
+
         const result = preactComputed(() => {
           const idx = condition.value % branchCount;
           return computedBranches[idx]!.value;
         });
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             if (i % 100 === 0) {
               condition.value = (i / 100) % branchCount;
             }
-            branches.forEach((b, idx) => b.value = i * (idx + 1));
+            branches.forEach((b, idx) => (b.value = i * (idx + 1)));
             void result.value;
           }
         };
-      })
-      .args('branches', [2, 4, 8]);
-    
+      }).args('branches', [2, 4, 8]);
+
       bench('Alien - $branches branches', function* (state: BenchState) {
         const branchCount = state.get('branches');
         const condition = alienSignal(0);
-        
-        const branches = Array.from({ length: branchCount }, (_, i) => 
+
+        const branches = Array.from({ length: branchCount }, (_, i) =>
           alienSignal(i)
         );
-        
-        const computedBranches = branches.map((branch) => 
+
+        const computedBranches = branches.map((branch) =>
           alienComputed(() => {
             const val = branch();
             let result = val;
@@ -131,12 +129,12 @@ group('Conditional Dependencies - Branch Pruning', () => {
             return result;
           })
         );
-        
+
         const result = alienComputed(() => {
           const idx = condition() % branchCount;
           return computedBranches[idx]!();
         });
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             if (i % 100 === 0) {
@@ -146,8 +144,7 @@ group('Conditional Dependencies - Branch Pruning', () => {
             void result();
           }
         };
-      })
-      .args('branches', [2, 4, 8]);
+      }).args('branches', [2, 4, 8]);
     });
   });
 });

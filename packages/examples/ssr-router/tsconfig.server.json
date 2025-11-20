@@ -8,5 +8,10 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src/server.ts", "src/api.ts", "src/pages/**/*", "src/islands/**/*"]
+  "include": [
+    "src/server.ts",
+    "src/api.ts",
+    "src/pages/**/*",
+    "src/islands/**/*"
+  ]
 }

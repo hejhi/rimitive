@@ -32,7 +32,8 @@ export const createAddEventListener = (batch: <T>(fn: () => T) => T) => {
   ): (element: HTMLElement) => () => void {
     return (element: HTMLElement) => {
       // Wrap handler with batching for automatic performance optimization
-      const batchedHandler = (e: HTMLElementEventMap[K]) => batch(() => handler(e));
+      const batchedHandler = (e: HTMLElementEventMap[K]) =>
+        batch(() => handler(e));
 
       element.addEventListener(event, batchedHandler as EventListener, options);
       return () =>

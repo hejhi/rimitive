@@ -35,7 +35,7 @@ export class MockElement {
   disabled?: boolean;
   checked?: boolean;
   name?: string;
-  onclick?: ((event: MouseEvent) => unknown);
+  onclick?: (event: MouseEvent) => unknown;
 
   // Custom test data - used to verify element reuse/preservation in tests
   __customState?: string;
@@ -159,42 +159,58 @@ export function createMockRenderer() {
     setAttribute: vi.fn((element: MockElement, key: string, value: unknown) => {
       element.props[key] = value;
     }),
-    appendChild: vi.fn((parent: MockElement, child: MockElement | MockText | MockComment) => {
-      if (!parent.children.includes(child)) {
-        parent.children.push(child);
-      }
-      child.parent = parent;
-    }),
-    removeChild: vi.fn((parent: MockElement, child: MockElement | MockText | MockComment) => {
-      const index = parent.children.indexOf(child);
-      if (index !== -1) parent.children.splice(index, 1);
-      child.parent = null;
-    }),
-    insertBefore: vi.fn((parent: MockElement, child: MockElement | MockText | MockComment, ref: MockElement | MockText | MockComment | null) => {
-      // Remove from old position if already in parent
-      const oldIndex = parent.children.indexOf(child);
-      if (oldIndex !== -1) {
-        parent.children.splice(oldIndex, 1);
-      }
-
-      // Insert at new position
-      if (ref === null || ref === undefined) {
-        parent.children.push(child);
-      } else {
-        const refIndex = parent.children.indexOf(ref);
-        if (refIndex !== -1) {
-          parent.children.splice(refIndex, 0, child);
-        } else {
+    appendChild: vi.fn(
+      (parent: MockElement, child: MockElement | MockText | MockComment) => {
+        if (!parent.children.includes(child)) {
           parent.children.push(child);
         }
+        child.parent = parent;
       }
-      child.parent = parent;
-    }),
+    ),
+    removeChild: vi.fn(
+      (parent: MockElement, child: MockElement | MockText | MockComment) => {
+        const index = parent.children.indexOf(child);
+        if (index !== -1) parent.children.splice(index, 1);
+        child.parent = null;
+      }
+    ),
+    insertBefore: vi.fn(
+      (
+        parent: MockElement,
+        child: MockElement | MockText | MockComment,
+        ref: MockElement | MockText | MockComment | null
+      ) => {
+        // Remove from old position if already in parent
+        const oldIndex = parent.children.indexOf(child);
+        if (oldIndex !== -1) {
+          parent.children.splice(oldIndex, 1);
+        }
+
+        // Insert at new position
+        if (ref === null || ref === undefined) {
+          parent.children.push(child);
+        } else {
+          const refIndex = parent.children.indexOf(ref);
+          if (refIndex !== -1) {
+            parent.children.splice(refIndex, 0, child);
+          } else {
+            parent.children.push(child);
+          }
+        }
+        child.parent = parent;
+      }
+    ),
     isConnected: vi.fn((element: MockElement) => element.connected),
-    addEventListener: vi.fn((element: MockElement, event: string, handler: (event: unknown) => void) => {
-      element.listeners.set(event, handler);
-      return () => element.listeners.delete(event);
-    }),
+    addEventListener: vi.fn(
+      (
+        element: MockElement,
+        event: string,
+        handler: (event: unknown) => void
+      ) => {
+        element.listeners.set(event, handler);
+        return () => element.listeners.delete(event);
+      }
+    ),
     serializeElement: vi.fn((element: MockElement, childrenHTML: string) => {
       // Simple mock serialization for testing
       const attrs = Object.entries(element.props)
@@ -219,7 +235,7 @@ export function createSignal<T>(initialValue: T) {
 
   const write = (newValue: T) => {
     value = newValue;
-    subscribers.forEach(fn => fn());
+    subscribers.forEach((fn) => fn());
   };
 
   return { read, write, subscribers };
@@ -228,7 +244,10 @@ export function createSignal<T>(initialValue: T) {
 /**
  * Creates a mock disposable for testing cleanup
  */
-export function createMockDisposable(): { dispose: () => void; disposed: boolean } {
+export function createMockDisposable(): {
+  dispose: () => void;
+  disposed: boolean;
+} {
   const mock = {
     disposed: false,
     dispose: vi.fn(() => {
@@ -245,7 +264,9 @@ export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
   // Store lifecycle callbacks
   const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
 
-  const ref = ((lifecycleCallback: LifecycleCallback<TElement>): RefSpec<TElement> => {
+  const ref = ((
+    lifecycleCallback: LifecycleCallback<TElement>
+  ): RefSpec<TElement> => {
     lifecycleCallbacks.push(lifecycleCallback);
     return ref;
   }) as RefSpec<TElement>;
@@ -284,7 +305,9 @@ export function wrapElement<TElement>(element: TElement) {
 /**
  * Extracts text content from mock element tree (simulates innerText)
  */
-export function getTextContent(element: MockElement | MockText | MockComment): string {
+export function getTextContent(
+  element: MockElement | MockText | MockComment
+): string {
   if ('content' in element) {
     return element.content;
   }
@@ -326,10 +349,15 @@ export function createTestEnv() {
   });
   const effect = effectFactory.method;
 
-  const { disposeScope, createElementScope, scopedEffect, onCleanup, getElementScope } =
-    createScopes({
-      baseEffect: effect,
-    });
+  const {
+    disposeScope,
+    createElementScope,
+    scopedEffect,
+    onCleanup,
+    getElementScope,
+  } = createScopes({
+    baseEffect: effect,
+  });
 
   return {
     consumer: graphEdges.consumer,

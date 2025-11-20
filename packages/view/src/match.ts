@@ -1,4 +1,8 @@
-import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import type {
+  LatticeExtension,
+  InstrumentationContext,
+  ExtensionContext,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type {
   LifecycleCallback,
@@ -48,9 +52,7 @@ export type MatchFactory<TBaseElement> = LatticeExtension<
   {
     <T, TElement extends TBaseElement>(
       reactive: Reactive<T>
-    ): (
-      matcher: (value: T) => RefSpec<TElement> | null
-    ) => RefSpec<TElement>;
+    ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement>;
   }
 >;
 
@@ -115,17 +117,15 @@ export const Match = create(
         };
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(
-          api?: unknown,
-          extensions?: TExt
-        ) => {
+        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
           const fragRef = createFragmentFn(lifecycleCallbacks, api);
           // If no extensions, return the ref directly to preserve mutability
-          if (!extensions || Object.keys(extensions).length === 0) return fragRef as FragmentRef<TElement> & TExt;
+          if (!extensions || Object.keys(extensions).length === 0)
+            return fragRef as FragmentRef<TElement> & TExt;
 
           return {
             ...fragRef,
-            ...extensions
+            ...extensions,
           } as FragmentRef<TElement> & TExt;
         };
 
@@ -134,7 +134,9 @@ export const Match = create(
 
       function match<T, TElement extends TBaseElement>(
         reactive: Reactive<T>
-      ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement> {
+      ): (
+        matcher: (value: T) => RefSpec<TElement> | null
+      ) => RefSpec<TElement> {
         return (matcher: (value: T) => RefSpec<TElement> | null) => {
           return createMatchSpec<TElement>((lifecycleCallbacks) => {
             const fragment: FragmentRef<TBaseElement> = {

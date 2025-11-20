@@ -22,7 +22,9 @@ export function island<TProps>(
 
 export function island<TProps>(
   id: string,
-  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => RefSpec<unknown>),
+  strategyOrComponent:
+    | IslandStrategy<TProps>
+    | ((props: TProps) => RefSpec<unknown>),
   maybeComponent?: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
   const component =

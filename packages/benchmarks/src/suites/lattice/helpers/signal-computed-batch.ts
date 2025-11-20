@@ -11,7 +11,9 @@ export const createApi = () => {
   const { trackDependency, track, detachAll, consumer } = createGraphEdges();
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
   const { withVisitor } = createGraphTraversal();
-  const { startBatch, endBatch, withPropagate } = createScheduler({ detachAll });
+  const { startBatch, endBatch, withPropagate } = createScheduler({
+    detachAll,
+  });
 
   const opts = {
     trackDependency,
@@ -21,7 +23,7 @@ export const createApi = () => {
     endBatch,
     track,
     shallowPropagate,
-    consumer
+    consumer,
   };
 
   return createLatticeContext(
@@ -29,4 +31,4 @@ export const createApi = () => {
     Computed().create(opts),
     Batch().create(opts)
   );
-}
+};

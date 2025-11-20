@@ -117,6 +117,6 @@ export function create<TArgs extends unknown[], TResult, TContext>(
     create: (context: TContext): TResult => {
       const component = factory(context);
       return component(...args);
-    }
+    },
   });
 }

@@ -23,7 +23,7 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
     case 'TRANSACTION':
       handleTransaction(message.data);
       break;
-      
+
     case 'NAVIGATION':
       handleNavigation();
       break;

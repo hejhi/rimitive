@@ -4,7 +4,8 @@ import type { ScheduledNode, Dependency, FromNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createGraphTraversal } from './graph-traversal';
 
-const { SCHEDULED, DISPOSED, CLEAN, CONSUMER, STATE_MASK, TYPE_MASK, PENDING } = CONSTANTS;
+const { SCHEDULED, DISPOSED, CLEAN, CONSUMER, STATE_MASK, TYPE_MASK, PENDING } =
+  CONSTANTS;
 
 /**
  * Pure unit tests for scheduler algorithm
@@ -17,7 +18,7 @@ describe('Scheduler Algorithm', () => {
   // Helper to create a mock scheduled node
   function createMockScheduledNode(): ScheduledNode {
     return {
-      status: CONSUMER | SCHEDULED | CLEAN,  // Type bits + initial state
+      status: CONSUMER | SCHEDULED | CLEAN, // Type bits + initial state
       nextScheduled: undefined,
       dependencies: undefined,
       dependencyTail: undefined,
@@ -89,7 +90,7 @@ describe('Scheduler Algorithm', () => {
     it('should only queue CLEAN nodes', () => {
       const executed: string[] = [];
       const node1 = createMockScheduledNode();
-      node1.status = (node1.status & TYPE_MASK) | CLEAN;  // Clean nodes get queued
+      node1.status = (node1.status & TYPE_MASK) | CLEAN; // Clean nodes get queued
       node1.flush = vi.fn(() => executed.push('clean'));
 
       const node2 = createMockScheduledNode();
@@ -243,7 +244,9 @@ describe('Scheduler Algorithm', () => {
   describe('Error Isolation', () => {
     it('should continue executing after error', () => {
       const executed: string[] = [];
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const node1 = createMockScheduledNode();
       node1.flush = vi.fn(() => executed.push('A'));

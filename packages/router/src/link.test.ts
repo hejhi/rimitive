@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { Link } from './link';
-import { createTestEnv, type MockRendererConfig, type MockElement, getTextContent } from '../../view/src/test-utils';
+import {
+  createTestEnv,
+  type MockRendererConfig,
+  type MockElement,
+  getTextContent,
+} from '../../view/src/test-utils';
 import { El } from '@lattice/view/el';
 import type { ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT } from '@lattice/view/types';
@@ -29,7 +34,11 @@ describe('Link component - basic rendering', () => {
     return { ...env, el, Link, navigate, currentPath, api };
   }
 
-  const mountElement = (spec: unknown, api: { el: unknown; navigate?: (path: string) => void }, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountElement = (
+    spec: unknown,
+    api: { el: unknown; navigate?: (path: string) => void },
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -41,7 +50,9 @@ describe('Link component - basic rendering', () => {
       lastChild: null,
     };
 
-    const nodeRef = (spec as { create: (api: unknown) => ElementRef<MockElement> }).create(api);
+    const nodeRef = (
+      spec as { create: (api: unknown) => ElementRef<MockElement> }
+    ).create(api);
     nodeRef.parent = parentRef;
     nodeRef.next = null;
     parent.children.push(nodeRef.element);
@@ -69,7 +80,7 @@ describe('Link component - basic rendering', () => {
       href: '/products',
       className: 'nav-link',
       id: 'products-link',
-      title: 'View Products'
+      title: 'View Products',
     })('Products');
 
     const parent = mountElement(linkSpec, api, renderer);
@@ -120,7 +131,11 @@ describe('Link component - click handling', () => {
     return { ...env, el, Link, navigate, currentPath, navigateCalls, api };
   }
 
-  const mountElement = (spec: unknown, api: { el: unknown; navigate?: (path: string) => void }, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountElement = (
+    spec: unknown,
+    api: { el: unknown; navigate?: (path: string) => void },
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -132,7 +147,9 @@ describe('Link component - click handling', () => {
       lastChild: null,
     };
 
-    const nodeRef = (spec as { create: (api: unknown) => ElementRef<MockElement> }).create(api);
+    const nodeRef = (
+      spec as { create: (api: unknown) => ElementRef<MockElement> }
+    ).create(api);
     nodeRef.parent = parentRef;
     nodeRef.next = null;
     parent.children.push(nodeRef.element);
@@ -148,7 +165,9 @@ describe('Link component - click handling', () => {
     const anchor = parent.children[0] as MockElement;
 
     const event = {
-      preventDefault: () => { event.defaultPrevented = true; },
+      preventDefault: () => {
+        event.defaultPrevented = true;
+      },
       stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
@@ -157,7 +176,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as (e: unknown) => void)?.(event);
 
     expect(event.defaultPrevented).toBe(true);
     expect(navigateCalls).toEqual(['/about']);
@@ -171,7 +190,9 @@ describe('Link component - click handling', () => {
     const anchor = parent.children[0] as MockElement;
 
     const event = {
-      preventDefault: () => { event.defaultPrevented = true; },
+      preventDefault: () => {
+        event.defaultPrevented = true;
+      },
       stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: true,
@@ -180,7 +201,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as (e: unknown) => void)?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -194,7 +215,9 @@ describe('Link component - click handling', () => {
     const anchor = parent.children[0] as MockElement;
 
     const event = {
-      preventDefault: () => { event.defaultPrevented = true; },
+      preventDefault: () => {
+        event.defaultPrevented = true;
+      },
       stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
@@ -203,7 +226,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as (e: unknown) => void)?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -217,7 +240,9 @@ describe('Link component - click handling', () => {
     const anchor = parent.children[0] as MockElement;
 
     const event = {
-      preventDefault: () => { event.defaultPrevented = true; },
+      preventDefault: () => {
+        event.defaultPrevented = true;
+      },
       stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
@@ -226,7 +251,7 @@ describe('Link component - click handling', () => {
       button: 2, // Right click
     };
 
-    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as (e: unknown) => void)?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -240,7 +265,9 @@ describe('Link component - click handling', () => {
     const anchor = parent.children[0] as MockElement;
 
     const event = {
-      preventDefault: () => { event.defaultPrevented = true; },
+      preventDefault: () => {
+        event.defaultPrevented = true;
+      },
       stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
@@ -249,7 +276,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as (e: unknown) => void)?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -263,7 +290,9 @@ describe('Link component - click handling', () => {
     const anchor = parent.children[0] as MockElement;
 
     const event = {
-      preventDefault: () => { event.defaultPrevented = true; },
+      preventDefault: () => {
+        event.defaultPrevented = true;
+      },
       stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
@@ -272,7 +301,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as (e: unknown) => void)?.(event);
 
     expect(event.defaultPrevented).toBe(false);
     expect(navigateCalls).toEqual([]);
@@ -284,14 +313,18 @@ describe('Link component - click handling', () => {
     const userClicks: string[] = [];
     const linkSpec = Link({
       href: '/about',
-      onclick: () => { userClicks.push('clicked'); }
+      onclick: () => {
+        userClicks.push('clicked');
+      },
     })('About');
 
     const parent = mountElement(linkSpec, api, renderer);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
-      preventDefault: () => { event.defaultPrevented = true; },
+      preventDefault: () => {
+        event.defaultPrevented = true;
+      },
       stopPropagation: () => {},
       defaultPrevented: false,
       metaKey: false,
@@ -300,7 +333,7 @@ describe('Link component - click handling', () => {
       button: 0,
     };
 
-    (anchor?.props.onclick as ((e: unknown) => void))?.(event);
+    (anchor?.props.onclick as (e: unknown) => void)?.(event);
 
     expect(userClicks).toEqual(['clicked']);
     expect(navigateCalls).toEqual(['/about']);
@@ -331,7 +364,11 @@ describe('Link component - lifecycle callbacks', () => {
     return { ...env, el, Link, navigate, currentPath, api };
   }
 
-  const mountElement = (spec: unknown, api: { el: unknown; navigate?: (path: string) => void }, renderer: { createElement: (tag: string) => MockElement }): MockElement => {
+  const mountElement = (
+    spec: unknown,
+    api: { el: unknown; navigate?: (path: string) => void },
+    renderer: { createElement: (tag: string) => MockElement }
+  ): MockElement => {
     const parent = renderer.createElement('div');
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
@@ -343,7 +380,9 @@ describe('Link component - lifecycle callbacks', () => {
       lastChild: null,
     };
 
-    const nodeRef = (spec as { create: (api: unknown) => ElementRef<MockElement> }).create(api);
+    const nodeRef = (
+      spec as { create: (api: unknown) => ElementRef<MockElement> }
+    ).create(api);
     nodeRef.parent = parentRef;
     nodeRef.next = null;
     parent.children.push(nodeRef.element);

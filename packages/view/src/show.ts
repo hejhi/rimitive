@@ -1,4 +1,8 @@
-import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import type {
+  LatticeExtension,
+  InstrumentationContext,
+  ExtensionContext,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type {
   LifecycleCallback,
@@ -147,17 +151,15 @@ export const Show = create(
         };
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(
-          api?: unknown,
-          extensions?: TExt
-        ) => {
+        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
           const fragRef = createFragmentFn(lifecycleCallbacks, api);
           // If no extensions, return the ref directly to preserve mutability
-          if (!extensions || Object.keys(extensions).length === 0) return fragRef as FragmentRef<TElement> & TExt;
+          if (!extensions || Object.keys(extensions).length === 0)
+            return fragRef as FragmentRef<TElement> & TExt;
 
           return {
             ...fragRef,
-            ...extensions
+            ...extensions,
           } as FragmentRef<TElement> & TExt;
         };
 
@@ -178,7 +180,7 @@ export const Show = create(
               }
             });
           };
-          
+
           const fragment: FragmentRef<TBaseElement> = {
             status: STATUS_FRAGMENT,
             element: null,
@@ -214,7 +216,8 @@ export const Show = create(
                     currentNode = nodeRef;
 
                     // Execute lifecycle callbacks from show level
-                    if (nodeRef.status === STATUS_ELEMENT) runLifecycleCallbacks(nodeRef.element);
+                    if (nodeRef.status === STATUS_ELEMENT)
+                      runLifecycleCallbacks(nodeRef.element);
                   }
 
                   if (isVisible) {

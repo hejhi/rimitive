@@ -19,7 +19,7 @@ const VISITED = 1;
 export type ReconcileNode<TData = unknown> = {
   position: number;
   reconcileStatus: typeof UNVISITED | typeof VISITED; // Separate from status field
-  data: TData
+  data: TData;
 };
 
 /**
@@ -235,7 +235,8 @@ export function createReconciler<
       const node = nodes[i]!;
 
       // Check if current position matches LIS position (incremental, zero-allocation)
-      const isInLIS = lisIdx >= 0 && node.position === newPosBuf[lisBuf[lisIdx]!]!;
+      const isInLIS =
+        lisIdx >= 0 && node.position === newPosBuf[lisBuf[lisIdx]!]!;
 
       if (isInLIS) {
         // In LIS - already in correct position, decrement LIS index

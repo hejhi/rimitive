@@ -1,4 +1,10 @@
-import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
+import type {
+  ProducerNode,
+  ConsumerNode,
+  ToNode,
+  FromNode,
+  Dependency,
+} from '../types';
 import { CONSTANTS } from '../constants';
 
 const { TYPE_MASK, CLEAN } = CONSTANTS;
@@ -15,15 +21,9 @@ export interface Consumer {
 
 export interface GraphEdges {
   consumer: Consumer;
-  trackDependency: (
-    producer: ProducerNode,
-    consumer: ConsumerNode,
-  ) => void;
+  trackDependency: (producer: ProducerNode, consumer: ConsumerNode) => void;
   detachAll: (dependency: Dependency) => void;
-  track: <T>(
-    node: ConsumerNode,
-    fn: () => T,
-  ) => T;
+  track: <T>(node: ConsumerNode, fn: () => T) => T;
 }
 
 // Unlink a dependency from producer's consumer list

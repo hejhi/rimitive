@@ -6,7 +6,8 @@ import { GraphEdges } from './graph-edges';
 export type { DerivedNode } from '../types';
 export type { GraphEdges } from './graph-edges';
 
-const { DIRTY, PENDING, STATE_MASK, TYPE_MASK, CONSUMER, CLEAN, PRODUCER } = CONSTANTS;
+const { DIRTY, PENDING, STATE_MASK, TYPE_MASK, CONSUMER, CLEAN, PRODUCER } =
+  CONSTANTS;
 
 // Predefined status combinations for prodcuer-consumer nodes
 const PC_CLEAN = PRODUCER | CONSUMER | CLEAN;
@@ -45,9 +46,9 @@ const PC_DIRTY = PC | DIRTY;
 const PC_PENDING = PC | PENDING;
 
 export function createPullPropagator({
-  track
+  track,
 }: {
-  track: GraphEdges['track']
+  track: GraphEdges['track'];
 }): PullPropagator {
   const pullUpdates = (rootDerived: DerivedNode): boolean => {
     if (!rootDerived.dependencies) return false;
@@ -60,7 +61,7 @@ export function createPullPropagator({
     // DESCENT PHASE: Walk down the dependency tree checking each dependency
     descent: for (;;) {
       const producer = dep.producer;
-			const status = producer.status;
+      const status = producer.status;
 
       // Check if this dependency makes the consumer dirty
       check: if ((consumer.status & STATE_MASK) === DIRTY) {

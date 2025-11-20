@@ -14,23 +14,16 @@ import {
   Header,
   TimelineView,
 } from './components';
-import {
-  useDataExport,
-  useDevToolsConnection,
-} from './hooks';
+import { useDataExport, useDevToolsConnection } from './hooks';
 import { devtoolsState } from './store/devtoolsCtx';
-import {
-  filteredTransactions,
-} from './store/computed';
+import { filteredTransactions } from './store/computed';
 
 export function App() {
   // Use Lattice signals with React
   const connected = useSubscribe(devtoolsState.connected);
   const contexts = useSubscribe(devtoolsState.contexts);
   const selectedTab = useSubscribe(devtoolsState.selectedTab);
-  const selectedTransaction = useSubscribe(
-    devtoolsState.selectedTransaction
-  );
+  const selectedTransaction = useSubscribe(devtoolsState.selectedTransaction);
   const filter = useSubscribe(devtoolsState.filter);
   const transactions = useSubscribe(filteredTransactions);
 
@@ -87,9 +80,7 @@ export function App() {
             selectedContext={devtoolsState.selectedContext()}
             filterType={filter.type}
             searchValue={filter.search}
-            onContextChange={(value) =>
-              devtoolsState.selectedContext(value)
-            }
+            onContextChange={(value) => devtoolsState.selectedContext(value)}
             onFilterTypeChange={(value) =>
               devtoolsState.filter({
                 ...devtoolsState.filter(),
@@ -113,9 +104,7 @@ export function App() {
           <TimelineView
             transactions={transactions}
             selectedTransaction={selectedTransaction}
-            onTransactionSelect={(id) =>
-              devtoolsState.selectedTransaction(id)
-            }
+            onTransactionSelect={(id) => devtoolsState.selectedTransaction(id)}
           />
         </TabsContent>
       </Tabs>

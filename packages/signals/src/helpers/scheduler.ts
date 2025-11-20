@@ -10,7 +10,8 @@
 import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { PENDING, DIRTY, CLEAN, DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } = CONSTANTS;
+const { PENDING, DIRTY, CLEAN, DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } =
+  CONSTANTS;
 
 // Predefined status combinations for scheduled nodes (effects)
 const SCHEDULED_CLEAN = CONSUMER | SCHEDULED | CLEAN;

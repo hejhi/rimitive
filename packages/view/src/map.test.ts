@@ -11,7 +11,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestEnv, MockElement, getTextContent, MockRendererConfig } from './test-utils';
+import {
+  createTestEnv,
+  MockElement,
+  getTextContent,
+  MockRendererConfig,
+} from './test-utils';
 import { Map } from './map';
 import { El } from './el';
 
@@ -50,7 +55,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -70,7 +75,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -86,7 +91,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -108,7 +113,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -133,7 +138,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -160,7 +165,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -185,7 +190,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -215,7 +220,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -247,7 +252,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -274,7 +279,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -301,7 +306,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -331,7 +336,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -358,7 +363,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -385,7 +390,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -412,7 +417,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -442,7 +447,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -473,7 +478,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -504,7 +509,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -537,7 +542,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -571,7 +576,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -580,7 +585,14 @@ describe('map() - User-facing behavior', () => {
       // LIS in middle: [A,B,C,D,E,F] → [F,B,C,D,A,E]
       // LIS: [B,C,D] (indices 1,2,3), A and F move before, E moves after
       const current = items();
-      items([current[5]!, current[1]!, current[2]!, current[3]!, current[0]!, current[4]!]);
+      items([
+        current[5]!,
+        current[1]!,
+        current[2]!,
+        current[3]!,
+        current[0]!,
+        current[4]!,
+      ]);
 
       expect(ul.children.length).toBe(6);
       expect(getTextContent(ul.children[0] as MockElement)).toBe('F');
@@ -607,7 +619,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -617,7 +629,15 @@ describe('map() - User-facing behavior', () => {
       // Non-LIS: [B,D,F] need to move
       // New order: [A,F,D,C,B,E,G]
       const current = items();
-      items([current[0]!, current[5]!, current[3]!, current[2]!, current[1]!, current[4]!, current[6]!]);
+      items([
+        current[0]!,
+        current[5]!,
+        current[3]!,
+        current[2]!,
+        current[1]!,
+        current[4]!,
+        current[6]!,
+      ]);
 
       expect(ul.children.length).toBe(7);
       expect(getTextContent(ul.children[0] as MockElement)).toBe('A');
@@ -644,7 +664,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -679,7 +699,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -709,7 +729,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -738,13 +758,16 @@ describe('map() - User-facing behavior', () => {
       const { el, map, signal } = setup();
 
       const items = signal(
-        Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `Item ${i}` }))
+        Array.from({ length: 100 }, (_, i) => ({
+          id: i + 1,
+          name: `Item ${i}`,
+        }))
       );
 
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -770,7 +793,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -797,14 +820,12 @@ describe('map() - User-facing behavior', () => {
       const mode = signal<Mode>('loading');
 
       const view = el.method('div')(
-        map(
-          () => [mode()]
-        )((modeSignal) => {
-            const m = modeSignal();
-            if (m === 'loading') return el.method('div')('Loading...');
-            if (m === 'error') return el.method('div')('Error occurred');
-            return el.method('div')('Success!');
-          })
+        map(() => [mode()])((modeSignal) => {
+          const m = modeSignal();
+          if (m === 'loading') return el.method('div')('Loading...');
+          if (m === 'error') return el.method('div')('Error occurred');
+          return el.method('div')('Success!');
+        })
       );
 
       const div = view.create().element as MockElement;
@@ -814,7 +835,9 @@ describe('map() - User-facing behavior', () => {
 
       mode('error');
       expect(div.children.length).toBe(1);
-      expect(getTextContent(div.children[0] as MockElement)).toBe('Error occurred');
+      expect(getTextContent(div.children[0] as MockElement)).toBe(
+        'Error occurred'
+      );
 
       mode('success');
       expect(div.children.length).toBe(1);
@@ -839,7 +862,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -875,7 +898,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -909,7 +932,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -945,7 +968,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -980,7 +1003,7 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) => el.method('li')(itemSignal().name))
       );
 
@@ -1016,12 +1039,14 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id  // Key function
+          (item) => item.id // Key function
         )((itemSignal) =>
-            el.method('li')(itemSignal().name)(((element) => {
-              // Simulate attaching custom state during lifecycle
-              (element as unknown as MockElement).__customState = `state-${itemSignal().id}`;
-            })))
+          el.method('li')(itemSignal().name)((element) => {
+            // Simulate attaching custom state during lifecycle
+            (element as unknown as MockElement).__customState =
+              `state-${itemSignal().id}`;
+          })
+        )
       );
 
       const ul = list.create().element as MockElement;
@@ -1055,12 +1080,13 @@ describe('map() - User-facing behavior', () => {
           () => [{ id: 1 }],
           (item) => item.id
         )(() =>
-            el.method('div')(
-              map(
-                () => [{ id: 1 }],
-                (item) => item.id
-              )(() => el.method('span')(displayValue))
-            ))
+          el.method('div')(
+            map(
+              () => [{ id: 1 }],
+              (item) => item.id
+            )(() => el.method('span')(displayValue))
+          )
+        )
       );
 
       const root = view.create().element as MockElement;
@@ -1088,18 +1114,20 @@ describe('map() - User-facing behavior', () => {
           () => [{ id: 1 }],
           (item) => item.id
         )(() =>
-            el.method('section')(
-              map(
-                () => [{ id: 1 }],
-                (item) => item.id
-              )(() =>
-                  el.method('article')(
-                    map(
-                      () => [{ id: 1 }],
-                      (item) => item.id
-                    )(() => el.method('span')(value))
-                  ))
-            ))
+          el.method('section')(
+            map(
+              () => [{ id: 1 }],
+              (item) => item.id
+            )(() =>
+              el.method('article')(
+                map(
+                  () => [{ id: 1 }],
+                  (item) => item.id
+                )(() => el.method('span')(value))
+              )
+            )
+          )
+        )
       );
 
       const root = view.create().element as MockElement;
@@ -1128,29 +1156,29 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id
+          (item) => item.id
         )((itemSignal) => {
-            renderCount++;
-            // This read should NOT become a dependency of map's effect
-            // because render() is called untracked
-            outerState(); // Read but don't track
-            return el.method('li')(itemSignal().name);
-          })
+          renderCount++;
+          // This read should NOT become a dependency of map's effect
+          // because render() is called untracked
+          outerState(); // Read but don't track
+          return el.method('li')(itemSignal().name);
+        })
       );
 
       list.create();
-      expect(renderCount).toBe(1);  // Initial render
+      expect(renderCount).toBe(1); // Initial render
 
       // Change outerState - should NOT trigger map reconciliation
       outerState('changed');
-      expect(renderCount).toBe(1);  // Still 1 - not re-rendered
+      expect(renderCount).toBe(1); // Still 1 - not re-rendered
 
       // Change items - SHOULD trigger map reconciliation for new items only
       items([
         { id: 1, name: 'Item 1' },
         { id: 2, name: 'Item 2' },
       ]);
-      expect(renderCount).toBe(2);  // Re-rendered once for new item
+      expect(renderCount).toBe(2); // Re-rendered once for new item
     });
 
     it('should not track outer reactive state in lifecycle callbacks', () => {
@@ -1165,38 +1193,38 @@ describe('map() - User-facing behavior', () => {
       const list = el.method('ul')(
         map(
           items,
-          item => item.id
+          (item) => item.id
         )((itemSignal) => {
-            renderCount++;
-            return el.method('li')(itemSignal().name)(
-              // Lifecycle callback reads a signal
-              () => {
-                lifecycleCallCount++;
-                // This read should NOT become a dependency of map's effect
-                const value = outerState();
-                // Just read the signal - we don't need to use the value
-                void value;
-              }
-            );
-          })
+          renderCount++;
+          return el.method('li')(itemSignal().name)(
+            // Lifecycle callback reads a signal
+            () => {
+              lifecycleCallCount++;
+              // This read should NOT become a dependency of map's effect
+              const value = outerState();
+              // Just read the signal - we don't need to use the value
+              void value;
+            }
+          );
+        })
       );
 
       list.create();
-      expect(renderCount).toBe(1);  // Initial render
-      expect(lifecycleCallCount).toBe(1);  // Initial lifecycle
+      expect(renderCount).toBe(1); // Initial render
+      expect(lifecycleCallCount).toBe(1); // Initial lifecycle
 
       // Change outerState - should NOT trigger map reconciliation or re-create elements
       outerState('changed-value');
-      expect(renderCount).toBe(1);  // Still 1 - element not recreated
-      expect(lifecycleCallCount).toBe(1);  // Still 1 - lifecycle not re-run
+      expect(renderCount).toBe(1); // Still 1 - element not recreated
+      expect(lifecycleCallCount).toBe(1); // Still 1 - lifecycle not re-run
 
       // Change items - SHOULD trigger map reconciliation for new items only
       items([
         { id: 1, name: 'Item 1' },
         { id: 2, name: 'Item 2' },
       ]);
-      expect(renderCount).toBe(2);  // Only new item rendered
-      expect(lifecycleCallCount).toBe(2);  // Only new item's lifecycle
+      expect(renderCount).toBe(2); // Only new item rendered
+      expect(lifecycleCallCount).toBe(2); // Only new item's lifecycle
     });
   });
 
@@ -1211,9 +1239,7 @@ describe('map() - User-facing behavior', () => {
       ]);
 
       const container = el.method('div')(
-        map(items)((item) =>
-          el.method('div')(`Item ${item().name}`)
-        )
+        map(items)((item) => el.method('div')(`Item ${item().name}`))
       );
 
       // Should throw when trying to create and attach (which runs the effect)
@@ -1228,9 +1254,7 @@ describe('map() - User-facing behavior', () => {
       const items = signal([1, 2, 3]);
 
       const container = el.method('div')(
-        map(items)((item) =>
-          el.method('div')(`Item ${item()}`)
-        )
+        map(items)((item) => el.method('div')(`Item ${item()}`))
       );
 
       // Should NOT throw - primitives are valid keys
@@ -1246,9 +1270,10 @@ describe('map() - User-facing behavior', () => {
       ]);
 
       const container = el.method('div')(
-        map(items, (item) => item.id)((item) =>
-          el.method('div')(`Item ${item().name}`)
-        )
+        map(
+          items,
+          (item) => item.id
+        )((item) => el.method('div')(`Item ${item().name}`))
       );
 
       // Should NOT throw - key function provided

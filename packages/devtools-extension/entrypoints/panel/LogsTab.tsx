@@ -52,7 +52,7 @@ function renderLogEntry(entry: LogEntry): React.ReactNode {
   const name = entry.nodeName || entry.nodeId || 'anonymous';
   const eventType = entry.eventType;
   const category = entry.category;
-  
+
   // Get dynamic colors for this category
   const colors = getCategoryColors(category);
 

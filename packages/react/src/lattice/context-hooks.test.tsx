@@ -14,7 +14,7 @@ describe('Lattice Context Hooks', () => {
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
       ];
-      
+
       const { result, unmount } = renderHook(() =>
         useLatticeContext(...mockExtensions)
       );
@@ -52,7 +52,7 @@ describe('Lattice Context Hooks', () => {
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
       ];
-      
+
       const { result, rerender } = renderHook(() =>
         useLatticeContext(...mockExtensions)
       );
@@ -75,10 +75,8 @@ describe('Lattice Context Hooks', () => {
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
       ];
-      
-      const { result } = renderHook(() =>
-        useLatticeContext(...mockExtensions)
-      );
+
+      const { result } = renderHook(() => useLatticeContext(...mockExtensions));
 
       const count = result.current.signal(0);
       const doubled = result.current.computed(() => count() * 2);
@@ -103,10 +101,8 @@ describe('Lattice Context Hooks', () => {
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
       ];
-      
-      const { result } = renderHook(() =>
-        useLatticeContext(...mockExtensions)
-      );
+
+      const { result } = renderHook(() => useLatticeContext(...mockExtensions));
 
       const a = result.current.signal(1);
       const b = result.current.signal(2);
@@ -146,9 +142,7 @@ describe('Lattice Context Hooks', () => {
         })(),
       };
 
-      const { result } = renderHook(() =>
-        useLatticeContext(counterExtension)
-      );
+      const { result } = renderHook(() => useLatticeContext(counterExtension));
 
       // Should have the custom extension method
       expect(typeof result.current.counter).toBe('object');

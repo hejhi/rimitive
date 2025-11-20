@@ -1,4 +1,8 @@
-import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import type {
+  LatticeExtension,
+  InstrumentationContext,
+  ExtensionContext,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type {
   LifecycleCallback,
@@ -29,11 +33,10 @@ type ReactiveProps<T> = {
  */
 export type ElementProps<
   TConfig extends RendererConfig,
-  Tag extends keyof TConfig['elements']
+  Tag extends keyof TConfig['elements'],
 > = ReactiveProps<TConfig['elements'][Tag]> & {
   status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
 };
-
 
 /**
  * Options passed to el factory
@@ -43,9 +46,7 @@ export type ElementProps<
  * - TElement: Base element type
  * - TText: Text node type
  */
-export type ElOpts<
-  TConfig extends RendererConfig,
-> = {
+export type ElOpts<TConfig extends RendererConfig> = {
   createElementScope: CreateScopes['createElementScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
@@ -70,10 +71,8 @@ export type ElProps<TConfig extends RendererConfig> = {
  */
 export type ChildrenApplicator<
   TConfig extends RendererConfig,
-  Tag extends keyof TConfig['elements']
-> = (
-  ...children: ElRefSpecChild[]
-) => RefSpec<TConfig['elements'][Tag]>;
+  Tag extends keyof TConfig['elements'],
+> = (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
 
 /**
  * Factory return type - curried element builder
@@ -85,9 +84,7 @@ export type ChildrenApplicator<
  * Generic over:
  * - TConfig: The renderer configuration
  */
-export type ElFactory<
-  TConfig extends RendererConfig
-> = LatticeExtension<
+export type ElFactory<TConfig extends RendererConfig> = LatticeExtension<
   'el',
   {
     // Static element builder
@@ -120,7 +117,10 @@ export const El = create(
       type TElementKeys = keyof TElements;
 
       const { instrument } = props;
-      const { processChildren } = createProcessChildren<TConfig>({ scopedEffect, renderer });
+      const { processChildren } = createProcessChildren<TConfig>({
+        scopedEffect,
+        renderer,
+      });
       const { setAttribute, createElement } = renderer;
 
       /**
@@ -128,7 +128,10 @@ export const El = create(
        * Generic over El - the element type (no longer constrained to HTMLElement)
        */
       const createRefSpec = <El>(
-        createElement: (callbacks: LifecycleCallback<El>[], api?: unknown) => ElementRef<El>
+        createElement: (
+          callbacks: LifecycleCallback<El>[],
+          api?: unknown
+        ) => ElementRef<El>
       ): RefSpec<El> => {
         const lifecycleCallbacks: LifecycleCallback<El>[] = [];
 
@@ -140,10 +143,7 @@ export const El = create(
         };
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(
-          api?: unknown,
-          extensions?: TExt
-        ) => {
+        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
           const elRef = createElement(lifecycleCallbacks, api);
           // If no extensions, return the ref directly to preserve mutability
           // This is critical for FragmentRef which gets firstChild set after creation
@@ -189,7 +189,9 @@ export const El = create(
                   continue;
                 }
                 // Reactive value - wrap in effect for updates
-                scopedEffect(() => setAttribute(element, key, (val as () => unknown)()));
+                scopedEffect(() =>
+                  setAttribute(element, key, (val as () => unknown)())
+                );
               }
               processChildren(elRef, children, api);
 

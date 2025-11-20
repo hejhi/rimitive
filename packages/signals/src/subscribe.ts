@@ -13,7 +13,11 @@
  */
 
 import type { ScheduledNode } from './types';
-import type { ExtensionContext, InstrumentationContext, LatticeExtension } from '@lattice/lattice';
+import type {
+  ExtensionContext,
+  InstrumentationContext,
+  LatticeExtension,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
@@ -31,7 +35,7 @@ export interface SubscribeFunction {
   <T = unknown>(
     source: () => T,
     callback: SubscribeCallback<T>
-  ): UnsubscribeFunction
+  ): UnsubscribeFunction;
 }
 
 export type SubscribeProps = {
@@ -53,9 +57,7 @@ export type { Scheduler } from './helpers/scheduler';
 
 export const Subscribe = create(
   ({ track, detachAll, dispose: disposeNode }: SubscribeOpts) =>
-    (
-      props?: SubscribeProps
-    ): SubscribeFactory => {
+    (props?: SubscribeProps): SubscribeFactory => {
       const { instrument } = props ?? {};
       const detachDeps = (node: ScheduledNode) => {
         const deps = node.dependencies;

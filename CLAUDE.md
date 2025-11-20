@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build and Development Commands
 
 ### Core Development Scripts
+
 ```bash
 # Build all packages
 pnpm build
@@ -34,6 +35,7 @@ pnpm --filter @lattice/signals test -- "should handle deep dependency"
 ```
 
 ### Benchmarking
+
 ```bash
 # Run all benchmarks
 pnpm bench
@@ -48,11 +50,13 @@ timeout 60 pnpm bench chain-deep
 ## Architecture Overview
 
 ### Package Structure
+
 The codebase is organized as a lerna monorepo using pnpm workspaces. The core packages are located in @packages/. Reference packages (such as the source code for `alien-signals` and `preact-signas`) are located in `/reference-packages`.
 
 ### Testing Strategy
 
 Tests are co-located with source files:
+
 - Unit tests: `*.test.ts` files next to implementation
 - Integration tests in `api.test.ts`
 - Memory leak tests in `detached-memory.test.ts`
@@ -61,6 +65,7 @@ Tests are co-located with source files:
 ## Git Workflow
 
 Follow conventional commits:
+
 - `fix:` - Bug fixes
 - `feat:` - New features
 - `docs:` - Documentation
@@ -68,6 +73,7 @@ Follow conventional commits:
 - `test:` - Test changes
 
 Create changesets for releases:
+
 ```bash
 pnpm changeset
 ```
@@ -79,14 +85,15 @@ pnpm changeset
 **Creating a workflow**: Place a markdown file in `.claude/workflows/` with YAML frontmatter defining stages. Each stage specifies a `name`, `command` (slash command to run), and `description`. The workflow runs via `/workflow [workflow-name]` and tracks completion by examining typical outputs from each command.
 
 Example structure:
+
 ```yaml
 ---
-name: "My Workflow"
-description: "What this workflow does"
+name: 'My Workflow'
+description: 'What this workflow does'
 stages:
-  - name: "First Stage"
-    command: "/some-command"
-    description: "What this stage accomplishes"
+  - name: 'First Stage'
+    command: '/some-command'
+    description: 'What this stage accomplishes'
 ---
 ```
 
@@ -105,10 +112,12 @@ An important note on the **direct and honest** principle:
 **NEVER REVERT, RESTORE, OR ABANDON DURING AN IMPLEMENTATION**.
 
 When you inevitably run into roadblocks during implementation, and you're considering reverting, restoring, or changing strategies, do one or more of the below:
+
 - **ANALYZE AND THINK DEEPLY**: if you don't explicitly understand the fundamental problem underlying the roadblock, the top priority is to figure it out and synthesize it into detailed, actionable knowledge
 - **THINK HARDER**: re-assess the roadblock with this added knowledge and strategize how you can iterate through it
 
 When all else fails, and you determine that either:
+
 - the approach is fundamentally flawed
 - there's too much ambiguity to continue iterating
 - you can't get to the root of the problem

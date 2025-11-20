@@ -29,7 +29,11 @@ import { type ComputedFunction } from '@lattice/signals/computed';
 
 const ITERATIONS = 10000;
 const latticeAPI = createApi();
-const { signal: latticeSignal, computed: latticeComputed, batch: latticeBatch } = latticeAPI;
+const {
+  signal: latticeSignal,
+  computed: latticeComputed,
+  batch: latticeBatch,
+} = latticeAPI;
 
 interface BenchState {
   get(name: 'signals'): number;
@@ -39,83 +43,93 @@ interface BenchState {
 group('Batch Multiple Updates - Scaling', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice BATCHED - $signals signals', function* (state: BenchState) {
-        const signalCount = state.get('signals');
-        const signals = Array.from({ length: signalCount }, () => latticeSignal(0));
-        
-        // Multiple layers of computeds to show cascade effects
-        const partialSums: ComputedFunction<number>[] = [];
-        for (let i = 0; i < signalCount; i += 2) {
-          const s1 = signals[i]!;
-          const s2 = signals[i + 1] || signals[i]!;
-          partialSums.push(latticeComputed(() => s1() + s2()));
+      bench(
+        'Lattice BATCHED - $signals signals',
+        function* (state: BenchState) {
+          const signalCount = state.get('signals');
+          const signals = Array.from({ length: signalCount }, () =>
+            latticeSignal(0)
+          );
+
+          // Multiple layers of computeds to show cascade effects
+          const partialSums: ComputedFunction<number>[] = [];
+          for (let i = 0; i < signalCount; i += 2) {
+            const s1 = signals[i]!;
+            const s2 = signals[i + 1] || signals[i]!;
+            partialSums.push(latticeComputed(() => s1() + s2()));
+          }
+
+          const totalSum = latticeComputed(() =>
+            partialSums.reduce((acc, ps) => acc + ps(), 0)
+          );
+
+          const final = latticeComputed(() => totalSum() * 2);
+
+          yield () => {
+            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+              latticeBatch(() => {
+                signals.forEach((s, idx) => {
+                  s(i * (idx + 1));
+                });
+              });
+              void final();
+            }
+          };
         }
-        
-        const totalSum = latticeComputed(() => 
-          partialSums.reduce((acc, ps) => acc + ps(), 0)
-        );
-        
-        const final = latticeComputed(() => totalSum() * 2);
-        
-        yield () => {
-          for (let i = 0; i < ITERATIONS / signalCount; i++) {
-            latticeBatch(() => {
+      ).args('signals', [10, 20, 40]);
+
+      bench(
+        'Lattice UNBATCHED - $signals signals',
+        function* (state: BenchState) {
+          const signalCount = state.get('signals');
+          const signals = Array.from({ length: signalCount }, () =>
+            latticeSignal(0)
+          );
+
+          const partialSums: ComputedFunction<number>[] = [];
+          for (let i = 0; i < signalCount; i += 2) {
+            const s1 = signals[i]!;
+            const s2 = signals[i + 1] || signals[i]!;
+            partialSums.push(latticeComputed(() => s1() + s2()));
+          }
+
+          const totalSum = latticeComputed(() =>
+            partialSums.reduce((acc, ps) => acc + ps(), 0)
+          );
+
+          const final = latticeComputed(() => totalSum() * 2);
+
+          yield () => {
+            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+              // NO BATCHING - cascade of recomputations
               signals.forEach((s, idx) => {
                 s(i * (idx + 1));
               });
-            });
-            void final();
-          }
-        };
-      })
-      .args('signals', [10, 20, 40]);
-      
-      bench('Lattice UNBATCHED - $signals signals', function* (state: BenchState) {
-        const signalCount = state.get('signals');
-        const signals = Array.from({ length: signalCount }, () => latticeSignal(0));
-        
-        const partialSums: ComputedFunction<number>[] = [];
-        for (let i = 0; i < signalCount; i += 2) {
-          const s1 = signals[i]!;
-          const s2 = signals[i + 1] || signals[i]!;
-          partialSums.push(latticeComputed(() => s1() + s2()));
+              void final();
+            }
+          };
         }
-        
-        const totalSum = latticeComputed(() => 
-          partialSums.reduce((acc, ps) => acc + ps(), 0)
-        );
-        
-        const final = latticeComputed(() => totalSum() * 2);
-        
-        yield () => {
-          for (let i = 0; i < ITERATIONS / signalCount; i++) {
-            // NO BATCHING - cascade of recomputations
-            signals.forEach((s, idx) => {
-              s(i * (idx + 1));
-            });
-            void final();
-          }
-        };
-      })
-      .args('signals', [10, 20, 40]);
-    
+      ).args('signals', [10, 20, 40]);
+
       bench('Preact BATCHED - $signals signals', function* (state: BenchState) {
         const signalCount = state.get('signals');
-        const signals = Array.from({ length: signalCount }, () => preactSignal(0));
-        
+        const signals = Array.from({ length: signalCount }, () =>
+          preactSignal(0)
+        );
+
         const partialSums: ReturnType<typeof preactComputed<number>>[] = [];
         for (let i = 0; i < signalCount; i += 2) {
           const s1 = signals[i]!;
           const s2 = signals[i + 1] || signals[i]!;
           partialSums.push(preactComputed(() => s1.value + s2.value));
         }
-        
-        const totalSum = preactComputed(() => 
+
+        const totalSum = preactComputed(() =>
           partialSums.reduce((acc, ps) => acc + ps.value, 0)
         );
-        
+
         const final = preactComputed(() => totalSum.value * 2);
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS / signalCount; i++) {
             preactBatch(() => {
@@ -126,54 +140,59 @@ group('Batch Multiple Updates - Scaling', () => {
             void final.value;
           }
         };
-      })
-      .args('signals', [10, 20, 40]);
-      
-      bench('Preact UNBATCHED - $signals signals', function* (state: BenchState) {
-        const signalCount = state.get('signals');
-        const signals = Array.from({ length: signalCount }, () => preactSignal(0));
-        
-        const partialSums: ReturnType<typeof preactComputed<number>>[] = [];
-        for (let i = 0; i < signalCount; i += 2) {
-          const s1 = signals[i]!;
-          const s2 = signals[i + 1] || signals[i]!;
-          partialSums.push(preactComputed(() => s1.value + s2.value));
-        }
-        
-        const totalSum = preactComputed(() => 
-          partialSums.reduce((acc, ps) => acc + ps.value, 0)
-        );
-        
-        const final = preactComputed(() => totalSum.value * 2);
-        
-        yield () => {
-          for (let i = 0; i < ITERATIONS / signalCount; i++) {
-            signals.forEach((s, idx) => {
-              s.value = i * (idx + 1);
-            });
-            void final.value;
+      }).args('signals', [10, 20, 40]);
+
+      bench(
+        'Preact UNBATCHED - $signals signals',
+        function* (state: BenchState) {
+          const signalCount = state.get('signals');
+          const signals = Array.from({ length: signalCount }, () =>
+            preactSignal(0)
+          );
+
+          const partialSums: ReturnType<typeof preactComputed<number>>[] = [];
+          for (let i = 0; i < signalCount; i += 2) {
+            const s1 = signals[i]!;
+            const s2 = signals[i + 1] || signals[i]!;
+            partialSums.push(preactComputed(() => s1.value + s2.value));
           }
-        };
-      })
-      .args('signals', [10, 20, 40]);
-    
+
+          const totalSum = preactComputed(() =>
+            partialSums.reduce((acc, ps) => acc + ps.value, 0)
+          );
+
+          const final = preactComputed(() => totalSum.value * 2);
+
+          yield () => {
+            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+              signals.forEach((s, idx) => {
+                s.value = i * (idx + 1);
+              });
+              void final.value;
+            }
+          };
+        }
+      ).args('signals', [10, 20, 40]);
+
       bench('Alien BATCHED - $signals signals', function* (state: BenchState) {
         const signalCount = state.get('signals');
-        const signals = Array.from({ length: signalCount }, () => alienSignal(0));
-        
+        const signals = Array.from({ length: signalCount }, () =>
+          alienSignal(0)
+        );
+
         const partialSums: ReturnType<typeof alienComputed<number>>[] = [];
         for (let i = 0; i < signalCount; i += 2) {
           const s1 = signals[i]!;
           const s2 = signals[i + 1] || signals[i]!;
           partialSums.push(alienComputed(() => s1() + s2()));
         }
-        
-        const totalSum = alienComputed(() => 
+
+        const totalSum = alienComputed(() =>
           partialSums.reduce((acc, ps) => acc + ps(), 0)
         );
-        
+
         const final = alienComputed(() => totalSum() * 2);
-        
+
         yield () => {
           for (let i = 0; i < ITERATIONS / signalCount; i++) {
             alienStartBatch();
@@ -184,36 +203,39 @@ group('Batch Multiple Updates - Scaling', () => {
             void final();
           }
         };
-      })
-      .args('signals', [10, 20, 40]);
-      
-      bench('Alien UNBATCHED - $signals signals', function* (state: BenchState) {
-        const signalCount = state.get('signals');
-        const signals = Array.from({ length: signalCount }, () => alienSignal(0));
-        
-        const partialSums: ReturnType<typeof alienComputed<number>>[] = [];
-        for (let i = 0; i < signalCount; i += 2) {
-          const s1 = signals[i]!;
-          const s2 = signals[i + 1] || signals[i]!;
-          partialSums.push(alienComputed(() => s1() + s2()));
-        }
-        
-        const totalSum = alienComputed(() => 
-          partialSums.reduce((acc, ps) => acc + ps(), 0)
-        );
-        
-        const final = alienComputed(() => totalSum() * 2);
-        
-        yield () => {
-          for (let i = 0; i < ITERATIONS / signalCount; i++) {
-            signals.forEach((s, idx) => {
-              s(i * (idx + 1));
-            });
-            void final();
+      }).args('signals', [10, 20, 40]);
+
+      bench(
+        'Alien UNBATCHED - $signals signals',
+        function* (state: BenchState) {
+          const signalCount = state.get('signals');
+          const signals = Array.from({ length: signalCount }, () =>
+            alienSignal(0)
+          );
+
+          const partialSums: ReturnType<typeof alienComputed<number>>[] = [];
+          for (let i = 0; i < signalCount; i += 2) {
+            const s1 = signals[i]!;
+            const s2 = signals[i + 1] || signals[i]!;
+            partialSums.push(alienComputed(() => s1() + s2()));
           }
-        };
-      })
-      .args('signals', [10, 20, 40]);
+
+          const totalSum = alienComputed(() =>
+            partialSums.reduce((acc, ps) => acc + ps(), 0)
+          );
+
+          const final = alienComputed(() => totalSum() * 2);
+
+          yield () => {
+            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+              signals.forEach((s, idx) => {
+                s(i * (idx + 1));
+              });
+              void final();
+            }
+          };
+        }
+      ).args('signals', [10, 20, 40]);
     });
   });
 });

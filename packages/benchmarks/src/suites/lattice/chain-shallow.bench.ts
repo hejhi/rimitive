@@ -49,15 +49,17 @@ group('Computed Chain - Shallow (Wide)', () => {
         const intermediates: (() => number)[] = [];
         for (let i = 0; i < width; i++) {
           const index = i;
-          intermediates.push(latticeComputed(() => {
-            const val = source();
-            // Non-trivial computation
-            let result = val;
-            for (let j = 0; j < 3; j++) {
-              result = ((result * 31) + index + j) % 1000007;
-            }
-            return result;
-          }));
+          intermediates.push(
+            latticeComputed(() => {
+              const val = source();
+              // Non-trivial computation
+              let result = val;
+              for (let j = 0; j < 3; j++) {
+                result = (result * 31 + index + j) % 1000007;
+              }
+              return result;
+            })
+          );
         }
 
         // Level 2: Single computed reading all intermediates
@@ -79,8 +81,7 @@ group('Computed Chain - Shallow (Wide)', () => {
             void final();
           }
         };
-      })
-      .args('width', [10, 20, 50, 100]);
+      }).args('width', [10, 20, 50, 100]);
 
       bench('Preact - $width wide', function* (state: BenchState) {
         const width = state.get('width');
@@ -89,14 +90,16 @@ group('Computed Chain - Shallow (Wide)', () => {
         const intermediates: ReadonlySignal<number>[] = [];
         for (let i = 0; i < width; i++) {
           const index = i;
-          intermediates.push(preactComputed(() => {
-            const val = source.value;
-            let result = val;
-            for (let j = 0; j < 3; j++) {
-              result = ((result * 31) + index + j) % 1000007;
-            }
-            return result;
-          }));
+          intermediates.push(
+            preactComputed(() => {
+              const val = source.value;
+              let result = val;
+              for (let j = 0; j < 3; j++) {
+                result = (result * 31 + index + j) % 1000007;
+              }
+              return result;
+            })
+          );
         }
 
         const final = preactComputed(() => {
@@ -117,8 +120,7 @@ group('Computed Chain - Shallow (Wide)', () => {
             void final.value;
           }
         };
-      })
-      .args('width', [10, 20, 50, 100]);
+      }).args('width', [10, 20, 50, 100]);
 
       bench('Alien - $width wide', function* (state: BenchState) {
         const width = state.get('width');
@@ -127,14 +129,16 @@ group('Computed Chain - Shallow (Wide)', () => {
         const intermediates: (() => number)[] = [];
         for (let i = 0; i < width; i++) {
           const index = i;
-          intermediates.push(alienComputed(() => {
-            const val = source();
-            let result = val;
-            for (let j = 0; j < 3; j++) {
-              result = ((result * 31) + index + j) % 1000007;
-            }
-            return result;
-          }));
+          intermediates.push(
+            alienComputed(() => {
+              const val = source();
+              let result = val;
+              for (let j = 0; j < 3; j++) {
+                result = (result * 31 + index + j) % 1000007;
+              }
+              return result;
+            })
+          );
         }
 
         const final = alienComputed(() => {
@@ -155,8 +159,7 @@ group('Computed Chain - Shallow (Wide)', () => {
             void final();
           }
         };
-      })
-      .args('width', [10, 20, 50, 100]);
+      }).args('width', [10, 20, 50, 100]);
     });
   });
 });

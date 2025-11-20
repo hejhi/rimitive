@@ -35,7 +35,9 @@ export function instrumentMap<TBaseElement>(
     const renderApplicator = method(items as () => T[], keyFn);
 
     // Wrap the render applicator
-    return (render: (itemSignal: Reactive<T>) => TSpec): RefSpec<TBaseElement> => {
+    return (
+      render: (itemSignal: Reactive<T>) => TSpec
+    ): RefSpec<TBaseElement> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -73,7 +75,10 @@ export function instrumentMap<TBaseElement>(
 
       instrumentedRefSpec.status = STATUS_REF_SPEC;
       instrumentedRefSpec.create = (api, extensions) => {
-        const fragmentRef = originalCreate(api, extensions) as FragmentRef<TBaseElement>;
+        const fragmentRef = originalCreate(
+          api,
+          extensions
+        ) as FragmentRef<TBaseElement>;
 
         // TODO: Add instrumentation for fragment initialization
         // (fragments no longer have attach() - initialized in processChildren)

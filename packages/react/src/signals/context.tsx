@@ -27,9 +27,7 @@ export function SignalProvider({ api, children }: SignalProviderProps) {
   }, [api]);
 
   return (
-    <SignalContext.Provider value={api}>
-      {children}
-    </SignalContext.Provider>
+    <SignalContext.Provider value={api}>{children}</SignalContext.Provider>
   );
 }
 
@@ -39,7 +37,7 @@ export function useSignalAPI(): SignalAPI {
   if (!api) {
     throw new Error(
       'useSignalAPI must be used within a SignalProvider. ' +
-      'Make sure to wrap your app or component tree with <SignalProvider api={...}>.'
+        'Make sure to wrap your app or component tree with <SignalProvider api={...}>.'
     );
   }
   return api;

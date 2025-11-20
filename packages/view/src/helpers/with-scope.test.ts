@@ -30,7 +30,8 @@ describe('createElementScope', () => {
     });
 
     it('registers scope when disposables are added', () => {
-      const { createElementScope, onCleanup, getElementScope } = createTestScopes();
+      const { createElementScope, onCleanup, getElementScope } =
+        createTestScopes();
       const element = createMockElement();
 
       const scope = createElementScope(element, () => {
@@ -45,7 +46,8 @@ describe('createElementScope', () => {
 
   describe('scope hierarchy', () => {
     it('creates parent-child hierarchy when nested', () => {
-      const { createElementScope, onCleanup, disposeScope } = createTestScopes();
+      const { createElementScope, onCleanup, disposeScope } =
+        createTestScopes();
 
       const parentElement = createMockElement();
       const childElement = createMockElement();
@@ -98,7 +100,8 @@ describe('createElementScope', () => {
 
   describe('scope reuse', () => {
     it('can look up existing scope from element', () => {
-      const { createElementScope, onCleanup, getElementScope } = createTestScopes();
+      const { createElementScope, onCleanup, getElementScope } =
+        createTestScopes();
       const element = createMockElement();
 
       // First call creates scope
@@ -118,7 +121,12 @@ describe('createElementScope', () => {
 
   describe('integration with effects', () => {
     it('enables automatic disposal tracking pattern', () => {
-      const { createElementScope, scopedEffect, disposeScope, getElementScope } = createTestScopes();
+      const {
+        createElementScope,
+        scopedEffect,
+        disposeScope,
+        getElementScope,
+      } = createTestScopes();
 
       const element = createMockElement();
       const effectCleanup = vi.fn();

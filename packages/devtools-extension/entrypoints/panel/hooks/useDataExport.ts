@@ -1,8 +1,5 @@
 import { useCallback } from 'react';
-import type {
-  ContextInfo,
-  LogEntry,
-} from '../store/types';
+import type { ContextInfo, LogEntry } from '../store/types';
 import { devtoolsState } from '../store/devtoolsCtx';
 
 interface ImportData {

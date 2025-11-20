@@ -36,9 +36,7 @@ const terserMangleInternals = (): Plugin => {
 };
 
 export default defineConfig({
-  plugins: [
-    terserMangleInternals(),
-  ],
+  plugins: [terserMangleInternals()],
   esbuild: {
     minifyIdentifiers: true,
     minifySyntax: true,
@@ -63,10 +61,7 @@ export default defineConfig({
           __dirname,
           'src/helpers/addEventListener.ts'
         ),
-        'helpers/index': resolve(
-          __dirname,
-          'src/helpers/index.ts'
-        ),
+        'helpers/index': resolve(__dirname, 'src/helpers/index.ts'),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),
       },

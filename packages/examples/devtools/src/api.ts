@@ -50,7 +50,7 @@ const createInstrumentedSignals = () => {
   );
 
   return signals;
-}
+};
 
 const createInstrumentedViewApi = () => {
   const signals = createInstrumentedSignals();
@@ -78,7 +78,7 @@ const createInstrumentedViewApi = () => {
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(views),
     use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
-}
+};
 
 export const { api, signals, mount, use, views } = createInstrumentedViewApi();
 

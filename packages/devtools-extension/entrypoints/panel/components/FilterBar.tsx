@@ -54,10 +54,7 @@ export function FilterBar({
         </Select>
       )}
 
-      <Select
-        value={filterType}
-        onValueChange={onFilterTypeChange}
-      >
+      <Select value={filterType} onValueChange={onFilterTypeChange}>
         <SelectTrigger className="h-8 w-[140px] text-xs">
           <SelectValue />
         </SelectTrigger>

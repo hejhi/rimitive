@@ -138,7 +138,9 @@ describe('Text Node Hydration', () => {
 
 describe('Fragment Range Hydration', () => {
   it('should detect and enter fragment range', () => {
-    const container = setupHTML('<div><!--fragment-start--><span>1</span><span>2</span><!--fragment-end--></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><span>1</span><span>2</span><!--fragment-end--></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -149,7 +151,9 @@ describe('Fragment Range Hydration', () => {
   });
 
   it('should hydrate multiple items in fragment range', () => {
-    const container = setupHTML('<div><!--fragment-start--><span>a</span><span>b</span><span>c</span><!--fragment-end--></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><span>a</span><span>b</span><span>c</span><!--fragment-end--></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -172,7 +176,9 @@ describe('Fragment Range Hydration', () => {
   });
 
   it('should skip fragment marker comments when counting children', () => {
-    const container = setupHTML('<div><p>before</p><!--fragment-start--><span>inside</span><!--fragment-end--><p>after</p></div>');
+    const container = setupHTML(
+      '<div><p>before</p><!--fragment-start--><span>inside</span><!--fragment-end--><p>after</p></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -190,7 +196,9 @@ describe('Fragment Range Hydration', () => {
   });
 
   it('should handle fragments that span to end of parent', () => {
-    const container = setupHTML('<div><!--fragment-start--><span>a</span><span>b</span><!--fragment-end--></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><span>a</span><span>b</span><!--fragment-end--></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -206,7 +214,9 @@ describe('Fragment Range Hydration', () => {
   });
 
   it('should auto-exit fragment range after last item', () => {
-    const container = setupHTML('<div><!--fragment-start--><span>1</span><!--fragment-end--><p>after</p></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><span>1</span><!--fragment-end--><p>after</p></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -227,7 +237,9 @@ describe('Fragment Range Hydration', () => {
 
 describe('Nested Fragment Ranges', () => {
   it('should handle nested fragment ranges', () => {
-    const container = setupHTML('<div><!--fragment-start--><section><!--fragment-start--><span>inner</span><!--fragment-end--></section><!--fragment-end--></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><section><!--fragment-start--><span>inner</span><!--fragment-end--></section><!--fragment-end--></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -239,7 +251,9 @@ describe('Nested Fragment Ranges', () => {
   });
 
   it('should exit nested ranges in correct order', () => {
-    const container = setupHTML('<div><!--fragment-start--><section><!--fragment-start--><span>a</span><span>b</span><!--fragment-end--></section><section><!--fragment-start--><span>c</span><!--fragment-end--></section><!--fragment-end--><p>after</p></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><section><!--fragment-start--><span>a</span><span>b</span><!--fragment-end--></section><section><!--fragment-start--><span>c</span><!--fragment-end--></section><!--fragment-end--><p>after</p></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -350,9 +364,14 @@ describe('Attribute and Event Handling', () => {
     const button = renderer.createElement('button');
 
     let clicked = false;
-    const cleanup = renderer.addEventListener(button, 'click', () => {
-      clicked = true;
-    }, {});
+    const cleanup = renderer.addEventListener(
+      button,
+      'click',
+      () => {
+        clicked = true;
+      },
+      {}
+    );
 
     button.click();
     expect(clicked).toBe(true);
@@ -371,7 +390,9 @@ describe('Attribute and Event Handling', () => {
 
 describe('Complex Hydration Scenarios', () => {
   it('should hydrate deeply nested structure', () => {
-    const container = setupHTML('<div><section><article><h1>Title</h1><p>Content</p></article></section></div>');
+    const container = setupHTML(
+      '<div><section><article><h1>Title</h1><p>Content</p></article></section></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -390,7 +411,9 @@ describe('Complex Hydration Scenarios', () => {
   });
 
   it('should hydrate mixed content with fragments and elements', () => {
-    const container = setupHTML('<div><header>Header</header><!--fragment-start--><section>Section 1</section><section>Section 2</section><!--fragment-end--><footer>Footer</footer></div>');
+    const container = setupHTML(
+      '<div><header>Header</header><!--fragment-start--><section>Section 1</section><section>Section 2</section><!--fragment-end--><footer>Footer</footer></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -417,7 +440,9 @@ describe('Complex Hydration Scenarios', () => {
   });
 
   it('should handle fragment with single element', () => {
-    const container = setupHTML('<div><!--fragment-start--><span>solo</span><!--fragment-end--></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><span>solo</span><!--fragment-end--></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');
@@ -460,7 +485,9 @@ describe('Hydration Mismatch Errors', () => {
   });
 
   it('should throw descriptive error on element type mismatch', () => {
-    const container = setupHTML('<div><!--fragment-start--><button>wrong</button><!--fragment-end--></div>');
+    const container = setupHTML(
+      '<div><!--fragment-start--><button>wrong</button><!--fragment-end--></div>'
+    );
     const renderer = createDOMHydrationRenderer(container);
 
     renderer.createElement('div');

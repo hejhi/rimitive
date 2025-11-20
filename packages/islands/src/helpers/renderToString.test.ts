@@ -58,7 +58,6 @@ function createFragmentRef(children: NodeRef<unknown>[]): FragmentRef<unknown> {
   };
 }
 
-
 /**
  * Create an element ref without outerHTML (invalid)
  */
@@ -94,7 +93,9 @@ describe('Element Rendering', () => {
   });
 
   it('should render element with attributes', () => {
-    const element = createElementRef('<button type="button" disabled>Click</button>');
+    const element = createElementRef(
+      '<button type="button" disabled>Click</button>'
+    );
     const result = renderToString(element);
 
     expect(result).toBe('<button type="button" disabled>Click</button>');
@@ -110,8 +111,12 @@ describe('Element Rendering', () => {
   it('should throw error when element lacks outerHTML', () => {
     const element = createInvalidElementRef();
 
-    expect(() => renderToString(element)).toThrow('Element does not have outerHTML property');
-    expect(() => renderToString(element)).toThrow('Are you using linkedom renderer?');
+    expect(() => renderToString(element)).toThrow(
+      'Element does not have outerHTML property'
+    );
+    expect(() => renderToString(element)).toThrow(
+      'Are you using linkedom renderer?'
+    );
   });
 });
 
@@ -159,7 +164,9 @@ describe('Fragment Rendering', () => {
 
     const result = renderToString(fragment);
 
-    expect(result).toBe('<h1>Title</h1><p>Paragraph 1</p><p>Paragraph 2</p><footer>Footer</footer>');
+    expect(result).toBe(
+      '<h1>Title</h1><p>Paragraph 1</p><p>Paragraph 2</p><footer>Footer</footer>'
+    );
   });
 });
 
@@ -179,25 +186,19 @@ describe('Nested Fragments', () => {
       createElementRef('<span>D</span>'),
     ]);
 
-    const outerFragment = createFragmentRef([
-      innerFragment1,
-      innerFragment2,
-    ]);
+    const outerFragment = createFragmentRef([innerFragment1, innerFragment2]);
 
     const result = renderToString(outerFragment);
 
-    expect(result).toBe('<span>A</span><span>B</span><span>C</span><span>D</span>');
+    expect(result).toBe(
+      '<span>A</span><span>B</span><span>C</span><span>D</span>'
+    );
   });
 
   it('should render deeply nested fragments', () => {
-    const level3 = createFragmentRef([
-      createElementRef('<i>Deep</i>'),
-    ]);
+    const level3 = createFragmentRef([createElementRef('<i>Deep</i>')]);
 
-    const level2 = createFragmentRef([
-      createElementRef('<b>Mid</b>'),
-      level3,
-    ]);
+    const level2 = createFragmentRef([createElementRef('<b>Mid</b>'), level3]);
 
     const level1 = createFragmentRef([
       createElementRef('<span>Top</span>'),
@@ -223,7 +224,9 @@ describe('Nested Fragments', () => {
 
     const result = renderToString(outerFragment);
 
-    expect(result).toBe('<h2>Header</h2><em>Italic</em><strong>Bold</strong><p>Paragraph</p>');
+    expect(result).toBe(
+      '<h2>Header</h2><em>Italic</em><strong>Bold</strong><p>Paragraph</p>'
+    );
   });
 });
 
@@ -258,7 +261,9 @@ describe('Edge Cases', () => {
   });
 
   it('should preserve HTML special characters', () => {
-    const element = createElementRef('<div>&lt;script&gt;alert("XSS")&lt;/script&gt;</div>');
+    const element = createElementRef(
+      '<div>&lt;script&gt;alert("XSS")&lt;/script&gt;</div>'
+    );
 
     const result = renderToString(element);
 
@@ -332,7 +337,7 @@ describe('Rendering Invariants', () => {
     const fragment = createFragmentRef(children);
     const result = renderToString(fragment);
 
-    const expected = children.map(c => renderToString(c)).join('');
+    const expected = children.map((c) => renderToString(c)).join('');
     expect(result).toBe(expected);
   });
 

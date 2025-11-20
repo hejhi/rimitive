@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { linkBefore, unlink, getNextElement, getPrevElement } from './linked-list';
+import {
+  linkBefore,
+  unlink,
+  getNextElement,
+  getPrevElement,
+} from './linked-list';
 import { STATUS_ELEMENT } from '../types';
 import type { ElementRef } from '../types';
 import { validateLinkedList, countLinkedNodes } from '../test-helpers';
@@ -257,7 +262,9 @@ describe('getPrevElement', () => {
 
 describe('integration tests', () => {
   it('should maintain list integrity through multiple operations', () => {
-    const nodes = Array.from({ length: 5 }, (_, i) => createElementRef(String(i)));
+    const nodes = Array.from({ length: 5 }, (_, i) =>
+      createElementRef(String(i))
+    );
 
     // Build list: 0 -> 1 -> 2 -> 3 -> 4
     // Start with first node
@@ -296,5 +303,4 @@ describe('integration tests', () => {
     expect(node1?.next).toBe(node2);
     expect(node2?.next).toBe(nodes[3]);
   });
-
 });

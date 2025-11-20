@@ -46,7 +46,10 @@ import { ReactiveAdapter } from '../../../view/dist/reactive-adapter';
 export const createIslandSSRApi = <T extends ReactiveAdapter>(signals: T) => {
   const renderer = createDOMServerRenderer();
   const viewHelpers = createSpec(renderer, signals);
-  const views = createApi(defaultExtensions<DOMServerRendererConfig>(), viewHelpers);
+  const views = createApi(
+    defaultExtensions<DOMServerRendererConfig>(),
+    viewHelpers
+  );
 
   const api = {
     ...signals,

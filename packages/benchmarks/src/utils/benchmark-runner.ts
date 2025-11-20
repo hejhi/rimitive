@@ -13,10 +13,10 @@ interface MitataOptions {
 
 export async function runBenchmark(options?: MitataOptions): Promise<unknown> {
   // Always use the default mitata format for display
-  const results = await mitataRun({ 
+  const results = await mitataRun({
     ...options,
-    format: 'mitata' // Use default display format
+    format: 'mitata', // Use default display format
   });
-  
+
   return results;
 }

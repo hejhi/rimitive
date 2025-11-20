@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  signal,
-  subscribe,
-  computed,
-  resetGlobalState,
-} from './test-setup';
+import { signal, subscribe, computed, resetGlobalState } from './test-setup';
 
 describe('Subscribe', () => {
   beforeEach(() => {

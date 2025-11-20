@@ -13,5 +13,5 @@
     { "path": "../lattice" },
     { "path": "../signals" },
     { "path": "../view" }
-  ],
+  ]
 }

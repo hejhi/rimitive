@@ -97,7 +97,10 @@ export const matchPath = (pattern: string, path: string): RouteMatch | null => {
  * @param path - URL path to match against
  * @returns RouteMatch if matched, null otherwise
  */
-export const matchPathPrefix = (pattern: string, path: string): RouteMatch | null => {
+export const matchPathPrefix = (
+  pattern: string,
+  path: string
+): RouteMatch | null => {
   // Wildcard matches any path
   if (pattern === '*') {
     return {

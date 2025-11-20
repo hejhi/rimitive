@@ -51,10 +51,7 @@ const createViewApi = () => {
 
   // Helper to mount a spec to a container element
   // Handles both FragmentRef and ElementRef properly
-  const mountToContainer = (
-    container: Element,
-    spec: RefSpec<unknown>
-  ) => {
+  const mountToContainer = (container: Element, spec: RefSpec<unknown>) => {
     const nodeRef = spec.create(api);
 
     // Check if it's a FragmentRef with attach method
@@ -90,9 +87,7 @@ const createViewApi = () => {
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
     mountToContainer,
     // Pre-bind api for type safety and convenience
-    use: <TReturn>(
-      fn: (api: ApiType) => TReturn
-    ): TReturn => fn(api),
+    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
 };
 

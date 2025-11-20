@@ -1,4 +1,8 @@
-import type { LatticeExtension, InstrumentationContext, ExtensionContext } from '@lattice/lattice';
+import type {
+  LatticeExtension,
+  InstrumentationContext,
+  ExtensionContext,
+} from '@lattice/lattice';
 import { create } from '@lattice/lattice';
 import type { ScheduledNode } from './types';
 import { GraphEdges } from './helpers/graph-edges';
@@ -31,7 +35,7 @@ export type { Scheduler } from './helpers/scheduler';
 export type EffectFactory = LatticeExtension<
   'effect',
   (fn: () => void | (() => void)) => () => void
-  >;
+>;
 
 // Effect node interface
 interface EffectNode extends ScheduledNode {
