@@ -5,13 +5,13 @@
  * Uses the headless todo-list behavior for logic
  */
 
-import { createTodoList } from '../behaviors/todo-list';
+import { useTodoList } from '../behaviors/useTodoList';
 import { TodoItem } from './TodoItem';
 import { create } from '../api';
 
 export const TodoList = create(({ el, map, signal, computed, addEventListener }) => () => {
   // Create headless behavior
-  const todoList = createTodoList({ computed, signal });
+  const todoList = useTodoList({ computed, signal });
 
   // Local UI state (input value)
   const inputValue = signal('');

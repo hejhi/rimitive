@@ -7,7 +7,7 @@
 import type { SignalFunction } from '@lattice/signals/signal';
 import type { ComputedFunction } from '@lattice/signals/computed';
 
-export interface CounterAPI {
+export interface UseCounter {
   count: SignalFunction<number>;
   doubled: ComputedFunction<number>;
   isEven: ComputedFunction<boolean>;
@@ -16,10 +16,10 @@ export interface CounterAPI {
   set(value: number): void;
 }
 
-export function createCounter(api: {
+export function useCounter(api: {
   signal: <T>(value: T) => SignalFunction<T>;
   computed: <T>(compute: () => T) => ComputedFunction<T>;
-}): CounterAPI {
+}): UseCounter {
   const count = api.signal(0);
   const doubled = api.computed(() => count() * 2);
   const isEven = api.computed(() => count() % 2 === 0);

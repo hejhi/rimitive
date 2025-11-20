@@ -6,15 +6,15 @@
  *
  * This shows composition through dependencies rather than creating everything internally.
  */
-import type { TodoListAPI } from './todo-list';
+import type { UseTodoList } from './useTodoList';
 import { Signals } from '../api';
 
 /**
  * Create a stats behavior that depends on an existing TodoList
  */
-export const createTodoStats = (
-  { computed }: Pick<Signals, 'computed' >,
-  { todos, activeCount }: Pick<TodoListAPI, 'todos' | 'activeCount'>
+export const useTodoStats = (
+  { computed }: Pick<Signals, 'computed'>,
+  { todos, activeCount }: Pick<UseTodoList, 'todos' | 'activeCount'>
 ) => {
   // These computed values depend on the injected todoList
   const total = computed(() => todos().length);
@@ -33,4 +33,4 @@ export const createTodoStats = (
     completed,
     completionRate,
   };
-}
+};

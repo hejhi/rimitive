@@ -16,7 +16,7 @@ export interface Todo {
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export const createTodoList = ({ signal, computed }: Pick<Signals, 'signal' | 'computed'>) => {
+export const useTodoList = ({ signal, computed }: Pick<Signals, 'signal' | 'computed'>) => {
   let nextId = 1;
   const todos = signal<Todo[]>([]);
   const filter = signal<FilterType>('all');

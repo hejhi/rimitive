@@ -177,7 +177,7 @@ function Counter() {
 
 // Lattice View - framework-agnostic, no compilation
 function Counter(api) {
-  const counter = createCounter(api); // Reusable behavior
+  const counter = useCounter(api); // Reusable behavior
   return el({
     tag: 'div',
     on: { click: counter.increment },

@@ -22,10 +22,10 @@ import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { devtoolsProvider, createInstrumentation, createApi } from '@lattice/lattice';
 
 // Import our React-compatible components
-import { createCounter } from './components/counter';
-import { createTodoList } from './components/todo-list';
-import { createFilter } from './components/filter';
-import { createAppState } from './components/app-state';
+import { useCounter } from './components/useCounter';
+import { useTodoList } from './components/useTodoList';
+import { useFilter } from './components/useFilter';
+import { useAppState } from './components/useAppState';
 import { Modal } from './design-system/Modal';
 import { createPushPullSchedule } from '@lattice/signals/helpers';
 
@@ -52,7 +52,7 @@ export const signalApi = createApi(
  * Using the counter component to track steps in a multi-step process
  */
 function StepCounter() {
-  const counter = useComponent(createCounter);
+  const counter = useComponent(useCounter);
   const step = useSubscribe(counter.count);
   const isEven = useSubscribe(counter.isEven);
 
@@ -93,7 +93,7 @@ function SlideCarousel() {
     'Building a Design System',
   ];
 
-  const counter = useComponent(createCounter);
+  const counter = useComponent(useCounter);
   const current = useSubscribe(counter.count);
   const doubled = useSubscribe(counter.doubled);
 
@@ -139,13 +139,13 @@ function SlideCarousel() {
  * Using todoList + filter components together - composition!
  */
 function TodoApp() {
-  const todoList = useComponent(createTodoList, [
+  const todoList = useComponent(useTodoList, [
     { id: 1, text: 'Learn Lattice', completed: false },
     { id: 2, text: 'Build a React app', completed: false },
     { id: 3, text: 'Try the component pattern', completed: true },
   ]);
 
-  const filter = useComponent(createFilter);
+  const filter = useComponent(useFilter);
 
   // Subscribe to reactive values
   const allTodos = useSubscribe(todoList.todos);
@@ -234,7 +234,7 @@ function TodoApp() {
  * Shows that we don't have React Context re-render problems
  */
 function FineGrainedReactivityDemo() {
-  const appState = useComponent(createAppState);
+  const appState = useComponent(useAppState);
 
   // Track render counts
   const renderCounts = React.useRef({

@@ -7,7 +7,7 @@
 
 import { Signals } from '../api';
 
-export const createCounter = (
+export const useCounter = (
   { signal, computed }: Pick<Signals, 'signal' | 'computed'>, initialCount = 0
 ) => {
   const count = signal(initialCount);

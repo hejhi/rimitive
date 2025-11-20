@@ -5,19 +5,19 @@
  */
 
 import type { SignalFunction } from '@lattice/signals/signal';
-import type { Todo } from './todo-list';
+import type { UseTodo } from './useTodoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export interface FilterAPI {
+export interface UseFilter {
   currentFilter: SignalFunction<FilterType>;
   setFilter(filter: FilterType): void;
-  filterTodos(todos: Todo[]): Todo[];
+  filterTodos(todos: UseTodo[]): UseTodo[];
 }
 
-export function createFilter(api: {
+export function useFilter(api: {
   signal: <T>(value: T) => SignalFunction<T>;
-}): FilterAPI {
+}): UseFilter {
   const currentFilter = api.signal<FilterType>('all');
 
   return {
@@ -30,7 +30,7 @@ export function createFilter(api: {
     },
 
     // Utility - filter any todo list
-    filterTodos(todos: Todo[]): Todo[] {
+    filterTodos(todos: UseTodo[]): UseTodo[] {
       const filter = currentFilter();
       if (filter === 'active') return todos.filter((t) => !t.completed);
       if (filter === 'completed') return todos.filter((t) => t.completed);

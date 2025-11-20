@@ -8,7 +8,7 @@
 
 import type { SignalFunction } from '@lattice/signals/signal';
 
-export interface AppStateAPI {
+export interface UseAppState {
   // User state
   userName: SignalFunction<string>;
   userEmail: SignalFunction<string>;
@@ -24,9 +24,9 @@ export interface AppStateAPI {
   incrementClicks: () => void;
 }
 
-export function createAppState(api: {
+export function useAppState(api: {
   signal: <T>(value: T) => SignalFunction<T>;
-}): AppStateAPI {
+}): UseAppState {
   const userName = api.signal('Alice');
   const userEmail = api.signal('alice@example.com');
   const theme = api.signal<'light' | 'dark'>('light');

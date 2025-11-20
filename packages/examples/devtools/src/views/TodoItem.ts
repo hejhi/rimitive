@@ -6,7 +6,7 @@
  */
 
 import { create } from '../api';
-import type { Todo } from '../behaviors/todo-list';
+import type { Todo } from '../behaviors/useTodoList';
 
 export const TodoItem = create(
   ({ el, addEventListener, computed }) =>

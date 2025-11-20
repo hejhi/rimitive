@@ -7,14 +7,14 @@
 import type { SignalFunction } from '@lattice/signals/signal';
 import type { ComputedFunction } from '@lattice/signals/computed';
 
-export interface Todo {
+export interface UseTodo {
   id: number;
   text: string;
   completed: boolean;
 }
 
-export interface TodoListAPI {
-  todos: SignalFunction<Todo[]>;
+export interface UseTodoList {
+  todos: SignalFunction<UseTodo[]>;
   allCompleted: ComputedFunction<boolean>;
   activeCount: ComputedFunction<number>;
   addTodo(text: string): void;
@@ -22,22 +22,22 @@ export interface TodoListAPI {
   toggleAll(): void;
 }
 
-export function createTodoList(
+export function useTodoList(
   api: {
     signal: <T>(value: T) => SignalFunction<T>;
     computed: <T>(compute: () => T) => ComputedFunction<T>;
   },
-  initialTodos: Todo[] = []
-): TodoListAPI {
-  const todos = api.signal<Todo[]>(initialTodos);
+  initialTodos: UseTodo[] = []
+): UseTodoList {
+  const todos = api.signal<UseTodo[]>(initialTodos);
 
   const allCompleted = api.computed(() => {
     const list = todos();
-    return list.length > 0 && list.every((todo: Todo) => todo.completed);
+    return list.length > 0 && list.every((todo: UseTodo) => todo.completed);
   });
 
   const activeCount = api.computed(() => {
-    return todos().filter((todo: Todo) => !todo.completed).length;
+    return todos().filter((todo: UseTodo) => !todo.completed).length;
   });
 
   return {
@@ -48,7 +48,7 @@ export function createTodoList(
 
     // Actions
     addTodo(text: string) {
-      const newTodo: Todo = {
+      const newTodo: UseTodo = {
         id: Date.now(),
         text,
         completed: false,
@@ -58,7 +58,7 @@ export function createTodoList(
 
     toggleTodo(id: number) {
       todos(
-        todos().map((todo: Todo) =>
+        todos().map((todo: UseTodo) =>
           todo.id === id ? { ...todo, completed: !todo.completed } : todo
         )
       );
@@ -66,7 +66,9 @@ export function createTodoList(
 
     toggleAll() {
       const shouldComplete = !allCompleted();
-      todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
+      todos(
+        todos().map((todo: UseTodo) => ({ ...todo, completed: shouldComplete }))
+      );
     },
   };
 }

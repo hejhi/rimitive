@@ -14,7 +14,7 @@ export interface Todo {
   completed: boolean;
 }
 
-export interface TodoListAPI {
+export interface UseTodoList {
   todos: SignalFunction<Todo[]>;
   allCompleted: ComputedFunction<boolean>;
   activeCount: ComputedFunction<number>;
@@ -23,10 +23,10 @@ export interface TodoListAPI {
   toggleAll: () => void;
 }
 
-export const createTodoList = (
+export const useTodoList = (
   { signal, computed }: Pick<Signals, 'signal' | 'computed'>,
   initialTodos: Todo[] = []
-): TodoListAPI => {
+): UseTodoList => {
   const todos = signal<Todo[]>(initialTodos);
 
   const allCompleted = computed(() => {
@@ -64,7 +64,9 @@ export const createTodoList = (
 
     toggleAll: () => {
       const shouldComplete = !allCompleted();
-      todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
+      todos(
+        todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete }))
+      );
     },
   };
 };

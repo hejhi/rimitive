@@ -6,11 +6,11 @@
  */
 
 import { Signals } from '../api';
-import type { Todo } from './todo-list';
+import type { Todo } from './useTodoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export const createFilter = ({ signal }: Pick<Signals, 'signal'>) => {
+export const useFilter = ({ signal }: Pick<Signals, 'signal'>) => {
   const currentFilter = signal<FilterType>('all');
 
   return {

@@ -11,7 +11,7 @@
 
 import { ReactNode } from 'react';
 import { useComponent, useSubscribe } from '@lattice/react';
-import { createModal } from '../components/modal';
+import { useModal } from '../components/useModal';
 
 export interface ModalProps {
   title: string;
@@ -36,7 +36,7 @@ export interface ModalProps {
 export function Modal({ title, children, trigger }: ModalProps) {
   // useComponent gets API from parent SignalProvider
   // Each call creates a new signal instance (isolated state)
-  const modal = useComponent(createModal);
+  const modal = useComponent(useModal);
   const isOpen = useSubscribe(modal.isOpen);
 
   return (

@@ -430,16 +430,7 @@ export function createRouter<TConfig extends RendererConfig>(
    * @returns A computed signal containing the current path
    */
   function useCurrentPath(initialPath: string): ComputedFunction<string> {
-    // Check if we're in a server environment
-    // Note: We use environment detection rather than SSR context because the
-    // router SSR context infrastructure is not yet fully implemented
-    if (typeof window === 'undefined') {
-      // Server: Return a computed wrapping the initialPath
-      return viewApi.computed(() => initialPath);
-    }
-
-    // Client: Return the router's reactive currentPath
-    return currentPath;
+    return viewApi.computed(() => typeof window === 'undefined' ? initialPath : currentPath());
   }
 
   // Return the router object

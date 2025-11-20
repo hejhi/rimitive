@@ -8,16 +8,16 @@
 
 import type { SignalFunction } from '@lattice/signals/signal';
 
-export interface ModalAPI {
+export interface UseModal {
   isOpen: SignalFunction<boolean>;
   open(): void;
   close(): void;
   toggle(): void;
 }
 
-export function createModal(api: {
+export function useModal(api: {
   signal: <T>(value: T) => SignalFunction<T>;
-}): ModalAPI {
+}): UseModal {
   const isOpen = api.signal(false);
 
   return {
