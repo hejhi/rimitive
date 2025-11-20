@@ -109,6 +109,19 @@ export type Router<TConfig extends RendererConfig> = {
   currentPath: ComputedFunction<string>;
 
   /**
+   * Get a reactive current path signal that works in both SSR and client contexts
+   *
+   * @param initialPath - The initial path value to use during SSR (typically from props)
+   * @returns A computed signal containing the current path
+   *
+   * On client: Returns the router's reactive currentPath
+   * On server: Returns a computed wrapping the initialPath
+   *
+   * This abstracts away environment detection from user code.
+   */
+  useCurrentPath: (initialPath: string) => ComputedFunction<string>;
+
+  /**
    * Internal: renderer config type marker (not used at runtime)
    * This ensures TConfig is part of the type signature for type safety
    */
@@ -408,11 +421,33 @@ export function createRouter<TConfig extends RendererConfig>(
     };
   }
 
+  /**
+   * useCurrentPath - Get a reactive current path that works in both SSR and client
+   *
+   * Abstracts away environment detection from user code.
+   *
+   * @param initialPath - The initial path value to use during SSR (from props)
+   * @returns A computed signal containing the current path
+   */
+  function useCurrentPath(initialPath: string): ComputedFunction<string> {
+    // Check if we're in a server environment
+    // Note: We use environment detection rather than SSR context because the
+    // router SSR context infrastructure is not yet fully implemented
+    if (typeof window === 'undefined') {
+      // Server: Return a computed wrapping the initialPath
+      return viewApi.computed(() => initialPath);
+    }
+
+    // Client: Return the router's reactive currentPath
+    return currentPath;
+  }
+
   // Return the router object
   return {
     route,
     connect,
     navigate,
     currentPath,
+    useCurrentPath,
   };
 }

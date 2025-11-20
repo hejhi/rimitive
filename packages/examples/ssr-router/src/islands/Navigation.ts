@@ -15,14 +15,8 @@ interface NavigationProps {
 
 export const Navigation = island(
   'Navigation',
-  create((api) => (props: NavigationProps) => {
-    const { el, computed } = api;
-
-    // On the client, use the router's reactive currentPath
-    // On the server, use the static prop value (wrapped in computed for consistent API)
-    const currentPathSignal = typeof window !== 'undefined'
-      ? router.currentPath
-      : computed(() => props.currentPath);
+  create(({ el, computed }) => (props: NavigationProps) => {
+    const currentPathSignal = router.useCurrentPath(props.currentPath);
 
     const navLink = (href: string, label: string) => {
       return Link({
