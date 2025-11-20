@@ -1,7 +1,7 @@
-import { create, router } from "../api.js";
+import { use, router } from '../api.js';
 
 export const About = router.connect(() =>
-  create(({ el }) => () => {
+  use(({ el }) => () => {
     return el('div', { className: 'page about-page' })(
       el('h2')('About This Example'),
 

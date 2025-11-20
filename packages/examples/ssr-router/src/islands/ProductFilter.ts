@@ -5,7 +5,7 @@
  * This is an island - it will be hydrated on the client.
  */
 import { island } from '@lattice/islands/island';
-import { create } from '../api.js';
+import { use } from '../api.js';
 import { Reactive } from '@lattice/view/types';
 
 interface Product {
@@ -21,15 +21,15 @@ interface ProductFilterProps {
 
 export const ProductFilter = island(
   'ProductFilter',
-  create(({ el, signal, computed, map }) => (props: ProductFilterProps) => {
+  use(({ el, signal, computed, map }) => (props: ProductFilterProps) => {
     const selectedCategory = signal<string>('all');
     const filteredProducts = computed(() => {
       const category = selectedCategory();
       if (category === 'all') return props.products;
-      return props.products.filter(p => p.category === category);
+      return props.products.filter((p) => p.category === category);
     });
     const categories = computed(() => {
-      const cats = new Set(props.products.map(p => p.category));
+      const cats = new Set(props.products.map((p) => p.category));
       return ['all', ...Array.from(cats)];
     });
     const productCards = map(filteredProducts, (p) => p.id)(ProductCard);
@@ -60,17 +60,14 @@ export const ProductFilter = island(
   })
 );
 
-const ProductCard = create(
-  ({ el, computed }) =>
-    (product: Reactive<Product>) => {
-      const name = computed(() => product().name);
-      const cat = computed(() => product().category);
-      const price = computed(() => `$${product().price}`);
+const ProductCard = use(({ el, computed }) => (product: Reactive<Product>) => {
+  const name = computed(() => product().name);
+  const cat = computed(() => product().category);
+  const price = computed(() => `$${product().price}`);
 
-      return el('div', { className: 'product-card' })(
-        el('h4')(name),
-        el('p', { className: 'category' })(cat),
-        el('p', { className: 'price' })(price)
-      );
-    }
-);
+  return el('div', { className: 'product-card' })(
+    el('h4')(name),
+    el('p', { className: 'category' })(cat),
+    el('p', { className: 'price' })(price)
+  );
+});

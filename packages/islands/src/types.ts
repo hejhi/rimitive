@@ -16,7 +16,7 @@ export { HydrationMismatch };
  * Islands don't need lifecycle callbacks, so we use a simpler interface than RefSpec
  */
 export interface IslandSpec {
-  status: number;
+  status: 4; // STATUS_REF_SPEC constant - must match RefSpec
   create(api?: unknown): NodeRef<unknown>;
 }
 

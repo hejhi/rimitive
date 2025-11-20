@@ -1,7 +1,7 @@
-import { create, router } from "../api.js";
+import { use, router } from '../api.js';
 
 export const Home = router.connect(({ navigate }) =>
-  create(({ el }) => () => {
+  use(({ el }) => () => {
     return el('div', { className: 'page home-page' })(
       el('h2')('Welcome to SSR + Router'),
       el('p', { className: 'lead' })(

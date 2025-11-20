@@ -3,7 +3,7 @@
  *
  * This page includes an interactive island component.
  */
-import { create, router } from '../api.js';
+import { use, router } from '../api.js';
 import { ProductFilter } from '../islands/ProductFilter.js';
 
 const products = {
@@ -20,7 +20,7 @@ const products = {
 const productFilter = ProductFilter(products);
 
 export const Products = router.connect(() =>
-  create(({ el }) => () => {
+  use(({ el }) => () => {
     return el('div', { className: 'page products-page' })(
       el('h2')('Products'),
 
@@ -46,5 +46,5 @@ export const Products = router.connect(() =>
         )
       )
     );
-  }
-));
+  })
+);

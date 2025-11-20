@@ -15,9 +15,8 @@ import {
   createDOMRenderer,
   DOMRendererConfig,
 } from '@lattice/view/renderers/dom';
-import { SealedSpec, RefSpec, STATUS_ELEMENT } from '@lattice/view/types';
+import { RefSpec, STATUS_ELEMENT } from '@lattice/view/types';
 import type { ElementRef } from '@lattice/view/types';
-import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
 
@@ -55,7 +54,7 @@ const createViewApi = () => {
   // Handles both FragmentRef and ElementRef properly
   const mountToContainer = (
     container: Element,
-    spec: SealedSpec<unknown> | RefSpec<unknown>
+    spec: RefSpec<unknown>
   ) => {
     const nodeRef = spec.create(api);
 
@@ -89,16 +88,15 @@ const createViewApi = () => {
     signals,
     views,
     router,
-    mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
     mountToContainer,
-    create: createComponent as ComponentFactory<ApiType>,
     use: <TReturn>(
       fn: (api: ApiType) => TReturn
     ): TReturn => fn(api),
   };
 };
 
-export const { api, signals, mount, mountToContainer, create, views, router, use } =
+export const { api, signals, mount, mountToContainer, views, router, use } =
   createViewApi();
 
 export type Signals = typeof signals;
