@@ -31,7 +31,9 @@ const App = create((api) => () => {
   const { el } = api;
   return el('div', { className: 'app' })(
     el('h1')('Lattice SSR Example'),
-    el('p', { className: 'subtitle' })('Static content with interactive islands'),
+    el('p', { className: 'subtitle' })(
+      'Static content with interactive islands'
+    ),
 
     // Static section - no JS shipped
     el('section', { className: 'static-section' })(
@@ -47,8 +49,12 @@ const App = create((api) => () => {
       TodoList({ initialTodos: ['Learn Lattice', 'Build an app', 'Ship it!'] }),
       el('div', { className: 'tag-container' })(
         el('h3')('Interactive Tags (Fragment Island)'),
-        el('p')('Click tags to remove them. This island returns multiple elements without a root wrapper.'),
-        TagList({ tags: ['TypeScript', 'SSR', 'Islands', 'Hydration', 'Reactive'] })
+        el('p')(
+          'Click tags to remove them. This island returns multiple elements without a root wrapper.'
+        ),
+        TagList({
+          tags: ['TypeScript', 'SSR', 'Islands', 'Hydration', 'Reactive'],
+        })
       )()
     )()
   )();

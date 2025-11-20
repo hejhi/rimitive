@@ -7,7 +7,10 @@
 import { createApi } from '@lattice/lattice';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
-import { createDOMRenderer, type DOMRendererConfig } from '@lattice/view/renderers/dom';
+import {
+  createDOMRenderer,
+  type DOMRendererConfig,
+} from '@lattice/view/renderers/dom';
 import { RefSpec } from '@lattice/view/types';
 
 // Create view API (for client-side)
@@ -29,9 +32,7 @@ const createViewApi = () => {
     signals,
     views,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
-    use: <TReturn>(
-      fn: (api: ApiType) => TReturn
-    ): TReturn => fn(api),
+    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
 };
 

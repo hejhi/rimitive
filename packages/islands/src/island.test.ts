@@ -28,31 +28,29 @@ describe('Island Wrapper', () => {
 
     it('should attach island metadata', () => {
       const Counter = island('counter', mockComponent<{ count: number }>());
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const meta = (Counter as any)[ISLAND_META];
+      const meta = Counter[ISLAND_META];
 
       expect(meta).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(meta.id).toBe('counter');
+      expect(meta!.id).toBe('counter');
     });
 
     it('should attach strategy when provided', () => {
       const strategy = { onMismatch: () => {} };
-      const Counter = island('counter', strategy, mockComponent<{ count: number }>());
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const meta = (Counter as any)[ISLAND_META];
+      const Counter = island(
+        'counter',
+        strategy,
+        mockComponent<{ count: number }>()
+      );
+      const meta = Counter[ISLAND_META];
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(meta.strategy).toBe(strategy);
+      expect(meta!.strategy).toBe(strategy);
     });
 
     it('should work without strategy', () => {
       const Counter = island('counter', mockComponent<{ count: number }>());
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const meta = (Counter as any)[ISLAND_META];
+      const meta = Counter[ISLAND_META];
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(meta.strategy).toBeUndefined();
+      expect(meta!.strategy).toBeUndefined();
     });
   });
 
@@ -64,21 +62,22 @@ describe('Island Wrapper', () => {
     });
 
     it('should accept complex nested props', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const Complex = island('complex', mockComponent<any>());
+      const Complex = island('complex', mockComponent());
 
-      expect(() => Complex({
-        string: 'hello',
-        number: 42,
-        boolean: true,
-        null: null,
-        array: [1, 2, 3],
-        nested: {
-          level2: {
-            level3: { value: 'deep' }
-          }
-        }
-      })).not.toThrow();
+      expect(() =>
+        Complex({
+          string: 'hello',
+          number: 42,
+          boolean: true,
+          null: null,
+          array: [1, 2, 3],
+          nested: {
+            level2: {
+              level3: { value: 'deep' },
+            },
+          },
+        })
+      ).not.toThrow();
     });
   });
 
@@ -108,8 +107,7 @@ describe('Island Wrapper', () => {
         return spec.create();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      expect((nodeRef as any).__islandId).toBe('counter-0');
+      expect(nodeRef.__islandId).toBe('counter-0');
     });
 
     it('should generate unique IDs for multiple islands', () => {
@@ -142,8 +140,7 @@ describe('Island Wrapper', () => {
       const spec = Counter({ count: 5 });
       const nodeRef = spec.create();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-      expect((nodeRef as any).__islandId).toBeUndefined();
+      expect(nodeRef.__islandId).toBeUndefined();
     });
   });
 
@@ -190,16 +187,13 @@ describe('Island Wrapper', () => {
         const ref2 = spec2.create();
         const ref3 = spec3.create();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        expect((ref1 as any).__islandId).toBe('counter-0');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        expect((ref2 as any).__islandId).toBe('counter-1');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        expect((ref3 as any).__islandId).toBe('counter-2');
+        expect(ref1.__islandId).toBe('counter-0');
+        expect(ref2.__islandId).toBe('counter-1');
+        expect(ref3.__islandId).toBe('counter-2');
       });
 
       expect(ctx.islands).toHaveLength(3);
-      expect(ctx.islands.map(i => i.props)).toEqual([
+      expect(ctx.islands.map((i) => i.props)).toEqual([
         { count: 1 },
         { count: 2 },
         { count: 3 },

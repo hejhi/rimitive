@@ -26,8 +26,10 @@ export const useTodoList = use(({ signal, computed }) => () => {
     const currentTodos = todos();
     const currentFilter = filter();
 
-    if (currentFilter === 'active') return currentTodos.filter((t: Todo) => !t.completed);
-    if (currentFilter === 'completed') return currentTodos.filter((t: Todo) => t.completed);
+    if (currentFilter === 'active')
+      return currentTodos.filter((t: Todo) => !t.completed);
+    if (currentFilter === 'completed')
+      return currentTodos.filter((t: Todo) => t.completed);
 
     return currentTodos;
   });
@@ -64,7 +66,7 @@ export const useTodoList = use(({ signal, computed }) => () => {
     },
 
     removeTodo: (id: number) => {
-      todos(todos().filter((todo: Todo) => todo.id !== id));
+      todos(todos().filter((todo: Todo) => (todo.id as number) !== id));
     },
 
     setFilter: (newFilter: FilterType) => {

@@ -6,7 +6,12 @@ const products = [
   { id: '2', name: 'Banana', description: 'Naturally sweet', price: '$0.99' },
   { id: '3', name: 'Orange', description: 'Juicy citrus', price: '$1.49' },
   { id: '4', name: 'Mango', description: 'Tropical delight', price: '$2.49' },
-  { id: '5', name: 'Strawberry', description: 'Berry delicious', price: '$3.99' },
+  {
+    id: '5',
+    name: 'Strawberry',
+    description: 'Berry delicious',
+    price: '$3.99',
+  },
 ];
 
 export const Products = router.connect((_route, { children }) =>
