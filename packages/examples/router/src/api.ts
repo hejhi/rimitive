@@ -11,7 +11,7 @@ import {
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { RefSpec, STATUS_ELEMENT } from '@lattice/view/types';
+import { RefSpec, STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
@@ -49,7 +49,7 @@ const createViewApi = () => {
     const nodeRef = spec.create(api);
 
     // Check if it's a FragmentRef with attach method
-    if ('attach' in nodeRef && typeof nodeRef.attach === 'function') {
+    if (nodeRef.status === STATUS_FRAGMENT) {
       // Create parent ref for the container
       const parentRef: ElementRef<Element> = {
         status: STATUS_ELEMENT,
