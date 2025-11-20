@@ -12,7 +12,8 @@
  * 6. On failure: fallback to client-side render with regular API
  */
 
-import type { IslandMetaData, IslandRegistryEntry, IslandSpec } from '../types';
+import type { IslandMetaData, IslandRegistryEntry } from '../types';
+import type { RefSpec } from '@lattice/view/types';
 import { HydrationMismatch, ISLAND_META } from '../types';
 import { createIslandsRenderer } from '../renderers/islands';
 import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
@@ -20,7 +21,7 @@ import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createHydrationApi } from '../hydration-api';
 import type { EffectAPI } from '../hydration-api';
 import type { ElementRef } from '@lattice/view/types';
-import { STATUS_ELEMENT } from '@lattice/view/types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 
 /**
  * Base island type for registration - accepts any object with island metadata
@@ -37,13 +38,13 @@ export interface IslandHydrator {
    * Hydrate all islands on the page
    * @param islands - Island components to register (can have different prop types)
    */
-  hydrate(...islands: RegisterableIsland[]): void;
+  hydrate: (...islands: RegisterableIsland[]) => void;
 }
 
 /**
  * Mount function type for client-side rendering fallback
  */
-export type MountFn = (spec: IslandSpec) => { element: unknown };
+export type MountFn = (spec: RefSpec<unknown>) => { element: unknown };
 
 /**
  * Create a DOM island hydrator
@@ -62,7 +63,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
   mount: MountFn
 ): IslandHydrator {
   return {
-    hydrate(...islands: RegisterableIsland[]) {
+    hydrate: (...islands: RegisterableIsland[]) => {
       // Build registry from island metadata - id comes from island() call
       // Wrapper only exists until this point - original component flows through system
       const entries: Record<string, IslandRegistryEntry> = {};
@@ -164,8 +165,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           // attach() is where map() creates the reconciler and binds event handlers
           if (
             isFragment &&
-            'attach' in actualNodeRef &&
-            typeof actualNodeRef.attach === 'function'
+            actualNodeRef.status === STATUS_FRAGMENT
           ) {
             // CRITICAL: Enter the container's children first
             // The hydrating renderer starts at position [] (the container itself)

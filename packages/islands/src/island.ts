@@ -5,8 +5,9 @@
  * Static content remains as HTML without hydration overhead.
  */
 
-import type { NodeRef } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy, IslandSpec } from './types';
+import type { NodeRef, LifecycleCallback } from '@lattice/view/types';
+import type { IslandComponent, IslandStrategy } from './types';
+import type { RefSpec } from '@lattice/view/types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext, registerIsland } from './ssr-context';
 
@@ -51,7 +52,7 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
  */
 export function island<TProps>(
   id: string,
-  component: (props: TProps) => IslandSpec
+  component: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 /**
@@ -64,22 +65,22 @@ export function island<TProps>(
 export function island<TProps>(
   id: string,
   strategy: IslandStrategy<TProps>,
-  component: (props: TProps) => IslandSpec
+  component: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 export function island<TProps>(
   id: string,
-  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => IslandSpec),
-  maybeComponent?: (props: TProps) => IslandSpec
+  strategyOrComponent: IslandStrategy<TProps> | ((props: TProps) => RefSpec<unknown>),
+  maybeComponent?: (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
   // Determine if second arg is strategy or component
   const component =
     maybeComponent ||
-    (strategyOrComponent as (props: TProps) => IslandSpec);
+    (strategyOrComponent as (props: TProps) => RefSpec<unknown>);
   const strategy = maybeComponent ? (strategyOrComponent as IslandStrategy<TProps>) : undefined;
 
   // Create wrapper function
-  const wrapper = ((props: TProps) => {
+  const wrapper = ((props: TProps): RefSpec<unknown> => {
     const spec = component(props); // Get the component spec
 
     if (!getActiveSSRContext()) return spec;
@@ -87,39 +88,42 @@ export function island<TProps>(
     // Server-side: Register island and tag nodeRef
     const instanceId = registerIsland(id, props);
 
-    // Return a new spec that tags the nodeRef
-    // Don't mutate the original spec to avoid recursion issues
-    return {
-      status: spec.status,
-      create(api?: unknown) {
-        const nodeRef = spec.create(api) as IslandNodeRef<unknown>;
+    const wrapper: RefSpec<unknown> = Object.assign(
+      (...callbacks: LifecycleCallback<unknown>[]) => spec(...callbacks),
+      {
+        status: spec.status,
+        create(api?: unknown) {
+          const nodeRef = spec.create(api) as IslandNodeRef<unknown>;
 
-        // Tag nodeRef with island ID for renderToString
-        nodeRef.__islandId = instanceId;
+          // Tag nodeRef with island ID for renderToString
+          nodeRef.__islandId = instanceId;
 
-        // For ElementRefs: also set a DOM attribute so it's preserved in outerHTML
-        // This handles the case where renderToString uses outerHTML
-        // and doesn't traverse the nodeRef tree
-        if (
-          'element' in nodeRef &&
-          nodeRef.element &&
-          typeof nodeRef.element === 'object'
-        ) {
-          const element = nodeRef.element as {
-            setAttribute?: (name: string, value: string) => void;
-          };
+          // For ElementRefs: also set a DOM attribute so it's preserved in outerHTML
+          // This handles the case where renderToString uses outerHTML
+          // and doesn't traverse the nodeRef tree
+          if (
+            'element' in nodeRef &&
+            nodeRef.element &&
+            typeof nodeRef.element === 'object'
+          ) {
+            const element = nodeRef.element as {
+              setAttribute?: (name: string, value: string) => void;
+            };
 
-          if (element.setAttribute) {
-            element.setAttribute('data-island-id', instanceId);
+            if (element.setAttribute) {
+              element.setAttribute('data-island-id', instanceId);
+            }
           }
-        }
 
-        // FragmentRefs don't need DOM attributes - __islandId is enough
-        // renderToString will detect the __islandId and wrap with fragment markers
+          // FragmentRefs don't need DOM attributes - __islandId is enough
+          // renderToString will detect the __islandId and wrap with fragment markers
 
-        return nodeRef;
-      },
-    };
+          return nodeRef;
+        },
+      }
+    );
+
+    return wrapper;
   });
 
   // Attach metadata for registry construction (includes component for unwrapping)
