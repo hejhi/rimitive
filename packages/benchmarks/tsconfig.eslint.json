@@ -1,4 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "include": ["src/**/*", "frameworks/**/*", "vitest.config.ts"]
-}

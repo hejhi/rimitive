@@ -20,6 +20,8 @@ export default tseslint.config(
       'packages/devtools-extension/.wxt/**',
       'packages/devtools-extension/public/**',
       'packages/devtools-extension/demo/**',
+      // Standalone benchmark frameworks without tsconfig
+      'packages/benchmarks/frameworks/**',
     ],
   },
   // Base JS/TS configuration
@@ -31,8 +33,7 @@ export default tseslint.config(
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.eslint.json",
-        tsconfigRootDir: process.cwd(),
+        project: true,
       },
     },
   },
@@ -65,11 +66,19 @@ export default tseslint.config(
       },
     },
   },
+  // Config files at package roots (not in tsconfig includes)
+  {
+    files: ['**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
   // Storybook configuration
   ...storybookPlugin.configs['flat/recommended'],
   // WXT devtools-extension specific overrides
   {
-    files: ['packages/devtools-extension/**/*.ts', 'packages/devtools-extension/**/*.tsx'],
+    files: [
+      'packages/devtools-extension/**/*.ts',
+      'packages/devtools-extension/**/*.tsx',
+    ],
     languageOptions: {
       globals: {
         defineBackground: 'readonly',
@@ -88,5 +97,5 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-unsafe-call': 'off',
     },
-  },
+  }
 );
