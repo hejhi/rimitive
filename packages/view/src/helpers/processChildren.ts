@@ -54,7 +54,6 @@ export function createProcessChildren<
 
       if (spec.status === STATUS_FRAGMENT) return spec;
 
-      // RefSpec or SealedSpec - both have .create() method
       if (spec.status & STATUS_SPEC_MASK) {
         const childRef = spec.create(api);
         // Only append actual DOM nodes (elements), not fragments

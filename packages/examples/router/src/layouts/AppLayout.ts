@@ -1,8 +1,8 @@
-import { router, create } from '../api';
+import { router, use } from '../api';
 import { Link } from '@lattice/router';
 
 export const AppLayout = router.connect(({ currentPath }, { children }) =>
-  create(({ el, computed }) => () => {
+  use(({ el, computed }) => () => {
     return el('div', { className: 'app-layout' })(
       el('nav', { className: 'navbar' })(
         el('div', { className: 'nav-brand' })(el('h1')('🧩 Lattice Router')),

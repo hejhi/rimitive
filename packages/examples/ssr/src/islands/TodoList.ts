@@ -2,13 +2,12 @@
  * TodoList Island - Interactive todo list
  */
 import { island } from '@lattice/islands/island';
-import { create } from '../api.js';
+import { use } from '../api.js';
 
 export const TodoList = island(
   'todolist',
-  create((api) => (props: { initialTodos: string[] }) => {
-    const { el, signal, computed, map } = api;
-    const todos = signal(props.initialTodos);
+  use(({ el, signal, computed, map }) => ({ initialTodos }: { initialTodos: string[] }) => {
+    const todos = signal(initialTodos);
     const input = signal('');
 
     const addTodo = () => {
@@ -29,13 +28,11 @@ export const TodoList = island(
           oninput: (e: Event) => input((e.target as HTMLInputElement).value),
           onkeydown: (e: KeyboardEvent) => {
             if (e.key === 'Enter') addTodo();
-          }
+          },
         })(),
         el('button', { onclick: addTodo })('Add')
       ),
-      el('ul')(
-        map(todos)(todo => el('li')(todo))
-      )
+      el('ul')(map(todos)((todo) => el('li')(todo)))
     );
   })
 );

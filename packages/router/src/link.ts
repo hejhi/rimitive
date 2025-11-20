@@ -5,8 +5,8 @@
  * Automatically gets navigate from API if available (client-side).
  */
 
-import type { ElRefSpecChild, SealedSpec } from '@lattice/view/types';
-import { STATUS_SEALED_SPEC } from '@lattice/view/types';
+import type { ElRefSpecChild, RefSpec, LifecycleCallback } from '@lattice/view/types';
+import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { ElementProps } from '@lattice/view/el';
 import type { ElMethod } from '@lattice/view/component';
@@ -20,29 +20,47 @@ import { getActiveRouterContext } from './ssr-context';
  */
 export function Link(
   props: ElementProps<DOMRendererConfig, 'a'> & { href: string }
-): (...children: ElRefSpecChild[]) => SealedSpec<HTMLAnchorElement> {
-  return (...children: ElRefSpecChild[]): SealedSpec<HTMLAnchorElement> => {
-    return {
-      status: STATUS_SEALED_SPEC,
-      create: (api: { el: ElMethod<DOMRendererConfig> }) => {
+): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement> {
+  return (...children: ElRefSpecChild[]): RefSpec<HTMLAnchorElement> => {
+    const lifecycleCallbacks: LifecycleCallback<HTMLAnchorElement>[] = [];
+
+    const refSpec: RefSpec<HTMLAnchorElement> = (
+      ...callbacks: LifecycleCallback<HTMLAnchorElement>[]
+    ) => {
+      lifecycleCallbacks.push(...callbacks);
+      return refSpec;
+    };
+
+    refSpec.status = STATUS_REF_SPEC;
+    refSpec.create = (api: { el: ElMethod<DOMRendererConfig> }) => {
         const { el } = api;
         const { href, onclick: userOnClick, ...restProps } = props;
 
         // Get navigate from API if available
         const navigate: ((path: string) => void) | null =
-          'navigate' in api ? (api as { navigate: (path: string) => void }).navigate : null;
+          'navigate' in api
+            ? (api as { navigate: (path: string) => void }).navigate
+            : null;
 
         const ssrContext = getActiveRouterContext();
         if (ssrContext) {
           // SERVER: Plain anchor, no click interception
-          const anchorSpec = el('a', { ...restProps, href, onclick: userOnClick })(...children);
+          const anchorSpec = el('a', {
+            ...restProps,
+            href,
+            onclick: userOnClick,
+          })(...children);
           return anchorSpec.create(api);
         }
 
         // CLIENT: Check if we have navigate function
         if (!navigate) {
           // No navigate function available, render plain anchor
-          const anchorSpec = el('a', { ...restProps, href, onclick: userOnClick })(...children);
+          const anchorSpec = el('a', {
+            ...restProps,
+            href,
+            onclick: userOnClick,
+          })(...children);
           return anchorSpec.create(api);
         }
 
@@ -50,16 +68,21 @@ export function Link(
 
         // Helper to check if link is external
         const isExternal = (url: string): boolean => {
-          return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//');
+          return (
+            url.startsWith('http://') ||
+            url.startsWith('https://') ||
+            url.startsWith('//')
+          );
         };
 
         // Navigation click handler
         const handleClick = (event: MouseEvent): void => {
           // Call user's onclick if provided (handle both static and reactive)
           if (userOnClick) {
-            const onClick = typeof userOnClick === 'function' && userOnClick.length === 0
-              ? (userOnClick as () => ((e: MouseEvent) => unknown))()
-              : userOnClick as (e: MouseEvent) => unknown;
+            const onClick =
+              typeof userOnClick === 'function' && userOnClick.length === 0
+                ? (userOnClick as () => (e: MouseEvent) => unknown)()
+                : (userOnClick as (e: MouseEvent) => unknown);
 
             if (onClick) onClick(event);
           }
@@ -92,7 +115,8 @@ export function Link(
         })(...children);
 
         return anchorSpec.create(api);
-      }
-    };
+      };
+
+    return refSpec;
   };
 }

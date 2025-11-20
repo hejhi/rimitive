@@ -2,7 +2,7 @@
  * Router API - separate app-level API for routing
  */
 
-import type { RendererConfig, RefSpec, SealedSpec, LifecycleCallback } from '@lattice/view/types';
+import type { RendererConfig, RefSpec, LifecycleCallback } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { ElMethod, SignalFunction, ComputedFunction } from '@lattice/view/component';
 import type { MatchFactory } from '@lattice/view/match';
@@ -53,32 +53,32 @@ export type RouteContext<TConfig extends RendererConfig> = {
  * A connected component that can be instantiated with route context
  */
 export type ConnectedComponent<TConfig extends RendererConfig> =
-  (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>;
+  (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>;
 
 /**
  * The connect method signature
  */
 export type ConnectMethod<TConfig extends RendererConfig> = <
   TElement extends TConfig['baseElement'],
-  TUserProps = {},
+  TUserProps = Record<string, unknown>,
 >(
   wrapper: (
     routeApi: RouteApi,
     routeContext: RouteContext<TConfig>
-  ) => (userProps: TUserProps) => SealedSpec<TElement>
+  ) => (userProps: TUserProps) => RefSpec<TElement>
 ) => (
   // Make userProps optional when it's empty {}, required otherwise
   ...args: TUserProps extends Record<string, never>
     ? [userProps?: TUserProps]
     : [userProps: TUserProps]
-) => (routeContext: RouteContext<TConfig>) => SealedSpec<TElement>;
+) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
 
 /**
  * Route method signature
  */
 export type RouteMethod<TConfig extends RendererConfig> = (
   path: string,
-  connectedComponent: (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>
+  connectedComponent: (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>
 ) => (
   ...children: RouteSpec<TConfig['baseElement']>[]
 ) => RouteSpec<TConfig['baseElement']>;
@@ -202,7 +202,7 @@ export function createRouter<TConfig extends RendererConfig>(
    */
   function route(
     path: string,
-    connectedComponent: (routeContext: RouteContext<TConfig>) => SealedSpec<TConfig['baseElement']>
+    connectedComponent: (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>
   ) {
     return (...children: RouteSpec<TConfig['baseElement']>[]) => {
       // Store the original path before processing
@@ -401,17 +401,17 @@ export function createRouter<TConfig extends RendererConfig>(
    */
   function connect<
     TElement extends TConfig['baseElement'],
-    TUserProps = {}
+    TUserProps = Record<string, unknown>
   >(
     wrapper: (
       routeApi: RouteApi,
       routeContext: RouteContext<TConfig>
-    ) => (userProps: TUserProps) => SealedSpec<TElement>
+    ) => (userProps: TUserProps) => RefSpec<TElement>
   ): (
     ...args: TUserProps extends Record<string, never>
       ? [userProps?: TUserProps]
       : [userProps: TUserProps]
-  ) => (routeContext: RouteContext<TConfig>) => SealedSpec<TElement> {
+  ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
     return (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => {
       const routeApi: RouteApi = { navigate, currentPath };
       const componentFactory = wrapper(routeApi, routeContext);

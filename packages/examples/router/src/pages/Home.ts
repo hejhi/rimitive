@@ -1,7 +1,7 @@
-import { router, create } from '../api';
+import { router, use } from '../api';
 
 export const Home = router.connect(({ navigate }) =>
-  create(({ el }) => () => {
+  use(({ el }) => () => {
     return el('div', { className: 'page' })(
       el('h2')('Welcome Home'),
       el('p')('This is the home page of the Lattice Router example.'),

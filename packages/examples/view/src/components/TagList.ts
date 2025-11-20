@@ -3,9 +3,9 @@
  *
  * This demonstrates that components can return fragments directly using map()
  */
-import { create } from '../api';
+import { use } from '../api';
 
-export const TagList = create((api) => {
+export const TagList = use((api) => {
   return (props: { tags: string[] }) => {
     const { el, map, signal } = api;
     const tags = signal(props.tags);
@@ -18,8 +18,8 @@ export const TagList = create((api) => {
         onclick: () => {
           // Remove this tag when clicked
           const current = tags();
-          tags(current.filter(t => t !== tag()));
-        }
+          tags(current.filter((t) => t !== tag()));
+        },
       })(`${tag()} x`);
     });
   };

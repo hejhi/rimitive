@@ -6,9 +6,9 @@
 
 import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/useTodoList';
-import { create } from '../api';
+import { use } from '../api';
 
-export const TodoItem = create(
+export const TodoItem = use(
   ({ el, addEventListener, computed }) =>
     (
       todoSignal: Reactive<Todo>,

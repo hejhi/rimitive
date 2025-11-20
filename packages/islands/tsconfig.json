@@ -4,6 +4,7 @@
     "outDir": "./dist",
     "declaration": true,
     "declarationMap": true,
+    "emitDeclarationOnly": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
@@ -11,7 +12,6 @@
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
-    "composite": true,
     "lib": ["ES2022", "DOM"],
     "types": [
       "vitest/importMeta"

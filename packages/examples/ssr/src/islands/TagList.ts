@@ -4,11 +4,11 @@
  * This tests fragment island hydration using map() to return multiple siblings
  */
 import { island } from '@lattice/islands/island';
-import { create } from '../api.js';
+import { use } from '../api.js';
 
 export const TagList = island(
   'taglist',
-  create((api) => {
+  use((api) => {
     return (props: { tags: string[] }) => {
       const { el, map, signal } = api;
       const tags = signal(props.tags);
@@ -21,8 +21,8 @@ export const TagList = island(
           onclick: () => {
             // Remove this tag when clicked
             const current = tags();
-            tags(current.filter(t => t !== tag()));
-          }
+            tags(current.filter((t) => t !== tag()));
+          },
         })(`${tag()} x`);
       });
     };

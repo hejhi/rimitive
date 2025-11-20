@@ -1,10 +1,10 @@
-import { create, mount } from './api';
+import { use, mount } from './api';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
 import { TagList } from './components/TagList';
 
-const App = create(({ el }) => () => {
+const App = use(({ el }) => () => {
   return el('div', { className: 'app' })(
     Counter(10),
     ConditionalExample(),

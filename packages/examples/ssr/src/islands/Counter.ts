@@ -2,28 +2,31 @@
  * Counter Island - Interactive component that ships JS to client
  */
 import { island } from '@lattice/islands/island';
-import { create, use } from '../api.js';
+import { use } from '../api.js';
 
-const useCounter = use((api) => {
-  return (props: { initialCount: number }) => {
-    const { signal } = api;
-    const count = signal(props.initialCount);
+// "Headless" component
+const useCounter = use(({ signal }) => {
+  return ({ initialCount }: { initialCount: number }) => {
+    const count = signal(initialCount);
 
-    return { count };
+    return {
+      count,
+      inc: () => count(count() + 1),
+      dec: () => count(count() - 1),
+    };
   };
 });
 
 export const Counter = island(
   'counter',
-  create((api) => {
+  use(({ el }) => {
     return (props: { initialCount: number }) => {
-      const { el } = api;
-      const { count } = useCounter(props);
+      const { count, inc, dec } = useCounter(props);
 
       return el('div', { className: 'counter' })(
-        el('button', { onclick: () => count(count() - 1) })('-'),
+        el('button', { onclick: dec })('-'),
         el('span', { className: 'counter-value' })(() => `Count: ${count()}`),
-        el('button', { onclick: () => count(count() + 1) })('+')
+        el('button', { onclick: inc })('+')
       );
     };
   })

@@ -7,9 +7,9 @@
  *
  * Uses the `use*` naming convention to indicate it returns reactive values.
  */
-import { Signals } from '../api';
+import { use } from '../api';
 
-export const useCounter = ({ signal, computed }: Pick<Signals, 'signal' | 'computed'>, initialCount = 0) => {
+export const useCounter = use(({ signal, computed }) => (initialCount = 0) => {
   const count = signal(initialCount);
   const doubled = computed(() => count() * 2);
 
@@ -23,4 +23,4 @@ export const useCounter = ({ signal, computed }: Pick<Signals, 'signal' | 'compu
     decrement: () => count(count() - 1),
     reset: () => count(initialCount),
   };
-};
+});

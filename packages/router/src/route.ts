@@ -229,11 +229,9 @@ export const createRouteFactory = create(
           };
 
           // Create component ONCE - runs only when route is defined, not on every navigation
-          // Support both SealedSpec (from createRouteComponent) and plain functions (for backwards compatibility)
           let componentRefSpec: RefSpec<TConfig['baseElement']>;
 
           if ('create' in component && typeof component.create === 'function') {
-            // SealedSpec pattern - component.create() returns a NodeRef, but show() expects a RefSpec
             const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] = [];
 
             const refSpec: RefSpec<TConfig['baseElement']> = (

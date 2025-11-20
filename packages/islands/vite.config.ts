@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import dts from 'vite-plugin-dts';
 import type { Plugin } from 'vite';
 import { minify } from 'terser';
 
@@ -38,19 +37,6 @@ const terserMangleInternals = (): Plugin => {
 
 export default defineConfig({
   plugins: [
-    dts({
-      insertTypesEntry: true,
-      outDir: 'dist',
-      include: ['src/**/*.ts'],
-      exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.test.d.ts',
-        'src/**/test-*.ts',
-        'src/**/*.example.ts',
-      ],
-      rollupTypes: false,
-      staticImport: true,
-    }),
     terserMangleInternals(),
   ],
   esbuild: {

@@ -4,7 +4,7 @@
  * Uses the create() pattern - the API is provided automatically when .create({ api }) is called.
  */
 
-import { create } from '../api';
+import { use } from '../api';
 
 interface CounterInstance {
   set: (value: number) => void;
@@ -13,21 +13,18 @@ interface CounterInstance {
   isEven: () => boolean;
 }
 
-export const Counter = create(
+export const Counter = use(
   ({ el, addEventListener, computed }) =>
-    ({
-      set,
-      count,
-      doubled,
-      isEven,
-    }: CounterInstance) => {
+    ({ set, count, doubled, isEven }: CounterInstance) => {
       const incrementBtn = el('button')('Increment')(
         addEventListener('click', () => set(count() + 1))
       );
       const decrementBtn = el('button')('Decrement')(
         addEventListener('click', () => set(count() - 1))
       );
-      const resetBtn = el('button')('Reset')(addEventListener('click', () => set(0)));
+      const resetBtn = el('button')('Reset')(
+        addEventListener('click', () => set(0))
+      );
 
       return el('section', { className: 'counter-section' })(
         el('h2')('Counter Example'),

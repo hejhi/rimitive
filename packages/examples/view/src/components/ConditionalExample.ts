@@ -1,6 +1,6 @@
-import { create } from '../api';
+import { use } from '../api';
 
-export const ConditionalExample = create(
+export const ConditionalExample = use(
   ({ el, signal, computed, addEventListener, match }) =>
     () => {
       // State for various conditional examples
@@ -127,10 +127,14 @@ export const ConditionalExample = create(
         el('div', { className: 'example-section' })(
           el('h3')('Example 2: Switch Element Types'),
           el('p')('Two patterns for handling elements with different props:'),
-          el('p')('Pattern 1: Match switches between different element types with their own props'),
+          el('p')(
+            'Pattern 1: Match switches between different element types with their own props'
+          ),
           editableText,
           el('br')(),
-          el('p')('Pattern 2: Separate conditional elements using match for show/hide behavior'),
+          el('p')(
+            'Pattern 2: Separate conditional elements using match for show/hide behavior'
+          ),
           editableTextAlt,
           editToggleBtn
         ),

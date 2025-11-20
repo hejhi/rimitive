@@ -1,11 +1,14 @@
-import { create } from '../api';
+import { use } from '../api';
 import { useCounter } from '../behaviors/useCounter';
 
-export const Counter = create((api) => (initialCount: number = 0) => {
-  const { el, addEventListener, computed } = api;
-  const { decrement, increment, reset, count, doubled } = useCounter(api, initialCount);
-  const decrementBtn = el('button')('- Decrement')(addEventListener('click', decrement));
-  const incrementBtn = el('button')('+ Increment')(addEventListener('click', increment));
+export const Counter = use(({ el, addEventListener, computed }) => (initialCount: number = 0) => {
+  const { decrement, increment, reset, count, doubled } = useCounter(initialCount);
+  const decrementBtn = el('button')('- Decrement')(
+    addEventListener('click', decrement)
+  );
+  const incrementBtn = el('button')('+ Increment')(
+    addEventListener('click', increment)
+  );
   const resetBtn = el('button')('Reset')(addEventListener('click', reset));
 
   return el('div', { className: 'example' })(

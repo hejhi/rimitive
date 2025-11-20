@@ -90,6 +90,7 @@ const createViewApi = () => {
     router,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
     mountToContainer,
+    // Pre-bind api for type safety and convenience
     use: <TReturn>(
       fn: (api: ApiType) => TReturn
     ): TReturn => fn(api),

@@ -28,12 +28,8 @@ import {
 } from '@lattice/lattice';
 import { defaultHelpers } from '@lattice/signals/presets/core';
 import { Match } from '@lattice/view/match';
-import {
-  ComponentFactory,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
-import { SealedSpec } from '@lattice/view/types';
-import { create as createComponent } from '@lattice/view/component';
+import { defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
+import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
 const createInstrumentedSignals = () => {
@@ -73,16 +69,18 @@ const createInstrumentedViewApi = () => {
     addEventListener: createAddEventListener(viewHelpers.batch),
   };
 
+  type ApiType = typeof api;
+
   return {
     api,
     signals,
     views,
-    mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(views),
-    create: createComponent as ComponentFactory<typeof api>,
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(views),
+    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
 }
 
-export const { api, signals, mount, create, views } = createInstrumentedViewApi();
+export const { api, signals, mount, use, views } = createInstrumentedViewApi();
 
 export type Signals = typeof signals;
 export type DOMViews = typeof views;

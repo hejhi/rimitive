@@ -1,4 +1,4 @@
-import type { RendererConfig, RefSpec, Reactive, LifecycleCallback, ElRefSpecChild, SealedSpec } from '@lattice/view/types';
+import type { RendererConfig, RefSpec, Reactive, LifecycleCallback, ElRefSpecChild } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { CreateScopes } from '@lattice/view/helpers/scope';
 import type { LatticeExtension } from '@lattice/lattice';
@@ -105,10 +105,9 @@ export type RouteOpts<TConfig extends RendererConfig> = {
  * @internal
  * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
  * Component that receives the API
- * Supports both SealedSpec (from createRouteComponent) and plain functions (backwards compatibility)
  */
 export type RouteComponent<TConfig extends RendererConfig> =
-  | SealedSpec<TConfig['baseElement']>
+  | RefSpec<TConfig['baseElement']>
   | ((api: RouteOpts<TConfig> & {
       params: ComputedFunction<RouteParams>;
       outlet: () => RefSpec<TConfig['baseElement']> | null;

@@ -1,4 +1,4 @@
-import { router, create } from '../api';
+import { router, use } from '../api';
 import { Link } from '@lattice/router';
 
 const products = [
@@ -9,25 +9,29 @@ const products = [
   { id: '5', name: 'Strawberry', description: 'Berry delicious', price: '$3.99' },
 ];
 
-export const Products = router.connect(
-  (_route, { children }) =>
-    create(({ el }) => () => {
-      return el('div', { className: 'page' })(
-        el('h2')('Products'),
-        el('p')('Click on a product to view details with route parameters.'),
-        el('div', { className: 'product-grid' })(
-          ...products.map(product =>
-            el('div', { className: 'product-card' })(
-              Link({ href: `/products/${product.id}`, className: 'product-link' })(
-                el('h3')(product.name),
-                el('p', { className: 'product-description' })(product.description),
-                el('div', { className: 'product-price' })(product.price)
-              )
-            )()
-          )
-        ),
-        // Render child route (Product detail) here
-        ...(children || [])
-      );
-    })
+export const Products = router.connect((_route, { children }) =>
+  use(({ el }) => () => {
+    return el('div', { className: 'page' })(
+      el('h2')('Products'),
+      el('p')('Click on a product to view details with route parameters.'),
+      el('div', { className: 'product-grid' })(
+        ...products.map((product) =>
+          el('div', { className: 'product-card' })(
+            Link({
+              href: `/products/${product.id}`,
+              className: 'product-link',
+            })(
+              el('h3')(product.name),
+              el('p', { className: 'product-description' })(
+                product.description
+              ),
+              el('div', { className: 'product-price' })(product.price)
+            )
+          )()
+        )
+      ),
+      // Render child route (Product detail) here
+      ...(children || [])
+    );
+  })
 );

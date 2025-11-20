@@ -5,27 +5,21 @@
  * Uses the create() pattern.
  */
 
-import { create } from '../api';
+import { use } from '../api';
 import type { Todo } from '../behaviors/useTodoList';
 
-export const TodoItem = create(
+export const TodoItem = use(
   ({ el, addEventListener, computed }) =>
-    (
-      todoSignal: () => Todo,
-      toggleTodo: (id: number) => void
-    ) => {
+    (todoSignal: () => Todo, toggleTodo: (id: number) => void) => {
       const checkbox = el('input', {
         type: 'checkbox',
-        checked: computed(() => todoSignal().completed)
-      })()(
-        addEventListener('change', () => toggleTodo(todoSignal().id))
-      );
+        checked: computed(() => todoSignal().completed),
+      })()(addEventListener('change', () => toggleTodo(todoSignal().id)));
 
       return el('li', {
-        className: computed(() => todoSignal().completed ? 'todo-item completed' : 'todo-item')
-      })(
-        checkbox,
-        el('span')(computed(() => todoSignal().text))
-      );
+        className: computed(() =>
+          todoSignal().completed ? 'todo-item completed' : 'todo-item'
+        ),
+      })(checkbox, el('span')(computed(() => todoSignal().text)));
     }
 );

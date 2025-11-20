@@ -5,27 +5,27 @@ import { useFilter } from './behaviors/useFilter';
 import { useTodoStats } from './behaviors/useTodoStats';
 
 // Import view components
-import { Counter as CounterView } from './views/Counter';
-import { TodoList as TodoListView } from './views/TodoList';
+import { Counter } from './views/Counter';
+import { TodoList } from './views/TodoList';
 import { BatchedUpdates as BatchedUpdatesView } from './views/BatchedUpdates';
-import { create, mount } from './api';
+import { use, mount } from './api';
 
-const App = create(({ el, signal, computed, batch }) => () => {
-  const counter = useCounter({ signal, computed }, 0);
-  const todoList = useTodoList({ signal, computed }, [
+const App = use(({ el, computed, batch }) => () => {
+  const counter = useCounter();
+  const todoList = useTodoList([
     { id: 1, text: 'Learn Lattice', completed: false },
     { id: 2, text: 'Build an app', completed: false },
   ]);
   const { todos, activeCount, addTodo, toggleTodo } = todoList;
-  const filter = useFilter({ signal });
+  const filter = useFilter();
   const { set: setCounter } = counter;
   const filteredTodos = computed(() => filter.filterTodos(todos()));
-  const todoStats = useTodoStats({ computed }, { todos, activeCount });
+  const todoStats = useTodoStats({ todos, activeCount });
 
   return el('div', { className: 'app' })(
     el('h1')('Lattice DevTools Example'),
-    CounterView(counter),
-    TodoListView(todoList, filter, filteredTodos, todoStats),
+    Counter(counter),
+    TodoList(todoList, filter, filteredTodos, todoStats),
     BatchedUpdatesView({
       onBatchedUpdate: () => {
         batch(() => {

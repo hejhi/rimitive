@@ -14,7 +14,7 @@ import {
   type DOMServerRendererConfig,
 } from '../renderers/dom-server';
 import type { RefSpec } from '@lattice/view/types';
-import { ReactiveAdapter } from '../../../view/dist/src/reactive-adapter';
+import { ReactiveAdapter } from '../../../view/dist/reactive-adapter';
 
 /**
  * Create an island-aware SSR API

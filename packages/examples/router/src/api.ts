@@ -6,15 +6,13 @@
  */
 import { createApi } from '@lattice/lattice';
 import {
-  ComponentFactory,
   defaultExtensions as defaultViewExtensions,
   defaultHelpers as defaultViewHelpers
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createDOMRenderer, DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { SealedSpec, RefSpec, STATUS_ELEMENT } from '@lattice/view/types';
+import { RefSpec, STATUS_ELEMENT } from '@lattice/view/types';
 import type { ElementRef } from '@lattice/view/types';
-import { create as createComponent } from '@lattice/view/component';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
 
@@ -47,7 +45,7 @@ const createViewApi = () => {
 
   // Helper to mount a spec to a container element
   // Handles both FragmentRef and ElementRef properly
-  const mountToContainer = (container: Element, spec: SealedSpec<unknown> | RefSpec<unknown>) => {
+  const mountToContainer = (container: Element, spec: RefSpec<unknown>) => {
     const nodeRef = spec.create(api);
 
     // Check if it's a FragmentRef with attach method
@@ -72,19 +70,20 @@ const createViewApi = () => {
 
     return nodeRef;
   };
+  type ApiType = typeof api;
 
   return {
     api,
     signals,
     views,
     router,
-    mount: <TElement>(spec: SealedSpec<TElement>) => spec.create(api),
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
     mountToContainer,
-    create: createComponent as ComponentFactory<typeof api>,
+    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
   };
 }
 
-export const { api, signals, mount, mountToContainer, create, views, router } = createViewApi();
+export const { api, signals, mount, mountToContainer, use, views, router } = createViewApi();
 
 export type Signals = typeof signals;
 export type DOMViews = typeof views;

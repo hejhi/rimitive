@@ -157,7 +157,6 @@ export const Map = create(
                       const itemSignal = signal(item);
 
                       // Render the item - this creates an element with its own scope
-                      // Pass api for SealedSpec components created with create()
                       elRef = render(itemSignal).create(api) as TRecNode;
 
                       // Insert into DOM - use parent.element directly

@@ -23,7 +23,6 @@ import { ISLAND_META } from '../types';
  * Create a minimal mock island with metadata
  */
 function createMockIsland(id: string) {
-  // Component must return a SealedSpec with .create() method
   const component = vi.fn(() => ({
     create: vi.fn(() => ({
       status: 1, // STATUS_ELEMENT

@@ -5,12 +5,12 @@
  * Demonstrates composition - this behavior works with any todo list.
  */
 
-import { Signals } from '../api';
+import { use } from '../api';
 import type { Todo } from './useTodoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export const useFilter = ({ signal }: Pick<Signals, 'signal'>) => {
+export const useFilter = use(({ signal }) => () => {
   const currentFilter = signal<FilterType>('all');
 
   return {
@@ -28,4 +28,4 @@ export const useFilter = ({ signal }: Pick<Signals, 'signal'>) => {
       return todos;
     },
   };
-};
+});
