@@ -1,11 +1,7 @@
-/**
- * Helper for creating instrumented contexts
- */
-
-import type { ServiceDefinition, LatticeContext } from '../extension';
-import { compose } from '../extension';
+import { compose } from '../compose';
 import type { InstrumentationConfig } from './types';
 import { createInstrumentation } from './compose';
+import type { LatticeContext, ServiceDefinition } from 'src/types';
 
 /**
  * Create a Lattice context with instrumentation

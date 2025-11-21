@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { compose } from './extension';
-import type { ServiceDefinition } from './extension';
+import { compose } from './compose';
+import { ServiceDefinition } from './types';
 
-describe('Extension System', () => {
+describe('Service Composition System', () => {
   it('should create a context with custom extensions', () => {
     let counterValue = 0;
 

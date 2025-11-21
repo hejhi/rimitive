@@ -1,21 +1,9 @@
-/**
- * DevTools instrumentation provider for Lattice
- *
- * This provider sends instrumentation events to the browser DevTools extension
- */
-
 import type { InstrumentationProvider, InstrumentationEvent } from '../types';
 
 export interface DevtoolsProviderOptions {
-  /**
-   * Enable console logging for debugging
-   */
   debug?: boolean;
 }
 
-/**
- * Create a DevTools instrumentation provider
- */
 export function devtoolsProvider(
   options: DevtoolsProviderOptions = {}
 ): InstrumentationProvider {

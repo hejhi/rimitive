@@ -2,7 +2,7 @@
  * Instrumentation composition utilities
  */
 
-import type { InstrumentationContext } from '../extension';
+import { InstrumentationContext } from 'src/types';
 import type {
   InstrumentationEvent,
   InstrumentationProvider,
