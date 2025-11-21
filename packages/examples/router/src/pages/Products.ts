@@ -1,4 +1,4 @@
-import { router, use } from '../api';
+import { router, useSvc } from '../service';
 import { Link } from '@lattice/router';
 
 const products = [
@@ -15,7 +15,7 @@ const products = [
 ];
 
 export const Products = router.connect((_route, { children }) =>
-  use(({ el }) => () => {
+  useSvc(({ el }) => () => {
     return el('div', { className: 'page' })(
       el('h2')('Products'),
       el('p')('Click on a product to view details with route parameters.'),

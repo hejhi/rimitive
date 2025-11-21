@@ -3,9 +3,9 @@
  *
  * This demonstrates that components can return fragments directly using map()
  */
-import { use } from '../api';
+import { useSvc } from '../service';
 
-export const TagList = use((api) => {
+export const TagList = useSvc((api) => {
   return (props: { tags: string[] }) => {
     const { el, map, signal } = api;
     const tags = signal(props.tags);

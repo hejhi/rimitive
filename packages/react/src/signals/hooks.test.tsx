@@ -7,29 +7,29 @@ import { createTestSignalAPI } from '../test-setup';
 
 describe('Signal Hooks', () => {
   // Create a wrapper that provides the signal context
-  const createWrapper = (api: ReturnType<typeof createTestSignalAPI>) => {
+  const createWrapper = (svc: ReturnType<typeof createTestSignalAPI>) => {
     return ({ children }: { children: ReactNode }) =>
-      React.createElement(SignalProvider, { api, children });
+      React.createElement(SignalProvider, { svc, children });
   };
 
   describe('useSubscribe', () => {
     it('should return current signal value', () => {
-      const api = createTestSignalAPI();
-      const count = api.signal(0);
+      const svc = createTestSignalAPI();
+      const count = svc.signal(0);
 
       const { result } = renderHook(() => useSubscribe(count), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       expect(result.current).toBe(0);
     });
 
     it('should re-render when signal changes', () => {
-      const api = createTestSignalAPI();
-      const count = api.signal(0);
+      const svc = createTestSignalAPI();
+      const count = svc.signal(0);
 
       const { result } = renderHook(() => useSubscribe(count), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       expect(result.current).toBe(0);
@@ -42,12 +42,12 @@ describe('Signal Hooks', () => {
     });
 
     it('should work with computed values', () => {
-      const api = createTestSignalAPI();
-      const count = api.signal(5);
-      const doubled = api.computed(() => count() * 2);
+      const svc = createTestSignalAPI();
+      const count = svc.signal(5);
+      const doubled = svc.computed(() => count() * 2);
 
       const { result } = renderHook(() => useSubscribe(doubled), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       expect(result.current).toBe(10);
@@ -60,12 +60,12 @@ describe('Signal Hooks', () => {
     });
 
     it('should work with computed values derived from signals', () => {
-      const api = createTestSignalAPI();
-      const user = api.signal({ name: 'John', age: 30 });
-      const name = api.computed(() => user().name);
+      const svc = createTestSignalAPI();
+      const user = svc.signal({ name: 'John', age: 30 });
+      const name = svc.computed(() => user().name);
 
       const { result } = renderHook(() => useSubscribe(name), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       expect(result.current).toBe('John');
@@ -80,10 +80,10 @@ describe('Signal Hooks', () => {
 
   describe('useSignal', () => {
     it('should create a local signal with initial value', () => {
-      const api = createTestSignalAPI();
+      const svc = createTestSignalAPI();
 
       const { result } = renderHook(() => useSignal(42), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       const [value] = result.current;
@@ -91,10 +91,10 @@ describe('Signal Hooks', () => {
     });
 
     it('should update value with setter', () => {
-      const api = createTestSignalAPI();
+      const svc = createTestSignalAPI();
 
       const { result } = renderHook(() => useSignal(0), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       expect(result.current[0]).toBe(0);
@@ -107,10 +107,10 @@ describe('Signal Hooks', () => {
     });
 
     it('should support function updates', () => {
-      const api = createTestSignalAPI();
+      const svc = createTestSignalAPI();
 
       const { result } = renderHook(() => useSignal(5), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       act(() => {
@@ -121,11 +121,11 @@ describe('Signal Hooks', () => {
     });
 
     it('should support lazy initialization', () => {
-      const api = createTestSignalAPI();
+      const svc = createTestSignalAPI();
       const init = vi.fn(() => 42);
 
       const { result } = renderHook(() => useSignal(init), {
-        wrapper: createWrapper(api),
+        wrapper: createWrapper(svc),
       });
 
       expect(result.current[0]).toBe(42);
@@ -135,8 +135,8 @@ describe('Signal Hooks', () => {
 
   describe('useSelector', () => {
     it('should select specific values from signal', () => {
-      const api = createTestSignalAPI();
-      const user = api.signal({
+      const svc = createTestSignalAPI();
+      const user = svc.signal({
         name: 'John',
         age: 30,
         email: 'john@example.com',
@@ -148,16 +148,16 @@ describe('Signal Hooks', () => {
             user,
             (u: { name: string; age: number; email: string }) => u.name
           ),
-        { wrapper: createWrapper(api) }
+        { wrapper: createWrapper(svc) }
       );
 
       expect(result.current).toBe('John');
     });
 
     it('computed should update when signal changes', () => {
-      const api = createTestSignalAPI();
-      const user = api.signal({ name: 'John', age: 30 });
-      const nameComputed = api.computed(() => user().name);
+      const svc = createTestSignalAPI();
+      const user = svc.signal({ name: 'John', age: 30 });
+      const nameComputed = svc.computed(() => user().name);
 
       expect(nameComputed()).toBe('John');
 
@@ -167,8 +167,8 @@ describe('Signal Hooks', () => {
     });
 
     it('should only re-render when selected value changes', () => {
-      const api = createTestSignalAPI();
-      const user = api.signal({ name: 'John', age: 30 });
+      const svc = createTestSignalAPI();
+      const user = svc.signal({ name: 'John', age: 30 });
       const renderCount = { current: 0 };
 
       const { result } = renderHook(
@@ -179,7 +179,7 @@ describe('Signal Hooks', () => {
             (u: { name: string; age: number }) => u.name
           );
         },
-        { wrapper: createWrapper(api) }
+        { wrapper: createWrapper(svc) }
       );
 
       expect(result.current).toBe('John');

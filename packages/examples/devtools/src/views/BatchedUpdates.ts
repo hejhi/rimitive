@@ -5,13 +5,13 @@
  * Uses the create() pattern.
  */
 
-import { use } from '../api';
+import { useSvc } from '../service';
 
 interface BatchedUpdateHandlers {
   onBatchedUpdate: () => void;
 }
 
-export const BatchedUpdates = use(
+export const BatchedUpdates = useSvc(
   ({ el, addEventListener }) =>
     ({ onBatchedUpdate }: BatchedUpdateHandlers) => {
       const batchBtn = el('button')('Run Batched Updates')(

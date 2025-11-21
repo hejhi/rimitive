@@ -5,10 +5,10 @@
  * Uses the create() pattern.
  */
 
-import { use } from '../api';
+import { useSvc } from '../service';
 import type { Todo } from '../behaviors/useTodoList';
 
-export const TodoItem = use(
+export const TodoItem = useSvc(
   ({ el, addEventListener, computed }) =>
     (todoSignal: () => Todo, toggleTodo: (id: number) => void) => {
       const checkbox = el('input', {

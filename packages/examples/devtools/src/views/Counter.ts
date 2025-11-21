@@ -4,7 +4,7 @@
  * Uses the create() pattern - the API is provided automatically when .create({ api }) is called.
  */
 
-import { use } from '../api';
+import { useSvc } from '../service';
 
 interface CounterInstance {
   set: (value: number) => void;
@@ -13,7 +13,7 @@ interface CounterInstance {
   isEven: () => boolean;
 }
 
-export const Counter = use(
+export const Counter = useSvc(
   ({ el, addEventListener, computed }) =>
     ({ set, count, doubled, isEven }: CounterInstance) => {
       const incrementBtn = el('button')('Increment')(

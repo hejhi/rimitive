@@ -4,13 +4,13 @@
  * This tests fragment island hydration using map() to return multiple siblings
  */
 import { island } from '@lattice/islands/island';
-import { withApi } from '../api.js';
+import { withSvc } from '../service.js';
 
 type TagListProps = { tags: string[] };
 
 export const TagList = island(
   'taglist',
-  withApi(({ el, map, signal }) => {
+  withSvc(({ el, map, signal }) => {
     return (props: TagListProps) => {
       const tags = signal(props.tags);
 

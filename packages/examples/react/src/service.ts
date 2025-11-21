@@ -32,4 +32,4 @@ function createSignalApi() {
   );
 }
 
-export const api = createSignalApi();
+export const service = createSignalApi();

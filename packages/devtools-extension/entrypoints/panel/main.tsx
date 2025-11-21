@@ -11,7 +11,7 @@ if (!rootElement) throw new Error('Root element not found');
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <SignalProvider api={devtoolsContext}>
+    <SignalProvider svc={devtoolsContext}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <App />
       </ThemeProvider>

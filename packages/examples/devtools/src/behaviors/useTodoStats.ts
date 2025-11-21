@@ -7,12 +7,12 @@
  * This shows composition through dependencies rather than creating everything internally.
  */
 import type { UseTodoList } from './useTodoList';
-import { use } from '../api';
+import { useSvc } from '../service';
 
 /**
  * Create a stats behavior that depends on an existing TodoList
  */
-export const useTodoStats = use(
+export const useTodoStats = useSvc(
   ({ computed }) =>
     ({ todos, activeCount }: Pick<UseTodoList, 'todos' | 'activeCount'>) => {
       // These computed values depend on the injected todoList

@@ -15,31 +15,34 @@ import { RefSpec } from '@lattice/view/types';
 
 // Create view API (for client-side)
 const createViewApi = () => {
-  const signals = createSignalsApi();
+  const signalSvc = createSignalsApi();
   const renderer = createDOMRenderer();
-  const viewHelpers = defaultHelpers(renderer, signals);
-  const views = composeFrom(
+  const viewHelpers = defaultHelpers(renderer, signalSvc);
+  const viewSvc = composeFrom(
     defaultExtensions<DOMRendererConfig>(),
     viewHelpers
   );
 
-  const api = {
-    ...signals,
-    ...views,
+  const svc = {
+    ...signalSvc,
+    ...viewSvc,
   };
 
-  type ApiType = typeof api;
+  type Service = typeof svc;
 
   return {
-    api,
-    signals,
-    views,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
-    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
-    withApi: <TReturn>(fn: (api: ApiType) => TReturn) => fn,
+    service: {
+      view: viewSvc,
+      signals: signalSvc,
+    },
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
+    useSvc: <TReturn>(fn: (svc: Service) => TReturn): TReturn => fn(svc),
+    withSvc: <TReturn>(fn: (svc: Service) => TReturn) => fn,
   };
 };
 
-export const { api, signals, views, mount, use, withApi } = createViewApi();
+export const { service, mount, useSvc, withSvc } = createViewApi();
 
-export type Api = typeof api;
+export type Service = typeof service;
+export type Signals = Service['signals'];
+export type DOMViews = Service['view'];

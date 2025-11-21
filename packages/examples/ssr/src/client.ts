@@ -9,10 +9,12 @@ import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { signals, mount } from './api';
+import { service, mount } from './service';
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
 import { TagList } from './islands/TagList.js';
+
+const { signals } = service;
 
 // Create API factory for hydrator
 function createFullAPI(

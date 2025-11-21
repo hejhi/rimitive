@@ -16,18 +16,18 @@ const SignalContext = createContext<SignalAPI | null>(null);
 
 // Provider component
 export interface SignalProviderProps {
-  api: SignalAPI;
+  svc: SignalAPI;
   children: ReactNode;
 }
 
-export function SignalProvider({ api, children }: SignalProviderProps) {
+export function SignalProvider({ svc, children }: SignalProviderProps) {
   // Dispose the API when the provider unmounts
   useEffect(() => {
-    return () => api.dispose();
-  }, [api]);
+    return () => svc.dispose();
+  }, [svc]);
 
   return (
-    <SignalContext.Provider value={api}>{children}</SignalContext.Provider>
+    <SignalContext.Provider value={svc}>{children}</SignalContext.Provider>
   );
 }
 

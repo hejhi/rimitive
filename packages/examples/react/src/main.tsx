@@ -18,7 +18,7 @@ import { useTodoList } from './components/useTodoList';
 import { useFilter } from './components/useFilter';
 import { useAppState } from './components/useAppState';
 import { Modal } from './design-system/Modal';
-import { api } from './api';
+import { service } from './service';
 
 /**
  * Example 1: Step Counter
@@ -490,7 +490,7 @@ function App() {
 const root = createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
-    <SignalProvider api={api}>
+    <SignalProvider svc={service}>
       <App />
     </SignalProvider>
   </React.StrictMode>

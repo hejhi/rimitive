@@ -16,11 +16,11 @@ const createSignals = () => composeFrom(defaultExtensions(), defaultHelpers());
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
   // Create a fresh signal API for each test
   return render(
-    createElement(SignalProvider, { api: createSignals(), children: ui })
+    createElement(SignalProvider, { svc: createSignals(), children: ui })
   );
 }
 
-// Also export api creation for tests that need direct access
+// Also export svc creation for tests that need direct access
 export function createTestSignalAPI() {
   return createSignals();
 }

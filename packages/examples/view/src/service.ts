@@ -18,30 +18,31 @@ import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
 const createViewApi = () => {
-  const signals = createSignalsApi();
-  const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
-  const views = composeFrom(
+  const signalsSvc = createSignalsApi();
+  const viewHelpers = defaultViewHelpers(createDOMRenderer(), signalsSvc);
+  const viewSvc = composeFrom(
     defaultViewExtensions<DOMRendererConfig>(),
     viewHelpers
   );
-  const api = {
-    ...signals,
-    ...views,
+  const svc = {
+    ...signalsSvc,
+    ...viewSvc,
     addEventListener: createAddEventListener(viewHelpers.batch),
   };
-  type ApiType = typeof api;
+  type Service = typeof svc;
 
   return {
-    api,
-    signals,
-    views,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
-    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
+    service: {
+      signals: signalsSvc,
+      view: viewSvc,
+    },
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
+    useSvc: <TReturn>(fn: (api: Service) => TReturn): TReturn => fn(svc),
   };
 };
 
-export const { api, signals, mount, use, views } = createViewApi();
+export const { service, mount, useSvc } = createViewApi();
 
-export type Signals = typeof signals;
-export type DOMViews = typeof views;
-export type CoreApi = typeof api;
+export type Service = typeof service;
+export type Signals = Service['signals'];
+export type DOMViews = Service['view'];

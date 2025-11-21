@@ -1,4 +1,4 @@
-import { router, use } from '../api';
+import { router, useSvc } from '../service';
 
 const products: Record<
   string,
@@ -42,7 +42,7 @@ const products: Record<
 };
 
 export const Product = router.connect(({ navigate }, { params }) =>
-  use(({ el, computed }) => () => {
+  useSvc(({ el, computed }) => () => {
     const id = computed(() => params().id || '');
     const productData = computed(() => products[id()]);
 

@@ -5,7 +5,7 @@
  * Demonstrates working with arrays in signals and computed values.
  */
 
-import { use } from '../api';
+import { useSvc } from '../service';
 import type { SignalFunction, ComputedFunction } from '../types';
 
 export interface Todo {
@@ -23,7 +23,7 @@ export interface UseTodoList {
   toggleAll: () => void;
 }
 
-export const useTodoList = use(
+export const useTodoList = useSvc(
   ({ signal, computed }) =>
     (initialTodos: Todo[] = []) => {
       const todos = signal<Todo[]>(initialTodos);

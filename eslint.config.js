@@ -46,6 +46,7 @@ export default tseslint.config(
     },
     rules: {
       'react/prop-types': 'off',
+      'react/react-in-jsx-scope': 'off', // Not needed with new JSX transform
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
     },

@@ -1,10 +1,10 @@
-import { use, mount } from './api';
+import { useSvc, mount } from './service';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
 import { TagList } from './components/TagList';
 
-const App = use(({ el }) => () => {
+const App = useSvc(({ el }) => () => {
   return el('div', { className: 'app' })(
     Counter(10),
     ConditionalExample(),

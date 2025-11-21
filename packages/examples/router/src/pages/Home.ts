@@ -1,7 +1,7 @@
-import { router, use } from '../api';
+import { router, useSvc } from '../service';
 
 export const Home = router.connect(({ navigate }) =>
-  use(({ el }) => () => {
+  useSvc(({ el }) => () => {
     return el('div', { className: 'page' })(
       el('h2')('Welcome Home'),
       el('p')('This is the home page of the Lattice Router example.'),

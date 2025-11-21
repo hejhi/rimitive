@@ -5,12 +5,12 @@
  * Demonstrates composition - this behavior works with any todo list.
  */
 
-import { use } from '../api';
+import { useSvc } from '../service';
 import type { Todo } from './useTodoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export const useFilter = use(({ signal }) => () => {
+export const useFilter = useSvc(({ signal }) => () => {
   const currentFilter = signal<FilterType>('all');
 
   return {

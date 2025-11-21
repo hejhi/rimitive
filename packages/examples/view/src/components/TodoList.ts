@@ -7,9 +7,9 @@
 
 import { useTodoList } from '../behaviors/useTodoList';
 import { TodoItem } from './TodoItem';
-import { use } from '../api';
+import { useSvc } from '../service';
 
-export const TodoList = use(
+export const TodoList = useSvc(
   ({ el, map, signal, computed, addEventListener }) =>
     () => {
       // Create headless behavior

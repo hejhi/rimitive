@@ -1,7 +1,7 @@
-import { use } from '../api';
+import { useSvc } from '../service';
 import { useCounter } from '../behaviors/useCounter';
 
-export const Counter = use(
+export const Counter = useSvc(
   ({ el, addEventListener, computed }) =>
     (initialCount: number = 0) => {
       const { decrement, increment, reset, count, doubled } =

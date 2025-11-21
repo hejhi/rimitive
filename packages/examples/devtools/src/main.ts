@@ -8,9 +8,9 @@ import { useTodoStats } from './behaviors/useTodoStats';
 import { Counter } from './views/Counter';
 import { TodoList } from './views/TodoList';
 import { BatchedUpdates as BatchedUpdatesView } from './views/BatchedUpdates';
-import { use, mount } from './api';
+import { useSvc, mount } from './service';
 
-const App = use(({ el, computed, batch }) => () => {
+const App = useSvc(({ el, computed, batch }) => () => {
   const counter = useCounter();
   const todoList = useTodoList([
     { id: 1, text: 'Learn Lattice', completed: false },

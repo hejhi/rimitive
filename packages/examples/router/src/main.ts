@@ -1,4 +1,4 @@
-import { mountToContainer, router } from './api';
+import { mountToContainer, router } from './service';
 import { AppLayout } from './layouts/AppLayout';
 import { Home } from './pages/Home';
 import { About } from './pages/About';

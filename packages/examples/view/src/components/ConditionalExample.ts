@@ -1,6 +1,6 @@
-import { use } from '../api';
+import { useSvc } from '../service';
 
-export const ConditionalExample = use(
+export const ConditionalExample = useSvc(
   ({ el, signal, computed, addEventListener, match }) =>
     () => {
       // State for various conditional examples

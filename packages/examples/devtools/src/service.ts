@@ -37,7 +37,7 @@ const createInstrumentedSignals = () => {
     providers: [devtoolsProvider()],
     enabled: true,
   });
-  const signals = composeFrom(
+  const signalSvc = composeFrom(
     {
       signal: Signal({ instrument: instrumentSignal }),
       computed: Computed({ instrument: instrumentComputed }),
@@ -49,13 +49,13 @@ const createInstrumentedSignals = () => {
     { instrumentation }
   );
 
-  return signals;
+  return signalSvc;
 };
 
 const createInstrumentedViewApi = () => {
-  const signals = createInstrumentedSignals();
-  const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
-  const views = composeFrom(
+  const signalSvc = createInstrumentedSignals();
+  const viewHelpers = defaultViewHelpers(createDOMRenderer(), signalSvc);
+  const viewSvc = composeFrom(
     {
       el: El<DOMRendererConfig>({ instrument: instrumentEl }),
       map: Map<DOMRendererConfig>({ instrument: instrumentMap }),
@@ -63,25 +63,26 @@ const createInstrumentedViewApi = () => {
     },
     viewHelpers
   );
-  const api = {
-    ...signals,
-    ...views,
+  const svc = {
+    ...signalSvc,
+    ...viewSvc,
     addEventListener: createAddEventListener(viewHelpers.batch),
   };
 
-  type ApiType = typeof api;
+  type Service = typeof svc;
 
   return {
-    api,
-    signals,
-    views,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(views),
-    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
+    service: {
+      signals: signalSvc,
+      view: viewSvc,
+    },
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(viewSvc),
+    useSvc: <TReturn>(fn: (svc: Service) => TReturn): TReturn => fn(svc),
   };
 };
 
-export const { api, signals, mount, use, views } = createInstrumentedViewApi();
+export const { service, mount, useSvc } = createInstrumentedViewApi();
 
-export type Signals = typeof signals;
-export type DOMViews = typeof views;
-export type CoreApi = typeof api;
+export type Service = typeof service;
+export type Signals = Service['signals'];
+export type DOMViews = Service['view'];

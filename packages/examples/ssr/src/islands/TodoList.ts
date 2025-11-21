@@ -2,13 +2,13 @@
  * TodoList Island - Interactive todo list
  */
 import { island } from '@lattice/islands/island';
-import { withApi } from '../api.js';
+import { withSvc } from '../service.js';
 
 type TodoProps = { initialTodos: string[] };
 
 export const TodoList = island(
   'todolist',
-  withApi(({ el, signal, computed, map }) => ({ initialTodos }: TodoProps) => {
+  withSvc(({ el, signal, computed, map }) => ({ initialTodos }: TodoProps) => {
     const todos = signal(initialTodos);
     const input = signal('');
 

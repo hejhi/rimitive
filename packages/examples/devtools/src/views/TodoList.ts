@@ -5,7 +5,7 @@
  * Uses the create() pattern.
  */
 
-import { use } from '../api';
+import { useSvc } from '../service';
 import type { Todo } from '../behaviors/useTodoList';
 import { TodoItem } from './TodoItem';
 
@@ -28,7 +28,7 @@ interface TodoStatsInstance {
   completionRate: () => number;
 }
 
-export const TodoList = use(
+export const TodoList = useSvc(
   ({ el, map, addEventListener, signal, computed }) =>
     (
       { addTodo, toggleTodo }: TodoListInstance,
