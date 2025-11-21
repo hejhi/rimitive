@@ -99,11 +99,20 @@ const createViewApi = () => {
     mountToContainer,
     // Pre-bind api for type safety and convenience
     use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
+    withApi: <TReturn>(fn: (api: ApiType) => TReturn) => fn,
   };
 };
 
-export const { api, signals, mount, mountToContainer, views, router, use } =
-  createViewApi();
+export const {
+  api,
+  signals,
+  mount,
+  mountToContainer,
+  views,
+  router,
+  use,
+  withApi,
+} = createViewApi();
 
 export type Signals = typeof signals;
 export type DOMViews = typeof views;

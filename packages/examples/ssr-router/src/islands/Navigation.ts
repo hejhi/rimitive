@@ -7,33 +7,32 @@
  */
 import { island } from '@lattice/islands/island';
 import { Link } from '@lattice/router/link';
-import { router, type CoreApi } from '../api.js';
+import { router, withApi } from '../api.js';
 
 interface NavigationProps {
   currentPath: string;
 }
 
-export const Navigation = island<NavigationProps, CoreApi>(
+export const Navigation = island(
   'Navigation',
-  ({ el, computed }) =>
-    ({ currentPath }) => {
-      const currentPathSignal = router.useCurrentPath(currentPath);
+  withApi(({ el, computed }) => ({ currentPath }: NavigationProps) => {
+    const currentPathSignal = router.useCurrentPath(currentPath);
 
-      const navLink = (href: string, label: string) => {
-        return Link({
-          href,
-          className: computed(() => {
-            const path = currentPathSignal();
-            const isActive = path === href;
-            return isActive ? 'nav-link active' : 'nav-link';
-          }),
-        })(label);
-      };
+    const navLink = (href: string, label: string) => {
+      return Link({
+        href,
+        className: computed(() => {
+          const path = currentPathSignal();
+          const isActive = path === href;
+          return isActive ? 'nav-link active' : 'nav-link';
+        }),
+      })(label);
+    };
 
-      return el('div', { className: 'nav-links' })(
-        navLink('/', 'Home'),
-        navLink('/about', 'About'),
-        navLink('/products', 'Products')
-      );
-    }
+    return el('div', { className: 'nav-links' })(
+      navLink('/', 'Home'),
+      navLink('/about', 'About'),
+      navLink('/products', 'Products')
+    );
+  })
 );

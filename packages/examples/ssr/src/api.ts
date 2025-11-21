@@ -36,9 +36,10 @@ const createViewApi = () => {
     views,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
     use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
+    withApi: <TReturn>(fn: (api: ApiType) => TReturn) => fn,
   };
 };
 
-export const { api, signals, views, mount, use } = createViewApi();
+export const { api, signals, views, mount, use, withApi } = createViewApi();
 
 export type Api = typeof api;
