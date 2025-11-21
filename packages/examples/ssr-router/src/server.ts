@@ -25,7 +25,11 @@ import { Products } from './pages/Products.js';
 import { Navigation } from './islands/Navigation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const clientBundlePath = join(__dirname, '../client/client.js');
+const isDev = __dirname.endsWith('src');
+
+const clientBundlePath = isDev
+  ? join(__dirname, '../dist/client/client.js')
+  : join(__dirname, '../client/client.js');
 
 // Create island-aware SSR API
 const signals = createSignalsApi();
