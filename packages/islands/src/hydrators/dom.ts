@@ -136,8 +136,9 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           // Create API with temporary renderer just to get the nodeRef type
           const tempApi = createAPI(tempRenderer, signals);
 
-          // Run component to get nodeRef and determine type
-          const nodeRef = Component(props).create(tempApi);
+          // Run component factory with API to get component function, then call with props
+          const componentFn = Component(tempApi);
+          const nodeRef = componentFn(props).create(tempApi);
 
           // Determine if fragment based on NodeRef, not DOM structure
           // STATUS_FRAGMENT = 2
@@ -159,7 +160,8 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           );
 
           // Re-create component with the actual hydrating API
-          const actualNodeRef = Component(props).create(hydratingApi);
+          const actualComponentFn = Component(hydratingApi);
+          const actualNodeRef = actualComponentFn(props).create(hydratingApi);
 
           // For fragment islands, call attach() and activate while in hydrating mode
           // attach() is where map() creates the reconciler and binds event handlers
@@ -248,9 +250,17 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             // Clear and remount:
             // - For element islands: remove island and script, mount fresh
             // - For fragment islands: clear the container div and mount fresh
+            // Create a regular API for client-side rendering
+            const fallbackRenderer = createDOMRenderer();
+            const fallbackApi = createAPI(
+              createIslandsRenderer(fallbackRenderer, fallbackRenderer),
+              signals
+            );
+
             if (isFragment) {
               container.innerHTML = '';
-              const instance = mount(Component(props));
+              const fallbackComponentFn = Component(fallbackApi);
+              const instance = mount(fallbackComponentFn(props));
               if (instance.element)
                 container.appendChild(instance.element as Node);
             } else {
@@ -258,7 +268,8 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
               const parent = islandElement?.parentNode;
               if (islandElement) islandElement.remove();
               script.remove();
-              const instance = mount(Component(props));
+              const fallbackComponentFn = Component(fallbackApi);
+              const instance = mount(fallbackComponentFn(props));
               if (instance.element && parent)
                 parent.appendChild(instance.element as Node);
             }

@@ -8,6 +8,7 @@
 import type { NodeRef, LifecycleCallback } from '@lattice/view/types';
 import type { IslandComponent, IslandStrategy } from './types';
 import type { RefSpec } from '@lattice/view/types';
+import { STATUS_REF_SPEC } from '@lattice/view/types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext, registerIsland } from './ssr-context';
 
@@ -26,19 +27,22 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
  * During SSR, islands register themselves for hydration.
  * On the client, islands hydrate from server-rendered HTML.
  *
+ * Island components receive the API at instantiation time to support proper hydration.
+ *
  * @param id - Unique island type identifier (e.g., "counter", "cart")
- * @param component - Component function that returns a RefSpec (from el, map, etc.)
+ * @param factory - Factory function that receives API and returns component function
  * @returns Wrapped component with island metadata
  *
  * @example
  * ```ts
  * const Counter = island('counter',
- *   use(({ el, signal }) => (props: { initialCount: number }) => {
+ *   (api) => (props: { initialCount: number }) => {
+ *     const { el, signal } = api;
  *     const count = signal(props.initialCount);
  *     return el('button', { onClick: () => count(count() + 1) })(
  *       `Count: ${count()}`
  *     );
- *   })
+ *   }
  * );
  *
  * // Server: renders to HTML + registers for hydration
@@ -49,9 +53,9 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
  * hydrator.hydrate({ counter: Counter });
  * ```
  */
-export function island<TProps>(
+export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
-  component: (props: TProps) => RefSpec<unknown>
+  factory: (api: TApi) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 /**
@@ -59,79 +63,90 @@ export function island<TProps>(
  *
  * @param id - Unique island type identifier
  * @param strategy - Custom hydration strategy (handles mismatches, etc.)
- * @param component - Component function
+ * @param factory - Factory function that receives API and returns component function
  */
-export function island<TProps>(
+export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
   strategy: IslandStrategy<TProps>,
-  component: (props: TProps) => RefSpec<unknown>
+  factory: (api: TApi) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
-export function island<TProps>(
+export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
-  strategyOrComponent:
+  strategyOrFactory:
     | IslandStrategy<TProps>
-    | ((props: TProps) => RefSpec<unknown>),
-  maybeComponent?: (props: TProps) => RefSpec<unknown>
+    | ((api: TApi) => (props: TProps) => RefSpec<unknown>),
+  maybeFactory?: (api: TApi) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
-  // Determine if second arg is strategy or component
-  const component =
-    maybeComponent ||
-    (strategyOrComponent as (props: TProps) => RefSpec<unknown>);
-  const strategy = maybeComponent
-    ? (strategyOrComponent as IslandStrategy<TProps>)
+  // Determine if second arg is strategy or factory
+  const factory =
+    maybeFactory ||
+    (strategyOrFactory as (api: TApi) => (props: TProps) => RefSpec<unknown>);
+  const strategy = maybeFactory
+    ? (strategyOrFactory as IslandStrategy<TProps>)
     : undefined;
 
   // Create wrapper function
   const wrapper = (props: TProps): RefSpec<unknown> => {
-    const spec = component(props); // Get the component spec
+    const lifecycleCallbacks: LifecycleCallback<unknown>[] = [];
 
-    if (!getActiveSSRContext()) return spec;
-
-    // Server-side: Register island and tag nodeRef
-    const instanceId = registerIsland(id, props);
-
-    const wrapper: RefSpec<unknown> = Object.assign(
-      (...callbacks: LifecycleCallback<unknown>[]) => spec(...callbacks),
+    // Create a deferred RefSpec that delays factory execution until create(api) is called
+    const deferredSpec: RefSpec<unknown> = Object.assign(
+      (...callbacks: LifecycleCallback<unknown>[]) => {
+        // Collect lifecycle callbacks
+        lifecycleCallbacks.push(...callbacks);
+        return deferredSpec;
+      },
       {
-        status: spec.status,
+        status: STATUS_REF_SPEC as typeof STATUS_REF_SPEC,
         create(api?: unknown) {
-          const nodeRef = spec.create(api) as IslandNodeRef<unknown>;
+          // NOW call factory with the API to get the component function
+          const component = factory(api as TApi);
 
-          // Tag nodeRef with island ID for renderToString
-          nodeRef.__islandId = instanceId;
+          // Call component with props to get the actual RefSpec
+          const spec = component(props);
 
-          // For ElementRefs: also set a DOM attribute so it's preserved in outerHTML
-          // This handles the case where renderToString uses outerHTML
-          // and doesn't traverse the nodeRef tree
-          if (
-            'element' in nodeRef &&
-            nodeRef.element &&
-            typeof nodeRef.element === 'object'
-          ) {
-            const element = nodeRef.element as {
-              setAttribute?: (name: string, value: string) => void;
-            };
-
-            if (element.setAttribute) {
-              element.setAttribute('data-island-id', instanceId);
-            }
+          // Apply collected lifecycle callbacks to the spec
+          if (lifecycleCallbacks.length > 0) {
+            spec(...lifecycleCallbacks);
           }
 
-          // FragmentRefs don't need DOM attributes - __islandId is enough
-          // renderToString will detect the __islandId and wrap with fragment markers
+          // Create the nodeRef
+          const nodeRef = spec.create(api) as IslandNodeRef<unknown>;
+
+          // Tag nodeRef with island ID for renderToString (SSR only)
+          const ssrContext = getActiveSSRContext();
+          if (ssrContext) {
+            const instanceId = registerIsland(id, props);
+            nodeRef.__islandId = instanceId;
+
+            // For ElementRefs: also set a DOM attribute so it's preserved in outerHTML
+            if (
+              'element' in nodeRef &&
+              nodeRef.element &&
+              typeof nodeRef.element === 'object'
+            ) {
+              const element = nodeRef.element as {
+                setAttribute?: (name: string, value: string) => void;
+              };
+
+              if (element.setAttribute) {
+                element.setAttribute('data-island-id', instanceId);
+              }
+            }
+          }
 
           return nodeRef;
         },
       }
     );
 
-    return wrapper;
+    return deferredSpec;
   };
 
-  // Attach metadata for registry construction (includes component for unwrapping)
+  // Attach metadata for registry construction (includes factory for unwrapping)
   Object.defineProperty(wrapper, ISLAND_META, {
-    value: { id, strategy, component },
+    value: { id, strategy, component: factory },
     enumerable: false,
   });
 

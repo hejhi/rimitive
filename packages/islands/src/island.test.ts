@@ -4,9 +4,9 @@ import { createSSRContext, runWithSSRContext } from './ssr-context';
 import { ISLAND_META } from './types';
 import type { RefSpec } from '@lattice/view/types';
 
-// Mock component factory
+// Mock component factory - now returns factory function (api) => (props) => RefSpec
 function mockComponent<TProps>() {
-  return (props: TProps): RefSpec<unknown> => {
+  return () => (props: TProps): RefSpec<unknown> => {
     const nodeRef = {
       status: 8, // STATUS_SEALED_SPEC
       element: { tag: 'div', props },
@@ -87,7 +87,8 @@ describe('Island Wrapper', () => {
       const Counter = island('counter', mockComponent<{ count: number }>());
 
       runWithSSRContext(ctx, () => {
-        Counter({ count: 5 });
+        const spec = Counter({ count: 5 });
+        spec.create();
       });
 
       expect(ctx.islands).toHaveLength(1);
@@ -116,9 +117,9 @@ describe('Island Wrapper', () => {
       const Form = island('form', mockComponent<{ fields: string[] }>());
 
       runWithSSRContext(ctx, () => {
-        Counter({ count: 1 });
-        Counter({ count: 2 });
-        Form({ fields: [] });
+        Counter({ count: 1 }).create();
+        Counter({ count: 2 }).create();
+        Form({ fields: [] }).create();
       });
 
       expect(ctx.islands).toHaveLength(3);
@@ -146,30 +147,32 @@ describe('Island Wrapper', () => {
 
   describe('Component passthrough', () => {
     it('should call underlying component with props', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let receivedProps: any;
-      const component = (props: { value: number }) => {
+      let receivedProps: { value: number } | undefined;
+      const componentFactory = () => (props: { value: number }) => {
         receivedProps = props;
-        return mockComponent<{ value: number }>()(props);
+        return mockComponent<{ value: number }>()()(props);
       };
 
-      const Island = island('test', component);
-      Island({ value: 42 });
+      const Island = island('test', componentFactory);
+      const spec = Island({ value: 42 });
+      spec.create();
 
       expect(receivedProps).toEqual({ value: 42 });
     });
 
-    it('should return spec from underlying component', () => {
-      const expectedSpec = {
-        status: 4,
-        create: () => ({}),
-      } as RefSpec<unknown>;
-      const component = () => expectedSpec;
+    it('should call factory with api during create', () => {
+      let receivedApi: unknown;
+      const componentFactory = (api: unknown) => {
+        receivedApi = api;
+        return (props: { value: number }) => mockComponent<{ value: number }>()()(props);
+      };
 
-      const Island = island('test', component);
-      const result = Island({ value: 1 });
+      const mockApi = { el: 'mock' };
+      const Island = island('test', componentFactory);
+      const spec = Island({ value: 1 });
+      spec.create(mockApi);
 
-      expect(result).toBe(expectedSpec);
+      expect(receivedApi).toBe(mockApi);
     });
   });
 

@@ -23,17 +23,20 @@ import { ISLAND_META } from '../types';
  * Create a minimal mock island with metadata
  */
 function createMockIsland(id: string) {
-  const component = vi.fn(() => ({
-    create: vi.fn(() => ({
-      status: 1, // STATUS_ELEMENT
-      element: document.createElement('div'),
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: null,
-      lastChild: null,
-    })),
-  }));
+  // Factory function: (api) => (props) => RefSpec
+  const component = vi.fn(() =>
+    vi.fn(() => ({
+      create: vi.fn(() => ({
+        status: 1, // STATUS_ELEMENT
+        element: document.createElement('div'),
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: null,
+        lastChild: null,
+      })),
+    }))
+  );
 
   return {
     [ISLAND_META]: {

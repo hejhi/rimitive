@@ -79,14 +79,14 @@ export interface IslandComponent<TProps = unknown> {
  *
  * Customizes behavior when hydration fails (e.g., preserve form inputs, track analytics)
  */
-export interface IslandStrategy<TProps = unknown> {
+export interface IslandStrategy<TProps = unknown, TApi = unknown> {
   /**
    * Called when hydration fails
    *
    * @param error - The hydration mismatch error
    * @param containerEl - The island container element
    * @param props - Props for this island instance
-   * @param Component - The island component function
+   * @param Component - The island component factory function
    * @param mount - Mount function for client-side rendering
    * @returns false to skip default fallback, undefined to proceed with fallback
    * @throws Error to propagate error up
@@ -95,7 +95,7 @@ export interface IslandStrategy<TProps = unknown> {
     error: HydrationMismatch,
     containerEl: HTMLElement,
     props: TProps,
-    Component: IslandComponent<TProps>,
+    Component: (api: TApi) => (props: TProps) => RefSpec<unknown>,
     mount: (spec: RefSpec<unknown>) => { element: unknown }
   ) => boolean | void;
 }
@@ -110,18 +110,18 @@ export const ISLAND_META = Symbol.for('lattice.island');
  * Island metadata stored on component functions (temporary, only for registry construction)
  * @internal
  */
-export interface IslandMetaData<TProps = unknown> {
+export interface IslandMetaData<TProps = unknown, TApi = unknown> {
   id: string;
   strategy?: IslandStrategy<TProps>;
-  component: (props: TProps) => RefSpec<unknown>;
+  component: (api: TApi) => (props: TProps) => RefSpec<unknown>;
 }
 
 /**
  * Island registry entry - stores component and metadata together
  * @internal
  */
-export interface IslandRegistryEntry<TProps = unknown> {
-  component: IslandComponent<TProps>;
+export interface IslandRegistryEntry<TProps = unknown, TApi = unknown> {
+  component: (api: TApi) => (props: TProps) => RefSpec<unknown>;
   id: string;
   strategy?: IslandStrategy<TProps>;
 }
