@@ -11,19 +11,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SignalProvider, useComponent, useSubscribe } from '@lattice/react';
-import { Signal } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Effect } from '@lattice/signals/effect';
-import { Batch } from '@lattice/signals/batch';
-import { instrumentSignal } from '@lattice/signals/devtools/signal';
-import { instrumentComputed } from '@lattice/signals/devtools/computed';
-import { instrumentEffect } from '@lattice/signals/devtools/effect';
-import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import {
-  devtoolsProvider,
-  createInstrumentation,
-  composeFrom,
-} from '@lattice/lattice';
 
 // Import our React-compatible components
 import { useCounter } from './components/useCounter';
@@ -31,25 +18,7 @@ import { useTodoList } from './components/useTodoList';
 import { useFilter } from './components/useFilter';
 import { useAppState } from './components/useAppState';
 import { Modal } from './design-system/Modal';
-import { createPushPullSchedule } from '@lattice/signals/helpers';
-
-const instrumentation = createInstrumentation({
-  providers: [devtoolsProvider()],
-  enabled: true,
-});
-
-// Manually create extensions with custom instrumentation
-// Each extension needs its own instrument function passed to the constructor
-export const signalApi = composeFrom(
-  {
-    signal: Signal({ instrument: instrumentSignal }),
-    computed: Computed({ instrument: instrumentComputed }),
-    effect: Effect({ instrument: instrumentEffect }),
-    batch: Batch({ instrument: instrumentBatch }),
-  },
-  createPushPullSchedule(),
-  { instrumentation }
-);
+import { api } from './api';
 
 /**
  * Example 1: Step Counter
@@ -521,7 +490,7 @@ function App() {
 const root = createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
-    <SignalProvider api={signalApi}>
+    <SignalProvider api={api}>
       <App />
     </SignalProvider>
   </React.StrictMode>
