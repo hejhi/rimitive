@@ -9,13 +9,13 @@ import type { SignalFunction } from '../signal';
  * Instrument a signal factory to emit events
  */
 export function instrumentSignal(
-  method: <T>(value: T) => SignalFunction<T>,
+  impl: <T>(value: T) => SignalFunction<T>,
   instrumentation: InstrumentationContext
 ) {
   return function instrumentedCreateSignal<T>(
     initialValue: T
   ): SignalFunction<T> {
-    const signal = method(initialValue);
+    const signal = impl(initialValue);
     const { id } = instrumentation.register(
       signal,
       'signal',

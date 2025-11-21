@@ -2,7 +2,7 @@
  * Location primitive for reactive URL state access
  */
 
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import type { LocationOpts, LocationFactory, LocationAPI } from './types';
 
 /**
@@ -62,7 +62,7 @@ function parseURL(url: string): {
 /**
  * Create location factory that provides reactive access to URL state
  */
-export const createLocationFactory = create(
+export const createLocationFactory = defineService(
   ({ computed, currentPath }: LocationOpts) => {
     return () => {
       function location(): LocationAPI {
@@ -98,7 +98,7 @@ export const createLocationFactory = create(
 
       const extension: LocationFactory = {
         name: 'location' as const,
-        method: location,
+        impl: location,
       };
 
       return extension;

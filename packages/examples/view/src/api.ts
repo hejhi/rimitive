@@ -4,7 +4,7 @@
  * All components in this app use this shared API.
  * This ensures consistent renderer configuration across the entire app.
  */
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import {
   defaultExtensions as defaultViewExtensions,
   defaultHelpers as defaultViewHelpers,
@@ -20,7 +20,7 @@ import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 const createViewApi = () => {
   const signals = createSignalsApi();
   const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
-  const views = createApi(
+  const views = composeFrom(
     defaultViewExtensions<DOMRendererConfig>(),
     viewHelpers
   );

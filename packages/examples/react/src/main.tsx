@@ -22,7 +22,7 @@ import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import {
   devtoolsProvider,
   createInstrumentation,
-  createApi,
+  composeFrom,
 } from '@lattice/lattice';
 
 // Import our React-compatible components
@@ -40,7 +40,7 @@ const instrumentation = createInstrumentation({
 
 // Manually create extensions with custom instrumentation
 // Each extension needs its own instrument function passed to the constructor
-export const signalApi = createApi(
+export const signalApi = composeFrom(
   {
     signal: Signal({ instrument: instrumentSignal }),
     computed: Computed({ instrument: instrumentComputed }),

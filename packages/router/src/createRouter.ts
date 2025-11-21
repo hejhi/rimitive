@@ -24,8 +24,8 @@ import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
  */
 export type ViewApi<TConfig extends RendererConfig> = {
   el: ElMethod<TConfig>;
-  match: MatchFactory<TConfig['baseElement']>['method'];
-  show: ShowFactory<TConfig['baseElement']>['method'];
+  match: MatchFactory<TConfig['baseElement']>['impl'];
+  show: ShowFactory<TConfig['baseElement']>['impl'];
   signal: <T>(value: T) => SignalFunction<T>;
   computed: <T>(fn: () => T) => ComputedFunction<T>;
 };
@@ -65,7 +65,7 @@ export type ConnectedComponent<TConfig extends RendererConfig> = (
 ) => RefSpec<TConfig['baseElement']>;
 
 /**
- * The connect method signature
+ * The connect impl signature
  */
 export type ConnectMethod<TConfig extends RendererConfig> = <
   TElement extends TConfig['baseElement'],

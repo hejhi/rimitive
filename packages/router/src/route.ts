@@ -2,7 +2,7 @@
  * Route matching utilities and route rendering primitives
  */
 
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import type {
   RendererConfig,
   RefSpec,
@@ -33,7 +33,7 @@ export { matchPath } from './helpers/matching';
 /**
  * Create route factory that handles route matching and rendering
  */
-export const createRouteFactory = create(
+export const createRouteFactory = defineService(
   <TConfig extends RendererConfig>(routeOpts: RouteOpts<TConfig>) =>
     () => {
       const { computed, el, match, show, currentPath } = routeOpts;
@@ -309,7 +309,7 @@ export const createRouteFactory = create(
 
       const extension: RouteFactory<TConfig> = {
         name: 'route' as const,
-        method: route,
+        impl: route,
       };
 
       return extension;

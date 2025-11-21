@@ -1,12 +1,12 @@
 import type {
-  ExtensionContext,
+  ServiceContext,
   InstrumentationContext,
-  LatticeExtension,
+  Service,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import { Scheduler } from './helpers/scheduler';
 
-export type BatchFactory = LatticeExtension<'batch', <T>(fn: () => T) => T>;
+export type BatchFactory = Service<'batch', <T>(fn: () => T) => T>;
 
 export type BatchOpts = {
   startBatch: Scheduler['startBatch'];
@@ -15,14 +15,14 @@ export type BatchOpts = {
 
 export type BatchProps = {
   instrument?: (
-    method: <T>(fn: () => T) => T,
+    impl: <T>(fn: () => T) => T,
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
+    context: ServiceContext
   ) => <T>(fn: () => T) => T;
 };
 
 // BatchFactory uses SignalContext which includes all helpers
-export const Batch = create(
+export const Batch = defineService(
   ({ startBatch, endBatch }: BatchOpts) =>
     (props?: BatchProps): BatchFactory => {
       const { instrument } = props ?? {};
@@ -41,7 +41,7 @@ export const Batch = create(
 
       return {
         name: 'batch',
-        method: batch,
+        impl: batch,
         ...(instrument && { instrument }),
       };
     }

@@ -9,7 +9,7 @@ import type { SubscribeFunction, SubscribeCallback } from '../subscribe';
  * Instrument a subscribe factory to emit events
  */
 export function instrumentSubscribe(
-  method: SubscribeFunction,
+  impl: SubscribeFunction,
   instrumentation: InstrumentationContext
 ): SubscribeFunction {
   return function instrumentedSubscribe<T>(
@@ -50,7 +50,7 @@ export function instrumentSubscribe(
     };
 
     // Create the actual subscription
-    const unsubscribe = method(source, instrumentedCallback);
+    const unsubscribe = impl(source, instrumentedCallback);
 
     // Wrap unsubscribe to emit disposal event
     return () => {

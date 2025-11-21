@@ -39,7 +39,7 @@ describe('map() - User-facing behavior', () => {
       getElementScope: env.getElementScope,
     });
 
-    return { ...env, el, map: mapFactory.method };
+    return { ...env, el, map: mapFactory.impl };
   }
 
   describe('Initial rendering', () => {
@@ -52,11 +52,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Cherry' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -72,11 +72,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -88,11 +88,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'Only' }]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -110,11 +110,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -135,11 +135,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -162,11 +162,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -187,11 +187,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'First' }]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -217,11 +217,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -249,11 +249,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -276,11 +276,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -303,11 +303,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -333,11 +333,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'Fifth' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -360,11 +360,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -387,11 +387,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -414,11 +414,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -444,11 +444,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -475,11 +475,11 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -506,11 +506,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -539,11 +539,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -573,11 +573,11 @@ describe('map() - User-facing behavior', () => {
         { id: 6, name: 'F' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -616,11 +616,11 @@ describe('map() - User-facing behavior', () => {
         { id: 7, name: 'G' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -661,11 +661,11 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -696,11 +696,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -726,11 +726,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -764,11 +764,11 @@ describe('map() - User-facing behavior', () => {
         }))
       );
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -790,11 +790,11 @@ describe('map() - User-facing behavior', () => {
         Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `Item ${i}` }))
       );
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -819,12 +819,12 @@ describe('map() - User-facing behavior', () => {
       type Mode = 'loading' | 'error' | 'success';
       const mode = signal<Mode>('loading');
 
-      const view = el.method('div')(
+      const view = el.impl('div')(
         map(() => [mode()])((modeSignal) => {
           const m = modeSignal();
-          if (m === 'loading') return el.method('div')('Loading...');
-          if (m === 'error') return el.method('div')('Error occurred');
-          return el.method('div')('Success!');
+          if (m === 'loading') return el.impl('div')('Loading...');
+          if (m === 'error') return el.impl('div')('Error occurred');
+          return el.impl('div')('Success!');
         })
       );
 
@@ -859,11 +859,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -895,11 +895,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -929,11 +929,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -965,11 +965,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -1000,11 +1000,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
-        )((itemSignal) => el.method('li')(itemSignal().name))
+        )((itemSignal) => el.impl('li')(itemSignal().name))
       );
 
       const ul = list.create().element as MockElement;
@@ -1036,12 +1036,12 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id // Key function
         )((itemSignal) =>
-          el.method('li')(itemSignal().name)((element) => {
+          el.impl('li')(itemSignal().name)((element) => {
             // Simulate attaching custom state during lifecycle
             (element as unknown as MockElement).__customState =
               `state-${itemSignal().id}`;
@@ -1075,16 +1075,16 @@ describe('map() - User-facing behavior', () => {
 
       // Nested map: outer creates div, inner creates span
       // Signal passed to inner element (not called) for reactivity
-      const view = el.method('div')(
+      const view = el.impl('div')(
         map(
           () => [{ id: 1 }],
           (item) => item.id
         )(() =>
-          el.method('div')(
+          el.impl('div')(
             map(
               () => [{ id: 1 }],
               (item) => item.id
-            )(() => el.method('span')(displayValue))
+            )(() => el.impl('span')(displayValue))
           )
         )
       );
@@ -1109,21 +1109,21 @@ describe('map() - User-facing behavior', () => {
       const value = signal('initial');
 
       // Triple nested map to test deep nesting
-      const view = el.method('div')(
+      const view = el.impl('div')(
         map(
           () => [{ id: 1 }],
           (item) => item.id
         )(() =>
-          el.method('section')(
+          el.impl('section')(
             map(
               () => [{ id: 1 }],
               (item) => item.id
             )(() =>
-              el.method('article')(
+              el.impl('article')(
                 map(
                   () => [{ id: 1 }],
                   (item) => item.id
-                )(() => el.method('span')(value))
+                )(() => el.impl('span')(value))
               )
             )
           )
@@ -1153,7 +1153,7 @@ describe('map() - User-facing behavior', () => {
       let renderCount = 0;
 
       // Create list where render() accidentally reads outerState
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id
@@ -1162,7 +1162,7 @@ describe('map() - User-facing behavior', () => {
           // This read should NOT become a dependency of map's effect
           // because render() is called untracked
           outerState(); // Read but don't track
-          return el.method('li')(itemSignal().name);
+          return el.impl('li')(itemSignal().name);
         })
       );
 
@@ -1190,13 +1190,13 @@ describe('map() - User-facing behavior', () => {
       let renderCount = 0;
 
       // Create list where lifecycle callback reads outerState
-      const list = el.method('ul')(
+      const list = el.impl('ul')(
         map(
           items,
           (item) => item.id
         )((itemSignal) => {
           renderCount++;
-          return el.method('li')(itemSignal().name)(
+          return el.impl('li')(itemSignal().name)(
             // Lifecycle callback reads a signal
             () => {
               lifecycleCallCount++;
@@ -1238,8 +1238,8 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Item 2' },
       ]);
 
-      const container = el.method('div')(
-        map(items)((item) => el.method('div')(`Item ${item().name}`))
+      const container = el.impl('div')(
+        map(items)((item) => el.impl('div')(`Item ${item().name}`))
       );
 
       // Should throw when trying to create and attach (which runs the effect)
@@ -1253,8 +1253,8 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([1, 2, 3]);
 
-      const container = el.method('div')(
-        map(items)((item) => el.method('div')(`Item ${item()}`))
+      const container = el.impl('div')(
+        map(items)((item) => el.impl('div')(`Item ${item()}`))
       );
 
       // Should NOT throw - primitives are valid keys
@@ -1269,11 +1269,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Item 2' },
       ]);
 
-      const container = el.method('div')(
+      const container = el.impl('div')(
         map(
           items,
           (item) => item.id
-        )((item) => el.method('div')(`Item ${item().name}`))
+        )((item) => el.impl('div')(`Item ${item().name}`))
       );
 
       // Should NOT throw - key function provided

@@ -14,11 +14,11 @@
 
 import type { ScheduledNode } from './types';
 import type {
-  ExtensionContext,
+  ServiceContext,
   InstrumentationContext,
-  LatticeExtension,
+  Service,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
 import { Scheduler } from './helpers/scheduler';
@@ -40,22 +40,22 @@ export interface SubscribeFunction {
 
 export type SubscribeProps = {
   instrument?: (
-    method: SubscribeFunction,
+    impl: SubscribeFunction,
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
+    context: ServiceContext
   ) => SubscribeFunction;
 };
 
 export type SubscribeCallback<T> = (value: T) => void;
 export type UnsubscribeFunction = () => void;
 
-export type SubscribeFactory = LatticeExtension<'subscribe', SubscribeFunction>;
+export type SubscribeFactory = Service<'subscribe', SubscribeFunction>;
 
 // Re-export types needed for type inference
 export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 
-export const Subscribe = create(
+export const Subscribe = defineService(
   ({ track, detachAll, dispose: disposeNode }: SubscribeOpts) =>
     (props?: SubscribeProps): SubscribeFactory => {
       const { instrument } = props ?? {};
@@ -95,7 +95,7 @@ export const Subscribe = create(
 
       const extension: SubscribeFactory = {
         name: 'subscribe',
-        method: createSubscribe,
+        impl: createSubscribe,
         ...(instrument && { instrument }),
       };
 

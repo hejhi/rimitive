@@ -7,7 +7,7 @@ This directory contains instrumentation wrappers for view extensions (`el`, `map
 The instrumentation follows the same pattern as signals instrumentation:
 
 - Each extension has a corresponding `instrument*` function
-- The function wraps the base method to emit events at key lifecycle points
+- The function wraps the base impl to emit events at key lifecycle points
 - Events are emitted through the `InstrumentationContext`
 
 ## Available Instrumentation
@@ -67,13 +67,13 @@ const instrumentation = createInstrumentation({
 const el = El().create({
   // ... other options
   instrument: instrumentEl,
-}).method;
+}).impl;
 ```
 
 ## Example: Full View Context with Instrumentation
 
 ```typescript
-import { createContext } from '@lattice/lattice';
+import { compose } from '@lattice/lattice';
 import { El } from '@lattice/view';
 import { Map } from '@lattice/view/map';
 import { On } from '@lattice/view/on';
@@ -94,17 +94,17 @@ const viewApi = {
   el: El().create({
     /* ctx, renderer, etc. */
     instrument: instrumentEl,
-  }).method,
+  }).impl,
 
   map: Map().create({
     /* ctx, signal, etc. */
     instrument: instrumentMap,
-  }).method,
+  }).impl,
 
   on: On().create({
     /* startBatch, endBatch */
     instrument: instrumentOn,
-  }).method,
+  }).impl,
 };
 
 // Use with instrumentation enabled

@@ -1,23 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createContext } from './extension';
-import type { LatticeExtension } from './extension';
+import { compose } from './extension';
+import type { Service } from './extension';
 
 describe('Extension System', () => {
   it('should create a context with custom extensions', () => {
     let counterValue = 0;
 
-    const counterExtension: LatticeExtension<'counter', () => number> = {
+    const counterExtension: Service<'counter', () => number> = {
       name: 'counter',
-      method: () => ++counterValue,
+      impl: () => ++counterValue,
     };
 
-    const loggerExtension: LatticeExtension<'log', (message: string) => void> =
-      {
-        name: 'log',
-        method: vi.fn(),
-      };
+    const loggerExtension: Service<'log', (message: string) => void> = {
+      name: 'log',
+      impl: vi.fn(),
+    };
 
-    const context = createContext(counterExtension, loggerExtension);
+    const context = compose(counterExtension, loggerExtension);
 
     // Extensions should be available
     expect('counter' in context).toBe(true);
@@ -30,7 +29,7 @@ describe('Extension System', () => {
 
     // Test logger
     context.log('test message');
-    expect(loggerExtension.method).toHaveBeenCalledWith('test message');
+    expect(loggerExtension.impl).toHaveBeenCalledWith('test message');
 
     context.dispose();
   });
@@ -39,14 +38,14 @@ describe('Extension System', () => {
     const init = vi.fn();
     const destroy = vi.fn();
 
-    const lifecycleExtension: LatticeExtension<'test', () => void> = {
+    const lifecycleExtension: Service<'test', () => void> = {
       name: 'test',
-      method: () => {},
+      impl: () => {},
       init,
       destroy,
     };
 
-    const context = createContext(lifecycleExtension);
+    const context = compose(lifecycleExtension);
     expect(init).toHaveBeenCalledOnce();
     expect(destroy).not.toHaveBeenCalled();
 
@@ -54,21 +53,18 @@ describe('Extension System', () => {
     expect(destroy).toHaveBeenCalledOnce();
   });
 
-  it('should wrap methods when wrapper is provided', () => {
+  it('should wrap impls when wrapper is provided', () => {
     let disposed = false;
 
-    const wrappedExtension: LatticeExtension<
-      'wrapped',
-      (value: string) => string
-    > = {
+    const wrappedExtension: Service<'wrapped', (value: string) => string> = {
       name: 'wrapped',
-      method: (value: string) => value.toUpperCase(),
-      adapt(method, ctx) {
+      impl: (value: string) => value.toUpperCase(),
+      adapt(impl, ctx) {
         return (value: string) => {
           if (ctx.isDestroyed) {
             throw new Error('Context is disposed');
           }
-          return method(value) + '!';
+          return impl(value) + '!';
         };
       },
       destroy() {
@@ -76,7 +72,7 @@ describe('Extension System', () => {
       },
     };
 
-    const context = createContext(wrappedExtension);
+    const context = compose(wrappedExtension);
 
     // Test wrapped behavior
     expect(context.wrapped('hello')).toBe('HELLO!');
@@ -91,12 +87,12 @@ describe('Extension System', () => {
   it('should support custom resource tracking', () => {
     const disposables: Array<() => void> = [];
 
-    const resourceExtension: LatticeExtension<
+    const resourceExtension: Service<
       'createResource',
       () => { dispose: () => void }
     > = {
       name: 'createResource',
-      method: () => {
+      impl: () => {
         const resource = {
           dispose: vi.fn(),
         };
@@ -109,7 +105,7 @@ describe('Extension System', () => {
       },
     };
 
-    const context = createContext(resourceExtension);
+    const context = compose(resourceExtension);
 
     const r1 = context.createResource();
     const r2 = context.createResource();
@@ -124,18 +120,16 @@ describe('Extension System', () => {
   });
 
   it('should prevent duplicate extension names', () => {
-    const ext1: LatticeExtension<'test', () => void> = {
+    const ext1: Service<'test', () => void> = {
       name: 'test',
-      method: () => {},
+      impl: () => {},
     };
 
-    const ext2: LatticeExtension<'test', () => void> = {
+    const ext2: Service<'test', () => void> = {
       name: 'test',
-      method: () => {},
+      impl: () => {},
     };
 
-    expect(() => createContext(ext1, ext2)).toThrow(
-      'Duplicate extension name: test'
-    );
+    expect(() => compose(ext1, ext2)).toThrow('Duplicate extension name: test');
   });
 });

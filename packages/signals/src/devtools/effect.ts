@@ -8,7 +8,7 @@ import type { InstrumentationContext } from '@lattice/lattice';
  * Instrument an effect factory to emit events
  */
 export function instrumentEffect(
-  method: (fn: () => void | (() => void)) => () => void,
+  impl: (fn: () => void | (() => void)) => () => void,
   instrumentation: InstrumentationContext
 ) {
   return function instrumentedCreateEffect(
@@ -48,7 +48,7 @@ export function instrumentEffect(
       return result;
     };
 
-    const dispose = method(wrappedFn);
+    const dispose = impl(wrappedFn);
 
     // Wrap dispose to emit disposal event
     return () => {

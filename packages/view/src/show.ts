@@ -1,9 +1,9 @@
 import type {
-  LatticeExtension,
+  Service,
   InstrumentationContext,
-  ExtensionContext,
+  ServiceContext,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import type {
   LifecycleCallback,
   RefSpec,
@@ -32,10 +32,10 @@ export type ShowOpts<TConfig extends RendererConfig> = {
 
 export type ShowProps<TBaseElement> = {
   instrument?: (
-    method: ShowFactory<TBaseElement>['method'],
+    impl: ShowFactory<TBaseElement>['impl'],
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
-  ) => ShowFactory<TBaseElement>['method'];
+    context: ServiceContext
+  ) => ShowFactory<TBaseElement>['impl'];
 };
 
 /**
@@ -44,7 +44,7 @@ export type ShowProps<TBaseElement> = {
  * Generic over:
  * - TElement: The element type (must extend base element from renderer config)
  */
-export type ShowFactory<TBaseElement> = LatticeExtension<
+export type ShowFactory<TBaseElement> = Service<
   'show',
   {
     <TElement extends TBaseElement>(
@@ -71,7 +71,7 @@ export type ShowFactory<TBaseElement> = LatticeExtension<
  * - match: recreates element every time (calls .create() repeatedly)
  * - show: creates once, then toggles visibility (preserves element state)
  */
-export const Show = create(
+export const Show = defineService(
   <TConfig extends RendererConfig>({
     scopedEffect,
     renderer,
@@ -267,7 +267,7 @@ export const Show = create(
 
       const extension: ShowFactory<TBaseElement> = {
         name: 'show',
-        method: show,
+        impl: show,
         ...(instrument && { instrument }),
       };
 

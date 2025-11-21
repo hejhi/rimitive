@@ -25,7 +25,7 @@ describe('location() - basic properties', () => {
       currentPath,
     });
 
-    return { location: location.method, currentPath, env };
+    return { location: location.impl, currentPath, env };
   }
 
   it('returns pathname from current path', () => {
@@ -79,7 +79,7 @@ describe('location() - empty/missing parts', () => {
       currentPath,
     });
 
-    return { location: location.method, currentPath };
+    return { location: location.impl, currentPath };
   }
 
   it('handles path with no query or hash', () => {
@@ -135,7 +135,7 @@ describe('location() - reactive updates', () => {
       currentPath,
     });
 
-    return { location: location.method, currentPath };
+    return { location: location.impl, currentPath };
   }
 
   it('pathname updates when path changes', () => {
@@ -213,7 +213,7 @@ describe('location() - query parsing edge cases', () => {
       currentPath,
     });
 
-    return { location: location.method };
+    return { location: location.impl };
   }
 
   it('handles multiple query params', () => {

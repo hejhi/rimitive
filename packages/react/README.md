@@ -203,7 +203,7 @@ function TodoApp() {
 // Or create non-reactive extensions
 const loggerExtension = {
   name: 'logger' as const,
-  method: {
+  impl: {
     log: (msg: string) => console.log(`[${new Date().toISOString()}] ${msg}`),
     error: (msg: string) =>
       console.error(`[${new Date().toISOString()}] ${msg}`),
@@ -225,7 +225,7 @@ function AppWithLogging() {
 Use React Context API:
 
 ```tsx
-const AppContext = createContext<Store<AppState>>(null!);
+const AppContext = compose<Store<AppState>>(null!);
 
 function App() {
   const store = useStore(() => createStore(initialState));

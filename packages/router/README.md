@@ -11,10 +11,10 @@ Minimal client-side routing for Lattice applications.
 ### Route Definition
 
 ```ts
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import { createRouteFactory, createLinkFactory } from '@lattice/router';
 
-const api = createApi({
+const api = composeFrom({
   signal: createSignalFactory,
   computed: createComputedFactory,
   el: createElFactory,

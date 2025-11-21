@@ -55,7 +55,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       createElementScope,
       onCleanup,
-    }).method;
+    }).impl;
 
     // Static element - no reactive content, no lifecycle callbacks
     // Note: scopes only register if they have disposables (performance optimization)
@@ -79,7 +79,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       createElementScope,
       onCleanup,
-    }).method;
+    }).impl;
 
     // Element with reactive prop
     const ref = el('div', { title: text })();
@@ -103,7 +103,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       createElementScope,
       onCleanup,
-    }).method;
+    }).impl;
 
     // Element with reactive text child
     const ref = el('div')(text);
@@ -122,7 +122,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       createElementScope,
       onCleanup,
-    }).method;
+    }).impl;
 
     // Static element with lifecycle callback that returns cleanup
     const ref = el('div')('Static content')(() => () => {
@@ -143,7 +143,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       createElementScope,
       onCleanup,
-    }).method;
+    }).impl;
 
     // Static element with lifecycle callback that returns nothing
     const ref = el('div')('Static content')(() => {
@@ -164,7 +164,7 @@ describe('el primitive - lazy scope creation', () => {
       renderer,
       createElementScope,
       onCleanup,
-    }).method;
+    }).impl;
 
     // Nested static elements
     const child = el('span')('Child') as unknown as RefSpec<MockElement>;

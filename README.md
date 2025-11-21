@@ -44,10 +44,10 @@ const doubled = computed(() => count.value * 2);
 Generic extension composition framework for building extensible libraries.
 
 ```typescript
-import { createContext } from '@lattice/lattice';
+import { compose } from '@lattice/lattice';
 import { signalExtension } from '@lattice/signals';
 
-const context = createContext(signalExtension);
+const context = compose(signalExtension);
 const count = context.signal(0);
 ```
 
@@ -56,10 +56,10 @@ const count = context.signal(0);
 Combine signals with the extension framework for state management:
 
 ```typescript
-import { createContext } from '@lattice/lattice';
+import { compose } from '@lattice/lattice';
 import { coreExtensions } from '@lattice/signals';
 
-const context = createContext(...coreExtensions);
+const context = compose(...coreExtensions);
 
 // fully typed!
 const todos = context.signal([]);

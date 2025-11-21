@@ -143,7 +143,7 @@ import { createOnFactory } from '@lattice/view/on';
 
 // Create factory with scheduler
 const onFactory = createOnFactory({ startBatch, endBatch });
-const on = onFactory.method;
+const on = onFactory.impl;
 
 const count = signal(0);
 const lastUpdated = signal(Date.now());
@@ -253,7 +253,7 @@ map(
 ## Complete Example
 
 ```ts
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
@@ -288,7 +288,7 @@ function createContext() {
 const context = createContext();
 
 // Create API with view primitives
-const api = createApi(
+const api = composeFrom(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,

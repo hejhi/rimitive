@@ -17,25 +17,25 @@ npm install @lattice/lattice
 Extensions are the building blocks of Lattice. Each extension provides a specific piece of functionality:
 
 ```typescript
-import { createContext, type LatticeExtension } from '@lattice/lattice';
+import { compose, type Service } from '@lattice/lattice';
 
 // A simple counter extension
-const counterExtension: LatticeExtension<'counter', () => number> = {
+const counterExtension: Service<'counter', () => number> = {
   name: 'counter',
-  method: (() => {
+  impl: (() => {
     let count = 0;
     return () => ++count;
   })(),
 };
 
 // A logger extension
-const loggerExtension: LatticeExtension<'log', (msg: string) => void> = {
+const loggerExtension: Service<'log', (msg: string) => void> = {
   name: 'log',
-  method: (msg) => console.log(`[${new Date().toISOString()}] ${msg}`),
+  impl: (msg) => console.log(`[${new Date().toISOString()}] ${msg}`),
 };
 
 // Create a context with these extensions
-const ctx = createContext(counterExtension, loggerExtension);
+const ctx = compose(counterExtension, loggerExtension);
 
 // Use the extensions
 ctx.log('Starting counter...');
@@ -48,22 +48,22 @@ console.log(ctx.counter()); // 2
 Extensions can hook into lifecycle events for setup and cleanup:
 
 ```typescript
-const databaseExtension: LatticeExtension<'db', Database> = {
+const databaseExtension: Service<'db', Database> = {
   name: 'db',
-  method: new Database(),
+  impl: new Database(),
 
   init(context) {
     console.log('Database extension initialized');
-    this.method.connect();
+    this.impl.connect();
   },
 
   destroy(context) {
     console.log('Cleaning up database connection');
-    this.method.disconnect();
+    this.impl.disconnect();
   },
 };
 
-const ctx = createContext(databaseExtension);
+const ctx = compose(databaseExtension);
 // "Database extension initialized"
 
 ctx.dispose();
@@ -75,9 +75,9 @@ ctx.dispose();
 Extensions can be wrapped to add context awareness:
 
 ```typescript
-const apiExtension: LatticeExtension<'api', ApiClient> = {
+const apiExtension: Service<'api', ApiClient> = {
   name: 'api',
-  method: new ApiClient(),
+  impl: new ApiClient(),
 
   adapt(client, context) {
     // Prevent usage after disposal
@@ -110,7 +110,7 @@ const ctx = withInstrumentation(
   analyticsExtension
 );
 
-// All extension method calls are now instrumented
+// All extension impl calls are now instrumented
 ```
 
 ## Real-World Examples
@@ -118,9 +118,9 @@ const ctx = withInstrumentation(
 ### HTTP Client Extension
 
 ```typescript
-const httpExtension: LatticeExtension<'http', HttpClient> = {
+const httpExtension: Service<'http', HttpClient> = {
   name: 'http',
-  method: new HttpClient(),
+  impl: new HttpClient(),
 
   instrument(client, instrumentation) {
     return new Proxy(client, {
@@ -154,9 +154,9 @@ const httpExtension: LatticeExtension<'http', HttpClient> = {
 ### Event Bus Extension
 
 ```typescript
-const eventBusExtension: LatticeExtension<'events', EventEmitter> = {
+const eventBusExtension: Service<'events', EventEmitter> = {
   name: 'events',
-  method: new EventEmitter(),
+  impl: new EventEmitter(),
 
   adapt(emitter, context) {
     const listeners = new Set<{ event: string; handler: Function }>();
@@ -186,18 +186,18 @@ const eventBusExtension: LatticeExtension<'events', EventEmitter> = {
 ### WebSocket Manager
 
 ```typescript
-const websocketExtension: LatticeExtension<'ws', WebSocketManager> = {
+const websocketExtension: Service<'ws', WebSocketManager> = {
   name: 'ws',
-  method: new WebSocketManager(),
+  impl: new WebSocketManager(),
 
   init(context) {
     // Initialize connection pool
-    this.method.initialize();
+    this.impl.initialize();
   },
 
   destroy() {
     // Close all connections
-    this.method.closeAll();
+    this.impl.closeAll();
   },
 
   instrument(manager, instrumentation) {
@@ -230,12 +230,12 @@ Lattice is perfect for:
 
 ## API Reference
 
-### `createContext(...extensions)`
+### `compose(...extensions)`
 
 Creates a new context with the provided extensions.
 
 ```typescript
-const ctx = createContext(extension1, extension2, extension3);
+const ctx = compose(extension1, extension2, extension3);
 ```
 
 ### `withInstrumentation(config, ...extensions)`
@@ -255,11 +255,11 @@ const ctx = withInstrumentation(
 ### Extension Interface
 
 ```typescript
-interface LatticeExtension<TName extends string, TMethod> {
+interface Service<TName extends string, TMethod> {
   name: TName; // Unique extension name
-  method: TMethod; // The functionality to provide
-  wrap?(method, context): TMethod; // Optional context wrapper
-  instrument?(method, instrumentation, context): TMethod; // Optional instrumentation
+  impl: TMethod; // The functionality to provide
+  wrap?(impl, context): TMethod; // Optional context wrapper
+  instrument?(impl, instrumentation, context): TMethod; // Optional instrumentation
   init?(context): void; // Called on creation
   destroy?(context): void; // Called on disposal
 }

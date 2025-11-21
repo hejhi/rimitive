@@ -4,7 +4,7 @@
  * Loads island components and hydrates them from server-rendered HTML.
  */
 import { createDOMHydrator } from '@lattice/islands/hydrators/dom';
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
@@ -20,7 +20,7 @@ function createFullAPI(
   signalsApi: ReturnType<typeof createSignalsApi>
 ) {
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);
-  const views = createApi(defaultExtensions<DOMRendererConfig>(), helpers);
+  const views = composeFrom(defaultExtensions<DOMRendererConfig>(), helpers);
 
   return { ...signalsApi, ...views };
 }

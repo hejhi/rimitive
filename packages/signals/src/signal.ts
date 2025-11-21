@@ -15,11 +15,11 @@
  */
 import type { ProducerNode, Dependency, Writable } from './types';
 import type {
-  LatticeExtension,
+  Service,
   InstrumentationContext,
-  ExtensionContext,
+  ServiceContext,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import { CONSTANTS } from './constants';
 import { GraphEdges, Consumer } from './helpers/graph-edges';
 
@@ -41,9 +41,9 @@ export type SignalOpts = {
 
 export type SignalProps = {
   instrument?: (
-    method: <T>(value: T) => SignalFunction<T>,
+    impl: <T>(value: T) => SignalFunction<T>,
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
+    context: ServiceContext
   ) => <T>(value: T) => SignalFunction<T>;
 };
 
@@ -57,12 +57,12 @@ interface SignalNode<T> extends ProducerNode {
 }
 
 // Export the factory return type for better type inference
-export type SignalFactory = LatticeExtension<
+export type SignalFactory = Service<
   'signal',
   <T>(value: T) => SignalFunction<T>
 >;
 
-export const Signal = create(
+export const Signal = defineService(
   ({ trackDependency, propagate, consumer }: SignalOpts) =>
     (props?: SignalProps): SignalFactory => {
       const { instrument } = props ?? {};
@@ -108,7 +108,7 @@ export const Signal = create(
 
       const extension: SignalFactory = {
         name: 'signal',
-        method: createSignal,
+        impl: createSignal,
         ...(instrument && { instrument }),
       };
 

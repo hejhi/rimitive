@@ -22,7 +22,7 @@ import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { instrumentSubscribe } from '@lattice/signals/devtools/subscribe';
 import { instrumentEl, instrumentMap } from '@lattice/view/devtools';
 import {
-  createApi,
+  composeFrom,
   createInstrumentation,
   devtoolsProvider,
 } from '@lattice/lattice';
@@ -37,7 +37,7 @@ const createInstrumentedSignals = () => {
     providers: [devtoolsProvider()],
     enabled: true,
   });
-  const signals = createApi(
+  const signals = composeFrom(
     {
       signal: Signal({ instrument: instrumentSignal }),
       computed: Computed({ instrument: instrumentComputed }),
@@ -55,7 +55,7 @@ const createInstrumentedSignals = () => {
 const createInstrumentedViewApi = () => {
   const signals = createInstrumentedSignals();
   const viewHelpers = defaultViewHelpers(createDOMRenderer(), signals);
-  const views = createApi(
+  const views = composeFrom(
     {
       el: El<DOMRendererConfig>({ instrument: instrumentEl }),
       map: Map<DOMRendererConfig>({ instrument: instrumentMap }),

@@ -11,9 +11,9 @@ import type { RendererConfig } from '../renderer';
  * Instrument an el factory to emit events
  */
 export function instrumentEl<TConfig extends RendererConfig>(
-  method: ElFactory<TConfig>['method'],
+  impl: ElFactory<TConfig>['impl'],
   instrumentation: InstrumentationContext
-): ElFactory<TConfig>['method'] {
+): ElFactory<TConfig>['impl'] {
   // Static element instrumentation matching ElFactory signature
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
     tag: Tag,
@@ -31,8 +31,8 @@ export function instrumentEl<TConfig extends RendererConfig>(
       },
     });
 
-    // Call base method to get children applicator
-    const childrenApplicator = method(tag, props);
+    // Call base impl to get children applicator
+    const childrenApplicator = impl(tag, props);
 
     // Wrap the children applicator to intercept RefSpec creation
     return (

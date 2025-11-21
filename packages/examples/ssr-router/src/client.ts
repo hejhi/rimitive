@@ -4,7 +4,7 @@
  * Sets up client-side navigation and hydrates islands.
  */
 import { createDOMHydrator } from '@lattice/islands/hydrators/dom';
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import { defaultHelpers, defaultExtensions } from '@lattice/view/presets/core';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
@@ -27,7 +27,7 @@ function createFullAPI(
   signalsApi: ReturnType<typeof createSignalsApi>
 ) {
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);
-  const views = createApi(defaultExtensions<DOMRendererConfig>(), helpers);
+  const views = composeFrom(defaultExtensions<DOMRendererConfig>(), helpers);
 
   // Add navigate to the API for Link component to use
   return { ...signalsApi, ...views, navigate };
@@ -58,7 +58,7 @@ if (mainContent) {
   // Create a client-side renderer for page navigation
   const pageRenderer = createDOMRenderer();
   const pageHelpers = defaultHelpers<DOMRendererConfig>(pageRenderer, signals);
-  const pageViews = createApi(
+  const pageViews = composeFrom(
     defaultExtensions<DOMRendererConfig>(),
     pageHelpers
   );

@@ -4,7 +4,7 @@
  * This provides the type-safe API that island components use.
  * On the server, we use SSR renderer. On the client, DOM renderer.
  */
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
 import {
@@ -18,7 +18,10 @@ const createViewApi = () => {
   const signals = createSignalsApi();
   const renderer = createDOMRenderer();
   const viewHelpers = defaultHelpers(renderer, signals);
-  const views = createApi(defaultExtensions<DOMRendererConfig>(), viewHelpers);
+  const views = composeFrom(
+    defaultExtensions<DOMRendererConfig>(),
+    viewHelpers
+  );
 
   const api = {
     ...signals,

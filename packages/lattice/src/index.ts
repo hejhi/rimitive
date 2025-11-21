@@ -1,23 +1,23 @@
 // Lattice Core - Generic extension composition framework
 
 // Export core extension system
-export { createContext } from './extension';
+export { compose } from './extension';
 export type {
-  LatticeExtension,
-  ExtensionContext,
+  Service,
+  ServiceContext,
   InstrumentationContext,
   CreateContextOptions,
-  ExtensionsToContext,
-  ExtensionMethod,
+  LatticeContext,
+  ServiceImpl,
 } from './extension';
 
 // Export factory-based API (separate for tree-shaking)
-export { createApi } from './api';
-export type { InstantiableExtension } from './api';
+export { composeFrom } from './api';
+export type { DefinedService } from './api';
 
 // Export component composition pattern
-export { create } from './component';
-export type { Instantiatable } from './component';
+export { defineService } from './component';
+export type { ServiceDefinition } from './types';
 
 // Export instrumentation system
 export {

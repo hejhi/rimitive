@@ -39,7 +39,7 @@ describe('List reconciliation - Complex reorderings', () => {
       getElementScope: env.getElementScope,
     });
 
-    return { ...env, el, map: mapFactory.method };
+    return { ...env, el, map: mapFactory.impl };
   }
 
   it('should maintain correct order after reverse', () => {
@@ -52,13 +52,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 4, name: 'D' },
     ]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -97,13 +97,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 5, name: 'E' },
     ]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -145,15 +145,13 @@ describe('List reconciliation - Complex reorderings', () => {
     // Initial: [1, 2, 3, 4, 5]
     const items = signal([1, 2, 3, 4, 5]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (num) => num // Key function (number itself)
       )(
         (numSignal) =>
-          el.method('li')(
-            String(numSignal())
-          ) as unknown as RefSpec<MockElement>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -190,13 +188,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -233,13 +231,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -274,13 +272,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -312,15 +310,13 @@ describe('List reconciliation - Complex reorderings', () => {
     // Initial: [1, 2, 3, 4, 5, 6]
     const items = signal([1, 2, 3, 4, 5, 6]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (num) => num // Key function (number itself)
       )(
         (numSignal) =>
-          el.method('li')(
-            String(numSignal())
-          ) as unknown as RefSpec<MockElement>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -353,13 +349,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 6, name: 'F' },
     ]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -393,13 +389,13 @@ describe('List reconciliation - Complex reorderings', () => {
       { id: 3, name: 'C' },
     ]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -435,15 +431,13 @@ describe('List reconciliation - Complex reorderings', () => {
 
     const items = signal([1, 2, 3, 4]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (num) => num // Key function (number itself)
       )(
         (numSignal) =>
-          el.method('li')(
-            String(numSignal())
-          ) as unknown as RefSpec<MockElement>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -485,7 +479,7 @@ describe('List reconciliation - Edge cases', () => {
       getElementScope: env.getElementScope,
     });
 
-    return { ...env, el, map: mapFactory.method };
+    return { ...env, el, map: mapFactory.impl };
   }
 
   it('should handle single element (no LIS needed)', () => {
@@ -493,13 +487,13 @@ describe('List reconciliation - Edge cases', () => {
 
     const items = signal([{ id: 1, name: 'A' }]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (item) => item.id // Key function
       )(
         (itemSignal) =>
-          el.method('li')(itemSignal().name) as unknown as RefSpec<MockElement>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -518,15 +512,13 @@ describe('List reconciliation - Edge cases', () => {
 
     const items = signal([1, 2, 3, 4, 5]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (num) => num // Key function (number itself)
       )(
         (numSignal) =>
-          el.method('li')(
-            String(numSignal())
-          ) as unknown as RefSpec<MockElement>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -555,15 +547,13 @@ describe('List reconciliation - Edge cases', () => {
 
     const items = signal([1, 2, 3, 4]);
 
-    const list = el.method('ul')(
+    const list = el.impl('ul')(
       map(
         () => items(),
         (num) => num // Key function (number itself)
       )(
         (numSignal) =>
-          el.method('li')(
-            String(numSignal())
-          ) as unknown as RefSpec<MockElement>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 

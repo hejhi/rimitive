@@ -3,7 +3,7 @@ import { Effect } from '@lattice/signals/effect';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-import { createContext as createLatticeContext } from '@lattice/lattice';
+import { compose as createLatticeContext } from '@lattice/lattice';
 
 export const createApi = () => {
   const { withVisitor } = createGraphTraversal();

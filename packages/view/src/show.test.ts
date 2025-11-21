@@ -28,14 +28,14 @@ describe('show() - conditional visibility without recreation', () => {
       getElementScope: env.getElementScope,
     });
 
-    return { ...env, el, show: show.method };
+    return { ...env, el, show: show.impl };
   }
 
   it('should create element only once despite multiple show/hide cycles', () => {
     const { el, show, signal, renderer } = setup();
 
     const shouldShow = signal(true);
-    const spec = show(shouldShow, el.method('div')('Content'));
+    const spec = show(shouldShow, el.impl('div')('Content'));
 
     // Create parent and initialize fragment
     const parent = renderer.createElement('section');
@@ -94,7 +94,7 @@ describe('show() - conditional visibility without recreation', () => {
     const { el, show, signal, renderer } = setup();
 
     const shouldShow = signal(true);
-    const spec = show(shouldShow, el.method('div')('Visible'));
+    const spec = show(shouldShow, el.impl('div')('Visible'));
 
     const parent = renderer.createElement('section');
     const parentRef: ElementRef<MockElement> = {
@@ -122,7 +122,7 @@ describe('show() - conditional visibility without recreation', () => {
     const { el, show, signal, renderer } = setup();
 
     const shouldShow = signal(false);
-    const spec = show(shouldShow, el.method('div')('Hidden'));
+    const spec = show(shouldShow, el.impl('div')('Hidden'));
 
     const parent = renderer.createElement('section');
     const parentRef: ElementRef<MockElement> = {
@@ -148,7 +148,7 @@ describe('show() - conditional visibility without recreation', () => {
     const { el, show, signal, renderer } = setup();
 
     const shouldShow = signal(true);
-    const spec = show(shouldShow, el.method('div')('Original'));
+    const spec = show(shouldShow, el.impl('div')('Original'));
 
     const parent = renderer.createElement('section');
     const parentRef: ElementRef<MockElement> = {
@@ -191,7 +191,7 @@ describe('show() - conditional visibility without recreation', () => {
     const { el, show, signal, renderer } = setup();
 
     const shouldShow = signal(true);
-    const spec = show(shouldShow, el.method('div')('Reactive'));
+    const spec = show(shouldShow, el.impl('div')('Reactive'));
 
     const parent = renderer.createElement('section');
     const parentRef: ElementRef<MockElement> = {
@@ -235,7 +235,7 @@ describe('show() - conditional visibility without recreation', () => {
 
     const spec = show(
       shouldShow,
-      el.method('div')('Content')(() => {
+      el.impl('div')('Content')(() => {
         lifecycleCallCount++;
         return () => {
           cleanupCallCount++;
@@ -289,7 +289,7 @@ describe('show() - conditional visibility without recreation', () => {
 
     const spec = show(
       shouldShow,
-      el.method('div')('Content')
+      el.impl('div')('Content')
     )(() => {
       showLevelCallCount++;
     });
@@ -325,9 +325,9 @@ describe('show() - conditional visibility without recreation', () => {
     const shouldShow = signal(true);
 
     // Create a fragment with multiple children
-    const fragmentSpec = el.method('div')(
-      el.method('span')('Child 1'),
-      el.method('span')('Child 2')
+    const fragmentSpec = el.impl('div')(
+      el.impl('span')('Child 1'),
+      el.impl('span')('Child 2')
     );
 
     const spec = show(shouldShow, fragmentSpec);
@@ -370,7 +370,7 @@ describe('show() - conditional visibility without recreation', () => {
     const { el, show, signal, renderer } = setup();
 
     const shouldShow = signal(true);
-    const contentSpec = el.method('div')('Stable');
+    const contentSpec = el.impl('div')('Stable');
     const spec = show(shouldShow, contentSpec);
 
     const parent = renderer.createElement('section');
@@ -413,7 +413,7 @@ describe('show() - conditional visibility without recreation', () => {
 
     // Start with false - this is the bug scenario
     const shouldShow = signal(false);
-    const spec = show(shouldShow, el.method('div')('Content'));
+    const spec = show(shouldShow, el.impl('div')('Content'));
 
     const parent = renderer.createElement('section');
     const parentRef: ElementRef<MockElement> = {

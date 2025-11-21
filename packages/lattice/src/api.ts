@@ -10,17 +10,13 @@
  * 3. Maintain type safety across component -> extension -> API
  */
 
-import {
-  createContext,
-  CreateContextOptions,
-  type LatticeExtension,
-} from './extension';
-import { type Instantiatable } from './component';
+import { compose, CreateContextOptions, type Service } from './extension';
+import { type ServiceDefinition } from './types';
 
 // Internal type for type-level operations
-export type InstantiableExtension = Instantiatable<
-  LatticeExtension<string, unknown>,
-  unknown
+export type DefinedService<TDeps = unknown> = ServiceDefinition<
+  Service<string, TDeps>,
+  TDeps
 >;
 
 // Helper to extract context requirements from instantiables
@@ -31,23 +27,22 @@ type UnionToIntersection<U> = (
   ? I
   : never;
 
-type ExtractContextRequirements<
-  T extends Record<string, InstantiableExtension>,
-> = UnionToIntersection<
-  T[keyof T] extends Instantiatable<unknown, infer C> ? C : never
->;
+type ExtractDeps<T extends Record<string, DefinedService>> =
+  UnionToIntersection<
+    T[keyof T] extends ServiceDefinition<unknown, infer C> ? C : never
+  >;
 
 /**
  * Create an API from a set of Instantiable components and shared context
  */
-export function createApi<
-  T extends Record<string, InstantiableExtension>,
-  TCtx extends ExtractContextRequirements<T>,
->(extensions: T, ctx: TCtx, options?: CreateContextOptions) {
+export function composeFrom<
+  T extends Record<string, DefinedService>,
+  TDeps extends ExtractDeps<T>,
+>(extensions: T, deps: TDeps, options?: CreateContextOptions) {
   const mappedComponents = Object.values(extensions).map((ext) =>
-    ext.create(ctx)
+    ext.create(deps)
   ) as ReturnType<T[keyof T]['create']>[];
 
-  if (options) return createContext(options, ...mappedComponents);
-  return createContext(...mappedComponents);
+  if (options) return compose(options, ...mappedComponents);
+  return compose(...mappedComponents);
 }

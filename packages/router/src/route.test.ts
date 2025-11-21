@@ -106,9 +106,9 @@ describe('route() - single route rendering', () => {
     const route = createRouteFactory<MockRendererConfig>().create({
       signal: env.signal,
       computed,
-      el: el.method as never,
-      match: match.method,
-      show: show.method,
+      el: el.impl as never,
+      match: match.impl,
+      show: show.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -116,7 +116,7 @@ describe('route() - single route rendering', () => {
       onCleanup: env.onCleanup,
     });
 
-    return { ...env, el, route: route.method, currentPath };
+    return { ...env, el, route: route.impl, currentPath };
   }
 
   // Helper to create and mount a route spec
@@ -325,9 +325,9 @@ describe('multiple routes - reactive switching', () => {
     const route = createRouteFactory<MockRendererConfig>().create({
       signal: env.signal,
       computed,
-      el: el.method as never,
-      match: match.method,
-      show: show.method,
+      el: el.impl as never,
+      match: match.impl,
+      show: show.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -335,7 +335,7 @@ describe('multiple routes - reactive switching', () => {
       onCleanup: env.onCleanup,
     });
 
-    return { ...env, el, route: route.method, currentPath };
+    return { ...env, el, route: route.impl, currentPath };
   }
 
   const mountRoute = (
@@ -408,7 +408,7 @@ describe('multiple routes - reactive switching', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('Products') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/about', About)().unwrap(),
       route('/products', Products)().unwrap()
@@ -433,7 +433,7 @@ describe('multiple routes - reactive switching', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/about', About)().unwrap()
     );
@@ -460,7 +460,7 @@ describe('multiple routes - reactive switching', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/about', About)().unwrap()
     );
@@ -489,7 +489,7 @@ describe('multiple routes - reactive switching', () => {
 
     currentPath('/test');
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/test', First)().unwrap(),
       route('/test', Second)().unwrap()
     );
@@ -519,7 +519,7 @@ describe('multiple routes - reactive switching', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('Products') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/about', About)().unwrap(),
       route('/products', Products)().unwrap()
@@ -582,9 +582,9 @@ describe('params - component access to route parameters', () => {
     const route = createRouteFactory<MockRendererConfig>().create({
       signal: env.signal,
       computed,
-      el: el.method as never,
-      match: match.method,
-      show: show.method,
+      el: el.impl as never,
+      match: match.impl,
+      show: show.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -592,7 +592,7 @@ describe('params - component access to route parameters', () => {
       onCleanup: env.onCleanup,
     });
 
-    return { ...env, el, route: route.method, currentPath, computed };
+    return { ...env, el, route: route.impl, currentPath, computed };
   }
 
   const mountRoute = (
@@ -782,9 +782,9 @@ describe('nested routes - structure and path composition', () => {
     const route = createRouteFactory<MockRendererConfig>().create({
       signal: env.signal,
       computed,
-      el: el.method as never,
-      match: match.method,
-      show: show.method,
+      el: el.impl as never,
+      match: match.impl,
+      show: show.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -792,7 +792,7 @@ describe('nested routes - structure and path composition', () => {
       onCleanup: env.onCleanup,
     });
 
-    return { ...env, el, route: route.method, currentPath, computed };
+    return { ...env, el, route: route.impl, currentPath, computed };
   }
 
   const mountRoute = (
@@ -1107,9 +1107,9 @@ describe('programmatic navigation', () => {
     const route = createRouteFactory<MockRendererConfig>().create({
       signal: env.signal,
       computed,
-      el: el.method as never,
-      match: match.method,
-      show: show.method,
+      el: el.impl as never,
+      match: match.impl,
+      show: show.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -1117,7 +1117,7 @@ describe('programmatic navigation', () => {
       onCleanup: env.onCleanup,
     });
 
-    return { ...env, el, route: route.method, currentPath, computed };
+    return { ...env, el, route: route.impl, currentPath, computed };
   }
 
   const mountRoute = (
@@ -1191,7 +1191,7 @@ describe('programmatic navigation', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/about', About)().unwrap()
     );
@@ -1231,7 +1231,7 @@ describe('programmatic navigation', () => {
         computed(() => `Product: ${params().id}`)
       ) as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/products/:id', Product)().unwrap()
     );
@@ -1311,7 +1311,7 @@ describe('programmatic navigation', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('Products') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/about', About)().unwrap(),
       route('/products', Products)().unwrap()
@@ -1360,7 +1360,7 @@ describe('programmatic navigation', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('About') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('/about', About)().unwrap()
     );
@@ -1422,9 +1422,9 @@ describe('wildcard routes - catch-all behavior', () => {
     const route = createRouteFactory<MockRendererConfig>().create({
       signal: env.signal,
       computed,
-      el: el.method as never,
-      match: match.method,
-      show: show.method,
+      el: el.impl as never,
+      match: match.impl,
+      show: show.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -1432,7 +1432,7 @@ describe('wildcard routes - catch-all behavior', () => {
       onCleanup: env.onCleanup,
     });
 
-    return { ...env, el, route: route.method, currentPath };
+    return { ...env, el, route: route.impl, currentPath };
   }
 
   const mountRoute = (
@@ -1501,7 +1501,7 @@ describe('wildcard routes - catch-all behavior', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('Not Found') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('*', NotFound)().unwrap()
     );
@@ -1527,7 +1527,7 @@ describe('wildcard routes - catch-all behavior', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('Not Found') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/about', About)().unwrap(),
       route('*', NotFound)().unwrap()
     );
@@ -1587,7 +1587,7 @@ describe('wildcard routes - catch-all behavior', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
     }) => elFn('div')('Not Found') as RefSpec<MockElement>;
 
-    const routesSpec = el.method('div')(
+    const routesSpec = el.impl('div')(
       route('/', Home)().unwrap(),
       route('*', NotFound)().unwrap()
     );
@@ -1640,9 +1640,9 @@ describe('outlet - parent components render matched children', () => {
     const route = createRouteFactory<MockRendererConfig>().create({
       signal: env.signal,
       computed,
-      el: el.method as never,
-      match: match.method,
-      show: show.method,
+      el: el.impl as never,
+      match: match.impl,
+      show: show.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
       renderer: env.renderer,
@@ -1650,7 +1650,7 @@ describe('outlet - parent components render matched children', () => {
       onCleanup: env.onCleanup,
     });
 
-    return { ...env, el, route: route.method, currentPath, computed };
+    return { ...env, el, route: route.impl, currentPath, computed };
   }
 
   const mountRoute = (

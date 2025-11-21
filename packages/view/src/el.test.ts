@@ -52,7 +52,7 @@ describe('el primitive', () => {
         renderer,
         createElementScope,
         onCleanup,
-      }).method;
+      }).impl;
 
       const ref = el('div', { className: 'container' })('Hello ', 'World');
 
@@ -70,7 +70,7 @@ describe('el primitive', () => {
         renderer,
         createElementScope,
         onCleanup,
-      }).method;
+      }).impl;
 
       const child = el('span')(
         'nested content'
@@ -105,7 +105,7 @@ describe('el primitive', () => {
         renderer,
         createElementScope,
         onCleanup,
-      }).method;
+      }).impl;
 
       const ref = el('div')(text);
 
@@ -135,7 +135,7 @@ describe('el primitive', () => {
         renderer,
         createElementScope,
         onCleanup,
-      }).method;
+      }).impl;
 
       const ref = el('div', { className })();
 
@@ -161,7 +161,7 @@ describe('el primitive', () => {
         renderer,
         createElementScope,
         onCleanup,
-      }).method;
+      }).impl;
 
       const ref = el('div')('Count: ', count);
 
@@ -187,7 +187,7 @@ describe('el primitive', () => {
         renderer,
         createElementScope,
         onCleanup,
-      }).method;
+      }).impl;
 
       const ref = el('div')(text);
       asElement(ref.create());
@@ -211,7 +211,7 @@ describe('el primitive', () => {
         renderer,
         createElementScope,
         onCleanup,
-      }).method;
+      }).impl;
 
       const cleanup = vi.fn();
       const ref = el('div')()(() => cleanup);

@@ -11,9 +11,9 @@ import { STATUS_REF_SPEC } from '../types';
  * Instrument a map factory to emit events
  */
 export function instrumentMap<TBaseElement>(
-  method: MapFactory<TBaseElement>['method'],
+  impl: MapFactory<TBaseElement>['impl'],
   instrumentation: InstrumentationContext
-): MapFactory<TBaseElement>['method'] {
+): MapFactory<TBaseElement>['impl'] {
   type TSpec = RefSpec<TBaseElement>;
 
   function instrumentedMap<T>(
@@ -31,8 +31,8 @@ export function instrumentMap<TBaseElement>(
       },
     });
 
-    // Call base method - TypeScript overloads will resolve at call site
-    const renderApplicator = method(items as () => T[], keyFn);
+    // Call base impl - TypeScript overloads will resolve at call site
+    const renderApplicator = impl(items as () => T[], keyFn);
 
     // Wrap the render applicator
     return (

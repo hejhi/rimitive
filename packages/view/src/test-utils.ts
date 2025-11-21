@@ -340,14 +340,14 @@ export function createTestEnv() {
   });
 
   // Use real signal
-  const signal = signalFactory.method;
+  const signal = signalFactory.impl;
 
   // Use real effect from signals
   const effectFactory = Effect().create({
     track: graphEdges.track,
     dispose: scheduler.dispose,
   });
-  const effect = effectFactory.method;
+  const effect = effectFactory.impl;
 
   const {
     disposeScope,

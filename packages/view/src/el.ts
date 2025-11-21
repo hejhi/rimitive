@@ -1,9 +1,9 @@
 import type {
-  LatticeExtension,
+  Service,
   InstrumentationContext,
-  ExtensionContext,
+  ServiceContext,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import type {
   LifecycleCallback,
   RefSpec,
@@ -55,10 +55,10 @@ export type ElOpts<TConfig extends RendererConfig> = {
 
 export type ElProps<TConfig extends RendererConfig> = {
   instrument?: (
-    method: ElFactory<TConfig>['method'],
+    impl: ElFactory<TConfig>['impl'],
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
-  ) => ElFactory<TConfig>['method'];
+    context: ServiceContext
+  ) => ElFactory<TConfig>['impl'];
 };
 
 /**
@@ -84,7 +84,7 @@ export type ChildrenApplicator<
  * Generic over:
  * - TConfig: The renderer configuration
  */
-export type ElFactory<TConfig extends RendererConfig> = LatticeExtension<
+export type ElFactory<TConfig extends RendererConfig> = Service<
   'el',
   {
     // Static element builder
@@ -104,7 +104,7 @@ export type ElFactory<TConfig extends RendererConfig> = LatticeExtension<
  * - TElement: Base element type
  * - TText: Text node type
  */
-export const El = create(
+export const El = defineService(
   <TConfig extends RendererConfig>({
     scopedEffect,
     renderer,
@@ -209,7 +209,7 @@ export const El = create(
 
       const extension: ElFactory<TConfig> = {
         name: 'el',
-        method: el,
+        impl: el,
         ...(instrument && { instrument }),
       };
 

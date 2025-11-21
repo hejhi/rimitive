@@ -10,7 +10,7 @@ import { Subscribe, SubscribeCallback } from './subscribe';
 import { Computed } from './computed';
 import { Effect } from './effect';
 import { Batch } from './batch';
-import { createContext as createLattice } from '@lattice/lattice';
+import { compose as createLattice } from '@lattice/lattice';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPullPropagator } from './helpers/pull-propagator';
 import { createScheduler } from './helpers/scheduler';

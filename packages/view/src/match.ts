@@ -1,9 +1,9 @@
 import type {
-  LatticeExtension,
+  Service,
   InstrumentationContext,
-  ExtensionContext,
+  ServiceContext,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import type {
   LifecycleCallback,
   RefSpec,
@@ -30,10 +30,10 @@ export type MatchOpts<TConfig extends RendererConfig> = {
 
 export type MatchProps<TBaseElement> = {
   instrument?: (
-    method: MatchFactory<TBaseElement>['method'],
+    impl: MatchFactory<TBaseElement>['impl'],
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
-  ) => MatchFactory<TBaseElement>['method'];
+    context: ServiceContext
+  ) => MatchFactory<TBaseElement>['impl'];
 };
 
 /**
@@ -47,7 +47,7 @@ export type MatchProps<TBaseElement> = {
  * - T: The reactive value type
  * - TElement: The element type (must extend base element from renderer config)
  */
-export type MatchFactory<TBaseElement> = LatticeExtension<
+export type MatchFactory<TBaseElement> = Service<
   'match',
   {
     <T, TElement extends TBaseElement>(
@@ -77,7 +77,7 @@ export type MatchFactory<TBaseElement> = LatticeExtension<
  * The matcher function is called with the current reactive value and must return
  * a RefSpec. It is NOT a reactive tracking scope - it's a pure mapping function.
  */
-export const Match = create(
+export const Match = defineService(
   <TConfig extends RendererConfig>({
     scopedEffect,
     renderer,
@@ -227,7 +227,7 @@ export const Match = create(
 
       const extension: MatchFactory<TBaseElement> = {
         name: 'match',
-        method: match,
+        impl: match,
         ...(instrument && { instrument }),
       };
 

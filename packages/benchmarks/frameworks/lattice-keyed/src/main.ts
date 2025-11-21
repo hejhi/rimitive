@@ -12,19 +12,22 @@ import {
   DOMRendererConfig,
 } from '@lattice/view/renderers/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 
 // Wire up view layer
 
 const renderer = createDOMRenderer();
-const signals = createApi(defaultSignalsExtensions(), defaultSignalsHelpers());
+const signals = composeFrom(
+  defaultSignalsExtensions(),
+  defaultSignalsHelpers()
+);
 const viewHelpers = defaultViewHelpers(renderer, signals);
 
 /**
  * DOM-specific API for this app
  * Types are automatically inferred from the renderer
  */
-const views = createApi(
+const views = composeFrom(
   defaultViewExtensions<DOMRendererConfig>(),
   viewHelpers
 );

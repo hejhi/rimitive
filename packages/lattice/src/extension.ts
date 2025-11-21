@@ -1,14 +1,14 @@
 /**
- * @fileoverview Lattice extension system
+ * @fileoverview Lattice context system
  *
- * Provides a unified interface for all lattice functionality through extensions.
+ * Provides a unified interface for all lattice functionality through services and context.
  * This allows optimal tree-shaking and easy extensibility.
  */
 
 /**
- * Context provided to extensions for lifecycle management
+ * Context provided to services for lifecycle management
  */
-export interface ExtensionContext {
+export interface ServiceContext {
   /**
    * Register a cleanup function to be called when context is disposed
    */
@@ -21,7 +21,7 @@ export interface ExtensionContext {
 }
 
 /**
- * Instrumentation context provided to extensions
+ * Instrumentation context provided to services
  */
 export interface InstrumentationContext {
   /**
@@ -54,69 +54,69 @@ export interface InstrumentationContext {
 }
 
 /**
- * Base interface for all lattice extensions
+ * Base interface for all lattice services
  */
-export interface LatticeExtension<TName extends string, TMethod> {
+export interface Service<TName extends string, TImpl> {
   /**
-   * Unique name for this extension (becomes the method name on context)
+   * Unique name for this service (becomes the impl name on context)
    */
   name: TName;
 
   /**
    * The actual implementation
    */
-  method: TMethod;
+  impl: TImpl;
 
   /**
    * Optional wrapper to add context awareness (disposal checks, tracking, etc.)
    */
-  adapt?(method: TMethod, context: ExtensionContext): TMethod;
+  adapt?(impl: TImpl, context: ServiceContext): TImpl;
 
   /**
    * Optional instrumentation wrapper for debugging/profiling
    */
   instrument?(
-    method: TMethod,
+    impl: TImpl,
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
-  ): TMethod;
+    context: ServiceContext
+  ): TImpl;
 
   /**
-   * Called when the extension is added to a context
+   * Called when the service is added to a context
    */
-  init?(context: ExtensionContext): void;
+  init?(context: ServiceContext): void;
 
   /**
    * Called when the context is disposed
    */
-  destroy?(context: ExtensionContext): void;
+  destroy?(context: ServiceContext): void;
 }
 
 /**
- * Helper type to extract the method type from an extension
+ * Helper type to extract the impl type from an service
  */
-export type ExtensionMethod<E> =
-  E extends LatticeExtension<string, infer M> ? M : never;
+export type ServiceImpl<TService> =
+  TService extends Service<string, infer M> ? M : never;
 
 /**
- * Helper type to extract the name from an extension
+ * Helper type to extract the name from an service
  */
-export type ExtensionName<E> =
-  E extends LatticeExtension<infer N, unknown> ? N : never;
+export type ServiceName<TService> =
+  TService extends Service<infer N, unknown> ? N : never;
 
 /**
- * Convert a tuple of extensions into a context type
+ * Convert a tuple of services into a context type
  */
-export type ExtensionsToContext<
-  E extends readonly LatticeExtension<string, unknown>[],
+export type LatticeContext<
+  TService extends readonly Service<string, unknown>[],
 > = {
-  [K in E[number] as ExtensionName<K>]: ExtensionMethod<K>;
+  [K in TService[number] as ServiceName<K>]: ServiceImpl<K>;
 } & {
   dispose(): void;
 };
 
 /**
- * Internal state for extension context
+ * Internal state for service context
  */
 interface ContextState {
   disposed: boolean;
@@ -134,21 +134,22 @@ export interface CreateContextOptions {
 }
 
 /**
- * Create a lattice context from a set of extensions
+ * Create a lattice context from a set of services
  *
- * Accepts extensions or arrays of extensions, automatically flattening nested arrays.
+ * Accepts services or arrays of services, automatically flattening nested arrays.
  */
-export function createContext<
-  E extends readonly LatticeExtension<string, unknown>[],
->(...extensions: E): ExtensionsToContext<E>;
-export function createContext<
-  E extends readonly LatticeExtension<string, unknown>[],
->(options: CreateContextOptions, ...extensions: E): ExtensionsToContext<E>;
-export function createContext<
-  E extends readonly LatticeExtension<string, unknown>[],
->(...args: [CreateContextOptions, ...E] | E): ExtensionsToContext<E> {
+export function compose<TServices extends readonly Service<string, unknown>[]>(
+  ...services: TServices
+): LatticeContext<TServices>;
+export function compose<TServices extends readonly Service<string, unknown>[]>(
+  options: CreateContextOptions,
+  ...services: TServices
+): LatticeContext<TServices>;
+export function compose<TServices extends readonly Service<string, unknown>[]>(
+  ...args: [CreateContextOptions, ...TServices] | TServices
+): LatticeContext<TServices> {
   // Parse arguments - first arg might be options
-  let rawExtensions: E;
+  let rawServices: TServices;
   let options: CreateContextOptions | undefined;
 
   if (
@@ -158,21 +159,21 @@ export function createContext<
     'instrumentation' in args[0]
   ) {
     options = args[0];
-    rawExtensions = args.slice(1) as unknown as E;
+    rawServices = args.slice(1) as unknown as TServices;
   } else {
-    rawExtensions = args as E;
+    rawServices = args as TServices;
   }
 
-  // Flatten any arrays of extensions
-  const extensions = rawExtensions.flat(1) as unknown as E;
+  // Flatten any arrays of services
+  const services = rawServices.flat(1) as unknown as TServices;
 
-  // Check for duplicate extension names
+  // Check for duplicate service names
   const names = new Set<string>();
-  for (const ext of extensions) {
-    if (names.has(ext.name)) {
-      throw new Error(`Duplicate extension name: ${ext.name}`);
+  for (const service of services) {
+    if (names.has(service.name)) {
+      throw new Error(`Duplicate service name: ${service.name}`);
     }
-    names.add(ext.name);
+    names.add(service.name);
   }
 
   const state: ContextState = {
@@ -180,7 +181,7 @@ export function createContext<
     disposers: new Set(),
   };
 
-  const extensionContext: ExtensionContext = {
+  const serviceCtx: ServiceContext = {
     destroy(cleanup: () => void): void {
       state.disposers.add(cleanup);
     },
@@ -196,9 +197,9 @@ export function createContext<
       if (state.disposed) return;
       state.disposed = true;
 
-      // Call extension cleanup first
-      for (const ext of extensions) {
-        ext.destroy?.(extensionContext);
+      // Call service cleanup first
+      for (const service of services) {
+        service.destroy?.(serviceCtx);
       }
 
       // Then call all registered disposers
@@ -207,30 +208,26 @@ export function createContext<
       }
       state.disposers.clear();
     },
-  } as ExtensionsToContext<E>;
+  } as LatticeContext<TServices>;
 
-  // Add each extension's method to the context
-  for (const ext of extensions) {
+  // Add each service's impl to the context
+  for (const service of services) {
     // Call init lifecycle
-    ext.init?.(extensionContext);
+    service.init?.(serviceCtx);
 
-    // Start with the base method
-    let method = ext.method;
+    // Start with the base impl
+    let impl = service.impl;
 
     // Apply instrumentation if provided
-    if (options?.instrumentation && ext.instrument) {
-      method = ext.instrument(
-        method,
-        options.instrumentation,
-        extensionContext
-      );
+    if (options?.instrumentation && service.instrument) {
+      impl = service.instrument(impl, options.instrumentation, serviceCtx);
     }
 
     // Apply context wrapper if provided
-    if (ext.adapt) method = ext.adapt(method, extensionContext);
+    if (service.adapt) impl = service.adapt(impl, serviceCtx);
 
     // Safe because we control the context type
-    (context as Record<string, unknown>)[ext.name] = method;
+    (context as Record<string, unknown>)[service.name] = impl;
   }
 
   return context;

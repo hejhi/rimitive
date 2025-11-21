@@ -6,7 +6,7 @@
  * island fragments with hydration markers.
  */
 
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import { defaultExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import {
@@ -45,7 +45,7 @@ import type { RefSpec, ReactiveAdapter } from '@lattice/view/types';
 export const createIslandSSRApi = <T extends ReactiveAdapter>(signals: T) => {
   const renderer = createDOMServerRenderer();
   const viewHelpers = createSpec(renderer, signals);
-  const views = createApi(
+  const views = composeFrom(
     defaultExtensions<DOMServerRendererConfig>(),
     viewHelpers
   );

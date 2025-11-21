@@ -7,11 +7,11 @@
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
 import type {
-  LatticeExtension,
+  Service,
   InstrumentationContext,
-  ExtensionContext,
+  ServiceContext,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import { GraphEdges, Consumer } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
 
@@ -32,9 +32,9 @@ export type ComputedOpts = {
 
 export type ComputedProps = {
   instrument?: (
-    method: <T>(compute: () => T) => ComputedFunction<T>,
+    impl: <T>(compute: () => T) => ComputedFunction<T>,
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
+    context: ServiceContext
   ) => <T>(compute: () => T) => ComputedFunction<T>;
 };
 
@@ -57,12 +57,12 @@ const COMPUTED_CLEAN = COMPUTED | CLEAN;
 const COMPUTED_DIRTY = COMPUTED | DIRTY;
 
 // Export the factory return type for better type inference
-export type ComputedFactory = LatticeExtension<
+export type ComputedFactory = Service<
   'computed',
   <T>(compute: () => T) => ComputedFunction<T>
 >;
 
-export const Computed = create(
+export const Computed = defineService(
   ({
     consumer,
     trackDependency,
@@ -142,7 +142,7 @@ export const Computed = create(
 
       return {
         name: 'computed',
-        method: createComputed,
+        impl: createComputed,
         ...(instrument && { instrument }),
       };
     }

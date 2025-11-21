@@ -9,13 +9,13 @@ import type { ComputedFunction } from '../computed';
  * Instrument a computed factory to emit events
  */
 export function instrumentComputed(
-  method: <T>(compute: () => T) => ComputedFunction<T>,
+  impl: <T>(compute: () => T) => ComputedFunction<T>,
   instrumentation: InstrumentationContext
 ) {
   return function instrumentedCreateComputed<T>(
     compute: () => T
   ): ComputedFunction<T> {
-    const computed = method(compute);
+    const computed = impl(compute);
     const { id } = instrumentation.register(computed, 'computed', 'Computed');
 
     // Wrap to emit computation events

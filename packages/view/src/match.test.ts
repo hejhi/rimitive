@@ -28,7 +28,7 @@ describe('match() - reactive element switching', () => {
       getElementScope: env.getElementScope,
     });
 
-    return { ...env, el, match: match.method };
+    return { ...env, el, match: match.impl };
   }
 
   describe('Untracked lifecycle callbacks', () => {
@@ -44,7 +44,7 @@ describe('match() - reactive element switching', () => {
       const spec = match(showDiv)((show) => {
         matcherCallCount++;
         return show
-          ? el.method('div')('Content')(() => {
+          ? el.impl('div')('Content')(() => {
               lifecycleCallCount++;
               // This read should NOT become a dependency of match's effect
               const value = outerState();

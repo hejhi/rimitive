@@ -13,4 +13,4 @@ export { useLatticeContext } from './lattice';
 // Types
 export type { SignalValue, SignalSetter, SignalProviderProps } from './signals';
 
-export type { LatticeExtension, ExtensionsToContext } from '@lattice/lattice';
+export type { Service, LatticeContext } from '@lattice/lattice';

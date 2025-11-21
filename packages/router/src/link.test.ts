@@ -27,7 +27,7 @@ describe('Link component - basic rendering', () => {
     };
 
     const api = {
-      el: el.method,
+      el: el.impl,
       navigate,
     };
 
@@ -95,8 +95,8 @@ describe('Link component - basic rendering', () => {
     const { Link, el, renderer, api } = setup();
 
     const linkSpec = Link({ href: '/home' })(
-      el.method('span')('Go to '),
-      el.method('strong')('Home')
+      el.impl('span')('Go to '),
+      el.impl('strong')('Home')
     );
 
     const parent = mountElement(linkSpec, api, renderer);
@@ -124,7 +124,7 @@ describe('Link component - click handling', () => {
     };
 
     const api = {
-      el: el.method,
+      el: el.impl,
       navigate,
     };
 
@@ -357,7 +357,7 @@ describe('Link component - lifecycle callbacks', () => {
     };
 
     const api = {
-      el: el.method,
+      el: el.impl,
       navigate,
     };
 

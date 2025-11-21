@@ -4,7 +4,7 @@
  * All components in this app use this shared API.
  * This ensures consistent renderer configuration across the entire app.
  */
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import {
   defaultExtensions as defaultViewExtensions,
   defaultHelpers as defaultViewHelpers,
@@ -39,7 +39,7 @@ const createViewApi = () => {
   >();
 
   // Create the views API (without route - that's separate now)
-  const views = createApi(baseExtensions, {
+  const views = composeFrom(baseExtensions, {
     ...viewHelpers,
   });
 

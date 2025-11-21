@@ -6,7 +6,7 @@
 export type { Renderer, RendererConfig } from './renderer';
 export type { ReactiveAdapter } from './reactive-adapter';
 
-import type { Instantiatable } from '@lattice/lattice';
+import type { ServiceDefinition } from '@lattice/lattice';
 
 /**
  * Status bits for node ref type discrimination
@@ -86,10 +86,10 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 
 /**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
- * Extends Instantiatable to provide uniform context injection pattern
+ * Extends ServiceDefinition to provide uniform context injection pattern
  */
 export interface RefSpec<TElement>
-  extends Instantiatable<NodeRef<TElement>, unknown> {
+  extends ServiceDefinition<NodeRef<TElement>, unknown> {
   status: typeof STATUS_REF_SPEC;
   (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions

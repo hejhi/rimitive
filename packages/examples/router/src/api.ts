@@ -4,7 +4,7 @@
  * All components in this app use this shared API.
  * This ensures consistent renderer configuration across the entire app.
  */
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import {
   defaultExtensions as defaultViewExtensions,
   defaultHelpers as defaultViewHelpers,
@@ -28,7 +28,7 @@ const createViewApi = () => {
   const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
 
   // Create the views API (without route - that's separate now)
-  const views = createApi(baseExtensions, viewHelpers);
+  const views = composeFrom(baseExtensions, viewHelpers);
 
   const api = {
     ...signals,
@@ -51,7 +51,7 @@ const createViewApi = () => {
   const mountToContainer = (container: Element, spec: RefSpec<unknown>) => {
     const nodeRef = spec.create(api);
 
-    // Check if it's a FragmentRef with attach method
+    // Check if it's a FragmentRef with attach impl
     if (nodeRef.status === STATUS_FRAGMENT) {
       // Create parent ref for the container
       const parentRef: ElementRef<Element> = {

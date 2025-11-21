@@ -4,13 +4,13 @@ import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { SignalProvider } from './signals/context';
-import { createApi } from '@lattice/lattice';
+import { composeFrom } from '@lattice/lattice';
 import {
   defaultExtensions,
   defaultHelpers,
 } from '@lattice/signals/presets/core';
 
-const createSignals = () => createApi(defaultExtensions(), defaultHelpers());
+const createSignals = () => composeFrom(defaultExtensions(), defaultHelpers());
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {

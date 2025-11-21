@@ -9,17 +9,17 @@ describe('Lattice Context Hooks', () => {
       // For testing, we'll create a mock extension set using the test API
       const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: testAPI.signal },
-        { name: 'computed' as const, method: testAPI.computed },
-        { name: 'effect' as const, method: testAPI.effect },
-        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'signal' as const, impl: testAPI.signal },
+        { name: 'computed' as const, impl: testAPI.computed },
+        { name: 'effect' as const, impl: testAPI.effect },
+        { name: 'batch' as const, impl: testAPI.batch },
       ];
 
       const { result, unmount } = renderHook(() =>
         useLatticeContext(...mockExtensions)
       );
 
-      // Context should have all methods
+      // Context should have all impls
       expect(typeof result.current.signal).toBe('function');
       expect(typeof result.current.computed).toBe('function');
       expect(typeof result.current.effect).toBe('function');
@@ -47,10 +47,10 @@ describe('Lattice Context Hooks', () => {
       // For testing, we'll create a mock extension set using the test API
       const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: testAPI.signal },
-        { name: 'computed' as const, method: testAPI.computed },
-        { name: 'effect' as const, method: testAPI.effect },
-        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'signal' as const, impl: testAPI.signal },
+        { name: 'computed' as const, impl: testAPI.computed },
+        { name: 'effect' as const, impl: testAPI.effect },
+        { name: 'batch' as const, impl: testAPI.batch },
       ];
 
       const { result, rerender } = renderHook(() =>
@@ -70,10 +70,10 @@ describe('Lattice Context Hooks', () => {
       // For testing, we'll create a mock extension set using the test API
       const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: testAPI.signal },
-        { name: 'computed' as const, method: testAPI.computed },
-        { name: 'effect' as const, method: testAPI.effect },
-        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'signal' as const, impl: testAPI.signal },
+        { name: 'computed' as const, impl: testAPI.computed },
+        { name: 'effect' as const, impl: testAPI.effect },
+        { name: 'batch' as const, impl: testAPI.batch },
       ];
 
       const { result } = renderHook(() => useLatticeContext(...mockExtensions));
@@ -96,10 +96,10 @@ describe('Lattice Context Hooks', () => {
       // For testing, we'll create a mock extension set using the test API
       const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: testAPI.signal },
-        { name: 'computed' as const, method: testAPI.computed },
-        { name: 'effect' as const, method: testAPI.effect },
-        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'signal' as const, impl: testAPI.signal },
+        { name: 'computed' as const, impl: testAPI.computed },
+        { name: 'effect' as const, impl: testAPI.effect },
+        { name: 'batch' as const, impl: testAPI.batch },
       ];
 
       const { result } = renderHook(() => useLatticeContext(...mockExtensions));
@@ -132,7 +132,7 @@ describe('Lattice Context Hooks', () => {
       // Create a custom extension
       const counterExtension = {
         name: 'counter' as const,
-        method: (() => {
+        impl: (() => {
           let count = 0;
           return {
             increment: () => ++count,
@@ -144,7 +144,7 @@ describe('Lattice Context Hooks', () => {
 
       const { result } = renderHook(() => useLatticeContext(counterExtension));
 
-      // Should have the custom extension method
+      // Should have the custom extension impl
       expect(typeof result.current.counter).toBe('object');
       expect(typeof result.current.counter.increment).toBe('function');
       expect(typeof result.current.dispose).toBe('function');

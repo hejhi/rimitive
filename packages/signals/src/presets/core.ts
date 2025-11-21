@@ -10,7 +10,7 @@ import { Effect } from '../effect';
 import { Batch } from '../batch';
 import { Subscribe } from '../subscribe';
 import { createPushPullSchedule } from '../helpers';
-import { createApi, type InstantiableExtension } from '@lattice/lattice';
+import { composeFrom, type DefinedService } from '@lattice/lattice';
 
 // Re-export types so they're part of the public API
 export type {
@@ -33,11 +33,9 @@ export type {
 } from '../computed';
 export type { EffectFactory, EffectOpts, EffectProps } from '../effect';
 export type { BatchFactory, BatchOpts, BatchProps } from '../batch';
-export type { InstantiableExtension } from '@lattice/lattice';
+export type { DefinedService } from '@lattice/lattice';
 
-export const defaultExtensions = <
-  T extends Record<string, InstantiableExtension>,
->(
+export const defaultExtensions = <T extends Record<string, DefinedService>>(
   extensions?: T
 ) => ({
   signal: Signal(),
@@ -50,4 +48,4 @@ export const defaultExtensions = <
 
 export const defaultHelpers = createPushPullSchedule;
 export const createSignalsApi = () =>
-  createApi(defaultExtensions(), defaultHelpers());
+  composeFrom(defaultExtensions(), defaultHelpers());

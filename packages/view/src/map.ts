@@ -3,11 +3,11 @@
  */
 
 import type {
-  LatticeExtension,
+  Service,
   InstrumentationContext,
-  ExtensionContext,
+  ServiceContext,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import type {
   RefSpec,
   FragmentRef,
@@ -25,7 +25,7 @@ import { removeFromFragment } from './helpers/fragment-boundaries';
 /**
  * Map factory type - curried for element builder pattern
  */
-export type MapFactory<TBaseElement> = LatticeExtension<
+export type MapFactory<TBaseElement> = Service<
   'map',
   {
     // Array
@@ -61,10 +61,10 @@ export interface MapOpts<TConfig extends RendererConfig> {
 
 export interface MapProps<TBaseElement> {
   instrument?: (
-    method: MapFactory<TBaseElement>['method'],
+    impl: MapFactory<TBaseElement>['impl'],
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
-  ) => MapFactory<TBaseElement>['method'];
+    context: ServiceContext
+  ) => MapFactory<TBaseElement>['impl'];
 }
 
 type RecNode<T, TElement> = ElementRef<TElement> &
@@ -74,7 +74,7 @@ type RecNode<T, TElement> = ElementRef<TElement> &
  * Map primitive - instantiatable extension using the create pattern
  * Similar to Signal() in signals preset
  */
-export const Map = create(
+export const Map = defineService(
   <TConfig extends RendererConfig>({
     signal,
     scopedEffect,
@@ -299,7 +299,7 @@ export const Map = create(
 
       const extension: MapFactory<TBaseElement> = {
         name: 'map',
-        method: map,
+        impl: map,
         ...(instrument && { instrument }),
       };
 

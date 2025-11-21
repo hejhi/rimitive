@@ -1,9 +1,9 @@
 import type {
-  LatticeExtension,
+  Service,
   InstrumentationContext,
-  ExtensionContext,
+  ServiceContext,
 } from '@lattice/lattice';
-import { create } from '@lattice/lattice';
+import { defineService } from '@lattice/lattice';
 import type { ScheduledNode } from './types';
 import { GraphEdges } from './helpers/graph-edges';
 import { CONSTANTS } from './constants';
@@ -21,9 +21,9 @@ export type EffectOpts = {
 
 export type EffectProps = {
   instrument?: (
-    method: (fn: () => void | (() => void)) => () => void,
+    impl: (fn: () => void | (() => void)) => () => void,
     instrumentation: InstrumentationContext,
-    context: ExtensionContext
+    context: ServiceContext
   ) => (fn: () => void | (() => void)) => () => void;
 };
 
@@ -32,7 +32,7 @@ export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 
 // Export the factory return type for better type inference
-export type EffectFactory = LatticeExtension<
+export type EffectFactory = Service<
   'effect',
   (fn: () => void | (() => void)) => () => void
 >;
@@ -43,7 +43,7 @@ interface EffectNode extends ScheduledNode {
   cleanup?: void | (() => void);
 }
 
-export const Effect = create(
+export const Effect = defineService(
   ({ dispose: disposeNode, track }: EffectOpts) =>
     (props?: EffectProps): EffectFactory => {
       const { instrument } = props ?? {};
@@ -77,7 +77,7 @@ export const Effect = create(
 
       const extension: EffectFactory = {
         name: 'effect',
-        method: createEffect,
+        impl: createEffect,
         ...(instrument && { instrument }),
       };
 

@@ -8,7 +8,7 @@ import type { InstrumentationContext } from '@lattice/lattice';
  * Instrument a batch factory to emit events
  */
 export function instrumentBatch(
-  method: <T>(fn: () => T) => T,
+  impl: <T>(fn: () => T) => T,
   instrumentation: InstrumentationContext
 ) {
   return function instrumentedBatch<T>(fn: () => T): T {
@@ -23,7 +23,7 @@ export function instrumentBatch(
     });
 
     try {
-      const result = method(fn);
+      const result = impl(fn);
 
       instrumentation.emit({
         type: 'BATCH_END',
