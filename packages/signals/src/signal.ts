@@ -15,7 +15,7 @@
  */
 import type { ProducerNode, Dependency, Writable } from './types';
 import type {
-  Service,
+  ServiceDefinition,
   InstrumentationContext,
   ServiceContext,
 } from '@lattice/lattice';
@@ -57,7 +57,7 @@ interface SignalNode<T> extends ProducerNode {
 }
 
 // Export the factory return type for better type inference
-export type SignalFactory = Service<
+export type SignalFactory = ServiceDefinition<
   'signal',
   <T>(value: T) => SignalFunction<T>
 >;

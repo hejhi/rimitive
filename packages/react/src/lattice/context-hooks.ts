@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { compose } from '@lattice/lattice';
-import type { Service, LatticeContext } from '@lattice/lattice';
+import type { ServiceDefinition, LatticeContext } from '@lattice/lattice';
 
 /**
  * Create a Lattice context with custom extensions that is scoped to the component lifecycle.
@@ -44,7 +44,7 @@ import type { Service, LatticeContext } from '@lattice/lattice';
  * ```
  */
 export function useLatticeContext<
-  E extends readonly Service<string, unknown>[],
+  E extends readonly ServiceDefinition<string, unknown>[],
 >(...extensions: E): LatticeContext<E> {
   // Create context only once, using ref to ensure stability
   const contextRef = useRef<LatticeContext<E> | null>(null);

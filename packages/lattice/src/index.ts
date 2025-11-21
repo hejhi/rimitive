@@ -3,7 +3,7 @@
 // Export core extension system
 export { compose } from './extension';
 export type {
-  Service,
+  ServiceDefinition,
   ServiceContext,
   InstrumentationContext,
   CreateContextOptions,
@@ -17,7 +17,7 @@ export type { DefinedService } from './api';
 
 // Export component composition pattern
 export { defineService } from './component';
-export type { ServiceDefinition } from './types';
+export type { Service } from './types';
 
 // Export instrumentation system
 export {

@@ -1,5 +1,5 @@
 import type {
-  Service,
+  ServiceDefinition,
   InstrumentationContext,
   ServiceContext,
 } from '@lattice/lattice';
@@ -44,7 +44,7 @@ export type ShowProps<TBaseElement> = {
  * Generic over:
  * - TElement: The element type (must extend base element from renderer config)
  */
-export type ShowFactory<TBaseElement> = Service<
+export type ShowFactory<TBaseElement> = ServiceDefinition<
   'show',
   {
     <TElement extends TBaseElement>(

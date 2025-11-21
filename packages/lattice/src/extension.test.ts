@@ -1,20 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
 import { compose } from './extension';
-import type { Service } from './extension';
+import type { ServiceDefinition } from './extension';
 
 describe('Extension System', () => {
   it('should create a context with custom extensions', () => {
     let counterValue = 0;
 
-    const counterExtension: Service<'counter', () => number> = {
+    const counterExtension: ServiceDefinition<'counter', () => number> = {
       name: 'counter',
       impl: () => ++counterValue,
     };
 
-    const loggerExtension: Service<'log', (message: string) => void> = {
-      name: 'log',
-      impl: vi.fn(),
-    };
+    const loggerExtension: ServiceDefinition<'log', (message: string) => void> =
+      {
+        name: 'log',
+        impl: vi.fn(),
+      };
 
     const context = compose(counterExtension, loggerExtension);
 
@@ -38,7 +39,7 @@ describe('Extension System', () => {
     const init = vi.fn();
     const destroy = vi.fn();
 
-    const lifecycleExtension: Service<'test', () => void> = {
+    const lifecycleExtension: ServiceDefinition<'test', () => void> = {
       name: 'test',
       impl: () => {},
       init,
@@ -56,7 +57,10 @@ describe('Extension System', () => {
   it('should wrap impls when wrapper is provided', () => {
     let disposed = false;
 
-    const wrappedExtension: Service<'wrapped', (value: string) => string> = {
+    const wrappedExtension: ServiceDefinition<
+      'wrapped',
+      (value: string) => string
+    > = {
       name: 'wrapped',
       impl: (value: string) => value.toUpperCase(),
       adapt(impl, ctx) {
@@ -87,7 +91,7 @@ describe('Extension System', () => {
   it('should support custom resource tracking', () => {
     const disposables: Array<() => void> = [];
 
-    const resourceExtension: Service<
+    const resourceExtension: ServiceDefinition<
       'createResource',
       () => { dispose: () => void }
     > = {
@@ -119,17 +123,17 @@ describe('Extension System', () => {
     expect(r2.dispose).toHaveBeenCalledOnce();
   });
 
-  it('should prevent duplicate extension names', () => {
-    const ext1: Service<'test', () => void> = {
+  it('should prevent duplicate service names', () => {
+    const ext1: ServiceDefinition<'test', () => void> = {
       name: 'test',
       impl: () => {},
     };
 
-    const ext2: Service<'test', () => void> = {
+    const ext2: ServiceDefinition<'test', () => void> = {
       name: 'test',
       impl: () => {},
     };
 
-    expect(() => compose(ext1, ext2)).toThrow('Duplicate extension name: test');
+    expect(() => compose(ext1, ext2)).toThrow('Duplicate service name: test');
   });
 });

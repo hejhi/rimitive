@@ -1,5 +1,5 @@
 import type {
-  Service,
+  ServiceDefinition,
   InstrumentationContext,
   ServiceContext,
 } from '@lattice/lattice';
@@ -32,7 +32,7 @@ export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 
 // Export the factory return type for better type inference
-export type EffectFactory = Service<
+export type EffectFactory = ServiceDefinition<
   'effect',
   (fn: () => void | (() => void)) => () => void
 >;

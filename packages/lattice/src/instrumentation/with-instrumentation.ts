@@ -2,7 +2,7 @@
  * Helper for creating instrumented contexts
  */
 
-import type { Service, LatticeContext } from '../extension';
+import type { ServiceDefinition, LatticeContext } from '../extension';
 import { compose } from '../extension';
 import type { InstrumentationConfig } from './types';
 import { createInstrumentation } from './compose';
@@ -19,7 +19,7 @@ import { createInstrumentation } from './compose';
  * ```
  */
 export function withInstrumentation<
-  E extends readonly Service<string, unknown>[],
+  E extends readonly ServiceDefinition<string, unknown>[],
 >(config: InstrumentationConfig, ...extensions: E): LatticeContext<E> {
   const instrumentation = createInstrumentation(config);
 

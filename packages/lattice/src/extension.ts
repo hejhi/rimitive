@@ -56,7 +56,7 @@ export interface InstrumentationContext {
 /**
  * Base interface for all lattice services
  */
-export interface Service<TName extends string, TImpl> {
+export interface ServiceDefinition<TName extends string, TImpl> {
   /**
    * Unique name for this service (becomes the impl name on context)
    */
@@ -96,19 +96,19 @@ export interface Service<TName extends string, TImpl> {
  * Helper type to extract the impl type from an service
  */
 export type ServiceImpl<TService> =
-  TService extends Service<string, infer M> ? M : never;
+  TService extends ServiceDefinition<string, infer M> ? M : never;
 
 /**
  * Helper type to extract the name from an service
  */
 export type ServiceName<TService> =
-  TService extends Service<infer N, unknown> ? N : never;
+  TService extends ServiceDefinition<infer N, unknown> ? N : never;
 
 /**
  * Convert a tuple of services into a context type
  */
 export type LatticeContext<
-  TService extends readonly Service<string, unknown>[],
+  TService extends readonly ServiceDefinition<string, unknown>[],
 > = {
   [K in TService[number] as ServiceName<K>]: ServiceImpl<K>;
 } & {
@@ -138,14 +138,18 @@ export interface CreateContextOptions {
  *
  * Accepts services or arrays of services, automatically flattening nested arrays.
  */
-export function compose<TServices extends readonly Service<string, unknown>[]>(
-  ...services: TServices
-): LatticeContext<TServices>;
-export function compose<TServices extends readonly Service<string, unknown>[]>(
+export function compose<
+  TServices extends readonly ServiceDefinition<string, unknown>[],
+>(...services: TServices): LatticeContext<TServices>;
+export function compose<
+  TServices extends readonly ServiceDefinition<string, unknown>[],
+>(
   options: CreateContextOptions,
   ...services: TServices
 ): LatticeContext<TServices>;
-export function compose<TServices extends readonly Service<string, unknown>[]>(
+export function compose<
+  TServices extends readonly ServiceDefinition<string, unknown>[],
+>(
   ...args: [CreateContextOptions, ...TServices] | TServices
 ): LatticeContext<TServices> {
   // Parse arguments - first arg might be options

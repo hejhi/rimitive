@@ -16,7 +16,7 @@ import type { ScheduledNode } from './types';
 import type {
   ServiceContext,
   InstrumentationContext,
-  Service,
+  ServiceDefinition,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
 import { GraphEdges } from './helpers/graph-edges';
@@ -49,7 +49,10 @@ export type SubscribeProps = {
 export type SubscribeCallback<T> = (value: T) => void;
 export type UnsubscribeFunction = () => void;
 
-export type SubscribeFactory = Service<'subscribe', SubscribeFunction>;
+export type SubscribeFactory = ServiceDefinition<
+  'subscribe',
+  SubscribeFunction
+>;
 
 // Re-export types needed for type inference
 export type { GraphEdges } from './helpers/graph-edges';

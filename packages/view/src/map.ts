@@ -3,7 +3,7 @@
  */
 
 import type {
-  Service,
+  ServiceDefinition,
   InstrumentationContext,
   ServiceContext,
 } from '@lattice/lattice';
@@ -25,7 +25,7 @@ import { removeFromFragment } from './helpers/fragment-boundaries';
 /**
  * Map factory type - curried for element builder pattern
  */
-export type MapFactory<TBaseElement> = Service<
+export type MapFactory<TBaseElement> = ServiceDefinition<
   'map',
   {
     // Array

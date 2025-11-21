@@ -7,7 +7,7 @@
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
 import type {
-  Service,
+  ServiceDefinition,
   InstrumentationContext,
   ServiceContext,
 } from '@lattice/lattice';
@@ -57,7 +57,7 @@ const COMPUTED_CLEAN = COMPUTED | CLEAN;
 const COMPUTED_DIRTY = COMPUTED | DIRTY;
 
 // Export the factory return type for better type inference
-export type ComputedFactory = Service<
+export type ComputedFactory = ServiceDefinition<
   'computed',
   <T>(compute: () => T) => ComputedFunction<T>
 >;

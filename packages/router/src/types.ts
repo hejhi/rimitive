@@ -7,7 +7,7 @@ import type {
 } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { CreateScopes } from '@lattice/view/helpers/scope';
-import type { Service } from '@lattice/lattice';
+import type { ServiceDefinition } from '@lattice/lattice';
 import type { ShowFactory } from '@lattice/view/show';
 import type { ElementProps } from '@lattice/view/el';
 import type { ElMethod } from '@lattice/view/component';
@@ -127,7 +127,7 @@ export type RouteComponent<TConfig extends RendererConfig> =
  * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
  * Route factory type
  */
-export type RouteFactory<TConfig extends RendererConfig> = Service<
+export type RouteFactory<TConfig extends RendererConfig> = ServiceDefinition<
   'route',
   {
     (
@@ -157,7 +157,7 @@ export type LinkOpts = {
  *
  * Link is DOM-only - no need for generic renderer abstraction
  */
-export type LinkFactory = Service<
+export type LinkFactory = ServiceDefinition<
   'Link',
   {
     (
@@ -188,7 +188,7 @@ export type LocationOpts = {
 /**
  * Location factory type
  */
-export type LocationFactory = Service<
+export type LocationFactory = ServiceDefinition<
   'location',
   {
     (): LocationAPI;

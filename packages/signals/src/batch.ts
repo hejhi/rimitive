@@ -1,12 +1,12 @@
 import type {
   ServiceContext,
   InstrumentationContext,
-  Service,
+  ServiceDefinition,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
 import { Scheduler } from './helpers/scheduler';
 
-export type BatchFactory = Service<'batch', <T>(fn: () => T) => T>;
+export type BatchFactory = ServiceDefinition<'batch', <T>(fn: () => T) => T>;
 
 export type BatchOpts = {
   startBatch: Scheduler['startBatch'];

@@ -1,5 +1,5 @@
 import type {
-  Service,
+  ServiceDefinition,
   InstrumentationContext,
   ServiceContext,
 } from '@lattice/lattice';
@@ -47,7 +47,7 @@ export type MatchProps<TBaseElement> = {
  * - T: The reactive value type
  * - TElement: The element type (must extend base element from renderer config)
  */
-export type MatchFactory<TBaseElement> = Service<
+export type MatchFactory<TBaseElement> = ServiceDefinition<
   'match',
   {
     <T, TElement extends TBaseElement>(

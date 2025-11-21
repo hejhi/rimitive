@@ -1,5 +1,5 @@
 import type {
-  Service,
+  ServiceDefinition,
   InstrumentationContext,
   ServiceContext,
 } from '@lattice/lattice';
@@ -84,7 +84,7 @@ export type ChildrenApplicator<
  * Generic over:
  * - TConfig: The renderer configuration
  */
-export type ElFactory<TConfig extends RendererConfig> = Service<
+export type ElFactory<TConfig extends RendererConfig> = ServiceDefinition<
   'el',
   {
     // Static element builder
