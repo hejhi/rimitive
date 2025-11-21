@@ -4,6 +4,7 @@
 
 // Re-export renderer types so they're available from @lattice/view/types
 export type { Renderer, RendererConfig } from './renderer';
+export type { ReactiveAdapter } from './reactive-adapter';
 
 import type { Instantiatable } from '@lattice/lattice';
 
