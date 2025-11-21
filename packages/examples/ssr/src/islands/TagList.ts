@@ -4,27 +4,26 @@
  * This tests fragment island hydration using map() to return multiple siblings
  */
 import { island } from '@lattice/islands/island';
-import { use } from '../api.js';
+import { api } from '../api.js';
 
-export const TagList = island(
-  'taglist',
-  use((api) => {
-    return (props: { tags: string[] }) => {
-      const { el, map, signal } = api;
-      const tags = signal(props.tags);
+type TagListProps = { tags: string[] };
 
-      // Return fragment - multiple span elements without a wrapper
-      // map() takes items and optional keyFn, then returns a function that takes render callback
-      return map(tags)((tag) => {
-        return el('span', {
-          className: 'tag',
-          onclick: () => {
-            // Remove this tag when clicked
-            const current = tags();
-            tags(current.filter((t) => t !== tag()));
-          },
-        })(`${tag()} x`);
-      });
-    };
-  })
-);
+export const TagList = island<TagListProps, typeof api>('taglist', (api) => {
+  return (props: TagListProps) => {
+    const { el, map, signal } = api;
+    const tags = signal(props.tags);
+
+    // Return fragment - multiple span elements without a wrapper
+    // map() takes items and optional keyFn, then returns a function that takes render callback
+    return map(tags)((tag) => {
+      return el('span', {
+        className: 'tag',
+        onclick: () => {
+          // Remove this tag when clicked
+          const current = tags();
+          tags(current.filter((t) => t !== tag()));
+        },
+      })(`${tag()} x`);
+    });
+  };
+});
