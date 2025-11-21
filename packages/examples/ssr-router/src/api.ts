@@ -14,6 +14,10 @@ import {
   createDOMRenderer,
   DOMRendererConfig,
 } from '@lattice/view/renderers/dom';
+import {
+  createDOMServerRenderer,
+  DOMServerRendererConfig,
+} from '@lattice/islands/renderers/dom-server';
 import { RefSpec, STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
@@ -21,11 +25,18 @@ import { createRouter } from '@lattice/router';
 
 const createViewApi = () => {
   const signals = createSignalsApi();
-  const renderer = createDOMRenderer();
+  // Use SSR renderer on server, DOM renderer on client
+  const renderer =
+    typeof document === 'undefined'
+      ? createDOMServerRenderer()
+      : createDOMRenderer();
   const viewHelpers = defaultViewHelpers(renderer, signals);
 
   // Create base extensions
-  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
+  // Use a type that works for both DOM and SSR renderers
+  const baseExtensions = defaultViewExtensions<
+    DOMRendererConfig | DOMServerRendererConfig
+  >();
 
   // Create the views API (without route - that's separate now)
   const views = createApi(baseExtensions, {
