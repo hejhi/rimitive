@@ -1,10 +1,11 @@
-import { mountToContainer, router } from './service';
+import { mount, router } from './service';
 import { AppLayout } from './layouts/AppLayout';
 import { Home } from './pages/Home';
 import { About } from './pages/About';
 import { Products } from './pages/Products';
 import { Product } from './pages/Product';
 import { NotFound } from './pages/NotFound';
+import { RefSpec } from '@lattice/view/types';
 
 // Define the application routes
 const App = router.route('/', AppLayout())(
@@ -17,6 +18,6 @@ const App = router.route('/', AppLayout())(
 
 // Mount the app to the #app container
 const container = document.querySelector('#app');
-if (container) {
-  mountToContainer(container, App.unwrap());
-}
+const appRef = mount(App.unwrap() as RefSpec<HTMLDivElement>);
+
+if (container) container.appendChild(appRef.element!);

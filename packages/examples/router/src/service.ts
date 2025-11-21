@@ -14,8 +14,7 @@ import {
   createDOMRenderer,
   DOMRendererConfig,
 } from '@lattice/view/renderers/dom';
-import { RefSpec, STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import type { ElementRef } from '@lattice/view/types';
+import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
 
@@ -46,33 +45,6 @@ const createViewApi = () => {
         : '/',
   });
 
-  // Helper to mount a spec to a container element
-  // Handles both FragmentRef and ElementRef properly
-  const mountToContainer = (container: Element, spec: RefSpec<unknown>) => {
-    const nodeRef = spec.create(svc);
-
-    // Check if it's a FragmentRef with attach impl
-    if (nodeRef.status === STATUS_FRAGMENT) {
-      // Create parent ref for the container
-      const parentRef: ElementRef<Element> = {
-        status: STATUS_ELEMENT,
-        element: container,
-        parent: null,
-        prev: null,
-        next: null,
-        firstChild: null,
-        lastChild: null,
-      };
-      nodeRef.parent = parentRef;
-      nodeRef.next = null;
-      nodeRef.attach(parentRef, null, svc);
-    } else if ('element' in nodeRef && nodeRef.element) {
-      // For element refs, just append
-      container.appendChild(nodeRef.element as Node);
-    }
-
-    return nodeRef;
-  };
   type Service = typeof svc;
 
   return {
@@ -82,13 +54,11 @@ const createViewApi = () => {
     },
     router,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
-    mountToContainer,
     useSvc: <TReturn>(fn: (svc: Service) => TReturn): TReturn => fn(svc),
   };
 };
 
-export const { service, mount, mountToContainer, useSvc, router } =
-  createViewApi();
+export const { service, mount, useSvc, router } = createViewApi();
 
 export type Service = typeof service;
 export type Signals = Service['signals'];

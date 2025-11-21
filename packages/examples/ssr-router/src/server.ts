@@ -64,7 +64,7 @@ const App = create((api) => (props: { path: string }) => {
       Navigation({ currentPath: path })
     ),
     el('main', { className: 'main-content' })(pageContent)
-  )();
+  );
 });
 
 // Create HTTP server
