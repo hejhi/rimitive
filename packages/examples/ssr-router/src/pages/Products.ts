@@ -6,18 +6,16 @@
 import { use, router } from '../api.js';
 import { ProductFilter } from '../islands/ProductFilter.js';
 
-const products = {
-  products: [
-    { id: 1, name: 'Laptop', category: 'electronics', price: 999 },
-    { id: 2, name: 'Desk Chair', category: 'furniture', price: 299 },
-    { id: 3, name: 'Coffee Maker', category: 'appliances', price: 79 },
-    { id: 4, name: 'Monitor', category: 'electronics', price: 399 },
-    { id: 5, name: 'Bookshelf', category: 'furniture', price: 149 },
-    { id: 6, name: 'Blender', category: 'appliances', price: 59 },
-  ],
-};
+const products = [
+  { id: 1, name: 'Laptop', category: 'electronics', price: 999 },
+  { id: 2, name: 'Desk Chair', category: 'furniture', price: 299 },
+  { id: 3, name: 'Coffee Maker', category: 'appliances', price: 79 },
+  { id: 4, name: 'Monitor', category: 'electronics', price: 399 },
+  { id: 5, name: 'Bookshelf', category: 'furniture', price: 149 },
+  { id: 6, name: 'Blender', category: 'appliances', price: 59 },
+];
 
-const productFilter = ProductFilter(products);
+const productFilter = ProductFilter({ products });
 
 export const Products = router.connect(() =>
   use(({ el }) => () => {

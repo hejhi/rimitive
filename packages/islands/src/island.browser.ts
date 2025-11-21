@@ -5,40 +5,77 @@
  * Creates a wrapper with metadata for the hydrator.
  */
 
+import type { NodeRef, LifecycleCallback } from '@lattice/view/types';
 import type { RefSpec } from '@lattice/view/types';
 import type { IslandComponent, IslandStrategy } from './types';
 import { ISLAND_META } from './types';
+import { STATUS_REF_SPEC } from '@lattice/view/types';
 
-export function island<TProps>(
+export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
-  component: (props: TProps) => RefSpec<unknown>
+  factory: (api: TApi) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
-export function island<TProps>(
+export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
   strategy: IslandStrategy<TProps>,
-  component: (props: TProps) => RefSpec<unknown>
+  factory: (api: TApi) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
-export function island<TProps>(
+export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
-  strategyOrComponent:
+  strategyOrFactory:
     | IslandStrategy<TProps>
-    | ((props: TProps) => RefSpec<unknown>),
-  maybeComponent?: (props: TProps) => RefSpec<unknown>
+    | ((api: TApi) => (props: TProps) => RefSpec<unknown>),
+  maybeFactory?: (api: TApi) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
-  const component =
-    maybeComponent ||
-    (strategyOrComponent as (props: TProps) => RefSpec<unknown>);
-  const strategy = maybeComponent ? strategyOrComponent : undefined;
+  // Determine if second arg is strategy or factory
+  const factory =
+    maybeFactory ||
+    (strategyOrFactory as (api: TApi) => (props: TProps) => RefSpec<unknown>);
+  const strategy = maybeFactory
+    ? (strategyOrFactory as IslandStrategy<TProps>)
+    : undefined;
 
-  // Create wrapper function instead of mutating the input component
-  const wrapper: IslandComponent<TProps> = (props: TProps) => component(props);
+  // Create wrapper function
+  const wrapper = (props: TProps): RefSpec<unknown> => {
+    const lifecycleCallbacks: LifecycleCallback<unknown>[] = [];
 
-  // Attach metadata to wrapper (temporary - only for registry construction)
-  // Includes component reference for unwrapping at registry boundary
+    // Create a deferred RefSpec that delays factory execution until create(api) is called
+    const deferredSpec: RefSpec<unknown> = Object.assign(
+      (...callbacks: LifecycleCallback<unknown>[]) => {
+        // Collect lifecycle callbacks
+        lifecycleCallbacks.push(...callbacks);
+        return deferredSpec;
+      },
+      {
+        status: STATUS_REF_SPEC as typeof STATUS_REF_SPEC,
+        create(api?: unknown) {
+          // NOW call factory with the API to get the component function
+          const component = factory(api as TApi);
+
+          // Call component with props to get the actual RefSpec
+          const spec = component(props);
+
+          // Apply collected lifecycle callbacks to the spec
+          if (lifecycleCallbacks.length > 0) {
+            spec(...lifecycleCallbacks);
+          }
+
+          // Create the nodeRef
+          const nodeRef = spec.create(api) as NodeRef<unknown>;
+
+          return nodeRef;
+        },
+      }
+    );
+
+    return deferredSpec;
+  };
+
+  // Attach metadata for registry construction (includes factory for unwrapping)
   Object.defineProperty(wrapper, ISLAND_META, {
-    value: { id, strategy, component },
+    value: { id, strategy, component: factory },
     enumerable: false,
   });
 
