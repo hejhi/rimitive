@@ -23,14 +23,14 @@ import type { ElementRef } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
 
-const createViewApi = () => {
-  const signals = createSignalsApi();
+const createServices = () => {
+  const signalServices = createSignalsApi();
   // Use SSR renderer on server, DOM renderer on client
   const renderer =
     typeof document === 'undefined'
       ? createDOMServerRenderer()
       : createDOMRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signals);
+  const viewHelpers = defaultViewHelpers(renderer, signalServices);
 
   // Create base extensions
   // Use a type that works for both DOM and SSR renderers
@@ -38,20 +38,22 @@ const createViewApi = () => {
     DOMRendererConfig | DOMServerRendererConfig
   >();
 
-  // Create the views API (without route - that's separate now)
-  const views = composeFrom(baseExtensions, {
+  // Create the view services
+  const viewServices = composeFrom(baseExtensions, {
     ...viewHelpers,
   });
 
-  const api = {
-    ...signals,
-    ...views,
+  const svc = {
+    ...signalServices,
+    ...viewServices,
     addEventListener: createAddEventListener(viewHelpers.batch),
   };
 
+  type MergedService = typeof svc;
+
   // Create router using view API (needs signal and computed from signals)
   // Router handles popstate internally
-  const router = createRouter(api, {
+  const router = createRouter(svc, {
     initialPath:
       typeof window !== 'undefined'
         ? window.location.pathname +
@@ -63,7 +65,7 @@ const createViewApi = () => {
   // Helper to mount a spec to a container element
   // Handles both FragmentRef and ElementRef properly
   const mountToContainer = (container: Element, spec: RefSpec<unknown>) => {
-    const nodeRef = spec.create(api);
+    const nodeRef = spec.create(svc);
 
     // Check if it's a FragmentRef with attach method
     if (nodeRef.status === STATUS_FRAGMENT) {
@@ -79,7 +81,7 @@ const createViewApi = () => {
       };
       nodeRef.parent = parentRef;
       nodeRef.next = null;
-      nodeRef.attach(parentRef, null, api);
+      nodeRef.attach(parentRef, null, svc);
     } else if ('element' in nodeRef && nodeRef.element) {
       // For element refs, just append
       container.appendChild(nodeRef.element as Node);
@@ -88,32 +90,23 @@ const createViewApi = () => {
     return nodeRef;
   };
 
-  type ApiType = typeof api;
-
   return {
-    api,
-    signals,
-    views,
+    service: {
+      view: viewServices,
+      signals: signalServices,
+    },
     router,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
     mountToContainer,
     // Pre-bind api for type safety and convenience
-    use: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
-    withApi: <TReturn>(fn: (api: ApiType) => TReturn) => fn,
+    useSvc: <TReturn>(fn: (svc: MergedService) => TReturn): TReturn => fn(svc),
+    withSvc: <TReturn>(fn: (svc: MergedService) => TReturn) => fn,
   };
 };
 
-export const {
-  api,
-  signals,
-  mount,
-  mountToContainer,
-  views,
-  router,
-  use,
-  withApi,
-} = createViewApi();
+export const { service, mount, mountToContainer, router, useSvc, withSvc } =
+  createServices();
 
-export type Signals = typeof signals;
-export type DOMViews = typeof views;
-export type CoreApi = typeof api;
+export type Service = typeof service;
+export type Signals = Service['signals'];
+export type DOMViews = Service['view'];

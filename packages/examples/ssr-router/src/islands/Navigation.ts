@@ -7,7 +7,7 @@
  */
 import { island } from '@lattice/islands/island';
 import { Link } from '@lattice/router/link';
-import { router, withApi } from '../api.js';
+import { router, withSvc } from '../service.js';
 
 interface NavigationProps {
   currentPath: string;
@@ -15,7 +15,7 @@ interface NavigationProps {
 
 export const Navigation = island(
   'Navigation',
-  withApi(({ el, computed }) => ({ currentPath }: NavigationProps) => {
+  withSvc(({ el, computed }) => ({ currentPath }: NavigationProps) => {
     const currentPathSignal = router.useCurrentPath(currentPath);
 
     const navLink = (href: string, label: string) => {

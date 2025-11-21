@@ -11,7 +11,7 @@ import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createDOMHydrationRenderer } from '@lattice/islands/renderers/dom-hydration';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { signals, router } from './api.js';
+import { service, router } from './service.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 import { Home } from './pages/Home.js';
@@ -20,6 +20,7 @@ import { Products } from './pages/Products.js';
 
 // Use router's navigation system
 const { currentPath, navigate } = router;
+const { signals } = service;
 
 // Create API factory for hydrator
 function createFullAPI(

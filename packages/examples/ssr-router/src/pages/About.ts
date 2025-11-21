@@ -1,7 +1,7 @@
-import { use, router } from '../api.js';
+import { useSvc, router } from '../service.js';
 
 export const About = router.connect(() =>
-  use(({ el }) => () => {
+  useSvc(({ el }) => () => {
     return el('div', { className: 'page about-page' })(
       el('h2')('About This Example'),
 
