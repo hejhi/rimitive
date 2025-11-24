@@ -87,14 +87,14 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "esbuild": "^0.25.8",
-    "happy-dom": "^15.11.7",
+    "esbuild": "^0.27.0",
+    "happy-dom": "^20.0.10",
     "rimraf": "^6.0.1",
     "terser": "^5.36.0",
     "typescript": "^5.8.3",
     "vite": "^7.1.1",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.13"
   },
   "sideEffects": false,
   "publishConfig": {

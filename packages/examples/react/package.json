@@ -13,14 +13,14 @@
     "@lattice/lattice": "workspace:*",
     "@lattice/signals": "workspace:*",
     "@lattice/react": "workspace:*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "vite": "^6.0.5",
+    "@vitejs/plugin-react": "^5.1.1",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "vite": "^7.2.4",
     "typescript": "^5.8.3"
   }
 }
