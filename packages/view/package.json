@@ -86,7 +86,7 @@
     "@lattice/signals": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^24.10.1",
     "esbuild": "^0.25.8",
     "happy-dom": "^15.11.7",
     "rimraf": "^6.0.1",
