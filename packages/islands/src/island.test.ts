@@ -82,24 +82,10 @@ describe('Island Wrapper', () => {
   });
 
   describe('SSR context integration', () => {
-    it('should register island in SSR context', () => {
-      const ctx = createSSRContext();
-      const Counter = island('counter', mockComponent<{ count: number }>());
+    // Note: Registration now happens lazily during decoration, not during create().
+    // These tests verify that __islandMeta is set correctly for the decorator to use.
 
-      runWithSSRContext(ctx, () => {
-        const spec = Counter({ count: 5 });
-        spec.create();
-      });
-
-      expect(ctx.islands).toHaveLength(1);
-      expect(ctx.islands[0]).toEqual({
-        id: 'counter-0',
-        type: 'counter',
-        props: { count: 5 },
-      });
-    });
-
-    it('should tag nodeRef with island ID', () => {
+    it('should tag nodeRef with island metadata in SSR context', () => {
       const ctx = createSSRContext();
       const Counter = island('counter', mockComponent<{ count: number }>());
 
@@ -108,27 +94,48 @@ describe('Island Wrapper', () => {
         return spec.create();
       });
 
-      expect(nodeRef.__islandId).toBe('counter-0');
+      // __islandMeta is set during create() for lazy registration by decorator
+      expect(nodeRef.__islandMeta).toBeDefined();
+      expect(nodeRef.__islandMeta).toEqual({
+        type: 'counter',
+        props: { count: 5 },
+      });
     });
 
-    it('should generate unique IDs for multiple islands', () => {
+    it('should not register until decorated (lazy registration)', () => {
+      const ctx = createSSRContext();
+      const Counter = island('counter', mockComponent<{ count: number }>());
+
+      runWithSSRContext(ctx, () => {
+        const spec = Counter({ count: 5 });
+        spec.create();
+      });
+
+      // Registration happens during decoration, not create()
+      // ctx.islands should be empty until decorator calls registerIsland
+      expect(ctx.islands).toHaveLength(0);
+    });
+
+    it('should set metadata for multiple islands', () => {
       const ctx = createSSRContext();
       const Counter = island('counter', mockComponent<{ count: number }>());
       const Form = island('form', mockComponent<{ fields: string[] }>());
 
-      runWithSSRContext(ctx, () => {
-        Counter({ count: 1 }).create();
-        Counter({ count: 2 }).create();
-        Form({ fields: [] }).create();
+      const [ref1, ref2, ref3] = runWithSSRContext(ctx, () => {
+        return [
+          Counter({ count: 1 }).create(),
+          Counter({ count: 2 }).create(),
+          Form({ fields: [] }).create(),
+        ] as const;
       });
 
-      expect(ctx.islands).toHaveLength(3);
-      expect(ctx.islands[0]?.id).toBe('counter-0');
-      expect(ctx.islands[1]?.id).toBe('counter-1');
-      expect(ctx.islands[2]?.id).toBe('form-2');
+      // Each ref has metadata for lazy registration
+      expect(ref1.__islandMeta).toEqual({ type: 'counter', props: { count: 1 } });
+      expect(ref2.__islandMeta).toEqual({ type: 'counter', props: { count: 2 } });
+      expect(ref3.__islandMeta).toEqual({ type: 'form', props: { fields: [] } });
     });
 
-    it('should not register outside SSR context', () => {
+    it('should not throw outside SSR context', () => {
       const Counter = island('counter', mockComponent<{ count: number }>());
 
       // No SSR context - should not throw
@@ -141,7 +148,7 @@ describe('Island Wrapper', () => {
       const spec = Counter({ count: 5 });
       const nodeRef = spec.create();
 
-      expect(nodeRef.__islandId).toBeUndefined();
+      expect(nodeRef.__islandMeta).toBeUndefined();
     });
   });
 
@@ -177,7 +184,7 @@ describe('Island Wrapper', () => {
   });
 
   describe('Multiple islands of same type', () => {
-    it('should track each instance separately', () => {
+    it('should set metadata for each instance separately', () => {
       const ctx = createSSRContext();
       const Counter = island('counter', mockComponent<{ count: number }>());
 
@@ -190,17 +197,19 @@ describe('Island Wrapper', () => {
         const ref2 = spec2.create();
         const ref3 = spec3.create();
 
-        expect(ref1.__islandId).toBe('counter-0');
-        expect(ref2.__islandId).toBe('counter-1');
-        expect(ref3.__islandId).toBe('counter-2');
+        // Each instance has its own metadata for lazy registration
+        expect(ref1.__islandMeta).toEqual({ type: 'counter', props: { count: 1 } });
+        expect(ref2.__islandMeta).toEqual({ type: 'counter', props: { count: 2 } });
+        expect(ref3.__islandMeta).toEqual({ type: 'counter', props: { count: 3 } });
+
+        // All refs have metadata
+        expect(ref1.__islandMeta).toBeDefined();
+        expect(ref2.__islandMeta).toBeDefined();
+        expect(ref3.__islandMeta).toBeDefined();
       });
 
-      expect(ctx.islands).toHaveLength(3);
-      expect(ctx.islands.map((i) => i.props)).toEqual([
-        { count: 1 },
-        { count: 2 },
-        { count: 3 },
-      ]);
+      // Registration happens during decoration, not create()
+      expect(ctx.islands).toHaveLength(0);
     });
   });
 });

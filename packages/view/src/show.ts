@@ -200,27 +200,21 @@ export const Show = defineService(
 
                 // Dispose immediately after it runs
                 scopedEffect(() => {
-                  // Create the element once and cache it
-                  if (!currentNode) {
-                    // Create the element/fragment from the spec
-                    const nodeRef = content.create(api ?? apiArg);
+                  if (isVisible) {
+                    // Create the element once and cache it (lazy creation)
+                    // Only create when first becoming visible to avoid:
+                    // 1. SSR registering islands for hidden routes/content
+                    // 2. Unnecessary work for content that may never be shown
+                    if (!currentNode) {
+                      // Create the element/fragment from the spec
+                      const nodeRef = content.create(api ?? apiArg);
+                      currentNode = nodeRef;
 
-                    if (nodeRef.status === STATUS_FRAGMENT) {
-                      fragment.firstChild = nodeRef.firstChild;
-                      fragment.lastChild = nodeRef.lastChild;
-                    } else {
-                      fragment.firstChild = nodeRef;
-                      fragment.lastChild = nodeRef;
+                      // Execute lifecycle callbacks from show level
+                      if (nodeRef.status === STATUS_ELEMENT)
+                        runLifecycleCallbacks(nodeRef.element);
                     }
 
-                    currentNode = nodeRef;
-
-                    // Execute lifecycle callbacks from show level
-                    if (nodeRef.status === STATUS_ELEMENT)
-                      runLifecycleCallbacks(nodeRef.element);
-                  }
-
-                  if (isVisible) {
                     // Only attach if not already attached
                     if (isAttached) return;
 
@@ -250,7 +244,7 @@ export const Show = defineService(
                   if (!isAttached) return;
 
                   // Detach from DOM (but keep in memory and preserve scope)
-                  detachNode(parent.element, currentNode);
+                  detachNode(parent.element, currentNode!);
 
                   // Clear fragment references when hidden
                   fragment.firstChild = null;

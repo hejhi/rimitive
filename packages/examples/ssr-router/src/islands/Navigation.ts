@@ -7,7 +7,7 @@
  */
 import { island } from '@lattice/islands/island';
 import { Link } from '@lattice/router/link';
-import { router, withSvc } from '../service.js';
+import { router, withSvc } from '../service-universal.js';
 
 interface NavigationProps {
   currentPath: string;

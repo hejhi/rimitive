@@ -12,9 +12,10 @@ import {
   createSSRContext,
   runWithSSRContext,
   getIslandScripts,
-  renderToString,
-  createIslandSSRApi,
-} from '@lattice/islands';
+} from '@lattice/islands/ssr-context';
+import { renderToString } from '@lattice/islands/helpers/renderToString';
+import { createIslandSSRApi } from '@lattice/islands/presets/island-ssr';
+
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
 import { TagList } from './islands/TagList.js';

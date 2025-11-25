@@ -6,10 +6,6 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
     "./ssr-context": {
       "import": "./dist/ssr-context.js",
       "types": "./dist/ssr-context.d.ts"

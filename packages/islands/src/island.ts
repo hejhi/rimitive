@@ -6,18 +6,22 @@
  */
 
 import type { NodeRef, LifecycleCallback } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy } from './types';
+import type { IslandComponent, IslandStrategy, IslandNodeMeta } from './types';
 import type { RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import { ISLAND_META } from './types';
-import { getActiveSSRContext, registerIsland } from './ssr-context';
+import { getActiveSSRContext } from './ssr-context';
 
 /**
- * NodeRef tagged with island metadata for SSR
+ * NodeRef tagged with island metadata for SSR (lazy registration)
+ *
+ * __islandMeta: Set during create(), used by decorator for atomic registration
+ * __islandId: Set by decorator after registration (for downstream use)
  * @internal
  */
 type IslandNodeRef<TElement> = NodeRef<TElement> & {
-  __islandId: string;
+  __islandMeta?: IslandNodeMeta;
+  __islandId?: string;
 };
 
 /**
@@ -114,26 +118,12 @@ export function island<TProps, TApi = Record<string, unknown>>(
           // Create the nodeRef
           const nodeRef = spec.create(api) as IslandNodeRef<unknown>;
 
-          // Tag nodeRef with island ID for renderToString (SSR only)
+          // Tag nodeRef with island metadata for lazy registration (SSR only)
+          // Registration happens atomically during decoration, ensuring only
+          // actually-rendered islands are registered for hydration.
           const ssrContext = getActiveSSRContext();
           if (ssrContext) {
-            const instanceId = registerIsland(id, props);
-            nodeRef.__islandId = instanceId;
-
-            // For ElementRefs: also set a DOM attribute so it's preserved in outerHTML
-            if (
-              'element' in nodeRef &&
-              nodeRef.element &&
-              typeof nodeRef.element === 'object'
-            ) {
-              const element = nodeRef.element as {
-                setAttribute?: (name: string, value: string) => void;
-              };
-
-              if (element.setAttribute) {
-                element.setAttribute('data-island-id', instanceId);
-              }
-            }
+            nodeRef.__islandMeta = { type: id, props };
           }
 
           return nodeRef;

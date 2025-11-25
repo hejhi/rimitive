@@ -2,6 +2,7 @@
  * Client-side hydration with routing
  *
  * Sets up client-side navigation and hydrates islands.
+ * Only mounts route content, preserving hydrated islands in the layout.
  */
 import { createDOMHydrator } from '@lattice/islands/hydrators/dom';
 import { composeFrom } from '@lattice/lattice';
@@ -11,16 +12,13 @@ import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createDOMHydrationRenderer } from '@lattice/islands/renderers/dom-hydration';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { service, router } from './service.js';
+import { service, router, mount as mountApp } from './service-client.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
-import { Home } from './pages/Home.js';
-import { About } from './pages/About.js';
-import { Products } from './pages/Products.js';
+import { createRouteContent } from './routes.js';
 
-// Use router's navigation system
-const { currentPath, navigate } = router;
-const { signals } = service;
+const { signals, view } = service;
+const { navigate } = router;
 
 // Create API factory for hydrator
 function createFullAPI(
@@ -49,49 +47,18 @@ function mount<T>(spec: {
 // Create hydrator with client-side API
 const hydrator = createDOMHydrator(createFullAPI, signals, mount);
 
-// Hydrate islands
+// Hydrate islands first (Navigation in navbar will survive)
 hydrator.hydrate(ProductFilter, Navigation);
 
-// Set up client-side page switching
+// Mount just the route content into .main-content
+// This preserves the hydrated layout (navbar with Navigation island)
 const mainContent = document.querySelector('.main-content');
-
 if (mainContent) {
-  // Create a client-side renderer for page navigation
-  const pageRenderer = createDOMRenderer();
-  const pageHelpers = defaultHelpers<DOMRendererConfig>(pageRenderer, signals);
-  const pageViews = composeFrom(
-    defaultExtensions<DOMRendererConfig>(),
-    pageHelpers
-  );
-  const pageApi = {
-    ...signals,
-    ...pageViews,
-    navigate,
-  };
+  // Create route content using el from service
+  const RouteContent = createRouteContent(router, view.el);
+  const routeRef = mountApp(RouteContent);
 
-  // Watch for route changes and re-render page content
-  signals.effect(() => {
-    const path = currentPath();
-
-    // Build route context for connected components
-    const routeContext = {
-      children: null,
-      params: signals.computed(() => ({})),
-    };
-
-    // Determine which page to render
-    // Connected components need: call with user props first, then route context
-    const pageSpec =
-      path === '/about'
-        ? About()(routeContext)
-        : path === '/products'
-          ? Products()(routeContext)
-          : Home()(routeContext);
-
-    // Clear and re-render main content
-    mainContent.innerHTML = '';
-    const pageNode = pageSpec.create(pageApi);
-    // NodeRef has 'element' property for element nodes
-    mainContent.appendChild(pageNode.element!);
-  });
+  // Replace the SSR'd route content with reactive client version
+  mainContent.innerHTML = '';
+  mainContent.appendChild(routeRef.element as HTMLElement);
 }

@@ -14,6 +14,8 @@ import type { ElementRef, FragmentRef } from '@lattice/view/types';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createIslandSSRApi } from '../presets/island-ssr';
 import { renderToString } from '../helpers/renderToString';
+import { createSSRContext, runWithSSRContext } from '../ssr-context';
+import type { IslandNodeMeta } from '../types';
 
 // ============================================================================
 // Tests: Basic DOM Operations
@@ -275,102 +277,114 @@ describe('Fragment Decoration (Non-Island)', () => {
 
 describe('Fragment Island Decoration', () => {
   it('should wrap island fragment in div with script tag', () => {
+    const ctx = createSSRContext();
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
-    const span = renderer.createElement('span');
-    span.textContent = 'island content';
+    runWithSSRContext(ctx, () => {
+      const container = renderer.createElement('div');
+      const span = renderer.createElement('span');
+      span.textContent = 'island content';
 
-    renderer.appendChild(container, span);
+      renderer.appendChild(container, span);
 
-    const spanRef: ElementRef<HTMLElement> = {
-      status: STATUS_ELEMENT,
-      element: span,
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: null,
-      lastChild: null,
-    };
+      const spanRef: ElementRef<HTMLElement> = {
+        status: STATUS_ELEMENT,
+        element: span,
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: null,
+        lastChild: null,
+      };
 
-    const fragment: FragmentRef<HTMLElement> & { __islandId?: string } = {
-      status: STATUS_FRAGMENT,
-      element: null,
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: spanRef,
-      lastChild: spanRef,
-      attach: () => {},
-      __islandId: 'test-island',
-    };
+      // Use __islandMeta for lazy registration (new architecture)
+      const fragment: FragmentRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+        status: STATUS_FRAGMENT,
+        element: null,
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: spanRef,
+        lastChild: spanRef,
+        attach: () => {},
+        __islandMeta: { type: 'test-island', props: {} },
+      };
 
-    renderer.decorateFragment?.(fragment, container);
+      renderer.decorateFragment?.(fragment, container);
 
-    const html = container.innerHTML;
-    expect(html).toContain('<div>');
-    expect(html).toContain('<!--fragment-start-->');
-    expect(html).toContain('<!--fragment-end-->');
-    expect(html).toContain('data-island="test-island"');
-    expect(html).toContain('type="application/json"');
-    expect(html).toContain('<script');
-    expect(html).toContain('</div>');
+      const html = container.innerHTML;
+      expect(html).toContain('<div>');
+      expect(html).toContain('<!--fragment-start-->');
+      expect(html).toContain('<!--fragment-end-->');
+      expect(html).toContain('data-island="test-island-0"'); // Instance ID from registerIsland
+      expect(html).toContain('type="application/json"');
+      expect(html).toContain('<script');
+      expect(html).toContain('</div>');
+
+      // Verify registration happened
+      expect(ctx.islands).toHaveLength(1);
+      expect(ctx.islands[0]?.type).toBe('test-island');
+    });
   });
 
   it('should preserve fragment children inside island wrapper', () => {
+    const ctx = createSSRContext();
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
-    const span1 = renderer.createElement('span');
-    const span2 = renderer.createElement('span');
+    runWithSSRContext(ctx, () => {
+      const container = renderer.createElement('div');
+      const span1 = renderer.createElement('span');
+      const span2 = renderer.createElement('span');
 
-    span1.textContent = 'first';
-    span2.textContent = 'second';
+      span1.textContent = 'first';
+      span2.textContent = 'second';
 
-    renderer.appendChild(container, span1);
-    renderer.appendChild(container, span2);
+      renderer.appendChild(container, span1);
+      renderer.appendChild(container, span2);
 
-    const span1Ref: ElementRef<HTMLElement> = {
-      status: STATUS_ELEMENT,
-      element: span1,
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: null,
-      lastChild: null,
-    };
+      const span1Ref: ElementRef<HTMLElement> = {
+        status: STATUS_ELEMENT,
+        element: span1,
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: null,
+        lastChild: null,
+      };
 
-    const span2Ref: ElementRef<HTMLElement> = {
-      status: STATUS_ELEMENT,
-      element: span2,
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: null,
-      lastChild: null,
-    };
+      const span2Ref: ElementRef<HTMLElement> = {
+        status: STATUS_ELEMENT,
+        element: span2,
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: null,
+        lastChild: null,
+      };
 
-    const fragment: FragmentRef<HTMLElement> & { __islandId?: string } = {
-      status: STATUS_FRAGMENT,
-      element: null,
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: span1Ref,
-      lastChild: span2Ref,
-      attach: () => {},
-      __islandId: 'multi-island',
-    };
+      // Use __islandMeta for lazy registration (new architecture)
+      const fragment: FragmentRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+        status: STATUS_FRAGMENT,
+        element: null,
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: span1Ref,
+        lastChild: span2Ref,
+        attach: () => {},
+        __islandMeta: { type: 'multi-island', props: {} },
+      };
 
-    renderer.decorateFragment?.(fragment, container);
+      renderer.decorateFragment?.(fragment, container);
 
-    const html = container.innerHTML;
-    expect(html).toContain('<span>first</span>');
-    expect(html).toContain('<span>second</span>');
-    // Check order: div, comment, children, comment, script, close div
-    expect(html).toMatch(
-      /<div><!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end--><script[^>]*><\/script><\/div>/
-    );
+      const html = container.innerHTML;
+      expect(html).toContain('<span>first</span>');
+      expect(html).toContain('<span>second</span>');
+      // Check order: div, comment, children, comment, script, close div
+      expect(html).toMatch(
+        /<div><!--fragment-start--><span>first<\/span><span>second<\/span><!--fragment-end--><script[^>]*><\/script><\/div>/
+      );
+    });
   });
 });
 
@@ -380,62 +394,74 @@ describe('Fragment Island Decoration', () => {
 
 describe('Element Island Decoration', () => {
   it('should add script tag after island element', () => {
+    const ctx = createSSRContext();
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
-    const button = renderer.createElement('button');
-    button.textContent = 'Click me';
+    runWithSSRContext(ctx, () => {
+      const container = renderer.createElement('div');
+      const button = renderer.createElement('button');
+      button.textContent = 'Click me';
 
-    renderer.appendChild(container, button);
+      renderer.appendChild(container, button);
 
-    const buttonRef: ElementRef<HTMLElement> & { __islandId?: string } = {
-      status: STATUS_ELEMENT,
-      element: button,
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: null,
-      lastChild: null,
-      __islandId: 'button-island',
-    };
+      // Use __islandMeta for lazy registration (new architecture)
+      const buttonRef: ElementRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+        status: STATUS_ELEMENT,
+        element: button,
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: null,
+        lastChild: null,
+        __islandMeta: { type: 'button-island', props: {} },
+      };
 
-    renderer.decorateElement?.(buttonRef, button);
+      renderer.decorateElement?.(buttonRef, button);
 
-    const html = container.innerHTML;
-    expect(html).toContain('<button>Click me</button>');
-    expect(html).toContain('data-island="button-island"');
-    expect(html).toContain('type="application/json"');
-    expect(html).toContain('<script');
+      const html = container.innerHTML;
+      expect(html).toContain('<button>Click me</button>');
+      expect(html).toContain('data-island="button-island-0"'); // Instance ID from registerIsland
+      expect(html).toContain('type="application/json"');
+      expect(html).toContain('<script');
+
+      // Verify registration happened
+      expect(ctx.islands).toHaveLength(1);
+      expect(ctx.islands[0]?.type).toBe('button-island');
+    });
   });
 
   it('should place script tag as next sibling of element', () => {
+    const ctx = createSSRContext();
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
-    const div = renderer.createElement('div');
-    const after = renderer.createTextNode('after');
+    runWithSSRContext(ctx, () => {
+      const container = renderer.createElement('div');
+      const div = renderer.createElement('div');
+      const after = renderer.createTextNode('after');
 
-    renderer.appendChild(container, div);
-    renderer.appendChild(container, after);
+      renderer.appendChild(container, div);
+      renderer.appendChild(container, after);
 
-    const divRef: ElementRef<HTMLElement> & { __islandId?: string } = {
-      status: STATUS_ELEMENT,
-      element: div,
-      parent: null,
-      prev: null,
-      next: null,
-      firstChild: null,
-      lastChild: null,
-      __islandId: 'div-island',
-    };
+      // Use __islandMeta for lazy registration (new architecture)
+      const divRef: ElementRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+        status: STATUS_ELEMENT,
+        element: div,
+        parent: null,
+        prev: null,
+        next: null,
+        firstChild: null,
+        lastChild: null,
+        __islandMeta: { type: 'div-island', props: {} },
+      };
 
-    renderer.decorateElement?.(divRef, div);
+      renderer.decorateElement?.(divRef, div);
 
-    // Script should be between div and "after" text
-    const children = Array.from(container.childNodes);
-    expect(children[0]).toBe(div);
-    expect(children[1]?.nodeName).toBe('SCRIPT');
-    expect(children[2]).toBe(after);
+      // Script should be between div and "after" text
+      const children = Array.from(container.childNodes);
+      expect(children[0]).toBe(div);
+      expect(children[1]?.nodeName).toBe('SCRIPT');
+      expect(children[2]).toBe(after);
+    });
   });
 
   it('should skip decoration for non-island elements', () => {

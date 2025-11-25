@@ -125,3 +125,17 @@ export interface IslandRegistryEntry<TProps = unknown, TApi = unknown> {
   id: string;
   strategy?: IslandStrategy<TProps>;
 }
+
+/**
+ * Island node metadata for lazy registration during decoration
+ *
+ * Set on NodeRef during create(), used by decorator to register atomically.
+ * This ensures only actually-rendered islands are registered.
+ * @internal
+ */
+export interface IslandNodeMeta {
+  /** Island type - matches the ID passed to island() */
+  type: string;
+  /** Props passed to island component (must be JSON-serializable) */
+  props: unknown;
+}

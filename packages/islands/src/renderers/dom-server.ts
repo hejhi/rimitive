@@ -8,6 +8,8 @@ import { parseHTML } from 'linkedom';
 import type { Renderer, RendererConfig } from '@lattice/view/types';
 import type { FragmentRef, NodeRef } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+import type { IslandNodeMeta } from '../types';
+import { registerIsland } from '../ssr-context';
 
 export interface DOMServerRendererConfig extends RendererConfig {
   elements: HTMLElementTagNameMap;
@@ -102,22 +104,33 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
     },
 
     /**
-     * Decorate elements with island script tags
+     * Decorate elements with island script tags (atomic registration)
      *
-     * For island elements (those with __islandId):
-     * Inserts <script data-island="..."></script> after the element
+     * For island elements (those with __islandMeta):
+     * 1. Registers the island in SSR context (generates hydration script)
+     * 2. Inserts <script data-island="..."></script> after the element
+     *
+     * This ensures registration and decoration happen atomically - only
+     * actually-rendered islands get registered for hydration.
      */
     decorateElement: (elementRef: unknown, element: HTMLElement) => {
-      const islandId = (elementRef as { __islandId?: string }).__islandId;
+      const meta = (elementRef as { __islandMeta?: IslandNodeMeta })
+        .__islandMeta;
 
-      if (islandId) {
+      if (meta) {
         const parent = element.parentNode;
         if (!parent) return;
+
+        // Register NOW - atomic with decoration, only for rendered islands
+        const instanceId = registerIsland(meta.type, meta.props);
+
+        // Store instance ID back on ref for downstream use
+        (elementRef as { __islandId?: string }).__islandId = instanceId;
 
         // Create script tag
         const script = element.ownerDocument.createElement('script');
         script.setAttribute('type', 'application/json');
-        script.setAttribute('data-island', islandId);
+        script.setAttribute('data-island', instanceId);
 
         // Insert after element
         parent.insertBefore(script, element.nextSibling);
@@ -125,25 +138,29 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
     },
 
     /**
-     * Decorate fragments with island markers and wrapper div
+     * Decorate fragments with island markers and wrapper div (atomic registration)
      *
-     * For island fragments (those with __islandId):
-     * 1. Inserts fragment-start/end comments
-     * 2. Wraps the fragment and comments in a container div
-     * 3. Adds script tag marker inside the wrapper div
+     * For island fragments (those with __islandMeta):
+     * 1. Registers the island in SSR context (generates hydration script)
+     * 2. Inserts fragment-start/end comments
+     * 3. Wraps the fragment and comments in a container div
+     * 4. Adds script tag marker inside the wrapper div
      *
      * Structure: <div><!--fragment-start-->...children...<!--fragment-end--><script data-island="..."></script></div>
      *
      * For non-island fragments:
      * Just adds fragment-start/end comments without wrapper
+     *
+     * This ensures registration and decoration happen atomically - only
+     * actually-rendered islands get registered for hydration.
      */
     decorateFragment: (fragmentRef: unknown, parentElement: HTMLElement) => {
-      // Check if this is an island fragment
-      const islandId = (
-        fragmentRef as FragmentRef<unknown> & { __islandId?: string }
-      ).__islandId;
+      // Check if this is an island fragment (lazy registration)
+      const meta = (
+        fragmentRef as FragmentRef<unknown> & { __islandMeta?: IslandNodeMeta }
+      ).__islandMeta;
 
-      if (islandId) {
+      if (meta) {
         const parent = parentElement;
         const frag = fragmentRef as FragmentRef<unknown>;
 
@@ -156,6 +173,14 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
 
         if (!firstNode || !lastNode) return;
 
+        // Register NOW - atomic with decoration, only for rendered islands
+        const instanceId = registerIsland(meta.type, meta.props);
+
+        // Store instance ID back on ref for downstream use
+        (
+          fragmentRef as FragmentRef<unknown> & { __islandId?: string }
+        ).__islandId = instanceId;
+
         // Create wrapper div
         const wrapper = parent.ownerDocument.createElement('div');
 
@@ -167,7 +192,7 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
         // Create script tag
         const scriptTag = parent.ownerDocument.createElement('script');
         scriptTag.setAttribute('type', 'application/json');
-        scriptTag.setAttribute('data-island', islandId);
+        scriptTag.setAttribute('data-island', instanceId);
 
         // Insert wrapper before first node
         parent.insertBefore(wrapper, firstNode);

@@ -51,10 +51,15 @@ export type RouteApi = {
 
 /**
  * Route context passed to connect wrapper
+ *
+ * Includes optional routeApi for server-side rendering where components
+ * are defined at module load time but need access to per-request router state.
  */
 export type RouteContext<TConfig extends RendererConfig> = {
   children: RefSpec<TConfig['baseElement']>[] | null;
   params: ComputedFunction<RouteParams>;
+  /** Route API - included when context is created by a router instance */
+  routeApi?: RouteApi;
 };
 
 /**
@@ -92,10 +97,45 @@ export type RouteMethod<TConfig extends RendererConfig> = (
 ) => RouteSpec<TConfig['baseElement']>;
 
 /**
+ * Root context returned by router.root()
+ * Provides scoped route creation and a create method for finalizing the route tree
+ */
+export type RootContext<TConfig extends RendererConfig> = {
+  /**
+   * Create the root element with its child routes
+   * Returns a RefSpec that renders the root layout with children
+   */
+  create: (
+    ...children: RouteSpec<TConfig['baseElement']>[]
+  ) => RefSpec<TConfig['baseElement']>;
+
+  /**
+   * Scoped route function for defining child routes within this root
+   */
+  route: RouteMethod<TConfig>;
+};
+
+/**
+ * Root method signature - defines the always-rendered root layout
+ */
+export type RootMethod<TConfig extends RendererConfig> = (
+  path: string,
+  connectedComponent: (
+    routeContext: RouteContext<TConfig>
+  ) => RefSpec<TConfig['baseElement']>
+) => RootContext<TConfig>;
+
+/**
  * Router object returned by createRouter
  * Generic over TConfig for type safety with renderer-specific implementations
  */
 export type Router<TConfig extends RendererConfig> = {
+  /**
+   * Define the root layout that's always rendered
+   * Unlike route(), root() doesn't wrap in show() since the root is always visible
+   */
+  root: RootMethod<TConfig>;
+
   /**
    * Define a route
    */
@@ -337,9 +377,11 @@ export function createRouter<TConfig extends RendererConfig>(
       });
 
       // Build RouteContext to pass to connected component
+      // Include routeApi so server-side components can access current path
       const routeContext: RouteContext<TConfig> = {
         children: processedChildren.length > 0 ? processedChildren : null,
         params: viewApi.computed(() => shouldRender()?.params ?? {}),
+        routeApi: { navigate, currentPath },
       };
 
       // Instantiate the connected component with route context
@@ -357,8 +399,8 @@ export function createRouter<TConfig extends RendererConfig>(
       };
 
       componentRefSpec.status = STATUS_REF_SPEC;
-      componentRefSpec.create = <TExt>() => {
-        const nodeRef = sealedSpec.create();
+      componentRefSpec.create = <TExt>(api?: unknown) => {
+        const nodeRef = sealedSpec.create(api);
         // Apply lifecycle callbacks
         for (const callback of lifecycleCallbacks) {
           callback(nodeRef);
@@ -446,8 +488,76 @@ export function createRouter<TConfig extends RendererConfig>(
     );
   }
 
+  /**
+   * Root method - defines the root layout that's always rendered
+   *
+   * Unlike route(), root() doesn't wrap the component in show() since
+   * the root layout is always visible. This solves the SSR issue where
+   * fragments at the root level have no parent to attach to.
+   *
+   * Returns an object with:
+   * - create: finalizes the route tree and returns a RefSpec (element, not fragment)
+   * - route: scoped route function for defining child routes
+   */
+  function root(
+    path: string,
+    connectedComponent: (
+      routeContext: RouteContext<TConfig>
+    ) => RefSpec<TConfig['baseElement']>
+  ): RootContext<TConfig> {
+    /**
+     * Create the root element with its child routes
+     */
+    const create = (
+      ...children: RouteSpec<TConfig['baseElement']>[]
+    ): RefSpec<TConfig['baseElement']> => {
+      // Process children - compose their paths with the root path
+      const processedChildren: RefSpec<TConfig['baseElement']>[] = [];
+
+      // Save and reset route group for children
+      const savedRouteGroup = activeRouteGroup;
+      const savedGroupDepth = groupCreationDepth;
+
+      for (const child of children) {
+        const metadata = child.routeMetadata;
+
+        // Reset route group so children form their own group
+        activeRouteGroup = null;
+        groupCreationDepth = 0;
+
+        // Rebuild with composed path
+        const composedPath = composePath(path, metadata.relativePath);
+        const rebuiltRouteSpec = metadata.rebuild(composedPath);
+        // Unwrap to get the inner RefSpec for the renderer
+        processedChildren.push(rebuiltRouteSpec.unwrap());
+      }
+
+      // Restore the route group
+      activeRouteGroup = savedRouteGroup;
+      groupCreationDepth = savedGroupDepth;
+
+      // Build RouteContext for the root component
+      // Root always matches, so params are empty
+      // Include routeApi so server-side components can access current path
+      const routeContext: RouteContext<TConfig> = {
+        children: processedChildren.length > 0 ? processedChildren : null,
+        params: viewApi.computed(() => ({})),
+        routeApi: { navigate, currentPath },
+      };
+
+      // Return the component RefSpec directly (not wrapped in show())
+      return connectedComponent(routeContext);
+    };
+
+    return {
+      create,
+      route, // Same route function - path composition happens in create()
+    };
+  }
+
   // Return the router object
   return {
+    root,
     route,
     connect,
     navigate,

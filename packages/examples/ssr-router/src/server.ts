@@ -7,22 +7,14 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createSignalsApi } from '@lattice/signals/presets/core';
 import {
   createSSRContext,
   runWithSSRContext,
   getIslandScripts,
-  renderToString,
-  createIslandSSRApi,
-} from '@lattice/islands';
-import {
-  createRouterContext,
-  runWithRouterContext,
-} from '@lattice/router/ssr-context';
-import { Home } from './pages/Home.js';
-import { About } from './pages/About.js';
-import { Products } from './pages/Products.js';
-import { Navigation } from './islands/Navigation.js';
+} from '@lattice/islands/ssr-context';
+import { renderToString } from '@lattice/islands/helpers/renderToString';
+import { createServices } from './service-server.js';
+import { createApp } from './routes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
@@ -31,44 +23,8 @@ const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')
   : join(__dirname, '../client/client.js');
 
-// Create island-aware SSR API
-const signals = createSignalsApi();
-const { mount, create } = createIslandSSRApi(signals);
-
-// Define the app
-const App = create((api) => (props: { path: string }) => {
-  const { el } = api;
-  const { path } = props;
-
-  // Build route context for connected components
-  const routeContext = {
-    children: null,
-    params: signals.computed(() => ({})),
-  };
-
-  // Determine which page to render based on path
-  // Connected components need: call with user props first, then route context
-  const pageContent =
-    path === '/about'
-      ? About()(routeContext)
-      : path === '/products'
-        ? Products()(routeContext)
-        : Home()(routeContext);
-
-  // Wrap in app layout
-  return el('div', { className: 'app' })(
-    el('nav', { className: 'navbar' })(
-      el('div', { className: 'nav-brand' })(
-        el('h1')('🧩 Lattice SSR + Router')
-      ),
-      Navigation({ currentPath: path })
-    ),
-    el('main', { className: 'main-content' })(pageContent)
-  );
-});
-
 // Create HTTP server
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   // Serve client bundle
   if (req.url === '/client.js') {
     if (existsSync(clientBundlePath)) {
@@ -89,15 +45,17 @@ const server = createServer((req, res) => {
   // Create SSR context for islands
   const ssrCtx = createSSRContext();
 
-  // Create router context with the request URL
-  const routerCtx = createRouterContext(path);
+  // Create per-request service and router with the specific request path
+  // This ensures route matching happens with the correct path
+  const { router, mount } = await createServices({ initialPath: path });
 
-  // Render app to HTML within both contexts
+  // Define the app routes using the request-scoped router
+  const App = createApp(router);
+
+  // Render app to HTML within SSR context
   const html = runWithSSRContext(ssrCtx, () => {
-    return runWithRouterContext(routerCtx, () => {
-      const rendered = mount(App({ path }));
-      return renderToString(rendered);
-    });
+    // Mount the app - createApp now returns a RefSpec directly (not wrapped in show())
+    return renderToString(mount(App));
   });
 
   // Get island hydration scripts

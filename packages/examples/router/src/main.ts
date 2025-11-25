@@ -5,19 +5,21 @@ import { About } from './pages/About';
 import { Products } from './pages/Products';
 import { Product } from './pages/Product';
 import { NotFound } from './pages/NotFound';
-import { RefSpec } from '@lattice/view/types';
 
-// Define the application routes
-const App = router.route('/', AppLayout())(
-  router.route('', Home())(),
-  router.route('about', About())(),
-  router.route('products', Products())(router.route(':id', Product())()),
+// Define the application routes using router.root()
+// root() returns an element directly (not wrapped in show())
+const { create, route } = router.root('/', AppLayout());
+
+const App = create(
+  route('', Home())(),
+  route('about', About())(),
+  route('products', Products())(route(':id', Product())()),
   // Catch-all route for 404
-  router.route('*', NotFound())()
+  route('*', NotFound())()
 );
 
 // Mount the app to the #app container
 const container = document.querySelector('#app');
-const appRef = mount(App.unwrap() as RefSpec<HTMLDivElement>);
+const appRef = mount(App);
 
-if (container) container.appendChild(appRef.element!);
+if (container) container.appendChild(appRef.element as HTMLElement);

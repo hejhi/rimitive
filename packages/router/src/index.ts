@@ -22,6 +22,8 @@ export type {
   RouterConfig,
   Router,
   RouteMethod,
+  RootMethod,
+  RootContext,
   ConnectMethod,
   RouteApi,
   RouteContext,
