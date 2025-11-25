@@ -34,3 +34,9 @@ export type { FullBaseService as Service } from '@lattice/islands/service';
  * These will be replaced by typedConnect in Phase 2
  */
 export { router, useSvc, withSvc } from './service-client.js';
+
+/**
+ * Re-export singleton's signals for hydrateApp
+ * This ensures islands share the same reactive system as the router
+ */
+export { service as clientService } from './service-client.js';

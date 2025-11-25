@@ -48,6 +48,16 @@ export interface HydrateAppOptions<TService> {
   service: ServiceDescriptor<TService>;
 
   /**
+   * Optional signals API from userland singleton
+   * If provided, hydrateApp uses these signals instead of creating new ones.
+   * This ensures islands share the same reactive system as the router.
+   *
+   * IMPORTANT: When using a router from a service singleton (like service-client.js),
+   * you must pass the singleton's signals here to ensure reactivity works correctly.
+   */
+  signals?: ReturnType<typeof createSignalsApi>;
+
+  /**
    * Optional router instance from userland
    * If provided, hydrateApp uses this router's navigate function instead of creating its own.
    * This ensures islands and routes share the same router state.
@@ -81,28 +91,6 @@ export interface HydrateAppOptions<TService> {
 }
 
 /**
- * Create base service for client-side rendering
- *
- * Creates signals + view services with the DOM renderer.
- * Called once on client initialization.
- *
- * Returns both the combined base service and separate signals for hydrator.
- */
-function createClientBaseService() {
-  const signals = createSignalsApi();
-  const renderer = createDOMRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signals);
-  const views = composeFrom(defaultViewExtensions<DOMRendererConfig>(), viewHelpers);
-
-  const base = {
-    ...signals,
-    ...views,
-  };
-
-  return { base, signals };
-}
-
-/**
  * Hydrate islands and optionally mount routes
  *
  * This is the main entry point for client-side initialization:
@@ -131,14 +119,23 @@ function createClientBaseService() {
 export function hydrateApp<TService>(options: HydrateAppOptions<TService>): void {
   const {
     service,
+    signals: providedSignals,
     router: providedRouter,
     createApp,
     islands,
     routeContainer = '.main-content',
   } = options;
 
-  // Create client base service (returns both combined base and separate signals)
-  const { base, signals } = createClientBaseService();
+  // Use provided signals or create new ones
+  // IMPORTANT: When using a router from a singleton, pass the singleton's signals
+  // to ensure islands and router share the same reactive system
+  const signals = providedSignals ?? createSignalsApi();
+
+  // Create client base service using the signals
+  const renderer = createDOMRenderer();
+  const viewHelpers = defaultViewHelpers(renderer, signals);
+  const views = composeFrom(defaultViewExtensions<DOMRendererConfig>(), viewHelpers);
+  const base = { ...signals, ...views };
 
   // Apply user's extensions
   const svc = service.extend(base);
