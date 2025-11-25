@@ -33,7 +33,10 @@ export function createBaseService() {
   const signals = createSignalsApi();
   const renderer = createDOMServerRenderer();
   const viewHelpers = defaultViewHelpers(renderer, signals);
-  const views = composeFrom(defaultExtensions<DOMServerRendererConfig>(), viewHelpers);
+  const views = composeFrom(
+    defaultExtensions<DOMServerRendererConfig>(),
+    viewHelpers
+  );
 
   return {
     ...signals,
@@ -57,21 +60,6 @@ export type BaseService = FullBaseService;
  *
  * Returns the extend closure with type inference. The closure is called
  * later at instantiation time by createSSRHandler or hydrateApp.
- *
- * @param extend - Function that receives base service and returns extended service
- * @returns Service descriptor with typed extend function
- *
- * @example
- * ```ts
- * // No extensions - just use base service
- * export const service = defineService();
- *
- * // With extensions
- * export const service = defineService((base) => ({
- *   ...base,
- *   analytics: createAnalytics(),
- * }));
- * ```
  */
 export function defineService<TService = FullBaseService>(
   extend?: (base: FullBaseService) => TService

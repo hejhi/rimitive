@@ -116,7 +116,9 @@ export interface HydrateAppOptions<TService> {
  * });
  * ```
  */
-export function hydrateApp<TService>(options: HydrateAppOptions<TService>): void {
+export function hydrateApp<TService>(
+  options: HydrateAppOptions<TService>
+): void {
   const {
     service,
     signals: providedSignals,
@@ -134,7 +136,10 @@ export function hydrateApp<TService>(options: HydrateAppOptions<TService>): void
   // Create client base service using the signals
   const renderer = createDOMRenderer();
   const viewHelpers = defaultViewHelpers(renderer, signals);
-  const views = composeFrom(defaultViewExtensions<DOMRendererConfig>(), viewHelpers);
+  const views = composeFrom(
+    defaultViewExtensions<DOMRendererConfig>(),
+    viewHelpers
+  );
   const base = { ...signals, ...views };
 
   // Apply user's extensions
@@ -151,10 +156,12 @@ export function hydrateApp<TService>(options: HydrateAppOptions<TService>): void
   // islands and routes share the same router state
   const internalRouter = providedRouter
     ? null
-    : (createRouter(
-        fullSvc as unknown as Parameters<typeof createRouter>[0],
-        { initialPath: window.location.pathname + window.location.search + window.location.hash }
-      ) as unknown as Router<DOMRendererConfig>);
+    : (createRouter(fullSvc as unknown as Parameters<typeof createRouter>[0], {
+        initialPath:
+          window.location.pathname +
+          window.location.search +
+          window.location.hash,
+      }) as unknown as Router<DOMRendererConfig>);
 
   // Get navigate function from provided router or internal router
   const navigate = providedRouter?.navigate ?? internalRouter!.navigate;
@@ -166,7 +173,8 @@ export function hydrateApp<TService>(options: HydrateAppOptions<TService>): void
   };
 
   // Create mount function
-  const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svcWithNavigate);
+  const mount = <TElement>(spec: RefSpec<TElement>) =>
+    spec.create(svcWithNavigate);
 
   // Create API factory for hydrator
   function createFullAPI(
@@ -174,7 +182,10 @@ export function hydrateApp<TService>(options: HydrateAppOptions<TService>): void
     signalsApi: ReturnType<typeof createSignalsApi>
   ) {
     const helpers = defaultViewHelpers<DOMRendererConfig>(renderer, signalsApi);
-    const views = composeFrom(defaultViewExtensions<DOMRendererConfig>(), helpers);
+    const views = composeFrom(
+      defaultViewExtensions<DOMRendererConfig>(),
+      helpers
+    );
 
     return {
       ...signalsApi,
@@ -195,8 +206,12 @@ export function hydrateApp<TService>(options: HydrateAppOptions<TService>): void
     if (container) {
       // Use provided router if available, otherwise use internal router
       // Note: if no router is provided but createApp is used, we need the internal router
-      const routerForApp = (providedRouter ?? internalRouter) as Router<DOMRendererConfig>;
-      const App = createApp(routerForApp, svcWithNavigate as FullService<TService>);
+      const routerForApp = (providedRouter ??
+        internalRouter) as Router<DOMRendererConfig>;
+      const App = createApp(
+        routerForApp,
+        svcWithNavigate as FullService<TService>
+      );
       const routeRef = mount(App);
 
       // Replace SSR'd route content with reactive client version

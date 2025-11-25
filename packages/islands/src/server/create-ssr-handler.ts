@@ -60,7 +60,10 @@ function createServerBaseService(): BaseService {
   const signals = createSignalsApi();
   const renderer = createDOMServerRenderer();
   const viewHelpers = defaultViewHelpers(renderer, signals);
-  const views = composeFrom(defaultViewExtensions<DOMServerRendererConfig>(), viewHelpers);
+  const views = composeFrom(
+    defaultViewExtensions<DOMServerRendererConfig>(),
+    viewHelpers
+  );
 
   return {
     ...signals,
@@ -76,35 +79,6 @@ function createServerBaseService(): BaseService {
  * 2. Creating a router with the request path
  * 3. Rendering the app to HTML
  * 4. Returning the complete HTML page with island scripts
- *
- * @param options - Handler configuration
- * @returns HTTP request handler function
- *
- * @example
- * ```ts
- * import { createServer } from 'node:http';
- * import { createSSRHandler } from '@lattice/islands/server';
- * import { service } from './service.js';
- * import { createApp } from './routes.js';
- *
- * const handler = createSSRHandler({
- *   service,
- *   createApp,
- *   template: (content, scripts) => `
- *     <!DOCTYPE html>
- *     <html>
- *       <head><title>My App</title></head>
- *       <body>
- *         ${content}
- *         ${scripts}
- *         <script type="module" src="/client.js"></script>
- *       </body>
- *     </html>
- *   `,
- * });
- *
- * createServer(handler).listen(3000);
- * ```
  */
 export function createSSRHandler<TService>(
   options: SSRHandlerOptions<TService>
@@ -113,7 +87,10 @@ export function createSSRHandler<TService>(
 
   return (req: IncomingMessage, res: ServerResponse) => {
     // Parse URL path
-    const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+    const url = new URL(
+      req.url || '/',
+      `http://${req.headers.host || 'localhost'}`
+    );
     const path = url.pathname;
 
     // Create SSR context for islands
@@ -128,7 +105,9 @@ export function createSSRHandler<TService>(
     // Add addEventListener helper (common need)
     const fullSvc = {
       ...svc,
-      addEventListener: createAddEventListener((base as { batch: <T>(fn: () => T) => T }).batch),
+      addEventListener: createAddEventListener(
+        (base as { batch: <T>(fn: () => T) => T }).batch
+      ),
     };
 
     // Create router with full service

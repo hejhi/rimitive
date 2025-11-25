@@ -23,9 +23,4 @@ export interface ServiceDescriptor<TService> {
    * have compatible shapes but TypeScript sees them as different types.
    */
   extend: (base: unknown) => TService;
-
-  /**
-   * Type marker for inference - not used at runtime
-   */
-  _type?: TService;
 }

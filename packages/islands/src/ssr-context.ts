@@ -16,15 +16,6 @@ const ssrContextStore = new AsyncLocalStorage<SSRContext>();
 
 /**
  * Create a new SSR context
- *
- * @returns Fresh SSR context with empty islands array and counter at 0
- *
- * @example
- * ```ts
- * const ctx = createSSRContext();
- * const html = runWithSSRContext(ctx, () => renderToString(mount(App())));
- * console.log(ctx.islands); // Islands discovered during render
- * ```
  */
 export function createSSRContext(): SSRContext {
   return {
@@ -38,19 +29,6 @@ export function createSSRContext(): SSRContext {
  *
  * Provides isolated context for the duration of the function execution.
  * Context is automatically cleaned up after the function completes.
- *
- * @param ctx - SSR context to use during execution
- * @param fn - Function to execute within the context
- * @returns Result of the function
- *
- * @example
- * ```ts
- * const ctx = createSSRContext();
- * const html = runWithSSRContext(ctx, () => {
- *   // Island components will register in ctx.islands
- *   return renderToString(mount(App()));
- * });
- * ```
  */
 export function runWithSSRContext<T>(ctx: SSRContext, fn: () => T): T {
   return ssrContextStore.run(ctx, fn);
@@ -61,19 +39,6 @@ export function runWithSSRContext<T>(ctx: SSRContext, fn: () => T): T {
  *
  * Returns the context for the current async execution context.
  * Returns undefined if not running within an SSR context.
- *
- * @returns Current SSR context or undefined
- *
- * @example
- * ```ts
- * const ctx = getActiveSSRContext();
- * if (ctx) {
- *   // Running on server during SSR
- *   ctx.islands.push({ id: 'counter-0', type: 'counter', props: {} });
- * } else {
- *   // Running on client or outside SSR context
- * }
- * ```
  */
 export function getActiveSSRContext(): SSRContext | undefined {
   return ssrContextStore.getStore();
@@ -84,17 +49,6 @@ export function getActiveSSRContext(): SSRContext | undefined {
  *
  * Emits <script> tags that call window.__hydrate for each island.
  * These scripts run immediately when encountered, starting hydration.
- *
- * @param ctx - SSR context containing islands
- * @returns HTML string with inline script tags
- *
- * @example
- * ```ts
- * const ctx = createSSRContext();
- * const html = runWithSSRContext(ctx, () => renderToString(mount(App())));
- * const scripts = getIslandScripts(ctx);
- * // Returns: <script>window.__hydrate("counter-0","counter",{"count":5});</script>...
- * ```
  */
 export function getIslandScripts(ctx: SSRContext): string {
   return ctx.islands
@@ -114,12 +68,6 @@ export function getIslandScripts(ctx: SSRContext): string {
  *
  * Called by the island() wrapper during server-side rendering.
  * Generates a unique instance ID and adds to context.
- *
- * @param type - Island type (e.g., "counter")
- * @param props - Island props (must be JSON-serializable)
- * @returns Unique instance ID (e.g., "counter-0")
- *
- * @internal
  */
 export function registerIsland(type: string, props: unknown): string {
   const ctx = getActiveSSRContext();
