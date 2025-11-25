@@ -206,27 +206,28 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
 
         wrapper.appendChild(endComment);
         wrapper.appendChild(scriptTag);
-      } else {
-        // Non-island fragment - just add comment markers (no wrapper)
-        const fragment = fragmentRef as FragmentRef<unknown>;
-
-        // Skip if fragment has no children
-        if (!fragment.firstChild || !fragment.lastChild) return;
-
-        // Find first and last actual DOM nodes
-        const firstNode = getFirstDOMNode(fragment.firstChild);
-        const lastNode = getLastDOMNode(fragment.lastChild);
-
-        if (!firstNode || !lastNode) return;
-
-        // Insert fragment-start comment before first child
-        const startComment = document.createComment('fragment-start');
-        parentElement.insertBefore(startComment, firstNode);
-
-        // Insert fragment-end comment after last child
-        const endComment = document.createComment('fragment-end');
-        parentElement.insertBefore(endComment, lastNode.nextSibling);
+        return;
       }
+
+      // Non-island fragment - just add comment markers (no wrapper)
+      const fragment = fragmentRef as FragmentRef<unknown>;
+
+      // Skip if fragment has no children
+      if (!fragment.firstChild || !fragment.lastChild) return;
+
+      // Find first and last actual DOM nodes
+      const firstNode = getFirstDOMNode(fragment.firstChild);
+      const lastNode = getLastDOMNode(fragment.lastChild);
+
+      if (!firstNode || !lastNode) return;
+
+      // Insert fragment-start comment before first child
+      const startComment = document.createComment('fragment-start');
+      parentElement.insertBefore(startComment, firstNode);
+
+      // Insert fragment-end comment after last child
+      const endComment = document.createComment('fragment-end');
+      parentElement.insertBefore(endComment, lastNode.nextSibling);
     },
   };
 }

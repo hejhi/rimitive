@@ -5,24 +5,12 @@
  * Static content remains as HTML without hydration overhead.
  */
 
-import type { NodeRef, LifecycleCallback } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy, IslandNodeMeta } from './types';
+import type { LifecycleCallback } from '@lattice/view/types';
+import type { IslandComponent, IslandStrategy } from './types';
 import type { RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext } from './ssr-context';
-
-/**
- * NodeRef tagged with island metadata for SSR (lazy registration)
- *
- * __islandMeta: Set during create(), used by decorator for atomic registration
- * __islandId: Set by decorator after registration (for downstream use)
- * @internal
- */
-type IslandNodeRef<TElement> = NodeRef<TElement> & {
-  __islandMeta?: IslandNodeMeta;
-  __islandId?: string;
-};
 
 /**
  * Mark a component as an island
@@ -32,30 +20,6 @@ type IslandNodeRef<TElement> = NodeRef<TElement> & {
  * On the client, islands hydrate from server-rendered HTML.
  *
  * Island components receive the API at instantiation time to support proper hydration.
- *
- * @param id - Unique island type identifier (e.g., "counter", "cart")
- * @param factory - Factory function that receives API and returns component function
- * @returns Wrapped component with island metadata
- *
- * @example
- * ```ts
- * const Counter = island('counter',
- *   (api) => (props: { initialCount: number }) => {
- *     const { el, signal } = api;
- *     const count = signal(props.initialCount);
- *     return el('button', { onClick: () => count(count() + 1) })(
- *       `Count: ${count()}`
- *     );
- *   }
- * );
- *
- * // Server: renders to HTML + registers for hydration
- * const html = renderToString(mount(Counter({ initialCount: 5 })));
- *
- * // Client: hydrates from existing HTML
- * const hydrator = createDOMHydrator();
- * hydrator.hydrate({ counter: Counter });
- * ```
  */
 export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
@@ -64,10 +28,6 @@ export function island<TProps, TApi = Record<string, unknown>>(
 
 /**
  * Mark a component as an island with custom hydration strategy
- *
- * @param id - Unique island type identifier
- * @param strategy - Custom hydration strategy (handles mismatches, etc.)
- * @param factory - Factory function that receives API and returns component function
  */
 export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
@@ -86,49 +46,42 @@ export function island<TProps, TApi = Record<string, unknown>>(
   const factory =
     maybeFactory ||
     (strategyOrFactory as (api: TApi) => (props: TProps) => RefSpec<unknown>);
-  const strategy = maybeFactory
-    ? (strategyOrFactory as IslandStrategy<TProps>)
-    : undefined;
+
+  const strategy = maybeFactory ? strategyOrFactory : undefined;
 
   // Create wrapper function
-  const wrapper = (props: TProps): RefSpec<unknown> => {
+  const wrapper = (props: TProps) => {
     const lifecycleCallbacks: LifecycleCallback<unknown>[] = [];
 
     // Create a deferred RefSpec that delays factory execution until create(api) is called
-    const deferredSpec: RefSpec<unknown> = Object.assign(
+    const deferredSpec = Object.assign(
       (...callbacks: LifecycleCallback<unknown>[]) => {
         // Collect lifecycle callbacks
         lifecycleCallbacks.push(...callbacks);
         return deferredSpec;
       },
       {
-        status: STATUS_REF_SPEC as typeof STATUS_REF_SPEC,
-        create(api?: unknown) {
-          // NOW call factory with the API to get the component function
-          const component = factory(api as TApi);
-
-          // Call component with props to get the actual RefSpec
-          const spec = component(props);
+        status: STATUS_REF_SPEC,
+        create(api: TApi) {
+          const component = factory(api); // NOW call factory with the API to get the component function
+          const spec = component(props); // Call component with props to get the actual RefSpec
 
           // Apply collected lifecycle callbacks to the spec
-          if (lifecycleCallbacks.length > 0) {
-            spec(...lifecycleCallbacks);
-          }
+          if (lifecycleCallbacks.length > 0) spec(...lifecycleCallbacks);
 
           // Create the nodeRef
-          const nodeRef = spec.create(api) as IslandNodeRef<unknown>;
+          const nodeRef = spec.create(api);
 
           // Tag nodeRef with island metadata for lazy registration (SSR only)
           // Registration happens atomically during decoration, ensuring only
           // actually-rendered islands are registered for hydration.
           const ssrContext = getActiveSSRContext();
-          if (ssrContext) {
-            nodeRef.__islandMeta = { type: id, props };
-          }
+
+          if (ssrContext) nodeRef.__islandMeta = { type: id, props };
 
           return nodeRef;
         },
-      }
+      } as const
     );
 
     return deferredSpec;

@@ -58,11 +58,14 @@ export interface SSRHandlerOptions<TSvc = Record<string, unknown>> {
  * 3. Rendering the app to HTML
  * 4. Returning the complete HTML page with island scripts
  */
-export function createSSRHandler<TSvc = Record<string, unknown>>(
-  options: SSRHandlerOptions<TSvc>
-): (req: IncomingMessage, res: ServerResponse) => void {
-  const { createService, createApp, template } = options;
-
+export function createSSRHandler<TSvc = Record<string, unknown>>({
+  createService,
+  createApp,
+  template,
+}: SSRHandlerOptions<TSvc>): (
+  req: IncomingMessage,
+  res: ServerResponse
+) => void {
   return (req: IncomingMessage, res: ServerResponse) => {
     // Parse URL path
     const url = new URL(
@@ -78,10 +81,9 @@ export function createSSRHandler<TSvc = Record<string, unknown>>(
     const { svc } = createService();
 
     // Create router with service
-    const router = createRouter(
-      svc as unknown as Parameters<typeof createRouter>[0],
-      { initialPath: path }
-    ) as unknown as Router<DOMServerRendererConfig>;
+    const router = createRouter(svc as Parameters<typeof createRouter>[0], {
+      initialPath: path,
+    }) as unknown as Router<DOMServerRendererConfig>;
 
     // Create mount function
     const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
@@ -90,9 +92,7 @@ export function createSSRHandler<TSvc = Record<string, unknown>>(
     const App = createApp(router);
 
     // Render app to HTML within SSR context
-    const html = runWithSSRContext(ssrCtx, () => {
-      return renderToString(mount(App));
-    });
+    const html = runWithSSRContext(ssrCtx, () => renderToString(mount(App)));
 
     // Get island hydration scripts
     const scripts = getIslandScripts(ssrCtx);
