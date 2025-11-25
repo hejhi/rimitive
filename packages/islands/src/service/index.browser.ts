@@ -1,10 +1,12 @@
 /**
  * Service Module - Browser Version
  *
- * Re-exports browser-safe implementations.
+ * Re-exports the client service factory and types.
  */
 
-export { defineService, createBaseService } from './define-service.browser';
-export type { ServiceDescriptor } from './types';
-
-export { createIsland } from './create-island.browser';
+export {
+  createIslandClientApi,
+  type IslandClientService,
+  type IslandClientSvc,
+  type IslandClientViews,
+} from '../presets/island-client';

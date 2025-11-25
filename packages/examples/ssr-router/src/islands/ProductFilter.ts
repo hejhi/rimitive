@@ -4,7 +4,7 @@
  * An interactive component that filters products by category.
  * This is an island - it will be hydrated on the client.
  */
-import { island } from '../service.js';
+import { island, type Service } from '../service.js';
 import type { Reactive } from '@lattice/view/types';
 
 interface Product {
@@ -45,10 +45,10 @@ const useFilters = (
   };
 };
 
-export const ProductFilter = island(
+export const ProductFilter = island<ProductFilterProps, Service>(
   'ProductFilter',
   ({ el, signal, computed, map }) =>
-    ({ products }: ProductFilterProps) => {
+    ({ products }) => {
       const selectedCategory = signal<string>('all');
       const { categories, filteredProducts } = useFilters(computed, {
         products,

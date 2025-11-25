@@ -1,34 +1,27 @@
 /**
- * Service Definition
+ * Service Configuration (Client-safe)
  *
- * Defines the service configuration using the functional defineService pattern.
- * The service closure is stored and called later at instantiation time:
- * - Server: per-request by createSSRHandler
- * - Client: once by hydrateApp
- */
-import { defineService, createIsland } from '@lattice/islands/service';
-
-/**
- * Define service - no extensions needed for this example
- * For custom extensions, pass a closure:
+ * Re-exports client-side service factories from the islands package.
+ * For server-side, import createIslandSSRApi directly from '@lattice/islands/presets/island-ssr'.
  *
- * export const service = defineService((base) => ({
- *   ...base,
- *   analytics: createAnalytics(),
- * }));
+ * For custom extensions, wrap the factory:
+ *
+ * const createMyService = (signals) => {
+ *   const base = createIslandClientApi(signals);
+ *   return { ...base, svc: { ...base.svc, analytics: createAnalytics() } };
+ * };
  */
-export const service = defineService();
+export { createIslandClientApi } from '@lattice/islands/presets/island-client';
+export { island } from '@lattice/islands/island';
+
+// NOTE: Do NOT re-export createIslandSSRApi here - it pulls in server-only code
+// (dom-server.js -> ssr-context.js with AsyncLocalStorage)
+// Server code should import directly from '@lattice/islands/presets/island-ssr'
 
 /**
- * Typed island factory for creating islands with full type inference
+ * Re-export service types for convenience
  */
-export const island = createIsland(service);
-
-/**
- * Re-export service type for convenience
- * Using client type since most userland code interacts with services on the client
- */
-export type { IslandClientApi as Service } from '@lattice/islands/presets/island-client';
+export type { IslandClientSvc as Service } from '@lattice/islands/presets/island-client';
 
 /**
  * TEMPORARY: Re-export router/useSvc from old service-client for page components

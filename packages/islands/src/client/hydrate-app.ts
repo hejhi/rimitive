@@ -10,23 +10,21 @@ import {
   defaultExtensions as defaultViewExtensions,
   defaultHelpers as defaultViewHelpers,
 } from '@lattice/view/presets/core';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter, type Router } from '@lattice/router';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { RefSpec } from '@lattice/view/types';
-import { createIslandClientApi } from '../presets/island-client';
+import { type IslandClientService } from '../presets/island-client';
 import { createDOMHydrator } from '../hydrators/dom';
 import { createIslandsRenderer } from '../renderers/islands';
-import type { ServiceDescriptor } from '../service/types';
 import { ISLAND_META } from '../types';
 
 /**
- * Full service with router navigate
+ * Service factory type - matches the return type of createIslandClientApi
+ * User can wrap createIslandClientApi to add extensions
  */
-export type FullService<TService> = TService & {
-  addEventListener: ReturnType<typeof createAddEventListener>;
-  navigate: (path: string) => void;
-};
+export type ServiceFactory<
+  TService extends IslandClientService = IslandClientService,
+> = (signals: ReturnType<typeof createSignalsApi>) => TService;
 
 /**
  * Router-like object with navigate function
@@ -39,19 +37,17 @@ export interface RouterLike {
 /**
  * Options for hydrateApp
  */
-export interface HydrateAppOptions<TService> {
+export interface HydrateAppOptions<TService extends IslandClientService> {
   /**
-   * Service descriptor from defineService()
+   * Service factory function
+   * Pass createIslandClientApi directly, or wrap it to add extensions
    */
-  service: ServiceDescriptor<TService>;
+  createService: ServiceFactory<TService>;
 
   /**
    * Optional signals API from userland singleton
-   * If provided, hydrateApp uses these signals instead of creating new ones.
+   * If provided, hydrateApp passes these signals to createService.
    * This ensures islands share the same reactive system as the router.
-   *
-   * IMPORTANT: When using a router from a service singleton (like service-client.js),
-   * you must pass the singleton's signals here to ensure reactivity works correctly.
    */
   signals?: ReturnType<typeof createSignalsApi>;
 
@@ -65,18 +61,15 @@ export interface HydrateAppOptions<TService> {
   /**
    * Function that creates the app given router and service
    * If provided, mounts routes after hydration
-   *
-   * Receives both router (for routing APIs) and svc (for el, signal, etc.)
    */
   createApp?: (
     router: Router<DOMRendererConfig>,
-    svc: FullService<TService>
+    svc: TService['svc'] & { navigate: (path: string) => void }
   ) => RefSpec<unknown>;
 
   /**
    * Islands to hydrate
-   * Pass island components created with the `island` function from createIsland
-   * Uses a permissive type to allow islands with different prop types
+   * Pass island components created with the `island` function
    */
   islands: Array<{ [ISLAND_META]?: unknown }>;
 
@@ -92,15 +85,15 @@ export interface HydrateAppOptions<TService> {
  * Hydrate islands and optionally mount routes
  *
  * This is the main entry point for client-side initialization:
- * 1. Creates client services using the service descriptor
+ * 1. Calls the service factory to create client services
  * 2. Hydrates all registered islands
  * 3. Optionally mounts routes into a container element
  */
-export function hydrateApp<TService>(
+export function hydrateApp<TService extends IslandClientService>(
   options: HydrateAppOptions<TService>
 ): void {
   const {
-    service,
+    createService,
     signals: providedSignals,
     router: providedRouter,
     createApp,
@@ -109,44 +102,31 @@ export function hydrateApp<TService>(
   } = options;
 
   // Use provided signals or create new ones
-  // IMPORTANT: When using a router from a singleton, pass the singleton's signals
-  // to ensure islands and router share the same reactive system
   const signals = providedSignals ?? createSignalsApi();
 
-  // Create client base service using the signals
-  const { api: base } = createIslandClientApi(signals);
-
-  // Apply user's extensions
-  const svc = service.extend(base);
-
-  // Add addEventListener helper
-  const fullSvc = {
-    ...svc,
-    addEventListener: createAddEventListener(signals.batch),
-  };
+  // Call the service factory
+  const { svc } = createService(signals);
 
   // Use provided router or create a new one
-  // If a router is provided from userland, use its navigate to ensure
-  // islands and routes share the same router state
   const internalRouter = providedRouter
     ? null
-    : (createRouter(fullSvc as unknown as Parameters<typeof createRouter>[0], {
+    : createRouter(svc, {
         initialPath:
           window.location.pathname +
           window.location.search +
           window.location.hash,
-      }) as unknown as Router<DOMRendererConfig>);
+      });
 
   // Get navigate function from provided router or internal router
   const navigate = providedRouter?.navigate ?? internalRouter!.navigate;
 
   // Add navigate to svc for islands that need it
   const svcWithNavigate = {
-    ...fullSvc,
+    ...svc,
     navigate,
   };
 
-  // Create mount function
+  // Create mount function that uses svc with navigate
   const mount = <TElement>(spec: RefSpec<TElement>) =>
     spec.create(svcWithNavigate);
 
@@ -168,7 +148,7 @@ export function hydrateApp<TService>(
     };
   }
 
-  // Create hydrator (pass signals, not combined base)
+  // Create hydrator
   const hydrator = createDOMHydrator(createFullAPI, signals, mount);
 
   // Hydrate islands
@@ -178,14 +158,9 @@ export function hydrateApp<TService>(
   if (createApp) {
     const container = document.querySelector(routeContainer);
     if (container) {
-      // Use provided router if available, otherwise use internal router
-      // Note: if no router is provided but createApp is used, we need the internal router
       const routerForApp = (providedRouter ??
         internalRouter) as Router<DOMRendererConfig>;
-      const App = createApp(
-        routerForApp,
-        svcWithNavigate as FullService<TService>
-      );
+      const App = createApp(routerForApp, svcWithNavigate);
       const routeRef = mount(App);
 
       // Replace SSR'd route content with reactive client version

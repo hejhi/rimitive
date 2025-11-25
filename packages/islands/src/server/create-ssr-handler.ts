@@ -6,7 +6,6 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter, type Router } from '@lattice/router';
 import type { RefSpec } from '@lattice/view/types';
 import { type DOMServerRendererConfig } from '../renderers/dom-server';
@@ -16,17 +15,36 @@ import {
   getIslandScripts,
 } from '../ssr-context';
 import { renderToString } from '../helpers/renderToString';
-import type { ServiceDescriptor } from '../service/types';
-import { createIslandSSRApi } from '../presets/island-ssr';
+import { type IslandSSRService } from '../presets/island-ssr';
+
+/**
+ * Service factory type for SSR - matches the return type of createIslandSSRApi
+ * User can wrap createIslandSSRApi to add extensions
+ */
+export type SSRServiceFactory<TService extends IslandSSRService = IslandSSRService> =
+  () => TService;
 
 /**
  * Options for createSSRHandler
  */
-export interface SSRHandlerOptions<TService> {
+export interface SSRHandlerOptions<TService extends IslandSSRService> {
   /**
-   * Service descriptor from defineService()
+   * Service factory function
+   * Pass createIslandSSRApi directly, or wrap it to add extensions:
+   *
+   * @example
+   * // No extensions
+   * createSSRHandler({ createService: createIslandSSRApi, ... })
+   *
+   * @example
+   * // With extensions
+   * const createMyService = () => {
+   *   const base = createIslandSSRApi();
+   *   return { ...base, svc: { ...base.svc, analytics: createAnalytics() } };
+   * };
+   * createSSRHandler({ createService: createMyService, ... })
    */
-  service: ServiceDescriptor<TService>;
+  createService: SSRServiceFactory<TService>;
 
   /**
    * Function that creates the app given a router
@@ -45,15 +63,15 @@ export interface SSRHandlerOptions<TService> {
  * Create an SSR request handler
  *
  * Returns a function that handles HTTP requests by:
- * 1. Creating per-request services using the service descriptor
+ * 1. Calling the service factory per-request (fresh signals)
  * 2. Creating a router with the request path
  * 3. Rendering the app to HTML
  * 4. Returning the complete HTML page with island scripts
  */
-export function createSSRHandler<TService>(
+export function createSSRHandler<TService extends IslandSSRService>(
   options: SSRHandlerOptions<TService>
 ): (req: IncomingMessage, res: ServerResponse) => void {
-  const { service, createApp, template } = options;
+  const { createService, createApp, template } = options;
 
   return (req: IncomingMessage, res: ServerResponse) => {
     // Parse URL path
@@ -66,28 +84,17 @@ export function createSSRHandler<TService>(
     // Create SSR context for islands
     const ssrCtx = createSSRContext();
 
-    // Create per-request base service
-    const base = createIslandSSRApi().api;
+    // Create per-request service (fresh signals per request)
+    const { svc } = createService();
 
-    // Apply user's extensions
-    const svc = service.extend(base);
-
-    // Add addEventListener helper (common need)
-    const fullSvc = {
-      ...svc,
-      addEventListener: createAddEventListener(
-        (base as { batch: <T>(fn: () => T) => T }).batch
-      ),
-    };
-
-    // Create router with full service
+    // Create router with service
     const router = createRouter(
-      fullSvc as unknown as Parameters<typeof createRouter>[0],
+      svc as unknown as Parameters<typeof createRouter>[0],
       { initialPath: path }
     ) as unknown as Router<DOMServerRendererConfig>;
 
     // Create mount function
-    const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(fullSvc);
+    const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 
     // Create the app with the router
     const App = createApp(router);

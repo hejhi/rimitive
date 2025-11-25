@@ -6,16 +6,16 @@
  * On the client, intercepts clicks for SPA-style navigation.
  */
 import { Link } from '@lattice/router/link';
-import { island, router } from '../service.js';
+import { island, router, type Service } from '../service.js';
 
 interface NavigationProps {
   currentPath: string;
 }
 
-export const Navigation = island(
+export const Navigation = island<NavigationProps, Service>(
   'Navigation',
   ({ el, computed }) =>
-    ({ currentPath }: NavigationProps) => {
+    ({ currentPath }) => {
       const currentPathSignal = router.useCurrentPath(currentPath);
 
       const navLink = (href: string, label: string) => {

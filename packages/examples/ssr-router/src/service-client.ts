@@ -5,9 +5,8 @@
  */
 import {
   createIslandClientApi,
-  type IslandClientApi,
+  type IslandClientSvc,
 } from '@lattice/islands/presets/island-client';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
 import type { RefSpec } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
@@ -20,26 +19,26 @@ type ServiceOptions = {
 /**
  * The merged service type available to components via useSvc/withSvc
  */
-export type MergedService = IslandClientApi & {
-  addEventListener: ReturnType<typeof createAddEventListener>;
+export type MergedService = IslandClientSvc & {
   navigate: (path: string) => void;
 };
 
 const createClientServices = (options: ServiceOptions = {}) => {
-  const { api, signals, views } = createIslandClientApi();
+  const clientApi = createIslandClientApi();
+  const { service, svc } = clientApi;
+  const { signals, views } = service;
 
   // Create router first so we can include navigate in svc
   // Cast needed because TypeScript has trouble inferring the exact renderer config type
-  const router = createRouter<DOMRendererConfig>(api, {
+  const router = createRouter<DOMRendererConfig>(svc, {
     initialPath:
       options.initialPath ||
       window.location.pathname + window.location.search + window.location.hash,
   });
 
   // Include navigate in svc so Link components can access it
-  const svc: MergedService = {
-    ...api,
-    addEventListener: createAddEventListener(signals.batch),
+  const svcWithNav: MergedService = {
+    ...svc,
     navigate: router.navigate,
   };
 
@@ -48,9 +47,10 @@ const createClientServices = (options: ServiceOptions = {}) => {
       view: views,
       signals,
     },
+    signals,
     router,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
-    useSvc: <TReturn>(fn: (svc: MergedService) => TReturn): TReturn => fn(svc),
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svcWithNav),
+    useSvc: <TReturn>(fn: (svc: MergedService) => TReturn): TReturn => fn(svcWithNav),
     withSvc: <TReturn>(fn: (svc: MergedService) => TReturn) => fn,
   };
 };

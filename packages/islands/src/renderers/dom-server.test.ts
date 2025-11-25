@@ -573,20 +573,17 @@ describe('Full SSR Integration', () => {
   it('should render all items in map() during SSR', () => {
     // Create SSR API
     const signals = createSignalsApi();
-    const { mount, create } = createIslandSSRApi(signals);
+    const { mount, svc } = createIslandSSRApi(signals);
+    const { el, map, signal } = svc;
 
     // Create component with map() that renders 6 items
-    const App = create((api) => () => {
-      const { el, map, signal } = api;
-      const items = signal([1, 2, 3, 4, 5, 6]);
-
-      return el('div', { className: 'container' })(
-        map(items)((item) => el('div', { className: 'item' })(`Item ${item()}`))
-      )();
-    });
+    const items = signal([1, 2, 3, 4, 5, 6]);
+    const App = el('div', { className: 'container' })(
+      map(items)((item) => el('div', { className: 'item' })(`Item ${item()}`))
+    );
 
     // Render to string
-    const rendered = mount(App());
+    const rendered = mount(App);
     const html = renderToString(rendered);
 
     // Debug: Log the actual HTML output
@@ -604,20 +601,16 @@ describe('Full SSR Integration', () => {
 
   it('should render all items when map() uses computed', () => {
     const signals = createSignalsApi();
-    const { mount, create } = createIslandSSRApi(signals);
+    const { mount, svc } = createIslandSSRApi(signals);
+    const { el, map, computed } = svc;
 
-    const App = create((api) => () => {
-      const { el, map, computed } = api;
+    // Use computed() like ProductFilter does
+    const items = computed(() => [1, 2, 3, 4, 5, 6]);
+    const App = el('div', { className: 'container' })(
+      map(items)((item) => el('div', { className: 'item' })(`Item ${item()}`))
+    );
 
-      // Use computed() like ProductFilter does
-      const items = computed(() => [1, 2, 3, 4, 5, 6]);
-
-      return el('div', { className: 'container' })(
-        map(items)((item) => el('div', { className: 'item' })(`Item ${item()}`))
-      )();
-    });
-
-    const rendered = mount(App());
+    const rendered = mount(App);
     const html = renderToString(rendered);
 
     // Debug: Log the actual HTML output

@@ -8,7 +8,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSSRHandler } from '@lattice/islands/server';
-import { service } from './service.js';
+import { createIslandSSRApi } from '@lattice/islands/presets/island-ssr';
 import { createApp } from './routes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -20,7 +20,7 @@ const clientBundlePath = isDev
 
 // Create SSR handler for rendering pages
 const ssrHandler = createSSRHandler({
-  service,
+  createService: createIslandSSRApi,
   createApp,
   template: (content, scripts) => `
 <!DOCTYPE html>

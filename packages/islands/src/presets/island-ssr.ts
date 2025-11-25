@@ -4,10 +4,12 @@
  * Pre-configured API for server-side rendering with island support.
  * Uses the island-aware linkedom renderer that automatically decorates
  * island fragments with hydration markers.
+ *
+ * This is a deferred factory - call it per-request for fresh signals.
  */
 
 import { composeFrom } from '@lattice/lattice';
-import { defaultExtensions } from '@lattice/view/presets/core';
+import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import {
   createDOMServerRenderer,
@@ -19,33 +21,36 @@ import { createSignalsApi } from '@lattice/signals/presets/core';
 /**
  * Create an island-aware SSR API
  *
- * Pre-configured API for server-side rendering with island support.
- * Provides the same API surface as the browser preset but optimized for SSR.
+ * Deferred factory for server-side rendering with island support.
+ * Call this per-request to get fresh signals (avoids state leakage).
+ *
+ * @param signals - Optional signals API (usually create fresh per-request)
  */
 export const createIslandSSRApi = (signals = createSignalsApi()) => {
   const renderer = createDOMServerRenderer();
   const viewHelpers = createSpec(renderer, signals);
-  const views = composeFrom(
-    defaultExtensions<DOMServerRendererConfig>(),
-    viewHelpers
-  );
+  const baseExtensions = defaultViewExtensions<DOMServerRendererConfig>();
+  const views = composeFrom(baseExtensions, viewHelpers);
 
-  const api = {
+  const svc = {
     ...signals,
     ...views,
   };
 
-  type ApiType = typeof api;
+  type Service = typeof svc;
 
   return {
-    api,
-    signals,
-    views,
+    service: {
+      views,
+      signals,
+    },
+    svc,
     renderer,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(api),
-    create: <TReturn>(fn: (api: ApiType) => TReturn): TReturn => fn(api),
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
+    useSvc: <TReturn>(fn: (svc: Service) => TReturn): TReturn => fn(svc),
   };
 };
 
-export type IslandSSRApi = ReturnType<typeof createIslandSSRApi>['api'];
-export type IslandSSRViews = ReturnType<typeof createIslandSSRApi>['views'];
+export type IslandSSRService = ReturnType<typeof createIslandSSRApi>;
+export type IslandSSRSvc = IslandSSRService['svc'];
+export type IslandSSRViews = IslandSSRService['service']['views'];

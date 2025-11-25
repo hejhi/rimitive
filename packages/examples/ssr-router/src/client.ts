@@ -1,17 +1,17 @@
 /**
  * Client-side hydration with routing
  *
- * Uses the new hydrateApp API for clean client initialization.
+ * Uses the hydrateApp API for clean client initialization.
  * Hydrates islands and mounts reactive routes.
  */
 import { hydrateApp } from '@lattice/islands/client';
-import { service, router, clientService } from './service.js';
+import { createIslandClientApi, router, clientService } from './service.js';
 import { createRouteContent } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 
 hydrateApp({
-  service,
+  createService: createIslandClientApi,
   signals: clientService.signals, // Use singleton's signals so islands share router's reactive system
   router, // Pass the singleton router so islands and routes share the same state
   createApp: createRouteContent,

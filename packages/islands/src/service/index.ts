@@ -1,10 +1,13 @@
 /**
  * Service Module
  *
- * Functional helpers for defining and composing services.
+ * Re-exports the SSR service factory and types.
+ * For client-side, use @lattice/islands/presets/island-client instead.
  */
 
-export { defineService } from './define-service';
-export type { ServiceDescriptor } from './types';
-
-export { createIsland } from './create-island';
+export {
+  createIslandSSRApi,
+  type IslandSSRService,
+  type IslandSSRSvc,
+  type IslandSSRViews,
+} from '../presets/island-ssr';
