@@ -12,7 +12,7 @@
  */
 
 import type { Renderer } from '@lattice/view/types';
-import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import {
   type Position,
   type TreePath,

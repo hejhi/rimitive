@@ -4,8 +4,6 @@
  * Exports island-specific client renderers for hydration.
  * - createDOMHydrationRenderer: Walks existing DOM during hydration
  * - createIslandsRenderer: Switches from hydration to regular rendering
- *
- * Compose with @lattice/signals and @lattice/view presets as needed.
  */
 
 export {

@@ -5,10 +5,9 @@
  * Static content remains as HTML without hydration overhead.
  */
 
-import type { LifecycleCallback } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy } from './types';
-import type { RefSpec } from '@lattice/view/types';
+import type { LifecycleCallback, RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
+import type { IslandComponent, IslandStrategy } from './types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext } from './ssr-context';
 

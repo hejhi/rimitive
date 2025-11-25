@@ -13,15 +13,14 @@
  */
 
 import type { IslandMetaData, IslandRegistryEntry } from '../types';
-import type { RefSpec } from '@lattice/view/types';
+import type { RefSpec, ElementRef } from '@lattice/view/types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { HydrationMismatch, ISLAND_META } from '../types';
 import { createIslandsRenderer } from '../renderers/islands';
 import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createHydrationApi } from '../hydration-api';
 import type { EffectAPI } from '../hydration-api';
-import type { ElementRef } from '@lattice/view/types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 
 /**
  * Base island type for registration - accepts any object with island metadata

@@ -3,29 +3,6 @@
  *
  * Provides fine-grained hydration for Lattice applications.
  * Only interactive components ("islands") ship JavaScript to the client.
- *
- * @example
- * ```ts
- * // Server-side
- * import { island, createSSRContext, runWithSSRContext } from '@lattice/islands';
- * import { renderToString } from '@lattice/view/helpers/renderToString';
- *
- * const Counter = island('counter', create(({ el, signal }) => (props) => {
- *   const count = signal(props.initialCount);
- *   return el('button', { onClick: () => count(count() + 1) })(
- *     `Count: ${count()}`
- *   )();
- * }));
- *
- * const ctx = createSSRContext();
- * const html = runWithSSRContext(ctx, () => renderToString(mount(Counter({ initialCount: 5 }))));
- *
- * // Client-side
- * import { createDOMHydrator } from '@lattice/islands';
- *
- * const hydrator = createDOMHydrator();
- * hydrator.hydrate({ counter: Counter });
- * ```
  */
 
 // Core types

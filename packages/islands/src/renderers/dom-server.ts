@@ -5,10 +5,9 @@
  */
 
 import { parseHTML } from 'linkedom';
-import type { Renderer } from '@lattice/view/types';
-import type { FragmentRef, NodeRef } from '@lattice/view/types';
+import type { Renderer, FragmentRef, NodeRef } from '@lattice/view/types';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { IslandNodeMeta } from '../types';
 import { registerIsland } from '../ssr-context';
 
