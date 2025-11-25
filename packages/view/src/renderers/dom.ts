@@ -38,18 +38,5 @@ export function createDOMRenderer(): Renderer<DOMRendererConfig> {
           options as AddEventListenerOptions
         );
     },
-    serializeElement: (element, childrenHTML) => {
-      // Create a clone with the same tag and attributes
-      const clone = document.createElement(element.tagName);
-      // Copy all attributes
-      for (let i = 0; i < element.attributes.length; i++) {
-        const attr = element.attributes[i];
-        if (attr) clone.setAttribute(attr.name, attr.value);
-      }
-      // Set the custom children HTML
-      clone.innerHTML = childrenHTML;
-      // Return serialized HTML
-      return clone.outerHTML;
-    },
   };
 }

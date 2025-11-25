@@ -286,19 +286,5 @@ export function createDOMHydrationRenderer(
           options as AddEventListenerOptions
         );
     },
-
-    /**
-     * Serialize element with custom children HTML
-     * Not typically used during hydration, but required by interface
-     */
-    serializeElement: (element, childrenHTML) => {
-      const clone = document.createElement(element.tagName);
-      for (let i = 0; i < element.attributes.length; i++) {
-        const attr = element.attributes[i];
-        if (attr) clone.setAttribute(attr.name, attr.value);
-      }
-      clone.innerHTML = childrenHTML;
-      return clone.outerHTML;
-    },
   };
 }

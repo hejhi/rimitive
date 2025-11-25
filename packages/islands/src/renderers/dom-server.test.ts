@@ -8,7 +8,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDOMServerRenderer, type DOMServerRendererConfig } from './dom-server';
+import {
+  createDOMServerRenderer,
+  type DOMServerRendererConfig,
+} from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
 import { createSignalsApi } from '@lattice/signals/presets/core';
@@ -322,7 +325,9 @@ describe('Fragment Island Decoration', () => {
       };
 
       // Use __islandMeta for lazy registration (new architecture)
-      const fragment: FragmentRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+      const fragment: FragmentRef<HTMLElement> & {
+        __islandMeta?: IslandNodeMeta;
+      } = {
         status: STATUS_FRAGMENT,
         element: null,
         parent: null,
@@ -387,7 +392,9 @@ describe('Fragment Island Decoration', () => {
       };
 
       // Use __islandMeta for lazy registration (new architecture)
-      const fragment: FragmentRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+      const fragment: FragmentRef<HTMLElement> & {
+        __islandMeta?: IslandNodeMeta;
+      } = {
         status: STATUS_FRAGMENT,
         element: null,
         parent: null,
@@ -429,7 +436,9 @@ describe('Element Island Decoration', () => {
       renderer.appendChild(container, button);
 
       // Use __islandMeta for lazy registration (new architecture)
-      const buttonRef: ElementRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+      const buttonRef: ElementRef<HTMLElement> & {
+        __islandMeta?: IslandNodeMeta;
+      } = {
         status: STATUS_ELEMENT,
         element: button,
         parent: null,
@@ -467,7 +476,9 @@ describe('Element Island Decoration', () => {
       renderer.appendChild(container, after);
 
       // Use __islandMeta for lazy registration (new architecture)
-      const divRef: ElementRef<HTMLElement> & { __islandMeta?: IslandNodeMeta } = {
+      const divRef: ElementRef<HTMLElement> & {
+        __islandMeta?: IslandNodeMeta;
+      } = {
         status: STATUS_ELEMENT,
         element: div,
         parent: null,
@@ -510,42 +521,6 @@ describe('Element Island Decoration', () => {
 
     const html = container.innerHTML;
     expect(html).not.toContain('<script');
-  });
-});
-
-// ============================================================================
-// Tests: Serialization
-// ============================================================================
-
-describe('Element Serialization', () => {
-  it('should serialize element with custom children HTML', () => {
-    const renderer = createDOMServerRenderer();
-
-    const div = renderer.createElement('div');
-    div.setAttribute('class', 'container');
-
-    const html = renderer.serializeElement(div, '<p>Custom child</p>');
-
-    // linkedom uses uppercase tag names and lowercases content
-    expect(html.toLowerCase()).toBe(
-      '<div class="container"><p>custom child</p></div>'
-    );
-  });
-
-  it('should preserve all attributes during serialization', () => {
-    const renderer = createDOMServerRenderer();
-
-    const button = renderer.createElement('button');
-    button.setAttribute('type', 'submit');
-    button.setAttribute('class', 'btn');
-    button.setAttribute('data-id', '123');
-
-    const html = renderer.serializeElement(button, 'Submit');
-
-    expect(html).toContain('type="submit"');
-    expect(html).toContain('class="btn"');
-    expect(html).toContain('data-id="123"');
-    expect(html.toLowerCase()).toContain('>submit</button>');
   });
 });
 

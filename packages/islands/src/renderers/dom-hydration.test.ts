@@ -515,23 +515,6 @@ describe('Hydration Mismatch Errors', () => {
 });
 
 // ============================================================================
-// Tests: Serialization (Interface Compliance)
-// ============================================================================
-
-describe('Serialization', () => {
-  it('should provide serializeElement for interface compliance', () => {
-    const container = setupHTML('<div class="test"></div>');
-    const renderer = createDOMHydrationRenderer(container);
-
-    const div = renderer.createElement('div');
-
-    const html = renderer.serializeElement(div, '<p>child</p>');
-
-    expect(html).toBe('<div class="test"><p>child</p></div>');
-  });
-});
-
-// ============================================================================
 // Tests: Connection Status
 // ============================================================================
 

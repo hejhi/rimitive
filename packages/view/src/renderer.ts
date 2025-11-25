@@ -111,18 +111,6 @@ export interface Renderer<TConfig extends RendererConfig> {
   ) => () => void;
 
   /**
-   * Serialize an element to HTML string with custom children HTML
-   *
-   * @param element - The element to serialize
-   * @param childrenHTML - The HTML string to use for children (instead of element's DOM children)
-   * @returns HTML string representation of the element with the provided children
-   */
-  serializeElement: (
-    element: TConfig['baseElement'],
-    childrenHTML: string
-  ) => string;
-
-  /**
    * Optional: Decorate an element with SSR markers (e.g., island script tags)
    *
    * Called after an element has been created and attached to the DOM.

@@ -89,19 +89,6 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
     // No-op for SSR - events aren't meaningful on the server
     // Return empty cleanup function
     addEventListener: () => () => () => {},
-    serializeElement: (element, childrenHTML) => {
-      // Create a clone with the same tag and attributes
-      const clone = document.createElement(element.tagName);
-      // Copy all attributes
-      for (let i = 0; i < element.attributes.length; i++) {
-        const attr = element.attributes[i];
-        if (attr) clone.setAttribute(attr.name, attr.value);
-      }
-      // Set the custom children HTML
-      clone.innerHTML = childrenHTML;
-      // Return serialized HTML
-      return clone.outerHTML;
-    },
 
     /**
      * Decorate elements with island script tags (atomic registration)
@@ -122,7 +109,11 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
         if (!parent) return;
 
         // Register NOW - atomic with decoration, only for rendered islands
-        const instanceId = registerIsland(meta.type, meta.props, STATUS_ELEMENT);
+        const instanceId = registerIsland(
+          meta.type,
+          meta.props,
+          STATUS_ELEMENT
+        );
 
         // Store instance ID back on ref for downstream use
         (elementRef as { __islandId?: string }).__islandId = instanceId;
@@ -174,7 +165,11 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
         if (!firstNode || !lastNode) return;
 
         // Register NOW - atomic with decoration, only for rendered islands
-        const instanceId = registerIsland(meta.type, meta.props, STATUS_FRAGMENT);
+        const instanceId = registerIsland(
+          meta.type,
+          meta.props,
+          STATUS_FRAGMENT
+        );
 
         // Store instance ID back on ref for downstream use
         (

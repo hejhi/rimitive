@@ -37,8 +37,6 @@ export function createIslandsRenderer(
     isConnected: (element) => getRenderer().isConnected(element),
     addEventListener: (element, event, handler, options) =>
       getRenderer().addEventListener(element, event, handler, options),
-    serializeElement: (element, childrenHTML) =>
-      getRenderer().serializeElement(element, childrenHTML),
     switchToFallback,
   };
 }
