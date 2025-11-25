@@ -26,7 +26,7 @@ import {
 } from '../ssr-context';
 import { renderToString } from '../helpers/renderToString';
 import type { ServiceDescriptor } from '../service/types';
-import type { BaseService } from '../service/define-service';
+import { IslandSSRApi } from 'src/presets/island-ssr';
 
 /**
  * Options for createSSRHandler
@@ -56,7 +56,7 @@ export interface SSRHandlerOptions<TService> {
  * Creates signals + view services with the linkedom renderer.
  * Called per-request to ensure isolation.
  */
-function createServerBaseService(): BaseService {
+function createServerBaseService(): IslandSSRApi {
   const signals = createSignalsApi();
   const renderer = createDOMServerRenderer();
   const viewHelpers = defaultViewHelpers(renderer, signals);

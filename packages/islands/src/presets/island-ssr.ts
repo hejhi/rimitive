@@ -13,36 +13,16 @@ import {
   createDOMServerRenderer,
   type DOMServerRendererConfig,
 } from '../renderers/dom-server';
-import type { RefSpec, ReactiveAdapter } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
+import { createSignalsApi } from '@lattice/signals/presets/core';
 
 /**
  * Create an island-aware SSR API
  *
  * Pre-configured API for server-side rendering with island support.
  * Provides the same API surface as the browser preset but optimized for SSR.
- *
- * @param signals - Signals API (from @lattice/signals/presets/core)
- * @returns API object with el, map, match, mount, and island renderer
- *
- * @example
- * ```ts
- * import { createSignalsApi } from '@lattice/signals/presets/core';
- * import { createIslandSSRApi } from '@lattice/islands/presets/island-ssr';
- *
- * const signals = createSignalsApi();
- * const { api, mount, create } = createIslandSSRApi(signals);
- *
- * const App = create(({ el }) => () => {
- *   return el('div', { className: 'app' })(
- *     el('h1')('Hello SSR!')
- *   )();
- * });
- *
- * const rendered = mount(App());
- * const html = rendered.element.outerHTML;
- * ```
  */
-export const createIslandSSRApi = <T extends ReactiveAdapter>(signals: T) => {
+export const createIslandSSRApi = (signals = createSignalsApi()) => {
   const renderer = createDOMServerRenderer();
   const viewHelpers = createSpec(renderer, signals);
   const views = composeFrom(

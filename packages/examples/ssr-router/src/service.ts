@@ -27,7 +27,7 @@ export const island = createIsland(service);
 /**
  * Re-export service type for convenience
  */
-export type { FullBaseService as Service } from '@lattice/islands/service';
+export type { IslandSSRApi as Service } from '@lattice/islands/presets/island-ssr';
 
 /**
  * TEMPORARY: Re-export router/useSvc from old service-client for page components
