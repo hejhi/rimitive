@@ -12,11 +12,9 @@ import {
 } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter, type Router } from '@lattice/router';
-import {
-  createDOMRenderer,
-  type DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
+import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { RefSpec } from '@lattice/view/types';
+import { createIslandClientApi } from '../presets/island-client';
 import { createDOMHydrator } from '../hydrators/dom';
 import { createIslandsRenderer } from '../renderers/islands';
 import type { ServiceDescriptor } from '../service/types';
@@ -116,13 +114,7 @@ export function hydrateApp<TService>(
   const signals = providedSignals ?? createSignalsApi();
 
   // Create client base service using the signals
-  const renderer = createDOMRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signals);
-  const views = composeFrom(
-    defaultViewExtensions<DOMRendererConfig>(),
-    viewHelpers
-  );
-  const base = { ...signals, ...views };
+  const { api: base } = createIslandClientApi(signals);
 
   // Apply user's extensions
   const svc = service.extend(base);
