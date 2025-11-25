@@ -14,10 +14,10 @@ export type { MergedService as Service } from './service-client.js';
 /**
  * Re-export router/useSvc from service-client for page components
  */
-export { router, useSvc, withSvc, createClientServiceFactory } from './service-client.js';
+export { router, useSvc, withSvc, createClientApi } from './service-client.js';
 
 /**
- * Re-export singleton's signals for hydrateApp
+ * Re-export singleton service for client hydration
  * This ensures islands share the same reactive system as the router
  */
 export { service as clientService } from './service-client.js';

@@ -1,8 +1,8 @@
 /**
  * Client Module
  *
- * Helpers for client-side hydration and interactivity.
+ * Re-exports the DOM hydrator for client-side island hydration.
  */
 
-export { hydrateApp } from './hydrate-app';
-export type { HydrateAppOptions, RouterLike } from './hydrate-app';
+export { createDOMHydrator } from '../hydrators/dom';
+export type { IslandHydrator, MountFn } from '../hydrators/dom';

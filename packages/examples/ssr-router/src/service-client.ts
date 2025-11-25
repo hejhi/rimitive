@@ -11,7 +11,7 @@ import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createDOMRenderer, type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { composeFrom } from '@lattice/lattice';
 import { createRouter } from '@lattice/router';
-import type { RefSpec } from '@lattice/view/types';
+import type { RefSpec, Renderer } from '@lattice/view/types';
 
 type ServiceOptions = {
   /** Initial path for the router (used for SSR with specific request paths) */
@@ -38,12 +38,21 @@ function createClientService(signals = createSignalsApi()) {
 }
 
 /**
- * Service factory for hydrateApp
- * Accepts signals parameter to share reactive state between islands and router
+ * API factory for hydrator
+ * Takes a renderer and signals, returns the full API for island hydration
  */
-export const createClientServiceFactory = (
+export const createClientApi = (
+  renderer: Renderer<DOMRendererConfig>,
   signals: ReturnType<typeof createSignalsApi>
-) => createClientService(signals);
+) => {
+  const viewHelpers = createSpec(renderer, signals);
+  const views = composeFrom(defaultViewExtensions<DOMRendererConfig>(), viewHelpers);
+  return {
+    ...signals,
+    ...views,
+    // navigate is added by client.ts after router is available
+  };
+};
 
 /**
  * The merged service type available to components via useSvc/withSvc
