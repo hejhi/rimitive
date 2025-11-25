@@ -3,8 +3,9 @@ import { Map } from '../map';
 import { Match } from '../match';
 import { Show } from '../show';
 import { createSpec } from '../helpers';
-import type { RendererConfig } from '../renderer';
-import type { RefSpec, NodeRef } from '../types';
+import type { Renderer, RendererConfig } from '../renderer';
+import type { RefSpec, NodeRef, ReactiveAdapter } from '../types';
+import { composeFrom } from '@lattice/lattice';
 
 export type { ElementProps, ChildrenApplicator } from '../el';
 export type { ElFactory } from '../el';
@@ -31,3 +32,9 @@ export type ComponentFactory<TApi> = <TArgs extends unknown[], TElement>(
 ) => (...args: TArgs) => RefSpec<TElement>;
 
 export const defaultHelpers = createSpec;
+
+export const createViewApi = <TConfig extends RendererConfig>(
+  renderer: Renderer<TConfig>,
+  signals: ReactiveAdapter
+) =>
+  composeFrom(defaultExtensions<TConfig>(), defaultHelpers(renderer, signals));

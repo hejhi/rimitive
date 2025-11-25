@@ -47,5 +47,6 @@ export const defaultExtensions = <T extends Record<string, DefinedService>>(
 });
 
 export const defaultHelpers = createPushPullSchedule;
+
 export const createSignalsApi = () =>
   composeFrom(defaultExtensions(), defaultHelpers());
