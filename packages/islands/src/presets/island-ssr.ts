@@ -40,10 +40,8 @@ export const createIslandSSRApi = (signals = createSignalsApi()) => {
   type Service = typeof svc;
 
   return {
-    service: {
-      views,
-      signals,
-    },
+    signals,
+    views,
     svc,
     renderer,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
@@ -53,4 +51,4 @@ export const createIslandSSRApi = (signals = createSignalsApi()) => {
 
 export type IslandSSRService = ReturnType<typeof createIslandSSRApi>;
 export type IslandSSRSvc = IslandSSRService['svc'];
-export type IslandSSRViews = IslandSSRService['service']['views'];
+export type IslandSSRViews = IslandSSRService['views'];

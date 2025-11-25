@@ -44,10 +44,8 @@ export const createIslandClientApi = (signals = createSignalsApi()) => {
   type Service = typeof svc;
 
   return {
-    service: {
-      views,
-      signals,
-    },
+    signals,
+    views,
     svc,
     renderer,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
@@ -57,4 +55,4 @@ export const createIslandClientApi = (signals = createSignalsApi()) => {
 
 export type IslandClientService = ReturnType<typeof createIslandClientApi>;
 export type IslandClientSvc = IslandClientService['svc'];
-export type IslandClientViews = IslandClientService['service']['views'];
+export type IslandClientViews = IslandClientService['views'];

@@ -47,8 +47,6 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         types: resolve(__dirname, 'src/types.ts'),
-        'service/index': resolve(__dirname, 'src/service/index.ts'),
-        'service/index.browser': resolve(__dirname, 'src/service/index.browser.ts'),
         'server/index': resolve(__dirname, 'src/server/index.ts'),
         'client/index': resolve(__dirname, 'src/client/index.ts'),
         'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),

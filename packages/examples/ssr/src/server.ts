@@ -23,13 +23,13 @@ import { TagList } from './islands/TagList.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
-// Create island-aware SSR API
+// Create island-aware SSR API (fresh per-request in real app, shared here for simplicity)
 const signals = createSignalsApi();
-const { mount, create } = createIslandSSRApi(signals);
+const { mount, svc } = createIslandSSRApi(signals);
+const { el } = svc;
 
 // Define the app component
-const App = create((api) => () => {
-  const { el } = api;
+const App = () => {
   return el('div', { className: 'app' })(
     el('h1')('Lattice SSR Example'),
     el('p', { className: 'subtitle' })(
@@ -59,7 +59,7 @@ const App = create((api) => () => {
       )()
     )()
   )();
-});
+};
 
 // Create HTTP server
 const server = createServer((req, res) => {

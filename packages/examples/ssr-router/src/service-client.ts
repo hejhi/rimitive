@@ -24,9 +24,7 @@ export type MergedService = IslandClientSvc & {
 };
 
 const createClientServices = (options: ServiceOptions = {}) => {
-  const clientApi = createIslandClientApi();
-  const { service, svc } = clientApi;
-  const { signals, views } = service;
+  const { signals, views, svc } = createIslandClientApi();
 
   // Create router first so we can include navigate in svc
   // Cast needed because TypeScript has trouble inferring the exact renderer config type

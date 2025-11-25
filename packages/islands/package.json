@@ -6,14 +6,6 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    "./service": {
-      "browser": {
-        "import": "./dist/service/index.browser.js",
-        "types": "./dist/service/index.browser.d.ts"
-      },
-      "import": "./dist/service/index.js",
-      "types": "./dist/service/index.d.ts"
-    },
     "./server": {
       "import": "./dist/server/index.js",
       "types": "./dist/server/index.d.ts"
