@@ -6,19 +6,10 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { composeFrom } from '@lattice/lattice';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import {
-  defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter, type Router } from '@lattice/router';
 import type { RefSpec } from '@lattice/view/types';
-import {
-  createDOMServerRenderer,
-  type DOMServerRendererConfig,
-} from '../renderers/dom-server';
+import { type DOMServerRendererConfig } from '../renderers/dom-server';
 import {
   createSSRContext,
   runWithSSRContext,
@@ -26,7 +17,7 @@ import {
 } from '../ssr-context';
 import { renderToString } from '../helpers/renderToString';
 import type { ServiceDescriptor } from '../service/types';
-import { IslandSSRApi } from 'src/presets/island-ssr';
+import { createIslandSSRApi } from '../presets/island-ssr';
 
 /**
  * Options for createSSRHandler
@@ -48,27 +39,6 @@ export interface SSRHandlerOptions<TService> {
    * Receives rendered content and island scripts, returns full HTML
    */
   template: (content: string, scripts: string) => string;
-}
-
-/**
- * Create base service for server-side rendering
- *
- * Creates signals + view services with the linkedom renderer.
- * Called per-request to ensure isolation.
- */
-function createServerBaseService(): IslandSSRApi {
-  const signals = createSignalsApi();
-  const renderer = createDOMServerRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signals);
-  const views = composeFrom(
-    defaultViewExtensions<DOMServerRendererConfig>(),
-    viewHelpers
-  );
-
-  return {
-    ...signals,
-    ...views,
-  };
 }
 
 /**
@@ -97,7 +67,7 @@ export function createSSRHandler<TService>(
     const ssrCtx = createSSRContext();
 
     // Create per-request base service
-    const base = createServerBaseService();
+    const base = createIslandSSRApi().api;
 
     // Apply user's extensions
     const svc = service.extend(base);

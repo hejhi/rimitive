@@ -97,24 +97,6 @@ export interface HydrateAppOptions<TService> {
  * 1. Creates client services using the service descriptor
  * 2. Hydrates all registered islands
  * 3. Optionally mounts routes into a container element
- *
- * @param options - Hydration configuration
- *
- * @example
- * ```ts
- * // client.ts
- * import { hydrateApp } from '@lattice/islands/client';
- * import { service } from './service.js';
- * import { createApp } from './routes.js';
- * import { Counter, Navigation } from './islands/index.js';
- *
- * hydrateApp({
- *   service,
- *   createApp,
- *   islands: [Counter, Navigation],
- *   routeContainer: '.main-content',
- * });
- * ```
  */
 export function hydrateApp<TService>(
   options: HydrateAppOptions<TService>
