@@ -7,14 +7,14 @@
 
 // Re-export interface types from shared types file
 export type { ServiceDescriptor } from './types';
-import { IslandSSRApi } from 'src/presets/island-ssr';
+import type { IslandClientApi } from '../presets/island-client';
 import type { ServiceDescriptor } from './types';
 
 /**
  * createBaseService is not available in browser
  * Service creation happens inside hydrateApp
  */
-export function createBaseService(): IslandSSRApi {
+export function createBaseService(): IslandClientApi {
   throw new Error('createBaseService should not be called in browser');
 }
 
@@ -23,12 +23,12 @@ export function createBaseService(): IslandSSRApi {
  *
  * Same as server version - just stores the extend function for later use.
  */
-export function defineService<TService = IslandSSRApi>(
-  extend?: (base: IslandSSRApi) => TService
+export function defineService<TService = IslandClientApi>(
+  extend?: (base: IslandClientApi) => TService
 ): ServiceDescriptor<TService> {
   // Cast to accept unknown since server/client base services have compatible shapes
   const extendFn = (base: unknown) => {
-    if (extend) return extend(base as IslandSSRApi);
+    if (extend) return extend(base as IslandClientApi);
     return base as unknown as TService;
   };
 

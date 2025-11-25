@@ -62,3 +62,7 @@ export { renderToString } from './helpers/renderToString';
 export { createDOMServerRenderer } from './renderers/dom-server';
 export { createIslandSSRApi } from './presets/island-ssr';
 export type { IslandSSRApi, IslandSSRViews } from './presets/island-ssr';
+
+// Client-side API
+export { createIslandClientApi } from './presets/island-client';
+export type { IslandClientApi, IslandClientViews } from './presets/island-client';
