@@ -11,7 +11,8 @@
  * - All position transformations are pure functions
  */
 
-import type { Renderer, RendererConfig } from '@lattice/view/types';
+import type { Renderer } from '@lattice/view/types';
+import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import {
   type Position,
   type TreePath,
@@ -22,6 +23,9 @@ import {
   getCurrentPath,
 } from '../helpers/hydrate-dom';
 
+// Re-export DOMRendererConfig for consumers that import from here
+export type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+
 /**
  * Hydration mismatch error
  */
@@ -30,14 +34,6 @@ export class HydrationMismatch extends Error {
     super(message);
     this.name = 'HydrationMismatch';
   }
-}
-
-export interface DOMRendererConfig extends RendererConfig {
-  elements: HTMLElementTagNameMap;
-  events: HTMLElementEventMap;
-  baseElement: HTMLElement;
-  textNode: Text;
-  comment: Comment;
 }
 
 // ============================================================================

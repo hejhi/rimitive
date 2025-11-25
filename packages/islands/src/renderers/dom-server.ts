@@ -5,19 +5,15 @@
  */
 
 import { parseHTML } from 'linkedom';
-import type { Renderer, RendererConfig } from '@lattice/view/types';
+import type { Renderer } from '@lattice/view/types';
 import type { FragmentRef, NodeRef } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { IslandNodeMeta } from '../types';
 import { registerIsland } from '../ssr-context';
 
-export interface DOMServerRendererConfig extends RendererConfig {
-  elements: HTMLElementTagNameMap;
-  events: HTMLElementEventMap;
-  baseElement: HTMLElement;
-  textNode: Text;
-  comment: Comment;
-}
+// Re-export DOMRendererConfig as DOMServerRendererConfig for backwards compatibility
+export type { DOMRendererConfig as DOMServerRendererConfig } from '@lattice/view/renderers/dom';
 
 /**
  * Get the first DOM node from a NodeRef (recursively traversing fragments)
@@ -53,7 +49,7 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
  * Create an island-aware linkedom renderer that decorates island fragments
  * with script tags for hydration
  */
-export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
+export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 

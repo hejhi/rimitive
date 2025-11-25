@@ -1,22 +1,25 @@
 /**
  * SSR Server with Router Support
  *
- * Uses the new createSSRHandler API for clean server-side rendering.
  * Composes services manually using signals/view/islands primitives.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createSSRHandler } from '@lattice/islands/server';
+import {
+  createSSRContext,
+  runWithSSRContext,
+  getIslandScripts,
+  renderToString,
+} from '@lattice/islands/server';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import { composeFrom } from '@lattice/lattice';
-import {
-  createDOMServerRenderer,
-  type DOMServerRendererConfig,
-} from '@lattice/islands/presets/island-ssr';
+import { createRouter } from '@lattice/router';
+import { createDOMServerRenderer } from '@lattice/islands/renderers/dom-server';
+import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { createApp } from './routes.js';
 
 /**
@@ -26,7 +29,7 @@ function createSSRService() {
   const signals = createSignalsApi();
   const renderer = createDOMServerRenderer();
   const viewHelpers = createSpec(renderer, signals);
-  const baseExtensions = defaultViewExtensions<DOMServerRendererConfig>();
+  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
   const views = composeFrom(baseExtensions, viewHelpers);
 
   const svc = {
@@ -34,7 +37,7 @@ function createSSRService() {
     ...views,
   };
 
-  return { svc };
+  return { svc, signals, renderer };
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -44,11 +47,10 @@ const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')
   : join(__dirname, '../client/client.js');
 
-// Create SSR handler for rendering pages
-const ssrHandler = createSSRHandler({
-  createService: createSSRService,
-  createApp,
-  template: (content, scripts) => `
+/**
+ * HTML template
+ */
+const template = (content: string, scripts: string) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -225,8 +227,7 @@ const ssrHandler = createSSRHandler({
   <script type="module" src="/client.js"></script>
 </body>
 </html>
-  `,
-});
+`;
 
 // Create HTTP server
 const server = createServer((req, res) => {
@@ -243,8 +244,41 @@ const server = createServer((req, res) => {
     return;
   }
 
-  // Use SSR handler for all other routes
-  ssrHandler(req, res);
+  // SSR handling
+  const url = new URL(
+    req.url || '/',
+    `http://${req.headers.host || 'localhost'}`
+  );
+  const path = url.pathname;
+
+  // Create SSR context for islands
+  const ssrCtx = createSSRContext();
+
+  // Create per-request service (fresh signals per request)
+  const { svc } = createSSRService();
+
+  // Create router with service
+  const router = createRouter<DOMRendererConfig>(svc, { initialPath: path });
+
+  // Create mount function
+  const mount = <TElement>(spec: { create: (api: typeof svc) => TElement }) =>
+    spec.create(svc);
+
+  // Create the app with the router
+  const App = createApp(router);
+
+  // Render app to HTML within SSR context
+  const html = runWithSSRContext(ssrCtx, () => renderToString(mount(App)));
+
+  // Get island hydration scripts
+  const scripts = getIslandScripts(ssrCtx);
+
+  // Generate full HTML page
+  const fullHtml = template(html, scripts);
+
+  // Send response
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.end(fullHtml);
 });
 
 const PORT = process.env.PORT || 3000;

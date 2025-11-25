@@ -1,8 +1,14 @@
 /**
  * Server Module
  *
- * Helpers for server-side rendering with islands.
+ * Re-exports SSR primitives for server-side rendering with islands.
  */
 
-export { createSSRHandler } from './create-ssr-handler';
-export type { SSRHandlerOptions } from './create-ssr-handler';
+export {
+  createSSRContext,
+  runWithSSRContext,
+  getIslandScripts,
+} from '../ssr-context';
+export type { SSRContext } from '../types';
+
+export { renderToString } from '../helpers/renderToString';

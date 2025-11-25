@@ -79,7 +79,6 @@
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",
-    "@lattice/router": "workspace:*",
     "@lattice/signals": "workspace:*",
     "@lattice/view": "workspace:*",
     "linkedom": "^0.18.12"
