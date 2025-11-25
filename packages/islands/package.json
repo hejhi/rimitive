@@ -7,6 +7,10 @@
   "type": "module",
   "exports": {
     "./ssr-context": {
+      "browser": {
+        "import": "./dist/ssr-context.browser.js",
+        "types": "./dist/ssr-context.browser.d.ts"
+      },
       "import": "./dist/ssr-context.js",
       "types": "./dist/ssr-context.d.ts"
     },

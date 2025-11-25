@@ -2,14 +2,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   resolve: {
+    // Ensure browser conditional exports are resolved for client builds
     conditions: ['browser', 'import', 'module', 'default'],
-    alias: {
-      // Provide a browser-safe version of ssr-context for client builds
-      '@lattice/router/ssr-context': new URL(
-        './src/ssr-context-browser.ts',
-        import.meta.url
-      ).pathname,
-    },
   },
   build: {
     outDir: 'dist/client',
