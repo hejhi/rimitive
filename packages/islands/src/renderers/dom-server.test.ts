@@ -8,14 +8,38 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDOMServerRenderer } from './dom-server';
+import { createDOMServerRenderer, type DOMServerRendererConfig } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import type { ElementRef, FragmentRef } from '@lattice/view/types';
+import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createIslandSSRApi } from '../presets/island-ssr';
+import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
+import { createSpec } from '@lattice/view/helpers';
+import { composeFrom } from '@lattice/lattice';
 import { renderToString } from '../helpers/renderToString';
 import { createSSRContext, runWithSSRContext } from '../ssr-context';
 import type { IslandNodeMeta } from '../types';
+
+/**
+ * Create SSR service for tests - matches the old preset pattern
+ * Uses explicit composition to preserve full type inference
+ */
+function createTestSSRService(signals = createSignalsApi()) {
+  const renderer = createDOMServerRenderer();
+  const viewHelpers = createSpec(renderer, signals);
+  const baseExtensions = defaultViewExtensions<DOMServerRendererConfig>();
+  const views = composeFrom(baseExtensions, viewHelpers);
+
+  const svc = {
+    ...signals,
+    ...views,
+  };
+
+  return {
+    svc,
+    renderer,
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
+  };
+}
 
 // ============================================================================
 // Tests: Basic DOM Operations
@@ -573,7 +597,7 @@ describe('Full SSR Integration', () => {
   it('should render all items in map() during SSR', () => {
     // Create SSR API
     const signals = createSignalsApi();
-    const { mount, svc } = createIslandSSRApi(signals);
+    const { mount, svc } = createTestSSRService(signals);
     const { el, map, signal } = svc;
 
     // Create component with map() that renders 6 items
@@ -601,7 +625,7 @@ describe('Full SSR Integration', () => {
 
   it('should render all items when map() uses computed', () => {
     const signals = createSignalsApi();
-    const { mount, svc } = createIslandSSRApi(signals);
+    const { mount, svc } = createTestSSRService(signals);
     const { el, map, computed } = svc;
 
     // Use computed() like ProductFilter does

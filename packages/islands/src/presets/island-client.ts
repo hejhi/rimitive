@@ -1,58 +1,17 @@
 /**
- * Island-aware Client Preset
+ * Island Client Preset
  *
- * Pre-configured API for client-side hydration with island support.
- * Uses the browser DOM renderer for real DOM manipulation.
+ * Exports island-specific client renderers for hydration.
+ * - createDOMHydrationRenderer: Walks existing DOM during hydration
+ * - createIslandsRenderer: Switches from hydration to regular rendering
  *
- * This is a deferred factory - call it when you need the service.
- * Pass signals to share reactive state with other parts of your app (e.g., router).
+ * Compose with @lattice/signals and @lattice/view presets as needed.
  */
 
-import { composeFrom } from '@lattice/lattice';
-import {
-  defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
-import {
-  createDOMRenderer,
+export {
+  createDOMHydrationRenderer,
   type DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
-import type { RefSpec } from '@lattice/view/types';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+  HydrationMismatch,
+} from '../renderers/dom-hydration';
 
-/**
- * Create an island-aware client API
- *
- * Deferred factory for client-side hydration with island support.
- * Follows the same pattern as other service factories in the codebase.
- *
- * @param signals - Optional signals API to share reactive state (e.g., with router)
- */
-export const createIslandClientApi = (signals = createSignalsApi()) => {
-  const renderer = createDOMRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signals);
-  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
-  const views = composeFrom(baseExtensions, viewHelpers);
-
-  const svc = {
-    ...signals,
-    ...views,
-    addEventListener: createAddEventListener(signals.batch),
-  };
-
-  type Service = typeof svc;
-
-  return {
-    signals,
-    views,
-    svc,
-    renderer,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
-    useSvc: <TReturn>(fn: (svc: Service) => TReturn): TReturn => fn(svc),
-  };
-};
-
-export type IslandClientService = ReturnType<typeof createIslandClientApi>;
-export type IslandClientSvc = IslandClientService['svc'];
-export type IslandClientViews = IslandClientService['views'];
+export { createIslandsRenderer } from '../renderers/islands';

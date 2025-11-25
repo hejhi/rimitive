@@ -15,36 +15,26 @@ import {
   getIslandScripts,
 } from '../ssr-context';
 import { renderToString } from '../helpers/renderToString';
-import { type IslandSSRService } from '../presets/island-ssr';
+import { type ServiceResult } from '../types';
 
 /**
- * Service factory type for SSR - matches the return type of createIslandSSRApi
- * User can wrap createIslandSSRApi to add extensions
+ * Service factory type for SSR
+ *
+ * Called per-request to get fresh services (avoids state leakage).
+ * Returns at minimum { svc }.
  */
-export type SSRServiceFactory<TService extends IslandSSRService = IslandSSRService> =
-  () => TService;
+export type SSRServiceFactory<TSvc = Record<string, unknown>> =
+  () => ServiceResult<TSvc>;
 
 /**
  * Options for createSSRHandler
  */
-export interface SSRHandlerOptions<TService extends IslandSSRService> {
+export interface SSRHandlerOptions<TSvc = Record<string, unknown>> {
   /**
    * Service factory function
-   * Pass createIslandSSRApi directly, or wrap it to add extensions:
-   *
-   * @example
-   * // No extensions
-   * createSSRHandler({ createService: createIslandSSRApi, ... })
-   *
-   * @example
-   * // With extensions
-   * const createMyService = () => {
-   *   const base = createIslandSSRApi();
-   *   return { ...base, svc: { ...base.svc, analytics: createAnalytics() } };
-   * };
-   * createSSRHandler({ createService: createMyService, ... })
+   * Called per-request to get fresh services.
    */
-  createService: SSRServiceFactory<TService>;
+  createService: SSRServiceFactory<TSvc>;
 
   /**
    * Function that creates the app given a router
@@ -68,8 +58,8 @@ export interface SSRHandlerOptions<TService extends IslandSSRService> {
  * 3. Rendering the app to HTML
  * 4. Returning the complete HTML page with island scripts
  */
-export function createSSRHandler<TService extends IslandSSRService>(
-  options: SSRHandlerOptions<TService>
+export function createSSRHandler<TSvc = Record<string, unknown>>(
+  options: SSRHandlerOptions<TSvc>
 ): (req: IncomingMessage, res: ServerResponse) => void {
   const { createService, createApp, template } = options;
 

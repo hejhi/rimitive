@@ -5,13 +5,13 @@
  * Hydrates islands and mounts reactive routes.
  */
 import { hydrateApp } from '@lattice/islands/client';
-import { createIslandClientApi, router, clientService } from './service.js';
+import { createClientServiceFactory, router, clientService } from './service.js';
 import { createRouteContent } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 
 hydrateApp({
-  createService: createIslandClientApi,
+  createService: createClientServiceFactory,
   signals: clientService.signals, // Use singleton's signals so islands share router's reactive system
   router, // Pass the singleton router so islands and routes share the same state
   createApp: createRouteContent,

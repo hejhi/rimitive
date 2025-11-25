@@ -2,14 +2,16 @@
  * Client-only service singleton
  *
  * This module is safe for browser bundling as it only imports client-safe code.
+ * Composes signals + view + islands primitives manually for full type inference.
  */
-import {
-  createIslandClientApi,
-  type IslandClientSvc,
-} from '@lattice/islands/presets/island-client';
+import { createSignalsApi } from '@lattice/signals/presets/core';
+import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
+import { createSpec } from '@lattice/view/helpers';
+import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createDOMRenderer, type DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { composeFrom } from '@lattice/lattice';
 import { createRouter } from '@lattice/router';
 import type { RefSpec } from '@lattice/view/types';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 
 type ServiceOptions = {
   /** Initial path for the router (used for SSR with specific request paths) */
@@ -17,17 +19,43 @@ type ServiceOptions = {
 };
 
 /**
+ * Create composed client service with signals + views + addEventListener
+ * @param signals - Optional signals API to share reactive state (e.g., with router)
+ */
+function createClientService(signals = createSignalsApi()) {
+  const renderer = createDOMRenderer();
+  const viewHelpers = createSpec(renderer, signals);
+  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
+  const views = composeFrom(baseExtensions, viewHelpers);
+
+  const svc = {
+    ...signals,
+    ...views,
+    addEventListener: createAddEventListener(signals.batch),
+  };
+
+  return { signals, views, svc };
+}
+
+/**
+ * Service factory for hydrateApp
+ * Accepts signals parameter to share reactive state between islands and router
+ */
+export const createClientServiceFactory = (
+  signals: ReturnType<typeof createSignalsApi>
+) => createClientService(signals);
+
+/**
  * The merged service type available to components via useSvc/withSvc
  */
-export type MergedService = IslandClientSvc & {
+export type MergedService = ReturnType<typeof createClientService>['svc'] & {
   navigate: (path: string) => void;
 };
 
 const createClientServices = (options: ServiceOptions = {}) => {
-  const { signals, views, svc } = createIslandClientApi();
+  const { signals, views, svc } = createClientService();
 
   // Create router first so we can include navigate in svc
-  // Cast needed because TypeScript has trouble inferring the exact renderer config type
   const router = createRouter<DOMRendererConfig>(svc, {
     initialPath:
       options.initialPath ||

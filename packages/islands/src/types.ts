@@ -139,3 +139,20 @@ export interface IslandNodeMeta {
   /** Props passed to island component (must be JSON-serializable) */
   props: unknown;
 }
+
+// ============================================================================
+// Service Adapter Types
+// ============================================================================
+
+/**
+ * Minimal interface for service factory results
+ *
+ * Service factories return an object with at least `svc` containing
+ * the composed service (signals + views + extensions).
+ *
+ * Similar to ReactiveAdapter in @lattice/view, this defines the protocol
+ * without coupling to specific implementations.
+ */
+export interface ServiceResult<TSvc = Record<string, unknown>> {
+  svc: TSvc;
+}

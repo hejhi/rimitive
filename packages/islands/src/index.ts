@@ -58,19 +58,18 @@ export type { IslandHydrator, MountFn } from './hydrators/dom';
 // Island-aware renderToString
 export { renderToString } from './helpers/renderToString';
 
-// Island-aware renderer and SSR API
-export { createDOMServerRenderer } from './renderers/dom-server';
-export { createIslandSSRApi } from './presets/island-ssr';
-export type {
-  IslandSSRService,
-  IslandSSRSvc,
-  IslandSSRViews,
+// Island-aware SSR renderer
+export {
+  createDOMServerRenderer,
+  type DOMServerRendererConfig,
 } from './presets/island-ssr';
 
-// Client-side API
-export { createIslandClientApi } from './presets/island-client';
-export type {
-  IslandClientService,
-  IslandClientSvc,
-  IslandClientViews,
+// Island-aware client renderers (hydration)
+export {
+  createDOMHydrationRenderer,
+  createIslandsRenderer,
+  type DOMRendererConfig,
 } from './presets/island-client';
+
+// Service adapter type
+export type { ServiceResult } from './types';

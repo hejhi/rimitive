@@ -13,18 +13,19 @@ import {
 import { createRouter, type Router } from '@lattice/router';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { RefSpec } from '@lattice/view/types';
-import { type IslandClientService } from '../presets/island-client';
 import { createDOMHydrator } from '../hydrators/dom';
 import { createIslandsRenderer } from '../renderers/islands';
-import { ISLAND_META } from '../types';
+import { ISLAND_META, type ServiceResult } from '../types';
 
 /**
- * Service factory type - matches the return type of createIslandClientApi
- * User can wrap createIslandClientApi to add extensions
+ * Service factory type for client hydration
+ *
+ * Factory receives signals API and returns at minimum { svc }.
+ * This allows sharing reactive state between islands and router.
  */
-export type ServiceFactory<
-  TService extends IslandClientService = IslandClientService,
-> = (signals: ReturnType<typeof createSignalsApi>) => TService;
+export type ServiceFactory<TSvc = Record<string, unknown>> = (
+  signals: ReturnType<typeof createSignalsApi>
+) => ServiceResult<TSvc>;
 
 /**
  * Router-like object with navigate function
@@ -37,12 +38,12 @@ export interface RouterLike {
 /**
  * Options for hydrateApp
  */
-export interface HydrateAppOptions<TService extends IslandClientService> {
+export interface HydrateAppOptions<TSvc = Record<string, unknown>> {
   /**
    * Service factory function
-   * Pass createIslandClientApi directly, or wrap it to add extensions
+   * Receives signals API, returns { svc } at minimum
    */
-  createService: ServiceFactory<TService>;
+  createService: ServiceFactory<TSvc>;
 
   /**
    * Optional signals API from userland singleton
@@ -64,7 +65,7 @@ export interface HydrateAppOptions<TService extends IslandClientService> {
    */
   createApp?: (
     router: Router<DOMRendererConfig>,
-    svc: TService['svc'] & { navigate: (path: string) => void }
+    svc: TSvc & { navigate: (path: string) => void }
   ) => RefSpec<unknown>;
 
   /**
@@ -89,8 +90,8 @@ export interface HydrateAppOptions<TService extends IslandClientService> {
  * 2. Hydrates all registered islands
  * 3. Optionally mounts routes into a container element
  */
-export function hydrateApp<TService extends IslandClientService>(
-  options: HydrateAppOptions<TService>
+export function hydrateApp<TSvc = Record<string, unknown>>(
+  options: HydrateAppOptions<TSvc>
 ): void {
   const {
     createService,
@@ -108,9 +109,11 @@ export function hydrateApp<TService extends IslandClientService>(
   const { svc } = createService(signals);
 
   // Use provided router or create a new one
+  // Cast svc to router's expected type - hydrateApp is orchestration code
+  // that assumes svc contains the necessary view primitives
   const internalRouter = providedRouter
     ? null
-    : createRouter(svc, {
+    : createRouter(svc as Parameters<typeof createRouter>[0], {
         initialPath:
           window.location.pathname +
           window.location.search +

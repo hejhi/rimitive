@@ -2,14 +2,40 @@
  * SSR Server with Router Support
  *
  * Uses the new createSSRHandler API for clean server-side rendering.
+ * Composes services manually using signals/view/islands primitives.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSSRHandler } from '@lattice/islands/server';
-import { createIslandSSRApi } from '@lattice/islands/presets/island-ssr';
+import { createSignalsApi } from '@lattice/signals/presets/core';
+import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
+import { createSpec } from '@lattice/view/helpers';
+import { composeFrom } from '@lattice/lattice';
+import {
+  createDOMServerRenderer,
+  type DOMServerRendererConfig,
+} from '@lattice/islands/presets/island-ssr';
 import { createApp } from './routes.js';
+
+/**
+ * Create SSR service - called per-request for fresh signals
+ */
+function createSSRService() {
+  const signals = createSignalsApi();
+  const renderer = createDOMServerRenderer();
+  const viewHelpers = createSpec(renderer, signals);
+  const baseExtensions = defaultViewExtensions<DOMServerRendererConfig>();
+  const views = composeFrom(baseExtensions, viewHelpers);
+
+  const svc = {
+    ...signals,
+    ...views,
+  };
+
+  return { svc };
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
@@ -20,7 +46,7 @@ const clientBundlePath = isDev
 
 // Create SSR handler for rendering pages
 const ssrHandler = createSSRHandler({
-  createService: createIslandSSRApi,
+  createService: createSSRService,
   createApp,
   template: (content, scripts) => `
 <!DOCTYPE html>

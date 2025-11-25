@@ -2,19 +2,27 @@
  * SSR Server Example
  *
  * Demonstrates server-side rendering with islands hydration.
+ * Composes services manually using signals/view/islands primitives.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSignalsApi } from '@lattice/signals/presets/core';
+import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
+import { createSpec } from '@lattice/view/helpers';
+import { composeFrom } from '@lattice/lattice';
 import {
   createSSRContext,
   runWithSSRContext,
   getIslandScripts,
 } from '@lattice/islands/ssr-context';
 import { renderToString } from '@lattice/islands/helpers/renderToString';
-import { createIslandSSRApi } from '@lattice/islands/presets/island-ssr';
+import {
+  createDOMServerRenderer,
+  type DOMServerRendererConfig,
+} from '@lattice/islands/presets/island-ssr';
+import type { RefSpec } from '@lattice/view/types';
 
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
@@ -25,7 +33,12 @@ const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
 // Create island-aware SSR API (fresh per-request in real app, shared here for simplicity)
 const signals = createSignalsApi();
-const { mount, svc } = createIslandSSRApi(signals);
+const renderer = createDOMServerRenderer();
+const viewHelpers = createSpec(renderer, signals);
+const baseExtensions = defaultViewExtensions<DOMServerRendererConfig>();
+const views = composeFrom(baseExtensions, viewHelpers);
+const svc = { ...signals, ...views };
+const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 const { el } = svc;
 
 // Define the app component
