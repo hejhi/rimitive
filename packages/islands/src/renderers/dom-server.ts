@@ -122,7 +122,7 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
         if (!parent) return;
 
         // Register NOW - atomic with decoration, only for rendered islands
-        const instanceId = registerIsland(meta.type, meta.props);
+        const instanceId = registerIsland(meta.type, meta.props, STATUS_ELEMENT);
 
         // Store instance ID back on ref for downstream use
         (elementRef as { __islandId?: string }).__islandId = instanceId;
@@ -174,7 +174,7 @@ export function createDOMServerRenderer(): Renderer<DOMServerRendererConfig> {
         if (!firstNode || !lastNode) return;
 
         // Register NOW - atomic with decoration, only for rendered islands
-        const instanceId = registerIsland(meta.type, meta.props);
+        const instanceId = registerIsland(meta.type, meta.props, STATUS_FRAGMENT);
 
         // Store instance ID back on ref for downstream use
         (

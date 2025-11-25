@@ -7,6 +7,7 @@ import {
   getIslandScripts,
   registerIsland,
 } from './ssr-context';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 
 describe('SSR Context', () => {
   describe('createSSRContext', () => {
@@ -108,13 +109,14 @@ describe('SSR Context', () => {
     it('should register island with unique ID', () => {
       const ctx = createSSRContext();
       runWithSSRContext(ctx, () => {
-        const id = registerIsland('counter', { initialCount: 5 });
+        const id = registerIsland('counter', { initialCount: 5 }, STATUS_ELEMENT);
         expect(id).toBe('counter-0');
         expect(ctx.islands).toHaveLength(1);
         expect(ctx.islands[0]).toEqual({
           id: 'counter-0',
           type: 'counter',
           props: { initialCount: 5 },
+          status: STATUS_ELEMENT,
         });
       });
     });
@@ -122,9 +124,9 @@ describe('SSR Context', () => {
     it('should increment counter for each island', () => {
       const ctx = createSSRContext();
       runWithSSRContext(ctx, () => {
-        const id1 = registerIsland('counter', { count: 1 });
-        const id2 = registerIsland('counter', { count: 2 });
-        const id3 = registerIsland('form', {});
+        const id1 = registerIsland('counter', { count: 1 }, STATUS_ELEMENT);
+        const id2 = registerIsland('counter', { count: 2 }, STATUS_ELEMENT);
+        const id3 = registerIsland('form', {}, STATUS_FRAGMENT);
 
         expect(id1).toBe('counter-0');
         expect(id2).toBe('counter-1');
@@ -135,13 +137,13 @@ describe('SSR Context', () => {
 
     it('should throw outside SSR context', () => {
       expect(() => {
-        registerIsland('counter', {});
+        registerIsland('counter', {}, STATUS_ELEMENT);
       }).toThrow('Cannot register island "counter" outside of SSR context');
     });
 
     it('should provide helpful error message', () => {
       expect(() => {
-        registerIsland('counter', {});
+        registerIsland('counter', {}, STATUS_ELEMENT);
       }).toThrow('Did you forget to wrap your render in runWithSSRContext()?');
     });
   });
@@ -156,20 +158,20 @@ describe('SSR Context', () => {
     it('should generate script for single island', () => {
       const ctx = createSSRContext();
       runWithSSRContext(ctx, () => {
-        registerIsland('counter', { initialCount: 5 });
+        registerIsland('counter', { initialCount: 5 }, STATUS_ELEMENT);
       });
 
       const scripts = getIslandScripts(ctx);
       expect(scripts).toBe(
-        '<script>window.__hydrate("counter-0","counter",{"initialCount":5});</script>'
+        `<script>window.__hydrate("counter-0","counter",{"initialCount":5},${STATUS_ELEMENT});</script>`
       );
     });
 
     it('should generate scripts for multiple islands', () => {
       const ctx = createSSRContext();
       runWithSSRContext(ctx, () => {
-        registerIsland('counter', { count: 1 });
-        registerIsland('form', { fields: [] });
+        registerIsland('counter', { count: 1 }, STATUS_ELEMENT);
+        registerIsland('form', { fields: [] }, STATUS_FRAGMENT);
       });
 
       const scripts = getIslandScripts(ctx);
@@ -182,7 +184,7 @@ describe('SSR Context', () => {
     it('should escape < and > in props JSON', () => {
       const ctx = createSSRContext();
       runWithSSRContext(ctx, () => {
-        registerIsland('xss', { html: '<script>alert("xss")</script>' });
+        registerIsland('xss', { html: '<script>alert("xss")</script>' }, STATUS_ELEMENT);
       });
 
       const scripts = getIslandScripts(ctx);
@@ -199,7 +201,7 @@ describe('SSR Context', () => {
           bool: true,
           num: 42,
           str: 'hello',
-        });
+        }, STATUS_ELEMENT);
       });
 
       const scripts = getIslandScripts(ctx);
@@ -214,7 +216,7 @@ describe('SSR Context', () => {
       const request1 = () => {
         const ctx = createSSRContext();
         return runWithSSRContext(ctx, () => {
-          registerIsland('counter', { userId: 1 });
+          registerIsland('counter', { userId: 1 }, STATUS_ELEMENT);
           return ctx;
         });
       };
@@ -222,7 +224,7 @@ describe('SSR Context', () => {
       const request2 = () => {
         const ctx = createSSRContext();
         return runWithSSRContext(ctx, () => {
-          registerIsland('counter', { userId: 2 });
+          registerIsland('counter', { userId: 2 }, STATUS_ELEMENT);
           return ctx;
         });
       };

@@ -58,7 +58,7 @@ export function getIslandScripts(ctx: SSRContext): string {
         .replace(/</g, '\\u003c')
         .replace(/>/g, '\\u003e');
 
-      return `<script>window.__hydrate("${island.id}","${island.type}",${propsJson});</script>`;
+      return `<script>window.__hydrate("${island.id}","${island.type}",${propsJson},${island.status});</script>`;
     })
     .join('\n');
 }
@@ -68,8 +68,16 @@ export function getIslandScripts(ctx: SSRContext): string {
  *
  * Called by the island() wrapper during server-side rendering.
  * Generates a unique instance ID and adds to context.
+ *
+ * @param type - Island type identifier
+ * @param props - Props passed to the island component
+ * @param status - Node status (STATUS_ELEMENT=1, STATUS_FRAGMENT=2)
  */
-export function registerIsland(type: string, props: unknown): string {
+export function registerIsland(
+  type: string,
+  props: unknown,
+  status: number
+): string {
   const ctx = getActiveSSRContext();
   if (!ctx) {
     throw new Error(
@@ -79,7 +87,7 @@ export function registerIsland(type: string, props: unknown): string {
   }
 
   const instanceId = `${type}-${ctx.islandCounter++}`;
-  ctx.islands.push({ id: instanceId, type, props });
+  ctx.islands.push({ id: instanceId, type, props, status });
 
   return instanceId;
 }

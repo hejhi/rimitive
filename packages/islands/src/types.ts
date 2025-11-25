@@ -58,6 +58,12 @@ export interface IslandMetadata {
    * MUST be JSON-serializable (no functions, signals, or DOM nodes)
    */
   props: unknown;
+
+  /**
+   * Node status (STATUS_ELEMENT=1, STATUS_FRAGMENT=2)
+   * Used by hydrator to determine container selection
+   */
+  status: number;
 }
 
 /**

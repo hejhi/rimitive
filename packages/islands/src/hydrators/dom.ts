@@ -85,9 +85,19 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
       // Set up global __hydrate function that inline scripts will call
       (
         window as {
-          __hydrate?: (id: string, type: string, props: unknown) => void;
+          __hydrate?: (
+            id: string,
+            type: string,
+            props: unknown,
+            status: number
+          ) => void;
         }
-      ).__hydrate = (id: string, type: string, props: unknown) => {
+      ).__hydrate = (
+        id: string,
+        type: string,
+        props: unknown,
+        status: number
+      ) => {
         // Find island by script tag marker
         const script = document.querySelector(
           `script[type="application/json"][data-island="${id}"]`
@@ -101,8 +111,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
         const islandElement =
           script.previousElementSibling as HTMLElement | null;
 
-        // We'll determine if it's a fragment after creating the component
-        // For now, use parent as potential container for fragments
+        // For fragments, parent is the wrapper div; for elements, parent contains the element
         const potentialContainer = script.parentElement as HTMLElement;
         if (!potentialContainer) {
           console.warn(`Island container for "${id}" not found`);
@@ -120,52 +129,37 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
         const Component = entry.component;
         const strategy = entry.strategy;
 
+        // Determine if fragment from SSR-provided status
+        const isFragment = status === STATUS_FRAGMENT;
+
+        // Select container based on status
+        // - Fragments: use the wrapper div (potentialContainer)
+        // - Elements: use the element itself (islandElement)
+        const container = isFragment
+          ? potentialContainer
+          : islandElement || potentialContainer;
+
         // Variables that need to be accessible in catch block
-        let isFragment = false;
-        let container: HTMLElement = potentialContainer;
         let fragmentParentRef: ElementRef<unknown> | null = null;
 
         try {
-          // Create component first to determine if it's a fragment
-          // Use a temporary renderer just for component creation
-          const tempRenderer = createIslandsRenderer(
-            createDOMHydrationRenderer(islandElement || potentialContainer),
-            createDOMRenderer()
-          );
-
-          // Create API with temporary renderer just to get the nodeRef type
-          const tempApi = createAPI(tempRenderer, signals);
-
-          // Run component factory with API to get component function, then call with props
-          const componentFn = Component(tempApi);
-          const nodeRef = componentFn(props).create(tempApi);
-
-          // Determine if fragment based on NodeRef, not DOM structure
-          // STATUS_FRAGMENT = 2
-          isFragment = nodeRef.status === 2;
-
-          // Now create the actual renderer with the correct container
-          container = isFragment
-            ? potentialContainer
-            : islandElement || potentialContainer;
-
           const renderer = createIslandsRenderer(
             createDOMHydrationRenderer(container),
             createDOMRenderer()
           );
 
-          // Create API with actual renderer
+          // Create API with hydrating renderer
           const { hydratingApi, activate } = createHydrationApi(
             createAPI(renderer, signals)
           );
 
-          // Re-create component with the actual hydrating API
-          const actualComponentFn = Component(hydratingApi);
-          const actualNodeRef = actualComponentFn(props).create(hydratingApi);
+          // Create component with the hydrating API
+          const componentFn = Component(hydratingApi);
+          const nodeRef = componentFn(props).create(hydratingApi);
 
           // For fragment islands, call attach() and activate while in hydrating mode
           // attach() is where map() creates the reconciler and binds event handlers
-          if (isFragment && actualNodeRef.status === STATUS_FRAGMENT) {
+          if (isFragment && nodeRef.status === STATUS_FRAGMENT) {
             // CRITICAL: Enter the container's children first
             // The hydrating renderer starts at position [] (the container itself)
             // We need to advance to position [0], [1], etc. (inside the container)
@@ -184,7 +178,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
               lastChild: null,
             };
 
-            actualNodeRef.attach(fragmentParentRef, null, hydratingApi);
+            nodeRef.attach(fragmentParentRef, null, hydratingApi);
 
             // Activate effects WHILE STILL IN HYDRATING MODE
             // This ensures children are hydrated, not created fresh
@@ -280,18 +274,23 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
       // Process islands queued by inline scripts
       const queuedIslands = (
         window as unknown as {
-          __islands?: Array<{ i: string; t: string; p: unknown }>;
+          __islands?: Array<{ i: string; t: string; p: unknown; s: number }>;
         }
       ).__islands;
 
       if (!queuedIslands) return;
-      queuedIslands.forEach(({ i, t, p }) => {
+      queuedIslands.forEach(({ i, t, p, s }) => {
         const hydrateFn = (
           window as unknown as {
-            __hydrate: (id: string, type: string, props: unknown) => void;
+            __hydrate: (
+              id: string,
+              type: string,
+              props: unknown,
+              status: number
+            ) => void;
           }
         ).__hydrate;
-        hydrateFn(i, t, p);
+        hydrateFn(i, t, p, s);
       });
     },
   };
