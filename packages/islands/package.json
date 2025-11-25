@@ -62,6 +62,10 @@
       "import": "./dist/presets/island-ssr.js",
       "types": "./dist/presets/island-ssr.d.ts"
     },
+    "./presets/island-client": {
+      "import": "./dist/presets/island-client.js",
+      "types": "./dist/presets/island-client.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

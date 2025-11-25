@@ -3,19 +3,14 @@
  *
  * This module is safe for browser bundling as it only imports client-safe code.
  */
-import { composeFrom } from '@lattice/lattice';
 import {
-  defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import {
-  createDOMRenderer,
-  DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
+  createIslandClientApi,
+  type IslandClientApi,
+} from '@lattice/islands/presets/island-client';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
-import { RefSpec } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 
 type ServiceOptions = {
   /** Initial path for the router (used for SSR with specific request paths) */
@@ -24,57 +19,34 @@ type ServiceOptions = {
 
 /**
  * The merged service type available to components via useSvc/withSvc
- * Inferred from a sample instantiation at the module level
  */
-const _typeHelper = () => {
-  const signalServices = createSignalsApi();
-  const renderer = createDOMRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signalServices);
-  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
-  const viewServices = composeFrom(baseExtensions, viewHelpers);
-  return {
-    ...signalServices,
-    ...viewServices,
-    addEventListener: createAddEventListener(viewHelpers.batch),
-    navigate: (_path: string) => {},
-  };
+export type MergedService = IslandClientApi & {
+  addEventListener: ReturnType<typeof createAddEventListener>;
+  navigate: (path: string) => void;
 };
-export type MergedService = ReturnType<typeof _typeHelper>;
 
 const createClientServices = (options: ServiceOptions = {}) => {
-  const signalServices = createSignalsApi();
-
-  // Client: use DOM renderer
-  const renderer = createDOMRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signalServices);
-
-  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
-  const viewServices = composeFrom(baseExtensions, viewHelpers);
+  const { api, signals, views } = createIslandClientApi();
 
   // Create router first so we can include navigate in svc
-  const router = createRouter(
-    { ...signalServices, ...viewServices },
-    {
-      initialPath:
-        options.initialPath ||
-        window.location.pathname +
-          window.location.search +
-          window.location.hash,
-    }
-  );
+  // Cast needed because TypeScript has trouble inferring the exact renderer config type
+  const router = createRouter<DOMRendererConfig>(api, {
+    initialPath:
+      options.initialPath ||
+      window.location.pathname + window.location.search + window.location.hash,
+  });
 
   // Include navigate in svc so Link components can access it
   const svc: MergedService = {
-    ...signalServices,
-    ...viewServices,
-    addEventListener: createAddEventListener(viewHelpers.batch),
+    ...api,
+    addEventListener: createAddEventListener(signals.batch),
     navigate: router.navigate,
   };
 
   return {
     service: {
-      view: viewServices,
-      signals: signalServices,
+      view: views,
+      signals,
     },
     router,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
@@ -127,7 +99,10 @@ function serverConnect<TUserProps>(
     routeContext: {
       children: unknown[] | null;
       params: () => Record<string, string>;
-      routeApi?: { navigate: (path: string) => void; currentPath: () => string };
+      routeApi?: {
+        navigate: (path: string) => void;
+        currentPath: () => string;
+      };
     }
   ) => (userProps: TUserProps) => unknown
 ) {
@@ -135,7 +110,10 @@ function serverConnect<TUserProps>(
     (routeContext: {
       children: unknown[] | null;
       params: () => Record<string, string>;
-      routeApi?: { navigate: (path: string) => void; currentPath: () => string };
+      routeApi?: {
+        navigate: (path: string) => void;
+        currentPath: () => string;
+      };
     }) => {
       // Use routeApi from routeContext if available (injected by per-request router)
       // Fall back to no-op values if not available
@@ -151,34 +129,37 @@ function serverConnect<TUserProps>(
 
 // Create a proxy for router to intercept all property accesses
 // Returns server-compatible implementations on server, real router on client
-export const router = new Proxy({} as ReturnType<typeof createClientServices>['router'], {
-  get(_target, prop) {
-    if (typeof window === 'undefined') {
-      // Server: return functional implementations that work at module load time
-      if (prop === 'connect') {
-        return serverConnect;
+export const router = new Proxy(
+  {} as ReturnType<typeof createClientServices>['router'],
+  {
+    get(_target, prop) {
+      if (typeof window === 'undefined') {
+        // Server: return functional implementations that work at module load time
+        if (prop === 'connect') {
+          return serverConnect;
+        }
+        // useCurrentPath needs to return a function that returns a computed-like getter
+        if (prop === 'useCurrentPath') {
+          return (initialPath: string) => {
+            // Return a callable that returns the initial path (mimics ComputedFunction)
+            const getter = () => initialPath;
+            getter.peek = () => initialPath;
+            return getter;
+          };
+        }
+        // Other methods return no-op functions
+        return () => {};
       }
-      // useCurrentPath needs to return a function that returns a computed-like getter
-      if (prop === 'useCurrentPath') {
-        return (initialPath: string) => {
-          // Return a callable that returns the initial path (mimics ComputedFunction)
-          const getter = () => initialPath;
-          getter.peek = () => initialPath;
-          return getter;
-        };
+      const services = getServices();
+      const value = services.router[prop as keyof typeof services.router];
+      // Bind methods to preserve 'this' context
+      if (typeof value === 'function') {
+        return value.bind(services.router);
       }
-      // Other methods return no-op functions
-      return () => {};
-    }
-    const services = getServices();
-    const value = services.router[prop as keyof typeof services.router];
-    // Bind methods to preserve 'this' context
-    if (typeof value === 'function') {
-      return value.bind(services.router);
-    }
-    return value;
-  },
-});
+      return value;
+    },
+  }
+);
 
 /**
  * useSvc - Immediate service access

@@ -6,7 +6,8 @@
  * The client hydrates islands and enables SPA navigation.
  */
 import type { Router } from '@lattice/router';
-import type { RefSpec, RendererConfig } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { AppLayout } from './layouts/AppLayout.js';
 import { Home } from './pages/Home.js';
 import { About } from './pages/About.js';
@@ -18,9 +19,7 @@ import { Products } from './pages/Products.js';
  * Uses router.root() to define the root layout - this returns an element directly
  * (not wrapped in show()) which is required for SSR where fragments need a parent element.
  */
-export function createApp<TConfig extends RendererConfig>(
-  router: Router<TConfig>
-) {
+export function createApp(router: Router<DOMRendererConfig>) {
   const { create, route } = router.root('/', AppLayout());
 
   return create(
@@ -39,13 +38,15 @@ export function createApp<TConfig extends RendererConfig>(
  * @param router - Router instance for route creation
  * @param svc - Full service (el is extracted from this)
  */
-export function createRouteContent<TConfig extends RendererConfig>(
-  router: Router<TConfig>,
+export function createRouteContent(
+  router: Router<DOMRendererConfig>,
   svc: {
     el: (
       tag: 'div',
       props?: Record<string, unknown>
-    ) => (...children: RefSpec<TConfig['baseElement']>[]) => RefSpec<HTMLDivElement>;
+    ) => (
+      ...children: RefSpec<DOMRendererConfig['baseElement']>[]
+    ) => RefSpec<HTMLDivElement>;
   }
 ) {
   const { route } = router;

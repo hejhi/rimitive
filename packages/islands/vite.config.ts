@@ -71,6 +71,10 @@ export default defineConfig({
         ),
         'renderers/islands': resolve(__dirname, 'src/renderers/islands.ts'),
         'presets/island-ssr': resolve(__dirname, 'src/presets/island-ssr.ts'),
+        'presets/island-client': resolve(
+          __dirname,
+          'src/presets/island-client.ts'
+        ),
       },
       formats: ['es'],
     },

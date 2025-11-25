@@ -26,8 +26,9 @@ export const island = createIsland(service);
 
 /**
  * Re-export service type for convenience
+ * Using client type since most userland code interacts with services on the client
  */
-export type { IslandSSRApi as Service } from '@lattice/islands/presets/island-ssr';
+export type { IslandClientApi as Service } from '@lattice/islands/presets/island-client';
 
 /**
  * TEMPORARY: Re-export router/useSvc from old service-client for page components
