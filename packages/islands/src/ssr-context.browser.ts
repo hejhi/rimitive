@@ -41,6 +41,7 @@ export function getActiveSSRContext(): SSRContext | undefined {
  * In browser: returns empty string (scripts are for server-rendered HTML)
  */
 export function getIslandScripts(_ctx: SSRContext): string {
+  void _ctx;
   return '';
 }
 
@@ -50,5 +51,6 @@ export function getIslandScripts(_ctx: SSRContext): string {
  * In browser: returns empty string (registration happens server-side)
  */
 export function registerIsland(_type: string, _props: unknown): string {
+  void _props;
   return '';
 }

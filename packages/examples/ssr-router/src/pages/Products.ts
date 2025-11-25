@@ -3,7 +3,7 @@
  *
  * This page includes an interactive island component.
  */
-import { useSvc, router } from '../service-universal.js';
+import { useSvc, router } from '../service.js';
 import { ProductFilter } from '../islands/ProductFilter.js';
 
 const products = [

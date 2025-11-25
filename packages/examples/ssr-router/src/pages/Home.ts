@@ -1,4 +1,4 @@
-import { useSvc, router } from '../service-universal.js';
+import { useSvc, router } from '../service.js';
 
 export const Home = router.connect(({ navigate }) =>
   useSvc(({ el }) => () => {

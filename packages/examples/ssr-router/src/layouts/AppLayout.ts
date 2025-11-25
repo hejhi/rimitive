@@ -1,4 +1,4 @@
-import { router, useSvc } from '../service-universal.js';
+import { router, useSvc } from '../service.js';
 import { Navigation } from '../islands/Navigation.js';
 
 export const AppLayout = router.connect(({ currentPath }, { children }) =>

@@ -1,19 +1,14 @@
 /**
  * SSR Server with Router Support
  *
- * Demonstrates server-side rendering with routing using the universal API.
+ * Uses the new createSSRHandler API for clean server-side rendering.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  createSSRContext,
-  runWithSSRContext,
-  getIslandScripts,
-} from '@lattice/islands/ssr-context';
-import { renderToString } from '@lattice/islands/helpers/renderToString';
-import { createServices } from './service-server.js';
+import { createSSRHandler } from '@lattice/islands/server';
+import { service } from './service.js';
 import { createApp } from './routes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -23,47 +18,11 @@ const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')
   : join(__dirname, '../client/client.js');
 
-// Create HTTP server
-const server = createServer(async (req, res) => {
-  // Serve client bundle
-  if (req.url === '/client.js') {
-    if (existsSync(clientBundlePath)) {
-      const bundle = readFileSync(clientBundlePath, 'utf-8');
-      res.writeHead(200, { 'Content-Type': 'application/javascript' });
-      res.end(bundle);
-    } else {
-      res.writeHead(404);
-      res.end('Client bundle not found. Run: pnpm build:client');
-    }
-    return;
-  }
-
-  // Parse URL path
-  const url = new URL(req.url || '/', `http://${req.headers.host}`);
-  const path = url.pathname;
-
-  // Create SSR context for islands
-  const ssrCtx = createSSRContext();
-
-  // Create per-request service and router with the specific request path
-  // This ensures route matching happens with the correct path
-  const { router, mount } = await createServices({ initialPath: path });
-
-  // Define the app routes using the request-scoped router
-  const App = createApp(router);
-
-  // Render app to HTML within SSR context
-  const html = runWithSSRContext(ssrCtx, () => {
-    // Mount the app - createApp now returns a RefSpec directly (not wrapped in show())
-    return renderToString(mount(App));
-  });
-
-  // Get island hydration scripts
-  const scripts = getIslandScripts(ssrCtx);
-
-  // Send complete HTML page
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end(`
+// Create SSR handler for rendering pages
+const ssrHandler = createSSRHandler({
+  service,
+  createApp,
+  template: (content, scripts) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -235,12 +194,31 @@ const server = createServer(async (req, res) => {
   </script>
 </head>
 <body>
-  ${html}
+  ${content}
   ${scripts}
   <script type="module" src="/client.js"></script>
 </body>
 </html>
-  `);
+  `,
+});
+
+// Create HTTP server
+const server = createServer((req, res) => {
+  // Serve client bundle
+  if (req.url === '/client.js') {
+    if (existsSync(clientBundlePath)) {
+      const bundle = readFileSync(clientBundlePath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end(bundle);
+    } else {
+      res.writeHead(404);
+      res.end('Client bundle not found. Run: pnpm build:client');
+    }
+    return;
+  }
+
+  // Use SSR handler for all other routes
+  ssrHandler(req, res);
 });
 
 const PORT = process.env.PORT || 3000;

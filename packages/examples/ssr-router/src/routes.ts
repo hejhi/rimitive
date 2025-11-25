@@ -37,16 +37,19 @@ export function createApp<TConfig extends RendererConfig>(
  * without replacing the entire app (preserving hydrated islands in the navbar).
  *
  * @param router - Router instance for route creation
- * @param el - Element factory from service (needed to wrap routes)
+ * @param svc - Full service (el is extracted from this)
  */
 export function createRouteContent<TConfig extends RendererConfig>(
   router: Router<TConfig>,
-  el: (
-    tag: 'div',
-    props?: Record<string, unknown>
-  ) => (...children: RefSpec<TConfig['baseElement']>[]) => RefSpec<HTMLDivElement>
+  svc: {
+    el: (
+      tag: 'div',
+      props?: Record<string, unknown>
+    ) => (...children: RefSpec<TConfig['baseElement']>[]) => RefSpec<HTMLDivElement>;
+  }
 ) {
   const { route } = router;
+  const { el } = svc;
 
   // Routes with absolute paths for standalone mounting
   // Wrapped in a div since fragments need a parent element
