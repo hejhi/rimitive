@@ -19,31 +19,32 @@ const products = [
 const productFilter = ProductFilter({ products });
 
 export const Products = connect(
-  (api: ConnectedApi<DOMRendererConfig>) => () => {
-    return api.el('div', { className: 'page products-page' })(
-      api.el('h2')('Products'),
+  ({ el }: ConnectedApi<DOMRendererConfig>) =>
+    () => {
+      return el('div', { className: 'page products-page' })(
+        el('h2')('Products'),
 
-      // Static content
-      api.el('section', { className: 'intro' })(
-        api.el('p')(
-          'This page demonstrates mixing static content with interactive islands.'
+        // Static content
+        el('section', { className: 'intro' })(
+          el('p')(
+            'This page demonstrates mixing static content with interactive islands.'
+          ),
+          el('p')(
+            "The product filter below is an island - it's interactive and ships JavaScript."
+          )
         ),
-        api.el('p')(
-          "The product filter below is an island - it's interactive and ships JavaScript."
-        )
-      ),
 
-      // Interactive island
-      api.el('section', { className: 'product-filter-section' })(productFilter),
+        // Interactive island
+        el('section', { className: 'product-filter-section' })(productFilter),
 
-      // More static content
-      api.el('section', { className: 'card' })(
-        api.el('h3')('Why Islands?'),
-        api.el('p')(
-          'Islands architecture lets you ship JavaScript only for interactive components. ' +
-            'The rest of the page is static HTML - faster to load and better for SEO.'
+        // More static content
+        el('section', { className: 'card' })(
+          el('h3')('Why Islands?'),
+          el('p')(
+            'Islands architecture lets you ship JavaScript only for interactive components. ' +
+              'The rest of the page is static HTML - faster to load and better for SEO.'
+          )
         )
-      )
-    );
-  }
+      );
+    }
 );
