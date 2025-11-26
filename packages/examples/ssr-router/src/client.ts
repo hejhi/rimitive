@@ -1,7 +1,8 @@
 /**
  * Client-side hydration with routing
  *
- * Composes the client service, hydrates islands, and mounts routes.
+ * Islands are hydrated (selective hydration).
+ * Routes use the SSR'd content for initial load, then swap on navigation.
  */
 import { createDOMHydrator } from '@lattice/islands/client';
 import { createClientApi, router, mount, service } from './service-client.js';
@@ -22,16 +23,37 @@ const createApi = (
 const hydrator = createDOMHydrator(createApi, service.signals, mount);
 hydrator.hydrate(ProductFilter, Navigation);
 
-// Mount routes - replace the SSR'd app with the reactive client version
-const ssrApp = document.querySelector('.app');
+// For routing: keep SSR'd content, set up navigation to swap routes
+const mainContent = document.querySelector('.main-content');
 
-if (ssrApp?.parentElement) {
-  // Mount the route tree using the router
-  const App = router.mount(appRoutes);
-  const routeRef = mount(App);
+if (mainContent) {
+  // Subscribe to route changes and swap content on navigation
+  // The first navigation will replace SSR'd content with client-rendered route
+  let isFirstRender = true;
 
-  // Replace SSR'd app with reactive client version
-  if (routeRef.element) {
-    ssrApp.parentElement.replaceChild(routeRef.element, ssrApp);
-  }
+  service.signals.effect(() => {
+    // Track current path
+    void router.currentPath();
+
+    // Skip initial render - SSR content is already correct
+    if (isFirstRender) {
+      isFirstRender = false;
+      return;
+    }
+
+    // Mount the full route tree and extract just the route content
+    const App = router.mount(appRoutes);
+    const appRef = mount(App);
+
+    // Find the main-content inside the new app
+    const newMainContent = appRef.element?.querySelector('.main-content');
+
+    if (newMainContent) {
+      // Replace content
+      mainContent.innerHTML = '';
+      while (newMainContent.firstChild) {
+        mainContent.appendChild(newMainContent.firstChild);
+      }
+    }
+  });
 }
