@@ -181,6 +181,28 @@ export const Show = defineService(
             });
           };
 
+          // EAGER creation during forward pass when condition is initially true
+          // This matches SSR behavior and ensures correct hydration position tracking
+          let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
+          const initiallyVisible = condition();
+          if (initiallyVisible) {
+            const node = content.create(api);
+            currentNode = node;
+            // During hydration, the element is already in the DOM. We need to call
+            // appendChild to signal the hydrator to exit from this element and
+            // advance to the next sibling. The hydrator's appendChild checks if
+            // child.parentNode === parent to detect this "exit" signal.
+            if (node.status === STATUS_ELEMENT) {
+              const parentElement = (node.element as Element).parentNode;
+              if (parentElement) {
+                renderer.appendChild(
+                  parentElement as TBaseElement,
+                  node.element
+                );
+              }
+            }
+          }
+
           const fragment: FragmentRef<TBaseElement> = {
             status: STATUS_FRAGMENT,
             element: null,
@@ -190,8 +212,8 @@ export const Show = defineService(
             firstChild: null,
             lastChild: null,
             attach(parent, nextSibling, apiArg) {
-              let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
               let isAttached = false;
+              let lifecycleRan = false;
 
               // Effect tracks the condition signal and updates visibility
               // Use nested effect to isolate updateVisibility from tracking
@@ -201,7 +223,7 @@ export const Show = defineService(
                 // Dispose immediately after it runs
                 scopedEffect(() => {
                   if (isVisible) {
-                    // Create the element once and cache it (lazy creation)
+                    // Create the element once and cache it (lazy creation for initially-false)
                     // Only create when first becoming visible to avoid:
                     // 1. SSR registering islands for hidden routes/content
                     // 2. Unnecessary work for content that may never be shown
@@ -211,12 +233,20 @@ export const Show = defineService(
                       currentNode = nodeRef;
 
                       // Execute lifecycle callbacks from show level
-                      if (nodeRef.status === STATUS_ELEMENT)
+                      if (nodeRef.status === STATUS_ELEMENT) {
                         runLifecycleCallbacks(nodeRef.element);
+                        lifecycleRan = true;
+                      }
                     }
 
                     // Only attach if not already attached
                     if (isAttached) return;
+
+                    // Run lifecycle callbacks for eagerly-created elements on first attach
+                    if (!lifecycleRan && currentNode.status === STATUS_ELEMENT) {
+                      runLifecycleCallbacks(currentNode.element as TElement);
+                      lifecycleRan = true;
+                    }
 
                     // Update fragment references to show the element
                     if (currentNode.status === STATUS_FRAGMENT) {
