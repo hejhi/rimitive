@@ -22,16 +22,16 @@ const createApi = (
 const hydrator = createDOMHydrator(createApi, service.signals, mount);
 hydrator.hydrate(ProductFilter, Navigation);
 
-// Mount routes into the main content area
-const routeContainer = document.querySelector('.main-content');
-if (routeContainer) {
+// Mount routes - replace the SSR'd app with the reactive client version
+const ssrApp = document.querySelector('.app');
+
+if (ssrApp?.parentElement) {
   // Mount the route tree using the router
   const App = router.mount(appRoutes);
   const routeRef = mount(App);
 
-  // Replace SSR'd route content with reactive client version
-  routeContainer.innerHTML = '';
+  // Replace SSR'd app with reactive client version
   if (routeRef.element) {
-    routeContainer.appendChild(routeRef.element as Node);
+    ssrApp.parentElement.replaceChild(routeRef.element, ssrApp);
   }
 }
