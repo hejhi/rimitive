@@ -1,17 +1,18 @@
-import { connect } from '@lattice/router';
-import { useSvc } from '../service.js';
+import { connect, type ConnectedApi } from '@lattice/router';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { Navigation } from '../islands/Navigation.js';
 
-export const AppLayout = connect(({ currentPath }, { children }) =>
-  useSvc(({ el }) => () => {
-    return el('div', { className: 'app' })(
-      el('nav', { className: 'navbar' })(
-        el('div', { className: 'nav-brand' })(
-          el('h1')('🧩 Lattice SSR + Router')
+export const AppLayout = connect(
+  (api: ConnectedApi<DOMRendererConfig>, { children }) =>
+    () => {
+      return api.el('div', { className: 'app' })(
+        api.el('nav', { className: 'navbar' })(
+          api.el('div', { className: 'nav-brand' })(
+            api.el('h1')('🧩 Lattice SSR + Router')
+          ),
+          Navigation({ currentPath: api.currentPath() })
         ),
-        Navigation({ currentPath: currentPath() })
-      ),
-      el('main', { className: 'main-content' })(...(children || []))
-    );
-  })
+        api.el('main', { className: 'main-content' })(...(children || []))
+      );
+    }
 );

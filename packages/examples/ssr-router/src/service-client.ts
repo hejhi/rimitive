@@ -3,21 +3,39 @@
  *
  * This module is safe for browser bundling as it only imports client-safe code.
  * Composes signals + view + islands primitives manually for full type inference.
+ *
+ * Uses a hybrid renderer that starts in hydration mode to adopt SSR'd DOM,
+ * then switches to regular DOM renderer for client-side navigation.
  */
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createDOMRenderer, type DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { createDOMHydrationRenderer } from '@lattice/islands/renderers/dom-hydration';
+import { createIslandsRenderer } from '@lattice/islands/renderers/islands';
 import { composeFrom } from '@lattice/lattice';
 import { createRouter } from '@lattice/router';
 import type { RefSpec, Renderer } from '@lattice/view/types';
 
 /**
  * Create composed client service with signals + views + addEventListener
+ *
+ * Uses a hybrid renderer that starts in hydration mode for initial mount,
+ * then switches to regular DOM renderer for navigation.
  */
 function createClientService(signals = createSignalsApi()) {
-  const renderer = createDOMRenderer();
+  // Create hybrid renderer: hydration mode first, then fallback to regular DOM
+  const appContainer = document.querySelector('.app') as HTMLElement;
+  const hydrationRenderer = appContainer
+    ? createDOMHydrationRenderer(appContainer)
+    : createDOMRenderer();
+  const fallbackRenderer = createDOMRenderer();
+  const hybridRenderer = createIslandsRenderer(hydrationRenderer, fallbackRenderer);
+
+  // Cast to base renderer type for createSpec (switchToFallback is still accessible)
+  const renderer = hybridRenderer as Renderer<DOMRendererConfig>;
+
   const viewHelpers = createSpec(renderer, signals);
   const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
   const views = composeFrom(baseExtensions, viewHelpers);
@@ -28,7 +46,7 @@ function createClientService(signals = createSignalsApi()) {
     addEventListener: createAddEventListener(signals.batch),
   };
 
-  return { signals, views, svc };
+  return { signals, views, svc, switchToFallback: hybridRenderer.switchToFallback };
 }
 
 /**
@@ -55,9 +73,9 @@ export type MergedService = ReturnType<typeof createClientService>['svc'] & {
 };
 
 const createClientServices = () => {
-  const { signals, views, svc } = createClientService();
+  const { signals, views, svc, switchToFallback } = createClientService();
 
-  // Create router with the service
+  // Create router with the service (uses hybrid renderer)
   const router = createRouter<DOMRendererConfig>(svc, {
     initialPath:
       window.location.pathname + window.location.search + window.location.hash,
@@ -76,6 +94,7 @@ const createClientServices = () => {
     },
     signals,
     router,
+    switchToFallback,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svcWithNav),
     useSvc: <TReturn>(fn: (svc: MergedService) => TReturn): TReturn => fn(svcWithNav),
   };
@@ -106,6 +125,14 @@ export const service = {
 
 export function mount<TElement>(spec: RefSpec<TElement>) {
   return getServices().mount(spec);
+}
+
+/**
+ * Switch renderer from hydration mode to regular DOM mode
+ * Call this after initial mount to enable client-side rendering for navigation
+ */
+export function switchToFallback() {
+  return getServices().switchToFallback();
 }
 
 /**

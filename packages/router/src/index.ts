@@ -26,6 +26,7 @@ export type {
   RootMethod,
   RootContext,
   ConnectMethod,
+  ConnectedApi,
   RouteApi,
   RouteContext,
   ConnectedComponent,

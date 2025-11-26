@@ -1,59 +1,42 @@
 /**
  * Client-side hydration with routing
  *
- * Islands are hydrated (selective hydration).
- * Routes use the SSR'd content for initial load, then swap on navigation.
+ * The service-client creates a hybrid renderer that:
+ * 1. Starts in hydration mode (adopts SSR'd DOM)
+ * 2. Switches to regular DOM mode after initial mount
+ *
+ * This enables true islands architecture - layout stays static,
+ * only interactive parts (islands) are hydrated.
  */
 import { createDOMHydrator } from '@lattice/islands/client';
-import { createClientApi, router, mount, service } from './service-client.js';
+import {
+  createClientApi,
+  router,
+  mount,
+  switchToFallback,
+  service,
+} from './service-client.js';
 import { appRoutes } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 
-// API factory for hydrator - wraps createClientApi and adds navigate
+// Mount routes first - uses hydrating renderer to adopt existing SSR'd DOM
+const App = router.mount(appRoutes);
+mount(App);
+
+// Switch to fallback renderer for future navigation
+switchToFallback();
+
+// API factory for island hydrator - adds navigate to the API
 const createApi = (
   renderer: Parameters<typeof createClientApi>[0],
   signals: Parameters<typeof createClientApi>[1]
 ) => ({
   ...createClientApi(renderer, signals),
   navigate: router.navigate,
+  currentPath: router.currentPath,
 });
 
 // Create hydrator and hydrate islands
 const hydrator = createDOMHydrator(createApi, service.signals, mount);
 hydrator.hydrate(ProductFilter, Navigation);
-
-// For routing: keep SSR'd content, set up navigation to swap routes
-const mainContent = document.querySelector('.main-content');
-
-if (mainContent) {
-  // Subscribe to route changes and swap content on navigation
-  // The first navigation will replace SSR'd content with client-rendered route
-  let isFirstRender = true;
-
-  service.signals.effect(() => {
-    // Track current path
-    void router.currentPath();
-
-    // Skip initial render - SSR content is already correct
-    if (isFirstRender) {
-      isFirstRender = false;
-      return;
-    }
-
-    // Mount the full route tree and extract just the route content
-    const App = router.mount(appRoutes);
-    const appRef = mount(App);
-
-    // Find the main-content inside the new app
-    const newMainContent = appRef.element?.querySelector('.main-content');
-
-    if (newMainContent) {
-      // Replace content
-      mainContent.innerHTML = '';
-      while (newMainContent.firstChild) {
-        mainContent.appendChild(newMainContent.firstChild);
-      }
-    }
-  });
-}

@@ -23,17 +23,18 @@ import type { RouteTree, RouteNode } from './defineRoutes';
 /**
  * Standalone connect function - doesn't require a router instance
  *
- * Creates a connected component that receives routeApi and routeContext
+ * Creates a connected component that receives a merged API (view + route)
  * when mounted via router.mount(). Works identically on server and client.
+ *
+ * The API-first pattern enables hydration - components use whatever API
+ * is passed to them (hydrating or regular) rather than pulling from a singleton.
  *
  * @example
  * ```ts
  * import { connect } from '@lattice/router';
  *
- * export const Home = connect(({ navigate }, { params }) =>
- *   useSvc(({ el }) => () =>
- *     el('div')('Home page')
- *   )
+ * export const Home = connect((api, { params }) => () =>
+ *   api.el('div')('Home page')
  * );
  * ```
  */
@@ -43,7 +44,7 @@ export function connect<
   TUserProps = Record<string, unknown>,
 >(
   wrapper: (
-    routeApi: RouteApi,
+    api: ConnectedApi<TConfig>,
     routeContext: RouteContext<TConfig>
   ) => (userProps: TUserProps) => RefSpec<TElement>
 ): (
@@ -51,9 +52,9 @@ export function connect<
 ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
   return (...args: [TUserProps?]) =>
     (routeContext: RouteContext<TConfig>) => {
-      // routeApi is always populated by router.mount()
-      const routeApi = routeContext.routeApi!;
-      const componentFactory = wrapper(routeApi, routeContext);
+      // API is always populated by router.mount()
+      const api = routeContext.api!;
+      const componentFactory = wrapper(api, routeContext);
       const userProps = args[0] ?? ({} as TUserProps);
       return componentFactory(userProps);
     };
@@ -82,7 +83,7 @@ export type RouterConfig = {
 };
 
 /**
- * Route API passed to connect wrapper
+ * Route API - navigation and path signals
  */
 export type RouteApi = {
   navigate: (path: string) => void;
@@ -90,16 +91,26 @@ export type RouteApi = {
 };
 
 /**
+ * Connected API - merged view API + route API
+ *
+ * This is the API passed to connected components, enabling them to use
+ * whatever renderer is provided (hydrating or regular) rather than
+ * pulling from a singleton.
+ */
+export type ConnectedApi<TConfig extends RendererConfig> = ViewApi<TConfig> &
+  RouteApi;
+
+/**
  * Route context passed to connect wrapper
  *
- * Includes optional routeApi for server-side rendering where components
- * are defined at module load time but need access to per-request router state.
+ * Contains route-specific data (children, params) and the merged API
+ * for rendering. The API is always populated by router.mount().
  */
 export type RouteContext<TConfig extends RendererConfig> = {
   children: RefSpec<TConfig['baseElement']>[] | null;
   params: ComputedFunction<RouteParams>;
-  /** Route API - included when context is created by a router instance */
-  routeApi?: RouteApi;
+  /** Merged API (view + route) - populated by router.mount() */
+  api?: ConnectedApi<TConfig>;
 };
 
 /**
@@ -117,7 +128,7 @@ export type ConnectMethod<TConfig extends RendererConfig> = <
   TUserProps = Record<string, unknown>,
 >(
   wrapper: (
-    routeApi: RouteApi,
+    api: ConnectedApi<TConfig>,
     routeContext: RouteContext<TConfig>
   ) => (userProps: TUserProps) => RefSpec<TElement>
 ) => (
@@ -297,6 +308,14 @@ export function createRouter<TConfig extends RendererConfig>(
     });
   }
 
+  // Merged API (view + route) passed to connected components
+  // This enables hydration - components use whatever API is provided
+  const connectedApi: ConnectedApi<TConfig> = {
+    ...viewApi,
+    navigate,
+    currentPath,
+  };
+
   // Shared state for tracking route groups
   // Routes created in the same synchronous tick are considered siblings
   let activeRouteGroup: Array<{
@@ -436,11 +455,11 @@ export function createRouter<TConfig extends RendererConfig>(
       });
 
       // Build RouteContext to pass to connected component
-      // Include routeApi so server-side components can access current path
+      // Include merged API so components can render with appropriate renderer
       const routeContext: RouteContext<TConfig> = {
         children: processedChildren.length > 0 ? processedChildren : null,
         params: viewApi.computed(() => shouldRender()?.params ?? {}),
-        routeApi: { navigate, currentPath },
+        api: connectedApi,
       };
 
       // Instantiate the connected component with route context
@@ -508,7 +527,7 @@ export function createRouter<TConfig extends RendererConfig>(
   /**
    * Connect method - implements the outer wrapper pattern
    *
-   * Takes a wrapper function that receives route API and route context,
+   * Takes a wrapper function that receives merged API and route context,
    * and returns a function that can be called with user props to create
    * a connected component.
    */
@@ -517,7 +536,7 @@ export function createRouter<TConfig extends RendererConfig>(
     TUserProps = Record<string, unknown>,
   >(
     wrapper: (
-      routeApi: RouteApi,
+      api: ConnectedApi<TConfig>,
       routeContext: RouteContext<TConfig>
     ) => (userProps: TUserProps) => RefSpec<TElement>
   ): (
@@ -525,8 +544,7 @@ export function createRouter<TConfig extends RendererConfig>(
   ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
     return (...args: [TUserProps?]) =>
       (routeContext: RouteContext<TConfig>) => {
-        const routeApi: RouteApi = { navigate, currentPath };
-        const componentFactory = wrapper(routeApi, routeContext);
+        const componentFactory = wrapper(connectedApi, routeContext);
         // Use empty object as default if no props provided
         const userProps = args[0] ?? ({} as TUserProps);
         return componentFactory(userProps);
@@ -597,11 +615,11 @@ export function createRouter<TConfig extends RendererConfig>(
 
       // Build RouteContext for the root component
       // Root always matches, so params are empty
-      // Include routeApi so server-side components can access current path
+      // Include merged API so components can render with appropriate renderer
       const routeContext: RouteContext<TConfig> = {
         children: processedChildren.length > 0 ? processedChildren : null,
         params: viewApi.computed(() => ({})),
-        routeApi: { navigate, currentPath },
+        api: connectedApi,
       };
 
       // Return the component RefSpec directly (not wrapped in show())
@@ -708,7 +726,7 @@ export function createRouter<TConfig extends RendererConfig>(
         const routeContext: RouteContext<TConfig> = {
           children: childRefSpecs.length > 0 ? childRefSpecs : null,
           params: viewApi.computed(() => shouldRender()?.params ?? {}),
-          routeApi: { navigate, currentPath },
+          api: connectedApi,
         };
 
         // Create the component RefSpec
@@ -732,7 +750,7 @@ export function createRouter<TConfig extends RendererConfig>(
     const rootContext: RouteContext<TConfig> = {
       children: childRefSpecs.length > 0 ? childRefSpecs : null,
       params: viewApi.computed(() => ({})),
-      routeApi: { navigate, currentPath },
+      api: connectedApi,
     };
 
     // Return the root component (not wrapped in show - always visible)
