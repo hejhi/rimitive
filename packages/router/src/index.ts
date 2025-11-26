@@ -7,7 +7,8 @@
 export { Link } from './link';
 export { createLocationFactory } from './location';
 export { matchPath } from './helpers/matching';
-export { createRouter } from './createRouter';
+export { createRouter, connect } from './createRouter';
+export { defineRoutes } from './defineRoutes';
 export type {
   RouteParams,
   RouteMatch,
@@ -29,3 +30,9 @@ export type {
   RouteContext,
   ConnectedComponent,
 } from './createRouter';
+export type {
+  RouteTree,
+  RouteNode,
+  RouteBuilder,
+  DefineRoutesContext,
+} from './defineRoutes';

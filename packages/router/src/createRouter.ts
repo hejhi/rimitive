@@ -18,6 +18,46 @@ import type { ShowFactory } from '@lattice/view/show';
 import type { RouteParams, RouteSpec, RouteMatch } from './types';
 import { STATUS_ROUTE_SPEC } from './types';
 import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
+import type { RouteTree, RouteNode } from './defineRoutes';
+
+/**
+ * Standalone connect function - doesn't require a router instance
+ *
+ * Creates a connected component that receives routeApi and routeContext
+ * when mounted via router.mount(). Works identically on server and client.
+ *
+ * @example
+ * ```ts
+ * import { connect } from '@lattice/router';
+ *
+ * export const Home = connect(({ navigate }, { params }) =>
+ *   useSvc(({ el }) => () =>
+ *     el('div')('Home page')
+ *   )
+ * );
+ * ```
+ */
+export function connect<
+  TConfig extends RendererConfig,
+  TElement extends TConfig['baseElement'] = TConfig['baseElement'],
+  TUserProps = Record<string, unknown>,
+>(
+  wrapper: (
+    routeApi: RouteApi,
+    routeContext: RouteContext<TConfig>
+  ) => (userProps: TUserProps) => RefSpec<TElement>
+): (
+  ...args: [TUserProps?]
+) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
+  return (...args: [TUserProps?]) =>
+    (routeContext: RouteContext<TConfig>) => {
+      // routeApi is always populated by router.mount()
+      const routeApi = routeContext.routeApi!;
+      const componentFactory = wrapper(routeApi, routeContext);
+      const userProps = args[0] ?? ({} as TUserProps);
+      return componentFactory(userProps);
+    };
+}
 
 /**
  * View API that the router depends on
@@ -168,6 +208,25 @@ export type Router<TConfig extends RendererConfig> = {
    * This abstracts away environment detection from user code.
    */
   useCurrentPath: (initialPath: string) => ComputedFunction<string>;
+
+  /**
+   * Mount a route tree defined with defineRoutes()
+   *
+   * Binds pure route data to this router instance, creating all reactive
+   * bindings for route matching, navigation, and rendering.
+   *
+   * @param routeTree - Route tree from defineRoutes().create()
+   * @returns RefSpec that renders the complete route tree
+   *
+   * @example
+   * ```ts
+   * import { appRoutes } from './routes';
+   *
+   * const App = router.mount(appRoutes);
+   * mount(App);
+   * ```
+   */
+  mount: (routeTree: RouteTree<TConfig>) => RefSpec<TConfig['baseElement']>;
 
   /**
    * Internal: renderer config type marker (not used at runtime)
@@ -555,6 +614,131 @@ export function createRouter<TConfig extends RendererConfig>(
     };
   }
 
+  /**
+   * Mount a route tree defined with defineRoutes()
+   *
+   * Binds pure route data to this router instance, creating all reactive
+   * bindings for route matching, navigation, and rendering.
+   */
+  function mount(routeTree: RouteTree<TConfig>): RefSpec<TConfig['baseElement']> {
+    /**
+     * Process a group of sibling routes - creates reactive matching logic
+     */
+    function processRouteGroup(
+      parentPath: string,
+      nodes: RouteNode<TConfig>[]
+    ): RefSpec<TConfig['baseElement']>[] {
+      // Route group state - sibling routes compete for matching
+      const routeGroup: Array<{
+        id: string;
+        pathPattern: string;
+        matchedPath: ComputedFunction<RouteMatch | null>;
+      }> = [];
+
+      return nodes.map((node, index) => {
+        const fullPath = composePath(parentPath, node.path);
+        const routeId = `route-${index}`;
+        const hasChildren = node.children.length > 0;
+
+        // Compute whether this route matches
+        const matchedPath = viewApi.computed(() => {
+          const current = currentPath();
+          return hasChildren
+            ? matchPathPrefix(fullPath, current)
+            : matchPath(fullPath, current);
+        });
+
+        // Register in route group
+        routeGroup.push({
+          id: routeId,
+          pathPattern: fullPath,
+          matchedPath,
+        });
+
+        // Capture current group state for this route's shouldRender
+        const myRoutes = routeGroup;
+        const myRouteId = routeId;
+
+        // Compute whether this route should render (first match wins, wildcards last)
+        const shouldRender = viewApi.computed(() => {
+          // Trigger reactivity
+          currentPath();
+
+          // Separate wildcard and normal routes
+          const wildcardRoutes: typeof myRoutes = [];
+          const normalRoutes: typeof myRoutes = [];
+
+          for (const r of myRoutes) {
+            if (r.pathPattern === '*' || r.pathPattern.endsWith('/*')) {
+              wildcardRoutes.push(r);
+            } else {
+              normalRoutes.push(r);
+            }
+          }
+
+          // Check normal routes first
+          let normalRouteMatched = false;
+          for (const r of normalRoutes) {
+            const match = r.matchedPath.peek();
+            if (match !== null) {
+              normalRouteMatched = true;
+              return r.id === myRouteId ? match : null;
+            }
+          }
+
+          // Only check wildcards if no normal route matched
+          if (!normalRouteMatched) {
+            for (const r of wildcardRoutes) {
+              const match = r.matchedPath.peek();
+              if (match !== null) {
+                return r.id === myRouteId ? match : null;
+              }
+            }
+          }
+
+          return null;
+        });
+
+        // Process children recursively
+        const childRefSpecs = hasChildren
+          ? processRouteGroup(fullPath, node.children)
+          : [];
+
+        // Build route context
+        const routeContext: RouteContext<TConfig> = {
+          children: childRefSpecs.length > 0 ? childRefSpecs : null,
+          params: viewApi.computed(() => shouldRender()?.params ?? {}),
+          routeApi: { navigate, currentPath },
+        };
+
+        // Create the component RefSpec
+        const componentRefSpec = node.component(routeContext);
+
+        // Wrap in show() for conditional rendering
+        return viewApi.show(
+          viewApi.computed(() => shouldRender() !== null),
+          componentRefSpec
+        );
+      });
+    }
+
+    // Process the root's children
+    const childRefSpecs = processRouteGroup(
+      routeTree.rootPath,
+      routeTree.children
+    );
+
+    // Build root context
+    const rootContext: RouteContext<TConfig> = {
+      children: childRefSpecs.length > 0 ? childRefSpecs : null,
+      params: viewApi.computed(() => ({})),
+      routeApi: { navigate, currentPath },
+    };
+
+    // Return the root component (not wrapped in show - always visible)
+    return routeTree.rootComponent(rootContext);
+  }
+
   // Return the router object
   return {
     root,
@@ -563,5 +747,6 @@ export function createRouter<TConfig extends RendererConfig>(
     navigate,
     currentPath,
     useCurrentPath,
+    mount,
   };
 }

@@ -12,9 +12,11 @@ export { island } from '@lattice/islands/island';
 export type { MergedService as Service } from './service-client.js';
 
 /**
- * Re-export router/useSvc from service-client for page components
+ * Re-export useSvc and router utilities from service-client
+ * Note: Route components now use standalone `connect` from @lattice/router
+ * Islands still use router.useCurrentPath for reactive current path
  */
-export { router, useSvc, withSvc, createClientApi } from './service-client.js';
+export { useSvc, createClientApi, router } from './service-client.js';
 
 /**
  * Re-export singleton service for client hydration

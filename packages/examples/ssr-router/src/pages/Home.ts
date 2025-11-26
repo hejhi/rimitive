@@ -1,6 +1,7 @@
-import { useSvc, router } from '../service.js';
+import { connect } from '@lattice/router';
+import { useSvc } from '../service.js';
 
-export const Home = router.connect(({ navigate }) =>
+export const Home = connect(({ navigate }) =>
   useSvc(({ el }) => () => {
     return el('div', { className: 'page home-page' })(
       el('h2')('Welcome to SSR + Router'),

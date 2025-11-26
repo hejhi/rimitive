@@ -1,7 +1,8 @@
-import { router, useSvc } from '../service.js';
+import { connect } from '@lattice/router';
+import { useSvc } from '../service.js';
 import { Navigation } from '../islands/Navigation.js';
 
-export const AppLayout = router.connect(({ currentPath }, { children }) =>
+export const AppLayout = connect(({ currentPath }, { children }) =>
   useSvc(({ el }) => () => {
     return el('div', { className: 'app' })(
       el('nav', { className: 'navbar' })(

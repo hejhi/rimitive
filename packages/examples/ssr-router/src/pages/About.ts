@@ -1,6 +1,7 @@
-import { useSvc, router } from '../service.js';
+import { connect } from '@lattice/router';
+import { useSvc } from '../service.js';
 
-export const About = router.connect(() =>
+export const About = connect(() =>
   useSvc(({ el }) => () => {
     return el('div', { className: 'page about-page' })(
       el('h2')('About This Example'),

@@ -5,7 +5,7 @@
  */
 import { createDOMHydrator } from '@lattice/islands/client';
 import { createClientApi, router, mount, service } from './service-client.js';
-import { createRouteContent } from './routes.js';
+import { appRoutes } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 
@@ -25,9 +25,8 @@ hydrator.hydrate(ProductFilter, Navigation);
 // Mount routes into the main content area
 const routeContainer = document.querySelector('.main-content');
 if (routeContainer) {
-  // Get svc with navigate for createRouteContent
-  const svcWithNav = { ...service.view, navigate: router.navigate };
-  const App = createRouteContent(router, svcWithNav);
+  // Mount the route tree using the router
+  const App = router.mount(appRoutes);
   const routeRef = mount(App);
 
   // Replace SSR'd route content with reactive client version

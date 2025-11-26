@@ -13,14 +13,8 @@ import { composeFrom } from '@lattice/lattice';
 import { createRouter } from '@lattice/router';
 import type { RefSpec, Renderer } from '@lattice/view/types';
 
-type ServiceOptions = {
-  /** Initial path for the router (used for SSR with specific request paths) */
-  initialPath?: string;
-};
-
 /**
  * Create composed client service with signals + views + addEventListener
- * @param signals - Optional signals API to share reactive state (e.g., with router)
  */
 function createClientService(signals = createSignalsApi()) {
   const renderer = createDOMRenderer();
@@ -50,28 +44,26 @@ export const createClientApi = (
   return {
     ...signals,
     ...views,
-    // navigate is added by client.ts after router is available
   };
 };
 
 /**
- * The merged service type available to components via useSvc/withSvc
+ * The merged service type available to components via useSvc
  */
 export type MergedService = ReturnType<typeof createClientService>['svc'] & {
   navigate: (path: string) => void;
 };
 
-const createClientServices = (options: ServiceOptions = {}) => {
+const createClientServices = () => {
   const { signals, views, svc } = createClientService();
 
-  // Create router first so we can include navigate in svc
+  // Create router with the service
   const router = createRouter<DOMRendererConfig>(svc, {
     initialPath:
-      options.initialPath ||
       window.location.pathname + window.location.search + window.location.hash,
   });
 
-  // Include navigate in svc so Link components can access it
+  // Include navigate in svc for components
   const svcWithNav: MergedService = {
     ...svc,
     navigate: router.navigate,
@@ -86,7 +78,6 @@ const createClientServices = (options: ServiceOptions = {}) => {
     router,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svcWithNav),
     useSvc: <TReturn>(fn: (svc: MergedService) => TReturn): TReturn => fn(svcWithNav),
-    withSvc: <TReturn>(fn: (svc: MergedService) => TReturn) => fn,
   };
 };
 
@@ -104,7 +95,6 @@ function getServices() {
 }
 
 // Export singleton for client-side usage with lazy initialization
-// Use getters to delay initialization until first access
 export const service = {
   get view() {
     return getServices().service.view;
@@ -119,101 +109,49 @@ export function mount<TElement>(spec: RefSpec<TElement>) {
 }
 
 /**
- * Server-compatible connect implementation
+ * Router accessor - lazy initialization on client
  *
- * On server, components are defined at module load time using router.connect().
- * This needs to return a proper component factory structure even without
- * actual router state - the routing state is injected at render time via routeContext.
- *
- * When the per-request router creates routeContext, it includes routeApi with
- * the correct currentPath. serverConnect uses this if available.
+ * With the new defineRoutes/connect API, components no longer need
+ * router.connect() at module load time. The router is only accessed
+ * at runtime for navigate(), mount(), and useCurrentPath().
  */
-function serverConnect<TUserProps>(
-  wrapper: (
-    routeApi: { navigate: (path: string) => void; currentPath: () => string },
-    routeContext: {
-      children: unknown[] | null;
-      params: () => Record<string, string>;
-      routeApi?: {
-        navigate: (path: string) => void;
-        currentPath: () => string;
-      };
+export const router = {
+  get navigate() {
+    return getServices().router.navigate;
+  },
+  get currentPath() {
+    return getServices().router.currentPath;
+  },
+  get mount() {
+    return getServices().router.mount;
+  },
+  /**
+   * Get a reactive current path for islands
+   * On server: returns a mock computed wrapping the initial path
+   * On client: returns the router's reactive currentPath
+   */
+  useCurrentPath(initialPath: string) {
+    if (typeof window === 'undefined') {
+      // Server: return a mock computed that returns the initial path
+      const getter = () => initialPath;
+      getter.peek = () => initialPath;
+      return getter;
     }
-  ) => (userProps: TUserProps) => unknown
-) {
-  return (...args: [TUserProps?]) =>
-    (routeContext: {
-      children: unknown[] | null;
-      params: () => Record<string, string>;
-      routeApi?: {
-        navigate: (path: string) => void;
-        currentPath: () => string;
-      };
-    }) => {
-      // Use routeApi from routeContext if available (injected by per-request router)
-      // Fall back to no-op values if not available
-      const routeApi = routeContext.routeApi ?? {
-        navigate: () => {},
-        currentPath: () => '',
-      };
-      const componentFactory = wrapper(routeApi, routeContext);
-      const userProps = args[0] ?? ({} as TUserProps);
-      return componentFactory(userProps);
-    };
-}
-
-// Create a proxy for router to intercept all property accesses
-// Returns server-compatible implementations on server, real router on client
-export const router = new Proxy(
-  {} as ReturnType<typeof createClientServices>['router'],
-  {
-    get(_target, prop) {
-      if (typeof window === 'undefined') {
-        // Server: return functional implementations that work at module load time
-        if (prop === 'connect') {
-          return serverConnect;
-        }
-        // useCurrentPath needs to return a function that returns a computed-like getter
-        if (prop === 'useCurrentPath') {
-          return (initialPath: string) => {
-            // Return a callable that returns the initial path (mimics ComputedFunction)
-            const getter = () => initialPath;
-            getter.peek = () => initialPath;
-            return getter;
-          };
-        }
-        // Other methods return no-op functions
-        return () => {};
-      }
-      const services = getServices();
-      const value = services.router[prop as keyof typeof services.router];
-      // Bind methods to preserve 'this' context
-      if (typeof value === 'function') {
-        return value.bind(services.router);
-      }
-      return value;
-    },
-  }
-);
+    return getServices().router.useCurrentPath(initialPath);
+  },
+};
 
 /**
  * useSvc - Immediate service access
  *
  * On client: Calls fn(svc) immediately and returns the result
  * On server: Returns a deferred RefSpec that calls fn(api) at create() time
- *
- * The server version creates a RefSpec-like wrapper because:
- * 1. At module load time, svc isn't available (it's per-request)
- * 2. The api IS available when RefSpec.create(api) is called
- * 3. We defer the fn(api) call to create() time
  */
 export function useSvc<TReturn>(fn: (svc: MergedService) => TReturn): TReturn {
   if (typeof window === 'undefined') {
     // Server: create a deferred RefSpec that calls fn(api) at create time
-    // This bridges the gap between module-load-time definition and request-time rendering
     const lifecycleCallbacks: unknown[] = [];
 
-    // Build refSpec object with proper typing
     const refSpec: {
       (...callbacks: unknown[]): typeof refSpec;
       status: number;
@@ -224,23 +162,15 @@ export function useSvc<TReturn>(fn: (svc: MergedService) => TReturn): TReturn {
         return refSpec;
       },
       {
-        // Mark as RefSpec (STATUS_REF_SPEC = 4)
-        status: 4,
-        // create() receives the api and can finally call fn
+        status: 4, // STATUS_REF_SPEC
         create: (api: MergedService) => {
-          // Call fn with the api to get the inner component function
           const innerFn = fn(api);
 
-          // innerFn is typically () => RefSpec (from the useSvc pattern)
-          // Call it to get the actual RefSpec
           if (typeof innerFn === 'function') {
             const innerRefSpec = (
               innerFn as () => { create?: (api: unknown) => unknown }
             )();
 
-            // If it has a create method, call it with api
-            // Note: RefSpec is a callable function (for lifecycle callbacks),
-            // so we check for 'function' not 'object'
             if (
               innerRefSpec &&
               (typeof innerRefSpec === 'function' ||
@@ -263,16 +193,6 @@ export function useSvc<TReturn>(fn: (svc: MergedService) => TReturn): TReturn {
     return refSpec as unknown as TReturn;
   }
   return getServices().useSvc(fn);
-}
-
-/**
- * withSvc - Deferred service access (type helper)
- *
- * Returns the function unchanged - actual service injection happens at render time.
- * Safe for universal code since it doesn't access services.
- */
-export function withSvc<TReturn>(fn: (svc: MergedService) => TReturn) {
-  return fn;
 }
 
 export type Service = typeof service;

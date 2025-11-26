@@ -3,7 +3,8 @@
  *
  * This page includes an interactive island component.
  */
-import { useSvc, router } from '../service.js';
+import { connect } from '@lattice/router';
+import { useSvc } from '../service.js';
 import { ProductFilter } from '../islands/ProductFilter.js';
 
 const products = [
@@ -17,7 +18,7 @@ const products = [
 
 const productFilter = ProductFilter({ products });
 
-export const Products = router.connect(() =>
+export const Products = connect(() =>
   useSvc(({ el }) => () => {
     return el('div', { className: 'page products-page' })(
       el('h2')('Products'),

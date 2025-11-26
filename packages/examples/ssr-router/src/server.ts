@@ -20,7 +20,7 @@ import { composeFrom } from '@lattice/lattice';
 import { createRouter } from '@lattice/router';
 import { createDOMServerRenderer } from '@lattice/islands/renderers/dom-server';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { createApp } from './routes.js';
+import { appRoutes } from './routes.js';
 
 /**
  * Create SSR service - called per-request for fresh signals
@@ -264,8 +264,8 @@ const server = createServer((req, res) => {
   const mount = <TElement>(spec: { create: (api: typeof svc) => TElement }) =>
     spec.create(svc);
 
-  // Create the app with the router
-  const App = createApp(router);
+  // Mount the route tree
+  const App = router.mount(appRoutes);
 
   // Render app to HTML within SSR context
   const html = runWithSSRContext(ssrCtx, () => renderToString(mount(App)));
