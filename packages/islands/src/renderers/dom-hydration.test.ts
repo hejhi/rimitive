@@ -531,3 +531,428 @@ describe('Connection Status', () => {
     document.body.removeChild(container);
   });
 });
+
+// ============================================================================
+// Tests: seekToFragment for Deferred Fragment Content
+// ============================================================================
+
+describe('skipFragment and seekToFragment for Deferred Fragment Content', () => {
+  it('should skip fragment during forward pass and seek back during unwind', () => {
+    // This simulates the show() hydration scenario:
+    // SSR renders: <div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div>
+    // Forward pass creates h2, section(intro), skips show() fragment via skipFragment, section(filter)
+    // Unwind calls seekToFragment before show().attach() creates the h1
+    const container = setupHTML(
+      '<div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div>'
+    );
+    const renderer = createDOMHydrationRenderer(container);
+
+    // Forward pass: create div
+    const div = renderer.createElement('div');
+
+    // Forward pass: create h2 and exit
+    const h2 = renderer.createElement('h2');
+    renderer.createTextNode('Products');
+    renderer.appendChild(div, h2);
+
+    // Forward pass: create section (intro) and exit
+    const sectionIntro = renderer.createElement('section');
+    renderer.createTextNode('intro');
+    renderer.appendChild(div, sectionIntro);
+
+    // Forward pass: SKIP show() fragment
+    // processChildren calls skipFragment to advance position past fragment content
+    renderer.skipFragment?.(div);
+
+    // Forward pass: create section (filter) and exit
+    const sectionFilter = renderer.createElement('section');
+    renderer.createTextNode('filter');
+    renderer.appendChild(div, sectionFilter);
+
+    // Now we're at the UNWIND phase
+    // Before show().attach(), we call seekToFragment to reset position
+    renderer.seekToFragment?.(div, sectionFilter);
+
+    // Now show().attach() creates the deferred h1 content
+    const h1 = renderer.createElement('h1');
+    renderer.createTextNode('hello');
+    renderer.appendChild(div, h1);
+
+    // Verify we got the right elements
+    expect(h2.textContent).toBe('Products');
+    expect(sectionIntro.textContent).toBe('intro');
+    expect(h1.textContent).toBe('hello');
+    expect(sectionFilter.textContent).toBe('filter');
+  });
+
+  it('should skip fragment at beginning of parent', () => {
+    const container = setupHTML(
+      '<div><!--fragment-start--><h1>first</h1><!--fragment-end--><section>after</section></div>'
+    );
+    const renderer = createDOMHydrationRenderer(container);
+
+    const div = renderer.createElement('div');
+
+    // Forward pass: skip the fragment
+    renderer.skipFragment?.(div);
+
+    // Forward pass: create section
+    const section = renderer.createElement('section');
+    renderer.createTextNode('after');
+    renderer.appendChild(div, section);
+
+    // Unwind: seek back to fragment position
+    renderer.seekToFragment?.(div, section);
+
+    // Create deferred fragment content
+    const h1 = renderer.createElement('h1');
+    renderer.createTextNode('first');
+    renderer.appendChild(div, h1);
+
+    expect(h1.textContent).toBe('first');
+    expect(section.textContent).toBe('after');
+  });
+
+  it('should handle fragment at end of parent (no next sibling)', () => {
+    const container = setupHTML(
+      '<div><section>before</section><!--fragment-start--><h1>last</h1><!--fragment-end--></div>'
+    );
+    const renderer = createDOMHydrationRenderer(container);
+
+    const div = renderer.createElement('div');
+
+    // Forward pass: create section
+    const section = renderer.createElement('section');
+    renderer.createTextNode('before');
+    renderer.appendChild(div, section);
+
+    // Forward pass: skip fragment (it's last, no next sibling after it)
+    renderer.skipFragment?.(div);
+
+    // Unwind: seek to fragment position (nextSibling is null)
+    renderer.seekToFragment?.(div, null);
+
+    // Create deferred fragment content
+    const h1 = renderer.createElement('h1');
+    renderer.createTextNode('last');
+    renderer.appendChild(div, h1);
+
+    expect(section.textContent).toBe('before');
+    expect(h1.textContent).toBe('last');
+  });
+
+  it('should handle multiple adjacent fragments', () => {
+    const container = setupHTML(
+      '<div><h2>title</h2><!--fragment-start--><p>frag1</p><!--fragment-end--><!--fragment-start--><span>frag2</span><!--fragment-end--><footer>end</footer></div>'
+    );
+    const renderer = createDOMHydrationRenderer(container);
+
+    const div = renderer.createElement('div');
+
+    // Forward pass: h2
+    const h2 = renderer.createElement('h2');
+    renderer.createTextNode('title');
+    renderer.appendChild(div, h2);
+
+    // Forward pass: skip first fragment
+    renderer.skipFragment?.(div);
+
+    // Forward pass: skip second fragment
+    renderer.skipFragment?.(div);
+
+    // Forward pass: create footer
+    const footer = renderer.createElement('footer');
+    renderer.createTextNode('end');
+    renderer.appendChild(div, footer);
+
+    // Unwind: seek to second fragment (closer to footer)
+    renderer.seekToFragment?.(div, footer);
+
+    // Create second fragment content
+    const span = renderer.createElement('span');
+    renderer.createTextNode('frag2');
+    renderer.appendChild(div, span);
+
+    // Seek to first fragment
+    renderer.seekToFragment?.(div, span);
+
+    // Create first fragment content
+    const p = renderer.createElement('p');
+    renderer.createTextNode('frag1');
+    renderer.appendChild(div, p);
+
+    expect(h2.textContent).toBe('title');
+    expect(p.textContent).toBe('frag1');
+    expect(span.textContent).toBe('frag2');
+    expect(footer.textContent).toBe('end');
+  });
+
+  it('should handle nested fragments (fragment inside fragment content)', () => {
+    // This replicates the real-world scenario:
+    // - Route match fragment wraps the entire page
+    // - Inside the page, show() fragment contains conditional content
+    //
+    // HTML structure:
+    // <main>
+    //   <!--fragment-start-->  (route match)
+    //   <div class="products-page">
+    //     <h2>Products</h2>
+    //     <section>intro</section>
+    //     <!--fragment-start--><h1>hello</h1><!--fragment-end-->  (show)
+    //     <section>filter</section>
+    //   </div>
+    //   <!--fragment-end-->
+    // </main>
+    const container = setupHTML(
+      '<main><!--fragment-start--><div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div><!--fragment-end--></main>'
+    );
+    const renderer = createDOMHydrationRenderer(container);
+
+    // Enter main
+    const main = renderer.createElement('main');
+
+    // Forward pass at main level: skip route match fragment
+    renderer.skipFragment?.(main);
+
+    // === UNWIND at main level ===
+    // Seek to route match fragment position, then process its content
+    renderer.seekToFragment?.(main, null);
+
+    // Route match attach() creates the div and processes its children
+    const div = renderer.createElement('div');
+
+    // Forward pass at div level: h2
+    const h2 = renderer.createElement('h2');
+    renderer.createTextNode('Products');
+    renderer.appendChild(div, h2);
+
+    // Forward pass at div level: section(intro)
+    const sectionIntro = renderer.createElement('section');
+    renderer.createTextNode('intro');
+    renderer.appendChild(div, sectionIntro);
+
+    // Forward pass at div level: skip show() fragment
+    renderer.skipFragment?.(div);
+
+    // Forward pass at div level: section(filter)
+    const sectionFilter = renderer.createElement('section');
+    renderer.createTextNode('filter');
+    renderer.appendChild(div, sectionFilter);
+
+    // === UNWIND at div level ===
+    // Seek to show() fragment position
+    renderer.seekToFragment?.(div, sectionFilter);
+
+    // show() attach() creates the h1
+    const h1 = renderer.createElement('h1');
+    renderer.createTextNode('hello');
+    renderer.appendChild(div, h1);
+
+    // Exit div (back to main level)
+    renderer.appendChild(main, div);
+
+    // Verify all elements
+    expect(h2.textContent).toBe('Products');
+    expect(sectionIntro.textContent).toBe('intro');
+    expect(h1.textContent).toBe('hello');
+    expect(sectionFilter.textContent).toBe('filter');
+  });
+
+  it('should handle hidden/empty fragments (no markers in DOM)', () => {
+    // This replicates the router scenario where multiple show() fragments exist,
+    // but only the active route renders markers. Hidden routes have no markers.
+    //
+    // Router children: [show(Home), show(About), show(Products)]
+    // Only Products is visible, so DOM has:
+    // <main>
+    //   <!--fragment-start--><div>Products page</div><!--fragment-end-->
+    // </main>
+    // But client code has 3 show() fragments
+    const container = setupHTML(
+      '<main><!--fragment-start--><div>Products page</div><!--fragment-end--></main>'
+    );
+    const renderer = createDOMHydrationRenderer(container);
+
+    // Enter main
+    const main = renderer.createElement('main');
+
+    // Forward pass: skip show(Home) - but it has NO markers in DOM!
+    // skipFragment should handle this gracefully
+    renderer.skipFragment?.(main);
+
+    // Forward pass: skip show(About) - also no markers
+    renderer.skipFragment?.(main);
+
+    // Forward pass: skip show(Products) - this one HAS markers
+    renderer.skipFragment?.(main);
+
+    // === UNWIND phase ===
+    // Seek to show(Products) - has markers, should work
+    renderer.seekToFragment?.(main, null);
+
+    // Products attach() creates the div
+    const productsDiv = renderer.createElement('div');
+    renderer.createTextNode('Products page');
+    renderer.appendChild(main, productsDiv);
+
+    // Seek to show(About) - NO markers, should be no-op
+    // nextSibling is productsDiv
+    renderer.seekToFragment?.(main, productsDiv);
+    // About attach() does nothing (condition false, no content to create)
+
+    // Seek to show(Home) - NO markers, should be no-op
+    // nextSibling is still productsDiv (About created nothing)
+    renderer.seekToFragment?.(main, productsDiv);
+    // Home attach() does nothing (condition false, no content to create)
+
+    // Verify Products page hydrated correctly
+    expect(productsDiv.textContent).toBe('Products page');
+  });
+});
+
+// ============================================================================
+// Integration Tests: Full View API with Hydration
+// ============================================================================
+
+import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createViewApi } from '@lattice/view/presets/core';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types';
+
+describe('Integration: show() hydration with full view API', () => {
+  const setupIntegrationHTML = (html: string): HTMLElement => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    document.body.appendChild(div);
+    return div.firstElementChild as HTMLElement;
+  };
+
+  it('should hydrate show() fragment correctly with real view API', () => {
+    // This replicates the Products page scenario:
+    // <div class="products-page">
+    //   <h2>Products</h2>
+    //   <section class="intro">intro</section>
+    //   <!--fragment-start--><h1>hello</h1><!--fragment-end-->
+    //   <section class="filter">filter</section>
+    // </div>
+    const container = setupIntegrationHTML(
+      '<div class="products-page"><h2>Products</h2><section class="intro">intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section class="filter">filter</section></div>'
+    );
+
+    const renderer = createDOMHydrationRenderer(container);
+    const signals = createSignalsApi();
+    const views = createViewApi<DOMRendererConfig>(renderer, signals);
+
+    // Combine signals and views to get full API
+    const api = { ...signals, ...views };
+    const { el, show, computed } = api;
+
+    // Create the component spec matching the SSR output
+    const pageSpec = el('div', { className: 'products-page' })(
+      el('h2')('Products'),
+      el('section', { className: 'intro' })('intro'),
+      show(
+        computed(() => true),
+        el('h1')('hello')
+      ),
+      el('section', { className: 'filter' })('filter')
+    );
+
+    // Hydrate
+    const nodeRef = pageSpec.create(api);
+
+    // Verify hydration succeeded
+    expect(nodeRef.status).toBe(STATUS_ELEMENT);
+    const pageDiv = (nodeRef as ElementRef<HTMLElement>).element;
+    expect(pageDiv.className).toBe('products-page');
+
+    // Verify all children are present and in correct order
+    const children = Array.from(pageDiv.children);
+    expect(children[0]?.tagName).toBe('H2');
+    expect(children[0]?.textContent).toBe('Products');
+    expect(children[1]?.tagName).toBe('SECTION');
+    expect((children[1] as HTMLElement)?.className).toBe('intro');
+    expect(children[2]?.tagName).toBe('H1');
+    expect(children[2]?.textContent).toBe('hello');
+    expect(children[3]?.tagName).toBe('SECTION');
+    expect((children[3] as HTMLElement)?.className).toBe('filter');
+
+    document.body.removeChild(container.parentElement!);
+  });
+
+  it('should hydrate nested show() inside route match fragment (real app structure)', () => {
+    // This replicates the FULL app structure:
+    // <div class="app">
+    //   <nav>nav</nav>
+    //   <main>
+    //     <!--fragment-start-->  (route match)
+    //     <div class="products-page">
+    //       <h2>Products</h2>
+    //       <section class="intro">intro</section>
+    //       <!--fragment-start--><h1>hello</h1><!--fragment-end-->  (show)
+    //       <section class="filter">filter</section>
+    //     </div>
+    //     <!--fragment-end-->
+    //   </main>
+    // </div>
+    const container = setupIntegrationHTML(
+      '<div class="app"><nav>nav</nav><main><!--fragment-start--><div class="products-page"><h2>Products</h2><section class="intro">intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section class="filter">filter</section></div><!--fragment-end--></main></div>'
+    );
+
+    const renderer = createDOMHydrationRenderer(container);
+    const signals = createSignalsApi();
+    const views = createViewApi<DOMRendererConfig>(renderer, signals);
+
+    // Combine signals and views to get full API
+    const api = { ...signals, ...views };
+    const { el, show, computed, match } = api;
+
+    // Build the Products page component
+    const ProductsPage = () =>
+      el('div', { className: 'products-page' })(
+        el('h2')('Products'),
+        el('section', { className: 'intro' })('intro'),
+        show(
+          computed(() => true),
+          el('h1')('hello')
+        ),
+        el('section', { className: 'filter' })('filter')
+      );
+
+    // Build the app structure with route match
+    // match(reactive)((value) => RefSpec | null) - renders content based on value
+    const appSpec = el('div', { className: 'app' })(
+      el('nav')('nav'),
+      el('main')(
+        match(computed(() => 'products'))((value) =>
+          value === 'products' ? ProductsPage() : null
+        )
+      )
+    );
+
+    // Hydrate
+    const nodeRef = appSpec.create(api);
+
+    // Verify hydration succeeded
+    expect(nodeRef.status).toBe(STATUS_ELEMENT);
+    const appDiv = (nodeRef as ElementRef<HTMLElement>).element;
+    expect(appDiv.className).toBe('app');
+
+    // Navigate to find the products page
+    const main = appDiv.querySelector('main');
+    const productsPage = main?.querySelector('.products-page');
+    expect(productsPage).toBeTruthy();
+
+    // Verify products page children are in correct order
+    const children = Array.from(productsPage!.children);
+    expect(children[0]?.tagName).toBe('H2');
+    expect(children[1]?.tagName).toBe('SECTION');
+    expect(children[1]?.className).toBe('intro');
+    expect(children[2]?.tagName).toBe('H1');
+    expect(children[2]?.textContent).toBe('hello');
+    expect(children[3]?.tagName).toBe('SECTION');
+    expect(children[3]?.className).toBe('filter');
+
+    document.body.removeChild(container.parentElement!);
+  });
+});

@@ -37,6 +37,10 @@ export function createIslandsRenderer(
     isConnected: (element) => getRenderer().isConnected(element),
     addEventListener: (element, event, handler, options) =>
       getRenderer().addEventListener(element, event, handler, options),
+    // Forward optional hydration-specific methods
+    skipFragment: (parent) => getRenderer().skipFragment?.(parent),
+    seekToFragment: (parent, nextSibling) =>
+      getRenderer().seekToFragment?.(parent, nextSibling),
     switchToFallback,
   };
 }

@@ -139,4 +139,36 @@ export interface Renderer<TConfig extends RendererConfig> {
     fragmentRef: unknown,
     parentElement: TConfig['baseElement']
   ) => void;
+
+  /**
+   * Optional: Skip past fragment during forward pass
+   *
+   * Called by processChildren when encountering a FragmentRef during the forward
+   * pass. Advances the hydrator's position past the fragment content so subsequent
+   * siblings can be correctly matched.
+   *
+   * @param parent - The parent element containing the fragment
+   * @param fragmentRef - The fragment reference (used to find fragment-end marker)
+   */
+  skipFragment?: (parent: TConfig['baseElement']) => void;
+
+  /**
+   * Optional: Seek to fragment position for deferred content hydration
+   *
+   * Called by fragment-creating primitives (show, map, match) during their
+   * attach() phase, before creating deferred content. Allows the hydration
+   * renderer to restore position to where the fragment's content exists in the DOM.
+   *
+   * Position is computed from DOM structure:
+   * 1. Scan backwards from nextSibling to find fragment-start marker
+   * 2. Count real children before marker to get content index
+   * 3. Walk up DOM to compute path to parent
+   *
+   * @param parent - The parent element containing the fragment
+   * @param nextSibling - The element that comes after this fragment (or null if last)
+   */
+  seekToFragment?: (
+    parent: TConfig['baseElement'],
+    nextSibling: TConfig['baseElement'] | null
+  ) => void;
 }

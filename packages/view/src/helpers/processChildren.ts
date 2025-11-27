@@ -72,6 +72,10 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
             childRef,
             childRef.element as TConfig['baseElement']
           );
+        } else if (childRef.status === STATUS_FRAGMENT) {
+          // Skip past fragment content during forward pass (for hydration)
+          // This advances position so subsequent siblings can be matched correctly
+          renderer.skipFragment?.(element);
         }
         return childRef;
       }
@@ -124,6 +128,18 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
     // Unwind: walk backwards attaching fragments
     while (lastChildRef) {
       if (lastChildRef.status === STATUS_FRAGMENT) {
+        // Seek to fragment position for hydration (no-op for non-hydrating renderers)
+        // Get next sibling's element for position computation
+        const nextRef = lastChildRef.next as NodeRef<TElement> | null;
+        const nextElement =
+          nextRef?.status === STATUS_ELEMENT
+            ? nextRef.element
+            : nextRef?.status === STATUS_FRAGMENT
+              ? (nextRef.firstChild as ElementRef<TElement> | null)?.element ??
+                null
+              : null;
+        renderer.seekToFragment?.(parent.element, nextElement);
+
         lastChildRef.attach(
           parent,
           lastChildRef.next as NodeRef<TElement> | null,

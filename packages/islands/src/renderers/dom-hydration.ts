@@ -122,6 +122,106 @@ function scanFragmentRange(node: Node): number | null {
   );
 }
 
+/**
+ * Check if node is a fragment-start marker
+ */
+function isFragmentStart(node: Node | null): boolean {
+  return (
+    node !== null &&
+    node.nodeType === 8 &&
+    (node as Comment).textContent === 'fragment-start'
+  );
+}
+
+/**
+ * Check if node is a fragment-end marker
+ */
+function isFragmentEnd(node: Node | null): boolean {
+  return (
+    node !== null &&
+    node.nodeType === 8 &&
+    (node as Comment).textContent === 'fragment-end'
+  );
+}
+
+/**
+ * Compute the tree path from root to target element
+ * Walks up DOM counting siblings (skipping markers) at each level
+ */
+function computePathToElement(root: Element, target: Element): TreePath {
+  const path: number[] = [];
+  let current: Node = target;
+
+  while (current !== root && current.parentNode) {
+    const parent = current.parentNode;
+
+    // Count real siblings before current
+    let index = 0;
+    let sibling = parent.firstChild;
+    while (sibling && sibling !== current) {
+      if (!isFragmentMarker(sibling)) index++;
+      sibling = sibling.nextSibling;
+    }
+
+    path.unshift(index);
+    current = parent as Element;
+  }
+
+  return path;
+}
+
+/**
+ * Find the child index where fragment content starts
+ * Scans backwards from nextSibling to find fragment-start marker
+ *
+ * Handles adjacent fragments: if nextSiblingElement is inside a fragment
+ * (preceded by fragment-start), we need to skip that entire fragment first.
+ *
+ * Returns null if no fragment markers are found (fragment was hidden during SSR)
+ */
+function findFragmentContentIndex(
+  parentElement: Element,
+  nextSiblingElement: Element | null
+): number | null {
+  // Step 1: Find the starting point for backwards scan
+  let node: Node | null = nextSiblingElement
+    ? nextSiblingElement.previousSibling
+    : parentElement.lastChild;
+
+  // Check if nextSiblingElement is the first element of a fragment
+  // (its previousSibling would be fragment-start)
+  // In that case, we need to skip past that fragment to find the PREVIOUS one
+  if (nextSiblingElement && node && isFragmentStart(node)) {
+    // nextSiblingElement is inside a fragment, skip past that fragment's start marker
+    node = node.previousSibling;
+  }
+
+  // Skip past fragment-end markers
+  while (isFragmentEnd(node)) {
+    node = node!.previousSibling;
+  }
+
+  // Skip past content to find fragment-start
+  while (node && !isFragmentStart(node)) {
+    node = node.previousSibling;
+  }
+
+  // No fragment markers found - fragment was hidden during SSR (e.g., show() with false condition)
+  if (!node) {
+    return null;
+  }
+
+  // Step 2: Count real children before fragment-start
+  let index = 0;
+  let current = parentElement.firstChild;
+  while (current && current !== node) {
+    if (!isFragmentMarker(current)) index++;
+    current = current.nextSibling;
+  }
+
+  return index;
+}
+
 // ============================================================================
 // Renderer Implementation
 // ============================================================================
@@ -281,6 +381,82 @@ export function createDOMHydrationRenderer(
           handler,
           options as AddEventListenerOptions
         );
+    },
+
+    /**
+     * Skip past fragment content during forward pass
+     *
+     * Called when processChildren encounters a FragmentRef. Advances position
+     * past the fragment's content so subsequent siblings can be matched correctly.
+     */
+    skipFragment: (parentElement) => {
+      const currentPath = getCurrentPath(position);
+      if (currentPath.length === 0) return;
+
+      const childIndex = currentPath[currentPath.length - 1];
+      if (childIndex === undefined) return;
+
+      // Find the node at current position
+      let count = 0;
+      let node: Node | null = parentElement.firstChild;
+
+      while (node && count < childIndex) {
+        if (!isFragmentMarker(node)) count++;
+        node = node.nextSibling;
+      }
+
+      // Skip any fragment markers to find the actual node
+      while (node && isFragmentMarker(node) && !isFragmentStart(node)) {
+        node = node.nextSibling;
+      }
+
+      // If we're at a fragment-start, scan to find fragment-end and count content
+      if (node && isFragmentStart(node)) {
+        let contentCount = 0;
+        let current: Node | null = node.nextSibling;
+
+        while (current && !isFragmentEnd(current)) {
+          if (!isFragmentMarker(current)) contentCount++;
+          current = current.nextSibling;
+        }
+
+        // Advance position past the fragment content
+        const newPath = [...currentPath.slice(0, -1), childIndex + contentCount];
+        position = {
+          path: newPath,
+          ranges: position.ranges,
+        };
+      }
+    },
+
+    /**
+     * Seek to fragment position for deferred content hydration
+     *
+     * Called by fragment-creating primitives during attach() phase,
+     * before creating deferred content. Computes position from DOM structure.
+     */
+    seekToFragment: (parentElement, nextSiblingElement) => {
+      // Find child index where fragment content starts
+      const childIndex = findFragmentContentIndex(
+        parentElement,
+        nextSiblingElement
+      );
+
+      // No fragment markers found - fragment was hidden during SSR
+      // This is expected for show() with initially-false condition
+      // No-op: position doesn't need to change since there's no content to hydrate
+      if (childIndex === null) {
+        return;
+      }
+
+      // Compute path from root to parent element
+      const parentPath = computePathToElement(containerEl, parentElement);
+
+      // Set position to point at fragment content
+      position = {
+        path: [...parentPath, childIndex],
+        ranges: [],
+      };
     },
   };
 }
