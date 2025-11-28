@@ -193,9 +193,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             // For fragments, use the first child element if available, otherwise the container
             const scopeElement =
               (container.firstElementChild as HTMLElement) || container;
-            createElementScope(scopeElement, () => {
-              activate();
-            });
+            createElementScope(scopeElement, activate);
           }
 
           // Success! Hydration complete
@@ -206,9 +204,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           // Fragment islands already activated above
           // Wrap in element scope so effects are cleaned up when island is removed
           if (!isFragment && islandElement) {
-            createElementScope(islandElement, () => {
-              activate();
-            });
+            createElementScope(islandElement, activate);
           }
 
           // Remove script tag marker
