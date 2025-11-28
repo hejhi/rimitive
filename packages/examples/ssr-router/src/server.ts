@@ -191,6 +191,20 @@ const template = (content: string, scripts: string) => `
       border-radius: 4px;
       border: 1px solid #e0e0e0;
     }
+    .product-card.clickable {
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .product-card.clickable:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .view-details {
+      display: block;
+      color: #007bff;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
     .product-card h4 {
       color: #333;
       margin-bottom: 0.5rem;
@@ -213,6 +227,41 @@ const template = (content: string, scripts: string) => `
     .cta {
       text-align: center;
       margin: 2rem 0;
+    }
+    /* Product detail page styles */
+    .product-detail-page .breadcrumb {
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    .product-detail-page .breadcrumb a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    .product-detail-page .breadcrumb a:hover {
+      text-decoration: underline;
+    }
+    .product-detail {
+      max-width: 600px;
+    }
+    .product-detail header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .product-detail h2 {
+      margin: 0;
+    }
+    .product-detail .description {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    .product-detail .price {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #007bff;
+      margin-bottom: 1.5rem;
     }
   </style>
   <script>

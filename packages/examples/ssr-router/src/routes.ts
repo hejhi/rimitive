@@ -11,6 +11,7 @@ import { AppLayout } from './layouts/AppLayout.js';
 import { Home } from './pages/Home.js';
 import { About } from './pages/About.js';
 import { Products } from './pages/Products.js';
+import { ProductDetail } from './pages/ProductDetail.js';
 
 /**
  * Route tree definition - pure data, no router instance needed
@@ -25,5 +26,6 @@ const { create, route } = defineRoutes<DOMRendererConfig>('/', AppLayout());
 export const appRoutes = create(
   route('', Home())(),
   route('about', About())(),
-  route('products', Products())()
+  route('products', Products())(),
+  route('products/:id', ProductDetail())()
 );

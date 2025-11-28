@@ -4,7 +4,7 @@
  * An interactive component that filters products by category.
  * This is an island - it will be hydrated on the client.
  */
-import { island, type Service } from '../service.js';
+import { island, type Service, router } from '../service.js';
 import type { Reactive } from '@lattice/view/types';
 
 interface Product {
@@ -60,11 +60,16 @@ export const ProductFilter = island<ProductFilterProps, Service>(
         const name = computed(() => product().name);
         const cat = computed(() => product().category);
         const price = computed(() => `$${product().price}`);
+        const productId = computed(() => product().id);
 
-        return el('div', { className: 'product-card' })(
+        return el('div', {
+          className: 'product-card clickable',
+          onclick: () => router.navigate(`/products/${productId()}`),
+        })(
           el('h4')(name),
           el('p', { className: 'category' })(cat),
-          el('p', { className: 'price' })(price)
+          el('p', { className: 'price' })(price),
+          el('span', { className: 'view-details' })('View details →')
         );
       });
       const categoryValues = map(categories)((cat) =>
