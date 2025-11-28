@@ -36,7 +36,7 @@ export { matchPath } from './helpers/matching';
 export const createRouteFactory = defineService(
   <TConfig extends RendererConfig>(routeOpts: RouteOpts<TConfig>) =>
     () => {
-      const { computed, el, match, show, currentPath } = routeOpts;
+      const { computed, el, match, currentPath } = routeOpts;
       // Create navigate function that updates path and history
       const navigate = (path: string): void => {
         currentPath(path);
@@ -197,12 +197,6 @@ export const createRouteFactory = defineService(
             return null;
           });
 
-          // Create params computed - reactive, updates automatically when path changes
-          const params = computed(() => {
-            const match = shouldRender();
-            return match?.params ?? {};
-          });
-
           // Create outlet function that renders the matched child
           const outlet = (): RefSpec<TConfig['baseElement']> | null => {
             // If there are no children, outlet returns null
@@ -223,56 +217,56 @@ export const createRouteFactory = defineService(
             });
           };
 
-          // Create component API that includes all helpers plus route-specific additions
-          // This allows components to use create() and receive a properly typed API
-          const componentApi = {
-            ...routeOpts,
-            params,
-            outlet,
-            navigate,
-          };
+          // Use match() to control component rendering based on route match
+          // match() recreates the component on every param change
+          const baseRefSpec = match(shouldRender)((matchResult) => {
+            if (!matchResult) return null;
 
-          // Create component ONCE - runs only when route is defined, not on every navigation
-          let componentRefSpec: RefSpec<TConfig['baseElement']>;
+            // Create params computed fresh for this match
+            // Returns static value since matchResult is captured
+            const params = computed(() => matchResult.params);
 
-          if ('create' in component && typeof component.create === 'function') {
-            const lifecycleCallbacks: LifecycleCallback<
-              TConfig['baseElement']
-            >[] = [];
+            // Create component API fresh each time
+            const componentApi = {
+              ...routeOpts,
+              params,
+              outlet,
+              navigate,
+            };
 
-            const refSpec: RefSpec<TConfig['baseElement']> = (
-              ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
-            ) => {
-              lifecycleCallbacks.push(...callbacks);
+            // Create component with fresh api
+            if ('create' in component && typeof component.create === 'function') {
+              const lifecycleCallbacks: LifecycleCallback<
+                TConfig['baseElement']
+              >[] = [];
+
+              const refSpec: RefSpec<TConfig['baseElement']> = (
+                ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
+              ) => {
+                lifecycleCallbacks.push(...callbacks);
+                return refSpec;
+              };
+
+              refSpec.status = STATUS_REF_SPEC;
+              refSpec.create = <TExt>() => {
+                const nodeRef = component.create(componentApi);
+                // Apply lifecycle callbacks
+                for (const callback of lifecycleCallbacks) {
+                  callback(nodeRef);
+                }
+                return nodeRef as typeof nodeRef & TExt;
+              };
+
               return refSpec;
-            };
-
-            refSpec.status = STATUS_REF_SPEC;
-            refSpec.create = <TExt>() => {
-              const nodeRef = component.create(componentApi);
-              // Apply lifecycle callbacks
-              for (const callback of lifecycleCallbacks) {
-                callback(nodeRef);
-              }
-              return nodeRef as typeof nodeRef & TExt;
-            };
-
-            componentRefSpec = refSpec;
-          } else {
-            // Plain function pattern (backwards compatibility) - call it directly
-            componentRefSpec = (
-              component as unknown as (
-                api: typeof componentApi
-              ) => RefSpec<TConfig['baseElement']>
-            )(componentApi);
-          }
-
-          // Use show() to control component visibility based on route match
-          // show() creates once and toggles visibility (no recreation)
-          const baseRefSpec = show(
-            computed(() => shouldRender() !== null),
-            componentRefSpec
-          );
+            } else {
+              // Plain function pattern (backwards compatibility) - call it directly
+              return (
+                component as unknown as (
+                  api: typeof componentApi
+                ) => RefSpec<TConfig['baseElement']>
+              )(componentApi);
+            }
+          });
 
           // Create true wrapper that delegates to baseRefSpec via closure
           // No mutation - full ownership through closure

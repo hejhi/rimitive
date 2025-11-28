@@ -1331,7 +1331,7 @@ describe('programmatic navigation', () => {
     expect(getTextContent(parent)).toBe('Home');
   });
 
-  it('components are created once and not recreated on navigation', () => {
+  it('components are recreated on each navigation to the route', () => {
     const { route, el, renderer, computed } = setup();
 
     let navigateFn: ((path: string) => void) | undefined;
@@ -1344,7 +1344,7 @@ describe('programmatic navigation', () => {
       el: (tag: string) => (...children: unknown[]) => unknown;
       navigate: (path: string) => void;
     }) => {
-      // Component body runs once
+      // Component body runs each time the route matches
       componentCreationCount++;
       navigateFn = navigate;
       return elFn('div')(
@@ -1371,11 +1371,11 @@ describe('programmatic navigation', () => {
     if (!navigateFn) throw new Error('navigate not set');
     navigateFn('/about');
     expect(getTextContent(parent)).toBe('About');
-    expect(componentCreationCount).toBe(1); // Still 1, not recreated
+    expect(componentCreationCount).toBe(1); // Home destroyed, count unchanged
 
     navigateFn('/');
     expect(getTextContent(parent)).toBe('Home');
-    expect(componentCreationCount).toBe(1); // Still 1, not recreated
+    expect(componentCreationCount).toBe(2); // Home recreated on return
   });
 });
 

@@ -454,43 +454,45 @@ export function createRouter<TConfig extends RendererConfig>(
         return null;
       });
 
-      // Build RouteContext to pass to connected component
-      // Include merged API so components can render with appropriate renderer
-      const routeContext: RouteContext<TConfig> = {
-        children: processedChildren.length > 0 ? processedChildren : null,
-        params: viewApi.computed(() => shouldRender()?.params ?? {}),
-        api: connectedApi,
-      };
+      // Use match() to control component rendering based on route match
+      // match() recreates the component on every param change
+      const baseRefSpec = viewApi.match(shouldRender)((matchResult) => {
+        if (!matchResult) return null;
 
-      // Instantiate the connected component with route context
-      const sealedSpec = connectedComponent(routeContext);
+        // Build RouteContext fresh for each match
+        // Include merged API so components can render with appropriate renderer
+        const routeContext: RouteContext<TConfig> = {
+          children: processedChildren.length > 0 ? processedChildren : null,
+          params: viewApi.computed(() => matchResult.params),
+          api: connectedApi,
+        };
 
-      // Wrap sealedSpec in lifecycle callback collector for show()
-      const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] =
-        [];
+        // Instantiate the connected component with route context
+        const sealedSpec = connectedComponent(routeContext);
 
-      const componentRefSpec: RefSpec<TConfig['baseElement']> = (
-        ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
-      ) => {
-        lifecycleCallbacks.push(...callbacks);
+        // Wrap sealedSpec in lifecycle callback collector
+        const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] =
+          [];
+
+        const componentRefSpec: RefSpec<TConfig['baseElement']> = (
+          ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
+        ) => {
+          lifecycleCallbacks.push(...callbacks);
+          return componentRefSpec;
+        };
+
+        componentRefSpec.status = STATUS_REF_SPEC;
+        componentRefSpec.create = <TExt>(api?: unknown) => {
+          const nodeRef = sealedSpec.create(api);
+          // Apply lifecycle callbacks
+          for (const callback of lifecycleCallbacks) {
+            callback(nodeRef);
+          }
+          return nodeRef as typeof nodeRef & TExt;
+        };
+
         return componentRefSpec;
-      };
-
-      componentRefSpec.status = STATUS_REF_SPEC;
-      componentRefSpec.create = <TExt>(api?: unknown) => {
-        const nodeRef = sealedSpec.create(api);
-        // Apply lifecycle callbacks
-        for (const callback of lifecycleCallbacks) {
-          callback(nodeRef);
-        }
-        return nodeRef as typeof nodeRef & TExt;
-      };
-
-      // Use show() to control component visibility based on route match
-      const baseRefSpec = viewApi.show(
-        viewApi.computed(() => shouldRender() !== null),
-        componentRefSpec
-      );
+      });
 
       // Create true wrapper that delegates to baseRefSpec via closure
       const routeSpec: RouteSpec<TConfig['baseElement']> = (
@@ -722,21 +724,20 @@ export function createRouter<TConfig extends RendererConfig>(
           ? processRouteGroup(fullPath, node.children)
           : [];
 
-        // Build route context
-        const routeContext: RouteContext<TConfig> = {
-          children: childRefSpecs.length > 0 ? childRefSpecs : null,
-          params: viewApi.computed(() => shouldRender()?.params ?? {}),
-          api: connectedApi,
-        };
+        // Use match() for conditional rendering - recreates component on param change
+        return viewApi.match(shouldRender)((matchResult) => {
+          if (!matchResult) return null;
 
-        // Create the component RefSpec
-        const componentRefSpec = node.component(routeContext);
+          // Build route context fresh for each match
+          const routeContext: RouteContext<TConfig> = {
+            children: childRefSpecs.length > 0 ? childRefSpecs : null,
+            params: viewApi.computed(() => matchResult.params),
+            api: connectedApi,
+          };
 
-        // Wrap in show() for conditional rendering
-        return viewApi.show(
-          viewApi.computed(() => shouldRender() !== null),
-          componentRefSpec
-        );
+          // Create the component RefSpec
+          return node.component(routeContext);
+        });
       });
     }
 
