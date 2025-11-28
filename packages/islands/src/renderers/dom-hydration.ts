@@ -21,6 +21,7 @@ import {
   advanceToSibling,
   enterFragmentRange,
   getCurrentPath,
+  positionFromPath,
 } from '../helpers/hydrate-dom';
 
 // Re-export DOMRendererConfig for consumers that import from here
@@ -229,8 +230,8 @@ function findFragmentContentIndex(
 export function createDOMHydrationRenderer(
   containerEl: HTMLElement
 ): Renderer<DOMRendererConfig> {
-  // Position tracks where we are in the tree
-  let position: Position = { path: [], ranges: [] };
+  // Position tracks where we are in the tree (empty = at root before entering)
+  let position: Position = { path: null, depth: 0, ranges: null };
 
   return {
     /**
@@ -421,11 +422,11 @@ export function createDOMHydrationRenderer(
         }
 
         // Advance position past the fragment content
-        const newPath = [...currentPath.slice(0, -1), childIndex + contentCount];
-        position = {
-          path: newPath,
-          ranges: position.ranges,
-        };
+        const newPathArray = [
+          ...currentPath.slice(0, -1),
+          childIndex + contentCount,
+        ];
+        position = positionFromPath(newPathArray);
       }
     },
 
@@ -453,10 +454,7 @@ export function createDOMHydrationRenderer(
       const parentPath = computePathToElement(containerEl, parentElement);
 
       // Set position to point at fragment content
-      position = {
-        path: [...parentPath, childIndex],
-        ranges: [],
-      };
+      position = positionFromPath([...parentPath, childIndex]);
     },
   };
 }
