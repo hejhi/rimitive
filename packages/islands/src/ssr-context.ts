@@ -6,7 +6,7 @@
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { SSRContext, RequestContext } from './types';
+import type { SSRContext, GetContext } from './types';
 
 /**
  * AsyncLocalStorage instance for SSR context
@@ -17,48 +17,26 @@ const ssrContextStore = new AsyncLocalStorage<SSRContext>();
 /**
  * Options for creating SSR context
  */
-export interface SSRContextOptions {
+export interface SSRContextOptions<TContext = unknown> {
   /**
-   * Request context (URL) for the current request
-   * Made available to islands via context.request()
+   * Context getter for islands
+   * Called by islands to get user-defined context
    */
-  request?: RequestContext | URL | string;
-}
-
-/**
- * Normalize request input to RequestContext
- */
-function normalizeRequest(
-  input: RequestContext | URL | string | undefined
-): RequestContext | undefined {
-  if (!input) return undefined;
-
-  // Already a RequestContext
-  if (typeof input === 'object' && 'pathname' in input && 'searchParams' in input) {
-    return input as RequestContext;
-  }
-
-  // URL object or string
-  const url = typeof input === 'string' ? new URL(input, 'http://localhost') : input;
-
-  return {
-    url,
-    pathname: url.pathname,
-    search: url.search,
-    searchParams: url.searchParams,
-  };
+  getContext?: GetContext<TContext>;
 }
 
 /**
  * Create a new SSR context
  *
- * @param options - Optional configuration including request context
+ * @param options - Optional configuration including context getter
  */
-export function createSSRContext(options?: SSRContextOptions): SSRContext {
+export function createSSRContext<TContext = unknown>(
+  options?: SSRContextOptions<TContext>
+): SSRContext<TContext> {
   return {
     islands: [],
     islandCounter: 0,
-    request: normalizeRequest(options?.request),
+    getContext: options?.getContext,
   };
 }
 
@@ -68,8 +46,11 @@ export function createSSRContext(options?: SSRContextOptions): SSRContext {
  * Provides isolated context for the duration of the function execution.
  * Context is automatically cleaned up after the function completes.
  */
-export function runWithSSRContext<T>(ctx: SSRContext, fn: () => T): T {
-  return ssrContextStore.run(ctx, fn);
+export function runWithSSRContext<T, TContext = unknown>(
+  ctx: SSRContext<TContext>,
+  fn: () => T
+): T {
+  return ssrContextStore.run(ctx as SSRContext, fn);
 }
 
 /**

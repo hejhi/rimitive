@@ -12,11 +12,14 @@ import { appRoutes } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 import { AddToCart } from './islands/AddToCart.js';
+import { buildAppContext, type AppContext } from './service.js';
 
-// Create base app (signals + views + hybrid renderer + request context)
-const { service, mount, createApi, signals, updateRequestContext } =
-  createSSRClientApp({
+// Create base app (signals + views + hybrid renderer + context)
+const { service, mount, createApi, signals, updateContext } =
+  createSSRClientApp<AppContext>({
     container: document.querySelector('.app'),
+    // Provide context getter - called on init and navigation (popstate)
+    getContext: () => buildAppContext(window.location.href),
   });
 
 // Add router at app layer
@@ -24,10 +27,10 @@ const router = createRouter<DOMRendererConfig>(service, {
   initialPath: location.pathname + location.search + location.hash,
 });
 
-// Wrap navigate to also update request context for islands
+// Wrap navigate to also update context for islands
 const navigate = (path: string) => {
   router.navigate(path);
-  updateRequestContext();
+  updateContext();
 };
 
 // Service with navigate for connected components

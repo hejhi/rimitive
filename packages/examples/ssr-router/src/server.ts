@@ -21,6 +21,7 @@ import { createRouter } from '@lattice/router';
 import { createDOMServerRenderer } from '@lattice/islands/renderers/dom-server';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { appRoutes } from './routes.js';
+import { buildAppContext } from './service.js';
 
 /**
  * Create SSR service - called per-request for fresh signals
@@ -370,8 +371,9 @@ const server = createServer((req, res) => {
   );
   const path = url.pathname;
 
-  // Create SSR context for islands (pass request URL for island context)
-  const ssrCtx = createSSRContext({ request: url });
+  // Create SSR context for islands (pass context getter for islands)
+  const appContext = buildAppContext(url);
+  const ssrCtx = createSSRContext({ getContext: () => appContext });
 
   // Create per-request service (fresh signals per request)
   const { svc } = createSSRService();

@@ -1,35 +1,35 @@
 /**
  * Client Context - Browser version
  *
- * Stores the reactive request context getter for client-side islands.
- * Set by the SSR client preset after creating the router.
+ * Stores the reactive context getter for client-side islands.
+ * Set by the SSR client preset.
  */
 
-import type { RequestContext } from './types';
+import type { GetContext } from './types';
 
 /**
- * Module-level storage for the client request context getter
+ * Module-level storage for the client context getter
  */
-let clientRequestGetter: (() => RequestContext) | undefined;
+let clientContextGetter: GetContext<unknown> | undefined;
 
 /**
- * Get the active client request context getter
+ * Get the active client context getter
  *
- * Returns a function that, when called, returns the current RequestContext.
+ * Returns a function that, when called, returns the current context.
  * This is reactive - calling the getter will track dependencies.
  */
-export function getClientRequestContext(): (() => RequestContext) | undefined {
-  return clientRequestGetter;
+export function getClientContext(): GetContext<unknown> | undefined {
+  return clientContextGetter;
 }
 
 /**
- * Set the client request context getter
+ * Set the client context getter
  *
- * Called by the SSR client preset after creating the router.
- * The getter should return the current request context reactively.
+ * Called by the SSR client preset.
+ * The getter should return the current context reactively.
  */
-export function setClientRequestContext(
-  getter: () => RequestContext
+export function setClientContext<TContext>(
+  getter: GetContext<TContext>
 ): void {
-  clientRequestGetter = getter;
+  clientContextGetter = getter as GetContext<unknown>;
 }

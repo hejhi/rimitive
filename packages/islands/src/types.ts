@@ -12,37 +12,27 @@ import { HydrationMismatch } from './renderers/dom-hydration';
 export { HydrationMismatch };
 
 // ============================================================================
-// Request Context Types
+// Context Types
 // ============================================================================
 
 /**
- * Request context - represents the current request/location
+ * Context getter type - passed to island factories as second argument
  *
- * Available to islands via the context parameter.
- * On server: static, from HTTP request
- * On client: reactive, updates on navigation
- */
-export interface RequestContext {
-  /** Full URL object */
-  url: URL;
-  /** URL pathname (e.g., "/products/123") */
-  pathname: string;
-  /** URL search string (e.g., "?sort=price") */
-  search: string;
-  /** Parsed search params */
-  searchParams: URLSearchParams;
-}
-
-/**
- * Island context - framework-provided context for islands
+ * Islands receive a getter function that returns user-defined context.
+ * On server: static, from SSR setup
+ * On client: reactive, called on init and navigation (popstate)
  *
- * Passed as second argument to island factory (separate from user API).
- * Similar to how connect() provides { params, children }.
+ * If no context is configured, the getter returns undefined.
+ *
+ * @example
+ * ```ts
+ * const MyIsland = island('my-island', (api, getContext) => {
+ *   const ctx = getContext(); // User-defined shape or undefined
+ *   return (props) => api.el('div', {}, props.label);
+ * });
+ * ```
  */
-export interface IslandContext {
-  /** Get current request context (reactive on client) */
-  request: () => RequestContext;
-}
+export type GetContext<TContext = unknown> = () => TContext | undefined;
 
 /**
  * SSR Context - tracks islands during server-side rendering
@@ -50,7 +40,7 @@ export interface IslandContext {
  * Uses AsyncLocalStorage for implicit context during render.
  * Each request gets its own isolated context.
  */
-export interface SSRContext {
+export interface SSRContext<TContext = unknown> {
   /**
    * Islands discovered during rendering
    * Collected as components are rendered on the server
@@ -64,10 +54,10 @@ export interface SSRContext {
   islandCounter: number;
 
   /**
-   * Request context for the current SSR request
+   * Context getter for the current SSR request
    * Set by the request handler, available to islands
    */
-  request?: RequestContext;
+  getContext?: GetContext<TContext>;
 }
 
 /**
@@ -124,7 +114,7 @@ export interface IslandComponent<TProps = unknown> {
  *
  * Customizes behavior when hydration fails (e.g., preserve form inputs, track analytics)
  */
-export interface IslandStrategy<TProps = unknown, TApi = unknown> {
+export interface IslandStrategy<TProps = unknown, TApi = unknown, TContext = unknown> {
   /**
    * Called when hydration fails
    *
@@ -140,7 +130,7 @@ export interface IslandStrategy<TProps = unknown, TApi = unknown> {
     error: HydrationMismatch,
     containerEl: HTMLElement,
     props: TProps,
-    Component: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>,
+    Component: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>,
     mount: (spec: RefSpec<unknown>) => { element: unknown }
   ) => boolean | void;
 }
@@ -155,20 +145,20 @@ export const ISLAND_META = Symbol.for('lattice.island');
  * Island metadata stored on component functions (temporary, only for registry construction)
  * @internal
  */
-export interface IslandMetaData<TProps = unknown, TApi = unknown> {
+export interface IslandMetaData<TProps = unknown, TApi = unknown, TContext = unknown> {
   id: string;
-  strategy?: IslandStrategy<TProps>;
-  component: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>;
+  strategy?: IslandStrategy<TProps, TApi, TContext>;
+  component: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>;
 }
 
 /**
  * Island registry entry - stores component and metadata together
  * @internal
  */
-export interface IslandRegistryEntry<TProps = unknown, TApi = unknown> {
-  component: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>;
+export interface IslandRegistryEntry<TProps = unknown, TApi = unknown, TContext = unknown> {
+  component: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>;
   id: string;
-  strategy?: IslandStrategy<TProps>;
+  strategy?: IslandStrategy<TProps, TApi, TContext>;
 }
 
 /**

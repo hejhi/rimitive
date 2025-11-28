@@ -7,7 +7,7 @@
  * - Service composition (signals + views)
  * - Auto-switching after first mount
  * - API factory for island hydration
- * - Request context for islands
+ * - User-defined context for islands
  *
  * Router integration is left to the app layer.
  *
@@ -18,6 +18,11 @@
  *
  * const { service, mount, createApi, signals } = createSSRClientApp({
  *   container: document.querySelector('.app'),
+ *   // Optional: provide context getter for islands
+ *   getContext: () => ({
+ *     pathname: location.pathname,
+ *     user: getCurrentUser(),
+ *   }),
  * });
  *
  * // Add router at app layer
@@ -36,31 +41,35 @@ import type { DOMRendererConfig } from '../renderers/dom-hydration';
 import { createIslandsRenderer } from '../renderers/islands';
 import { composeFrom } from '@lattice/lattice';
 import type { RefSpec, Renderer } from '@lattice/view/types';
-import type { RequestContext } from '../types';
-import { setClientRequestContext } from '../client-context.browser';
+import type { GetContext } from '../types';
+import { setClientContext } from '../client-context.browser';
 
 /**
  * Options for createSSRClientApp
  */
-export interface SSRClientAppOptions {
+export interface SSRClientAppOptions<TContext = unknown> {
   /**
    * Container element for hydration
    * If null, falls back to regular DOM rendering
    */
   container: HTMLElement | null;
-}
 
-/**
- * Build RequestContext from current location
- */
-function buildRequestContext(): RequestContext {
-  const url = new URL(window.location.href);
-  return {
-    url,
-    pathname: url.pathname,
-    search: url.search,
-    searchParams: url.searchParams,
-  };
+  /**
+   * Context getter for islands
+   *
+   * Called on init and on navigation (popstate) to get the current context.
+   * If not provided, islands will receive undefined from getContext().
+   *
+   * @example
+   * ```ts
+   * getContext: () => ({
+   *   pathname: location.pathname,
+   *   search: location.search,
+   *   user: getCurrentUser(),
+   * })
+   * ```
+   */
+  getContext?: GetContext<TContext>;
 }
 
 /**
@@ -69,22 +78,35 @@ function buildRequestContext(): RequestContext {
  * Returns direct exports - no lazy init, no proxies.
  * Call this at the top level of your client entry point.
  */
-export function createSSRClientApp(options: SSRClientAppOptions) {
-  const { container } = options;
+export function createSSRClientApp<TContext = unknown>(
+  options: SSRClientAppOptions<TContext>
+) {
+  const { container, getContext } = options;
 
   // Create signals API
   const signals = createSignalsApi();
 
-  // Create reactive request context signal
-  const requestSignal = signals.signal<RequestContext>(buildRequestContext());
+  // Create reactive context signal if getContext is provided
+  // Otherwise context is undefined
+  const contextSignal = getContext
+    ? signals.signal<TContext | undefined>(getContext())
+    : null;
 
-  // Set up the client request context for islands
-  setClientRequestContext(() => requestSignal());
+  // Set up the client context getter for islands
+  // If no getContext provided, islands get undefined
+  const contextGetter: GetContext<TContext> = contextSignal
+    ? () => contextSignal()
+    : () => undefined;
+
+  setClientContext(contextGetter);
 
   // Listen for navigation changes (popstate for back/forward)
-  window.addEventListener('popstate', () => {
-    requestSignal(buildRequestContext());
-  });
+  // Only update if we have a context getter
+  if (getContext && contextSignal) {
+    window.addEventListener('popstate', () => {
+      contextSignal(getContext());
+    });
+  }
 
   // Create hybrid renderer: hydration mode first, then fallback to regular DOM
   const hydrationRenderer = container
@@ -150,11 +172,15 @@ export function createSSRClientApp(options: SSRClientAppOptions) {
   };
 
   /**
-   * Update the request context (call after navigation)
-   * This updates the reactive signal so islands re-render
+   * Update the context (call after navigation)
+   *
+   * Calls getContext() and updates the reactive signal so islands re-render.
+   * No-op if getContext was not provided in options.
    */
-  const updateRequestContext = () => {
-    requestSignal(buildRequestContext());
+  const updateContext = () => {
+    if (getContext && contextSignal) {
+      contextSignal(getContext());
+    }
   };
 
   return {
@@ -166,11 +192,11 @@ export function createSSRClientApp(options: SSRClientAppOptions) {
     mount,
     /** API factory for island hydrator */
     createApi,
-    /** Update request context after navigation */
-    updateRequestContext,
+    /** Update context after navigation */
+    updateContext,
   };
 }
 
 // Re-export types for convenience
 export type { DOMRendererConfig } from '../renderers/dom-hydration';
-export type { RequestContext } from '../types';
+export type { GetContext } from '../types';

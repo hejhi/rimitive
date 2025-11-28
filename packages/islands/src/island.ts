@@ -7,42 +7,33 @@
 
 import type { LifecycleCallback, RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy, IslandContext } from './types';
+import type { IslandComponent, IslandStrategy, GetContext } from './types';
 import { ISLAND_META } from './types';
 import { getActiveSSRContext } from './ssr-context';
-import { getClientRequestContext } from './client-context';
+import { getClientContext } from './client-context';
 
 /**
- * Build IslandContext from available sources
+ * Get the context getter from available sources
+ *
+ * On server: uses SSR context's getContext if set
+ * On client: uses client context getter if set
+ * Otherwise: returns a getter that returns undefined
  */
-function getIslandContext(): IslandContext {
+function getContextGetter(): GetContext<unknown> {
   // Try SSR context first (server-side)
   const ssrContext = getActiveSSRContext();
-  if (ssrContext?.request) {
-    const request = ssrContext.request;
-    return {
-      request: () => request,
-    };
+  if (ssrContext?.getContext) {
+    return ssrContext.getContext;
   }
 
   // Try client context (browser)
-  const clientGetter = getClientRequestContext();
+  const clientGetter = getClientContext();
   if (clientGetter) {
-    return {
-      request: clientGetter,
-    };
+    return clientGetter;
   }
 
-  // Fallback: return a stub that throws on access
-  return {
-    request: () => {
-      throw new Error(
-        'Request context not available. ' +
-          'On server: pass request to createSSRContext(). ' +
-          'On client: call setClientRequestContext().'
-      );
-    },
-  };
+  // Fallback: return a getter that returns undefined
+  return () => undefined;
 }
 
 /**
@@ -54,39 +45,39 @@ function getIslandContext(): IslandContext {
  *
  * Island components receive two arguments:
  * 1. api - The user-defined service API (el, signal, computed, etc.)
- * 2. context - Framework-provided context ({ request })
+ * 2. getContext - Getter function that returns user-defined context (or undefined)
  */
-export function island<TProps, TApi = Record<string, unknown>>(
+export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
   id: string,
   factory: (
     api: TApi,
-    context: IslandContext
+    getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 /**
  * Mark a component as an island with custom hydration strategy
  */
-export function island<TProps, TApi = Record<string, unknown>>(
+export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
   id: string,
-  strategy: IslandStrategy<TProps>,
+  strategy: IslandStrategy<TProps, TApi, TContext>,
   factory: (
     api: TApi,
-    context: IslandContext
+    getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
-export function island<TProps, TApi = Record<string, unknown>>(
+export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
   id: string,
   strategyOrFactory:
-    | IslandStrategy<TProps>
+    | IslandStrategy<TProps, TApi, TContext>
     | ((
         api: TApi,
-        context: IslandContext
+        getContext: GetContext<TContext>
       ) => (props: TProps) => RefSpec<unknown>),
   maybeFactory?: (
     api: TApi,
-    context: IslandContext
+    getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
   // Determine if second arg is strategy or factory
@@ -94,7 +85,7 @@ export function island<TProps, TApi = Record<string, unknown>>(
     maybeFactory ||
     (strategyOrFactory as (
       api: TApi,
-      context: IslandContext
+      getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>);
 
   const strategy = maybeFactory ? strategyOrFactory : undefined;
@@ -113,10 +104,10 @@ export function island<TProps, TApi = Record<string, unknown>>(
       {
         status: STATUS_REF_SPEC,
         create(api: TApi) {
-          // Get island context (request, etc.)
-          const context = getIslandContext();
+          // Get the context getter
+          const getContext = getContextGetter() as GetContext<TContext>;
 
-          const component = factory(api, context); // Pass both API and context
+          const component = factory(api, getContext); // Pass API and context getter
           const spec = component(props); // Call component with props to get the actual RefSpec
 
           // Apply collected lifecycle callbacks to the spec

@@ -3,12 +3,12 @@
  *
  * An interactive component for the product detail page.
  * Demonstrates how islands can reactively respond to route changes
- * by using context.request to derive the current product.
+ * by using getContext() to derive the current product.
  *
  * Props provide initial values for SSR, but on client the island
  * derives current state from the URL for proper navigation support.
  */
-import { island, type Service } from '../service.js';
+import { island, type Service, type AppContext } from '../service.js';
 
 // Product data - in a real app this would come from a store/API
 const products = [
@@ -26,14 +26,15 @@ interface AddToCartProps {
   price: number;
 }
 
-export const AddToCart = island<AddToCartProps, Service>(
+export const AddToCart = island<AddToCartProps, Service, AppContext>(
   'AddToCart',
-  ({ el, signal, computed }, { request }) =>
+  ({ el, signal, computed }, getContext) =>
     (initialProps) => {
-      // Use request context to reactively derive current product
+      // Use context to reactively derive current product
       // Falls back to initial props for SSR or if path doesn't match
       const currentProduct = computed(() => {
-        const path = request().pathname;
+        const ctx = getContext();
+        const path = ctx?.pathname ?? '';
         const match = path.match(/^\/products\/(\d+)$/);
         if (match?.[1]) {
           const id = parseInt(match[1], 10);
