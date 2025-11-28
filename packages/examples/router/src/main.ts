@@ -7,7 +7,7 @@ import { Product } from './pages/Product';
 import { NotFound } from './pages/NotFound';
 
 // Define the application routes using router.root()
-// root() returns an element directly (not wrapped in show())
+// root() returns an element directly (not wrapped in match())
 const { create, route } = router.root('/', AppLayout());
 
 const App = create(

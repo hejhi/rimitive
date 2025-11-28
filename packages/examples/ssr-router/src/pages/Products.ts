@@ -19,7 +19,7 @@ const products = [
 const productFilter = ProductFilter({ products });
 
 export const Products = connect(
-  ({ el, show, computed }: ConnectedApi<DOMRendererConfig>) =>
+  ({ el }: ConnectedApi<DOMRendererConfig>) =>
     () => {
       return el('div', { className: 'page products-page' })(
         el('h2')('Products'),
@@ -32,11 +32,6 @@ export const Products = connect(
           el('p')(
             "The product filter below is an island - it's interactive and ships JavaScript."
           )
-        ),
-
-        show(
-          computed(() => true),
-          el('h1')('hello')
         ),
 
         // Interactive island

@@ -819,7 +819,7 @@ import { createViewApi } from '@lattice/view/presets/core';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types';
 
-describe('Integration: show() hydration with full view API', () => {
+describe('Integration: match() hydration with full view API', () => {
   const setupIntegrationHTML = (html: string): HTMLElement => {
     const div = document.createElement('div');
     div.innerHTML = html;
@@ -827,7 +827,7 @@ describe('Integration: show() hydration with full view API', () => {
     return div.firstElementChild as HTMLElement;
   };
 
-  it('should hydrate show() fragment correctly with real view API', () => {
+  it('should hydrate match() fragment correctly with real view API', () => {
     // This replicates the Products page scenario:
     // <div class="products-page">
     //   <h2>Products</h2>
@@ -845,16 +845,13 @@ describe('Integration: show() hydration with full view API', () => {
 
     // Combine signals and views to get full API
     const api = { ...signals, ...views };
-    const { el, show, computed } = api;
+    const { el, match, computed } = api;
 
     // Create the component spec matching the SSR output
     const pageSpec = el('div', { className: 'products-page' })(
       el('h2')('Products'),
       el('section', { className: 'intro' })('intro'),
-      show(
-        computed(() => true),
-        el('h1')('hello')
-      ),
+      match(computed(() => true))((visible) => (visible ? el('h1')('hello') : null)),
       el('section', { className: 'filter' })('filter')
     );
 
@@ -880,7 +877,7 @@ describe('Integration: show() hydration with full view API', () => {
     document.body.removeChild(container.parentElement!);
   });
 
-  it('should hydrate nested show() inside route match fragment (real app structure)', () => {
+  it('should hydrate nested match() inside route match fragment (real app structure)', () => {
     // This replicates the FULL app structure:
     // <div class="app">
     //   <nav>nav</nav>
@@ -905,16 +902,15 @@ describe('Integration: show() hydration with full view API', () => {
 
     // Combine signals and views to get full API
     const api = { ...signals, ...views };
-    const { el, show, computed, match } = api;
+    const { el, computed, match } = api;
 
     // Build the Products page component
     const ProductsPage = () =>
       el('div', { className: 'products-page' })(
         el('h2')('Products'),
         el('section', { className: 'intro' })('intro'),
-        show(
-          computed(() => true),
-          el('h1')('hello')
+        match(computed(() => true))((visible) =>
+          visible ? el('h1')('hello') : null
         ),
         el('section', { className: 'filter' })('filter')
       );

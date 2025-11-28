@@ -56,7 +56,7 @@ const products = [
 
 export const ProductDetail = connect(
   (
-    { el, navigate, computed, show }: ConnectedApi<DOMRendererConfig>,
+    { el, navigate, computed, match }: ConnectedApi<DOMRendererConfig>,
     { params }
   ) =>
     () => {
@@ -79,63 +79,55 @@ export const ProductDetail = connect(
           })
         : null;
 
-      const notFound = show(
-        computed(() => product() === null),
-        el('div', { className: 'page product-detail-page' })(
-          el('h2')('Product Not Found'),
-          el('p')('The product you are looking for does not exist.'),
-          el('button', {
-            className: 'primary-btn',
-            onclick: () => navigate('/products'),
-          })('← Back to Products')
-        )
-      );
+      return match(product)((p) =>
+        p === null
+          ? el('div', { className: 'page product-detail-page' })(
+              el('h2')('Product Not Found'),
+              el('p')('The product you are looking for does not exist.'),
+              el('button', {
+                className: 'primary-btn',
+                onclick: () => navigate('/products'),
+              })('← Back to Products')
+            )
+          : el('div', { className: 'page product-detail-page' })(
+              el('nav', { className: 'breadcrumb' })(
+                el('a', {
+                  href: '/products',
+                  onclick: (e: Event) => {
+                    e.preventDefault();
+                    navigate('/products');
+                  },
+                })('Products'),
+                el('span')(' / '),
+                el('span')(p.name)
+              ),
 
-      const productContent = show(
-        computed(() => product() !== null),
-        el('div', { className: 'page product-detail-page' })(
-          el('nav', { className: 'breadcrumb' })(
-            el('a', {
-              href: '/products',
-              onclick: (e: Event) => {
-                e.preventDefault();
-                navigate('/products');
-              },
-            })('Products'),
-            el('span')(' / '),
-            el('span')(computed(() => product()?.name ?? ''))
-          ),
+              el('article', { className: 'product-detail card' })(
+                el('header')(
+                  el('h2')(p.name),
+                  el('span', { className: 'category' })(p.category)
+                ),
 
-          el('article', { className: 'product-detail card' })(
-            el('header')(
-              el('h2')(computed(() => product()?.name ?? '')),
-              el('span', { className: 'category' })(
-                computed(() => product()?.category ?? '')
+                el('p', { className: 'description' })(p.description),
+
+                el('p', { className: 'price' })(`$${p.price}`),
+
+                // Interactive island - gets hydrated on client
+                // Created once with initial product data
+                ...(addToCart
+                  ? [
+                      el('section', { className: 'add-to-cart-section' })(
+                        addToCart
+                      ),
+                    ]
+                  : []),
+
+                el('button', {
+                  className: 'secondary-btn',
+                  onclick: () => navigate('/products'),
+                })('← Back to Products')
               )
-            ),
-
-            el('p', { className: 'description' })(
-              computed(() => product()?.description ?? '')
-            ),
-
-            el('p', { className: 'price' })(
-              computed(() => `$${product()?.price ?? 0}`)
-            ),
-
-            // Interactive island - gets hydrated on client
-            // Created once with initial product data
-            ...(addToCart
-              ? [el('section', { className: 'add-to-cart-section' })(addToCart)]
-              : []),
-
-            el('button', {
-              className: 'secondary-btn',
-              onclick: () => navigate('/products'),
-            })('← Back to Products')
-          )
-        )
+            )
       );
-
-      return el('div')(notFound, productContent);
     }
 );

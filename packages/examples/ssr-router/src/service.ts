@@ -16,7 +16,6 @@ import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { ElFactory } from '@lattice/view/el';
 import type { MapFactory } from '@lattice/view/map';
 import type { MatchFactory } from '@lattice/view/match';
-import type { ShowFactory } from '@lattice/view/show';
 
 /**
  * App context - user-defined context available to islands
@@ -48,7 +47,7 @@ export function buildAppContext(url: URL | string): AppContext {
  *
  * Includes:
  * - Signals: signal, computed, effect, batch
- * - Views: el, map, match, show
+ * - Views: el, map, match
  * - Router: navigate, currentPath (injected by client.ts)
  */
 export type Service = {
@@ -62,7 +61,6 @@ export type Service = {
   el: ElFactory<DOMRendererConfig>['impl'];
   map: MapFactory<DOMRendererConfig['baseElement']>['impl'];
   match: MatchFactory<DOMRendererConfig['baseElement']>['impl'];
-  show: ShowFactory<DOMRendererConfig['baseElement']>['impl'];
 
   // Router (injected by client.ts via createApiWithRouter)
   navigate: (path: string) => void;

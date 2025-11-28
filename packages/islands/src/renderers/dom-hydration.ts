@@ -207,7 +207,7 @@ function findFragmentContentIndex(
     node = node.previousSibling;
   }
 
-  // No fragment markers found - fragment was hidden during SSR (e.g., show() with false condition)
+  // No fragment markers found - fragment was hidden during SSR (e.g., match() returned null)
   if (!node) {
     return null;
   }
@@ -444,7 +444,7 @@ export function createDOMHydrationRenderer(
       );
 
       // No fragment markers found - fragment was hidden during SSR
-      // This is expected for show() with initially-false condition
+      // This is expected for match() with initially-null result
       // No-op: position doesn't need to change since there's no content to hydrate
       if (childIndex === null) {
         return;

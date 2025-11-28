@@ -1,7 +1,6 @@
 import { El } from '../el';
 import { Map } from '../map';
 import { Match } from '../match';
-import { Show } from '../show';
 import { createSpec } from '../helpers';
 import type { Renderer, RendererConfig } from '../renderer';
 import type { RefSpec, NodeRef, ReactiveAdapter } from '../types';
@@ -11,13 +10,11 @@ export type { ElementProps, ChildrenApplicator } from '../el';
 export type { ElFactory } from '../el';
 export type { MapFactory } from '../map';
 export type { MatchFactory } from '../match';
-export type { ShowFactory } from '../show';
 
 export const defaultExtensions = <TConfig extends RendererConfig>() => ({
   el: El<TConfig>(),
   map: Map<TConfig>(),
   match: Match<TConfig>(),
-  show: Show<TConfig>(),
 });
 
 /**

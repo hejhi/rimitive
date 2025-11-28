@@ -62,7 +62,6 @@ describe('createRouter', () => {
       computed: mockComputed as ViewApi<DOMRendererConfig>['computed'],
       el: (() => {}) as unknown as ViewApi<DOMRendererConfig>['el'],
       match: (() => {}) as unknown as ViewApi<DOMRendererConfig>['match'],
-      show: (() => {}) as unknown as ViewApi<DOMRendererConfig>['show'],
     };
   });
 

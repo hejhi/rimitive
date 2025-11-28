@@ -14,7 +14,6 @@ import type {
   ComputedFunction,
 } from '@lattice/view/component';
 import type { MatchFactory } from '@lattice/view/match';
-import type { ShowFactory } from '@lattice/view/show';
 import type { RouteParams, RouteSpec, RouteMatch } from './types';
 import { STATUS_ROUTE_SPEC } from './types';
 import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
@@ -66,7 +65,6 @@ export function connect<
 export type ViewApi<TConfig extends RendererConfig> = {
   el: ElMethod<TConfig>;
   match: MatchFactory<TConfig['baseElement']>['impl'];
-  show: ShowFactory<TConfig['baseElement']>['impl'];
   signal: <T>(value: T) => SignalFunction<T>;
   computed: <T>(fn: () => T) => ComputedFunction<T>;
 };
@@ -183,7 +181,7 @@ export type RootMethod<TConfig extends RendererConfig> = (
 export type Router<TConfig extends RendererConfig> = {
   /**
    * Define the root layout that's always rendered
-   * Unlike route(), root() doesn't wrap in show() since the root is always visible
+   * Unlike route(), root() doesn't wrap in match() since the root is always visible
    */
   root: RootMethod<TConfig>;
 
@@ -570,7 +568,7 @@ export function createRouter<TConfig extends RendererConfig>(
   /**
    * Root method - defines the root layout that's always rendered
    *
-   * Unlike route(), root() doesn't wrap the component in show() since
+   * Unlike route(), root() doesn't wrap the component in match() since
    * the root layout is always visible. This solves the SSR issue where
    * fragments at the root level have no parent to attach to.
    *
@@ -624,7 +622,7 @@ export function createRouter<TConfig extends RendererConfig>(
         api: connectedApi,
       };
 
-      // Return the component RefSpec directly (not wrapped in show())
+      // Return the component RefSpec directly (not wrapped in match())
       return connectedComponent(routeContext);
     };
 
@@ -754,7 +752,7 @@ export function createRouter<TConfig extends RendererConfig>(
       api: connectedApi,
     };
 
-    // Return the root component (not wrapped in show - always visible)
+    // Return the root component (not wrapped in match - always visible)
     return routeTree.rootComponent(rootContext);
   }
 

@@ -8,7 +8,6 @@ import type {
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import type { CreateScopes } from '@lattice/view/helpers/scope';
 import type { ServiceDefinition } from '@lattice/lattice';
-import type { ShowFactory } from '@lattice/view/show';
 import type { ElementProps } from '@lattice/view/el';
 import type { ElMethod } from '@lattice/view/component';
 
@@ -99,7 +98,6 @@ export type RouteOpts<TConfig extends RendererConfig> = {
     props?: Record<string, unknown>
   ) => (...children: unknown[]) => RefSpec<TConfig['elements'][Tag]>;
   match: MatchFunction<TConfig['baseElement']>;
-  show: ShowFactory<TConfig['baseElement']>['impl'];
   currentPath: Reactive<string>;
   scopedEffect: CreateScopes['scopedEffect'];
   renderer: import('@lattice/view/types').Renderer<TConfig>;
