@@ -6,7 +6,7 @@
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { SSRContext } from './types';
+import type { SSRContext, RequestContext } from './types';
 
 /**
  * AsyncLocalStorage instance for SSR context
@@ -15,12 +15,50 @@ import type { SSRContext } from './types';
 const ssrContextStore = new AsyncLocalStorage<SSRContext>();
 
 /**
- * Create a new SSR context
+ * Options for creating SSR context
  */
-export function createSSRContext(): SSRContext {
+export interface SSRContextOptions {
+  /**
+   * Request context (URL) for the current request
+   * Made available to islands via context.request()
+   */
+  request?: RequestContext | URL | string;
+}
+
+/**
+ * Normalize request input to RequestContext
+ */
+function normalizeRequest(
+  input: RequestContext | URL | string | undefined
+): RequestContext | undefined {
+  if (!input) return undefined;
+
+  // Already a RequestContext
+  if (typeof input === 'object' && 'pathname' in input && 'searchParams' in input) {
+    return input as RequestContext;
+  }
+
+  // URL object or string
+  const url = typeof input === 'string' ? new URL(input, 'http://localhost') : input;
+
+  return {
+    url,
+    pathname: url.pathname,
+    search: url.search,
+    searchParams: url.searchParams,
+  };
+}
+
+/**
+ * Create a new SSR context
+ *
+ * @param options - Optional configuration including request context
+ */
+export function createSSRContext(options?: SSRContextOptions): SSRContext {
   return {
     islands: [],
     islandCounter: 0,
+    request: normalizeRequest(options?.request),
   };
 }
 

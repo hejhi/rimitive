@@ -7,31 +7,53 @@
 
 import type { LifecycleCallback, RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
-import type { IslandComponent, IslandStrategy } from './types';
+import type { IslandComponent, IslandStrategy, IslandContext } from './types';
 import { ISLAND_META } from './types';
+import { getClientRequestContext } from './client-context.browser';
+
+/**
+ * Build IslandContext for browser
+ */
+function getIslandContext(): IslandContext {
+  const clientGetter = getClientRequestContext();
+  if (clientGetter) {
+    return {
+      request: clientGetter,
+    };
+  }
+
+  // Fallback: return a stub that throws on access
+  return {
+    request: () => {
+      throw new Error(
+        'Request context not available. Call setClientRequestContext() first.'
+      );
+    },
+  };
+}
 
 export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
-  factory: (api: TApi) => (props: TProps) => RefSpec<unknown>
+  factory: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
   strategy: IslandStrategy<TProps>,
-  factory: (api: TApi) => (props: TProps) => RefSpec<unknown>
+  factory: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
 export function island<TProps, TApi = Record<string, unknown>>(
   id: string,
   strategyOrFactory:
     | IslandStrategy<TProps>
-    | ((api: TApi) => (props: TProps) => RefSpec<unknown>),
-  maybeFactory?: (api: TApi) => (props: TProps) => RefSpec<unknown>
+    | ((api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>),
+  maybeFactory?: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
   // Determine if second arg is strategy or factory
   const factory =
     maybeFactory ||
-    (strategyOrFactory as (api: TApi) => (props: TProps) => RefSpec<unknown>);
+    (strategyOrFactory as (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>);
 
   const strategy = maybeFactory ? strategyOrFactory : undefined;
 
@@ -49,7 +71,10 @@ export function island<TProps, TApi = Record<string, unknown>>(
       {
         status: STATUS_REF_SPEC,
         create(api: TApi) {
-          const component = factory(api); // NOW call factory with the API to get the component function
+          // Get island context (request, etc.)
+          const context = getIslandContext();
+
+          const component = factory(api, context); // Pass both API and context
           const spec = component(props); // Call component with props to get the actual RefSpec
 
           // Apply collected lifecycle callbacks to the spec

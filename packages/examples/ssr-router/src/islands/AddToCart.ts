@@ -3,12 +3,12 @@
  *
  * An interactive component for the product detail page.
  * Demonstrates how islands can reactively respond to route changes
- * by using currentPath to derive the current product.
+ * by using context.request to derive the current product.
  *
  * Props provide initial values for SSR, but on client the island
  * derives current state from the URL for proper navigation support.
  */
-import { island, type Service, router } from '../service.js';
+import { island, type Service } from '../service.js';
 
 // Product data - in a real app this would come from a store/API
 const products = [
@@ -28,16 +28,12 @@ interface AddToCartProps {
 
 export const AddToCart = island<AddToCartProps, Service>(
   'AddToCart',
-  ({ el, signal, computed }) =>
+  ({ el, signal, computed }, { request }) =>
     (initialProps) => {
-      // Use currentPath to reactively derive current product
+      // Use request context to reactively derive current product
       // Falls back to initial props for SSR or if path doesn't match
-      const currentPath = router.useCurrentPath(
-        `/products/${initialProps.productId}`
-      );
-
       const currentProduct = computed(() => {
-        const path = currentPath();
+        const path = request().pathname;
         const match = path.match(/^\/products\/(\d+)$/);
         if (match?.[1]) {
           const id = parseInt(match[1], 10);
@@ -91,7 +87,9 @@ export const AddToCart = island<AddToCartProps, Service>(
             onclick: decrement,
             disabled: computed(() => quantity() <= 1),
           })('−'),
-          el('span', { className: 'qty-display' })(computed(() => `${quantity()}`)),
+          el('span', { className: 'qty-display' })(
+            computed(() => `${quantity()}`)
+          ),
           el('button', {
             className: 'qty-btn',
             onclick: increment,
@@ -99,9 +97,7 @@ export const AddToCart = island<AddToCartProps, Service>(
           })('+')
         ),
         el('button', {
-          className: computed(() =>
-            isAdded() ? 'add-btn added' : 'add-btn'
-          ),
+          className: computed(() => (isAdded() ? 'add-btn added' : 'add-btn')),
           onclick: handleAdd,
           disabled: isAdded,
         })(buttonText)

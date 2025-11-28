@@ -370,8 +370,8 @@ const server = createServer((req, res) => {
   );
   const path = url.pathname;
 
-  // Create SSR context for islands
-  const ssrCtx = createSSRContext();
+  // Create SSR context for islands (pass request URL for island context)
+  const ssrCtx = createSSRContext({ request: url });
 
   // Create per-request service (fresh signals per request)
   const { svc } = createSSRService();

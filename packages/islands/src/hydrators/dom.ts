@@ -12,7 +12,7 @@
  * 6. On failure: fallback to client-side render with regular API
  */
 
-import type { IslandMetaData, IslandRegistryEntry } from '../types';
+import type { IslandMetaData, IslandRegistryEntry, IslandContext } from '../types';
 import type { RefSpec, ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
@@ -21,6 +21,27 @@ import { createIslandsRenderer } from '../renderers/islands';
 import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
 import { createHydrationApi } from '../hydration-api';
 import type { EffectAPI } from '../hydration-api';
+import { getClientRequestContext } from '../client-context.browser';
+
+/**
+ * Get island context for hydration
+ * Uses the client request context set by the preset
+ */
+function getIslandContext(): IslandContext {
+  const clientGetter = getClientRequestContext();
+  if (clientGetter) {
+    return { request: clientGetter };
+  }
+
+  // Fallback: stub that throws on access
+  return {
+    request: () => {
+      throw new Error(
+        'Request context not available. Call setClientRequestContext() before hydrating.'
+      );
+    },
+  };
+}
 
 /**
  * Base island type for registration - accepts any object with island metadata
@@ -162,8 +183,11 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           const { api, createElementScope } = createAPI(renderer, signals);
           const { hydratingApi, activate } = createHydrationApi(api);
 
-          // Create component with the hydrating API
-          const componentFn = Component(hydratingApi);
+          // Get island context (request, etc.)
+          const context = getIslandContext();
+
+          // Create component with the hydrating API and context
+          const componentFn = Component(hydratingApi, context);
           const nodeRef = componentFn(props).create(hydratingApi);
 
           // For fragment islands, call attach() and activate while in hydrating mode
@@ -265,9 +289,12 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
               signals
             );
 
+            // Get island context for fallback rendering
+            const fallbackContext = getIslandContext();
+
             if (isFragment) {
               container.innerHTML = '';
-              const fallbackComponentFn = Component(fallbackApi);
+              const fallbackComponentFn = Component(fallbackApi, fallbackContext);
               const instance = mount(fallbackComponentFn(props));
               if (instance.element)
                 container.appendChild(instance.element as Node);
@@ -276,7 +303,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
               const parent = islandElement?.parentNode;
               if (islandElement) islandElement.remove();
               script.remove();
-              const fallbackComponentFn = Component(fallbackApi);
+              const fallbackComponentFn = Component(fallbackApi, fallbackContext);
               const instance = mount(fallbackComponentFn(props));
               if (instance.element && parent)
                 parent.appendChild(instance.element as Node);

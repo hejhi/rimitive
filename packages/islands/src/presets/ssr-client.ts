@@ -7,6 +7,7 @@
  * - Service composition (signals + views)
  * - Auto-switching after first mount
  * - API factory for island hydration
+ * - Request context for islands
  *
  * Router integration is left to the app layer.
  *
@@ -35,6 +36,8 @@ import type { DOMRendererConfig } from '../renderers/dom-hydration';
 import { createIslandsRenderer } from '../renderers/islands';
 import { composeFrom } from '@lattice/lattice';
 import type { RefSpec, Renderer } from '@lattice/view/types';
+import type { RequestContext } from '../types';
+import { setClientRequestContext } from '../client-context.browser';
 
 /**
  * Options for createSSRClientApp
@@ -48,6 +51,19 @@ export interface SSRClientAppOptions {
 }
 
 /**
+ * Build RequestContext from current location
+ */
+function buildRequestContext(): RequestContext {
+  const url = new URL(window.location.href);
+  return {
+    url,
+    pathname: url.pathname,
+    search: url.search,
+    searchParams: url.searchParams,
+  };
+}
+
+/**
  * Create a fully configured SSR client app
  *
  * Returns direct exports - no lazy init, no proxies.
@@ -58,6 +74,17 @@ export function createSSRClientApp(options: SSRClientAppOptions) {
 
   // Create signals API
   const signals = createSignalsApi();
+
+  // Create reactive request context signal
+  const requestSignal = signals.signal<RequestContext>(buildRequestContext());
+
+  // Set up the client request context for islands
+  setClientRequestContext(() => requestSignal());
+
+  // Listen for navigation changes (popstate for back/forward)
+  window.addEventListener('popstate', () => {
+    requestSignal(buildRequestContext());
+  });
 
   // Create hybrid renderer: hydration mode first, then fallback to regular DOM
   const hydrationRenderer = container
@@ -87,9 +114,10 @@ export function createSSRClientApp(options: SSRClientAppOptions) {
   };
 
   // Mount function with auto-switch after first mount
+  // Accepts optional service override (useful when router adds navigate/currentPath)
   let switched = false;
-  const mount = <TElement>(spec: RefSpec<TElement>) => {
-    const result = spec.create(service);
+  const mount = <TElement>(spec: RefSpec<TElement>, svc = service) => {
+    const result = spec.create(svc);
     if (!switched) {
       switched = true;
       hybridRenderer.switchToFallback();
@@ -121,6 +149,14 @@ export function createSSRClientApp(options: SSRClientAppOptions) {
     };
   };
 
+  /**
+   * Update the request context (call after navigation)
+   * This updates the reactive signal so islands re-render
+   */
+  const updateRequestContext = () => {
+    requestSignal(buildRequestContext());
+  };
+
   return {
     /** Full service (signals + views) */
     service,
@@ -130,8 +166,11 @@ export function createSSRClientApp(options: SSRClientAppOptions) {
     mount,
     /** API factory for island hydrator */
     createApi,
+    /** Update request context after navigation */
+    updateRequestContext,
   };
 }
 
 // Re-export types for convenience
 export type { DOMRendererConfig } from '../renderers/dom-hydration';
+export type { RequestContext } from '../types';

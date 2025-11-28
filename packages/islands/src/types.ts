@@ -11,6 +11,39 @@ import { HydrationMismatch } from './renderers/dom-hydration';
 // Re-export HydrationMismatch for convenience
 export { HydrationMismatch };
 
+// ============================================================================
+// Request Context Types
+// ============================================================================
+
+/**
+ * Request context - represents the current request/location
+ *
+ * Available to islands via the context parameter.
+ * On server: static, from HTTP request
+ * On client: reactive, updates on navigation
+ */
+export interface RequestContext {
+  /** Full URL object */
+  url: URL;
+  /** URL pathname (e.g., "/products/123") */
+  pathname: string;
+  /** URL search string (e.g., "?sort=price") */
+  search: string;
+  /** Parsed search params */
+  searchParams: URLSearchParams;
+}
+
+/**
+ * Island context - framework-provided context for islands
+ *
+ * Passed as second argument to island factory (separate from user API).
+ * Similar to how connect() provides { params, children }.
+ */
+export interface IslandContext {
+  /** Get current request context (reactive on client) */
+  request: () => RequestContext;
+}
+
 /**
  * SSR Context - tracks islands during server-side rendering
  *
@@ -29,6 +62,12 @@ export interface SSRContext {
    * Increments for each island instantiation: "counter-0", "counter-1", etc.
    */
   islandCounter: number;
+
+  /**
+   * Request context for the current SSR request
+   * Set by the request handler, available to islands
+   */
+  request?: RequestContext;
 }
 
 /**
@@ -101,7 +140,7 @@ export interface IslandStrategy<TProps = unknown, TApi = unknown> {
     error: HydrationMismatch,
     containerEl: HTMLElement,
     props: TProps,
-    Component: (api: TApi) => (props: TProps) => RefSpec<unknown>,
+    Component: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>,
     mount: (spec: RefSpec<unknown>) => { element: unknown }
   ) => boolean | void;
 }
@@ -119,7 +158,7 @@ export const ISLAND_META = Symbol.for('lattice.island');
 export interface IslandMetaData<TProps = unknown, TApi = unknown> {
   id: string;
   strategy?: IslandStrategy<TProps>;
-  component: (api: TApi) => (props: TProps) => RefSpec<unknown>;
+  component: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>;
 }
 
 /**
@@ -127,7 +166,7 @@ export interface IslandMetaData<TProps = unknown, TApi = unknown> {
  * @internal
  */
 export interface IslandRegistryEntry<TProps = unknown, TApi = unknown> {
-  component: (api: TApi) => (props: TProps) => RefSpec<unknown>;
+  component: (api: TApi, context: IslandContext) => (props: TProps) => RefSpec<unknown>;
   id: string;
   strategy?: IslandStrategy<TProps>;
 }
