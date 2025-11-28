@@ -263,6 +263,76 @@ const template = (content: string, scripts: string) => `
       color: #007bff;
       margin-bottom: 1.5rem;
     }
+    .secondary-btn {
+      background: #f5f5f5;
+      color: #333;
+      border: 1px solid #ccc;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    .secondary-btn:hover {
+      background: #e5e5e5;
+    }
+    /* Add to Cart island styles */
+    .add-to-cart-section {
+      margin: 1.5rem 0;
+      padding: 1rem;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+    .add-to-cart-island {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .quantity-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .qty-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #ccc;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .qty-btn:hover:not(:disabled) {
+      background: #f0f0f0;
+    }
+    .qty-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .qty-display {
+      min-width: 40px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .add-btn {
+      flex: 1;
+      padding: 0.75rem 1.5rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .add-btn:hover:not(:disabled) {
+      background: #0056b3;
+    }
+    .add-btn.added {
+      background: #28a745;
+    }
+    .add-btn:disabled {
+      cursor: default;
+    }
   </style>
   <script>
     // Queue islands for hydration

@@ -19,6 +19,7 @@ import {
 import { appRoutes } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
+import { AddToCart } from './islands/AddToCart.js';
 
 // Mount routes first - uses hydrating renderer to adopt existing SSR'd DOM
 const App = router.mount(appRoutes);
@@ -39,4 +40,4 @@ const createApi = (
 
 // Create hydrator and hydrate islands
 const hydrator = createDOMHydrator(createApi, service.signals, mount);
-hydrator.hydrate(ProductFilter, Navigation);
+hydrator.hydrate(ProductFilter, Navigation, AddToCart);

@@ -2,9 +2,11 @@
  * Product Detail Page
  *
  * Shows details for a single product based on route params.
+ * Demonstrates using an island inside a connected route component.
  */
 import { connect, type ConnectedApi } from '@lattice/router';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { AddToCart } from '../islands/AddToCart.js';
 
 // Same product data as Products page - in a real app this would come from an API
 const products = [
@@ -63,6 +65,18 @@ export const ProductDetail = connect(
         return products.find((p) => p.id === id) ?? null;
       });
 
+      // Create island once with reactive props
+      // Note: Island props must be static at creation time for SSR hydration
+      // The initial product data comes from the first params() value
+      const initialProduct = product();
+      const addToCart = initialProduct
+        ? AddToCart({
+            productId: initialProduct.id,
+            productName: initialProduct.name,
+            price: initialProduct.price,
+          })
+        : null;
+
       const notFound = show(
         computed(() => product() === null),
         el('div', { className: 'page product-detail-page' })(
@@ -106,8 +120,14 @@ export const ProductDetail = connect(
               computed(() => `$${product()?.price ?? 0}`)
             ),
 
+            // Interactive island - gets hydrated on client
+            // Created once with initial product data
+            ...(addToCart
+              ? [el('section', { className: 'add-to-cart-section' })(addToCart)]
+              : []),
+
             el('button', {
-              className: 'primary-btn',
+              className: 'secondary-btn',
               onclick: () => navigate('/products'),
             })('← Back to Products')
           )
