@@ -39,7 +39,7 @@ export const AddToCart = island<AddToCartProps, Service>(
       const currentProduct = computed(() => {
         const path = currentPath();
         const match = path.match(/^\/products\/(\d+)$/);
-        if (match) {
+        if (match?.[1]) {
           const id = parseInt(match[1], 10);
           const found = products.find((p) => p.id === id);
           if (found) return found;

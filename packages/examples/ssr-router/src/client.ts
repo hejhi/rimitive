@@ -1,40 +1,50 @@
 /**
  * Client-side hydration with routing
  *
- * The service-client creates a hybrid renderer that:
- * 1. Starts in hydration mode (adopts SSR'd DOM)
- * 2. Switches to regular DOM mode after initial mount
- *
- * This enables true islands architecture - layout stays static,
- * only interactive parts (islands) are hydrated.
+ * Uses the SSR client preset for hydration setup,
+ * then composes the router at the app layer.
  */
+import { createSSRClientApp } from '@lattice/islands/presets/ssr-client';
 import { createDOMHydrator } from '@lattice/islands/client';
-import {
-  createClientApi,
-  router,
-  mount,
-  switchToFallback,
-  service,
-} from './service-client.js';
+import { createRouter } from '@lattice/router';
+import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { setClientRouter } from './service.js';
 import { appRoutes } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 import { AddToCart } from './islands/AddToCart.js';
 
-// Mount routes first - uses hydrating renderer to adopt existing SSR'd DOM
-const App = router.mount(appRoutes);
-mount(App);
+// Create base app (signals + views + hybrid renderer)
+const { service, mount, createApi, signals } = createSSRClientApp({
+  container: document.querySelector('.app'),
+});
 
-// Switch to fallback renderer for future navigation
-switchToFallback();
+// Add router at app layer (explicit generic for type inference)
+const router = createRouter<DOMRendererConfig>(service, {
+  initialPath: location.pathname + location.search + location.hash,
+});
 
-// API factory for island hydrator - adds navigate to the API
-// Returns { api, createElementScope } for scope-aware hydration
-const createApi = (
-  renderer: Parameters<typeof createClientApi>[0],
-  signals: Parameters<typeof createClientApi>[1]
-) => {
-  const { api, createElementScope } = createClientApi(renderer, signals);
+// Set router reference for islands that use router.useCurrentPath
+setClientRouter(router);
+
+// Service with navigate for connected components
+const serviceWithNav = {
+  ...service,
+  navigate: router.navigate,
+  currentPath: router.currentPath,
+};
+
+// Mount with service that includes navigate
+const mountWithNav = (spec: Parameters<typeof mount>[0]) => {
+  return spec.create(serviceWithNav);
+};
+
+// Mount routes - hydrates existing SSR'd DOM, then auto-switches renderer
+mount(router.mount(appRoutes));
+
+// API factory that includes router methods for islands
+const createApiWithRouter: typeof createApi = (renderer, sigs) => {
+  const { api, createElementScope } = createApi(renderer, sigs);
   return {
     api: {
       ...api,
@@ -45,6 +55,9 @@ const createApi = (
   };
 };
 
-// Create hydrator and hydrate islands
-const hydrator = createDOMHydrator(createApi, service.signals, mount);
+// Hydrate islands
+const hydrator = createDOMHydrator(createApiWithRouter, signals, mountWithNav);
 hydrator.hydrate(ProductFilter, Navigation, AddToCart);
+
+// Export for islands that need router access
+export { router };

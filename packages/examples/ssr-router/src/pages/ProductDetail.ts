@@ -61,7 +61,9 @@ export const ProductDetail = connect(
   ) =>
     () => {
       const product = computed(() => {
-        const id = parseInt(params().id, 10);
+        const idParam = params().id;
+        if (!idParam) return null;
+        const id = parseInt(idParam, 10);
         return products.find((p) => p.id === id) ?? null;
       });
 

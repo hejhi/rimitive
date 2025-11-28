@@ -73,6 +73,10 @@ export default defineConfig({
           __dirname,
           'src/presets/island-client.ts'
         ),
+        'presets/ssr-client': resolve(
+          __dirname,
+          'src/presets/ssr-client.ts'
+        ),
       },
       formats: ['es'],
     },
@@ -86,6 +90,8 @@ export default defineConfig({
         '@lattice/lattice',
         '@lattice/view',
         /^@lattice\/view\//,
+        '@lattice/signals',
+        /^@lattice\/signals\//,
       ],
       output: {
         entryFileNames: '[name].js',

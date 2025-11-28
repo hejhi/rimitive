@@ -17,6 +17,7 @@ import { TagList } from './islands/TagList.js';
 const { signals } = service;
 
 // Create API factory for hydrator
+// Returns { api, createElementScope } for scope-aware hydration
 function createFullAPI(
   renderer: ReturnType<typeof createIslandsRenderer>,
   signalsApi: ReturnType<typeof createSignalsApi>
@@ -24,7 +25,10 @@ function createFullAPI(
   const helpers = defaultHelpers<DOMRendererConfig>(renderer, signalsApi);
   const views = composeFrom(defaultExtensions<DOMRendererConfig>(), helpers);
 
-  return { ...signalsApi, ...views };
+  return {
+    api: { ...signalsApi, ...views },
+    createElementScope: helpers.createElementScope,
+  };
 }
 
 // Create hydrator with client-side API
