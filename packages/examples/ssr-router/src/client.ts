@@ -29,14 +29,21 @@ mount(App);
 switchToFallback();
 
 // API factory for island hydrator - adds navigate to the API
+// Returns { api, createElementScope } for scope-aware hydration
 const createApi = (
   renderer: Parameters<typeof createClientApi>[0],
   signals: Parameters<typeof createClientApi>[1]
-) => ({
-  ...createClientApi(renderer, signals),
-  navigate: router.navigate,
-  currentPath: router.currentPath,
-});
+) => {
+  const { api, createElementScope } = createClientApi(renderer, signals);
+  return {
+    api: {
+      ...api,
+      navigate: router.navigate,
+      currentPath: router.currentPath,
+    },
+    createElementScope,
+  };
+};
 
 // Create hydrator and hydrate islands
 const hydrator = createDOMHydrator(createApi, service.signals, mount);

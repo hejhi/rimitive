@@ -52,7 +52,10 @@ function createMockIsland(id: string) {
  */
 function createMocks() {
   return {
-    createAPI: vi.fn(() => ({ effect: vi.fn() })),
+    createAPI: vi.fn(() => ({
+      api: { effect: vi.fn() },
+      createElementScope: vi.fn((_element, fn) => fn()),
+    })),
     signals: { effect: vi.fn() },
     mount: vi.fn(() => ({ element: document.createElement('div') })),
   };

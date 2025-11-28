@@ -46,9 +46,20 @@ export interface IslandHydrator {
 export type MountFn = (spec: RefSpec<unknown>) => { element: unknown };
 
 /**
+ * Result type from createAPI - includes both the API and scope helper
+ */
+export interface CreateAPIResult {
+  api: EffectAPI & Record<string, unknown>;
+  createElementScope: <TElement extends object>(
+    element: TElement,
+    fn: () => void
+  ) => unknown;
+}
+
+/**
  * Create a DOM island hydrator
  *
- * @param createAPI - Function to create API helpers (el, map, etc.)
+ * @param createAPI - Function to create API helpers (el, map, etc.) and scope helpers
  * @param signals - Signals API (for both hydrating and regular modes)
  * @param mount - Mount function for fallback client-side rendering
  * @returns Hydrator instance
@@ -57,7 +68,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
   createAPI: (
     renderer: ReturnType<typeof createIslandsRenderer>,
     signals: TSignals
-  ) => EffectAPI & Record<string, unknown>,
+  ) => CreateAPIResult,
   signals: TSignals,
   mount: MountFn
 ): IslandHydrator {
@@ -147,10 +158,9 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             createDOMRenderer()
           );
 
-          // Create API with hydrating renderer
-          const { hydratingApi, activate } = createHydrationApi(
-            createAPI(renderer, signals)
-          );
+          // Create API with hydrating renderer - includes scope helper
+          const { api, createElementScope } = createAPI(renderer, signals);
+          const { hydratingApi, activate } = createHydrationApi(api);
 
           // Create component with the hydrating API
           const componentFn = Component(hydratingApi);
@@ -179,9 +189,13 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
 
             nodeRef.attach(fragmentParentRef, null, hydratingApi);
 
-            // Activate effects WHILE STILL IN HYDRATING MODE
-            // This ensures children are hydrated, not created fresh
-            activate();
+            // Activate effects within element scope for proper cleanup
+            // For fragments, use the first child element if available, otherwise the container
+            const scopeElement =
+              (container.firstElementChild as HTMLElement) || container;
+            createElementScope(scopeElement, () => {
+              activate();
+            });
           }
 
           // Success! Hydration complete
@@ -190,7 +204,12 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
 
           // Activate remaining queued effects (for element islands)
           // Fragment islands already activated above
-          if (!isFragment) activate();
+          // Wrap in element scope so effects are cleaned up when island is removed
+          if (!isFragment && islandElement) {
+            createElementScope(islandElement, () => {
+              activate();
+            });
+          }
 
           // Remove script tag marker
           script.remove();
@@ -245,7 +264,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             // - For fragment islands: clear the container div and mount fresh
             // Create a regular API for client-side rendering
             const fallbackRenderer = createDOMRenderer();
-            const fallbackApi = createAPI(
+            const { api: fallbackApi } = createAPI(
               createIslandsRenderer(fallbackRenderer, fallbackRenderer),
               signals
             );

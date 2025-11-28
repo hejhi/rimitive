@@ -52,6 +52,7 @@ function createClientService(signals = createSignalsApi()) {
 /**
  * API factory for hydrator
  * Takes a renderer and signals, returns the full API for island hydration
+ * Also returns createElementScope for scope-aware hydration
  */
 export const createClientApi = (
   renderer: Renderer<DOMRendererConfig>,
@@ -60,8 +61,12 @@ export const createClientApi = (
   const viewHelpers = createSpec(renderer, signals);
   const views = composeFrom(defaultViewExtensions<DOMRendererConfig>(), viewHelpers);
   return {
-    ...signals,
-    ...views,
+    api: {
+      ...signals,
+      ...views,
+    },
+    // Expose scope helper for island hydration - enables proper cleanup
+    createElementScope: viewHelpers.createElementScope,
   };
 };
 
