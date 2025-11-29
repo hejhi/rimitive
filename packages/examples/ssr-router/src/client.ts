@@ -51,6 +51,11 @@ const navigate = (path: string) => {
   app.updateContext();
 };
 
+// Handle browser back/forward - update context when route changes
+window.addEventListener('popstate', () => {
+  app.updateContext();
+});
+
 // Service with navigate for connected components
 const serviceWithNav = {
   ...app.service,

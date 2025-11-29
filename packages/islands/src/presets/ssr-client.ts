@@ -100,14 +100,6 @@ export function createSSRClientApp<TContext = unknown>(
 
   setClientContext(contextGetter);
 
-  // Listen for navigation changes (popstate for back/forward)
-  // Only update if we have a context getter
-  if (getContext && contextSignal) {
-    window.addEventListener('popstate', () => {
-      contextSignal(getContext());
-    });
-  }
-
   // Create hybrid renderer: hydration mode first, then fallback to regular DOM
   const hydrationRenderer = container
     ? createDOMHydrationRenderer(container)

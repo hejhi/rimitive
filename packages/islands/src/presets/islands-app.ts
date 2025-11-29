@@ -160,13 +160,6 @@ export function createIslandsApp<TContext = unknown>(
 
   setClientContext(contextGetter);
 
-  // Listen for navigation changes (popstate for back/forward)
-  if (getContext && contextSignal) {
-    window.addEventListener('popstate', () => {
-      contextSignal(getContext());
-    });
-  }
-
   // Compose service from provided dependencies
   const service: IslandsClientService = {
     ...signals,
