@@ -135,7 +135,11 @@ function SelectDemo() {
         </button>
 
         {isOpen && (
-          <ul className="select-listbox" role="listbox">
+          <ul
+            className="select-listbox"
+            role="listbox"
+            data-select-id={select.listboxProps['data-select-id']}
+          >
             {selectOptions.map((option, index) => {
               const props = select.getOptionProps(option, index);
               const isHighlighted = highlightedIndex === index;
