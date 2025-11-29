@@ -29,19 +29,30 @@ const createViewApi = () => {
     ...viewSvc,
     addEventListener: createAddEventListener(viewHelpers.batch),
   };
-  type Service = typeof svc;
 
   return {
     service: {
       signals: signalsSvc,
       view: viewSvc,
     },
+    svc,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
-    useSvc: <TReturn>(fn: (api: Service) => TReturn): TReturn => fn(svc),
   };
 };
 
-export const { service, mount, useSvc } = createViewApi();
+export const { service, mount, svc } = createViewApi();
+
+export const {
+  addEventListener,
+  batch,
+  computed,
+  effect,
+  el,
+  map,
+  match,
+  signal,
+  subscribe,
+} = svc;
 
 export type Service = typeof service;
 export type Signals = Service['signals'];

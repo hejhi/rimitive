@@ -7,23 +7,20 @@
  *
  * Uses the `use*` naming convention to indicate it returns reactive values.
  */
-import { useSvc } from '../service';
+import { signal, computed } from '../service';
 
-export const useCounter = useSvc(
-  ({ signal, computed }) =>
-    (initialCount = 0) => {
-      const count = signal(initialCount);
-      const doubled = computed(() => count() * 2);
+export const useCounter = (initialCount = 0) => {
+  const count = signal(initialCount);
+  const doubled = computed(() => count() * 2);
 
-      return {
-        // Reactive state - expose signals directly
-        count,
-        doubled,
+  return {
+    // Reactive state - expose signals directly
+    count,
+    doubled,
 
-        // Actions - update state
-        increment: () => count(count() + 1),
-        decrement: () => count(count() - 1),
-        reset: () => count(initialCount),
-      };
-    }
-);
+    // Actions - update state
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+    reset: () => count(initialCount),
+  };
+};

@@ -6,7 +6,7 @@
  * Can be used with any signals implementation (Lattice, Solid, Preact Signals, etc.)
  */
 
-import { useSvc } from '../service';
+import { signal, computed } from '../service';
 
 export interface Todo {
   id: number;
@@ -16,7 +16,7 @@ export interface Todo {
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export const useTodoList = useSvc(({ signal, computed }) => () => {
+export const useTodoList = () => {
   let nextId = 1;
   const todos = signal<Todo[]>([]);
   const filter = signal<FilterType>('all');
@@ -77,4 +77,4 @@ export const useTodoList = useSvc(({ signal, computed }) => () => {
       todos(todos().filter((todo: Todo) => !todo.completed));
     },
   };
-});
+};

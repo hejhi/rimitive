@@ -1,10 +1,10 @@
-import { useSvc, mount } from './service';
+import { el, mount } from './service';
 import { Counter } from './components/Counter';
 import { TodoList } from './components/TodoList';
 import { ConditionalExample } from './components/ConditionalExample';
 import { TagList } from './components/TagList';
 
-const App = useSvc(({ el }) => () => {
+const App = () => {
   return el('div', { className: 'app' })(
     Counter(10),
     ConditionalExample(),
@@ -16,7 +16,7 @@ const App = useSvc(({ el }) => () => {
       )
     )
   )();
-});
+};
 
 const app = mount(App());
 const container = document.querySelector('#app');
