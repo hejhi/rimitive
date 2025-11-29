@@ -17,7 +17,17 @@ export function createDOMRenderer(): Renderer<DOMRendererConfig> {
     createTextNode: (text) => document.createTextNode(text),
     updateTextNode: (node, text) => (node.textContent = text),
     setAttribute: (element, key, value) => {
-      Reflect.set(element, key, value);
+      // Hyphenated keys (data-*, aria-*, custom attributes) use setAttribute
+      // Everything else uses property assignment for proper type handling
+      if (key.includes('-')) {
+        if (value == null) {
+          element.removeAttribute(key);
+        } else {
+          element.setAttribute(key, String(value));
+        }
+      } else {
+        Reflect.set(element, key, value);
+      }
     },
     appendChild: (parent, child) => parent.appendChild(child),
     removeChild: (parent, child) => parent.removeChild(child),

@@ -177,11 +177,10 @@ function createSelectDemo(): RefSpec<HTMLElement> {
     ariaHasPopup: 'listbox',
     onkeydown: select.triggerProps.onkeydown,
     ariaExpanded: computed(() => String(select.isOpen())),
+    dataSelectId: select.triggerProps['data-select-id'],
   })(select.selectedLabel)(
     // Lifecycle: Set up ARIA attributes and keyboard handler
     (elem: HTMLButtonElement) => {
-      elem.dataset.selectId = select.triggerProps['data-select-id'];
-
       const disposeDescendant = effect(() => {
         const active = select.triggerProps['aria-activedescendant']();
         if (active) {

@@ -27,6 +27,10 @@ type ReactiveProps<T> = {
  * Props for an element - type-safe based on the renderer's element configuration
  * Each prop can be either a static value or a Reactive value
  *
+ * The type provides autocomplete for known element properties while allowing
+ * arbitrary attributes (data-*, aria-*, custom attributes) via index signature.
+ * This matches real DOM behavior where any attribute can be set on any element.
+ *
  * Generic over:
  * - TConfig: The renderer configuration
  * - Tag: The element tag name (must be a key in TConfig['elements'])
@@ -36,6 +40,7 @@ export type ElementProps<
   Tag extends keyof TConfig['elements'],
 > = ReactiveProps<TConfig['elements'][Tag]> & {
   status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
+  [key: string]: unknown; // Allow arbitrary attributes (data-*, aria-*, custom)
 };
 
 /**
