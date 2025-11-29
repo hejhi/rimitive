@@ -11,6 +11,7 @@ import {
   createDOMRenderer,
   type DOMRendererConfig,
 } from '@lattice/view/renderers/dom';
+import { createIsland } from '@lattice/islands/factory';
 import type { RefSpec } from '@lattice/view/types';
 import type { ElFactory } from '@lattice/view/el';
 import type { MapFactory } from '@lattice/view/map';
@@ -32,6 +33,11 @@ export type Service = {
   map: MapFactory<DOMRendererConfig['baseElement']>['impl'];
   match: MatchFactory<DOMRendererConfig['baseElement']>['impl'];
 };
+
+/**
+ * Typed island factory - no generics needed at call site!
+ */
+export const island = createIsland<Service>();
 
 // Create view API (for client-side)
 const createViewApi = () => {

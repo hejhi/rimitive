@@ -8,7 +8,7 @@
  * Props provide initial values for SSR, but on client the island
  * derives current state from the URL for proper navigation support.
  */
-import { island, type Service, type AppContext } from '../service.js';
+import { island } from '../service.js';
 
 // Product data - in a real app this would come from a store/API
 const products = [
@@ -26,10 +26,10 @@ interface AddToCartProps {
   price: number;
 }
 
-export const AddToCart = island<AddToCartProps, Service, AppContext>(
+export const AddToCart = island(
   'AddToCart',
   ({ el, signal, computed }, getContext) =>
-    (initialProps) => {
+    (initialProps: AddToCartProps) => {
       // Use context to reactively derive current product
       // Falls back to initial props for SSR or if path doesn't match
       const currentProduct = computed(() => {

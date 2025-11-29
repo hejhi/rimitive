@@ -81,6 +81,10 @@
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
+    },
+    "./factory": {
+      "import": "./dist/factory.js",
+      "types": "./dist/factory.d.ts"
     }
   },
   "files": [

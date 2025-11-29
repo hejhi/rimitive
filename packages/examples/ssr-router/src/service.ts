@@ -2,12 +2,11 @@
  * Service Configuration (Universal)
  *
  * Provides shared exports for both server and client:
- * - island wrapper for creating islands
+ * - island factory for creating typed islands
  * - Service type for API typing
  * - AppContext type for island context
  */
-export { island } from '@lattice/islands/island';
-
+import { createIsland } from '@lattice/islands/factory';
 import type {
   SignalFunction,
   ComputedFunction,
@@ -66,3 +65,21 @@ export type Service = {
   navigate: (path: string) => void;
   currentPath: ComputedFunction<string>;
 };
+
+/**
+ * Typed island factory
+ *
+ * Creates islands with Service and AppContext types baked in.
+ * Props are inferred from the factory function - no generics needed!
+ *
+ * @example
+ * ```ts
+ * export const Counter = island('counter', ({ el, signal }) =>
+ *   (props: { initial: number }) => {
+ *     const count = signal(props.initial);
+ *     return el('div')(count);
+ *   }
+ * );
+ * ```
+ */
+export const island = createIsland<Service, AppContext>();

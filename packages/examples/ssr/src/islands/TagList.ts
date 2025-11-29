@@ -3,15 +3,12 @@
  *
  * This tests fragment island hydration using map() to return multiple siblings
  */
-import { island } from '@lattice/islands/island';
-import type { Service } from '../service.js';
+import { island } from '../service.js';
 
-type TagListProps = { tags: string[] };
-
-export const TagList = island<TagListProps, Service>(
+export const TagList = island(
   'taglist',
   ({ el, map, signal }) =>
-    (props) => {
+    (props: { tags: string[] }) => {
       const tags = signal(props.tags);
 
       // Return fragment - multiple span elements without a wrapper

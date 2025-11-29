@@ -6,15 +6,12 @@
  * On the client, intercepts clicks for SPA-style navigation.
  */
 import { Link } from '@lattice/router/link';
-import { island, type Service, type AppContext } from '../service.js';
+import { island } from '../service.js';
 
-// No props needed - uses context for current path
-type NavigationProps = Record<string, never>;
-
-export const Navigation = island<NavigationProps, Service, AppContext>(
+export const Navigation = island(
   'Navigation',
   ({ el, computed }, getContext) =>
-    () => {
+    (_props: Record<string, never>) => {
       const navLink = (href: string, label: string) => {
         return Link({
           href,

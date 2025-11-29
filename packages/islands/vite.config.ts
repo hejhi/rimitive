@@ -55,6 +55,7 @@ export default defineConfig({
         'client-context.browser': resolve(__dirname, 'src/client-context.browser.ts'),
         island: resolve(__dirname, 'src/island.ts'),
         'island.browser': resolve(__dirname, 'src/island.browser.ts'),
+        factory: resolve(__dirname, 'src/factory.ts'),
         'hydration-api': resolve(__dirname, 'src/hydration-api.ts'),
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
         'helpers/renderToString': resolve(

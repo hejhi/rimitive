@@ -1,15 +1,12 @@
 /**
  * TodoList Island - Interactive todo list
  */
-import { island } from '@lattice/islands/island';
-import type { Service } from '../service.js';
+import { island } from '../service.js';
 
-type TodoProps = { initialTodos: string[] };
-
-export const TodoList = island<TodoProps, Service>(
+export const TodoList = island(
   'todolist',
   ({ el, signal, computed, map }) =>
-    ({ initialTodos }) => {
+    ({ initialTodos }: { initialTodos: string[] }) => {
       const todos = signal(initialTodos);
       const input = signal('');
 

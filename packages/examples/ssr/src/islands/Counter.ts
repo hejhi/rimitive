@@ -1,15 +1,12 @@
 /**
  * Counter Island - Interactive component that ships JS to client
  */
-import { island } from '@lattice/islands/island';
-import type { Service } from '../service.js';
+import { island } from '../service.js';
 
-type CounterProps = { initialCount: number };
-
-export const Counter = island<CounterProps, Service>(
+export const Counter = island(
   'counter',
   ({ el, signal }) =>
-    (props) => {
+    (props: { initialCount: number }) => {
       const count = signal(props.initialCount);
       const inc = () => count(count() + 1);
       const dec = () => count(count() - 1);

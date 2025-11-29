@@ -45,3 +45,6 @@ export {
   type ClientOptions,
   type IslandsClientService,
 } from './presets/islands-app';
+
+// Island factory for typed islands
+export { createIsland, type IslandFactory } from './factory';
