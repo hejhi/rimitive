@@ -26,8 +26,8 @@ import { buildAppContext, type AppContext } from './service.js';
 const container = document.querySelector('.app') as HTMLElement;
 const signals = createSignalsApi();
 const renderer = createIslandsRenderer(
-  createDOMRenderer(),
-  createDOMHydrationRenderer(container)
+  createDOMHydrationRenderer(container),
+  createDOMRenderer()
 );
 const view = createViewApi<DOMRendererConfig>(renderer, signals);
 
