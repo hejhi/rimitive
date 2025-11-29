@@ -1,9 +1,19 @@
 /**
  * Client-side hydration with routing
  *
- * Uses createIslandsApp for a clean, unified API.
+ * Demonstrates composable islands architecture:
+ * 1. Create the primitives (signals, renderer, view)
+ * 2. Wire them together with createIslandsApp
+ * 3. Add router at app layer
  */
 import { createIslandsApp } from '@lattice/islands';
+import {
+  createDOMHydrationRenderer,
+  createIslandsRenderer,
+} from '@lattice/islands/client';
+import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createViewApi } from '@lattice/view/presets/core';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { createRouter, type ViewApi } from '@lattice/router';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { appRoutes } from './routes.js';
@@ -12,14 +22,24 @@ import { Navigation } from './islands/Navigation.js';
 import { AddToCart } from './islands/AddToCart.js';
 import { buildAppContext, type AppContext } from './service.js';
 
-// Create islands app with container (client mode)
+// 1. Create the primitives
+const container = document.querySelector('.app') as HTMLElement;
+const signals = createSignalsApi();
+const renderer = createIslandsRenderer(
+  createDOMRenderer(),
+  createDOMHydrationRenderer(container)
+);
+const view = createViewApi<DOMRendererConfig>(renderer, signals);
+
+// 2. Wire them for islands
 const app = createIslandsApp<AppContext>({
-  container: document.querySelector('.app') as HTMLElement,
+  signals,
+  renderer,
+  view,
   context: () => buildAppContext(window.location.href),
 });
 
-// Add router at app layer
-// Note: cast needed as router expects ViewApi shape, service has it structurally
+// 3. Add router at app layer
 const router = createRouter<DOMRendererConfig>(
   app.service as ViewApi<DOMRendererConfig>,
   { initialPath: location.pathname + location.search + location.hash }

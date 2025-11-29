@@ -2,19 +2,10 @@
  * Islands App Preset - Client Version
  *
  * Provides createIslandsApp for client-side hydration and SPA.
+ * Accepts signals, renderer, and view as dependencies for maximum composability.
+ *
  * For server-side rendering, import from '@lattice/islands/server' instead.
  *
- * @example
- * ```ts
- * import { createIslandsApp } from '@lattice/islands';
- *
- * const app = createIslandsApp({
- *   container: document.querySelector('.app'),
- *   context: () => buildAppContext(location.href),
- * });
- * app.mount(router.mount(routes));
- * app.hydrate(ProductFilter, Navigation);
- * ```
  */
 
 import { createSignalsApi } from '@lattice/signals/presets/core';
@@ -24,36 +15,17 @@ import {
 } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
 import { composeFrom } from '@lattice/lattice';
 import type { RefSpec, Renderer, NodeRef } from '@lattice/view/types';
 import type { GetContext } from '../types';
 import { ISLAND_META } from '../types';
-import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
 import type { DOMRendererConfig } from '../renderers/dom-hydration';
-import { createIslandsRenderer } from '../renderers/islands';
 import { setClientContext } from '../client-context.browser';
 import { createDOMHydrator } from '../hydrators/dom';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-/**
- * Client app options
- */
-export interface ClientOptions<TContext> {
-  /**
-   * Container element for hydration (required for client)
-   */
-  container: HTMLElement;
-
-  /**
-   * Context getter for islands
-   * Called on init and navigation (popstate), reactive via signal
-   */
-  context?: GetContext<TContext>;
-}
 
 /**
  * Signals API type
@@ -66,12 +38,48 @@ type SignalsApi = ReturnType<typeof createSignalsApi>;
 type ViewsApi = ReturnType<typeof createViewApi<DOMRendererConfig>>;
 
 /**
+ * Hybrid renderer type (from createIslandsRenderer)
+ */
+type HybridRenderer = Renderer<DOMRendererConfig> & {
+  switchToFallback: () => void;
+};
+
+/**
  * Full service type - signals + views + addEventListener
  */
 export type IslandsClientService = SignalsApi &
   ViewsApi & {
     addEventListener: ReturnType<typeof createAddEventListener>;
   };
+
+/**
+ * Client app options - accepts primitives as dependencies
+ */
+export interface ClientOptions<TContext> {
+  /**
+   * Signals API instance
+   * Create with: createSignalsApi()
+   */
+  signals: SignalsApi;
+
+  /**
+   * Hybrid renderer (hydration → fallback)
+   * Create with: createIslandsRenderer(hydrationRenderer, fallbackRenderer)
+   */
+  renderer: HybridRenderer;
+
+  /**
+   * View API instance
+   * Create with: createViewApi(renderer, signals)
+   */
+  view: ViewsApi;
+
+  /**
+   * Context getter for islands
+   * Called on init and navigation (popstate), reactive via signal
+   */
+  context?: GetContext<TContext>;
+}
 
 /**
  * Island component type for hydrate()
@@ -127,6 +135,9 @@ export interface ClientApp {
 /**
  * Create an islands app for client-side hydration
  *
+ * Accepts signals, renderer, and view as dependencies - does not create them internally.
+ * This allows maximum composability and custom extensions.
+ *
  * For server-side rendering, import from '@lattice/islands/server':
  * ```ts
  * import { createIslandsApp } from '@lattice/islands/server';
@@ -135,10 +146,7 @@ export interface ClientApp {
 export function createIslandsApp<TContext = unknown>(
   options: ClientOptions<TContext>
 ): ClientApp {
-  const { container, context: getContext } = options;
-
-  // Create signals API
-  const signals = createSignalsApi();
+  const { signals, renderer, view, context: getContext } = options;
 
   // Create reactive context signal if getContext is provided
   const contextSignal = getContext
@@ -159,28 +167,10 @@ export function createIslandsApp<TContext = unknown>(
     });
   }
 
-  // Create hybrid renderer: hydration mode first, then fallback to regular DOM
-  const hydrationRenderer = createDOMHydrationRenderer(container);
-  const fallbackRenderer = createDOMRenderer();
-  const hybridRenderer = createIslandsRenderer(
-    hydrationRenderer,
-    fallbackRenderer
-  );
-
-  // Cast to base renderer type for createSpec
-  const renderer: Renderer<DOMRendererConfig> = hybridRenderer;
-
-  // Create view helpers
-  const viewHelpers = createSpec(renderer, signals);
-  const views = composeFrom(
-    defaultViewExtensions<DOMRendererConfig>(),
-    viewHelpers
-  );
-
-  // Compose service with proper typing
+  // Compose service from provided dependencies
   const service: IslandsClientService = {
     ...signals,
-    ...views,
+    ...view,
     addEventListener: createAddEventListener(signals.batch),
   } as IslandsClientService;
 
@@ -195,7 +185,7 @@ export function createIslandsApp<TContext = unknown>(
     const result = spec.create(svc);
     if (!switched) {
       switched = true;
-      hybridRenderer.switchToFallback();
+      renderer.switchToFallback();
     }
     return result;
   };

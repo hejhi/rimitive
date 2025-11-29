@@ -13,6 +13,10 @@ export type { SSRContext } from '../types';
 
 export { renderToString } from '../helpers/renderToString';
 
+// Server renderer
+export { createDOMServerRenderer } from '../renderers/dom-server';
+export type { DOMServerRendererConfig } from '../renderers/dom-server';
+
 // Unified islands app preset (server version)
 export {
   createIslandsApp,

@@ -1,13 +1,18 @@
 /**
  * SSR Server with Router Support
  *
- * Uses createIslandsApp for a clean, unified API.
+ * Demonstrates composable islands architecture on the server:
+ * 1. Create the primitives (signals, renderer, view) per request
+ * 2. Wire them together with createIslandsApp
+ * 3. Add router and render to HTML
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createIslandsApp } from '@lattice/islands/server';
+import { createIslandsApp, createDOMServerRenderer } from '@lattice/islands/server';
+import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createViewApi } from '@lattice/view/presets/core';
 import { createRouter, type ViewApi } from '@lattice/router';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { appRoutes } from './routes.js';
@@ -343,13 +348,19 @@ const server = createServer((req, res) => {
   );
   const path = url.pathname;
 
-  // Create islands app for this request (fresh signals per request)
+  // 1. Create the primitives (fresh per request)
+  const signals = createSignalsApi();
+  const renderer = createDOMServerRenderer();
+  const view = createViewApi<DOMRendererConfig>(renderer, signals);
+
+  // 2. Wire them for islands
   const app = createIslandsApp({
+    signals,
+    view,
     context: () => buildAppContext(url),
   });
 
-  // Create router with service
-  // Note: cast needed as router expects ViewApi shape, service has it structurally
+  // 3. Add router and render
   const router = createRouter<DOMRendererConfig>(
     app.service as ViewApi<DOMRendererConfig>,
     { initialPath: path }
