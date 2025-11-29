@@ -60,6 +60,9 @@ function createDialogDemo(): RefSpec<HTMLElement> {
     className: 'dialog-content',
     role: dialog.dialogProps.role,
     tabIndex: -1,
+    ariaModal: 'true',
+    ariaLabel: 'Dialog',
+    onkeydown: dialog.dialogProps.onkeydown,
   })(
     el('h4')('Headless Dialog'),
     el('p')(
@@ -80,14 +83,8 @@ function createDialogDemo(): RefSpec<HTMLElement> {
   )(
     // Lifecycle: Set up ARIA attributes and ref
     (elem: HTMLDivElement) => {
-      elem.setAttribute('aria-modal', 'true');
-      elem.setAttribute('aria-label', 'Dialog');
-      elem.addEventListener('keydown', dialog.dialogProps.onkeydown);
       dialog.dialogProps.ref(elem);
-      return () => {
-        elem.removeEventListener('keydown', dialog.dialogProps.onkeydown);
-        dialog.dialogProps.ref(null);
-      };
+      return () => dialog.dialogProps.ref(null);
     }
   );
 
@@ -154,15 +151,9 @@ function createSelectDemo(): RefSpec<HTMLElement> {
       }),
       onclick: props.onclick,
       onmouseenter: props.onmouseenter,
-    })(option.label)(
-      // Lifecycle: Set up ARIA attributes
-      (elem: HTMLLIElement) => {
-        if (option.disabled) elem.setAttribute('aria-disabled', 'true');
-        return effect(() => {
-          elem.setAttribute('aria-selected', String(props['aria-selected']()));
-        });
-      }
-    );
+      ariaDisabled: computed(() => String(!!option.disabled)),
+      ariaSelected: computed(() => String(props['aria-selected']())),
+    })(option.label);
   });
 
   // Listbox (dropdown)
@@ -183,16 +174,14 @@ function createSelectDemo(): RefSpec<HTMLElement> {
     className: 'select-trigger',
     role: select.triggerProps.role,
     onclick: select.triggerProps.onclick,
+    ariaHasPopup: 'listbox',
+    onkeydown: select.triggerProps.onkeydown,
+    ariaExpanded: computed(() => String(select.isOpen())),
   })(select.selectedLabel)(
     // Lifecycle: Set up ARIA attributes and keyboard handler
     (elem: HTMLButtonElement) => {
       elem.dataset.selectId = select.triggerProps['data-select-id'];
-      elem.setAttribute('aria-haspopup', 'listbox');
-      elem.addEventListener('keydown', select.triggerProps.onkeydown);
 
-      const disposeExpanded = effect(() => {
-        elem.setAttribute('aria-expanded', String(select.isOpen()));
-      });
       const disposeDescendant = effect(() => {
         const active = select.triggerProps['aria-activedescendant']();
         if (active) {
@@ -203,8 +192,6 @@ function createSelectDemo(): RefSpec<HTMLElement> {
       });
 
       return () => {
-        elem.removeEventListener('keydown', select.triggerProps.onkeydown);
-        disposeExpanded();
         disposeDescendant();
       };
     }
