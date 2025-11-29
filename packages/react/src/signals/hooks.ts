@@ -5,8 +5,21 @@ import type { ComputedFunction } from '@lattice/signals/computed';
 import type { SignalSetter } from './types';
 
 /**
+ * Portable signal type - a readable/writable signal with overloaded call signatures.
+ * This matches the common pattern used by headless UI libraries.
+ */
+export type PortableSignal<T> = {
+  (): T;
+  (value: T): void;
+};
+
+/**
  * Subscribe to a signal, computed, or selected value and return its current value.
  * The component will re-render when the signal value changes.
+ *
+ * Accepts any readable signal-like value (anything callable that returns T).
+ * This enables interoperability with portable headless components that define
+ * their own signal types (e.g., `{ (): T; (value: T): void }`).
  *
  * @example
  * ```tsx
@@ -18,9 +31,16 @@ import type { SignalSetter } from './types';
  * }
  * ```
  */
-export function useSubscribe<T>(
-  signal: SignalFunction<T> | ComputedFunction<T>
-): T {
+// Overload for Lattice SignalFunction
+export function useSubscribe<T>(signal: SignalFunction<T>): T;
+// Overload for Lattice ComputedFunction
+export function useSubscribe<T>(signal: ComputedFunction<T>): T;
+// Overload for portable signal type (headless components)
+export function useSubscribe<T>(signal: PortableSignal<T>): T;
+// Overload for simple readable
+export function useSubscribe<T>(signal: () => T): T;
+// Implementation
+export function useSubscribe<T>(signal: () => T): T {
   const api = useSignalAPI();
 
   // Create stable subscription using effect
@@ -43,8 +63,8 @@ export function useSubscribe<T>(
 
   return useSyncExternalStore(
     subscribeCallback,
-    () => signal(), // Read current value
-    () => signal() // Server snapshot
+    signal, // Read current value
+    signal // Server snapshot
   );
 }
 
@@ -202,4 +222,95 @@ export function useComponent<T, Args extends unknown[]>(
   }
 
   return componentRef.current;
+}
+
+/**
+ * Portable readable signal type - can be read by calling with no args.
+ */
+export interface Readable<T> {
+  (): T;
+}
+
+/**
+ * Portable writable signal type - can be read or written.
+ */
+export interface Writable<T> extends Readable<T> {
+  (value: T): void;
+}
+
+/**
+ * Reactive adapter interface for portable headless components.
+ * This is compatible with Lattice's SignalAPI and other reactive systems.
+ */
+export interface ReactiveAdapter {
+  signal: <T>(initialValue: T) => Writable<T>;
+  computed: <T>(fn: () => T) => Readable<T>;
+  effect: (fn: () => void | (() => void)) => () => void;
+}
+
+/**
+ * Create a React hook from a double-function behavior pattern.
+ *
+ * This is designed for portable headless components that follow the pattern:
+ * `(api) => (options) => Result`
+ *
+ * The returned hook handles SignalAPI injection automatically and creates
+ * one instance per React component (like useComponent).
+ *
+ * @example
+ * ```tsx
+ * // Import a portable headless behavior
+ * import { useDialog } from '@my-design-system/headless';
+ *
+ * // Create a React hook from it (typically at module level)
+ * const useDialogHook = createHook(useDialog);
+ *
+ * // Use in React components - clean, familiar API
+ * function MyModal() {
+ *   const dialog = useDialogHook({ initialOpen: false });
+ *   const isOpen = useSubscribe(dialog.isOpen);
+ *
+ *   return (
+ *     <>
+ *       <button onClick={dialog.open}>Open</button>
+ *       {isOpen && <div>Modal content</div>}
+ *     </>
+ *   );
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // Works with any double-function behavior
+ * import { useSelect, useTooltip } from '@my-design-system/headless';
+ *
+ * const useSelectHook = createHook(useSelect);
+ * const useTooltipHook = createHook(useTooltip);
+ *
+ * function MySelect() {
+ *   const select = useSelectHook({ options: myOptions });
+ *   // ...
+ * }
+ * ```
+ *
+ * Note: Options are captured once when the component mounts (like useRef's
+ * initial value). If you need reactive options, pass signals as option values
+ * and read them inside the behavior.
+ */
+export function createHook<Api extends ReactiveAdapter, Options, Result>(
+  behavior: (api: Api) => (options: Options) => Result
+): (options: Options) => Result {
+  return function useHook(options: Options): Result {
+    const api = useSignalAPI();
+
+    // Create behavior instance once on mount
+    const instanceRef = useRef<Result | null>(null);
+
+    if (instanceRef.current === null) {
+      // Cast is safe because SignalAPI satisfies ReactiveAdapter
+      instanceRef.current = behavior(api as unknown as Api)(options);
+    }
+
+    return instanceRef.current;
+  };
 }
