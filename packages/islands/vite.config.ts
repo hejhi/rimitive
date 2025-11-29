@@ -79,6 +79,14 @@ export default defineConfig({
           __dirname,
           'src/presets/ssr-client.ts'
         ),
+        'presets/islands-app': resolve(
+          __dirname,
+          'src/presets/islands-app.ts'
+        ),
+        'presets/islands-app-server': resolve(
+          __dirname,
+          'src/presets/islands-app-server.ts'
+        ),
       },
       formats: ['es'],
     },

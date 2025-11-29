@@ -1,45 +1,17 @@
 /**
  * SSR Server with Router Support
  *
- * Composes services manually using signals/view/islands primitives.
+ * Uses createIslandsApp for a clean, unified API.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  createSSRContext,
-  runWithSSRContext,
-  getIslandScripts,
-  renderToString,
-} from '@lattice/islands/server';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
-import { createSpec } from '@lattice/view/helpers';
-import { composeFrom } from '@lattice/lattice';
-import { createRouter } from '@lattice/router';
-import { createDOMServerRenderer } from '@lattice/islands/renderers/dom-server';
+import { createIslandsApp } from '@lattice/islands/server';
+import { createRouter, type ViewApi } from '@lattice/router';
 import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { appRoutes } from './routes.js';
 import { buildAppContext } from './service.js';
-
-/**
- * Create SSR service - called per-request for fresh signals
- */
-function createSSRService() {
-  const signals = createSignalsApi();
-  const renderer = createDOMServerRenderer();
-  const viewHelpers = createSpec(renderer, signals);
-  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
-  const views = composeFrom(baseExtensions, viewHelpers);
-
-  const svc = {
-    ...signals,
-    ...views,
-  };
-
-  return { svc, signals, renderer };
-}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
@@ -371,28 +343,20 @@ const server = createServer((req, res) => {
   );
   const path = url.pathname;
 
-  // Create SSR context for islands (pass context getter for islands)
-  const appContext = buildAppContext(url);
-  const ssrCtx = createSSRContext({ getContext: () => appContext });
-
-  // Create per-request service (fresh signals per request)
-  const { svc } = createSSRService();
+  // Create islands app for this request (fresh signals per request)
+  const app = createIslandsApp({
+    context: () => buildAppContext(url),
+  });
 
   // Create router with service
-  const router = createRouter<DOMRendererConfig>(svc, { initialPath: path });
+  // Note: cast needed as router expects ViewApi shape, service has it structurally
+  const router = createRouter<DOMRendererConfig>(
+    app.service as ViewApi<DOMRendererConfig>,
+    { initialPath: path }
+  );
 
-  // Create mount function
-  const mount = <TElement>(spec: { create: (api: typeof svc) => TElement }) =>
-    spec.create(svc);
-
-  // Mount the route tree
-  const App = router.mount(appRoutes);
-
-  // Render app to HTML within SSR context
-  const html = runWithSSRContext(ssrCtx, () => renderToString(mount(App)));
-
-  // Get island hydration scripts
-  const scripts = getIslandScripts(ssrCtx);
+  // Render the route tree to HTML
+  const { html, scripts } = app.render(router.mount(appRoutes));
 
   // Generate full HTML page
   const fullHtml = template(html, scripts);

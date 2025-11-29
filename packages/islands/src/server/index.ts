@@ -12,3 +12,11 @@ export {
 export type { SSRContext } from '../types';
 
 export { renderToString } from '../helpers/renderToString';
+
+// Unified islands app preset (server version)
+export {
+  createIslandsApp,
+  type ServerApp,
+  type ServerOptions,
+  type IslandsServerService,
+} from '../presets/islands-app-server';
