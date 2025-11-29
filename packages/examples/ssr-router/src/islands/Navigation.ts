@@ -11,7 +11,7 @@ import { island } from '../service.js';
 export const Navigation = island(
   'Navigation',
   ({ el, computed }, getContext) =>
-    (_props: Record<string, never>) => {
+    () => {
       const navLink = (href: string, label: string) => {
         return Link({
           href,
