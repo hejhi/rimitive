@@ -11,7 +11,27 @@ import {
   createDOMRenderer,
   type DOMRendererConfig,
 } from '@lattice/view/renderers/dom';
-import { RefSpec } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
+import type { ElFactory } from '@lattice/view/el';
+import type { MapFactory } from '@lattice/view/map';
+import type { MatchFactory } from '@lattice/view/match';
+import type {
+  SignalFunction,
+  ComputedFunction,
+} from '@lattice/signals/presets/core';
+
+/**
+ * Service type - the API available to island components
+ */
+export type Service = {
+  signal: <T>(value: T) => SignalFunction<T>;
+  computed: <T>(fn: () => T) => ComputedFunction<T>;
+  effect: (fn: () => void | (() => void)) => () => void;
+  batch: <T>(fn: () => T) => T;
+  el: ElFactory<DOMRendererConfig>['impl'];
+  map: MapFactory<DOMRendererConfig['baseElement']>['impl'];
+  match: MatchFactory<DOMRendererConfig['baseElement']>['impl'];
+};
 
 // Create view API (for client-side)
 const createViewApi = () => {
@@ -28,21 +48,16 @@ const createViewApi = () => {
     ...viewSvc,
   };
 
-  type Service = typeof svc;
-
   return {
     service: {
       view: viewSvc,
       signals: signalSvc,
     },
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
-    useSvc: <TReturn>(fn: (svc: Service) => TReturn): TReturn => fn(svc),
-    withSvc: <TReturn>(fn: (svc: Service) => TReturn) => fn,
   };
 };
 
-export const { service, mount, useSvc, withSvc } = createViewApi();
+export const { service, mount } = createViewApi();
 
-export type Service = typeof service;
-export type Signals = Service['signals'];
-export type DOMViews = Service['view'];
+export type Signals = typeof service.signals;
+export type DOMViews = typeof service.view;
