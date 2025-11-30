@@ -46,6 +46,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        'index.browser': resolve(__dirname, 'src/index.browser.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         'server/index': resolve(__dirname, 'src/server/index.ts'),
         'client/index': resolve(__dirname, 'src/client/index.ts'),
@@ -56,6 +57,7 @@ export default defineConfig({
         island: resolve(__dirname, 'src/island.ts'),
         'island.browser': resolve(__dirname, 'src/island.browser.ts'),
         factory: resolve(__dirname, 'src/factory.ts'),
+        'factory.browser': resolve(__dirname, 'src/factory.browser.ts'),
         'hydration-api': resolve(__dirname, 'src/hydration-api.ts'),
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
         'helpers/renderToString': resolve(
