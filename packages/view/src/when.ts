@@ -159,7 +159,7 @@ export const When = defineService(
               lastChild: null,
               attach(parent, nextSibling, api) {
                 // Track created child nodes for cleanup
-                let childNodes: NodeRef<TBaseElement>[] = [];
+                let childNodes: NodeRef<TElement>[] = [];
                 let isShowing = false;
 
                 // Create all children and insert them

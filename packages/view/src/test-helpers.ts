@@ -82,7 +82,7 @@ export function validateLinkedList<T>(
 
     // Move forward
     prev = current;
-    const nextNode = current.next as LinkedNode<T> | null;
+    const nextNode = current.next;
     if (!nextNode) break;
     current = nextNode;
   }
@@ -99,7 +99,7 @@ export function validateLinkedList<T>(
 
     // Move backward
     next = reverseNode;
-    const prevNode = reverseNode.prev as LinkedNode<T> | null;
+    const prevNode = reverseNode.prev;
     if (!prevNode) break;
     reverseNode = prevNode;
   }
@@ -122,7 +122,7 @@ export function countLinkedNodes<T>(
 
   while (current) {
     count++;
-    current = current.next as LinkedNode<T> | null;
+    current = current.next;
   }
 
   return count;
@@ -142,7 +142,7 @@ export function linkedListToArray<T>(
 
   while (current) {
     result.push(current);
-    current = current.next as LinkedNode<T> | null;
+    current = current.next;
   }
 
   return result;

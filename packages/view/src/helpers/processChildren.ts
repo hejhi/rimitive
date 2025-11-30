@@ -36,7 +36,7 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
     child: ElRefSpecChild,
     api?: unknown
   ): NodeRef<TNode> | null => {
-    const element = parentRef.element as TNode;
+    const element = parentRef.element;
     const childType = typeof child;
 
     // Skip null/undefined/false
@@ -51,24 +51,24 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
       return null; // Text nodes don't participate in ref node chain
     }
 
+    const spec = child as ViewChild;
+
     if (
       (childType === 'function' || childType === 'object') &&
-      'status' in (child as ViewChild)
+      'status' in spec
     ) {
-      const spec = child as ViewChild;
-
       if (spec.status === STATUS_FRAGMENT) return spec;
 
       if (spec.status & STATUS_SPEC_MASK) {
         const childRef = spec.create(api);
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
-          renderer.appendChild(element, childRef.element as TNode);
+          renderer.appendChild(element, childRef.element);
           // Lifecycle hook: onCreate for elements (e.g., SSR adds island markers)
-          renderer.onCreate?.(childRef as NodeRef<TNode>, element);
+          renderer.onCreate?.(childRef, element);
         } else if (childRef.status === STATUS_FRAGMENT) {
           // Lifecycle hook: onCreate for fragments (e.g., hydration skips past content)
-          renderer.onCreate?.(childRef as NodeRef<TNode>, element);
+          renderer.onCreate?.(childRef, element);
         }
         return childRef;
       }
@@ -122,32 +122,23 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
     while (lastChildRef) {
       if (lastChildRef.status === STATUS_FRAGMENT) {
         // Get next sibling's element for position computation
-        const nextRef = lastChildRef.next as NodeRef<TNode> | null;
+        const nextRef = lastChildRef.next;
         const nextElement =
           nextRef?.status === STATUS_ELEMENT
             ? nextRef.element
             : nextRef?.status === STATUS_FRAGMENT
-              ? ((nextRef.firstChild as ElementRef<TNode> | null)?.element ??
-                null)
+              ? (nextRef.firstChild?.element ?? null)
               : null;
 
         // Lifecycle hook: beforeAttach for fragments (e.g., hydration seeks to position)
-        renderer.beforeAttach?.(
-          lastChildRef as NodeRef<TNode>,
-          parent.element,
-          nextElement
-        );
+        renderer.beforeAttach?.(lastChildRef, parent.element, nextElement);
 
-        lastChildRef.attach(
-          parent,
-          lastChildRef.next as NodeRef<TNode> | null,
-          api
-        );
+        lastChildRef.attach(parent, lastChildRef.next, api);
 
         // Lifecycle hook: onAttach for fragments (e.g., SSR adds markers)
-        renderer.onAttach?.(lastChildRef as NodeRef<TNode>, parent.element);
+        renderer.onAttach?.(lastChildRef, parent.element);
       }
-      lastChildRef = lastChildRef.prev as NodeRef<TNode> | null;
+      lastChildRef = lastChildRef.prev;
     }
   };
 

@@ -35,13 +35,8 @@ export const createAddEventListener = (batch: <T>(fn: () => T) => T) => {
       const batchedHandler = (e: HTMLElementEventMap[K]) =>
         batch(() => handler(e));
 
-      element.addEventListener(event, batchedHandler as EventListener, options);
-      return () =>
-        element.removeEventListener(
-          event,
-          batchedHandler as EventListener,
-          options
-        );
+      element.addEventListener(event, batchedHandler, options);
+      return () => element.removeEventListener(event, batchedHandler, options);
     };
   };
 };

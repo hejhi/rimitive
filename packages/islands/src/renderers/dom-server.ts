@@ -5,7 +5,12 @@
  */
 
 import { parseHTML } from 'linkedom';
-import type { Renderer, FragmentRef, NodeRef, ElementRef } from '@lattice/view/types';
+import type {
+  Renderer,
+  FragmentRef,
+  NodeRef,
+  ElementRef,
+} from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { IslandNodeMeta } from '../types';
@@ -113,9 +118,8 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
       // Only handle elements in onCreate - fragments are handled in onAttach
       if (ref.status !== STATUS_ELEMENT) return;
 
-      const elementRef = ref as ElementRef<Node>;
-      const element = elementRef.element as HTMLElement;
-      const meta = (elementRef as ElementRef<Node> & { __islandMeta?: IslandNodeMeta })
+      const element = ref.element;
+      const meta = (ref as ElementRef<Node> & { __islandMeta?: IslandNodeMeta })
         .__islandMeta;
 
       if (meta) {
@@ -129,7 +133,8 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         );
 
         // Store instance ID back on ref for downstream use
-        (elementRef as ElementRef<Node> & { __islandId?: string }).__islandId = instanceId;
+        (ref as ElementRef<Node> & { __islandId?: string }).__islandId =
+          instanceId;
 
         // Create script tag
         const script = element.ownerDocument?.createElement('script');
@@ -140,7 +145,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         script.setAttribute('data-island', instanceId);
 
         // Insert after element
-        (parentElement as HTMLElement).insertBefore(script, element.nextSibling);
+        parentElement.insertBefore(script, element.nextSibling);
       }
     },
 

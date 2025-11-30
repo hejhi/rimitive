@@ -215,9 +215,7 @@ export const Match = defineService(
 
                   // Execute lifecycle callbacks from match level
                   if (nodeRef.status === STATUS_ELEMENT) {
-                    runLifecycleCallbacks(
-                      (nodeRef as ElementRef<TElement>).element
-                    );
+                    runLifecycleCallbacks(nodeRef.element);
                   }
 
                   // Insert into DOM

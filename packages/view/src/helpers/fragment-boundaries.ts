@@ -45,10 +45,10 @@ export function removeFromFragment<T>(
 ): void {
   // Update boundaries if this was a boundary node
   if (node === fragment.firstChild) {
-    fragment.firstChild = node.next as LinkedNode<T>;
+    fragment.firstChild = node.next;
   }
   if (node === fragment.lastChild) {
-    fragment.lastChild = node.prev as LinkedNode<T>;
+    fragment.lastChild = node.prev;
   }
 
   // If fragment is now empty (both boundaries cleared)
@@ -75,7 +75,7 @@ export function isInFragmentRange<T>(
   while (current) {
     if (current === node) return true;
     if (current === fragment.lastChild) break;
-    current = current.next as LinkedNode<T>;
+    current = current.next;
   }
 
   return false;
@@ -126,7 +126,7 @@ export function countFragmentNodes<T>(fragment: FragmentRef<T>): number {
   while (current) {
     count++;
     if (current === fragment.lastChild) break;
-    current = current.next as LinkedNode<T>;
+    current = current.next;
   }
 
   return count;

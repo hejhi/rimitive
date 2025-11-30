@@ -374,7 +374,6 @@ describe('Attribute and Event Handling', () => {
 
     expect(div.className).toBe('hydrated');
   });
-
 });
 
 // ============================================================================
@@ -510,7 +509,6 @@ describe('Hydration Mismatch Errors', () => {
 // ============================================================================
 // Tests: Connection Status
 // ============================================================================
-
 
 // ============================================================================
 // Tests: Fragment Lifecycle Hooks for Deferred Fragment Content
@@ -837,7 +835,9 @@ describe('Integration: match() hydration with full view API', () => {
     const pageSpec = el('div', { className: 'products-page' })(
       el('h2')('Products'),
       el('section', { className: 'intro' })('intro'),
-      match(computed(() => true))((visible) => (visible ? el('h1')('hello') : null)),
+      match(computed(() => true))((visible) =>
+        visible ? el('h1')('hello') : null
+      ),
       el('section', { className: 'filter' })('filter')
     );
 

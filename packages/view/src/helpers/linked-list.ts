@@ -62,7 +62,7 @@ export function getNextElement<T>(
     if (current.status === STATUS_ELEMENT) {
       return current;
     }
-    current = current.next as LinkedNode<T> | null;
+    current = current.next;
   }
 
   return undefined;
@@ -84,7 +84,7 @@ export function getPrevElement<T>(
     if (current.status === STATUS_ELEMENT) {
       return current;
     }
-    current = current.prev as LinkedNode<T> | null;
+    current = current.prev;
   }
 
   return undefined;

@@ -175,7 +175,7 @@ export const Map = defineService(
                       const itemSignal = signal(item);
 
                       // Render the item - this creates an element with its own scope
-                      elRef = render(itemSignal).create(api) as TRecNode;
+                      elRef = render(itemSignal).create<TRecNode>(api);
 
                       // Insert into DOM - use parent.element directly
                       insertNodeBefore(

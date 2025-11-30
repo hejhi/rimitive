@@ -43,13 +43,13 @@ export type LinkedNode<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 export interface ElementRef<TElement> extends BaseRef {
   status: typeof STATUS_ELEMENT;
   element: TElement;
-  parent: ElementRef<unknown> | null; // Parent element in tree
-  prev: LinkedNode<unknown> | null; // Previous sibling in doubly-linked list
-  next: LinkedNode<unknown> | null; // Next sibling in doubly-linked list
+  parent: ElementRef<TElement> | null; // Parent element in tree
+  prev: LinkedNode<TElement> | null; // Previous sibling in doubly-linked list
+  next: LinkedNode<TElement> | null; // Next sibling in doubly-linked list
 
   // Child list (nodes within this element) - using LinkedNode for fragments
-  firstChild: LinkedNode<unknown> | null;
-  lastChild: LinkedNode<unknown> | null;
+  firstChild: LinkedNode<TElement> | null;
+  lastChild: LinkedNode<TElement> | null;
 }
 
 /**
@@ -62,9 +62,9 @@ export interface FragmentRef<TElement> extends BaseRef {
 
   // Position in parent's doubly-linked list
   // Uses 'unknown' for variance - allows FragmentRef<T> to be assignable to FragmentRef<unknown>
-  parent: ElementRef<unknown> | null;
-  prev: NodeRef<unknown> | null;
-  next: NodeRef<unknown> | null;
+  parent: ElementRef<TElement> | null;
+  prev: NodeRef<TElement> | null;
+  next: NodeRef<TElement> | null;
 
   // Own child list (nodes within this fragment)
   firstChild: LinkedNode<TElement> | null;
