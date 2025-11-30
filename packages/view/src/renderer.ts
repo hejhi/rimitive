@@ -209,34 +209,3 @@ export interface Renderer<TConfig extends RendererConfig> {
     parent: TConfig['baseElement']
   ) => void;
 }
-
-/**
- * HydrationRenderer extension for hydration-specific position tracking
- *
- * These methods are separate from the general lifecycle hooks because they're
- * concerned with cursor/position management during hydration, not general
- * node lifecycle events.
- */
-export interface HydrationRenderer<TConfig extends RendererConfig>
-  extends Renderer<TConfig> {
-  /**
-   * Seek to a specific child position within a parent
-   *
-   * Used during hydration to sync position when attaching deferred content
-   * (e.g., fragments whose content is created lazily)
-   *
-   * @param parent - The parent element
-   * @param childIndex - The child index to seek to
-   */
-  seekToPosition?: (parent: TConfig['baseElement'], childIndex: number) => void;
-
-  /**
-   * Skip past content in the current traversal
-   *
-   * Used during hydration to skip past fragment content that was already
-   * rendered on the server
-   *
-   * @param count - Number of nodes to skip
-   */
-  skipContent?: (count: number) => void;
-}

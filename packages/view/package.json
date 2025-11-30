@@ -10,6 +10,10 @@
       "import": "./dist/renderers/dom.js",
       "types": "./dist/renderers/dom.d.ts"
     },
+    "./renderers/test": {
+      "import": "./dist/renderers/test.js",
+      "types": "./dist/renderers/test.d.ts"
+    },
     "./el": {
       "import": "./dist/el.js",
       "types": "./dist/el.d.ts"
