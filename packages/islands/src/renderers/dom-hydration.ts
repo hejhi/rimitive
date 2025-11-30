@@ -235,9 +235,34 @@ export function createDOMHydrationRenderer(
 
   return {
     /**
-     * Return existing element and enter its children
+     * Create or return existing node
      */
-    createElement: (tag) => {
+    createNode: (type, props) => {
+      // Handle text nodes
+      if (type === 'text') {
+        const node = getNodeAtPath(containerEl, getCurrentPath(position));
+
+        if (node.nodeType !== 3) {
+          throw new HydrationMismatch(
+            `Expected text node at ${getCurrentPath(position).join('/')}, got ${node.nodeName}`
+          );
+        }
+
+        const textNode = node as Text;
+        const text = (props?.value as string) || '';
+
+        // Update text if it differs (handles data races)
+        if (textNode.textContent !== text) {
+          textNode.textContent = text;
+        }
+
+        // Advance to next sibling
+        position = advanceToSibling(position);
+
+        return textNode;
+      }
+
+      // Handle element nodes
       const node = getNodeAtPath(containerEl, getCurrentPath(position));
 
       // Check if we're at a fragment marker
@@ -251,10 +276,10 @@ export function createDOMHydrationRenderer(
 
         if (
           firstNode.nodeType !== 1 ||
-          (firstNode as Element).tagName.toLowerCase() !== tag.toLowerCase()
+          (firstNode as Element).tagName.toLowerCase() !== type.toLowerCase()
         ) {
           throw new HydrationMismatch(
-            `Expected <${tag}> as first item in fragment, got <${(firstNode as Element).tagName}>`
+            `Expected <${type}> as first item in fragment, got <${(firstNode as Element).tagName}>`
           );
         }
 
@@ -266,10 +291,10 @@ export function createDOMHydrationRenderer(
       // Regular element
       if (
         node.nodeType !== 1 ||
-        (node as Element).tagName.toLowerCase() !== tag.toLowerCase()
+        (node as Element).tagName.toLowerCase() !== type.toLowerCase()
       ) {
         throw new HydrationMismatch(
-          `Expected <${tag}> at ${getCurrentPath(position).join('/')}, got <${(node as Element).tagName}>`
+          `Expected <${type}> at ${getCurrentPath(position).join('/')}, got <${(node as Element).tagName}>`
         );
       }
 
@@ -279,42 +304,17 @@ export function createDOMHydrationRenderer(
     },
 
     /**
-     * Return existing text node and advance to next sibling
+     * Set property on node
      */
-    createTextNode: (text) => {
-      const node = getNodeAtPath(containerEl, getCurrentPath(position));
-
-      if (node.nodeType !== 3) {
-        throw new HydrationMismatch(
-          `Expected text node at ${getCurrentPath(position).join('/')}, got ${node.nodeName}`
-        );
+    setProperty: (node: Node, key: string, value: unknown) => {
+      // Handle text nodes
+      if (node.nodeType === 3 && key === 'value') {
+        node.textContent = String(value);
+        return;
       }
 
-      const textNode = node as Text;
-
-      // Update text if it differs (handles data races)
-      if (textNode.textContent !== text) {
-        textNode.textContent = text;
-      }
-
-      // Advance to next sibling
-      position = advanceToSibling(position);
-
-      return textNode;
-    },
-
-    /**
-     * Update text node content
-     */
-    updateTextNode: (node, text) => {
-      node.textContent = text;
-    },
-
-    /**
-     * Set attribute/property on element
-     */
-    setAttribute: (element, key, value) => {
-      Reflect.set(element, key, value);
+      // Handle element properties
+      Reflect.set(node, key, value);
     },
 
     /**
@@ -365,11 +365,6 @@ export function createDOMHydrationRenderer(
 
       // No actual DOM operation - child already in place
     },
-
-    /**
-     * Check if element is connected to DOM
-     */
-    isConnected: (element) => element.isConnected,
 
     /**
      * Attach event listeners to hydrated elements
@@ -439,8 +434,8 @@ export function createDOMHydrationRenderer(
     seekToFragment: (parentElement, nextSiblingElement) => {
       // Find child index where fragment content starts
       const childIndex = findFragmentContentIndex(
-        parentElement,
-        nextSiblingElement
+        parentElement as HTMLElement,
+        nextSiblingElement as HTMLElement
       );
 
       // No fragment markers found - fragment was hidden during SSR
@@ -451,7 +446,10 @@ export function createDOMHydrationRenderer(
       }
 
       // Compute path from root to parent element
-      const parentPath = computePathToElement(containerEl, parentElement);
+      const parentPath = computePathToElement(
+        containerEl,
+        parentElement as HTMLElement
+      );
 
       // Set position to point at fragment content
       position = positionFromPath([...parentPath, childIndex]);

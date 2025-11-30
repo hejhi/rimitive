@@ -132,7 +132,8 @@ export interface MockRendererConfig extends RendererConfig {
     h6: MockElement;
     a: MockElement;
     img: MockElement;
-    [key: string]: MockElement;
+    text: MockText;
+    [key: string]: MockElement | MockText;
   };
   events: {
     click: MockEvent;
@@ -141,9 +142,7 @@ export interface MockRendererConfig extends RendererConfig {
     submit: MockEvent;
     [key: string]: MockEvent;
   };
-  baseElement: MockElement;
-  textNode: MockText;
-  comment: MockComment;
+  baseElement: MockElement | MockText;
 }
 
 /**
@@ -151,16 +150,31 @@ export interface MockRendererConfig extends RendererConfig {
  */
 export function createMockRenderer() {
   const renderer: Renderer<MockRendererConfig> = {
-    createElement: vi.fn((tag: string) => new MockElement(tag)),
-    createTextNode: vi.fn((text: string) => new MockText(text)),
-    updateTextNode: vi.fn((node: MockText, text: string) => {
-      node.content = text;
+    createNode: vi.fn((type: string, props?: Record<string, unknown>) => {
+      if (type === 'text') {
+        return new MockText(
+          props?.value != null ? String(props.value) : ''
+        ) as MockText;
+      }
+      return new MockElement(type) as MockElement;
     }),
-    setAttribute: vi.fn((element: MockElement, key: string, value: unknown) => {
-      element.props[key] = value;
-    }),
+    setProperty: vi.fn(
+      (node: MockElement | MockText, key: string, value: unknown) => {
+        if (node instanceof MockText) {
+          if (key === 'value') {
+            node.content = value != null ? String(value) : '';
+          }
+          return;
+        }
+        node.props[key] = value;
+      }
+    ),
     appendChild: vi.fn(
-      (parent: MockElement, child: MockElement | MockText | MockComment) => {
+      (
+        parent: MockElement | MockText,
+        child: MockElement | MockText | MockComment
+      ) => {
+        if (parent instanceof MockText) return; // Text nodes can't have children
         if (!parent.children.includes(child)) {
           parent.children.push(child);
         }
@@ -168,7 +182,11 @@ export function createMockRenderer() {
       }
     ),
     removeChild: vi.fn(
-      (parent: MockElement, child: MockElement | MockText | MockComment) => {
+      (
+        parent: MockElement | MockText,
+        child: MockElement | MockText | MockComment
+      ) => {
+        if (parent instanceof MockText) return; // Text nodes can't have children
         const index = parent.children.indexOf(child);
         if (index !== -1) parent.children.splice(index, 1);
         child.parent = null;
@@ -176,10 +194,12 @@ export function createMockRenderer() {
     ),
     insertBefore: vi.fn(
       (
-        parent: MockElement,
+        parent: MockElement | MockText,
         child: MockElement | MockText | MockComment,
         ref: MockElement | MockText | MockComment | null
       ) => {
+        if (parent instanceof MockText) return; // Text nodes can't have children
+
         // Remove from old position if already in parent
         const oldIndex = parent.children.indexOf(child);
         if (oldIndex !== -1) {
@@ -200,13 +220,13 @@ export function createMockRenderer() {
         child.parent = parent;
       }
     ),
-    isConnected: vi.fn((element: MockElement) => element.connected),
     addEventListener: vi.fn(
       (
-        element: MockElement,
+        element: MockElement | MockText,
         event: string,
         handler: (event: unknown) => void
       ) => {
+        if (element instanceof MockText) return () => {}; // Text nodes don't have events
         element.listeners.set(event, handler);
         return () => element.listeners.delete(event);
       }

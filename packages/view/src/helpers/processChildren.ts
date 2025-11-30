@@ -20,23 +20,23 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
 }) {
-  type TElement = TConfig['baseElement'];
-  type ViewChild = RefSpec<TElement> | FragmentRef<TElement>;
+  type TNode = TConfig['baseElement'];
+  type ViewChild = RefSpec<TNode> | FragmentRef<TNode>;
 
   const { scopedEffect, renderer } = opts;
   const createTextEffect =
-    (child: () => string | number, text: TConfig['textNode']) => () => {
+    (child: () => string | number, textNode: TNode) => () => {
       const value = child();
       const stringValue = value == null ? '' : String(value);
-      renderer.updateTextNode(text, stringValue);
+      renderer.setProperty(textNode, 'value', stringValue);
     };
 
   const handleChild = (
-    parentRef: ElementRef<TElement>,
+    parentRef: ElementRef<TNode>,
     child: ElRefSpecChild,
     api?: unknown
-  ): NodeRef<TElement> | null => {
-    const element = parentRef.element as TConfig['baseElement'];
+  ): NodeRef<TNode> | null => {
+    const element = parentRef.element as TNode;
     const childType = typeof child;
 
     // Skip null/undefined/false
@@ -44,9 +44,9 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
 
     // Static primitive (string, number)
     if (childType === 'string' || childType === 'number') {
-      const textNode = renderer.createTextNode(
-        String(child as string | number)
-      );
+      const textNode = renderer.createNode('text', {
+        value: String(child as string | number),
+      });
       renderer.appendChild(element, textNode);
       return null; // Text nodes don't participate in ref node chain
     }
@@ -63,15 +63,9 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
         const childRef = spec.create(api);
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
-          renderer.appendChild(
-            element,
-            childRef.element as TConfig['baseElement']
-          );
+          renderer.appendChild(element, childRef.element as TNode);
           // Decorate element if renderer supports it (e.g., add island markers)
-          renderer.decorateElement?.(
-            childRef,
-            childRef.element as TConfig['baseElement']
-          );
+          renderer.decorateElement?.(childRef, childRef.element as TNode);
         } else if (childRef.status === STATUS_FRAGMENT) {
           // Skip past fragment content during forward pass (for hydration)
           // This advances position so subsequent siblings can be matched correctly
@@ -83,7 +77,7 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
 
     // Bare function (reactive computed or effect) - wrap in scopedEffect
     if (childType === 'function') {
-      const textNode = renderer.createTextNode('');
+      const textNode = renderer.createNode('text', { value: '' });
       scopedEffect(createTextEffect(child as () => string, textNode));
       renderer.appendChild(element, textNode);
       return null;
@@ -93,12 +87,12 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
   };
 
   const processChildren = (
-    parent: ElementRef<TElement>,
+    parent: ElementRef<TNode>,
     children: ElRefSpecChild[],
     api?: unknown
   ): void => {
-    let firstChildRef: NodeRef<TElement> | null = null;
-    let lastChildRef: NodeRef<TElement> | null = null;
+    let firstChildRef: NodeRef<TNode> | null = null;
+    let lastChildRef: NodeRef<TNode> | null = null;
 
     // Forward pass: create refs and build doubly-linked list (including fragments)
     for (const child of children) {
@@ -130,25 +124,25 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
       if (lastChildRef.status === STATUS_FRAGMENT) {
         // Seek to fragment position for hydration (no-op for non-hydrating renderers)
         // Get next sibling's element for position computation
-        const nextRef = lastChildRef.next as NodeRef<TElement> | null;
+        const nextRef = lastChildRef.next as NodeRef<TNode> | null;
         const nextElement =
           nextRef?.status === STATUS_ELEMENT
             ? nextRef.element
             : nextRef?.status === STATUS_FRAGMENT
-              ? (nextRef.firstChild as ElementRef<TElement> | null)?.element ??
-                null
+              ? ((nextRef.firstChild as ElementRef<TNode> | null)?.element ??
+                null)
               : null;
         renderer.seekToFragment?.(parent.element, nextElement);
 
         lastChildRef.attach(
           parent,
-          lastChildRef.next as NodeRef<TElement> | null,
+          lastChildRef.next as NodeRef<TNode> | null,
           api
         );
         // Decorate fragment with SSR markers if renderer supports it
         renderer.decorateFragment?.(lastChildRef, parent.element);
       }
-      lastChildRef = lastChildRef.prev as NodeRef<TElement> | null;
+      lastChildRef = lastChildRef.prev as NodeRef<TNode> | null;
     }
   };
 

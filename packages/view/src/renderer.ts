@@ -1,85 +1,76 @@
 /**
- * Renderer interface - abstracts all platform-specific concerns
+ * TreeAdapter interface - abstracts tree manipulation for any node-based target
  *
  * This allows el() and map() to be pure reactive primitives that work
- * with any rendering target (DOM, SSR, React Native, etc.)
- */
-
-/**
- * Generic element interface - platform-agnostic
- * Renderers can extend this with their own element types
- */
-export type Element = object;
-
-/**
- * Generic text node interface
- * Renderers can extend this with their own text node types
- */
-export type TextNode = object;
-
-/**
- * RendererConfig defines the type-level contract for a renderer:
- * - elements: Maps tag names to their element types (e.g., 'div' -> HTMLDivElement)
- * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
- * - baseElement: Base element type for this renderer (e.g., HTMLElement)
- * - textNode: Text node type for this renderer (e.g., Text)
- * - comment: Comment node type for this renderer (e.g., Comment)
+ * with any tree target (DOM, Three.js scene graph, etc.)
  *
- * This allows the type system to provide full type safety while keeping
- * the renderer implementation simple and agnostic.
+ * The interface is intentionally minimal - just the core tree operations.
+ * DOM-specific concerns (events, hydration) are layered on top.
+ */
+
+/**
+ * Generic node interface - platform-agnostic
+ * Adapters can extend this with their own node types
+ */
+export type Node = object;
+
+/**
+ * RendererConfig defines the type-level contract for a tree adapter:
+ * - elements: Maps tag names to their node types (e.g., 'div' -> HTMLDivElement)
+ * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
+ * - baseElement: Base node type for this adapter (e.g., Node for DOM)
+ *
+ * Note: Text is just another node type created via createNode('text', { value: '...' })
  */
 export interface RendererConfig {
   elements: object;
   events: object;
   baseElement: object;
-  textNode: object;
 }
 
 /**
- * Renderer interface - all platform-specific operations
+ * Renderer interface - core tree operations
  *
  * Generic over:
- * - TConfig: The renderer configuration (elements, events, baseElement, textNode)
+ * - TConfig: The renderer configuration (elements, events, baseElement)
  */
 export interface Renderer<TConfig extends RendererConfig> {
   /**
-   * Create an element with the given tag name
+   * Create a node with the given type
+   *
+   * For DOM: type is tag name ('div', 'span', 'text')
+   * For Three.js: type is constructor name ('mesh', 'group')
+   *
+   * Text nodes are created with type 'text' and initial value in props:
+   *   createNode('text', { value: 'hello' })
    */
-  createElement: (tag: string) => TConfig['baseElement'];
+  createNode: (type: string, props?: Record<string, unknown>) => TConfig['baseElement'];
 
   /**
-   * Create a text node with initial content
+   * Set a property on a node
+   *
+   * For text nodes, setting 'value' updates the text content
    */
-  createTextNode: (text: string) => TConfig['textNode'];
-
-  /**
-   * Update a text node's content
-   */
-  updateTextNode: (node: TConfig['textNode'], text: string) => void;
-
-  /**
-   * Set an attribute/property on an element
-   */
-  setAttribute: (
-    element: TConfig['baseElement'],
+  setProperty: (
+    node: TConfig['baseElement'],
     key: string,
     value: unknown
   ) => void;
 
   /**
-   * Append a child to a parent element
+   * Append a child to a parent node
    */
   appendChild: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode']
+    child: TConfig['baseElement']
   ) => void;
 
   /**
-   * Remove a child from a parent element
+   * Remove a child from a parent node
    */
   removeChild: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode']
+    child: TConfig['baseElement']
   ) => void;
 
   /**
@@ -87,23 +78,25 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   insertBefore: (
     parent: TConfig['baseElement'],
-    child: TConfig['baseElement'] | TConfig['textNode'],
-    reference: TConfig['baseElement'] | TConfig['textNode'] | null
+    child: TConfig['baseElement'],
+    reference: TConfig['baseElement'] | null
   ) => void;
 
   /**
-   * Check if an element is currently connected to the render tree
+   * Optional: Called when a node is attached to the tree
    */
-  isConnected: (element: TConfig['baseElement']) => boolean;
+  onAttach?: (node: TConfig['baseElement']) => void | (() => void);
 
   /**
-   * Add an event listener to an element
-   * Returns a cleanup function to remove the listener
-   *
-   * Implementation note: The runtime implementation uses string for event name
-   * and unknown for handler, but the type system constrains these based on TConfig
+   * Optional: Called when a node is detached from the tree
    */
-  addEventListener: <TOpts extends Record<string, unknown>>(
+  onDetach?: (node: TConfig['baseElement']) => void;
+
+  /**
+   * Optional: Add an event listener to a node (DOM-specific)
+   * Returns a cleanup function to remove the listener
+   */
+  addEventListener?: <TOpts extends Record<string, unknown>>(
     element: TConfig['baseElement'],
     event: string,
     handler: (event: unknown) => void,

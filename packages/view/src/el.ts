@@ -126,7 +126,7 @@ export const El = defineService(
         scopedEffect,
         renderer,
       });
-      const { setAttribute, createElement } = renderer;
+      const { setProperty, createNode } = renderer;
 
       /**
        * Helper to create a RefSpec with lifecycle callback chaining
@@ -173,7 +173,7 @@ export const El = defineService(
         // Return children applicator
         return (...children: ElRefSpecChild[]) => {
           return createRefSpec((lifecycleCallbacks, api) => {
-            const element = createElement(tag);
+            const element = createNode(tag);
             const elRef: ElementRef<TBaseElement> = {
               status: STATUS_ELEMENT,
               element: element,
@@ -190,12 +190,12 @@ export const El = defineService(
                 const isEventHandler = key.startsWith('on');
 
                 if (typeof val !== 'function' || isEventHandler) {
-                  setAttribute(element, key, val);
+                  setProperty(element, key, val);
                   continue;
                 }
                 // Reactive value - wrap in effect for updates
                 scopedEffect(() =>
-                  setAttribute(element, key, (val as () => unknown)())
+                  setProperty(element, key, (val as () => unknown)())
                 );
               }
               processChildren(elRef, children, api);

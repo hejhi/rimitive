@@ -1,11 +1,9 @@
 import type { Renderer, RendererConfig } from '../renderer';
 
 export interface DOMRendererConfig extends RendererConfig {
-  elements: HTMLElementTagNameMap;
+  elements: HTMLElementTagNameMap & { text: Text };
   events: HTMLElementEventMap;
-  baseElement: HTMLElement;
-  textNode: Text;
-  comment: Comment;
+  baseElement: Node;
 }
 
 /**
@@ -13,27 +11,45 @@ export interface DOMRendererConfig extends RendererConfig {
  */
 export function createDOMRenderer(): Renderer<DOMRendererConfig> {
   return {
-    createElement: (tag) => document.createElement(tag),
-    createTextNode: (text) => document.createTextNode(text),
-    updateTextNode: (node, text) => (node.textContent = text),
-    setAttribute: (element, key, value) => {
-      // Hyphenated keys (data-*, aria-*, custom attributes) use setAttribute
-      // Everything else uses property assignment for proper type handling
-      if (key.includes('-')) {
-        if (value == null) {
-          element.removeAttribute(key);
-        } else {
-          element.setAttribute(key, String(value));
+    createNode: (type, props) => {
+      if (type === 'text') {
+        return document.createTextNode(
+          props?.value != null ? String(props.value) : ''
+        );
+      }
+      return document.createElement(type);
+    },
+
+    setProperty: (node, key, value) => {
+      // Text nodes only support 'value' -> textContent
+      if (node instanceof Text) {
+        if (key === 'value') {
+          node.textContent = value != null ? String(value) : '';
         }
-      } else {
-        Reflect.set(element, key, value);
+        return;
+      }
+
+      // Element nodes
+      if (node instanceof Element) {
+        // Hyphenated keys (data-*, aria-*, custom attributes) use setAttribute
+        // Everything else uses property assignment for proper type handling
+        if (key.includes('-')) {
+          if (value == null) {
+            node.removeAttribute(key);
+          } else {
+            node.setAttribute(key, String(value));
+          }
+        } else {
+          Reflect.set(node, key, value);
+        }
       }
     },
+
     appendChild: (parent, child) => parent.appendChild(child),
     removeChild: (parent, child) => parent.removeChild(child),
     insertBefore: (parent, child, reference) =>
       parent.insertBefore(child, reference),
-    isConnected: (element) => element.isConnected,
+
     addEventListener: (
       element,
       event,

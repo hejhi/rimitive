@@ -187,7 +187,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             // The hydrating renderer starts at position [] (the container itself)
             // We need to advance to position [0], [1], etc. (inside the container)
             // Calling createElement('div') matches the container and enters its children
-            renderer.createElement('div');
+            renderer.createNode('div');
 
             // Create a parent ref for the wrapper div (needed for hydration to work)
             // Save it so we can update it later before unwrapping

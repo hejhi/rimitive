@@ -35,7 +35,7 @@ describe('Basic Element Hydration', () => {
     const container = setupHTML('<div></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
+    const div = renderer.createNode('div') as HTMLElement;
 
     expect(div.tagName).toBe('DIV');
     expect(div).toBe(container); // Hydrates the container itself
@@ -46,10 +46,10 @@ describe('Basic Element Hydration', () => {
     const renderer = createDOMHydrationRenderer(container);
 
     expect(() => {
-      renderer.createElement('span');
+      renderer.createNode('span');
     }).toThrow(HydrationMismatch);
     expect(() => {
-      renderer.createElement('span');
+      renderer.createNode('span');
     }).toThrow('Expected <span>');
   });
 
@@ -57,8 +57,8 @@ describe('Basic Element Hydration', () => {
     const container = setupHTML('<div><button></button></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
-    const button = renderer.createElement('button');
+    const div = renderer.createNode('div') as HTMLElement;
+    const button = renderer.createNode('button') as HTMLElement;
 
     expect(button.tagName).toBe('BUTTON');
     expect(button.parentElement).toBe(div);
@@ -68,13 +68,13 @@ describe('Basic Element Hydration', () => {
     const container = setupHTML('<div><span></span><p></p></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const span = renderer.createElement('span');
+    renderer.createNode('div');
+    const span = renderer.createNode('span') as HTMLElement;
 
     // appendChild signals exit from span, advance to next sibling
     renderer.appendChild(span.parentElement!, span);
 
-    const p = renderer.createElement('p');
+    const p = renderer.createNode('p') as HTMLElement;
 
     expect(span.tagName).toBe('SPAN');
     expect(p.tagName).toBe('P');
@@ -91,8 +91,8 @@ describe('Text Node Hydration', () => {
     const container = setupHTML('<div>Hello</div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const text = renderer.createTextNode('Hello');
+    renderer.createNode('div');
+    const text = renderer.createNode('text', { value: 'Hello' });
 
     expect(text.textContent).toBe('Hello');
   });
@@ -101,13 +101,13 @@ describe('Text Node Hydration', () => {
     const container = setupHTML('<div><span></span></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
     expect(() => {
-      renderer.createTextNode('text');
+      renderer.createNode('text', { value: 'text' });
     }).toThrow(HydrationMismatch);
     expect(() => {
-      renderer.createTextNode('text');
+      renderer.createNode('text', { value: 'text' });
     }).toThrow('Expected text node');
   });
 
@@ -115,8 +115,8 @@ describe('Text Node Hydration', () => {
     const container = setupHTML('<div>old</div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const text = renderer.createTextNode('new');
+    renderer.createNode('div');
+    const text = renderer.createNode('text', { value: 'new' });
 
     expect(text.textContent).toBe('new');
   });
@@ -125,8 +125,8 @@ describe('Text Node Hydration', () => {
     const container = setupHTML('<div>same</div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const text = renderer.createTextNode('same');
+    renderer.createNode('div');
+    const text = renderer.createNode('text', { value: 'same' });
 
     expect(text.textContent).toBe('same');
   });
@@ -143,8 +143,8 @@ describe('Fragment Range Hydration', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const span1 = renderer.createElement('span'); // Should detect marker and enter range
+    renderer.createNode('div');
+    const span1 = renderer.createNode('span') as HTMLElement; // Should detect marker and enter range
 
     expect(span1.tagName).toBe('SPAN');
     expect(span1.textContent).toBe('1');
@@ -156,18 +156,18 @@ describe('Fragment Range Hydration', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
-    const span1 = renderer.createElement('span');
-    renderer.createTextNode('a');
+    const span1 = renderer.createNode('span') as HTMLElement;
+    renderer.createNode('text', { value: 'a' });
     renderer.appendChild(span1.parentElement!, span1);
 
-    const span2 = renderer.createElement('span');
-    renderer.createTextNode('b');
+    const span2 = renderer.createNode('span') as HTMLElement;
+    renderer.createNode('text', { value: 'b' });
     renderer.appendChild(span2.parentElement!, span2);
 
-    const span3 = renderer.createElement('span');
-    renderer.createTextNode('c');
+    const span3 = renderer.createNode('span') as HTMLElement;
+    renderer.createNode('text', { value: 'c' });
     renderer.appendChild(span3.parentElement!, span3);
 
     expect(span1.textContent).toBe('a');
@@ -181,14 +181,14 @@ describe('Fragment Range Hydration', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const p1 = renderer.createElement('p');
+    renderer.createNode('div');
+    const p1 = renderer.createNode('p') as HTMLElement;
     renderer.appendChild(p1.parentElement!, p1);
 
-    const span = renderer.createElement('span'); // Enters fragment
+    const span = renderer.createNode('span') as HTMLElement; // Enters fragment
     renderer.appendChild(span.parentElement!, span); // Exits fragment
 
-    const p2 = renderer.createElement('p');
+    const p2 = renderer.createNode('p') as HTMLElement;
 
     expect(p1.textContent).toBe('before');
     expect(span.textContent).toBe('inside');
@@ -201,12 +201,12 @@ describe('Fragment Range Hydration', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
-    const span1 = renderer.createElement('span');
+    const span1 = renderer.createNode('span') as HTMLElement;
     renderer.appendChild(span1.parentElement!, span1);
 
-    const span2 = renderer.createElement('span');
+    const span2 = renderer.createNode('span') as HTMLElement;
     renderer.appendChild(span2.parentElement!, span2);
 
     expect(span1.textContent).toBe('a');
@@ -219,12 +219,12 @@ describe('Fragment Range Hydration', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
-    const span = renderer.createElement('span');
+    const span = renderer.createNode('span') as HTMLElement;
     renderer.appendChild(span.parentElement!, span); // Should exit range
 
-    const p = renderer.createElement('p'); // Should be outside range
+    const p = renderer.createNode('p') as HTMLElement; // Should be outside range
 
     expect(span.textContent).toBe('1');
     expect(p.textContent).toBe('after');
@@ -242,9 +242,9 @@ describe('Nested Fragment Ranges', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const section = renderer.createElement('section');
-    const span = renderer.createElement('span'); // Enters inner fragment
+    renderer.createNode('div');
+    const section = renderer.createNode('section') as HTMLElement;
+    const span = renderer.createNode('span') as HTMLElement; // Enters inner fragment
 
     expect(section.tagName).toBe('SECTION');
     expect(span.textContent).toBe('inner');
@@ -256,23 +256,23 @@ describe('Nested Fragment Ranges', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
     // First outer item
-    const section1 = renderer.createElement('section');
-    const spanA = renderer.createElement('span'); // Inner fragment
+    const section1 = renderer.createNode('section') as HTMLElement;
+    const spanA = renderer.createNode('span') as HTMLElement; // Inner fragment
     renderer.appendChild(spanA.parentElement!, spanA);
-    const spanB = renderer.createElement('span');
+    const spanB = renderer.createNode('span') as HTMLElement;
     renderer.appendChild(spanB.parentElement!, spanB); // Exit inner
     renderer.appendChild(section1.parentElement!, section1); // Exit section
 
     // Second outer item
-    const section2 = renderer.createElement('section');
-    const spanC = renderer.createElement('span'); // Inner fragment
+    const section2 = renderer.createNode('section') as HTMLElement;
+    const spanC = renderer.createNode('span') as HTMLElement; // Inner fragment
     renderer.appendChild(spanC.parentElement!, spanC); // Exit inner
     renderer.appendChild(section2.parentElement!, section2); // Exit section, exit outer
 
-    const p = renderer.createElement('p');
+    const p = renderer.createNode('p') as HTMLElement;
 
     expect(spanA.textContent).toBe('a');
     expect(spanB.textContent).toBe('b');
@@ -290,9 +290,9 @@ describe('Position Bookkeeping', () => {
     const container = setupHTML('<div><button>Click</button></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const button = renderer.createElement('button');
-    const text = renderer.createTextNode('Click');
+    renderer.createNode('div');
+    const button = renderer.createNode('button') as HTMLElement;
+    const text = renderer.createNode('text', { value: 'Click' });
 
     // appendChild with already-attached child signals exit
     renderer.appendChild(button, text);
@@ -305,14 +305,14 @@ describe('Position Bookkeeping', () => {
     const container = setupHTML('<div><span>a</span><span>b</span></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const span = renderer.createElement('span');
+    renderer.createNode('div');
+    const span = renderer.createNode('span') as HTMLElement;
 
     // insertBefore with already-attached child signals exit
     renderer.insertBefore(span.parentElement!, span, null);
 
     // Should be positioned at next sibling now
-    const span2 = renderer.createElement('span');
+    const span2 = renderer.createNode('span') as HTMLElement;
     expect(span2.textContent).toBe('b');
   });
 
@@ -320,7 +320,7 @@ describe('Position Bookkeeping', () => {
     const container = setupHTML('<div></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
+    const div = renderer.createNode('div') as HTMLElement;
     const orphan = document.createElement('span');
 
     // Should not affect position when child is not attached
@@ -331,8 +331,8 @@ describe('Position Bookkeeping', () => {
     const container = setupHTML('<div><span></span></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
-    const span = renderer.createElement('span');
+    const div = renderer.createNode('div') as HTMLElement;
+    const span = renderer.createNode('span') as HTMLElement;
 
     // removeChild should be no-op
     renderer.removeChild(div, span);
@@ -351,8 +351,8 @@ describe('Attribute and Event Handling', () => {
     const container = setupHTML('<div></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
-    renderer.setAttribute(div, 'className', 'hydrated');
+    const div = renderer.createNode('div') as HTMLElement;
+    renderer.setProperty(div, 'className', 'hydrated');
 
     expect(div.className).toBe('hydrated');
   });
@@ -361,10 +361,10 @@ describe('Attribute and Event Handling', () => {
     const container = setupHTML('<button>Click</button>');
     const renderer = createDOMHydrationRenderer(container);
 
-    const button = renderer.createElement('button');
+    const button = renderer.createNode('button') as HTMLElement;
 
     let clicked = false;
-    const cleanup = renderer.addEventListener(
+    const cleanup = renderer.addEventListener!(
       button,
       'click',
       () => {
@@ -395,15 +395,15 @@ describe('Complex Hydration Scenarios', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    renderer.createElement('section');
-    renderer.createElement('article');
-    const h1 = renderer.createElement('h1');
-    renderer.createTextNode('Title');
+    renderer.createNode('div');
+    renderer.createNode('section');
+    renderer.createNode('article');
+    const h1 = renderer.createNode('h1') as HTMLElement;
+    renderer.createNode('text', { value: 'Title' });
     renderer.appendChild(h1.parentElement!, h1);
 
-    const p = renderer.createElement('p');
-    renderer.createTextNode('Content');
+    const p = renderer.createNode('p') as HTMLElement;
+    renderer.createNode('text', { value: 'Content' });
     renderer.appendChild(p.parentElement!, p);
 
     expect(h1.textContent).toBe('Title');
@@ -416,22 +416,22 @@ describe('Complex Hydration Scenarios', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
-    const header = renderer.createElement('header');
-    renderer.createTextNode('Header');
+    const header = renderer.createNode('header') as HTMLElement;
+    renderer.createNode('text', { value: 'Header' });
     renderer.appendChild(header.parentElement!, header);
 
-    const s1 = renderer.createElement('section'); // Enters fragment
-    renderer.createTextNode('Section 1');
+    const s1 = renderer.createNode('section') as HTMLElement; // Enters fragment
+    renderer.createNode('text', { value: 'Section 1' });
     renderer.appendChild(s1.parentElement!, s1);
 
-    const s2 = renderer.createElement('section');
-    renderer.createTextNode('Section 2');
+    const s2 = renderer.createNode('section') as HTMLElement;
+    renderer.createNode('text', { value: 'Section 2' });
     renderer.appendChild(s2.parentElement!, s2); // Exits fragment
 
-    const footer = renderer.createElement('footer');
-    renderer.createTextNode('Footer');
+    const footer = renderer.createNode('footer') as HTMLElement;
+    renderer.createNode('text', { value: 'Footer' });
 
     expect(header.textContent).toBe('Header');
     expect(s1.textContent).toBe('Section 1');
@@ -445,9 +445,9 @@ describe('Complex Hydration Scenarios', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const span = renderer.createElement('span');
-    renderer.createTextNode('solo');
+    renderer.createNode('div');
+    const span = renderer.createNode('span') as HTMLElement;
+    renderer.createNode('text', { value: 'solo' });
     renderer.appendChild(span.parentElement!, span);
 
     expect(span.textContent).toBe('solo');
@@ -457,8 +457,8 @@ describe('Complex Hydration Scenarios', () => {
     const container = setupHTML('<div><button></button></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    const button = renderer.createElement('button');
+    renderer.createNode('div');
+    const button = renderer.createNode('button') as HTMLElement;
     renderer.appendChild(button.parentElement!, button);
 
     expect(button.childNodes.length).toBe(0);
@@ -474,13 +474,13 @@ describe('Hydration Mismatch Errors', () => {
     const container = setupHTML('<div></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
     expect(() => {
-      renderer.createElement('span');
+      renderer.createNode('span');
     }).toThrow(HydrationMismatch);
     expect(() => {
-      renderer.createElement('span');
+      renderer.createNode('span');
     }).toThrow('Child at index 0 not found');
   });
 
@@ -490,14 +490,14 @@ describe('Hydration Mismatch Errors', () => {
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
+    renderer.createNode('div');
 
     // Mismatch errors include helpful information about what was expected vs found
     expect(() => {
-      renderer.createElement('span');
+      renderer.createNode('span');
     }).toThrow(HydrationMismatch);
     expect(() => {
-      renderer.createElement('span');
+      renderer.createNode('span');
     }).toThrow(/Expected <span>/);
   });
 
@@ -505,11 +505,11 @@ describe('Hydration Mismatch Errors', () => {
     const container = setupHTML('<div><section><p></p></section></div>');
     const renderer = createDOMHydrationRenderer(container);
 
-    renderer.createElement('div');
-    renderer.createElement('section');
+    renderer.createNode('div');
+    renderer.createNode('section');
 
     expect(() => {
-      renderer.createElement('span');
+      renderer.createNode('span');
     }).toThrow('Expected <span> at 0/0');
   });
 });
@@ -518,19 +518,6 @@ describe('Hydration Mismatch Errors', () => {
 // Tests: Connection Status
 // ============================================================================
 
-describe('Connection Status', () => {
-  it('should report hydrated elements as connected', () => {
-    const container = setupHTML('<div></div>');
-    document.body.appendChild(container);
-    const renderer = createDOMHydrationRenderer(container);
-
-    const div = renderer.createElement('div');
-
-    expect(renderer.isConnected(div)).toBe(true);
-
-    document.body.removeChild(container);
-  });
-});
 
 // ============================================================================
 // Tests: seekToFragment for Deferred Fragment Content
@@ -548,16 +535,16 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     const renderer = createDOMHydrationRenderer(container);
 
     // Forward pass: create div
-    const div = renderer.createElement('div');
+    const div = renderer.createNode('div') as HTMLElement;
 
     // Forward pass: create h2 and exit
-    const h2 = renderer.createElement('h2');
-    renderer.createTextNode('Products');
+    const h2 = renderer.createNode('h2') as HTMLElement;
+    renderer.createNode('text', { value: 'Products' });
     renderer.appendChild(div, h2);
 
     // Forward pass: create section (intro) and exit
-    const sectionIntro = renderer.createElement('section');
-    renderer.createTextNode('intro');
+    const sectionIntro = renderer.createNode('section') as HTMLElement;
+    renderer.createNode('text', { value: 'intro' });
     renderer.appendChild(div, sectionIntro);
 
     // Forward pass: SKIP show() fragment
@@ -565,8 +552,8 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.skipFragment?.(div);
 
     // Forward pass: create section (filter) and exit
-    const sectionFilter = renderer.createElement('section');
-    renderer.createTextNode('filter');
+    const sectionFilter = renderer.createNode('section') as HTMLElement;
+    renderer.createNode('text', { value: 'filter' });
     renderer.appendChild(div, sectionFilter);
 
     // Now we're at the UNWIND phase
@@ -574,8 +561,8 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.seekToFragment?.(div, sectionFilter);
 
     // Now show().attach() creates the deferred h1 content
-    const h1 = renderer.createElement('h1');
-    renderer.createTextNode('hello');
+    const h1 = renderer.createNode('h1') as HTMLElement;
+    renderer.createNode('text', { value: 'hello' });
     renderer.appendChild(div, h1);
 
     // Verify we got the right elements
@@ -591,22 +578,22 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
+    const div = renderer.createNode('div') as HTMLElement;
 
     // Forward pass: skip the fragment
     renderer.skipFragment?.(div);
 
     // Forward pass: create section
-    const section = renderer.createElement('section');
-    renderer.createTextNode('after');
+    const section = renderer.createNode('section') as HTMLElement;
+    renderer.createNode('text', { value: 'after' });
     renderer.appendChild(div, section);
 
     // Unwind: seek back to fragment position
     renderer.seekToFragment?.(div, section);
 
     // Create deferred fragment content
-    const h1 = renderer.createElement('h1');
-    renderer.createTextNode('first');
+    const h1 = renderer.createNode('h1') as HTMLElement;
+    renderer.createNode('text', { value: 'first' });
     renderer.appendChild(div, h1);
 
     expect(h1.textContent).toBe('first');
@@ -619,11 +606,11 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
+    const div = renderer.createNode('div') as HTMLElement;
 
     // Forward pass: create section
-    const section = renderer.createElement('section');
-    renderer.createTextNode('before');
+    const section = renderer.createNode('section') as HTMLElement;
+    renderer.createNode('text', { value: 'before' });
     renderer.appendChild(div, section);
 
     // Forward pass: skip fragment (it's last, no next sibling after it)
@@ -633,8 +620,8 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.seekToFragment?.(div, null);
 
     // Create deferred fragment content
-    const h1 = renderer.createElement('h1');
-    renderer.createTextNode('last');
+    const h1 = renderer.createNode('h1') as HTMLElement;
+    renderer.createNode('text', { value: 'last' });
     renderer.appendChild(div, h1);
 
     expect(section.textContent).toBe('before');
@@ -647,11 +634,11 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     );
     const renderer = createDOMHydrationRenderer(container);
 
-    const div = renderer.createElement('div');
+    const div = renderer.createNode('div') as HTMLElement;
 
     // Forward pass: h2
-    const h2 = renderer.createElement('h2');
-    renderer.createTextNode('title');
+    const h2 = renderer.createNode('h2') as HTMLElement;
+    renderer.createNode('text', { value: 'title' });
     renderer.appendChild(div, h2);
 
     // Forward pass: skip first fragment
@@ -661,24 +648,24 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.skipFragment?.(div);
 
     // Forward pass: create footer
-    const footer = renderer.createElement('footer');
-    renderer.createTextNode('end');
+    const footer = renderer.createNode('footer') as HTMLElement;
+    renderer.createNode('text', { value: 'end' });
     renderer.appendChild(div, footer);
 
     // Unwind: seek to second fragment (closer to footer)
     renderer.seekToFragment?.(div, footer);
 
     // Create second fragment content
-    const span = renderer.createElement('span');
-    renderer.createTextNode('frag2');
+    const span = renderer.createNode('span') as HTMLElement;
+    renderer.createNode('text', { value: 'frag2' });
     renderer.appendChild(div, span);
 
     // Seek to first fragment
     renderer.seekToFragment?.(div, span);
 
     // Create first fragment content
-    const p = renderer.createElement('p');
-    renderer.createTextNode('frag1');
+    const p = renderer.createNode('p') as HTMLElement;
+    renderer.createNode('text', { value: 'frag1' });
     renderer.appendChild(div, p);
 
     expect(h2.textContent).toBe('title');
@@ -709,7 +696,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     const renderer = createDOMHydrationRenderer(container);
 
     // Enter main
-    const main = renderer.createElement('main');
+    const main = renderer.createNode('main') as HTMLElement;
 
     // Forward pass at main level: skip route match fragment
     renderer.skipFragment?.(main);
@@ -718,25 +705,25 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     // Seek to route match fragment position, then process its content
     renderer.seekToFragment?.(main, null);
 
-    // Route match attach() creates the div and processes its children
-    const div = renderer.createElement('div');
+    // Route match attach() creates the div and processes its content
+    const div = renderer.createNode('div') as HTMLElement;
 
     // Forward pass at div level: h2
-    const h2 = renderer.createElement('h2');
-    renderer.createTextNode('Products');
+    const h2 = renderer.createNode('h2') as HTMLElement;
+    renderer.createNode('text', { value: 'Products' });
     renderer.appendChild(div, h2);
 
     // Forward pass at div level: section(intro)
-    const sectionIntro = renderer.createElement('section');
-    renderer.createTextNode('intro');
+    const sectionIntro = renderer.createNode('section') as HTMLElement;
+    renderer.createNode('text', { value: 'intro' });
     renderer.appendChild(div, sectionIntro);
 
     // Forward pass at div level: skip show() fragment
     renderer.skipFragment?.(div);
 
     // Forward pass at div level: section(filter)
-    const sectionFilter = renderer.createElement('section');
-    renderer.createTextNode('filter');
+    const sectionFilter = renderer.createNode('section') as HTMLElement;
+    renderer.createNode('text', { value: 'filter' });
     renderer.appendChild(div, sectionFilter);
 
     // === UNWIND at div level ===
@@ -744,8 +731,8 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.seekToFragment?.(div, sectionFilter);
 
     // show() attach() creates the h1
-    const h1 = renderer.createElement('h1');
-    renderer.createTextNode('hello');
+    const h1 = renderer.createNode('h1') as HTMLElement;
+    renderer.createNode('text', { value: 'hello' });
     renderer.appendChild(div, h1);
 
     // Exit div (back to main level)
@@ -774,7 +761,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     const renderer = createDOMHydrationRenderer(container);
 
     // Enter main
-    const main = renderer.createElement('main');
+    const main = renderer.createNode('main') as HTMLElement;
 
     // Forward pass: skip show(Home) - but it has NO markers in DOM!
     // skipFragment should handle this gracefully
@@ -791,8 +778,8 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.seekToFragment?.(main, null);
 
     // Products attach() creates the div
-    const productsDiv = renderer.createElement('div');
-    renderer.createTextNode('Products page');
+    const productsDiv = renderer.createNode('div') as HTMLElement;
+    renderer.createNode('text', { value: 'Products page' });
     renderer.appendChild(main, productsDiv);
 
     // Seek to show(About) - NO markers, should be no-op

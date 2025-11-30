@@ -55,7 +55,7 @@ describe('match() - reactive element switching', () => {
       });
 
       // Create parent and initialize fragment
-      const parent = renderer.createElement('div');
+      const parent = renderer.createNode('div') as MockElement;
       const parentRef: ElementRef<MockElement> = {
         status: STATUS_ELEMENT,
         element: parent,

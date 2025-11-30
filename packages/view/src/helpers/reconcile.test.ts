@@ -27,7 +27,7 @@ describe('reconcileWithKeys', () => {
 
   function setup() {
     const env = createTestEnv();
-    const parent = env.renderer.createElement('ul');
+    const parent = env.renderer.createNode('ul') as MockElement;
 
     // Create reconciler instance with hooks
     const reconciler = createReconciler<
@@ -37,8 +37,8 @@ describe('reconcileWithKeys', () => {
     >({
       parentElement: parent,
       onCreate: (item: Item) => {
-        const li = env.renderer.createElement('li');
-        const textNode = env.renderer.createTextNode(item.text);
+        const li = env.renderer.createNode('li') as MockElement;
+        const textNode = env.renderer.createNode('text', { value: item.text });
         env.renderer.appendChild(li, textNode);
         env.renderer.insertBefore(parent, li, null);
 
@@ -53,7 +53,7 @@ describe('reconcileWithKeys', () => {
         // Update text content if needed
         const li = (node as ElementRef<MockElement>).element;
         if (li.children[0]) {
-          (li.children[0] as MockText).content = item.text;
+          env.renderer.setProperty(li.children[0] as MockText, 'value', item.text);
         }
       },
       onMove: (node, nextSibling) => {
@@ -657,7 +657,7 @@ describe('reconcileWithKeys', () => {
   describe('Key fallback behavior', () => {
     it('should use index as key when key is undefined', () => {
       const env = createTestEnv();
-      const parent = env.renderer.createElement('ul');
+      const parent = env.renderer.createNode('ul') as MockElement;
 
       // Create reconciler that uses index as key
       const reconciler = createReconciler<
@@ -667,8 +667,8 @@ describe('reconcileWithKeys', () => {
       >({
         parentElement: parent,
         onCreate: (item: { text: string }) => {
-          const li = env.renderer.createElement('li');
-          const textNode = env.renderer.createTextNode(item.text);
+          const li = env.renderer.createNode('li') as MockElement;
+          const textNode = env.renderer.createNode('text', { value: item.text });
           env.renderer.appendChild(li, textNode);
           env.renderer.insertBefore(parent, li, null);
 

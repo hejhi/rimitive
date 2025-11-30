@@ -7,7 +7,6 @@
  */
 
 import type { ElementRef } from '../types';
-import type { Element as RendererElement } from '../renderer';
 
 // Status bits for reconciliation (separate from STATUS_ELEMENT/STATUS_FRAGMENT)
 const UNVISITED = 0;
@@ -146,7 +145,7 @@ export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
  */
 export function createReconciler<
   T,
-  TElement extends RendererElement,
+  TElement extends object,
   TNode extends ReconcileNode,
 >(options: ReconcilerOptions<T, TElement, TNode>): Reconciler<T, TNode> {
   // Internal reconciliation state

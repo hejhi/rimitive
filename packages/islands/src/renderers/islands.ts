@@ -25,18 +25,17 @@ export function createIslandsRenderer(
     useHydrating ? hydrateRenderer : fallbackRenderer;
 
   return {
-    createElement: (tag) => getRenderer().createElement(tag),
-    createTextNode: (text) => getRenderer().createTextNode(text),
-    updateTextNode: (node, text) => getRenderer().updateTextNode(node, text),
-    setAttribute: (element, key, value) =>
-      getRenderer().setAttribute(element, key, value),
+    createNode: (type: string, props?: Record<string, unknown>) => getRenderer().createNode(type, props),
+    setProperty: (node: Node, key: string, value: unknown) =>
+      getRenderer().setProperty(node, key, value),
     appendChild: (parent, child) => getRenderer().appendChild(parent, child),
     removeChild: (parent, child) => getRenderer().removeChild(parent, child),
     insertBefore: (parent, newNode, refNode) =>
       getRenderer().insertBefore(parent, newNode, refNode),
-    isConnected: (element) => getRenderer().isConnected(element),
-    addEventListener: (element, event, handler, options) =>
-      getRenderer().addEventListener(element, event, handler, options),
+    addEventListener: (element: Node, event: string, handler: (event: unknown) => void, options?: Record<string, unknown>) => {
+      const cleanup = getRenderer().addEventListener?.(element, event, handler, options);
+      return cleanup || (() => {});
+    },
     // Forward optional hydration-specific methods
     skipFragment: (parent) => getRenderer().skipFragment?.(parent),
     seekToFragment: (parent, nextSibling) =>

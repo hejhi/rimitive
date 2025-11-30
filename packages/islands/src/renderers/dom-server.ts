@@ -59,10 +59,23 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
   return {
-    createElement: (tag) => document.createElement(tag),
-    createTextNode: (text) => document.createTextNode(text),
-    updateTextNode: (node, text) => (node.textContent = text),
-    setAttribute: (element, key, value) => {
+    createNode: (type: string, props?: Record<string, unknown>) => {
+      if (type === 'text') {
+        const textNode = document.createTextNode(
+          (props?.value as string) || ''
+        );
+        return textNode;
+      }
+      return document.createElement(type);
+    },
+    setProperty: (node: Node, key: string, value: unknown) => {
+      // Handle text nodes
+      if (node.nodeType === 3 && key === 'value') {
+        node.textContent = String(value);
+        return;
+      }
+
+      const element = node as HTMLElement;
       // Skip event handlers during SSR (no interactivity on server)
       if (key.startsWith('on')) return;
 
@@ -85,8 +98,6 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
     removeChild: (parent, child) => parent.removeChild(child),
     insertBefore: (parent, child, reference) =>
       parent.insertBefore(child, reference),
-    // In linkedom, elements are always "connected" to the document
-    isConnected: (element) => element.isConnected,
     // No-op for SSR - events aren't meaningful on the server
     // Return empty cleanup function
     addEventListener: () => () => () => {},
@@ -101,12 +112,13 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
      * This ensures registration and decoration happen atomically - only
      * actually-rendered islands get registered for hydration.
      */
-    decorateElement: (elementRef: unknown, element: HTMLElement) => {
+    decorateElement: (elementRef, element) => {
+      const htmlElement = element as HTMLElement;
       const meta = (elementRef as { __islandMeta?: IslandNodeMeta })
         .__islandMeta;
 
       if (meta) {
-        const parent = element.parentNode;
+        const parent = htmlElement.parentNode;
         if (!parent) return;
 
         // Register NOW - atomic with decoration, only for rendered islands
@@ -120,12 +132,15 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         (elementRef as { __islandId?: string }).__islandId = instanceId;
 
         // Create script tag
-        const script = element.ownerDocument.createElement('script');
+        const script = htmlElement.ownerDocument?.createElement('script');
+
+        if (!script) return;
+
         script.setAttribute('type', 'application/json');
         script.setAttribute('data-island', instanceId);
 
         // Insert after element
-        parent.insertBefore(script, element.nextSibling);
+        parent.insertBefore(script, htmlElement.nextSibling);
       }
     },
 
@@ -146,16 +161,16 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
      * This ensures registration and decoration happen atomically - only
      * actually-rendered islands get registered for hydration.
      */
-    decorateFragment: (fragmentRef: unknown, parentElement: HTMLElement) => {
+    decorateFragment: (fragmentRef, parentElement) => {
+      const parent = parentElement as HTMLElement;
+      const frag = fragmentRef as FragmentRef<HTMLElement> & {
+        __islandMeta?: IslandNodeMeta;
+        __islandId: string;
+      };
       // Check if this is an island fragment (lazy registration)
-      const meta = (
-        fragmentRef as FragmentRef<unknown> & { __islandMeta?: IslandNodeMeta }
-      ).__islandMeta;
+      const meta = frag.__islandMeta;
 
       if (meta) {
-        const parent = parentElement;
-        const frag = fragmentRef as FragmentRef<unknown>;
-
         // Skip if fragment has no children
         if (!frag.firstChild || !frag.lastChild) return;
 
@@ -173,9 +188,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         );
 
         // Store instance ID back on ref for downstream use
-        (
-          fragmentRef as FragmentRef<unknown> & { __islandId?: string }
-        ).__islandId = instanceId;
+        frag.__islandId = instanceId;
 
         // Create wrapper div
         const wrapper = parent.ownerDocument.createElement('div');
@@ -210,15 +223,12 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         return;
       }
 
-      // Non-island fragment - just add comment markers (no wrapper)
-      const fragment = fragmentRef as FragmentRef<unknown>;
-
       // Skip if fragment has no children
-      if (!fragment.firstChild || !fragment.lastChild) return;
+      if (!frag.firstChild || !frag.lastChild) return;
 
       // Find first and last actual DOM nodes
-      const firstNode = getFirstDOMNode(fragment.firstChild);
-      const lastNode = getLastDOMNode(fragment.lastChild);
+      const firstNode = getFirstDOMNode(frag.firstChild);
+      const lastNode = getLastDOMNode(frag.lastChild);
 
       if (!firstNode || !lastNode) return;
 

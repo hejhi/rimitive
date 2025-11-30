@@ -33,7 +33,7 @@ describe('createHydratingRenderer', () => {
     renderer.switchToFallback();
 
     // Should now create a new element
-    const newDiv = renderer.createElement('div');
+    const newDiv = renderer.createNode('div') as HTMLElement;
     expect(newDiv).toBeInstanceOf(HTMLElement);
     expect(newDiv.tagName.toLowerCase()).toBe('div');
   });
@@ -49,7 +49,7 @@ describe('createHydratingRenderer', () => {
     renderer.switchToFallback();
 
     // Should create new text node
-    const textNode = renderer.createTextNode('Test text');
+    const textNode = renderer.createNode('text', { value: 'Test text' }) as Text;
     expect(textNode.textContent).toBe('Test text');
     expect(textNode.nodeType).toBe(3); // TEXT_NODE
   });
@@ -62,17 +62,15 @@ describe('createHydratingRenderer', () => {
     );
 
     // Get references to methods before switch
-    const createElementRef = renderer.createElement;
-    const createTextNodeRef = renderer.createTextNode;
-    const setAttributeRef = renderer.setAttribute;
+    const createNodeRef = renderer.createNode;
+    const setPropertyRef = renderer.setProperty;
 
     // Switch mode
     renderer.switchToFallback();
 
     // Should still be the same method references (stable API)
-    expect(renderer.createElement).toBe(createElementRef);
-    expect(renderer.createTextNode).toBe(createTextNodeRef);
-    expect(renderer.setAttribute).toBe(setAttributeRef);
+    expect(renderer.createNode).toBe(createNodeRef);
+    expect(renderer.setProperty).toBe(setPropertyRef);
   });
 
   it('should allow multiple switches to fallback (idempotent)', () => {
@@ -88,7 +86,7 @@ describe('createHydratingRenderer', () => {
     renderer.switchToFallback();
 
     // Should still work
-    const element = renderer.createElement('div');
+    const element = renderer.createNode('div') as HTMLElement;
     expect(element).toBeInstanceOf(HTMLElement);
   });
 });

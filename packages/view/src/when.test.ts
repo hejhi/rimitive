@@ -41,11 +41,11 @@ describe('when() - conditional children rendering', () => {
    */
   function attachFragment(
     renderer: MockRendererConfig['baseElement'] extends infer E
-      ? { createElement: (tag: string) => E }
+      ? { createNode: (tag: string, props?: Record<string, unknown>) => E }
       : never,
     spec: ReturnType<ReturnType<ReturnType<typeof setup>['when']>>
   ) {
-    const parent = renderer.createElement('div') as MockElement;
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,

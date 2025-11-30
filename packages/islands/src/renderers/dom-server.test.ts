@@ -52,8 +52,8 @@ describe('Basic DOM Operations', () => {
   it('should create elements with correct tag names', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    const span = renderer.createElement('span');
+    const div = renderer.createNode('div') as HTMLElement;
+    const span = renderer.createNode('span') as HTMLElement;
 
     expect(div.tagName.toLowerCase()).toBe('div');
     expect(span.tagName.toLowerCase()).toBe('span');
@@ -62,7 +62,7 @@ describe('Basic DOM Operations', () => {
   it('should create text nodes with correct content', () => {
     const renderer = createDOMServerRenderer();
 
-    const text = renderer.createTextNode('Hello');
+    const text = renderer.createNode('text', { value: 'Hello' });
 
     expect(text.textContent).toBe('Hello');
   });
@@ -70,8 +70,8 @@ describe('Basic DOM Operations', () => {
   it('should append children to parent', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    const span = renderer.createElement('span');
+    const div = renderer.createNode('div') as HTMLElement;
+    const span = renderer.createNode('span') as HTMLElement;
 
     renderer.appendChild(div, span);
 
@@ -82,9 +82,9 @@ describe('Basic DOM Operations', () => {
   it('should insert child before reference node', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    const first = renderer.createTextNode('first');
-    const second = renderer.createTextNode('second');
+    const div = renderer.createNode('div');
+    const first = renderer.createNode('text', { value: 'first' });
+    const second = renderer.createNode('text', { value: 'second' });
 
     renderer.appendChild(div, second);
     renderer.insertBefore(div, first, second);
@@ -96,8 +96,8 @@ describe('Basic DOM Operations', () => {
   it('should update text node content', () => {
     const renderer = createDOMServerRenderer();
 
-    const text = renderer.createTextNode('before');
-    renderer.updateTextNode(text, 'after');
+    const text = renderer.createNode('text', { value: 'before' });
+    renderer.setProperty(text, 'value', 'after');
 
     expect(text.textContent).toBe('after');
   });
@@ -111,8 +111,8 @@ describe('Attribute Handling', () => {
   it('should skip event handler attributes', () => {
     const renderer = createDOMServerRenderer();
 
-    const button = renderer.createElement('button');
-    renderer.setAttribute(button, 'onClick', () => {});
+    const button = renderer.createNode('button') as HTMLElement;
+    renderer.setProperty(button, 'onClick', () => {});
 
     expect(button.hasAttribute('onClick')).toBe(false);
     expect(button.hasAttribute('onclick')).toBe(false);
@@ -121,8 +121,8 @@ describe('Attribute Handling', () => {
   it('should map className to class attribute', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    renderer.setAttribute(div, 'className', 'container');
+    const div = renderer.createNode('div') as HTMLElement;
+    renderer.setProperty(div, 'className', 'container');
 
     expect(div.getAttribute('class')).toBe('container');
     expect(div.hasAttribute('className')).toBe(false);
@@ -131,9 +131,9 @@ describe('Attribute Handling', () => {
   it('should stringify primitive values', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    renderer.setAttribute(div, 'data-count', 42);
-    renderer.setAttribute(div, 'data-active', true);
+    const div = renderer.createNode('div') as HTMLElement;
+    renderer.setProperty(div, 'data-count', 42);
+    renderer.setProperty(div, 'data-active', true);
 
     expect(div.getAttribute('data-count')).toBe('42');
     expect(div.getAttribute('data-active')).toBe('true');
@@ -142,8 +142,8 @@ describe('Attribute Handling', () => {
   it('should skip object values', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    renderer.setAttribute(div, 'data-config', { foo: 'bar' });
+    const div = renderer.createNode('div') as HTMLElement;
+    renderer.setProperty(div, 'data-config', { foo: 'bar' });
 
     expect(div.hasAttribute('data-config')).toBe(false);
   });
@@ -151,8 +151,8 @@ describe('Attribute Handling', () => {
   it('should skip function values', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    renderer.setAttribute(div, 'ref', () => {});
+    const div = renderer.createNode('div') as HTMLElement;
+    renderer.setProperty(div, 'ref', () => {});
 
     expect(div.hasAttribute('ref')).toBe(false);
   });
@@ -160,9 +160,9 @@ describe('Attribute Handling', () => {
   it('should skip null and false values', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    renderer.setAttribute(div, 'disabled', null);
-    renderer.setAttribute(div, 'hidden', false);
+    const div = renderer.createNode('div') as HTMLElement;
+    renderer.setProperty(div, 'disabled', null);
+    renderer.setProperty(div, 'hidden', false);
 
     expect(div.hasAttribute('disabled')).toBe(false);
     expect(div.hasAttribute('hidden')).toBe(false);
@@ -177,9 +177,9 @@ describe('Fragment Decoration (Non-Island)', () => {
   it('should add fragment-start and fragment-end comments', () => {
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
-    const child1 = renderer.createElement('span');
-    const child2 = renderer.createElement('span');
+    const container = renderer.createNode('div') as HTMLElement;
+    const child1 = renderer.createNode('span') as HTMLElement;
+    const child2 = renderer.createNode('span') as HTMLElement;
 
     renderer.appendChild(container, child1);
     renderer.appendChild(container, child2);
@@ -225,9 +225,9 @@ describe('Fragment Decoration (Non-Island)', () => {
   it('should place comments around fragment children', () => {
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
-    const span1 = renderer.createElement('span');
-    const span2 = renderer.createElement('span');
+    const container = renderer.createNode('div') as HTMLElement;
+    const span1 = renderer.createNode('span') as HTMLElement;
+    const span2 = renderer.createNode('span') as HTMLElement;
 
     span1.textContent = 'first';
     span2.textContent = 'second';
@@ -277,7 +277,7 @@ describe('Fragment Decoration (Non-Island)', () => {
   it('should skip empty fragments', () => {
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
+    const container = renderer.createNode('div') as HTMLElement;
 
     const fragment: FragmentRef<HTMLElement> = {
       status: STATUS_FRAGMENT,
@@ -308,8 +308,8 @@ describe('Fragment Island Decoration', () => {
     const renderer = createDOMServerRenderer();
 
     runWithSSRContext(ctx, () => {
-      const container = renderer.createElement('div');
-      const span = renderer.createElement('span');
+      const container = renderer.createNode('div') as HTMLElement;
+      const span = renderer.createNode('span') as HTMLElement;
       span.textContent = 'island content';
 
       renderer.appendChild(container, span);
@@ -361,9 +361,9 @@ describe('Fragment Island Decoration', () => {
     const renderer = createDOMServerRenderer();
 
     runWithSSRContext(ctx, () => {
-      const container = renderer.createElement('div');
-      const span1 = renderer.createElement('span');
-      const span2 = renderer.createElement('span');
+      const container = renderer.createNode('div') as HTMLElement;
+      const span1 = renderer.createNode('span') as HTMLElement;
+      const span2 = renderer.createNode('span') as HTMLElement;
 
       span1.textContent = 'first';
       span2.textContent = 'second';
@@ -429,8 +429,8 @@ describe('Element Island Decoration', () => {
     const renderer = createDOMServerRenderer();
 
     runWithSSRContext(ctx, () => {
-      const container = renderer.createElement('div');
-      const button = renderer.createElement('button');
+      const container = renderer.createNode('div') as HTMLElement;
+      const button = renderer.createNode('button') as HTMLElement;
       button.textContent = 'Click me';
 
       renderer.appendChild(container, button);
@@ -468,9 +468,9 @@ describe('Element Island Decoration', () => {
     const renderer = createDOMServerRenderer();
 
     runWithSSRContext(ctx, () => {
-      const container = renderer.createElement('div');
-      const div = renderer.createElement('div');
-      const after = renderer.createTextNode('after');
+      const container = renderer.createNode('div') as HTMLElement;
+      const div = renderer.createNode('div') as HTMLElement;
+      const after = renderer.createNode('text', { value: 'after' });
 
       renderer.appendChild(container, div);
       renderer.appendChild(container, after);
@@ -502,8 +502,8 @@ describe('Element Island Decoration', () => {
   it('should skip decoration for non-island elements', () => {
     const renderer = createDOMServerRenderer();
 
-    const container = renderer.createElement('div');
-    const span = renderer.createElement('span');
+    const container = renderer.createNode('div') as HTMLElement;
+    const span = renderer.createNode('span') as HTMLElement;
 
     renderer.appendChild(container, span);
 
@@ -532,30 +532,22 @@ describe('SSR-Specific Behaviors', () => {
   it('should return no-op cleanup for addEventListener', () => {
     const renderer = createDOMServerRenderer();
 
-    const button = renderer.createElement('button');
-    const cleanup = renderer.addEventListener(button, 'click', () => {}, {});
+    const button = renderer.createNode('button') as HTMLElement;
+    const cleanup = renderer.addEventListener?.(button, 'click', () => {}, {});
 
     // Should return a function that returns a function (no-op chain)
     expect(typeof cleanup).toBe('function');
-    expect(typeof cleanup()).toBe('function');
-  });
-
-  it('should check element connection status', () => {
-    const renderer = createDOMServerRenderer();
-
-    const div = renderer.createElement('div');
-
-    // In linkedom, elements aren't connected until added to document
-    // but isConnected method works correctly
-    expect(typeof renderer.isConnected(div)).toBe('boolean');
+    if (cleanup) {
+      expect(typeof cleanup()).toBe('function');
+    }
   });
 
   it('should generate valid HTML from DOM tree', () => {
     const renderer = createDOMServerRenderer();
 
-    const div = renderer.createElement('div');
-    const h1 = renderer.createElement('h1');
-    const text = renderer.createTextNode('Hello World');
+    const div = renderer.createNode('div') as HTMLElement;
+    const h1 = renderer.createNode('h1') as HTMLElement;
+    const text = renderer.createNode('text', { value: 'Hello World' });
 
     renderer.appendChild(h1, text);
     renderer.appendChild(div, h1);
