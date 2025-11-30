@@ -95,9 +95,17 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
     }
   }
 
+  // Linked list stack frame for iterative fragment removal
+  interface StackFrame {
+    childCursor: LinkedNode<TElement> | null;
+    lastChild: LinkedNode<TElement> | null;
+    prev: StackFrame | undefined;
+  }
+
   /**
    * Remove a node from the DOM and dispose its scope.
    * Handles ElementRef and FragmentRef correctly, including nested fragments.
+   * Uses iterative traversal with linked list stack to avoid allocations.
    *
    * @param parentElement - Parent DOM element
    * @param node - Node to remove (element or fragment)
@@ -113,35 +121,53 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
       // Remove from DOM
       renderer.removeChild(parentElement, node.element);
-    } else if (node.status === STATUS_FRAGMENT) {
-      // Call fragment's cleanup function first (disposes effects, etc.)
-      // This must happen before removing children so nested fragment cleanups
-      // are called in the correct order (parent before children)
-      node.cleanup?.();
+      return;
+    }
 
-      // Unlink fragment from parent's list
-      unlink(node as LinkedNode<TElement>);
+    // Fragment removal - use iterative traversal with linked list stack
+    // Initialize with the root fragment
+    node.cleanup?.();
+    unlink(node as LinkedNode<TElement>);
 
-      // Remove all children in fragment's own list
-      let current = node.firstChild;
-      while (current) {
-        const next = current.next;
+    let stack: StackFrame | undefined = {
+      childCursor: node.firstChild,
+      lastChild: node.lastChild,
+      prev: undefined,
+    };
 
-        // Unlink child from fragment's list
-        unlink(current);
+    while (stack) {
+      const current = stack.childCursor;
 
-        // Dispose and remove from DOM - recurse for nested fragments
-        if (current.status === STATUS_ELEMENT) {
-          const scope = getElementScope(current.element);
-          if (scope) disposeScope(scope);
-          renderer.removeChild(parentElement, current.element);
-        } else if (current.status === STATUS_FRAGMENT) {
-          // Recursively remove nested fragment
-          removeNode(parentElement, current);
-        }
+      if (!current) {
+        // No more children in this fragment, pop stack
+        stack = stack.prev;
+        continue;
+      }
 
-        if (current === node.lastChild) break;
-        current = next as typeof current;
+      // Advance cursor before processing (in case we push a new frame)
+      stack.childCursor =
+        current === stack.lastChild
+          ? null
+          : (current.next as LinkedNode<TElement> | null);
+
+      // Unlink child from fragment's list
+      unlink(current);
+
+      if (current.status === STATUS_ELEMENT) {
+        // Element: dispose scope and remove from DOM
+        const scope = getElementScope(current.element);
+        if (scope) disposeScope(scope);
+        renderer.removeChild(parentElement, current.element);
+      } else if (current.status === STATUS_FRAGMENT) {
+        // Nested fragment: call cleanup first (parent before children order)
+        // then push onto stack to process its children
+        current.cleanup?.();
+        unlink(current as LinkedNode<TElement>);
+        stack = {
+          childCursor: current.firstChild,
+          lastChild: current.lastChild,
+          prev: stack,
+        };
       }
     }
   }
