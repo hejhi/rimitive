@@ -100,7 +100,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
       parent.insertBefore(child, reference),
 
     /**
-     * Decorate elements with island script tags (atomic registration)
+     * Lifecycle: element created
      *
      * For island elements (those with __islandMeta):
      * 1. Registers the island in SSR context (generates hydration script)
@@ -109,14 +109,13 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
      * This ensures registration and decoration happen atomically - only
      * actually-rendered islands get registered for hydration.
      */
-    decorateElement: (elementRef, element) => {
-      const htmlElement = element as HTMLElement;
+    onElementCreated: (elementRef, parentElement) => {
+      const element = (elementRef as { element: HTMLElement }).element;
       const meta = (elementRef as { __islandMeta?: IslandNodeMeta })
         .__islandMeta;
 
       if (meta) {
-        const parent = htmlElement.parentNode;
-        if (!parent) return;
+        if (!parentElement) return;
 
         // Register NOW - atomic with decoration, only for rendered islands
         const instanceId = registerIsland(
@@ -129,7 +128,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         (elementRef as { __islandId?: string }).__islandId = instanceId;
 
         // Create script tag
-        const script = htmlElement.ownerDocument?.createElement('script');
+        const script = element.ownerDocument?.createElement('script');
 
         if (!script) return;
 
@@ -137,12 +136,12 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         script.setAttribute('data-island', instanceId);
 
         // Insert after element
-        parent.insertBefore(script, htmlElement.nextSibling);
+        (parentElement as HTMLElement).insertBefore(script, element.nextSibling);
       }
     },
 
     /**
-     * Decorate fragments with island markers and wrapper div (atomic registration)
+     * Lifecycle: after fragment attach
      *
      * For island fragments (those with __islandMeta):
      * 1. Registers the island in SSR context (generates hydration script)
@@ -158,7 +157,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
      * This ensures registration and decoration happen atomically - only
      * actually-rendered islands get registered for hydration.
      */
-    decorateFragment: (fragmentRef, parentElement) => {
+    afterFragmentAttach: (fragmentRef, parentElement) => {
       const parent = parentElement as HTMLElement;
       const frag = fragmentRef as FragmentRef<HTMLElement> & {
         __islandMeta?: IslandNodeMeta;

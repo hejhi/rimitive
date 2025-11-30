@@ -367,12 +367,12 @@ export function createDOMHydrationRenderer(
     },
 
     /**
-     * Skip past fragment content during forward pass
+     * Lifecycle: fragment created
      *
-     * Called when processChildren encounters a FragmentRef. Advances position
+     * Skip past fragment content during forward pass. Advances position
      * past the fragment's content so subsequent siblings can be matched correctly.
      */
-    skipFragment: (parentElement) => {
+    onFragmentCreated: (_fragmentRef, parentElement) => {
       const currentPath = getCurrentPath(position);
       if (currentPath.length === 0) return;
 
@@ -413,12 +413,12 @@ export function createDOMHydrationRenderer(
     },
 
     /**
-     * Seek to fragment position for deferred content hydration
+     * Lifecycle: before fragment attach
      *
-     * Called by fragment-creating primitives during attach() phase,
-     * before creating deferred content. Computes position from DOM structure.
+     * Seek to fragment position for deferred content hydration.
+     * Computes position from DOM structure before creating deferred content.
      */
-    seekToFragment: (parentElement, nextSiblingElement) => {
+    beforeFragmentAttach: (_fragmentRef, parentElement, nextSiblingElement) => {
       // Find child index where fragment content starts
       const childIndex = findFragmentContentIndex(
         parentElement as HTMLElement,

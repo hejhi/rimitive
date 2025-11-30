@@ -92,65 +92,72 @@ export interface Renderer<TConfig extends RendererConfig> {
    */
   onDetach?: (node: TConfig['baseElement']) => void;
 
+  // ============================================================================
+  // Lifecycle Hooks
+  //
+  // These hooks allow renderers to intercept tree operations without polluting
+  // the core interface with renderer-specific concerns (SSR, hydration, etc.)
+  // ============================================================================
+
   /**
-   * Optional: Decorate an element with SSR markers (e.g., island script tags)
+   * Optional: Called after an element is created and appended to its parent
    *
-   * Called after an element has been created and attached to the DOM.
-   * Used by SSR renderers to insert hydration markers
-   * for island components. Not needed for client-side rendering.
+   * Use cases:
+   * - SSR: Add island script tags after elements
+   * - Hydration: No-op (elements already exist in DOM)
    *
    * @param elementRef - The element reference (unknown type to avoid circular deps)
-   * @param element - The actual DOM element
+   * @param parentElement - The parent element
    */
-  decorateElement?: (
+  onElementCreated?: (
     elementRef: unknown,
-    element: TConfig['baseElement']
+    parentElement: TConfig['baseElement']
   ) => void;
 
   /**
-   * Optional: Decorate a fragment with SSR markers (e.g., comment nodes)
+   * Optional: Called after a fragment ref is created (but before its content is attached)
    *
-   * Called after a fragment's children have been attached to the DOM.
-   * Used by SSR renderers (linkedom) to insert fragment boundary markers
-   * for hydration. Not needed for client-side rendering.
+   * Use cases:
+   * - SSR: No-op
+   * - Hydration: Skip past fragment content in DOM to sync position for siblings
    *
    * @param fragmentRef - The fragment reference (unknown type to avoid circular deps)
-   * @param parentElement - The parent element containing the fragment's children
+   * @param parentElement - The parent element
    */
-  decorateFragment?: (
+  onFragmentCreated?: (
     fragmentRef: unknown,
     parentElement: TConfig['baseElement']
   ) => void;
 
   /**
-   * Optional: Skip past fragment during forward pass
+   * Optional: Called before a fragment's deferred content is attached
    *
-   * Called by processChildren when encountering a FragmentRef during the forward
-   * pass. Advances the hydrator's position past the fragment content so subsequent
-   * siblings can be correctly matched.
+   * Use cases:
+   * - SSR: No-op
+   * - Hydration: Seek to fragment position in DOM to sync position for content
    *
-   * @param parent - The parent element containing the fragment
-   * @param fragmentRef - The fragment reference (used to find fragment-end marker)
+   * @param fragmentRef - The fragment reference
+   * @param parentElement - The parent element
+   * @param nextSibling - The next sibling element (or null if last)
    */
-  skipFragment?: (parent: TConfig['baseElement']) => void;
+  beforeFragmentAttach?: (
+    fragmentRef: unknown,
+    parentElement: TConfig['baseElement'],
+    nextSibling: TConfig['baseElement'] | null
+  ) => void;
 
   /**
-   * Optional: Seek to fragment position for deferred content hydration
+   * Optional: Called after a fragment's content has been attached
    *
-   * Called by fragment-creating primitives (show, map, match) during their
-   * attach() phase, before creating deferred content. Allows the hydration
-   * renderer to restore position to where the fragment's content exists in the DOM.
+   * Use cases:
+   * - SSR: Add fragment boundary markers (comments) and island script tags
+   * - Hydration: No-op
    *
-   * Position is computed from DOM structure:
-   * 1. Scan backwards from nextSibling to find fragment-start marker
-   * 2. Count real children before marker to get content index
-   * 3. Walk up DOM to compute path to parent
-   *
-   * @param parent - The parent element containing the fragment
-   * @param nextSibling - The element that comes after this fragment (or null if last)
+   * @param fragmentRef - The fragment reference
+   * @param parentElement - The parent element containing the fragment's children
    */
-  seekToFragment?: (
-    parent: TConfig['baseElement'],
-    nextSibling: TConfig['baseElement'] | null
+  afterFragmentAttach?: (
+    fragmentRef: unknown,
+    parentElement: TConfig['baseElement']
   ) => void;
 }

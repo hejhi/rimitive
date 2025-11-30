@@ -495,15 +495,15 @@ describe('Hydration Mismatch Errors', () => {
 
 
 // ============================================================================
-// Tests: seekToFragment for Deferred Fragment Content
+// Tests: Fragment Lifecycle Hooks for Deferred Fragment Content
 // ============================================================================
 
-describe('skipFragment and seekToFragment for Deferred Fragment Content', () => {
+describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Content', () => {
   it('should skip fragment during forward pass and seek back during unwind', () => {
     // This simulates the show() hydration scenario:
     // SSR renders: <div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div>
-    // Forward pass creates h2, section(intro), skips show() fragment via skipFragment, section(filter)
-    // Unwind calls seekToFragment before show().attach() creates the h1
+    // Forward pass creates h2, section(intro), skips show() fragment via onFragmentCreated, section(filter)
+    // Unwind calls beforeFragmentAttach before show().attach() creates the h1
     const container = setupHTML(
       '<div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div>'
     );
@@ -523,8 +523,8 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, sectionIntro);
 
     // Forward pass: SKIP show() fragment
-    // processChildren calls skipFragment to advance position past fragment content
-    renderer.skipFragment?.(div);
+    // processChildren calls onFragmentCreated to advance position past fragment content
+    renderer.onFragmentCreated?.(null,div);
 
     // Forward pass: create section (filter) and exit
     const sectionFilter = renderer.createNode('section') as HTMLElement;
@@ -532,8 +532,8 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, sectionFilter);
 
     // Now we're at the UNWIND phase
-    // Before show().attach(), we call seekToFragment to reset position
-    renderer.seekToFragment?.(div, sectionFilter);
+    // Before show().attach(), we call beforeFragmentAttach to reset position
+    renderer.beforeFragmentAttach?.(null,div, sectionFilter);
 
     // Now show().attach() creates the deferred h1 content
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -556,7 +556,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     const div = renderer.createNode('div') as HTMLElement;
 
     // Forward pass: skip the fragment
-    renderer.skipFragment?.(div);
+    renderer.onFragmentCreated?.(null,div);
 
     // Forward pass: create section
     const section = renderer.createNode('section') as HTMLElement;
@@ -564,7 +564,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, section);
 
     // Unwind: seek back to fragment position
-    renderer.seekToFragment?.(div, section);
+    renderer.beforeFragmentAttach?.(null,div, section);
 
     // Create deferred fragment content
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -589,10 +589,10 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, section);
 
     // Forward pass: skip fragment (it's last, no next sibling after it)
-    renderer.skipFragment?.(div);
+    renderer.onFragmentCreated?.(null,div);
 
     // Unwind: seek to fragment position (nextSibling is null)
-    renderer.seekToFragment?.(div, null);
+    renderer.beforeFragmentAttach?.(null,div, null);
 
     // Create deferred fragment content
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -617,10 +617,10 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, h2);
 
     // Forward pass: skip first fragment
-    renderer.skipFragment?.(div);
+    renderer.onFragmentCreated?.(null,div);
 
     // Forward pass: skip second fragment
-    renderer.skipFragment?.(div);
+    renderer.onFragmentCreated?.(null,div);
 
     // Forward pass: create footer
     const footer = renderer.createNode('footer') as HTMLElement;
@@ -628,7 +628,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, footer);
 
     // Unwind: seek to second fragment (closer to footer)
-    renderer.seekToFragment?.(div, footer);
+    renderer.beforeFragmentAttach?.(null,div, footer);
 
     // Create second fragment content
     const span = renderer.createNode('span') as HTMLElement;
@@ -636,7 +636,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, span);
 
     // Seek to first fragment
-    renderer.seekToFragment?.(div, span);
+    renderer.beforeFragmentAttach?.(null,div, span);
 
     // Create first fragment content
     const p = renderer.createNode('p') as HTMLElement;
@@ -674,11 +674,11 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     const main = renderer.createNode('main') as HTMLElement;
 
     // Forward pass at main level: skip route match fragment
-    renderer.skipFragment?.(main);
+    renderer.onFragmentCreated?.(null,main);
 
     // === UNWIND at main level ===
     // Seek to route match fragment position, then process its content
-    renderer.seekToFragment?.(main, null);
+    renderer.beforeFragmentAttach?.(null,main, null);
 
     // Route match attach() creates the div and processes its content
     const div = renderer.createNode('div') as HTMLElement;
@@ -694,7 +694,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     renderer.appendChild(div, sectionIntro);
 
     // Forward pass at div level: skip show() fragment
-    renderer.skipFragment?.(div);
+    renderer.onFragmentCreated?.(null,div);
 
     // Forward pass at div level: section(filter)
     const sectionFilter = renderer.createNode('section') as HTMLElement;
@@ -703,7 +703,7 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
 
     // === UNWIND at div level ===
     // Seek to show() fragment position
-    renderer.seekToFragment?.(div, sectionFilter);
+    renderer.beforeFragmentAttach?.(null,div, sectionFilter);
 
     // show() attach() creates the h1
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -739,18 +739,18 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
     const main = renderer.createNode('main') as HTMLElement;
 
     // Forward pass: skip show(Home) - but it has NO markers in DOM!
-    // skipFragment should handle this gracefully
-    renderer.skipFragment?.(main);
+    // onFragmentCreated should handle this gracefully
+    renderer.onFragmentCreated?.(null,main);
 
     // Forward pass: skip show(About) - also no markers
-    renderer.skipFragment?.(main);
+    renderer.onFragmentCreated?.(null,main);
 
     // Forward pass: skip show(Products) - this one HAS markers
-    renderer.skipFragment?.(main);
+    renderer.onFragmentCreated?.(null,main);
 
     // === UNWIND phase ===
     // Seek to show(Products) - has markers, should work
-    renderer.seekToFragment?.(main, null);
+    renderer.beforeFragmentAttach?.(null,main, null);
 
     // Products attach() creates the div
     const productsDiv = renderer.createNode('div') as HTMLElement;
@@ -759,12 +759,12 @@ describe('skipFragment and seekToFragment for Deferred Fragment Content', () => 
 
     // Seek to show(About) - NO markers, should be no-op
     // nextSibling is productsDiv
-    renderer.seekToFragment?.(main, productsDiv);
+    renderer.beforeFragmentAttach?.(null,main, productsDiv);
     // About attach() does nothing (condition false, no content to create)
 
     // Seek to show(Home) - NO markers, should be no-op
     // nextSibling is still productsDiv (About created nothing)
-    renderer.seekToFragment?.(main, productsDiv);
+    renderer.beforeFragmentAttach?.(null,main, productsDiv);
     // Home attach() does nothing (condition false, no content to create)
 
     // Verify Products page hydrated correctly

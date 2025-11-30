@@ -32,10 +32,15 @@ export function createIslandsRenderer(
     removeChild: (parent, child) => getRenderer().removeChild(parent, child),
     insertBefore: (parent, newNode, refNode) =>
       getRenderer().insertBefore(parent, newNode, refNode),
-    // Forward optional hydration-specific methods
-    skipFragment: (parent) => getRenderer().skipFragment?.(parent),
-    seekToFragment: (parent, nextSibling) =>
-      getRenderer().seekToFragment?.(parent, nextSibling),
+    // Forward lifecycle hooks
+    onElementCreated: (elementRef, parentElement) =>
+      getRenderer().onElementCreated?.(elementRef, parentElement),
+    onFragmentCreated: (fragmentRef, parentElement) =>
+      getRenderer().onFragmentCreated?.(fragmentRef, parentElement),
+    beforeFragmentAttach: (fragmentRef, parentElement, nextSibling) =>
+      getRenderer().beforeFragmentAttach?.(fragmentRef, parentElement, nextSibling),
+    afterFragmentAttach: (fragmentRef, parentElement) =>
+      getRenderer().afterFragmentAttach?.(fragmentRef, parentElement),
     switchToFallback,
   };
 }

@@ -64,12 +64,11 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
           renderer.appendChild(element, childRef.element as TNode);
-          // Decorate element if renderer supports it (e.g., add island markers)
-          renderer.decorateElement?.(childRef, childRef.element as TNode);
+          // Lifecycle hook: element created (e.g., SSR adds island markers)
+          renderer.onElementCreated?.(childRef, element);
         } else if (childRef.status === STATUS_FRAGMENT) {
-          // Skip past fragment content during forward pass (for hydration)
-          // This advances position so subsequent siblings can be matched correctly
-          renderer.skipFragment?.(element);
+          // Lifecycle hook: fragment created (e.g., hydration skips past content)
+          renderer.onFragmentCreated?.(childRef, element);
         }
         return childRef;
       }
@@ -122,7 +121,6 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
     // Unwind: walk backwards attaching fragments
     while (lastChildRef) {
       if (lastChildRef.status === STATUS_FRAGMENT) {
-        // Seek to fragment position for hydration (no-op for non-hydrating renderers)
         // Get next sibling's element for position computation
         const nextRef = lastChildRef.next as NodeRef<TNode> | null;
         const nextElement =
@@ -132,15 +130,18 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
               ? ((nextRef.firstChild as ElementRef<TNode> | null)?.element ??
                 null)
               : null;
-        renderer.seekToFragment?.(parent.element, nextElement);
+
+        // Lifecycle hook: before fragment attach (e.g., hydration seeks to position)
+        renderer.beforeFragmentAttach?.(lastChildRef, parent.element, nextElement);
 
         lastChildRef.attach(
           parent,
           lastChildRef.next as NodeRef<TNode> | null,
           api
         );
-        // Decorate fragment with SSR markers if renderer supports it
-        renderer.decorateFragment?.(lastChildRef, parent.element);
+
+        // Lifecycle hook: after fragment attach (e.g., SSR adds markers)
+        renderer.afterFragmentAttach?.(lastChildRef, parent.element);
       }
       lastChildRef = lastChildRef.prev as NodeRef<TNode> | null;
     }

@@ -60,8 +60,8 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       const nextEl = nextLinked?.element ?? null;
       renderer.insertBefore(parentElement, node.element, nextEl);
 
-      // Decorate element if renderer supports it (e.g., add island markers)
-      renderer.decorateElement?.(node, node.element as TConfig['baseElement']);
+      // Lifecycle hook: element created (e.g., SSR adds island markers)
+      renderer.onElementCreated?.(node, parentElement);
     } else if (node.status === STATUS_FRAGMENT) {
       // Link fragment into parent's doubly-linked list
       const parentRef: ElementRef<TElement> = {
@@ -90,8 +90,8 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       const cleanup = node.attach(parentRef, nextSib, api);
       if (cleanup) node.cleanup = cleanup;
 
-      // Decorate fragment with SSR markers if renderer supports it
-      renderer.decorateFragment?.(node, parentElement);
+      // Lifecycle hook: after fragment attach (e.g., SSR adds markers)
+      renderer.afterFragmentAttach?.(node, parentElement);
     }
   }
 
