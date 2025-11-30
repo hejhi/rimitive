@@ -15,30 +15,36 @@ import { registerIsland } from '../ssr-context';
 export type { DOMRendererConfig as DOMServerRendererConfig } from '@lattice/view/renderers/dom';
 
 /**
- * Get the first DOM node from a NodeRef (recursively traversing fragments)
+ * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
  */
 function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
-  if (nodeRef.status === STATUS_ELEMENT) {
-    return nodeRef.element as Node;
-  }
-  if (nodeRef.status === STATUS_FRAGMENT) {
-    if (nodeRef.firstChild) {
-      return getFirstDOMNode(nodeRef.firstChild);
+  let current: NodeRef<unknown> | null = nodeRef;
+  while (current) {
+    if (current.status === STATUS_ELEMENT) {
+      return current.element as Node;
+    }
+    if (current.status === STATUS_FRAGMENT) {
+      current = current.firstChild;
+    } else {
+      break;
     }
   }
   return null;
 }
 
 /**
- * Get the last DOM node from a NodeRef (recursively traversing fragments)
+ * Get the last DOM node from a NodeRef (iteratively traversing nested fragments)
  */
 function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
-  if (nodeRef.status === STATUS_ELEMENT) {
-    return nodeRef.element as Node;
-  }
-  if (nodeRef.status === STATUS_FRAGMENT) {
-    if (nodeRef.lastChild) {
-      return getLastDOMNode(nodeRef.lastChild);
+  let current: NodeRef<unknown> | null = nodeRef;
+  while (current) {
+    if (current.status === STATUS_ELEMENT) {
+      return current.element as Node;
+    }
+    if (current.status === STATUS_FRAGMENT) {
+      current = current.lastChild;
+    } else {
+      break;
     }
   }
   return null;
