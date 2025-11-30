@@ -4,6 +4,7 @@ import {
   createTestEnv,
   type MockRendererConfig,
   type MockElement,
+  type MockText,
   getTextContent,
 } from '../../view/src/test-utils';
 import { El } from '@lattice/view/el';
@@ -37,9 +38,9 @@ describe('Link component - basic rendering', () => {
   const mountElement = (
     spec: unknown,
     api: { el: unknown; navigate?: (path: string) => void },
-    renderer: { createElement: (tag: string) => MockElement }
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -134,9 +135,9 @@ describe('Link component - click handling', () => {
   const mountElement = (
     spec: unknown,
     api: { el: unknown; navigate?: (path: string) => void },
-    renderer: { createElement: (tag: string) => MockElement }
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -367,9 +368,9 @@ describe('Link component - lifecycle callbacks', () => {
   const mountElement = (
     spec: unknown,
     api: { el: unknown; navigate?: (path: string) => void },
-    renderer: { createElement: (tag: string) => MockElement }
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,

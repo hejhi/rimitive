@@ -49,20 +49,5 @@ export function createDOMRenderer(): Renderer<DOMRendererConfig> {
     removeChild: (parent, child) => parent.removeChild(child),
     insertBefore: (parent, child, reference) =>
       parent.insertBefore(child, reference),
-
-    addEventListener: (
-      element,
-      event,
-      handler,
-      options?: AddEventListenerOptions
-    ) => {
-      element.addEventListener(event, handler, options);
-      return () =>
-        element.removeEventListener(
-          event,
-          handler,
-          options as AddEventListenerOptions
-        );
-    },
   };
 }

@@ -4,6 +4,7 @@ import {
   createTestEnv,
   type MockRendererConfig,
   type MockElement,
+  type MockText,
   getTextContent,
 } from '../../view/src/test-utils';
 import { El } from '@lattice/view/el';
@@ -110,10 +111,10 @@ describe('route() - single route rendering', () => {
 
   // Helper to create and mount a route spec
   const mountRoute = (
-    spec: RefSpec<MockElement>,
-    renderer: { createElement: (tag: string) => MockElement }
+    spec: RefSpec<MockElement | MockText>,
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -318,10 +319,10 @@ describe('multiple routes - reactive switching', () => {
   }
 
   const mountRoute = (
-    spec: RefSpec<MockElement>,
-    renderer: { createElement: (tag: string) => MockElement }
+    spec: RefSpec<MockElement | MockText>,
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -565,10 +566,10 @@ describe('params - component access to route parameters', () => {
   }
 
   const mountRoute = (
-    spec: RefSpec<MockElement>,
-    renderer: { createElement: (tag: string) => MockElement }
+    spec: RefSpec<MockElement | MockText>,
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -755,10 +756,10 @@ describe('nested routes - structure and path composition', () => {
   }
 
   const mountRoute = (
-    spec: RefSpec<MockElement>,
-    renderer: { createElement: (tag: string) => MockElement }
+    spec: RefSpec<MockElement | MockText>,
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -1070,10 +1071,10 @@ describe('programmatic navigation', () => {
   }
 
   const mountRoute = (
-    spec: RefSpec<MockElement>,
-    renderer: { createElement: (tag: string) => MockElement }
+    spec: RefSpec<MockElement | MockText>,
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -1375,10 +1376,10 @@ describe('wildcard routes - catch-all behavior', () => {
   }
 
   const mountRoute = (
-    spec: RefSpec<MockElement>,
-    renderer: { createElement: (tag: string) => MockElement }
+    spec: RefSpec<MockElement | MockText>,
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -1583,10 +1584,10 @@ describe('outlet - parent components render matched children', () => {
   }
 
   const mountRoute = (
-    spec: RefSpec<MockElement>,
-    renderer: { createElement: (tag: string) => MockElement }
+    spec: RefSpec<MockElement | MockText>,
+    renderer: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createElement('div');
+    const parent = renderer.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,

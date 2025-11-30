@@ -220,17 +220,6 @@ export function createMockRenderer() {
         child.parent = parent;
       }
     ),
-    addEventListener: vi.fn(
-      (
-        element: MockElement | MockText,
-        event: string,
-        handler: (event: unknown) => void
-      ) => {
-        if (element instanceof MockText) return () => {}; // Text nodes don't have events
-        element.listeners.set(event, handler);
-        return () => element.listeners.delete(event);
-      }
-    ),
   };
 
   return { renderer };

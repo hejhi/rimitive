@@ -32,10 +32,6 @@ export function createIslandsRenderer(
     removeChild: (parent, child) => getRenderer().removeChild(parent, child),
     insertBefore: (parent, newNode, refNode) =>
       getRenderer().insertBefore(parent, newNode, refNode),
-    addEventListener: (element: Node, event: string, handler: (event: unknown) => void, options?: Record<string, unknown>) => {
-      const cleanup = getRenderer().addEventListener?.(element, event, handler, options);
-      return cleanup || (() => {});
-    },
     // Forward optional hydration-specific methods
     skipFragment: (parent) => getRenderer().skipFragment?.(parent),
     seekToFragment: (parent, nextSibling) =>

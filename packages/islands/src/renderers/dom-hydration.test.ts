@@ -357,31 +357,6 @@ describe('Attribute and Event Handling', () => {
     expect(div.className).toBe('hydrated');
   });
 
-  it('should attach event listeners to hydrated elements', () => {
-    const container = setupHTML('<button>Click</button>');
-    const renderer = createDOMHydrationRenderer(container);
-
-    const button = renderer.createNode('button') as HTMLElement;
-
-    let clicked = false;
-    const cleanup = renderer.addEventListener!(
-      button,
-      'click',
-      () => {
-        clicked = true;
-      },
-      {}
-    );
-
-    button.click();
-    expect(clicked).toBe(true);
-
-    // Cleanup should remove listener
-    cleanup();
-    clicked = false;
-    button.click();
-    expect(clicked).toBe(false);
-  });
 });
 
 // ============================================================================

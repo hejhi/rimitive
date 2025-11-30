@@ -93,17 +93,6 @@ export interface Renderer<TConfig extends RendererConfig> {
   onDetach?: (node: TConfig['baseElement']) => void;
 
   /**
-   * Optional: Add an event listener to a node (DOM-specific)
-   * Returns a cleanup function to remove the listener
-   */
-  addEventListener?: <TOpts extends Record<string, unknown>>(
-    element: TConfig['baseElement'],
-    event: string,
-    handler: (event: unknown) => void,
-    options?: TOpts
-  ) => () => void;
-
-  /**
    * Optional: Decorate an element with SSR markers (e.g., island script tags)
    *
    * Called after an element has been created and attached to the DOM.

@@ -367,19 +367,6 @@ export function createDOMHydrationRenderer(
     },
 
     /**
-     * Attach event listeners to hydrated elements
-     */
-    addEventListener: (element, event, handler, options) => {
-      element.addEventListener(event, handler, options);
-      return () =>
-        element.removeEventListener(
-          event,
-          handler,
-          options as AddEventListenerOptions
-        );
-    },
-
-    /**
      * Skip past fragment content during forward pass
      *
      * Called when processChildren encounters a FragmentRef. Advances position

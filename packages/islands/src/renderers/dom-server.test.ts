@@ -529,19 +529,6 @@ describe('Element Island Decoration', () => {
 // ============================================================================
 
 describe('SSR-Specific Behaviors', () => {
-  it('should return no-op cleanup for addEventListener', () => {
-    const renderer = createDOMServerRenderer();
-
-    const button = renderer.createNode('button') as HTMLElement;
-    const cleanup = renderer.addEventListener?.(button, 'click', () => {}, {});
-
-    // Should return a function that returns a function (no-op chain)
-    expect(typeof cleanup).toBe('function');
-    if (cleanup) {
-      expect(typeof cleanup()).toBe('function');
-    }
-  });
-
   it('should generate valid HTML from DOM tree', () => {
     const renderer = createDOMServerRenderer();
 

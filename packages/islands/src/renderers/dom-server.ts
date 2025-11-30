@@ -98,9 +98,6 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
     removeChild: (parent, child) => parent.removeChild(child),
     insertBefore: (parent, child, reference) =>
       parent.insertBefore(child, reference),
-    // No-op for SSR - events aren't meaningful on the server
-    // Return empty cleanup function
-    addEventListener: () => () => () => {},
 
     /**
      * Decorate elements with island script tags (atomic registration)
