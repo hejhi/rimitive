@@ -8,7 +8,7 @@
  * use the hydrating renderer, causing HydrationMismatch errors.
  */
 
-import type { Renderer } from '@lattice/view/types';
+import type { Renderer, NodeRef } from '@lattice/view/types';
 import type { DOMRendererConfig } from './dom-hydration';
 
 /**
@@ -25,22 +25,27 @@ export function createIslandsRenderer(
     useHydrating ? hydrateRenderer : fallbackRenderer;
 
   return {
-    createNode: (type: string, props?: Record<string, unknown>) => getRenderer().createNode(type, props),
+    createNode: (type: string, props?: Record<string, unknown>) =>
+      getRenderer().createNode(type, props),
     setProperty: (node: Node, key: string, value: unknown) =>
       getRenderer().setProperty(node, key, value),
     appendChild: (parent, child) => getRenderer().appendChild(parent, child),
     removeChild: (parent, child) => getRenderer().removeChild(parent, child),
     insertBefore: (parent, newNode, refNode) =>
       getRenderer().insertBefore(parent, newNode, refNode),
-    // Forward lifecycle hooks
-    onElementCreated: (elementRef, parentElement) =>
-      getRenderer().onElementCreated?.(elementRef, parentElement),
-    onFragmentCreated: (fragmentRef, parentElement) =>
-      getRenderer().onFragmentCreated?.(fragmentRef, parentElement),
-    beforeFragmentAttach: (fragmentRef, parentElement, nextSibling) =>
-      getRenderer().beforeFragmentAttach?.(fragmentRef, parentElement, nextSibling),
-    afterFragmentAttach: (fragmentRef, parentElement) =>
-      getRenderer().afterFragmentAttach?.(fragmentRef, parentElement),
+    // Forward lifecycle hooks (new unified API)
+    beforeCreate: (type: string, props?: Record<string, unknown>) =>
+      getRenderer().beforeCreate?.(type, props),
+    onCreate: (ref: NodeRef<Node>, parent: Node) =>
+      getRenderer().onCreate?.(ref, parent),
+    beforeAttach: (ref: NodeRef<Node>, parent: Node, nextSibling: Node | null) =>
+      getRenderer().beforeAttach?.(ref, parent, nextSibling),
+    onAttach: (ref: NodeRef<Node>, parent: Node) =>
+      getRenderer().onAttach?.(ref, parent),
+    beforeDestroy: (ref: NodeRef<Node>, parent: Node) =>
+      getRenderer().beforeDestroy?.(ref, parent),
+    onDestroy: (ref: NodeRef<Node>, parent: Node) =>
+      getRenderer().onDestroy?.(ref, parent),
     switchToFallback,
   };
 }

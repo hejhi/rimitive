@@ -64,11 +64,11 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
           renderer.appendChild(element, childRef.element as TNode);
-          // Lifecycle hook: element created (e.g., SSR adds island markers)
-          renderer.onElementCreated?.(childRef, element);
+          // Lifecycle hook: onCreate for elements (e.g., SSR adds island markers)
+          renderer.onCreate?.(childRef as NodeRef<TNode>, element);
         } else if (childRef.status === STATUS_FRAGMENT) {
-          // Lifecycle hook: fragment created (e.g., hydration skips past content)
-          renderer.onFragmentCreated?.(childRef, element);
+          // Lifecycle hook: onCreate for fragments (e.g., hydration skips past content)
+          renderer.onCreate?.(childRef as NodeRef<TNode>, element);
         }
         return childRef;
       }
@@ -131,8 +131,12 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
                 null)
               : null;
 
-        // Lifecycle hook: before fragment attach (e.g., hydration seeks to position)
-        renderer.beforeFragmentAttach?.(lastChildRef, parent.element, nextElement);
+        // Lifecycle hook: beforeAttach for fragments (e.g., hydration seeks to position)
+        renderer.beforeAttach?.(
+          lastChildRef as NodeRef<TNode>,
+          parent.element,
+          nextElement
+        );
 
         lastChildRef.attach(
           parent,
@@ -140,8 +144,8 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
           api
         );
 
-        // Lifecycle hook: after fragment attach (e.g., SSR adds markers)
-        renderer.afterFragmentAttach?.(lastChildRef, parent.element);
+        // Lifecycle hook: onAttach for fragments (e.g., SSR adds markers)
+        renderer.onAttach?.(lastChildRef as NodeRef<TNode>, parent.element);
       }
       lastChildRef = lastChildRef.prev as NodeRef<TNode> | null;
     }

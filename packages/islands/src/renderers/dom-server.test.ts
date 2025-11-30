@@ -215,7 +215,7 @@ describe('Fragment Decoration (Non-Island)', () => {
       attach: () => {},
     };
 
-    renderer.afterFragmentAttach?.(fragment, container);
+    renderer.onAttach?.(fragment, container);
 
     const html = container.innerHTML;
     expect(html).toContain('<!--fragment-start-->');
@@ -266,7 +266,7 @@ describe('Fragment Decoration (Non-Island)', () => {
       attach: () => {},
     };
 
-    renderer.afterFragmentAttach?.(fragment, container);
+    renderer.onAttach?.(fragment, container);
 
     const html = container.innerHTML;
     expect(html).toMatch(
@@ -290,7 +290,7 @@ describe('Fragment Decoration (Non-Island)', () => {
       attach: () => {},
     };
 
-    renderer.afterFragmentAttach?.(fragment, container);
+    renderer.onAttach?.(fragment, container);
 
     const html = container.innerHTML;
     expect(html).not.toContain('<!--fragment-start-->');
@@ -339,7 +339,7 @@ describe('Fragment Island Decoration', () => {
         __islandMeta: { type: 'test-island', props: {} },
       };
 
-      renderer.afterFragmentAttach?.(fragment, container);
+      renderer.onAttach?.(fragment, container);
 
       const html = container.innerHTML;
       expect(html).toContain('<div>');
@@ -406,7 +406,7 @@ describe('Fragment Island Decoration', () => {
         __islandMeta: { type: 'multi-island', props: {} },
       };
 
-      renderer.afterFragmentAttach?.(fragment, container);
+      renderer.onAttach?.(fragment, container);
 
       const html = container.innerHTML;
       expect(html).toContain('<span>first</span>');
@@ -449,7 +449,7 @@ describe('Element Island Decoration', () => {
         __islandMeta: { type: 'button-island', props: {} },
       };
 
-      renderer.onElementCreated?.(buttonRef, container);
+      renderer.onCreate?.(buttonRef, container);
 
       const html = container.innerHTML;
       expect(html).toContain('<button>Click me</button>');
@@ -489,7 +489,7 @@ describe('Element Island Decoration', () => {
         __islandMeta: { type: 'div-island', props: {} },
       };
 
-      renderer.onElementCreated?.(divRef, container);
+      renderer.onCreate?.(divRef, container);
 
       // Script should be between div and "after" text
       const children = Array.from(container.childNodes);
@@ -517,7 +517,7 @@ describe('Element Island Decoration', () => {
       lastChild: null,
     };
 
-    renderer.onElementCreated?.(spanRef, container);
+    renderer.onCreate?.(spanRef, container);
 
     const html = container.innerHTML;
     expect(html).not.toContain('<script');

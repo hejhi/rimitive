@@ -8,6 +8,8 @@
  * DOM-specific concerns (events, hydration) are layered on top.
  */
 
+import type { NodeRef } from './types';
+
 /**
  * Generic node interface - platform-agnostic
  * Adapters can extend this with their own node types
@@ -33,18 +35,43 @@ export interface RendererConfig {
  *
  * Generic over:
  * - TConfig: The renderer configuration (elements, events, baseElement)
+ *
+ * ## Lifecycle Hooks
+ *
+ * The renderer supports six symmetric lifecycle hooks across three phases:
+ *
+ * | Phase   | Before         | After (on) |
+ * |---------|----------------|------------|
+ * | Create  | beforeCreate   | onCreate   |
+ * | Attach  | beforeAttach   | onAttach   |
+ * | Destroy | beforeDestroy  | onDestroy  |
+ *
+ * Node type (element vs fragment) is determined by `ref.status`:
+ * - STATUS_ELEMENT (1): Element node with actual DOM element
+ * - STATUS_FRAGMENT (2): Fragment node (logical container, no DOM element)
+ *
+ * ### Hydration
+ *
+ * For hydration-specific position tracking, use the HydrationRenderer extension
+ * which adds `seekToPosition` and `skipContent` methods.
  */
 export interface Renderer<TConfig extends RendererConfig> {
+  // ============================================================================
+  // Core Tree Operations
+  // ============================================================================
+
   /**
    * Create a node with the given type
    *
    * For DOM: type is tag name ('div', 'span', 'text')
-   * For Three.js: type is constructor name ('mesh', 'group')
    *
    * Text nodes are created with type 'text' and initial value in props:
    *   createNode('text', { value: 'hello' })
    */
-  createNode: (type: string, props?: Record<string, unknown>) => TConfig['baseElement'];
+  createNode: (
+    type: string,
+    props?: Record<string, unknown>
+  ) => TConfig['baseElement'];
 
   /**
    * Set a property on a node
@@ -82,82 +109,134 @@ export interface Renderer<TConfig extends RendererConfig> {
     reference: TConfig['baseElement'] | null
   ) => void;
 
-  /**
-   * Optional: Called when a node is attached to the tree
-   */
-  onAttach?: (node: TConfig['baseElement']) => void | (() => void);
-
-  /**
-   * Optional: Called when a node is detached from the tree
-   */
-  onDetach?: (node: TConfig['baseElement']) => void;
-
   // ============================================================================
   // Lifecycle Hooks
   //
-  // These hooks allow renderers to intercept tree operations without polluting
-  // the core interface with renderer-specific concerns (SSR, hydration, etc.)
+  // Symmetric hooks for create, attach, and destroy phases.
+  // Node type is determined by ref.status (STATUS_ELEMENT or STATUS_FRAGMENT).
   // ============================================================================
 
   /**
-   * Optional: Called after an element is created and appended to its parent
+   * Called before a node is created
+   *
+   * Use cases:
+   * - Hydration: Prepare position tracking before node creation
+   *
+   * @param type - The node type being created ('div', 'text', etc.)
+   * @param props - Initial properties for the node
+   */
+  beforeCreate?: (type: string, props?: Record<string, unknown>) => void;
+
+  /**
+   * Called after a node ref is created
    *
    * Use cases:
    * - SSR: Add island script tags after elements
-   * - Hydration: No-op (elements already exist in DOM)
+   * - Hydration: Skip past fragment content to sync position for siblings
    *
-   * @param elementRef - The element reference (unknown type to avoid circular deps)
-   * @param parentElement - The parent element
+   * @param ref - The node reference (element or fragment, check ref.status)
+   * @param parent - The parent element
    */
-  onElementCreated?: (
-    elementRef: unknown,
-    parentElement: TConfig['baseElement']
+  onCreate?: (
+    ref: NodeRef<TConfig['baseElement']>,
+    parent: TConfig['baseElement']
   ) => void;
 
   /**
-   * Optional: Called after a fragment ref is created (but before its content is attached)
+   * Called before a node's content is attached to the tree
+   *
+   * For elements: Called before the element is inserted into the DOM
+   * For fragments: Called before fragment's deferred content is attached
    *
    * Use cases:
-   * - SSR: No-op
-   * - Hydration: Skip past fragment content in DOM to sync position for siblings
+   * - Hydration: Seek to correct position in DOM before attaching content
    *
-   * @param fragmentRef - The fragment reference (unknown type to avoid circular deps)
-   * @param parentElement - The parent element
-   */
-  onFragmentCreated?: (
-    fragmentRef: unknown,
-    parentElement: TConfig['baseElement']
-  ) => void;
-
-  /**
-   * Optional: Called before a fragment's deferred content is attached
-   *
-   * Use cases:
-   * - SSR: No-op
-   * - Hydration: Seek to fragment position in DOM to sync position for content
-   *
-   * @param fragmentRef - The fragment reference
-   * @param parentElement - The parent element
+   * @param ref - The node reference
+   * @param parent - The parent element
    * @param nextSibling - The next sibling element (or null if last)
    */
-  beforeFragmentAttach?: (
-    fragmentRef: unknown,
-    parentElement: TConfig['baseElement'],
+  beforeAttach?: (
+    ref: NodeRef<TConfig['baseElement']>,
+    parent: TConfig['baseElement'],
     nextSibling: TConfig['baseElement'] | null
   ) => void;
 
   /**
-   * Optional: Called after a fragment's content has been attached
+   * Called after a node's content has been attached to the tree
+   *
+   * For elements: Called after the element is inserted into the DOM
+   * For fragments: Called after fragment's content has been attached
    *
    * Use cases:
    * - SSR: Add fragment boundary markers (comments) and island script tags
-   * - Hydration: No-op
+   * - Lifecycle callbacks: Trigger onConnect callbacks
    *
-   * @param fragmentRef - The fragment reference
-   * @param parentElement - The parent element containing the fragment's children
+   * @param ref - The node reference
+   * @param parent - The parent element
    */
-  afterFragmentAttach?: (
-    fragmentRef: unknown,
-    parentElement: TConfig['baseElement']
+  onAttach?: (
+    ref: NodeRef<TConfig['baseElement']>,
+    parent: TConfig['baseElement']
   ) => void;
+
+  /**
+   * Called before a node is removed from the tree
+   *
+   * Use cases:
+   * - Animation: Trigger exit animations before removal
+   * - Cleanup: Perform cleanup before node is detached
+   *
+   * @param ref - The node reference
+   * @param parent - The parent element
+   */
+  beforeDestroy?: (
+    ref: NodeRef<TConfig['baseElement']>,
+    parent: TConfig['baseElement']
+  ) => void;
+
+  /**
+   * Called after a node has been removed from the tree and disposed
+   *
+   * Use cases:
+   * - Cleanup: Final cleanup after node is fully removed
+   * - Logging: Track node removal
+   *
+   * @param ref - The node reference
+   * @param parent - The parent element (may no longer contain node)
+   */
+  onDestroy?: (
+    ref: NodeRef<TConfig['baseElement']>,
+    parent: TConfig['baseElement']
+  ) => void;
+}
+
+/**
+ * HydrationRenderer extension for hydration-specific position tracking
+ *
+ * These methods are separate from the general lifecycle hooks because they're
+ * concerned with cursor/position management during hydration, not general
+ * node lifecycle events.
+ */
+export interface HydrationRenderer<TConfig extends RendererConfig>
+  extends Renderer<TConfig> {
+  /**
+   * Seek to a specific child position within a parent
+   *
+   * Used during hydration to sync position when attaching deferred content
+   * (e.g., fragments whose content is created lazily)
+   *
+   * @param parent - The parent element
+   * @param childIndex - The child index to seek to
+   */
+  seekToPosition?: (parent: TConfig['baseElement'], childIndex: number) => void;
+
+  /**
+   * Skip past content in the current traversal
+   *
+   * Used during hydration to skip past fragment content that was already
+   * rendered on the server
+   *
+   * @param count - Number of nodes to skip
+   */
+  skipContent?: (count: number) => void;
 }

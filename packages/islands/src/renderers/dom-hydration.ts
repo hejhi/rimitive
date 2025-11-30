@@ -11,8 +11,9 @@
  * - All position transformations are pure functions
  */
 
-import type { Renderer } from '@lattice/view/types';
+import type { Renderer, NodeRef } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { STATUS_FRAGMENT } from '@lattice/view/types';
 import {
   type Position,
   type TreePath,
@@ -367,12 +368,15 @@ export function createDOMHydrationRenderer(
     },
 
     /**
-     * Lifecycle: fragment created
+     * Lifecycle: onCreate
      *
-     * Skip past fragment content during forward pass. Advances position
+     * For fragments: Skip past fragment content during forward pass. Advances position
      * past the fragment's content so subsequent siblings can be matched correctly.
      */
-    onFragmentCreated: (_fragmentRef, parentElement) => {
+    onCreate: (ref: NodeRef<Node>, parentElement) => {
+      // Only handle fragments - elements don't need special handling during hydration
+      if (ref.status !== STATUS_FRAGMENT) return;
+
       const currentPath = getCurrentPath(position);
       if (currentPath.length === 0) return;
 
@@ -413,12 +417,15 @@ export function createDOMHydrationRenderer(
     },
 
     /**
-     * Lifecycle: before fragment attach
+     * Lifecycle: beforeAttach
      *
-     * Seek to fragment position for deferred content hydration.
+     * For fragments: Seek to fragment position for deferred content hydration.
      * Computes position from DOM structure before creating deferred content.
      */
-    beforeFragmentAttach: (_fragmentRef, parentElement, nextSiblingElement) => {
+    beforeAttach: (ref: NodeRef<Node>, parentElement, nextSiblingElement) => {
+      // Only handle fragments - elements don't need special handling during hydration
+      if (ref.status !== STATUS_FRAGMENT) return;
+
       // Find child index where fragment content starts
       const childIndex = findFragmentContentIndex(
         parentElement as HTMLElement,

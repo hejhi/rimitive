@@ -60,8 +60,8 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       const nextEl = nextLinked?.element ?? null;
       renderer.insertBefore(parentElement, node.element, nextEl);
 
-      // Lifecycle hook: element created (e.g., SSR adds island markers)
-      renderer.onElementCreated?.(node, parentElement);
+      // Lifecycle hook: onAttach for elements (e.g., SSR adds island markers)
+      renderer.onAttach?.(node as NodeRef<TElement>, parentElement);
     } else if (node.status === STATUS_FRAGMENT) {
       // Link fragment into parent's doubly-linked list
       const parentRef: ElementRef<TElement> = {
@@ -86,12 +86,23 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       }
       linkBefore(node, nextLinked);
 
+      // Determine next sibling element for beforeAttach hook
+      const nextSibEl =
+        nextSib?.status === STATUS_ELEMENT ? nextSib.element : null;
+
+      // Lifecycle hook: beforeAttach for fragments (e.g., hydration seeks to position)
+      renderer.beforeAttach?.(
+        node as NodeRef<TElement>,
+        parentElement,
+        nextSibEl
+      );
+
       // Attach fragment (sets up children) and store cleanup function
       const cleanup = node.attach(parentRef, nextSib, api);
       if (cleanup) node.cleanup = cleanup;
 
-      // Lifecycle hook: after fragment attach (e.g., SSR adds markers)
-      renderer.afterFragmentAttach?.(node, parentElement);
+      // Lifecycle hook: onAttach for fragments (e.g., SSR adds markers)
+      renderer.onAttach?.(node as NodeRef<TElement>, parentElement);
     }
   }
 
@@ -112,6 +123,9 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
    */
   function removeNode(parentElement: TElement, node: NodeRef<TElement>): void {
     if (node.status === STATUS_ELEMENT) {
+      // Lifecycle hook: beforeDestroy for elements
+      renderer.beforeDestroy?.(node as NodeRef<TElement>, parentElement);
+
       // Unlink from doubly-linked list
       unlink(node as LinkedNode<TElement>);
 
@@ -121,10 +135,16 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
       // Remove from DOM
       renderer.removeChild(parentElement, node.element);
+
+      // Lifecycle hook: onDestroy for elements
+      renderer.onDestroy?.(node as NodeRef<TElement>, parentElement);
       return;
     }
 
     // Fragment removal - use iterative traversal with linked list stack
+    // Lifecycle hook: beforeDestroy for the root fragment
+    renderer.beforeDestroy?.(node as NodeRef<TElement>, parentElement);
+
     // Initialize with the root fragment
     node.cleanup?.();
     unlink(node as LinkedNode<TElement>);
@@ -154,11 +174,20 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       unlink(current);
 
       if (current.status === STATUS_ELEMENT) {
+        // Lifecycle hook: beforeDestroy for nested elements
+        renderer.beforeDestroy?.(current as NodeRef<TElement>, parentElement);
+
         // Element: dispose scope and remove from DOM
         const scope = getElementScope(current.element);
         if (scope) disposeScope(scope);
         renderer.removeChild(parentElement, current.element);
+
+        // Lifecycle hook: onDestroy for nested elements
+        renderer.onDestroy?.(current as NodeRef<TElement>, parentElement);
       } else if (current.status === STATUS_FRAGMENT) {
+        // Lifecycle hook: beforeDestroy for nested fragments
+        renderer.beforeDestroy?.(current as NodeRef<TElement>, parentElement);
+
         // Nested fragment: call cleanup first (parent before children order)
         // then push onto stack to process its children
         current.cleanup?.();
@@ -170,6 +199,9 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
         };
       }
     }
+
+    // Lifecycle hook: onDestroy for the root fragment
+    renderer.onDestroy?.(node as NodeRef<TElement>, parentElement);
   }
 
   return {

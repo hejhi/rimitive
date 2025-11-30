@@ -10,6 +10,24 @@
 
 import { describe, it, expect } from 'vitest';
 import { createDOMHydrationRenderer, HydrationMismatch } from './dom-hydration';
+import { STATUS_FRAGMENT, type FragmentRef } from '@lattice/view/types';
+
+/**
+ * Create a mock fragment ref for testing lifecycle hooks
+ * The hydration renderer only checks ref.status to discriminate node types
+ */
+function createMockFragmentRef(): FragmentRef<Node> {
+  return {
+    status: STATUS_FRAGMENT,
+    element: null,
+    parent: null,
+    prev: null,
+    next: null,
+    firstChild: null,
+    lastChild: null,
+    attach: () => undefined,
+  };
+}
 
 // ============================================================================
 // Test Helpers
@@ -498,16 +516,17 @@ describe('Hydration Mismatch Errors', () => {
 // Tests: Fragment Lifecycle Hooks for Deferred Fragment Content
 // ============================================================================
 
-describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Content', () => {
+describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
   it('should skip fragment during forward pass and seek back during unwind', () => {
     // This simulates the show() hydration scenario:
     // SSR renders: <div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div>
-    // Forward pass creates h2, section(intro), skips show() fragment via onFragmentCreated, section(filter)
-    // Unwind calls beforeFragmentAttach before show().attach() creates the h1
+    // Forward pass creates h2, section(intro), skips show() fragment via onCreate, section(filter)
+    // Unwind calls beforeAttach before show().attach() creates the h1
     const container = setupHTML(
       '<div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div>'
     );
     const renderer = createDOMHydrationRenderer(container);
+    const mockFragRef = createMockFragmentRef();
 
     // Forward pass: create div
     const div = renderer.createNode('div') as HTMLElement;
@@ -523,8 +542,8 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, sectionIntro);
 
     // Forward pass: SKIP show() fragment
-    // processChildren calls onFragmentCreated to advance position past fragment content
-    renderer.onFragmentCreated?.(null,div);
+    // processChildren calls onCreate to advance position past fragment content
+    renderer.onCreate?.(mockFragRef, div);
 
     // Forward pass: create section (filter) and exit
     const sectionFilter = renderer.createNode('section') as HTMLElement;
@@ -532,8 +551,8 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, sectionFilter);
 
     // Now we're at the UNWIND phase
-    // Before show().attach(), we call beforeFragmentAttach to reset position
-    renderer.beforeFragmentAttach?.(null,div, sectionFilter);
+    // Before show().attach(), we call beforeAttach to reset position
+    renderer.beforeAttach?.(mockFragRef, div, sectionFilter);
 
     // Now show().attach() creates the deferred h1 content
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -552,11 +571,12 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
       '<div><!--fragment-start--><h1>first</h1><!--fragment-end--><section>after</section></div>'
     );
     const renderer = createDOMHydrationRenderer(container);
+    const mockFragRef = createMockFragmentRef();
 
     const div = renderer.createNode('div') as HTMLElement;
 
     // Forward pass: skip the fragment
-    renderer.onFragmentCreated?.(null,div);
+    renderer.onCreate?.(mockFragRef, div);
 
     // Forward pass: create section
     const section = renderer.createNode('section') as HTMLElement;
@@ -564,7 +584,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, section);
 
     // Unwind: seek back to fragment position
-    renderer.beforeFragmentAttach?.(null,div, section);
+    renderer.beforeAttach?.(mockFragRef, div, section);
 
     // Create deferred fragment content
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -580,6 +600,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
       '<div><section>before</section><!--fragment-start--><h1>last</h1><!--fragment-end--></div>'
     );
     const renderer = createDOMHydrationRenderer(container);
+    const mockFragRef = createMockFragmentRef();
 
     const div = renderer.createNode('div') as HTMLElement;
 
@@ -589,10 +610,10 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, section);
 
     // Forward pass: skip fragment (it's last, no next sibling after it)
-    renderer.onFragmentCreated?.(null,div);
+    renderer.onCreate?.(mockFragRef, div);
 
     // Unwind: seek to fragment position (nextSibling is null)
-    renderer.beforeFragmentAttach?.(null,div, null);
+    renderer.beforeAttach?.(mockFragRef, div, null);
 
     // Create deferred fragment content
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -608,6 +629,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
       '<div><h2>title</h2><!--fragment-start--><p>frag1</p><!--fragment-end--><!--fragment-start--><span>frag2</span><!--fragment-end--><footer>end</footer></div>'
     );
     const renderer = createDOMHydrationRenderer(container);
+    const mockFragRef = createMockFragmentRef();
 
     const div = renderer.createNode('div') as HTMLElement;
 
@@ -617,10 +639,10 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, h2);
 
     // Forward pass: skip first fragment
-    renderer.onFragmentCreated?.(null,div);
+    renderer.onCreate?.(mockFragRef, div);
 
     // Forward pass: skip second fragment
-    renderer.onFragmentCreated?.(null,div);
+    renderer.onCreate?.(mockFragRef, div);
 
     // Forward pass: create footer
     const footer = renderer.createNode('footer') as HTMLElement;
@@ -628,7 +650,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, footer);
 
     // Unwind: seek to second fragment (closer to footer)
-    renderer.beforeFragmentAttach?.(null,div, footer);
+    renderer.beforeAttach?.(mockFragRef, div, footer);
 
     // Create second fragment content
     const span = renderer.createNode('span') as HTMLElement;
@@ -636,7 +658,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, span);
 
     // Seek to first fragment
-    renderer.beforeFragmentAttach?.(null,div, span);
+    renderer.beforeAttach?.(mockFragRef, div, span);
 
     // Create first fragment content
     const p = renderer.createNode('p') as HTMLElement;
@@ -669,16 +691,17 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
       '<main><!--fragment-start--><div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div><!--fragment-end--></main>'
     );
     const renderer = createDOMHydrationRenderer(container);
+    const mockFragRef = createMockFragmentRef();
 
     // Enter main
     const main = renderer.createNode('main') as HTMLElement;
 
     // Forward pass at main level: skip route match fragment
-    renderer.onFragmentCreated?.(null,main);
+    renderer.onCreate?.(mockFragRef, main);
 
     // === UNWIND at main level ===
     // Seek to route match fragment position, then process its content
-    renderer.beforeFragmentAttach?.(null,main, null);
+    renderer.beforeAttach?.(mockFragRef, main, null);
 
     // Route match attach() creates the div and processes its content
     const div = renderer.createNode('div') as HTMLElement;
@@ -694,7 +717,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
     renderer.appendChild(div, sectionIntro);
 
     // Forward pass at div level: skip show() fragment
-    renderer.onFragmentCreated?.(null,div);
+    renderer.onCreate?.(mockFragRef, div);
 
     // Forward pass at div level: section(filter)
     const sectionFilter = renderer.createNode('section') as HTMLElement;
@@ -703,7 +726,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
 
     // === UNWIND at div level ===
     // Seek to show() fragment position
-    renderer.beforeFragmentAttach?.(null,div, sectionFilter);
+    renderer.beforeAttach?.(mockFragRef, div, sectionFilter);
 
     // show() attach() creates the h1
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -734,23 +757,24 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
       '<main><!--fragment-start--><div>Products page</div><!--fragment-end--></main>'
     );
     const renderer = createDOMHydrationRenderer(container);
+    const mockFragRef = createMockFragmentRef();
 
     // Enter main
     const main = renderer.createNode('main') as HTMLElement;
 
     // Forward pass: skip show(Home) - but it has NO markers in DOM!
-    // onFragmentCreated should handle this gracefully
-    renderer.onFragmentCreated?.(null,main);
+    // onCreate should handle this gracefully
+    renderer.onCreate?.(mockFragRef, main);
 
     // Forward pass: skip show(About) - also no markers
-    renderer.onFragmentCreated?.(null,main);
+    renderer.onCreate?.(mockFragRef, main);
 
     // Forward pass: skip show(Products) - this one HAS markers
-    renderer.onFragmentCreated?.(null,main);
+    renderer.onCreate?.(mockFragRef, main);
 
     // === UNWIND phase ===
     // Seek to show(Products) - has markers, should work
-    renderer.beforeFragmentAttach?.(null,main, null);
+    renderer.beforeAttach?.(mockFragRef, main, null);
 
     // Products attach() creates the div
     const productsDiv = renderer.createNode('div') as HTMLElement;
@@ -759,12 +783,12 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
 
     // Seek to show(About) - NO markers, should be no-op
     // nextSibling is productsDiv
-    renderer.beforeFragmentAttach?.(null,main, productsDiv);
+    renderer.beforeAttach?.(mockFragRef, main, productsDiv);
     // About attach() does nothing (condition false, no content to create)
 
     // Seek to show(Home) - NO markers, should be no-op
     // nextSibling is still productsDiv (About created nothing)
-    renderer.beforeFragmentAttach?.(null,main, productsDiv);
+    renderer.beforeAttach?.(mockFragRef, main, productsDiv);
     // Home attach() does nothing (condition false, no content to create)
 
     // Verify Products page hydrated correctly
@@ -779,7 +803,7 @@ describe('onFragmentCreated and beforeFragmentAttach for Deferred Fragment Conte
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createViewApi } from '@lattice/view/presets/core';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
-import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types';
+import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types'; // Separate import for integration tests
 
 describe('Integration: match() hydration with full view API', () => {
   const setupIntegrationHTML = (html: string): HTMLElement => {

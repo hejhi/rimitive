@@ -5,7 +5,7 @@
  */
 
 import { parseHTML } from 'linkedom';
-import type { Renderer, FragmentRef, NodeRef } from '@lattice/view/types';
+import type { Renderer, FragmentRef, NodeRef, ElementRef } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { IslandNodeMeta } from '../types';
@@ -100,7 +100,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
       parent.insertBefore(child, reference),
 
     /**
-     * Lifecycle: element created
+     * Lifecycle: onCreate
      *
      * For island elements (those with __islandMeta):
      * 1. Registers the island in SSR context (generates hydration script)
@@ -109,9 +109,13 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
      * This ensures registration and decoration happen atomically - only
      * actually-rendered islands get registered for hydration.
      */
-    onElementCreated: (elementRef, parentElement) => {
-      const element = (elementRef as { element: HTMLElement }).element;
-      const meta = (elementRef as { __islandMeta?: IslandNodeMeta })
+    onCreate: (ref, parentElement) => {
+      // Only handle elements in onCreate - fragments are handled in onAttach
+      if (ref.status !== STATUS_ELEMENT) return;
+
+      const elementRef = ref as ElementRef<Node>;
+      const element = elementRef.element as HTMLElement;
+      const meta = (elementRef as ElementRef<Node> & { __islandMeta?: IslandNodeMeta })
         .__islandMeta;
 
       if (meta) {
@@ -125,7 +129,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
         );
 
         // Store instance ID back on ref for downstream use
-        (elementRef as { __islandId?: string }).__islandId = instanceId;
+        (elementRef as ElementRef<Node> & { __islandId?: string }).__islandId = instanceId;
 
         // Create script tag
         const script = element.ownerDocument?.createElement('script');
@@ -141,7 +145,7 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
     },
 
     /**
-     * Lifecycle: after fragment attach
+     * Lifecycle: onAttach
      *
      * For island fragments (those with __islandMeta):
      * 1. Registers the island in SSR context (generates hydration script)
@@ -157,9 +161,12 @@ export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
      * This ensures registration and decoration happen atomically - only
      * actually-rendered islands get registered for hydration.
      */
-    afterFragmentAttach: (fragmentRef, parentElement) => {
+    onAttach: (ref, parentElement) => {
+      // Only handle fragments in onAttach - elements are handled in onCreate
+      if (ref.status !== STATUS_FRAGMENT) return;
+
       const parent = parentElement as HTMLElement;
-      const frag = fragmentRef as FragmentRef<HTMLElement> & {
+      const frag = ref as FragmentRef<HTMLElement> & {
         __islandMeta?: IslandNodeMeta;
         __islandId: string;
       };
