@@ -37,11 +37,14 @@ export type MatchProps<TBaseElement> = {
 };
 
 /**
- * Match factory type - reactive element switching based on a reactive value
+ * Match factory type - reactive element switching based on a Reactive<T>
+ *
+ * Takes a Reactive<T> (signal, computed, or () => T) and a matcher function.
+ * When the reactive value changes, the current element is disposed and
+ * replaced with a new one from the matcher.
  *
  * The matcher function is NOT a reactive scope - it's a pure function that
- * receives the current value and returns a RefSpec. The reactivity is handled
- * by match itself.
+ * receives the current value and returns a RefSpec.
  *
  * Generic over:
  * - T: The reactive value type
@@ -59,19 +62,27 @@ export type MatchFactory<TBaseElement> = ServiceDefinition<
 /**
  * Match primitive - switches between different elements based on reactive value
  *
+ * Takes a Reactive<T> (signal, computed, or any () => T) and rebuilds children
+ * when the value changes. Use for polymorphic rendering where the value
+ * determines WHAT to render.
+ *
+ * For simple show/hide based on truthiness, use when() instead - it's more
+ * efficient as it doesn't rebuild the parent.
+ *
  * Usage:
  * ```typescript
- * // Pattern 1: Conditional element type
- * match(showDiv)((show) =>
- *   show
- *     ? el('div', { className: 'card' })(children)
- *     : el('span', { className: 'inline' })(children)
- * )(sharedLifecycle)
+ * const currentTab = signal<'home' | 'settings'>('home');
  *
- * // Pattern 2: Dynamic tag selection
- * match(headingLevel)((level) =>
- *   el(level > 2 ? 'h3' : 'h1', { className: 'title' })(children)
- * )(sharedLifecycle)
+ * // Switch between different views based on tab
+ * match(currentTab)((tab) =>
+ *   tab === 'home' ? HomePage() : SettingsPage()
+ * )
+ *
+ * // With computed
+ * const viewMode = computed(() => user().isAdmin ? 'admin' : 'user');
+ * match(viewMode)((mode) =>
+ *   mode === 'admin' ? AdminPanel() : UserPanel()
+ * )
  * ```
  *
  * The matcher function is called with the current reactive value and must return
@@ -152,6 +163,8 @@ export const Match = defineService(
                   | ElementRef<TBaseElement>
                   | TFragRef
                   | undefined;
+                let currentValue: T | undefined;
+                let isFirstRun = true;
 
                 // Run lifecycle callbacks for element
                 const runLifecycleCallbacks = (element: TElement) => {
@@ -165,6 +178,15 @@ export const Match = defineService(
 
                 // Update function - called when reactive value changes
                 const updateElement = (value: T) => {
+                  // Skip update if value hasn't changed (after first run)
+                  // This prevents unnecessary teardown/recreation when the
+                  // matched value stays the same
+                  if (!isFirstRun && value === currentValue) {
+                    return;
+                  }
+                  isFirstRun = false;
+                  currentValue = value;
+
                   // Clean up old element or fragment
                   if (currentNode) removeNode(parent.element, currentNode);
 

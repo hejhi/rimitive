@@ -47,6 +47,7 @@ export default defineConfig({
       entry: {
         el: resolve(__dirname, 'src/el.ts'),
         match: resolve(__dirname, 'src/match.ts'),
+        when: resolve(__dirname, 'src/when.ts'),
         component: resolve(__dirname, 'src/component.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         map: resolve(__dirname, 'src/map.ts'),

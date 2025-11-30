@@ -86,8 +86,9 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       }
       linkBefore(node, nextLinked);
 
-      // Attach fragment (sets up children)
-      node.attach(parentRef, nextSib, api);
+      // Attach fragment (sets up children) and store cleanup function
+      const cleanup = node.attach(parentRef, nextSib, api);
+      if (cleanup) node.cleanup = cleanup;
 
       // Decorate fragment with SSR markers if renderer supports it
       renderer.decorateFragment?.(node, parentElement);
@@ -96,7 +97,7 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
 
   /**
    * Remove a node from the DOM and dispose its scope.
-   * Handles ElementRef and FragmentRef correctly.
+   * Handles ElementRef and FragmentRef correctly, including nested fragments.
    *
    * @param parentElement - Parent DOM element
    * @param node - Node to remove (element or fragment)
@@ -113,6 +114,11 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
       // Remove from DOM
       renderer.removeChild(parentElement, node.element);
     } else if (node.status === STATUS_FRAGMENT) {
+      // Call fragment's cleanup function first (disposes effects, etc.)
+      // This must happen before removing children so nested fragment cleanups
+      // are called in the correct order (parent before children)
+      node.cleanup?.();
+
       // Unlink fragment from parent's list
       unlink(node as LinkedNode<TElement>);
 
@@ -124,11 +130,14 @@ export function createNodeHelpers<TConfig extends RendererConfig>(
         // Unlink child from fragment's list
         unlink(current);
 
-        // Dispose and remove from DOM
+        // Dispose and remove from DOM - recurse for nested fragments
         if (current.status === STATUS_ELEMENT) {
           const scope = getElementScope(current.element);
           if (scope) disposeScope(scope);
           renderer.removeChild(parentElement, current.element);
+        } else if (current.status === STATUS_FRAGMENT) {
+          // Recursively remove nested fragment
+          removeNode(parentElement, current);
         }
 
         if (current === node.lastChild) break;

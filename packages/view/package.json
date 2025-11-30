@@ -18,6 +18,10 @@
       "import": "./dist/match.js",
       "types": "./dist/match.d.ts"
     },
+    "./when": {
+      "import": "./dist/when.js",
+      "types": "./dist/when.d.ts"
+    },
     "./show": {
       "import": "./dist/show.js",
       "types": "./dist/show.d.ts"

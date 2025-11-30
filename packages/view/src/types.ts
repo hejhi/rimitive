@@ -70,6 +70,10 @@ export interface FragmentRef<TElement> extends BaseRef {
   firstChild: LinkedNode<TElement> | null;
   lastChild: LinkedNode<TElement> | null;
 
+  // Cleanup function returned by attach() - called when fragment is removed
+  // Stored by insertNodeBefore, called by removeNode
+  cleanup?: () => void;
+
   // Attach method - called when fragment is attached to the tree
   // Method syntax (not property) is bivariant, allowing proper typing while maintaining variance
   attach(
