@@ -80,7 +80,7 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
     handlePointerMove,
     handlePointerUp,
     shapes: el('group')(
-      map(shapes, (shape) => shape.id)((shape) => Shape(shape)),
+      map(shapes, (shape) => shape.id)(Shape),
       SelectionIndicator({ selectedShape })
     ),
   };
