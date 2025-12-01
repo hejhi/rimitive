@@ -538,18 +538,20 @@ export function createCanvasRenderer(
     setProperty: (node, key, value) => {
       // Handle bridge element properties
       if (isBridgeElement(node)) {
-        if (key === 'width') {
-          node.width = value as number;
-          node.__markDirty();
-        } else if (key === 'height') {
-          node.height = value as number;
-          node.__markDirty();
-        } else if (key === 'clearColor') {
+        // Canvas-specific rendering options
+        if (key === 'clearColor') {
           node.__options.clearColor = value as string;
           node.__markDirty();
         } else if (key === 'autoClear') {
           node.__options.autoClear = value as boolean;
           node.__markDirty();
+        } else {
+          // Forward all other props to HTMLCanvasElement (width, height, className, id, style, etc.)
+          Reflect.set(node, key, value);
+          // width/height changes need repaint
+          if (key === 'width' || key === 'height') {
+            node.__markDirty();
+          }
         }
         return;
       }

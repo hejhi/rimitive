@@ -75,17 +75,42 @@ export interface CanvasBaseProps {
 }
 
 /**
- * Props for canvas bridge element (the <canvas> HTML element)
+ * Writable HTML attributes from HTMLCanvasElement
+ * Excludes methods, readonly properties, and 'style' (handled separately)
  */
-export interface CanvasProps {
-  /** Canvas width in pixels */
-  width?: number;
-  /** Canvas height in pixels */
-  height?: number;
-  /** Whether to clear before each paint */
+type HTMLCanvasAttributes = Partial<
+  Pick<
+    HTMLCanvasElement,
+    | 'width'
+    | 'height'
+    | 'className'
+    | 'id'
+    | 'title'
+    | 'tabIndex'
+    | 'hidden'
+    | 'draggable'
+    | 'dir'
+    | 'lang'
+    | 'accessKey'
+  >
+> & {
+  /** Inline styles - accepts string or style object */
+  style?: string | Partial<CSSStyleDeclaration>;
+};
+
+/**
+ * Props for canvas bridge element (the <canvas> HTML element)
+ *
+ * Extends HTMLCanvasElement attributes with canvas-specific rendering options.
+ * All props are forwarded to the underlying canvas element.
+ */
+export interface CanvasProps extends HTMLCanvasAttributes {
+  /** Whether to clear before each paint (default: true) */
   autoClear?: boolean;
   /** Background color when clearing */
   clearColor?: string;
+  /** Additional attributes are forwarded to HTMLCanvasElement */
+  [key: string]: unknown;
 }
 
 /**

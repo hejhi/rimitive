@@ -54,16 +54,16 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
         height: canvasHeight,
         clearColor: '#16213e',
       })(shapes)(
-        canvas.addEventListener('pointerdown', (e) => handlePointerDown(e)),
-        canvas.addEventListener('pointermove', (e) => handlePointerMove(e)),
-        canvas.addEventListener('pointerup', () => handlePointerUp())
+        canvas.addEventListener('pointerdown', handlePointerDown),
+        canvas.addEventListener('pointermove', handlePointerMove),
+        canvas.addEventListener('pointerup', handlePointerUp)
       )
     ),
 
     // DOM toolbar - passes actions to canvas scene
     Toolbar({
-      onAddShape: (type) => addShape(type),
-      onClearAll: () => clearAll(),
+      onAddShape: addShape,
+      onClearAll: clearAll,
     }),
 
     dom.el('div', { className: 'info' })(
