@@ -80,13 +80,8 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
     handlePointerMove,
     handlePointerUp,
     shapes: el('group')(
-      // Render all shapes using map() - pure, no lifecycle side effects
-      map(
-        shapes,
-        (shape) => shape.id
-      )((shapeSignal) => Shape(shapeSignal())),
-      // Selection indicator on top
+      map(shapes, (shape) => shape.id)((shape) => Shape(shape)),
       SelectionIndicator({ selectedShape })
-    )(),
+    ),
   };
 };

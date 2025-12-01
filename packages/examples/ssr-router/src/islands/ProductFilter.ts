@@ -55,27 +55,20 @@ export const ProductFilter = island(
         category: selectedCategory,
       });
 
-      // Inline ProductCard - uses el/computed from outer closure, product from map
+      // Inline ProductCard - uses el from outer closure, product from map
       const productCards = map(filteredProducts, (p) => p.id)((product) => {
-        const name = computed(() => product().name);
-        const cat = computed(() => product().category);
-        const price = computed(() => `$${product().price}`);
-        const productId = computed(() => product().id);
-
         return el('div', {
           className: 'product-card clickable',
-          onclick: () => navigate(`/products/${productId()}`),
+          onclick: () => navigate(`/products/${product.id}`),
         })(
-          el('h4')(name),
-          el('p', { className: 'category' })(cat),
-          el('p', { className: 'price' })(price),
+          el('h4')(product.name),
+          el('p', { className: 'category' })(product.category),
+          el('p', { className: 'price' })(`$${product.price}`),
           el('span', { className: 'view-details' })('View details →')
         );
       });
       const categoryValues = map(categories)((cat) =>
-        el('option', { value: cat })(
-          computed(() => cat().charAt(0).toUpperCase() + cat().slice(1))
-        )
+        el('option', { value: cat })(cat.charAt(0).toUpperCase() + cat.slice(1))
       );
 
       const count = computed(

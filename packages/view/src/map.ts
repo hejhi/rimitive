@@ -24,35 +24,23 @@ import { removeFromFragment } from './helpers/fragment-boundaries';
 
 /**
  * Map factory type - curried for element builder pattern
+ *
+ * Items can be a static array or a reactive signal of array.
+ * The render callback receives items directly (not wrapped in signals).
+ * If items are signals themselves, updates push new values into them.
+ * If items are plain values, components are recreated on update.
  */
 export type MapFactory<TBaseElement> = ServiceDefinition<
   'map',
   {
-    // Array
     <T, TEl>(
-      items: T[],
+      items: T[] | Reactive<T[]>,
       keyFn?: (item: T) => string | number
-    ): (
-      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
-    ) => RefSpec<TBaseElement>;
-    <T, TEl>(
-      items: Reactive<T[]>,
-      keyFn?: (item: T) => string | number
-    ): (
-      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
-    ) => RefSpec<TBaseElement>;
-    // Plain function that returns array
-    <T, TEl>(
-      items: () => T[],
-      keyFn?: (item: T) => string | number
-    ): (
-      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
-    ) => RefSpec<TBaseElement>;
+    ): (render: (item: T) => RefSpec<TEl>) => RefSpec<TBaseElement>;
   }
 >;
 
 export interface MapOpts<TConfig extends RendererConfig> {
-  signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   renderer: Renderer<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
@@ -67,8 +55,7 @@ export interface MapProps<TBaseElement> {
   ) => MapFactory<TBaseElement>['impl'];
 }
 
-type RecNode<T, TElement> = ElementRef<TElement> &
-  ReconcileNode<(value: T) => void>;
+type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<T>;
 
 /**
  * Map primitive - instantiatable extension using the create pattern
@@ -76,7 +63,6 @@ type RecNode<T, TElement> = ElementRef<TElement> &
  */
 export const Map = defineService(
   <TConfig extends RendererConfig>({
-    signal,
     scopedEffect,
     renderer,
     disposeScope,
@@ -85,7 +71,6 @@ export const Map = defineService(
     (props?: MapProps<TConfig['baseElement']>) => {
       type TBaseElement = TConfig['baseElement'];
       type TFragRef = FragmentRef<TBaseElement>;
-      type TSpec = RefSpec<TBaseElement>;
 
       const { instrument } = props ?? {};
       const { insertNodeBefore, removeNode } = createNodeHelpers({
@@ -128,13 +113,13 @@ export const Map = defineService(
         return refSpec;
       };
 
-      function map<T>(
-        items: T[] | (() => T[]) | Reactive<T[]>,
+      function map<T, TEl>(
+        items: T[] | Reactive<T[]>,
         keyFn?: (item: T) => string | number
-      ): (render: (itemSignal: Reactive<T>) => TSpec) => RefSpec<TBaseElement> {
+      ): (render: (item: T) => RefSpec<TEl>) => RefSpec<TBaseElement> {
         type TRecNode = RecNode<T, TBaseElement>;
 
-        return (render: (itemSignal: Reactive<T>) => TSpec) =>
+        return (render: (item: T) => RefSpec<TEl>) =>
           createRefSpec((lifecycleCallbacks, api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
@@ -172,10 +157,8 @@ export const Map = defineService(
                     let elRef: TRecNode;
 
                     const isolate = scopedEffect(() => {
-                      const itemSignal = signal(item);
-
-                      // Render the item - this creates an element with its own scope
-                      elRef = render(itemSignal).create<TRecNode>(api);
+                      // Render the item directly - no signal wrapping
+                      elRef = render(item).create<TRecNode>(api);
 
                       // Insert into DOM - use parent.element directly
                       insertNodeBefore(
@@ -206,18 +189,31 @@ export const Map = defineService(
                         fragment.lastChild = elRef;
                       }
 
-                      elRef.data = itemSignal;
+                      // Store item for update detection
+                      elRef.data = item;
                     });
 
                     isolate(); // Dispose immediately after it runs
 
-                    // Attach the signal to the node ref for updates
                     return elRef!;
                   },
 
                   // onUpdate: called when existing item's data should be updated
                   onUpdate(item, node) {
-                    node.data(item);
+                    const prevItem = node.data;
+
+                    // If previous item is a function (signal), push new value into it
+                    if (typeof prevItem === 'function') {
+                      // Read value from new item if it's also a signal
+                      const newValue =
+                        typeof item === 'function'
+                          ? (item as () => unknown)()
+                          : item;
+                      (prevItem as (v: unknown) => void)(newValue);
+                    }
+
+                    // Update stored item reference
+                    node.data = item;
                   },
 
                   // onMove: called when item needs repositioning

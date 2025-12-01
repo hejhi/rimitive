@@ -14,10 +14,8 @@ export function instrumentMap<TBaseElement>(
   impl: MapFactory<TBaseElement>['impl'],
   instrumentation: InstrumentationContext
 ): MapFactory<TBaseElement>['impl'] {
-  type TSpec = RefSpec<TBaseElement>;
-
-  function instrumentedMap<T>(
-    items: T[] | (() => T[]) | Reactive<T[]>,
+  function instrumentedMap<T, TEl>(
+    items: T[] | Reactive<T[]>,
     keyFn?: (item: T) => string | number
   ) {
     const mapId = crypto.randomUUID();
@@ -31,13 +29,11 @@ export function instrumentMap<TBaseElement>(
       },
     });
 
-    // Call base impl - TypeScript overloads will resolve at call site
-    const renderApplicator = impl(items as () => T[], keyFn);
+    // Call base impl
+    const renderApplicator = impl<T, TEl>(items, keyFn);
 
     // Wrap the render applicator
-    return (
-      render: (itemSignal: Reactive<T>) => TSpec
-    ): RefSpec<TBaseElement> => {
+    return (render: (item: T) => RefSpec<TEl>): RefSpec<TBaseElement> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -47,7 +43,7 @@ export function instrumentMap<TBaseElement>(
       });
 
       // Track reconciliation operations by wrapping the render function
-      const instrumentedRender = (itemSignal: Reactive<T>): TSpec => {
+      const instrumentedRender = (item: T): RefSpec<TEl> => {
         const itemId = crypto.randomUUID();
 
         instrumentation.emit({
@@ -59,7 +55,7 @@ export function instrumentMap<TBaseElement>(
           },
         });
 
-        return render(itemSignal);
+        return render(item);
       };
 
       // Call base render applicator with instrumented render

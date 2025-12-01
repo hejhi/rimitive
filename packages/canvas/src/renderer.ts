@@ -631,6 +631,14 @@ export function createCanvasRenderer(
           };
           root.__bridge = parent;
 
+          // Remove from old parent if needed (proper move semantics)
+          if (child.parent) {
+            const oldIdx = child.parent.children.indexOf(child);
+            if (oldIdx !== -1) {
+              child.parent.children.splice(oldIdx, 1);
+            }
+          }
+
           child.parent = root;
           if (reference && isSceneNode(reference)) {
             const idx = root.children.indexOf(reference);
@@ -648,6 +656,14 @@ export function createCanvasRenderer(
 
       // Parent is scene node - normal scene graph insert
       if (isSceneNode(parent) && isSceneNode(child)) {
+        // Remove from old parent if needed (proper move semantics)
+        if (child.parent) {
+          const oldIdx = child.parent.children.indexOf(child);
+          if (oldIdx !== -1) {
+            child.parent.children.splice(oldIdx, 1);
+          }
+        }
+
         child.parent = parent;
         if (reference && isSceneNode(reference)) {
           const idx = parent.children.indexOf(reference);

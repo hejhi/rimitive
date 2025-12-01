@@ -4,21 +4,18 @@
  * Renders a single todo item with checkbox, text, and remove button
  */
 
-import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/useTodoList';
-import { el, addEventListener, computed } from '../service';
+import { el, addEventListener } from '../service';
 
 export const TodoItem = (
-  todoSignal: Reactive<Todo>,
+  todo: Todo,
   onToggle: (id: number) => void,
   onRemove: (id: number) => void
 ) => {
-  const todo = todoSignal();
-
   // Create checkbox with event listener
   const checkbox = el('input', {
     type: 'checkbox',
-    checked: computed(() => todoSignal().completed),
+    checked: todo.completed,
   })()(addEventListener('change', () => onToggle(todo.id)));
 
   // Create remove button with event listener
@@ -26,12 +23,10 @@ export const TodoItem = (
     addEventListener('click', () => onRemove(todo.id))
   );
 
-  // Conditionally render completed vs active todo text using computed
+  // Todo text with completed styling
   const todoText = el('span', {
-    className: computed(() =>
-      todoSignal().completed ? 'todo-text completed' : 'todo-text'
-    ),
-  })(computed(() => todoSignal().text));
+    className: todo.completed ? 'todo-text completed' : 'todo-text',
+  })(todo.text);
 
   return el('div', { className: 'todo-item' })(checkbox, todoText, removeBtn);
 };

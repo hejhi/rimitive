@@ -9,17 +9,15 @@ import { useSvc } from '../service';
 import type { Todo } from '../behaviors/useTodoList';
 
 export const TodoItem = useSvc(
-  ({ el, addEventListener, computed }) =>
-    (todoSignal: () => Todo, toggleTodo: (id: number) => void) => {
+  ({ el, addEventListener }) =>
+    (todo: Todo, toggleTodo: (id: number) => void) => {
       const checkbox = el('input', {
         type: 'checkbox',
-        checked: computed(() => todoSignal().completed),
-      })()(addEventListener('change', () => toggleTodo(todoSignal().id)));
+        checked: todo.completed,
+      })()(addEventListener('change', () => toggleTodo(todo.id)));
 
       return el('li', {
-        className: computed(() =>
-          todoSignal().completed ? 'todo-item completed' : 'todo-item'
-        ),
-      })(checkbox, el('span')(computed(() => todoSignal().text)));
+        className: todo.completed ? 'todo-item completed' : 'todo-item',
+      })(checkbox, el('span')(todo.text));
     }
 );

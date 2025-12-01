@@ -172,7 +172,7 @@ describe('reconcileWithKeys', () => {
   });
 
   describe('Adding elements', () => {
-    it('should add new element to end', () => {
+    it('should add new element to end without duplicates', () => {
       const { parent, reconcile } = setup();
 
       reconcile([
@@ -182,7 +182,8 @@ describe('reconcileWithKeys', () => {
 
       expect(parent.children.length).toBe(2);
 
-      // Add new element
+      // Add new element - should result in exactly 3 children
+      // onMove is called on new nodes to position them correctly
       reconcile([
         { id: 'a', text: 'Apple' },
         { id: 'b', text: 'Banana' },
@@ -190,6 +191,8 @@ describe('reconcileWithKeys', () => {
       ]);
 
       expect(parent.children.length).toBe(3);
+      expect(getTextContent(parent.children[0] as MockElement)).toBe('Apple');
+      expect(getTextContent(parent.children[1] as MockElement)).toBe('Banana');
       expect(getTextContent(parent.children[2] as MockElement)).toBe('Cherry');
     });
 
@@ -308,6 +311,35 @@ describe('reconcileWithKeys', () => {
       expect(parent.children.length).toBe(2);
 
       // Clear all
+      reconcile([]);
+
+      expect(parent.children.length).toBe(0);
+    });
+
+    it('should clear all elements including dynamically added ones', () => {
+      const { parent, reconcile } = setup();
+
+      // Initial items
+      reconcile([
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+      ]);
+
+      expect(parent.children.length).toBe(2);
+
+      // Add new items dynamically
+      reconcile([
+        { id: 'a', text: 'Apple' },
+        { id: 'b', text: 'Banana' },
+        { id: 'c', text: 'Cherry' },
+        { id: 'd', text: 'Date' },
+      ]);
+
+      expect(parent.children.length).toBe(4);
+
+      // Clear all - should remove ALL items including dynamically added ones
+      // (regression test: previously dynamically added items were inserted twice,
+      // so clearing would leave orphaned duplicates in the DOM)
       reconcile([]);
 
       expect(parent.children.length).toBe(0);

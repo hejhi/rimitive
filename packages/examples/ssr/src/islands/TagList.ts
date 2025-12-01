@@ -19,9 +19,9 @@ export const TagList = island(
           onclick: () => {
             // Remove this tag when clicked
             const current = tags();
-            tags(current.filter((t) => t !== tag()));
+            tags(current.filter((t) => t !== tag));
           },
-        })(`${tag()} x`);
+        })(`${tag} x`);
       });
     }
 );

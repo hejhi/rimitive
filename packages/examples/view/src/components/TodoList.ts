@@ -83,9 +83,9 @@ export const TodoList = () => {
       map(
         todoList.filteredTodos,
         (todo) => todo.id // Key function for immutable updates
-      )((todoSignal) =>
+      )((todo) =>
         TodoItem(
-          todoSignal,
+          todo,
           (id) => todoList.toggleTodo(id),
           (id) => todoList.removeTodo(id)
         )
