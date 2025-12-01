@@ -2,18 +2,14 @@
  * ShapeEditor Component (Canvas)
  *
  * Main canvas scene component that composes shapes and selection indicator.
- * Uses el(), map(), and lifecycle callbacks just like DOM components.
+ * Uses el() and map() for declarative rendering.
  *
- * Event handling is done at the canvas level via addEventListener,
- * not on individual shape nodes.
+ * Event handling uses pure geometric hit testing - no side effects or
+ * node-to-data mappings needed.
  */
 import { canvas } from '../service';
-import type { CanvasNode, CanvasPointerEvent } from '../service';
-import {
-  useShapeEditor,
-  type ShapeData,
-  type ShapeType,
-} from '../behaviors/useShapeEditor';
+import type { CanvasPointerEvent } from '../service';
+import { useShapeEditor, type ShapeType } from '../behaviors/useShapeEditor';
 import { Shape } from './Shape';
 import { SelectionIndicator } from './SelectionIndicator';
 
@@ -23,13 +19,6 @@ interface ShapeEditorProps {
   canvasWidth?: number;
   canvasHeight?: number;
   initialShapes?: Array<{ type: ShapeType }>;
-  onReady?: (actions: {
-    addShape: (type: ShapeType) => void;
-    clearAll: () => void;
-    handlePointerDown: (e: CanvasPointerEvent) => void;
-    handlePointerMove: (e: CanvasPointerEvent) => void;
-    handlePointerUp: (e: CanvasPointerEvent) => void;
-  }) => void;
 }
 
 /**
@@ -38,7 +27,7 @@ interface ShapeEditorProps {
  * Creates an interactive shape editing canvas with:
  * - Draggable shapes (circles and rectangles)
  * - Selection indicator
- * - Event handlers exposed via onReady callback
+ * - Pure geometric hit testing (no WeakMap side effects)
  */
 export const ShapeEditor = (props: ShapeEditorProps = {}) => {
   const { canvasWidth = 600, canvasHeight = 400, initialShapes = [] } = props;
@@ -54,6 +43,7 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
     startDrag,
     endDrag,
     isDragging,
+    hitTest,
   } = useShapeEditor({
     canvasWidth,
     canvasHeight,
@@ -64,12 +54,9 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
     addShape(type);
   }
 
-  // Track node-to-shape mapping for hit testing
-  const shapeNodeToData = new WeakMap<CanvasNode, ShapeData>();
-
-  // Event handlers - called from canvas addEventListener
+  // Event handlers using pure geometric hit testing
   const handlePointerDown = (e: CanvasPointerEvent) => {
-    const shape = e.target ? shapeNodeToData.get(e.target) : undefined;
+    const shape = hitTest(e.x, e.y);
     if (!shape) return;
     startDrag(shape.id, { x: e.x, y: e.y });
   };
@@ -93,24 +80,11 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
     handlePointerMove,
     handlePointerUp,
     shapes: el('group')(
-      // Render all shapes using map()
+      // Render all shapes using map() - pure, no lifecycle side effects
       map(
         shapes,
         (shape) => shape.id
-      )((shapeSignal) => {
-        const shape = shapeSignal();
-
-        // Create shape element
-        const shapeEl = Shape(shape);
-
-        // Register for hit testing via lifecycle callback
-        return shapeEl((node) => {
-          shapeNodeToData.set(node, shape);
-          return () => {
-            shapeNodeToData.delete(node);
-          };
-        });
-      }),
+      )((shapeSignal) => Shape(shapeSignal())),
       // Selection indicator on top
       SelectionIndicator({ selectedShape })
     )(),

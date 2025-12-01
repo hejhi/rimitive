@@ -108,6 +108,31 @@ export const useShapeEditor = (options: UseShapeEditorOptions = {}) => {
   };
   const endDrag = () => isDragging(false);
 
+  // Pure geometric hit testing - no side effects
+  const hitTest = (x: number, y: number): ShapeData | null => {
+    const allShapes = shapes();
+    // Test in reverse order (top shape first)
+    for (let i = allShapes.length - 1; i >= 0; i--) {
+      const shape = allShapes[i]!;
+      if (isPointInShape(x, y, shape)) return shape;
+    }
+    return null;
+  };
+
+  const isPointInShape = (x: number, y: number, shape: ShapeData): boolean => {
+    const sx = shape.x();
+    const sy = shape.y();
+    const size = shape.size;
+
+    if (shape.type === 'circle') {
+      const dx = x - sx;
+      const dy = y - sy;
+      return dx * dx + dy * dy <= size * size;
+    }
+    // rect centered at (sx, sy) with half-width/height of size
+    return Math.abs(x - sx) <= size && Math.abs(y - sy) <= size;
+  };
+
   return {
     // Reactive state
     shapes,
@@ -128,5 +153,6 @@ export const useShapeEditor = (options: UseShapeEditorOptions = {}) => {
     startDrag,
     endDrag,
     isDragging,
+    hitTest,
   };
 };
