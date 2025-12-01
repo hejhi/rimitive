@@ -9,28 +9,24 @@
  * matching DOM patterns. Hit testing provides the target canvas node.
  */
 import { dom, canvas } from '../service';
-import type { CanvasPointerEvent } from '../service';
 import { ShapeEditor } from './ShapeEditor';
 import { Toolbar } from './Toolbar';
-import type { ShapeType } from '../behaviors/useShapeEditor';
 
 interface AppProps {
   canvasWidth: number;
   canvasHeight: number;
 }
 
-export const App = (props: AppProps) => {
-  const { canvasWidth, canvasHeight } = props;
-
-  // Actions and event handlers will be populated when ShapeEditor is ready
-  let addShape: (type: ShapeType) => void = () => {};
-  let clearAll: () => void = () => {};
-  let handlePointerDown: (e: CanvasPointerEvent) => void = () => {};
-  let handlePointerMove: (e: CanvasPointerEvent) => void = () => {};
-  let handlePointerUp: (e: CanvasPointerEvent) => void = () => {};
-
+export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
   // Get the scene content (the group with shapes)
-  const sceneContent = ShapeEditor({
+  const {
+    shapes,
+    addShape,
+    clearAll,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+  } = ShapeEditor({
     canvasWidth,
     canvasHeight,
     initialShapes: [
@@ -40,20 +36,15 @@ export const App = (props: AppProps) => {
       { type: 'rect' },
       { type: 'circle' },
     ],
-    onReady: (actions) => {
-      addShape = actions.addShape;
-      clearAll = actions.clearAll;
-      handlePointerDown = actions.handlePointerDown;
-      handlePointerMove = actions.handlePointerMove;
-      handlePointerUp = actions.handlePointerUp;
-    },
   });
 
   // Single composed tree: DOM with embedded canvas
   // canvas.el('canvas') creates an HTMLCanvasElement that acts as the boundary
   return dom.el('div', { className: 'app' })(
     dom.el('h1')('Lattice Canvas'),
-    dom.el('p', { className: 'subtitle' })('Reactive canvas rendering with signals'),
+    dom.el('p', { className: 'subtitle' })(
+      'Reactive canvas rendering with signals'
+    ),
 
     dom.el('div', { className: 'canvas-container' })(
       // Canvas element: DOM node externally, scene graph root internally
@@ -62,12 +53,10 @@ export const App = (props: AppProps) => {
         width: canvasWidth,
         height: canvasHeight,
         clearColor: '#16213e',
-      })(
-        sceneContent
-      )(
+      })(shapes)(
         canvas.addEventListener('pointerdown', (e) => handlePointerDown(e)),
         canvas.addEventListener('pointermove', (e) => handlePointerMove(e)),
-        canvas.addEventListener('pointerup', (e) => handlePointerUp(e))
+        canvas.addEventListener('pointerup', () => handlePointerUp())
       )
     ),
 

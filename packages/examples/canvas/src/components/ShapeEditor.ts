@@ -44,75 +44,75 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
   const { canvasWidth = 600, canvasHeight = 400, initialShapes = [] } = props;
 
   // Use the headless behavior for state management
-  const editor = useShapeEditor({ canvasWidth, canvasHeight });
+  const {
+    addShape,
+    shapes,
+    dragOffset,
+    selectedShape,
+    moveShape,
+    clearAll,
+    startDrag,
+    endDrag,
+    isDragging,
+  } = useShapeEditor({
+    canvasWidth,
+    canvasHeight,
+  });
 
   // Add initial shapes
   for (const { type } of initialShapes) {
-    editor.addShape(type);
+    addShape(type);
   }
 
   // Track node-to-shape mapping for hit testing
-  const shapeNodeToData = new Map<CanvasNode, ShapeData>();
-
-  // Track drag state
-  let isDragging = false;
-  let dragOffsetX = 0;
-  let dragOffsetY = 0;
+  const shapeNodeToData = new WeakMap<CanvasNode, ShapeData>();
 
   // Event handlers - called from canvas addEventListener
   const handlePointerDown = (e: CanvasPointerEvent) => {
     const shape = e.target ? shapeNodeToData.get(e.target) : undefined;
-    if (shape) {
-      editor.selectShape(shape.id);
-      isDragging = true;
-      dragOffsetX = e.x - shape.x();
-      dragOffsetY = e.y - shape.y();
-    }
+    if (!shape) return;
+    startDrag(shape.id, { x: e.x, y: e.y });
   };
 
   const handlePointerMove = (e: CanvasPointerEvent) => {
-    if (isDragging) {
-      const selected = editor.selectedShape();
-      if (selected) {
-        editor.moveShape(selected.id, e.x - dragOffsetX, e.y - dragOffsetY);
-      }
-    }
+    if (!isDragging()) return;
+
+    const selected = selectedShape();
+    if (!selected) return;
+
+    moveShape(selected.id, e.x - dragOffset.x(), e.y - dragOffset.y());
   };
 
-  const handlePointerUp = () => {
-    isDragging = false;
-  };
+  const handlePointerUp = endDrag;
 
-  // Expose actions and event handlers via callback
-  props.onReady?.({
-    addShape: editor.addShape,
-    clearAll: editor.clearAll,
+  // The scene: a group containing all shapes and the selection indicator
+  return {
+    addShape,
+    clearAll,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
-  });
+    shapes: el('group')(
+      // Render all shapes using map()
+      map(
+        shapes,
+        (shape) => shape.id
+      )((shapeSignal) => {
+        const shape = shapeSignal();
 
-  // The scene: a group containing all shapes and the selection indicator
-  return el('group')(
-    // Render all shapes using map()
-    map(
-      editor.shapes,
-      (shape) => shape.id
-    )((shapeSignal) => {
-      const shape = shapeSignal();
+        // Create shape element
+        const shapeEl = Shape(shape);
 
-      // Create shape element
-      const shapeEl = Shape(shape);
-
-      // Register for hit testing via lifecycle callback
-      return shapeEl((node) => {
-        shapeNodeToData.set(node as CanvasNode, shape);
-        return () => {
-          shapeNodeToData.delete(node as CanvasNode);
-        };
-      });
-    }),
-    // Selection indicator on top
-    SelectionIndicator({ selectedShape: editor.selectedShape })
-  )();
+        // Register for hit testing via lifecycle callback
+        return shapeEl((node) => {
+          shapeNodeToData.set(node, shape);
+          return () => {
+            shapeNodeToData.delete(node);
+          };
+        });
+      }),
+      // Selection indicator on top
+      SelectionIndicator({ selectedShape })
+    )(),
+  };
 };

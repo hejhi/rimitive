@@ -226,13 +226,13 @@ export interface CanvasRendererConfig extends RendererConfig {
   };
   elements: {
     canvas: CanvasBridgeElement;
-    group: CanvasNode;
-    rect: CanvasNode;
-    circle: CanvasNode;
-    line: CanvasNode;
-    path: CanvasNode;
-    text: CanvasNode;
-    image: CanvasNode;
+    group: GroupElement;
+    rect: RectElement;
+    circle: CircleElement;
+    line: LineElement;
+    path: PathElement;
+    text: TextElement;
+    image: ImageElement;
   };
   events: {
     click: CanvasPointerEvent;
@@ -243,9 +243,9 @@ export interface CanvasRendererConfig extends RendererConfig {
   baseElement: CanvasElement;
 }
 
-export interface CanvasPointerEvent {
+export interface CanvasPointerEvent<T extends CanvasNode = CanvasNode> {
   x: number;
   y: number;
-  target: CanvasNode | null;
+  target: T | null;
   nativeEvent: PointerEvent;
 }

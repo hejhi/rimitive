@@ -44,6 +44,9 @@ export const useShapeEditor = (options: UseShapeEditorOptions = {}) => {
   let nextId = 1;
   const shapes = signal<ShapeData[]>([]);
   const selectedId = signal<number | null>(null);
+  const isDragging = signal(false);
+  const dragOffsetX = signal(0);
+  const dragOffsetY = signal(0);
 
   // Derived state
   const selectedShape = computed(() => {
@@ -93,12 +96,28 @@ export const useShapeEditor = (options: UseShapeEditorOptions = {}) => {
     }
   };
 
+  const startDrag = (shapeId: number, { x, y }: { x: number; y: number }) => {
+    selectShape(shapeId);
+    const shape = selectedShape();
+
+    if (shape) {
+      dragOffsetX(x - shape.x());
+      dragOffsetY(y - shape.y());
+      isDragging(true);
+    }
+  };
+  const endDrag = () => isDragging(false);
+
   return {
     // Reactive state
     shapes,
     selectedId,
     selectedShape,
     shapeCount,
+    dragOffset: {
+      x: dragOffsetX,
+      y: dragOffsetY,
+    },
 
     // Actions
     addShape,
@@ -106,5 +125,8 @@ export const useShapeEditor = (options: UseShapeEditorOptions = {}) => {
     selectShape,
     clearAll,
     moveShape,
+    startDrag,
+    endDrag,
+    isDragging,
   };
 };
