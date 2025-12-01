@@ -57,15 +57,16 @@ const canvasViewHelpers = defaultViewHelpers<CanvasRendererConfig>(
   canvasRenderer as Renderer<CanvasRendererConfig>,
   signalsSvc
 );
-const canvasViewSvc = composeFrom(
+const { el: canvasEl, ...canvasViewSvc } = composeFrom(
   defaultViewExtensions<CanvasRendererConfig>(),
   canvasViewHelpers
 );
 
 export const canvas = {
   ...canvasViewSvc,
+  cvs: canvasEl,
   renderer: canvasRenderer,
-  addEventListener: createCanvasAddEventListener(canvasRenderer, signalsSvc.batch),
+  on: createCanvasAddEventListener(canvasRenderer, signalsSvc.batch),
   mount: <TElement>(spec: RefSpec<TElement>) => spec.create(canvasViewSvc),
 };
 

@@ -7,7 +7,7 @@
 import { canvas } from '../service';
 import type { ShapeData } from '../behaviors/useShapeEditor';
 
-const { el, match } = canvas;
+const { cvs, match } = canvas;
 
 interface SelectionIndicatorProps {
   selectedShape: () => ShapeData | null;
@@ -24,7 +24,7 @@ export const SelectionIndicator = (props: SelectionIndicatorProps) => {
 
   return match(selectedShape)((shape) =>
     shape
-      ? el('circle', {
+      ? cvs('circle', {
           x: shape.x,
           y: shape.y,
           radius: shape.size + 8,

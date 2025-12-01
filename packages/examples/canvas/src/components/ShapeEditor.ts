@@ -13,7 +13,7 @@ import { useShapeEditor, type ShapeType } from '../behaviors/useShapeEditor';
 import { Shape } from './Shape';
 import { SelectionIndicator } from './SelectionIndicator';
 
-const { el, map } = canvas;
+const { cvs, map } = canvas;
 
 interface ShapeEditorProps {
   canvasWidth?: number;
@@ -79,7 +79,7 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
-    shapes: el('group')(
+    shapes: cvs('group')(
       map(shapes, (shape) => shape.id)(Shape),
       SelectionIndicator({ selectedShape })
     ),
