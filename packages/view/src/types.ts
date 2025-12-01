@@ -2,11 +2,24 @@
  * Core types for @lattice/view
  */
 
+import type { Service } from '@lattice/lattice';
+
 // Re-export renderer types so they're available from @lattice/view/types
 export type { Renderer, RendererConfig } from './renderer';
 export type { ReactiveAdapter } from './reactive-adapter';
 
-import type { Service } from '@lattice/lattice';
+/**
+ * Parent context passed to RefSpec.create() for renderer composition
+ * Allows child RefSpecs to know their parent's renderer and element
+ *
+ * Note: renderer uses 'unknown' for variance - any Renderer<T> is assignable
+ */
+export interface ParentContext<TElement> {
+  /** The parent's renderer - enables cross-renderer composition */
+  renderer: unknown;
+  /** The parent element (already created when children are processed) */
+  element: TElement;
+}
 
 /**
  * Status bits for node ref type discrimination
@@ -97,9 +110,11 @@ export interface RefSpec<TElement> extends Service<NodeRef<TElement>, unknown> {
   (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
   // api parameter is optional - only needed for components created with create()
+  // parentContext enables cross-renderer composition (e.g., canvas inside DOM)
   create<TExt = Record<string, unknown>>(
     api?: unknown,
-    extensions?: TExt
+    extensions?: TExt,
+    parentContext?: ParentContext<unknown>
   ): NodeRef<TElement> & TExt;
 }
 

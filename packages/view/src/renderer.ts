@@ -8,7 +8,7 @@
  * DOM-specific concerns (events, hydration) are layered on top.
  */
 
-import type { NodeRef } from './types';
+import type { NodeRef, ParentContext } from './types';
 
 /**
  * Generic node interface - platform-agnostic
@@ -67,10 +67,15 @@ export interface Renderer<TConfig extends RendererConfig> {
    *
    * Text nodes are created with type 'text' and initial value in props:
    *   createNode('text', { value: 'hello' })
+   *
+   * For cross-renderer composition, parentContext provides the parent's renderer
+   * and element, enabling renderers to make boundary decisions (e.g., canvas
+   * renderer creating an HTMLCanvasElement when nested under a DOM parent).
    */
   createNode: (
     type: string,
-    props?: Record<string, unknown>
+    props?: Record<string, unknown>,
+    parentContext?: ParentContext<unknown>
   ) => TConfig['baseElement'];
 
   /**

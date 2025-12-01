@@ -168,6 +168,43 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
 
+  packages/canvas:
+    dependencies:
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
+      '@lattice/view':
+        specifier: workspace:*
+        version: link:../view
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.15.3
+      esbuild:
+        specifier: ^0.25.8
+        version: 0.25.12
+      happy-dom:
+        specifier: ^15.11.7
+        version: 15.11.7
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      terser:
+        specifier: ^5.36.0
+        version: 5.43.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.1
+        version: 7.1.1(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@22.15.3)(rollup@4.52.5)(typescript@5.9.3)(vite@7.1.1(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@15.11.7)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
   packages/devtools-extension:
     dependencies:
       '@lattice/lattice':
@@ -292,6 +329,22 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
+
+  packages/examples/canvas:
+    dependencies:
+      '@lattice/canvas':
+        specifier: workspace:*
+        version: link:../../canvas
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../../signals
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.5
+        version: 6.4.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
   packages/examples/devtools:
     dependencies:
@@ -11263,7 +11316,7 @@ snapshots:
       magic-string: 0.30.17
       sirv: 3.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@15.11.7)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
       ws: 8.18.2
     transitivePeerDependencies:
       - bufferutil

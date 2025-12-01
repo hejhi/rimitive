@@ -10,6 +10,7 @@ import type {
   Reactive,
   ElementRef,
   ElRefSpecChild,
+  ParentContext,
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { Renderer, RendererConfig } from './renderer';
@@ -135,7 +136,8 @@ export const El = defineService(
       const createRefSpec = <El>(
         createElement: (
           callbacks: LifecycleCallback<El>[],
-          api?: unknown
+          api?: unknown,
+          parentContext?: ParentContext<unknown>
         ) => ElementRef<El>
       ): RefSpec<El> => {
         const lifecycleCallbacks: LifecycleCallback<El>[] = [];
@@ -148,8 +150,12 @@ export const El = defineService(
         };
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const elRef = createElement(lifecycleCallbacks, api);
+        refSpec.create = <TExt>(
+          api?: unknown,
+          extensions?: TExt,
+          parentContext?: ParentContext<unknown>
+        ) => {
+          const elRef = createElement(lifecycleCallbacks, api, parentContext);
           // If no extensions, return the ref directly to preserve mutability
           // This is critical for FragmentRef which gets firstChild set after creation
           if (!extensions || Object.keys(extensions).length === 0) return elRef;
@@ -172,8 +178,10 @@ export const El = defineService(
       ): ChildrenApplicator<TConfig, Tag> {
         // Return children applicator
         return (...children: ElRefSpecChild[]) => {
-          return createRefSpec((lifecycleCallbacks, api) => {
-            const element = createNode(tag);
+          return createRefSpec((lifecycleCallbacks, api, parentContext) => {
+            // Pass initial props to createNode - needed for renderers that require
+            // props at creation time (e.g., canvas renderer needs width/height)
+            const element = createNode(tag, props as Record<string, unknown>, parentContext);
             const elRef: ElementRef<TBaseElement> = {
               status: STATUS_ELEMENT,
               element: element,
@@ -182,6 +190,12 @@ export const El = defineService(
               next: null,
               firstChild: null,
               lastChild: null,
+            };
+
+            // Create context for children - they'll see this element as their parent
+            const childContext: ParentContext<TBaseElement> = {
+              renderer,
+              element,
             };
 
             createElementScope(element, () => {
@@ -198,7 +212,7 @@ export const El = defineService(
                   setProperty(element, key, (val as () => unknown)())
                 );
               }
-              processChildren(elRef, children, api);
+              processChildren(elRef, children, api, childContext);
 
               // Execute lifecycle callbacks within scope
               for (const callback of lifecycleCallbacks) {

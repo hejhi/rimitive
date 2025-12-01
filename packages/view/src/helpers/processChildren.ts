@@ -12,6 +12,7 @@ import type {
   ElRefSpecChild,
   FragmentRef,
   RefSpec,
+  ParentContext,
 } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Renderer, RendererConfig } from '../renderer';
@@ -34,7 +35,8 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
   const handleChild = (
     parentRef: ElementRef<TNode>,
     child: ElRefSpecChild,
-    api?: unknown
+    api?: unknown,
+    parentContext?: ParentContext<TNode>
   ): NodeRef<TNode> | null => {
     const element = parentRef.element;
     const childType = typeof child;
@@ -60,7 +62,13 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
       if (spec.status === STATUS_FRAGMENT) return spec;
 
       if (spec.status & STATUS_SPEC_MASK) {
-        const childRef = spec.create(api);
+        // Pass parentContext to child's create() for renderer composition
+        const refSpec = spec as RefSpec<TNode>;
+        const childRef = refSpec.create(
+          api,
+          {} as Record<string, never>,
+          parentContext
+        );
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
           renderer.appendChild(element, childRef.element);
@@ -88,14 +96,15 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
   const processChildren = (
     parent: ElementRef<TNode>,
     children: ElRefSpecChild[],
-    api?: unknown
+    api?: unknown,
+    parentContext?: ParentContext<TNode>
   ): void => {
     let firstChildRef: NodeRef<TNode> | null = null;
     let lastChildRef: NodeRef<TNode> | null = null;
 
     // Forward pass: create refs and build doubly-linked list (including fragments)
     for (const child of children) {
-      const refNode = handleChild(parent, child, api);
+      const refNode = handleChild(parent, child, api, parentContext);
 
       if (!refNode) continue;
 
