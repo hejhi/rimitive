@@ -18,13 +18,18 @@ export type Node = object;
 
 /**
  * RendererConfig defines the type-level contract for a tree adapter:
- * - elements: Maps tag names to their node types (e.g., 'div' -> HTMLDivElement)
+ * - props: Maps tag names to their prop types for el() autocomplete
+ * - elements: Maps tag names to their node types for RefSpec<T> (e.g., 'div' -> HTMLDivElement)
  * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
  * - baseElement: Base node type for this adapter (e.g., Node for DOM)
+ *
+ * Separating `props` from `elements` allows renderers to have clean prop autocomplete
+ * without exposing internal node properties (like canvas's bounds, dirty, etc).
  *
  * Note: Text is just another node type created via createNode('text', { value: '...' })
  */
 export interface RendererConfig {
+  props: object;
   elements: object;
   events: object;
   baseElement: object;

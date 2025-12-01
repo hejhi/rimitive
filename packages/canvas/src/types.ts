@@ -41,15 +41,15 @@ export interface CanvasBridgeElement extends HTMLCanvasElement {
 export type CanvasElement = CanvasNode | CanvasBridgeElement;
 
 // ============================================================================
-// Element types with typed props
-// These extend the runtime types AND include typed props for autocomplete.
-// TypeScript sees the props for type-checking, runtime uses node.props bag.
+// Props types for el() autocomplete
+// These define what props users can pass to el('rect', {...}), etc.
+// Separate from runtime CanvasNode structure.
 // ============================================================================
 
 /**
  * Common transform and style props shared by all canvas elements
  */
-interface CanvasBaseProps {
+export interface CanvasBaseProps {
   /** X position (translation) */
   x?: number;
   /** Y position (translation) */
@@ -75,14 +75,13 @@ interface CanvasBaseProps {
 }
 
 /**
- * Canvas bridge element with typed props
- * Extends CanvasBridgeElement (for lifecycle callbacks) with prop types (for el() autocomplete)
+ * Props for canvas bridge element (the <canvas> HTML element)
  */
-export interface CanvasBridgeProps extends CanvasBridgeElement {
+export interface CanvasProps {
   /** Canvas width in pixels */
-  width: number;
+  width?: number;
   /** Canvas height in pixels */
-  height: number;
+  height?: number;
   /** Whether to clear before each paint */
   autoClear?: boolean;
   /** Background color when clearing */
@@ -90,14 +89,14 @@ export interface CanvasBridgeProps extends CanvasBridgeElement {
 }
 
 /**
- * Group element with typed props
+ * Props for group element
  */
-export interface GroupElement extends CanvasNode, CanvasBaseProps {}
+export type GroupProps = CanvasBaseProps;
 
 /**
- * Rectangle element with typed props
+ * Props for rectangle element
  */
-export interface RectElement extends CanvasNode, CanvasBaseProps {
+export interface RectProps extends CanvasBaseProps {
   /** Rectangle width */
   width?: number;
   /** Rectangle height */
@@ -107,9 +106,9 @@ export interface RectElement extends CanvasNode, CanvasBaseProps {
 }
 
 /**
- * Circle/ellipse element with typed props
+ * Props for circle/ellipse element
  */
-export interface CircleElement extends CanvasNode, CanvasBaseProps {
+export interface CircleProps extends CanvasBaseProps {
   /** Circle radius (or default for ellipse) */
   radius?: number;
   /** Horizontal radius for ellipse */
@@ -119,9 +118,9 @@ export interface CircleElement extends CanvasNode, CanvasBaseProps {
 }
 
 /**
- * Line element with typed props
+ * Props for line element
  */
-export interface LineElement extends CanvasNode, CanvasBaseProps {
+export interface LineProps extends CanvasBaseProps {
   /** Start X coordinate */
   x1?: number;
   /** Start Y coordinate */
@@ -133,17 +132,17 @@ export interface LineElement extends CanvasNode, CanvasBaseProps {
 }
 
 /**
- * Path element with typed props
+ * Props for path element
  */
-export interface PathElement extends CanvasNode, CanvasBaseProps {
+export interface PathProps extends CanvasBaseProps {
   /** SVG path data string */
   d?: string;
 }
 
 /**
- * Text element with typed props
+ * Props for text element
  */
-export interface TextElement extends CanvasNode, CanvasBaseProps {
+export interface TextProps extends CanvasBaseProps {
   /** Text content */
   text?: string;
   /** Alternative text content prop */
@@ -159,9 +158,9 @@ export interface TextElement extends CanvasNode, CanvasBaseProps {
 }
 
 /**
- * Image element with typed props
+ * Props for image element
  */
-export interface ImageElement extends CanvasNode, CanvasBaseProps {
+export interface ImageProps extends CanvasBaseProps {
   /** Image source URL */
   src?: string;
   /** Image width (defaults to natural width) */
@@ -171,19 +170,69 @@ export interface ImageElement extends CanvasNode, CanvasBaseProps {
 }
 
 // ============================================================================
+// Element types for RendererConfig
+// These combine CanvasNode (for RefSpec compatibility) with Props (for autocomplete)
+// ============================================================================
+
+/**
+ * Group element - CanvasNode with group props
+ */
+export interface GroupElement extends CanvasNode, GroupProps {}
+
+/**
+ * Rect element - CanvasNode with rect props
+ */
+export interface RectElement extends CanvasNode, RectProps {}
+
+/**
+ * Circle element - CanvasNode with circle props
+ */
+export interface CircleElement extends CanvasNode, CircleProps {}
+
+/**
+ * Line element - CanvasNode with line props
+ */
+export interface LineElement extends CanvasNode, LineProps {}
+
+/**
+ * Path element - CanvasNode with path props
+ */
+export interface PathElement extends CanvasNode, PathProps {}
+
+/**
+ * Text element - CanvasNode with text props
+ */
+export interface TextElement extends CanvasNode, TextProps {}
+
+/**
+ * Image element - CanvasNode with image props
+ */
+export interface ImageElement extends CanvasNode, ImageProps {}
+
+// ============================================================================
 // Renderer config
 // ============================================================================
 
 export interface CanvasRendererConfig extends RendererConfig {
+  props: {
+    canvas: CanvasProps;
+    group: GroupProps;
+    rect: RectProps;
+    circle: CircleProps;
+    line: LineProps;
+    path: PathProps;
+    text: TextProps;
+    image: ImageProps;
+  };
   elements: {
-    canvas: CanvasBridgeProps;
-    group: GroupElement;
-    rect: RectElement;
-    circle: CircleElement;
-    line: LineElement;
-    path: PathElement;
-    text: TextElement;
-    image: ImageElement;
+    canvas: CanvasBridgeElement;
+    group: CanvasNode;
+    rect: CanvasNode;
+    circle: CanvasNode;
+    line: CanvasNode;
+    path: CanvasNode;
+    text: CanvasNode;
+    image: CanvasNode;
   };
   events: {
     click: CanvasPointerEvent;

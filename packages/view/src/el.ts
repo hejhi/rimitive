@@ -25,7 +25,7 @@ type ReactiveProps<T> = {
 };
 
 /**
- * Props for an element - type-safe based on the renderer's element configuration
+ * Props for an element - type-safe based on the renderer's props configuration
  * Each prop can be either a static value or a Reactive value
  *
  * The type provides autocomplete for known element properties while allowing
@@ -34,12 +34,12 @@ type ReactiveProps<T> = {
  *
  * Generic over:
  * - TConfig: The renderer configuration
- * - Tag: The element tag name (must be a key in TConfig['elements'])
+ * - Tag: The element tag name (must be a key in TConfig['props'])
  */
 export type ElementProps<
   TConfig extends RendererConfig,
-  Tag extends keyof TConfig['elements'],
-> = ReactiveProps<TConfig['elements'][Tag]> & {
+  Tag extends keyof TConfig['props'],
+> = ReactiveProps<TConfig['props'][Tag]> & {
   status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
   [key: string]: unknown; // Allow arbitrary attributes (data-*, aria-*, custom)
 };
@@ -73,11 +73,11 @@ export type ElProps<TConfig extends RendererConfig> = {
  *
  * Generic over:
  * - TConfig: The renderer configuration
- * - Tag: The element tag name
+ * - Tag: The element tag name (must exist in both props and elements)
  */
 export type ChildrenApplicator<
   TConfig extends RendererConfig,
-  Tag extends keyof TConfig['elements'],
+  Tag extends keyof TConfig['props'] & keyof TConfig['elements'],
 > = (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
 
 /**
@@ -93,8 +93,8 @@ export type ChildrenApplicator<
 export type ElFactory<TConfig extends RendererConfig> = ServiceDefinition<
   'el',
   {
-    // Static element builder
-    <Tag extends string & keyof TConfig['elements']>(
+    // Static element builder - Tag must be valid in both props and elements
+    <Tag extends string & keyof TConfig['props'] & keyof TConfig['elements']>(
       tag: Tag,
       props?: ElementProps<TConfig, Tag>
     ): ChildrenApplicator<TConfig, Tag>;
@@ -119,8 +119,9 @@ export const El = defineService(
   }: ElOpts<TConfig>) =>
     (props: ElProps<TConfig> = {}) => {
       type TBaseElement = TConfig['baseElement'];
+      type TProps = TConfig['props'];
       type TElements = TConfig['elements'];
-      type TElementKeys = keyof TElements;
+      type TElementKeys = keyof TProps & keyof TElements;
 
       const { instrument } = props;
       const { processChildren } = createProcessChildren<TConfig>({

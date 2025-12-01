@@ -1,6 +1,7 @@
 import type { Renderer, RendererConfig } from '../renderer';
 
 export interface DOMRendererConfig extends RendererConfig {
+  props: HTMLElementTagNameMap & { text: Text };
   elements: HTMLElementTagNameMap & { text: Text };
   events: HTMLElementEventMap;
   baseElement: Node;

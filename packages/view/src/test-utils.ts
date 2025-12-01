@@ -104,9 +104,62 @@ export interface MockEvent {
 }
 
 /**
+ * Mock element props - common DOM-like properties for testing
+ */
+export interface MockElementProps {
+  className?: string;
+  title?: string;
+  value?: string;
+  href?: string;
+  src?: string;
+  type?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  checked?: boolean;
+  name?: string;
+  onclick?: (event: MouseEvent) => unknown;
+  [key: string]: unknown;
+}
+
+/**
+ * Mock text props - just the value property
+ */
+export interface MockTextProps {
+  value?: string;
+}
+
+/**
  * Mock renderer configuration - maps tag names to MockElement and events to MockEvent
  */
 export interface MockRendererConfig extends RendererConfig {
+  props: {
+    div: MockElementProps;
+    span: MockElementProps;
+    button: MockElementProps;
+    input: MockElementProps;
+    form: MockElementProps;
+    section: MockElementProps;
+    article: MockElementProps;
+    header: MockElementProps;
+    footer: MockElementProps;
+    nav: MockElementProps;
+    main: MockElementProps;
+    aside: MockElementProps;
+    ul: MockElementProps;
+    ol: MockElementProps;
+    li: MockElementProps;
+    p: MockElementProps;
+    h1: MockElementProps;
+    h2: MockElementProps;
+    h3: MockElementProps;
+    h4: MockElementProps;
+    h5: MockElementProps;
+    h6: MockElementProps;
+    a: MockElementProps;
+    img: MockElementProps;
+    text: MockTextProps;
+    [key: string]: MockElementProps | MockTextProps;
+  };
   elements: {
     div: MockElement;
     span: MockElement;
