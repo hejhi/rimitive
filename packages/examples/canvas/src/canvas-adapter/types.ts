@@ -1,7 +1,15 @@
+/**
+ * Canvas Adapter Types
+ *
+ * This is a reference implementation demonstrating how to build a custom
+ * NodeAdapter for non-DOM targets. The canvas adapter creates a scene graph
+ * that gets rendered to an HTML canvas element.
+ */
+
 import type { RendererConfig } from '@lattice/view/types';
 
 // ============================================================================
-// Runtime types (used internally by renderer)
+// Runtime types (used internally by adapter)
 // ============================================================================
 
 export interface CanvasNode {
@@ -36,7 +44,7 @@ export interface CanvasBridgeElement extends HTMLCanvasElement {
 }
 
 /**
- * Union type for canvas renderer nodes - either a scene graph node or a bridge element
+ * Union type for canvas adapter nodes - either a scene graph node or a bridge element
  */
 export type CanvasElement = CanvasNode | CanvasBridgeElement;
 
@@ -235,10 +243,10 @@ export interface TextElement extends CanvasNode, TextProps {}
 export interface ImageElement extends CanvasNode, ImageProps {}
 
 // ============================================================================
-// Renderer config
+// Adapter config
 // ============================================================================
 
-export interface CanvasRendererConfig extends RendererConfig {
+export interface CanvasAdapterConfig extends RendererConfig {
   props: {
     canvas: CanvasProps;
     group: GroupProps;

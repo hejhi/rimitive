@@ -1,6 +1,31 @@
+/**
+ * Canvas Node Adapter
+ *
+ * This is a reference implementation demonstrating how to build a custom
+ * NodeAdapter for non-DOM targets. It creates a scene graph that renders
+ * to an HTML canvas element via the Canvas 2D API.
+ *
+ * Key concepts:
+ * - Bridge element: An HTMLCanvasElement that owns a scene graph
+ * - Scene nodes: Internal graph nodes (circle, rect, group, etc.)
+ * - The adapter handles tree operations and schedules repaints
+ *
+ * Usage:
+ * ```typescript
+ * const canvasAdapter = createCanvasAdapter();
+ *
+ * // In composed tree:
+ * dom.el('div')(
+ *   canvas.el('canvas', { width: 600, height: 400, clearColor: '#000' })(
+ *     canvas.el('circle', { x: 100, y: 100, radius: 50, fill: 'red' })()
+ *   )
+ * )
+ * ```
+ */
+
 import type { Renderer, ParentContext } from '@lattice/view/types';
 import type {
-  CanvasRendererConfig,
+  CanvasAdapterConfig,
   CanvasNode,
   CanvasBridgeElement,
   CanvasElement,
@@ -301,7 +326,7 @@ function isSceneNode(node: CanvasElement): node is CanvasNode {
   return 'type' in node && 'children' in node && !('__sceneRoot' in node);
 }
 
-export interface CanvasRendererOptions {
+export interface CanvasAdapterOptions {
   /**
    * If true, automatically clear the canvas before each paint.
    * Default: true
@@ -314,33 +339,24 @@ export interface CanvasRendererOptions {
   clearColor?: string;
 }
 
-export interface CanvasRendererInstance extends Renderer<CanvasRendererConfig> {
+export interface CanvasAdapterInstance extends Renderer<CanvasAdapterConfig> {
   /** Perform hit testing on a specific canvas at a point */
   hitTest: (canvas: CanvasBridgeElement, x: number, y: number) => CanvasNode | null;
 }
 
 /**
- * Create a canvas renderer for composable DOM + Canvas rendering
+ * Create a canvas node adapter for composable DOM + Canvas rendering
  *
- * Usage:
- * ```typescript
- * const canvasRenderer = createCanvasRenderer();
- *
- * // In composed tree:
- * dom.el('div')(
- *   canvas.el('canvas', { width: 600, height: 400, clearColor: '#000' })(
- *     canvas.el('circle', { x: 100, y: 100, radius: 50, fill: 'red' })()
- *   )
- * )
- * ```
+ * This adapter implements the Renderer interface, allowing canvas primitives
+ * to be composed with DOM elements using the same el()/map()/when() patterns.
  *
  * The 'canvas' element type creates an HTMLCanvasElement that acts as a bridge
  * between DOM and the canvas scene graph. Children of the canvas element are
  * canvas primitives (circle, rect, etc.) that render to the 2D context.
  */
-export function createCanvasRenderer(
-  options: CanvasRendererOptions = {}
-): CanvasRendererInstance {
+export function createCanvasAdapter(
+  options: CanvasAdapterOptions = {}
+): CanvasAdapterInstance {
   const { autoClear = true, clearColor } = options;
 
   /**
@@ -507,8 +523,8 @@ export function createCanvasRenderer(
     return null;
   }
 
-  // Store renderer reference for identity checks
-  const rendererInstance: CanvasRendererInstance = {
+  // Store adapter reference for identity checks
+  const adapterInstance: CanvasAdapterInstance = {
     hitTest,
 
     createNode: (
@@ -522,9 +538,9 @@ export function createCanvasRenderer(
         return createBridgeElement(props ?? {});
       }
 
-      // For non-bridge types, validate that parent renderer is this canvas renderer
+      // For non-bridge types, validate that parent renderer is this canvas adapter
       // This catches errors like: dom.el('div')(canvas.el('circle')()) - missing canvas boundary
-      if (parentContext && parentContext.renderer !== rendererInstance) {
+      if (parentContext && parentContext.renderer !== adapterInstance) {
         throw new Error(
           `Canvas primitive '${type}' must be nested inside a canvas element. ` +
             `Use canvas.el('canvas', {...})(...) to create a canvas boundary.`
@@ -679,5 +695,5 @@ export function createCanvasRenderer(
     },
   };
 
-  return rendererInstance;
+  return adapterInstance;
 }

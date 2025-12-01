@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/canvas": "workspace:*",
-    "@lattice/signals": "workspace:*"
+    "@lattice/lattice": "workspace:*",
+    "@lattice/signals": "workspace:*",
+    "@lattice/view": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

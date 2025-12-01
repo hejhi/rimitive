@@ -1,8 +1,12 @@
 /**
- * App-level API for Canvas example
+ * Canvas Example - Service Composition
  *
- * Demonstrates mixing renderers: DOM for UI controls, Canvas for the scene.
- * Both share the same signals service for reactive state.
+ * Demonstrates how to compose custom adapters with the view system.
+ * This example shows mixing DOM and Canvas rendering in a single tree,
+ * both sharing the same signals service for reactive state.
+ *
+ * The canvas adapter is a reference implementation showing how to build
+ * custom NodeAdapters for non-DOM targets.
  */
 import { composeFrom } from '@lattice/lattice';
 import {
@@ -11,10 +15,10 @@ import {
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import {
-  createCanvasRenderer,
+  createCanvasAdapter,
   createCanvasAddEventListener,
-  type CanvasRendererConfig,
-} from '@lattice/canvas';
+  type CanvasAdapterConfig,
+} from './canvas-adapter';
 import {
   createDOMRenderer,
   type DOMRendererConfig,
@@ -29,11 +33,11 @@ import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 const signalsSvc = createSignalsApi();
 
 // ============================================================================
-// DOM Renderer (for toolbar/UI)
+// DOM Adapter (for toolbar/UI)
 // ============================================================================
 
-const domRenderer = createDOMRenderer();
-const domViewHelpers = defaultViewHelpers(domRenderer, signalsSvc);
+const domAdapter = createDOMRenderer();
+const domViewHelpers = defaultViewHelpers(domAdapter, signalsSvc);
 const domViewSvc = composeFrom(
   defaultViewExtensions<DOMRendererConfig>(),
   domViewHelpers
@@ -46,27 +50,27 @@ export const dom = {
 };
 
 // ============================================================================
-// Canvas Renderer (for scene)
+// Canvas Adapter (for scene)
 // ============================================================================
 
-const canvasRenderer = createCanvasRenderer({
+const canvasAdapter = createCanvasAdapter({
   clearColor: '#16213e',
 });
 
-const canvasViewHelpers = defaultViewHelpers<CanvasRendererConfig>(
-  canvasRenderer as Renderer<CanvasRendererConfig>,
+const canvasViewHelpers = defaultViewHelpers<CanvasAdapterConfig>(
+  canvasAdapter as Renderer<CanvasAdapterConfig>,
   signalsSvc
 );
 const { el: canvasEl, ...canvasViewSvc } = composeFrom(
-  defaultViewExtensions<CanvasRendererConfig>(),
+  defaultViewExtensions<CanvasAdapterConfig>(),
   canvasViewHelpers
 );
 
 export const canvas = {
   ...canvasViewSvc,
   cvs: canvasEl,
-  renderer: canvasRenderer,
-  on: createCanvasAddEventListener(canvasRenderer, signalsSvc.batch),
+  adapter: canvasAdapter,
+  on: createCanvasAddEventListener(canvasAdapter, signalsSvc.batch),
   mount: <TElement>(spec: RefSpec<TElement>) => spec.create(canvasViewSvc),
 };
 
@@ -76,9 +80,9 @@ export const canvas = {
 
 export const { signal, computed, effect, batch, subscribe } = signalsSvc;
 
-// Re-export types
+// Re-export types from canvas adapter
 export type {
   CanvasNode,
   CanvasPointerEvent,
   CanvasBridgeElement,
-} from '@lattice/canvas';
+} from './canvas-adapter';

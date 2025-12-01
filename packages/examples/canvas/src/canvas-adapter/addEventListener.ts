@@ -19,7 +19,7 @@
  */
 
 import type { CanvasBridgeElement, CanvasPointerEvent } from './types';
-import type { CanvasRendererInstance } from './renderer';
+import type { CanvasAdapterInstance } from './adapter';
 
 /**
  * Canvas event types that support hit testing
@@ -29,12 +29,12 @@ export type CanvasEventType = 'pointerdown' | 'pointermove' | 'pointerup' | 'cli
 /**
  * Creates a canvas addEventListener helper with hit testing
  *
- * @param renderer - Canvas renderer instance (for hit testing)
+ * @param adapter - Canvas adapter instance (for hit testing)
  * @param batch - Batch function from signals API for automatic batching
  * @returns addEventListener helper function
  */
 export const createCanvasAddEventListener = (
-  renderer: CanvasRendererInstance,
+  adapter: CanvasAdapterInstance,
   batch: <T>(fn: () => T) => T
 ) => {
   /**
@@ -62,7 +62,7 @@ export const createCanvasAddEventListener = (
         return {
           x: coords.x,
           y: coords.y,
-          target: renderer.hitTest(bridge, coords.x, coords.y),
+          target: adapter.hitTest(bridge, coords.x, coords.y),
           nativeEvent: e as PointerEvent,
         };
       };

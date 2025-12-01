@@ -2,7 +2,7 @@
  * App Component
  *
  * Composes DOM (toolbar) and Canvas (scene) in a single tree.
- * Demonstrates the new composable renderer pattern where canvas.el('canvas')
+ * Demonstrates the composable adapter pattern where canvas.cvs('canvas')
  * acts as a boundary - a DOM element externally, scene graph root internally.
  *
  * Event handling uses addEventListener on the canvas element itself,
@@ -75,9 +75,7 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
       el('strong')('Drag'),
       ' to move selected shape. Shapes are reactive - powered by ',
       el('code')('@lattice/signals'),
-      ' and rendered with ',
-      el('code')('@lattice/canvas'),
-      '.'
+      ' and rendered with a custom canvas adapter.'
     )
   );
 };
