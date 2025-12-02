@@ -16,8 +16,8 @@
  *
  * // In composed tree:
  * dom.el('div')(
- *   canvas.el('canvas', { width: 600, height: 400, clearColor: '#000' })(
- *     canvas.el('circle', { x: 100, y: 100, radius: 50, fill: 'red' })()
+ *   canvas.el('canvas').props({ width: 600, height: 400, clearColor: '#000' })(
+ *     canvas.el('circle').props({ x: 100, y: 100, radius: 50, fill: 'red' })()
  *   )
  * )
  * ```

@@ -14,7 +14,7 @@ export const TagList = island(
       // Return fragment - multiple span elements without a wrapper
       // map() takes items and optional keyFn, then returns a function that takes render callback
       return map(tags)((tag) => {
-        return el('span', {
+        return el('span').props({
           className: 'tag',
           onclick: () => {
             // Remove this tag when clicked

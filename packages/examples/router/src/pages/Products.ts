@@ -16,21 +16,21 @@ const products = [
 
 export const Products = router.connect((_route, { children }) =>
   useSvc(({ el }) => () => {
-    return el('div', { className: 'page' })(
+    return el('div').props({ className: 'page' })(
       el('h2')('Products'),
       el('p')('Click on a product to view details with route parameters.'),
-      el('div', { className: 'product-grid' })(
+      el('div').props({ className: 'product-grid' })(
         ...products.map((product) =>
-          el('div', { className: 'product-card' })(
+          el('div').props({ className: 'product-card' })(
             Link({
               href: `/products/${product.id}`,
               className: 'product-link',
             })(
               el('h3')(product.name),
-              el('p', { className: 'product-description' })(
+              el('p').props({ className: 'product-description' })(
                 product.description
               ),
-              el('div', { className: 'product-price' })(product.price)
+              el('div').props({ className: 'product-price' })(product.price)
             )
           )()
         )

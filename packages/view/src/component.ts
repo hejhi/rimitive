@@ -27,15 +27,37 @@ export interface ComputedFunction<T> {
 }
 
 /**
- * Type for the el method with both overloads
+ * Tag factory - returned from el(tag)
+ * Callable with children to create RefSpec, or use .props() to add properties
+ */
+export interface TagFactory<
+  TConfig extends RendererConfig,
+  Tag extends keyof TConfig['props'] & keyof TConfig['elements'],
+> {
+  /**
+   * Apply children to create a RefSpec
+   */
+  (...children: ElRefSpecChild[]): RefSpec<TConfig['elements'][Tag]>;
+
+  /**
+   * Add properties to the element, returning a new TagFactory
+   */
+  props(
+    propsOrFn:
+      | ElElementProps<TConfig, Tag>
+      | ((current: ElElementProps<TConfig, Tag>) => ElElementProps<TConfig, Tag>)
+  ): TagFactory<TConfig, Tag>;
+}
+
+/**
+ * Type for the el method - returns a TagFactory
  * Generic over TConfig to match the renderer configuration
  */
 export interface ElMethod<TConfig extends RendererConfig> {
-  // Static element builder
+  // Static element builder - returns TagFactory with .props() method
   <Tag extends string & keyof TConfig['elements']>(
-    tag: Tag,
-    props?: ElElementProps<TConfig, Tag>
-  ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
+    tag: Tag
+  ): TagFactory<TConfig, Tag>;
   // Reactive element builder - tag can be dynamic or null for conditional rendering
   <Tag extends keyof TConfig['elements']>(
     reactive: Reactive<Tag | null>,

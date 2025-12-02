@@ -24,7 +24,7 @@ export const SelectionIndicator = (props: SelectionIndicatorProps) => {
 
   return match(selectedShape)((shape) =>
     shape
-      ? cvs('circle', {
+      ? cvs('circle').props({
           x: shape.x,
           y: shape.y,
           radius: shape.size + 8,

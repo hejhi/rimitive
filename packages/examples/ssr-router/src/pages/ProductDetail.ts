@@ -81,17 +81,17 @@ export const ProductDetail = connect(
 
       return match(product)((p) =>
         p === null
-          ? el('div', { className: 'page product-detail-page' })(
+          ? el('div').props({ className: 'page product-detail-page' })(
               el('h2')('Product Not Found'),
               el('p')('The product you are looking for does not exist.'),
-              el('button', {
+              el('button').props({
                 className: 'primary-btn',
                 onclick: () => navigate('/products'),
               })('← Back to Products')
             )
-          : el('div', { className: 'page product-detail-page' })(
-              el('nav', { className: 'breadcrumb' })(
-                el('a', {
+          : el('div').props({ className: 'page product-detail-page' })(
+              el('nav').props({ className: 'breadcrumb' })(
+                el('a').props({
                   href: '/products',
                   onclick: (e: Event) => {
                     e.preventDefault();
@@ -102,27 +102,27 @@ export const ProductDetail = connect(
                 el('span')(p.name)
               ),
 
-              el('article', { className: 'product-detail card' })(
+              el('article').props({ className: 'product-detail card' })(
                 el('header')(
                   el('h2')(p.name),
-                  el('span', { className: 'category' })(p.category)
+                  el('span').props({ className: 'category' })(p.category)
                 ),
 
-                el('p', { className: 'description' })(p.description),
+                el('p').props({ className: 'description' })(p.description),
 
-                el('p', { className: 'price' })(`$${p.price}`),
+                el('p').props({ className: 'price' })(`$${p.price}`),
 
                 // Interactive island - gets hydrated on client
                 // Created once with initial product data
                 ...(addToCart
                   ? [
-                      el('section', { className: 'add-to-cart-section' })(
+                      el('section').props({ className: 'add-to-cart-section' })(
                         addToCart
                       ),
                     ]
                   : []),
 
-                el('button', {
+                el('button').props({
                   className: 'secondary-btn',
                   onclick: () => navigate('/products'),
                 })('← Back to Products')

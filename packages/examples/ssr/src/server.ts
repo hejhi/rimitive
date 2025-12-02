@@ -43,25 +43,25 @@ const { el } = svc;
 
 // Define the app component
 const App = () => {
-  return el('div', { className: 'app' })(
+  return el('div').props({ className: 'app' })(
     el('h1')('Lattice SSR Example'),
-    el('p', { className: 'subtitle' })(
+    el('p').props({ className: 'subtitle' })(
       'Static content with interactive islands'
     ),
 
     // Static section - no JS shipped
-    el('section', { className: 'static-section' })(
+    el('section').props({ className: 'static-section' })(
       el('h2')('Static Section'),
       el('p')('This content is rendered on the server and stays static.'),
       el('p')('No JavaScript needed for this part!')
     )(),
 
     // Interactive islands - JS shipped only for these
-    el('section', { className: 'islands-section' })(
+    el('section').props({ className: 'islands-section' })(
       el('h2')('Interactive Islands'),
       Counter({ initialCount: 0 }),
       TodoList({ initialTodos: ['Learn Lattice', 'Build an app', 'Ship it!'] }),
-      el('div', { className: 'tag-container' })(
+      el('div').props({ className: 'tag-container' })(
         el('h3')('Interactive Tags (Fragment Island)'),
         el('p')(
           'Click tags to remove them. This island returns multiple elements without a root wrapper.'

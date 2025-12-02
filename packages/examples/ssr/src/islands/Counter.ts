@@ -11,10 +11,10 @@ export const Counter = island(
       const inc = () => count(count() + 1);
       const dec = () => count(count() - 1);
 
-      return el('div', { className: 'counter' })(
-        el('button', { onclick: dec })('-'),
-        el('span', { className: 'counter-value' })(() => `Count: ${count()}`),
-        el('button', { onclick: inc })('+')
+      return el('div').props({ className: 'counter' })(
+        el('button').props({ onclick: dec })('-'),
+        el('span').props({ className: 'counter-value' })(() => `Count: ${count()}`),
+        el('button').props({ onclick: inc })('+')
       );
     }
 );

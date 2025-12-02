@@ -68,7 +68,7 @@ export interface IslandFactory<TService, TContext> {
    * const Counter = island('counter', ({ el, signal }, getContext) =>
    *   (props: { initial: number }) => {
    *     const count = signal(props.initial);
-   *     return el('button', { onclick: () => count(count() + 1) })(
+   *     return el('button').props({ onclick: () => count(count() + 1) })(
    *       () => `Count: ${count()}`
    *     );
    *   }

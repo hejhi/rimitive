@@ -17,7 +17,7 @@
  *
  * el('div')(
  *   t`Count: ${count} (doubled: ${doubled})`,
- *   el('button', { onclick: () => count(c => c + 1) })('+')
+ *   el('button').props({ onclick: () => count(c => c + 1) })('+')
  * )
  * ```
  */

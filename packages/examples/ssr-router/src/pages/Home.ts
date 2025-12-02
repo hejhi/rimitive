@@ -4,13 +4,13 @@ import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 export const Home = connect(
   ({ el, navigate }: ConnectedApi<DOMRendererConfig>) =>
     () => {
-      return el('div', { className: 'page home-page' })(
+      return el('div').props({ className: 'page home-page' })(
         el('h2')('Welcome to SSR + Router'),
-        el('p', { className: 'lead' })(
+        el('p').props({ className: 'lead' })(
           'This example demonstrates server-side rendering with routing using the universal API.'
         ),
 
-        el('section', { className: 'features' })(
+        el('section').props({ className: 'features' })(
           el('h3')('Features Demonstrated:'),
           el('ul')(
             el('li')('✓ Server-side rendering with router context'),
@@ -22,9 +22,9 @@ export const Home = connect(
           )
         ),
 
-        el('section', { className: 'cta' })(
+        el('section').props({ className: 'cta' })(
           el('p')('Try navigating between pages to see SSR in action!'),
-          el('button', {
+          el('button').props({
             className: 'primary-btn',
             onclick: () => navigate('/about'),
           })('Learn More →')

@@ -5,14 +5,14 @@ import { Navigation } from '../islands/Navigation.js';
 export const AppLayout = connect(
   ({ el }: ConnectedApi<DOMRendererConfig>, { children }) =>
     () => {
-      return el('div', { className: 'app' })(
-        el('nav', { className: 'navbar' })(
-          el('div', { className: 'nav-brand' })(
+      return el('div').props({ className: 'app' })(
+        el('nav').props({ className: 'navbar' })(
+          el('div').props({ className: 'nav-brand' })(
             el('h1')('🧩 Lattice SSR + Router')
           ),
           Navigation({})
         ),
-        el('main', { className: 'main-content' })(...(children || []))
+        el('main').props({ className: 'main-content' })(...(children || []))
       );
     }
 );

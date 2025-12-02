@@ -81,23 +81,23 @@ export const AddToCart = island(
         }
       };
 
-      return el('div', { className: 'add-to-cart-island' })(
-        el('div', { className: 'quantity-selector' })(
-          el('button', {
+      return el('div').props({ className: 'add-to-cart-island' })(
+        el('div').props({ className: 'quantity-selector' })(
+          el('button').props({
             className: 'qty-btn',
             onclick: decrement,
             disabled: computed(() => quantity() <= 1),
           })('−'),
-          el('span', { className: 'qty-display' })(
+          el('span').props({ className: 'qty-display' })(
             computed(() => `${quantity()}`)
           ),
-          el('button', {
+          el('button').props({
             className: 'qty-btn',
             onclick: increment,
             disabled: computed(() => quantity() >= 10),
           })('+')
         ),
-        el('button', {
+        el('button').props({
           className: computed(() => (isAdded() ? 'add-btn added' : 'add-btn')),
           onclick: handleAdd,
           disabled: isAdded,

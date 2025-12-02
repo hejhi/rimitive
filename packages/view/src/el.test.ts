@@ -54,7 +54,7 @@ describe('el primitive', () => {
         onCleanup,
       }).impl;
 
-      const ref = el('div', { className: 'container' })('Hello ', 'World');
+      const ref = el('div').props({ className: 'container' })('Hello ', 'World');
 
       // User cares: content is rendered
       const element: MockElement = asElement(ref.create());
@@ -137,7 +137,7 @@ describe('el primitive', () => {
         onCleanup,
       }).impl;
 
-      const ref = el('div', { className })();
+      const ref = el('div').props({ className })();
 
       // User cares: initial prop value is set
       const element: MockElement = asElement(ref.create());
@@ -223,6 +223,73 @@ describe('el primitive', () => {
       // through the reconciler's disposal mechanism
       // This test verifies the lifecycle callback runs during creation
       expect(element).toBeDefined();
+    });
+  });
+
+  describe('props builder pattern', () => {
+    it('allows chaining multiple .props() calls', () => {
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = El<MockRendererConfig>().create({
+        scopedEffect,
+        renderer,
+        createElementScope,
+        onCleanup,
+      }).impl;
+
+      const ref = el('div')
+        .props({ className: 'base' })
+        .props({ id: 'test' })('content');
+
+      const element: MockElement = asElement(ref.create());
+      expect(element.props.className).toBe('base');
+      expect(element.props.id).toBe('test');
+    });
+
+    it('allows props callback to access and extend current props', () => {
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = El<MockRendererConfig>().create({
+        scopedEffect,
+        renderer,
+        createElementScope,
+        onCleanup,
+      }).impl;
+
+      const card = el('div').props({ className: 'card' });
+      const blueCard = card.props((p) => ({
+        ...p,
+        className: `${p.className} blue`,
+      }));
+
+      const element: MockElement = asElement(blueCard('content').create());
+      expect(element.props.className).toBe('card blue');
+    });
+
+    it('creates reusable element factories', () => {
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = El<MockRendererConfig>().create({
+        scopedEffect,
+        renderer,
+        createElementScope,
+        onCleanup,
+      }).impl;
+
+      const div = el('div');
+      const container = div.props({ className: 'container' });
+
+      // Same factory, different children
+      const ref1 = container('Hello');
+      const ref2 = container('World');
+
+      const el1: MockElement = asElement(ref1.create());
+      const el2: MockElement = asElement(ref2.create());
+
+      expect(el1.props.className).toBe('container');
+      expect(el2.props.className).toBe('container');
+      expect(getTextContent(el1)).toBe('Hello');
+      expect(getTextContent(el2)).toBe('World');
     });
   });
 });

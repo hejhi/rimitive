@@ -6,8 +6,8 @@
  *
  * Usage:
  * ```typescript
- * canvas.el('canvas', { width: 600, height: 400 })(
- *   canvas.el('circle', { x: 100, y: 100, radius: 50 })()
+ * canvas.el('canvas').props({ width: 600, height: 400 })(
+ *   canvas.el('circle').props({ x: 100, y: 100, radius: 50 })()
  * )(
  *   addEventListener('pointerdown', (e) => {
  *     if (e.target) {

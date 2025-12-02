@@ -22,7 +22,7 @@ const App = useSvc(({ el, computed, batch }) => () => {
   const filteredTodos = computed(() => filter.filterTodos(todos()));
   const todoStats = useTodoStats({ todos, activeCount });
 
-  return el('div', { className: 'app' })(
+  return el('div').props({ className: 'app' })(
     el('h1')('Lattice DevTools Example'),
     Counter(counter),
     TodoList(todoList, filter, filteredTodos, todoStats),

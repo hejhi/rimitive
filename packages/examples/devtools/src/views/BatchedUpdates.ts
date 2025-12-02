@@ -18,7 +18,7 @@ export const BatchedUpdates = useSvc(
         addEventListener('click', onBatchedUpdate)
       );
 
-      return el('section', { className: 'batched-section' })(
+      return el('section').props({ className: 'batched-section' })(
         el('h2')('Batched Updates Example'),
         el('p')(
           'This button demonstrates batched updates - multiple state changes in one render'

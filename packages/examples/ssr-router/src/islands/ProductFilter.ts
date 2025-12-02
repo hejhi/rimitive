@@ -57,18 +57,18 @@ export const ProductFilter = island(
 
       // Inline ProductCard - uses el from outer closure, product from map
       const productCards = map(filteredProducts, (p) => p.id)((product) => {
-        return el('div', {
+        return el('div').props({
           className: 'product-card clickable',
           onclick: () => navigate(`/products/${product.id}`),
         })(
           el('h4')(product.name),
-          el('p', { className: 'category' })(product.category),
-          el('p', { className: 'price' })(`$${product.price}`),
-          el('span', { className: 'view-details' })('View details →')
+          el('p').props({ className: 'category' })(product.category),
+          el('p').props({ className: 'price' })(`$${product.price}`),
+          el('span').props({ className: 'view-details' })('View details →')
         );
       });
       const categoryValues = map(categories)((cat) =>
-        el('option', { value: cat })(cat.charAt(0).toUpperCase() + cat.slice(1))
+        el('option').props({ value: cat })(cat.charAt(0).toUpperCase() + cat.slice(1))
       );
 
       const count = computed(
@@ -76,10 +76,10 @@ export const ProductFilter = island(
           `Showing ${filteredProducts().length} of ${products.length} products`
       );
 
-      return el('div', { className: 'product-filter-island' })(
-        el('div', { className: 'filter-controls' })(
+      return el('div').props({ className: 'product-filter-island' })(
+        el('div').props({ className: 'filter-controls' })(
           el('label')('Filter by category: '),
-          el('select', {
+          el('select').props({
             value: selectedCategory,
             onchange: (e: Event) => {
               const target = e.target as HTMLSelectElement;
@@ -87,8 +87,8 @@ export const ProductFilter = island(
             },
           })(categoryValues)
         ),
-        el('div', { className: 'products-grid' })(productCards),
-        el('p', { className: 'count' })(count)
+        el('div').props({ className: 'products-grid' })(productCards),
+        el('p').props({ className: 'count' })(count)
       );
     }
 );

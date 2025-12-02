@@ -13,20 +13,20 @@ export const TodoItem = (
   onRemove: (id: number) => void
 ) => {
   // Create checkbox with event listener
-  const checkbox = el('input', {
+  const checkbox = el('input').props({
     type: 'checkbox',
     checked: todo.completed,
   })()(addEventListener('change', () => onToggle(todo.id)));
 
   // Create remove button with event listener
-  const removeBtn = el('button', { className: 'todo-remove' })('x')(
+  const removeBtn = el('button').props({ className: 'todo-remove' })('x')(
     addEventListener('click', () => onRemove(todo.id))
   );
 
   // Todo text with completed styling
-  const todoText = el('span', {
+  const todoText = el('span').props({
     className: todo.completed ? 'todo-text completed' : 'todo-text',
   })(todo.text);
 
-  return el('div', { className: 'todo-item' })(checkbox, todoText, removeBtn);
+  return el('div').props({ className: 'todo-item' })(checkbox, todoText, removeBtn);
 };

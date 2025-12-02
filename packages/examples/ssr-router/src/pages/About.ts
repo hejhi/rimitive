@@ -4,10 +4,10 @@ import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
 export const About = connect(
   ({ el }: ConnectedApi<DOMRendererConfig>) =>
     () => {
-      return el('div', { className: 'page about-page' })(
+      return el('div').props({ className: 'page about-page' })(
         el('h2')('About This Example'),
 
-        el('section', { className: 'card' })(
+        el('section').props({ className: 'card' })(
           el('h3')('How It Works'),
           el('p')(
             "This example uses the router's universal API that works seamlessly on both server and client."
@@ -25,7 +25,7 @@ export const About = connect(
           )
         ),
 
-        el('section', { className: 'card' })(
+        el('section').props({ className: 'card' })(
           el('h3')('Universal API'),
           el('p')(
             'The same router API works everywhere - no special SSR-specific code needed!'
@@ -39,7 +39,7 @@ export const About = connect(
           )
         ),
 
-        el('section', { className: 'card' })(
+        el('section').props({ className: 'card' })(
           el('h3')('This Page'),
           el('p')(
             'This about page is completely static - no JavaScript shipped for this content.'

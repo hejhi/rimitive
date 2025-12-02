@@ -49,7 +49,7 @@ export function Link(
       const ssrContext = getActiveRouterContext();
       if (ssrContext) {
         // SERVER: Plain anchor, no click interception
-        const anchorSpec = el('a', {
+        const anchorSpec = el('a').props({
           ...restProps,
           href,
           onclick: userOnClick,
@@ -60,7 +60,7 @@ export function Link(
       // CLIENT: Check if we have navigate function
       if (!navigate) {
         // No navigate function available, render plain anchor
-        const anchorSpec = el('a', {
+        const anchorSpec = el('a').props({
           ...restProps,
           href,
           onclick: userOnClick,
@@ -112,7 +112,7 @@ export function Link(
       };
 
       // Create anchor element with onclick handler merged with user's onclick
-      const anchorSpec = el('a', {
+      const anchorSpec = el('a').props({
         ...restProps,
         href,
         onclick: handleClick,

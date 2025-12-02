@@ -24,7 +24,7 @@ export const Navigation = island(
         })(label);
       };
 
-      return el('div', { className: 'nav-links' })(
+      return el('div').props({ className: 'nav-links' })(
         navLink('/', 'Home'),
         navLink('/about', 'About'),
         navLink('/products', 'Products')

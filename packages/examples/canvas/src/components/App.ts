@@ -43,16 +43,16 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
 
   // Single composed tree: DOM with embedded canvas
   // canvas.el('canvas') creates an HTMLCanvasElement that acts as the boundary
-  return el('div', { className: 'app' })(
+  return el('div').props({ className: 'app' })(
     el('h1')('Lattice Canvas'),
-    el('p', { className: 'subtitle' })(
+    el('p').props({ className: 'subtitle' })(
       'Reactive canvas rendering with signals'
     ),
 
-    el('div', { className: 'canvas-container' })(
+    el('div').props({ className: 'canvas-container' })(
       // Canvas element: DOM node externally, scene graph root internally
       // Event listeners attached via lifecycle callbacks with hit testing
-      cvs('canvas', {
+      cvs('canvas').props({
         width: canvasWidth,
         height: canvasHeight,
         clearColor: '#16213e',
@@ -69,7 +69,7 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
       onClearAll: clearAll,
     }),
 
-    el('div', { className: 'info' })(
+    el('div').props({ className: 'info' })(
       el('strong')('Click on shapes'),
       ' to select them. ',
       el('strong')('Drag'),

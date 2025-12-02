@@ -47,7 +47,7 @@ export const TodoList = useSvc(
       };
 
       // Create input and attach events
-      const todoInput = el('input', {
+      const todoInput = el('input').props({
         type: 'text',
         placeholder: 'What needs to be done?',
         value: inputValue,
@@ -65,37 +65,37 @@ export const TodoList = useSvc(
       );
 
       // Filter buttons
-      const allBtn = el('button', {
+      const allBtn = el('button').props({
         className: computed(() =>
           currentFilter() === 'all' ? 'filter active' : 'filter'
         ),
       })('All')(addEventListener('click', () => setFilter('all')));
-      const activeBtn = el('button', {
+      const activeBtn = el('button').props({
         className: computed(() =>
           currentFilter() === 'active' ? 'filter active' : 'filter'
         ),
       })('Active')(addEventListener('click', () => setFilter('active')));
-      const completedBtn = el('button', {
+      const completedBtn = el('button').props({
         className: computed(() =>
           currentFilter() === 'completed' ? 'filter active' : 'filter'
         ),
       })('Completed')(addEventListener('click', () => setFilter('completed')));
 
-      return el('section', { className: 'todo-section' })(
+      return el('section').props({ className: 'todo-section' })(
         el('h2')('Todo List Example'),
 
         // Input section
-        el('div', { className: 'todo-input' })(todoInput, addBtn),
+        el('div').props({ className: 'todo-input' })(todoInput, addBtn),
 
         // Filter buttons
-        el('div', { className: 'filter-buttons' })(
+        el('div').props({ className: 'filter-buttons' })(
           allBtn,
           activeBtn,
           completedBtn
         ),
 
         // Todo list
-        el('ul', { id: 'todoList' })(
+        el('ul').props({ id: 'todoList' })(
           map(
             filteredTodos,
             (todo) => todo.id
@@ -103,7 +103,7 @@ export const TodoList = useSvc(
         ),
 
         // Stats
-        el('div', { id: 'todoStats' })(
+        el('div').props({ id: 'todoStats' })(
           el('strong')('Stats:'),
           el('br')(),
           computed(

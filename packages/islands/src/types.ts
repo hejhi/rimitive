@@ -28,7 +28,7 @@ export { HydrationMismatch };
  * ```ts
  * const MyIsland = island('my-island', (api, getContext) => {
  *   const ctx = getContext(); // User-defined shape or undefined
- *   return (props) => api.el('div', {}, props.label);
+ *   return (props) => api.el('div')(props.label);
  * });
  * ```
  */

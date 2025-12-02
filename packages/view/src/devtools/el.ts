@@ -3,7 +3,7 @@
  */
 
 import type { InstrumentationContext } from '@lattice/lattice';
-import type { ElFactory, ChildrenApplicator, ElementProps } from '../el';
+import type { ElFactory, TagFactory, ElementProps } from '../el';
 import type { RefSpec, ElRefSpecChild } from '../types';
 import type { RendererConfig } from '../renderer';
 
@@ -16,9 +16,8 @@ export function instrumentEl<TConfig extends RendererConfig>(
 ): ElFactory<TConfig>['impl'] {
   // Static element instrumentation matching ElFactory signature
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
-    tag: Tag,
-    props?: ElementProps<TConfig, Tag>
-  ): ChildrenApplicator<TConfig, Tag> {
+    tag: Tag
+  ): TagFactory<TConfig, Tag> {
     const elId = crypto.randomUUID();
 
     instrumentation.emit({
@@ -27,15 +26,15 @@ export function instrumentEl<TConfig extends RendererConfig>(
       data: {
         elId,
         tag,
-        propsCount: props ? Object.keys(props).length : 0,
+        propsCount: 0,
       },
     });
 
-    // Call base impl to get children applicator
-    const childrenApplicator = impl(tag, props);
+    // Call base impl to get tag factory
+    const tagFactory = impl(tag);
 
-    // Wrap the children applicator to intercept RefSpec creation
-    return (
+    // Wrap the tag factory to intercept props and children
+    const wrappedFactory = (
       ...children: ElRefSpecChild[]
     ): RefSpec<TConfig['elements'][Tag]> => {
       instrumentation.emit({
@@ -47,8 +46,8 @@ export function instrumentEl<TConfig extends RendererConfig>(
         },
       });
 
-      // Call the original children applicator to get RefSpec
-      const refSpec = childrenApplicator(...children);
+      // Call the original tag factory to get RefSpec
+      const refSpec = tagFactory(...children);
 
       // Wrap the create method to emit mount/unmount events
       const originalCreate = refSpec.create.bind(refSpec);
@@ -78,6 +77,31 @@ export function instrumentEl<TConfig extends RendererConfig>(
 
       return refSpec;
     };
+
+    // Wrap the props method to track props being added
+    wrappedFactory.props = (
+      propsOrFn:
+        | ElementProps<TConfig, Tag>
+        | ((current: ElementProps<TConfig, Tag>) => ElementProps<TConfig, Tag>)
+    ): TagFactory<TConfig, Tag> => {
+      const props = typeof propsOrFn === 'function' ? propsOrFn({} as ElementProps<TConfig, Tag>) : propsOrFn;
+
+      instrumentation.emit({
+        type: 'EL_STATIC_CREATED',
+        timestamp: Date.now(),
+        data: {
+          elId,
+          tag,
+          propsCount: props ? Object.keys(props).length : 0,
+        },
+      });
+
+      // Call original props method and wrap the result
+      tagFactory.props(propsOrFn);
+      return instrumentedEl(tag) as TagFactory<TConfig, Tag>;
+    };
+
+    return wrappedFactory as TagFactory<TConfig, Tag>;
   }
 
   return instrumentedEl;

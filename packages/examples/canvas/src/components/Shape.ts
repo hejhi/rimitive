@@ -21,7 +21,7 @@ const { cvs } = canvas;
  * Returns a RefSpec that can accept lifecycle callbacks.
  */
 export const Circle = (shape: ShapeData) => {
-  return cvs('circle', {
+  return cvs('circle').props({
     x: shape.x,
     y: shape.y,
     radius: shape.size,
@@ -38,7 +38,7 @@ export const Circle = (shape: ShapeData) => {
 export const Rect = (shape: ShapeData) => {
   const halfSize = shape.size;
 
-  return cvs('rect', {
+  return cvs('rect').props({
     x: computed(() => shape.x() - halfSize),
     y: computed(() => shape.y() - halfSize),
     width: halfSize * 2,

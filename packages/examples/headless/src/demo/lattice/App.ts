@@ -56,7 +56,7 @@ function createDialogDemo(): RefSpec<HTMLElement> {
   const dialog = useDialog({ signal, computed, effect })({});
 
   // Dialog content element
-  const dialogContent = el('div', {
+  const dialogContent = el('div').props({
     className: 'dialog-content',
     role: dialog.dialogProps.role,
     tabIndex: -1,
@@ -70,12 +70,12 @@ function createDialogDemo(): RefSpec<HTMLElement> {
       el('code')('useDialog'),
       ' headless behavior. It handles focus trapping, keyboard navigation (ESC to close), and returns focus to the trigger on close.'
     ),
-    el('div', { className: 'dialog-actions' })(
-      el('button', {
+    el('div').props({ className: 'dialog-actions' })(
+      el('button').props({
         className: 'dialog-close',
         onclick: dialog.closeButtonProps.onclick,
       })('Cancel'),
-      el('button', {
+      el('button').props({
         className: 'dialog-confirm',
         onclick: dialog.close,
       })('Confirm')
@@ -89,7 +89,7 @@ function createDialogDemo(): RefSpec<HTMLElement> {
   );
 
   // Dialog overlay (captures clicks outside)
-  const dialogOverlay = el('div', {
+  const dialogOverlay = el('div').props({
     className: 'dialog-overlay',
     onclick: (e: Event) => {
       if (e.target === e.currentTarget) dialog.close();
@@ -97,7 +97,7 @@ function createDialogDemo(): RefSpec<HTMLElement> {
   })(dialogContent);
 
   // Trigger button
-  const triggerButton = el('button', {
+  const triggerButton = el('button').props({
     className: 'dialog-trigger',
     onclick: dialog.triggerProps.onclick,
   })('Open Dialog')(
@@ -111,14 +111,14 @@ function createDialogDemo(): RefSpec<HTMLElement> {
     }
   );
 
-  return el('div', { className: 'demo-section' })(
+  return el('div').props({ className: 'demo-section' })(
     el('h3')('Dialog'),
-    el('p', { className: 'demo-description' })(
+    el('p').props({ className: 'demo-description' })(
       'Accessible modal with focus trapping, ESC to close, and focus restoration.'
     ),
     triggerButton,
     // Conditionally show dialog overlay
-    el('div', {
+    el('div').props({
       className: computed(() => (dialog.isOpen() ? '' : 'hidden')),
     })(dialogOverlay)
   );
@@ -139,7 +139,7 @@ function createSelectDemo(): RefSpec<HTMLElement> {
   const optionElements = selectOptions.map((option, index) => {
     const props = select.getOptionProps(option, index);
 
-    return el('li', {
+    return el('li').props({
       id: props.id,
       role: props.role,
       className: computed(() => {
@@ -157,7 +157,7 @@ function createSelectDemo(): RefSpec<HTMLElement> {
   });
 
   // Listbox (dropdown)
-  const listbox = el('ul', {
+  const listbox = el('ul').props({
     className: computed(() =>
       select.isOpen() ? 'select-listbox' : 'select-listbox hidden'
     ),
@@ -170,7 +170,7 @@ function createSelectDemo(): RefSpec<HTMLElement> {
   );
 
   // Trigger button
-  const trigger = el('button', {
+  const trigger = el('button').props({
     className: 'select-trigger',
     role: select.triggerProps.role,
     onclick: select.triggerProps.onclick,
@@ -196,12 +196,12 @@ function createSelectDemo(): RefSpec<HTMLElement> {
     }
   );
 
-  return el('div', { className: 'demo-section' })(
+  return el('div').props({ className: 'demo-section' })(
     el('h3')('Select'),
-    el('p', { className: 'demo-description' })(
+    el('p').props({ className: 'demo-description' })(
       'Accessible dropdown with keyboard navigation (↑↓), typeahead, and ARIA.'
     ),
-    el('div', { className: 'select-wrapper' })(trigger, listbox)
+    el('div').props({ className: 'select-wrapper' })(trigger, listbox)
   );
 }
 

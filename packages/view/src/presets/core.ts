@@ -7,7 +7,7 @@ import type { Renderer, RendererConfig } from '../renderer';
 import type { RefSpec, NodeRef, ReactiveAdapter } from '../types';
 import { composeFrom } from '@lattice/lattice';
 
-export type { ElementProps, ChildrenApplicator } from '../el';
+export type { ElementProps, TagFactory } from '../el';
 export type { ElFactory } from '../el';
 export type { MapFactory } from '../map';
 export type { MatchFactory } from '../match';

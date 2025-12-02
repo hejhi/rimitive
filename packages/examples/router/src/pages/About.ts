@@ -2,14 +2,14 @@ import { router, useSvc } from '../service';
 
 export const About = router.connect(({ navigate }) =>
   useSvc(({ el }) => () => {
-    return el('div', { className: 'page' })(
+    return el('div').props({ className: 'page' })(
       el('h2')('About Lattice Router'),
       el('p')(
         'The ',
         el('code')('@lattice/router'),
         ' package provides minimal client-side routing for Lattice applications.'
       ),
-      el('div', { className: 'card' })(
+      el('div').props({ className: 'card' })(
         el('h3')('Key Concepts:'),
         el('ul')(
           el('li')(
@@ -38,7 +38,7 @@ export const About = router.connect(({ navigate }) =>
           )
         )
       ),
-      el('button', {
+      el('button').props({
         className: 'secondary-btn',
         onclick: () => navigate('/'),
       })('← Back to Home')

@@ -1,6 +1,6 @@
 # @lattice/view
 
-Reactive DOM primitives for Lattice. A lightweight, SSR-compatible view layer built on fine-grained signals.
+Reactive DOM primitives for Lattice. A lightweight, SSR-compatible view layer built on fine-grained signals. Functional api.
 
 ## Features
 
@@ -27,7 +27,7 @@ import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
 import { createDOMRenderer } from '@lattice/view/renderers/dom';
 
-// Create your service
+// Create your reactive service
 const signals = createSignalsApi();
 const renderer = createDOMRenderer();
 const view = composeFrom(
@@ -44,28 +44,88 @@ const Counter = (initial = 0) => {
 
   return el('div')(
     el('span')(computed(() => `Count: ${count()}`)),
-    el('button', { onclick: () => count((c) => c + 1) })('+')
+    el('button').props({ onclick: () => count((c) => c + 1) })('+')
   );
 };
 
 // Mount to DOM
 const ref = Counter(10).create({ ...signals, ...view });
 document.body.appendChild(ref.element);
+
+// Create reusable element factories
+export const div = el('div');
+export const button = el('button');
+export const container = div.props({ className: 'container' });
 ```
+
+## Inspiration
+
+Lattice draws inspiration from several projects:
+
+- **[Solid.js](https://www.solidjs.com/)** - Fine-grained reactivity without virtual DOM. Lattice shares the philosophy that reactive primitives should map directly to DOM updates, not through a diffing layer.
+- **[Alien Signals](https://github.com/nickmccurdy/alien-signals)** - Performance-focused signal implementation. Lattice signals are optimized for minimal overhead and efficient dependency tracking.
+- **[Preact Signals](https://preactjs.com/guide/v10/signals/)** - Demonstrated that signals can be framework-agnostic. Lattice extends this with the `@lattice/lattice` extension system for full composability.
+
+### Why Lattice?
+
+The JavaScript ecosystem has converged on signals as the reactive primitive of choice, but most implementations are coupled to specific frameworks. Lattice takes a different approach:
+
+1. **Portable by design** - Write reactive behaviors once using `@lattice/signals`, use them in React, Vue, Svelte, or go framework-free with `@lattice/view`. Your logic isn't locked in.
+
+2. **Performance without compromise** - No virtual DOM means updates are surgical. Benchmarks show Lattice outperforming Preact on both signals and view rendering.
+
+3. **Extensible architecture** - The `@lattice/lattice` extension system lets you compose, instrument, and extend every primitive. Add devtools, logging, or custom behavior without forking.
+
+4. **SSR as a first-class citizen** - `@lattice/islands` provides true islands architecture where static content ships zero JavaScript. Only interactive components hydrate.
+
+5. **Honest abstractions** - The API surface is small and predictable. `el(tag).props(props)(children)` creates elements. `signal(value)` creates state. No magic, no hidden complexity.
+
+6. **Zero compilation** - Unlike Solid (JSX transform), Svelte (compiler), or Vue (template compilation), Lattice works as pure TypeScript/JavaScript. No babel plugins, no build step required. Components are plain functions that return data structures—reactivity is entirely runtime.
+
+### How Reactivity Works
+
+Most frameworks either re-run components on every state change (React) or require compilation to create reactive bindings (Solid, Svelte, Vue). Lattice does neither:
+
+```typescript
+const Counter = () => {
+  const count = signal(0); // Runs once when component is called
+
+  return el('div')(
+    computed(() => `Count: ${count()}`), // Explicit reactive boundary
+    el('button').props({ onclick: () => count((c) => c + 1) })('+')
+  );
+};
+// Component executes once, returns an inert blueprint (RefSpec)
+// Only computed(), effect(), and element scopes track dependencies
+```
+
+Reactivity is explicit and predictable:
+
+- **Component functions** - Run once, return blueprints. Not reactive.
+- **`computed()`** - Creates a reactive derivation. Tracks dependencies.
+- **`effect()`** - Creates a reactive side effect. Tracks dependencies.
+- **Element scopes** - Props passed to `.props()` that are functions are automatically tracked.
+
+You always know when dependency tracking happens because you explicitly opted into it.
+
+Lattice is for developers who want the ergonomics of modern reactive frameworks with the performance of hand-written code and the flexibility to use it anywhere.
 
 ## Core API
 
-### `el(tag, props)(children)`
+### `el(tag).props(props)(children)`
 
-Creates elements with reactive props and children.
+Creates elements with reactive props and children. The `.props()` method is optional and chainable.
 
 ```typescript
-// Basic element
-el('div', { className: 'container' })('Hello');
+// Basic element (no props)
+el('div')('Hello');
+
+// Element with props
+el('div').props({ className: 'container' })('Hello');
 
 // Reactive props
 const isActive = signal(false);
-el('button', {
+el('button').props({
   className: computed(() => (isActive() ? 'active' : '')),
   onclick: () => isActive((v) => !v),
 })('Toggle');
@@ -74,12 +134,31 @@ el('button', {
 el('div')(el('h1')('Title'), el('p')('Paragraph'));
 ```
 
+**Props builder pattern:**
+
+The `.props()` method returns a new element factory, enabling composition:
+
+```typescript
+// Create reusable element factories
+const div = el('div');
+const button = el('button');
+
+// Build up styled variants
+const card = div.props({ className: 'card' });
+const blueCard = card.props((p) => ({ ...p, className: `${p.className} blue` }));
+
+// Use them
+card('Card content');
+blueCard('Blue card content');
+blueCard.props({ id: 'main' })('Specific blue card');
+```
+
 **Props support:**
 
 - Static values: `{ className: 'foo' }`
 - Reactive values: `{ className: computed(() => ...) }`
 - Event handlers: `{ onclick: handler, oninput: e => ... }`
-- Any DOM attribute: `{ 'data-id': '123', 'aria-label': 'Close' }`
+- Type-safe DOM attributes: `{ 'data-id': '123', 'aria-label': 'Close' }`
 
 ### `map(items, keyFn)(render)`
 
@@ -119,7 +198,7 @@ Conditionally shows/hides children based on a truthy condition. More efficient t
 const showDetails = signal(false);
 
 when(showDetails)(
-  el('div', { className: 'details' })(el('p')('These are the details...'))
+  el('div').props({ className: 'details' })(el('p')('These are the details...'))
 );
 ```
 
@@ -158,7 +237,7 @@ Signals and computeds are automatically unwrapped in the template.
 Add lifecycle callbacks by calling the RefSpec with callback functions:
 
 ```typescript
-el('input', { type: 'text' })()((element) => {
+el('input').props({ type: 'text' })()((element) => {
   // Called when element is created (within reactive scope)
   element.focus();
 
@@ -188,7 +267,7 @@ Components are just functions that return RefSpecs:
 ```typescript
 // Simple component
 const Button = (label: string, onclick: () => void) =>
-  el('button', { onclick })(label);
+  el('button').props({ onclick })(label);
 
 // Component with state
 const Counter = (initial = 0) => {
@@ -230,8 +309,8 @@ const Counter = (initial = 0) => {
 
   return el('div')(
     computed(() => `${count()} (×2 = ${doubled()})`),
-    el('button', { onclick: increment })('+'),
-    el('button', { onclick: decrement })('-')
+    el('button').props({ onclick: increment })('+'),
+    el('button').props({ onclick: decrement })('-')
   );
 };
 ```
@@ -293,7 +372,7 @@ const Counter = island(
   ({ el, signal }) =>
     (props: { initial: number }) => {
       const count = signal(props.initial);
-      return el('button', { onclick: () => count((c) => c + 1) })(
+      return el('button').props({ onclick: () => count((c) => c + 1) })(
         computed(() => `Count: ${count()}`)
       );
     }
@@ -316,14 +395,14 @@ Full type inference for elements and props:
 
 ```typescript
 // Props are inferred from tag name
-el('input', {
+el('input').props({
   type: 'text', // ✓ valid
   value: 'hello', // ✓ valid
   checked: true, // ✓ valid (though semantically for checkbox)
 });
 
 // Custom attributes work too
-el('div', {
+el('div').props({
   'data-testid': 'my-div',
   'aria-label': 'Description',
 });

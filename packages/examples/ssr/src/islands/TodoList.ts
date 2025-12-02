@@ -18,10 +18,10 @@ export const TodoList = island(
         }
       };
 
-      return el('div', { className: 'todo-list' })(
+      return el('div').props({ className: 'todo-list' })(
         el('h2')('Todo List Island'),
-        el('div', { className: 'add-todo' })(
-          el('input', {
+        el('div').props({ className: 'add-todo' })(
+          el('input').props({
             type: 'text',
             placeholder: 'Add a todo...',
             value: computed(() => input()),
@@ -30,7 +30,7 @@ export const TodoList = island(
               if (e.key === 'Enter') addTodo();
             },
           })(),
-          el('button', { onclick: addTodo })('Add')
+          el('button').props({ onclick: addTodo })('Add')
         ),
         el('ul')(map(todos)((todo) => el('li')(todo)))
       );

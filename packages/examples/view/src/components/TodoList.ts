@@ -26,7 +26,7 @@ export const TodoList = () => {
   };
 
   // Create input with event listeners
-  const todoInput = el('input', {
+  const todoInput = el('input').props({
     className: 'todo-input',
     type: 'text',
     placeholder: 'What needs to be done?',
@@ -41,20 +41,20 @@ export const TodoList = () => {
   );
 
   // Create "Add Todo" button
-  const addBtn = el('button', {})('Add Todo')(
+  const addBtn = el('button')('Add Todo')(
     addEventListener('click', handleAdd)
   );
 
   // Create filter buttons
-  const allBtn = el('button', {
+  const allBtn = el('button').props({
     className: computed(() => (todoList.filter() === 'all' ? 'active' : '')),
   })('All')(addEventListener('click', () => todoList.setFilter('all')));
 
-  const activeBtn = el('button', {
+  const activeBtn = el('button').props({
     className: computed(() => (todoList.filter() === 'active' ? 'active' : '')),
   })('Active')(addEventListener('click', () => todoList.setFilter('active')));
 
-  const completedBtn = el('button', {
+  const completedBtn = el('button').props({
     className: computed(() =>
       todoList.filter() === 'completed' ? 'active' : ''
     ),
@@ -66,7 +66,7 @@ export const TodoList = () => {
     addEventListener('click', () => todoList.clearCompleted())
   );
 
-  return el('div', { className: 'example' })(
+  return el('div').props({ className: 'example' })(
     el('h2')('Todo List Example'),
     el('p')(
       'Demonstrates reactive lists with map, filtering, and complex state.'
@@ -76,10 +76,10 @@ export const TodoList = () => {
     el('div')(todoInput, addBtn),
 
     // Filter buttons
-    el('div', { className: 'filter-buttons' })(allBtn, activeBtn, completedBtn),
+    el('div').props({ className: 'filter-buttons' })(allBtn, activeBtn, completedBtn),
 
     // Todo list using map with composed TodoItem component
-    el('div', { className: 'todo-list' })(
+    el('div').props({ className: 'todo-list' })(
       map(
         todoList.filteredTodos,
         (todo) => todo.id // Key function for immutable updates
@@ -93,7 +93,7 @@ export const TodoList = () => {
     ),
 
     // Stats
-    el('div', { className: 'todo-stats' })(
+    el('div').props({ className: 'todo-stats' })(
       computed(
         () =>
           `Active: ${todoList.activeCount()} | Completed: ${todoList.completedCount()} | `

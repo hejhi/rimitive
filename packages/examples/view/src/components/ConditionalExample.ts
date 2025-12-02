@@ -15,7 +15,7 @@ export const ConditionalExample = () => {
   // Conditional message - renders null when hidden
   const conditionalMessage = match(showMessage)((show) =>
     show
-      ? el('div', { className: 'conditional-message' })(
+      ? el('div').props({ className: 'conditional-message' })(
           el('span')('👋 This message can be toggled on and off!')
         )
       : null
@@ -30,7 +30,7 @@ export const ConditionalExample = () => {
   // Use match to switch between input and span based on edit mode
   const editableText = match(isEditMode)((isEdit) =>
     isEdit
-      ? el('input', {
+      ? el('input').props({
           type: 'text',
           className: 'edit-input',
           value: editText,
@@ -41,16 +41,16 @@ export const ConditionalExample = () => {
           input.addEventListener('input', handler);
           return () => input.removeEventListener('input', handler);
         })
-      : el('span', { className: 'display-text' })(editText)
+      : el('span').props({ className: 'display-text' })(editText)
   );
 
   // Pattern 2: Alternative - use separate conditional elements with match
   // Multiple conditional elements can be composed
-  const editableTextAlt = el('div', { className: 'editable-wrapper' })(
+  const editableTextAlt = el('div').props({ className: 'editable-wrapper' })(
     // Input (only renders in edit mode) with all its specific props
     match(isEditMode)((isEdit) =>
       isEdit
-        ? el('input', {
+        ? el('input').props({
             type: 'text',
             className: 'edit-input',
             value: editText,
@@ -65,7 +65,7 @@ export const ConditionalExample = () => {
     ),
     // Span (only renders in display mode)
     match(isEditMode)((isEdit) =>
-      !isEdit ? el('span', { className: 'display-text' })(editText) : null
+      !isEdit ? el('span').props({ className: 'display-text' })(editText) : null
     )
   );
 
@@ -88,7 +88,7 @@ export const ConditionalExample = () => {
 
   // Dynamic button that changes based on state
   // Static button element with reactive props and children
-  const dynamicButton = el('button', {
+  const dynamicButton = el('button').props({
     className: computed(() => `dynamic-btn ${buttonType()}`),
   })(
     computed(() => {
@@ -102,14 +102,14 @@ export const ConditionalExample = () => {
     })
   );
 
-  return el('div', { className: 'example conditional-example' })(
+  return el('div').props({ className: 'example conditional-example' })(
     el('h2')('Conditional Element Example'),
     el('p')(
       'Demonstrates reactive conditional rendering with match(reactive)((value) => refSpec | null).'
     ),
 
     // Example 1: Toggle visibility
-    el('div', { className: 'example-section' })(
+    el('div').props({ className: 'example-section' })(
       el('h3')('Example 1: Toggle Visibility'),
       el('p')(
         'Element can be shown/hidden by returning null from the computed spec.'
@@ -119,7 +119,7 @@ export const ConditionalExample = () => {
     ),
 
     // Example 2: Switch element types
-    el('div', { className: 'example-section' })(
+    el('div').props({ className: 'example-section' })(
       el('h3')('Example 2: Switch Element Types'),
       el('p')('Two patterns for handling elements with different props:'),
       el('p')(
@@ -135,7 +135,7 @@ export const ConditionalExample = () => {
     ),
 
     // Example 3: Dynamic styling
-    el('div', { className: 'example-section' })(
+    el('div').props({ className: 'example-section' })(
       el('h3')('Example 3: Dynamic Styling'),
       el('p')('Element properties and styles change based on state.'),
       dynamicButton,

@@ -17,14 +17,14 @@ interface ToolbarProps {
 export const Toolbar = (props: ToolbarProps) => {
   const { onAddShape, onClearAll } = props;
 
-  return el('div', { className: 'controls' })(
+  return el('div').props({ className: 'controls' })(
     el('button')('Add Circle')(
       addEventListener('click', () => onAddShape('circle'))
     ),
-    el('button', { className: 'secondary' })('Add Rectangle')(
+    el('button').props({ className: 'secondary' })('Add Rectangle')(
       addEventListener('click', () => onAddShape('rect'))
     ),
-    el('button', { className: 'secondary' })('Clear All')(
+    el('button').props({ className: 'secondary' })('Clear All')(
       addEventListener('click', () => onClearAll())
     )
   );

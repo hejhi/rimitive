@@ -832,13 +832,13 @@ describe('Integration: match() hydration with full view API', () => {
     const { el, match, computed } = api;
 
     // Create the component spec matching the SSR output
-    const pageSpec = el('div', { className: 'products-page' })(
+    const pageSpec = el('div').props({ className: 'products-page' })(
       el('h2')('Products'),
-      el('section', { className: 'intro' })('intro'),
+      el('section').props({ className: 'intro' })('intro'),
       match(computed(() => true))((visible) =>
         visible ? el('h1')('hello') : null
       ),
-      el('section', { className: 'filter' })('filter')
+      el('section').props({ className: 'filter' })('filter')
     );
 
     // Hydrate
@@ -892,18 +892,18 @@ describe('Integration: match() hydration with full view API', () => {
 
     // Build the Products page component
     const ProductsPage = () =>
-      el('div', { className: 'products-page' })(
+      el('div').props({ className: 'products-page' })(
         el('h2')('Products'),
-        el('section', { className: 'intro' })('intro'),
+        el('section').props({ className: 'intro' })('intro'),
         match(computed(() => true))((visible) =>
           visible ? el('h1')('hello') : null
         ),
-        el('section', { className: 'filter' })('filter')
+        el('section').props({ className: 'filter' })('filter')
       );
 
     // Build the app structure with route match
     // match(reactive)((value) => RefSpec | null) - renders content based on value
-    const appSpec = el('div', { className: 'app' })(
+    const appSpec = el('div').props({ className: 'app' })(
       el('nav')('nav'),
       el('main')(
         match(computed(() => 'products'))((value) =>

@@ -176,7 +176,7 @@ const select = (id: number) => {
 // ============================================================================
 
 const Button = (id: string, label: string) =>
-  el('button', {
+  el('button').props({
     className: 'btn btn-primary btn-block col-sm-6 smallpad',
     type: 'button',
     id,
@@ -187,31 +187,31 @@ const Row = (data: Reactive<RowData>, children: ElRefSpecChild[] = []) => {
   const label = data().label;
   const rowClass = computed(() => (selected() === id ? 'danger' : ''));
 
-  return el('tr', { className: rowClass })(
-    el('td', { className: 'col-md-1' })(String(id))(),
-    el('td', { className: 'col-md-4' })(
+  return el('tr').props({ className: rowClass })(
+    el('td').props({ className: 'col-md-1' })(String(id))(),
+    el('td').props({ className: 'col-md-4' })(
       el('a')(label)(addEventListener('click', () => select(id)))
     )(),
-    el('td', { className: 'col-md-1' })(
+    el('td').props({ className: 'col-md-1' })(
       el('a')(
-        el('span', {
+        el('span').props({
           className: 'glyphicon glyphicon-remove',
           ariaHidden: 'true',
         })()
       )(addEventListener('click', () => remove(id)))
     )(),
-    el('td', { className: 'col-md-6' })(),
+    el('td').props({ className: 'col-md-6' })(),
     ...children
   )();
 };
 
 const App = () => {
-  return el('div', { className: 'container' })(
-    el('div', { className: 'jumbotron' })(
-      el('div', { className: 'row' })(
-        el('div', { className: 'col-md-6' })(el('h1')('Lattice-keyed')())(),
-        el('div', { className: 'col-md-6' })(
-          el('div', { className: 'row' })(
+  return el('div').props({ className: 'container' })(
+    el('div').props({ className: 'jumbotron' })(
+      el('div').props({ className: 'row' })(
+        el('div').props({ className: 'col-md-6' })(el('h1')('Lattice-keyed')())(),
+        el('div').props({ className: 'col-md-6' })(
+          el('div').props({ className: 'row' })(
             Button('run', 'Create 1,000 rows')(addEventListener('click', run)),
             Button(
               'runlots',
@@ -228,10 +228,10 @@ const App = () => {
         )()
       )()
     )(),
-    el('table', { className: 'table table-hover table-striped test-data' })(
+    el('table').props({ className: 'table table-hover table-striped test-data' })(
       el('tbody')(map(data, (rowData: RowData) => rowData.id)(Row))()
     )(),
-    el('span', {
+    el('span').props({
       className: 'preloadicon glyphicon glyphicon-remove',
       ariaHidden: 'true',
     })()

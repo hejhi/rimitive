@@ -5,13 +5,13 @@ import { ConditionalExample } from './components/ConditionalExample';
 import { TagList } from './components/TagList';
 
 const App = () => {
-  return el('div', { className: 'app' })(
+  return el('div').props({ className: 'app' })(
     Counter(10),
     ConditionalExample(),
     TodoList(),
-    el('div', { className: 'tag-list-container' })(
+    el('div').props({ className: 'tag-list-container' })(
       el('h3')('Tag List (Fragment Component)'),
-      el('div', { className: 'tag-list' })(
+      el('div').props({ className: 'tag-list' })(
         TagList({ tags: ['React', 'Vue', 'Svelte', 'Solid', 'Lattice'] })
       )
     )

@@ -68,24 +68,41 @@ export type ElProps<TConfig extends RendererConfig> = {
 };
 
 /**
- * Children applicator - returned from el(tag, props)
- * Returns RefSpec which is itself callable for chaining lifecycle callbacks
+ * Tag factory - returned from el(tag)
+ * Callable with children to create RefSpec, or use .props() to add properties
  *
  * Generic over:
  * - TConfig: The renderer configuration
  * - Tag: The element tag name (must exist in both props and elements)
  */
-export type ChildrenApplicator<
+export type TagFactory<
   TConfig extends RendererConfig,
   Tag extends keyof TConfig['props'] & keyof TConfig['elements'],
-> = (...children: ElRefSpecChild[]) => RefSpec<TConfig['elements'][Tag]>;
+> = {
+  /**
+   * Apply children to create a RefSpec
+   */
+  (...children: ElRefSpecChild[]): RefSpec<TConfig['elements'][Tag]>;
+
+  /**
+   * Add properties to the element, returning a new TagFactory
+   * Can be called with props object or a function that receives current props
+   */
+  props(
+    propsOrFn:
+      | ElementProps<TConfig, Tag>
+      | ((current: ElementProps<TConfig, Tag>) => ElementProps<TConfig, Tag>)
+  ): TagFactory<TConfig, Tag>;
+};
 
 /**
- * Factory return type - curried element builder
+ * Factory return type - element builder
  *
- * Element construction is separated into two phases:
- * 1. Structure phase: el(tag, props)(children) - Pure, returns RefSpec blueprint
- * 2. Behavior phase: refSpec(lifecycle) - Imperative, attaches side effects
+ * Element construction is separated into phases:
+ * 1. Tag phase: el(tag) - Returns TagFactory
+ * 2. Props phase (optional): factory.props({}) - Returns new TagFactory with props
+ * 3. Children phase: factory(children) - Returns RefSpec blueprint
+ * 4. Behavior phase: refSpec(lifecycle) - Attaches side effects
  *
  * Generic over:
  * - TConfig: The renderer configuration
@@ -93,11 +110,10 @@ export type ChildrenApplicator<
 export type ElFactory<TConfig extends RendererConfig> = ServiceDefinition<
   'el',
   {
-    // Static element builder - Tag must be valid in both props and elements
+    // Tag selector - returns a TagFactory
     <Tag extends string & keyof TConfig['props'] & keyof TConfig['elements']>(
-      tag: Tag,
-      props?: ElementProps<TConfig, Tag>
-    ): ChildrenApplicator<TConfig, Tag>;
+      tag: Tag
+    ): TagFactory<TConfig, Tag>;
   }
 >;
 
@@ -172,17 +188,23 @@ export const El = defineService(
         return refSpec;
       };
 
-      // Static element builder
-      function el<Tag extends string & TElementKeys>(
+      /**
+       * Create a TagFactory for a given tag with accumulated props
+       */
+      function createTagFactory<Tag extends string & TElementKeys>(
         tag: Tag,
-        props: ElementProps<TConfig, Tag> = {}
-      ): ChildrenApplicator<TConfig, Tag> {
-        // Return children applicator
-        return (...children: ElRefSpecChild[]) => {
+        accumulatedProps: ElementProps<TConfig, Tag>
+      ): TagFactory<TConfig, Tag> {
+        // The callable part - applies children and returns RefSpec
+        const factory = (...children: ElRefSpecChild[]) => {
           return createRefSpec((lifecycleCallbacks, api, parentContext) => {
             // Pass initial props to createNode - needed for renderers that require
             // props at creation time (e.g., canvas renderer needs width/height)
-            const element = createNode(tag, props as Record<string, unknown>, parentContext);
+            const element = createNode(
+              tag,
+              accumulatedProps as Record<string, unknown>,
+              parentContext
+            );
             const elRef: ElementRef<TBaseElement> = {
               status: STATUS_ELEMENT,
               element: element,
@@ -200,7 +222,7 @@ export const El = defineService(
             };
 
             createElementScope(element, () => {
-              for (const [key, val] of Object.entries(props)) {
+              for (const [key, val] of Object.entries(accumulatedProps)) {
                 // Event handlers are functions but NOT reactive - treat as static
                 const isEventHandler = key.startsWith('on');
 
@@ -225,6 +247,30 @@ export const El = defineService(
             return elRef as ElementRef<TElements[Tag]>;
           });
         };
+
+        // Add .props() method
+        factory.props = (
+          propsOrFn:
+            | ElementProps<TConfig, Tag>
+            | ((
+                current: ElementProps<TConfig, Tag>
+              ) => ElementProps<TConfig, Tag>)
+        ): TagFactory<TConfig, Tag> => {
+          const newProps =
+            typeof propsOrFn === 'function'
+              ? propsOrFn(accumulatedProps)
+              : { ...accumulatedProps, ...propsOrFn };
+          return createTagFactory(tag, newProps);
+        };
+
+        return factory as TagFactory<TConfig, Tag>;
+      }
+
+      // Main el function - just selects tag, returns TagFactory
+      function el<Tag extends string & TElementKeys>(
+        tag: Tag
+      ): TagFactory<TConfig, Tag> {
+        return createTagFactory(tag, {} as ElementProps<TConfig, Tag>);
       }
 
       const extension: ElFactory<TConfig> = {

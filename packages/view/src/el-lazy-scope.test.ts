@@ -59,7 +59,7 @@ describe('el primitive - lazy scope creation', () => {
 
     // Static element - no reactive content, no lifecycle callbacks
     // Note: scopes only register if they have disposables (performance optimization)
-    const ref = el('div', { className: 'static' })('Hello');
+    const ref = el('div').props({ className: 'static' })('Hello');
     const element: MockElement = asElement(ref.create());
 
     // Static element created successfully
@@ -82,7 +82,7 @@ describe('el primitive - lazy scope creation', () => {
     }).impl;
 
     // Element with reactive prop
-    const ref = el('div', { title: text })();
+    const ref = el('div').props({ title: text })();
     const element: MockElement = asElement(ref.create());
 
     // Should have created an effect (subscribers tracked)
