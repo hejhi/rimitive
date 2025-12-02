@@ -99,6 +99,7 @@ export const dom = {
 
 export const canvas = {
   canvas: canvasSvc.el('canvas'),
+  rect: canvasSvc.el('rect'),
   circle: canvasSvc.el('circle'),
   group: canvasSvc.el('group'),
   ...canvasSvc,

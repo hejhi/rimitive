@@ -13,7 +13,7 @@
 import { canvas, computed } from '../service';
 import type { ShapeData } from '../behaviors/useShapeEditor';
 
-const { circle } = canvas;
+const { circle, rect } = canvas;
 
 /**
  * Circle shape component
@@ -38,7 +38,7 @@ export const Circle = (shape: ShapeData) => {
 export const Rect = (shape: ShapeData) => {
   const halfSize = shape.size;
 
-  return circle.props({
+  return rect.props({
     x: computed(() => shape.x() - halfSize),
     y: computed(() => shape.y() - halfSize),
     width: halfSize * 2,
