@@ -6,80 +6,44 @@
   "fileMap": {
     "nonProjectFiles": [
       {
-        "file": ".claude/commands/scaffold-package.md",
-        "hash": "13774620936177920178"
-      },
-      {
-        "file": ".changeset/.gitkeep",
-        "hash": "3244421341483603138"
-      },
-      {
-        "file": ".claude/commands/workflow.md",
-        "hash": "8525223545704196616"
-      },
-      {
         "file": "eslint.config.js",
         "hash": "12404005700077585307"
-      },
-      {
-        "file": ".github/workflows/pr-title.yml",
-        "hash": "9053157152279884607"
-      },
-      {
-        "file": "pnpm-workspace.yaml",
-        "hash": "5174843801328762164"
-      },
-      {
-        "file": ".prettierrc",
-        "hash": "14808059657890296164"
-      },
-      {
-        "file": "pnpm-lock.yaml",
-        "hash": "17662001520221541411"
-      },
-      {
-        "file": "nx.json",
-        "hash": "731019651267700296"
-      },
-      {
-        "file": "vitest.config.ts",
-        "hash": "17696468095981323063"
-      },
-      {
-        "file": ".claude/commands/setup-build-config.md",
-        "hash": "14311847385471376996"
-      },
-      {
-        "file": "CONTRIBUTING.md",
-        "hash": "17685745596151304086"
-      },
-      {
-        "file": "lerna.json",
-        "hash": "17494716379267711819"
       },
       {
         "file": "tsconfig.json",
         "hash": "11347180060375909959"
       },
       {
-        "file": ".github/workflows/ci.yml",
-        "hash": "7442783079896346100"
+        "file": ".github/workflows/pr-title.yml",
+        "hash": "9053157152279884607"
       },
       {
-        "file": ".github/workflows/release.yml",
-        "hash": "5452793647848367243"
-      },
-      {
-        "file": ".claude/agents/frp-algorithm-architect.md",
-        "hash": "15724924189583160224"
-      },
-      {
-        "file": "CLAUDE.md",
-        "hash": "10370836458644780609"
+        "file": ".changeset/README.md",
+        "hash": "4888845876018830777"
       },
       {
         "file": ".claude/workflows/create-package.md",
         "hash": "8656968389793282740"
+      },
+      {
+        "file": ".changeset/.gitkeep",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "CONTRIBUTING.md",
+        "hash": "17685745596151304086"
+      },
+      {
+        "file": ".gitignore",
+        "hash": "3326181247358675835"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "hash": "7442783079896346100"
+      },
+      {
+        "file": ".claude/agents/frp-algorithm-architect.md",
+        "hash": "15724924189583160224"
       },
       {
         "file": "README.md",
@@ -90,32 +54,68 @@
         "hash": "6358243731074469076"
       },
       {
-        "file": ".github/workflows/codeql.yml.disabled",
-        "hash": "13443043018540950874"
-      },
-      {
-        "file": ".github/dependabot.yml",
-        "hash": "5494285431413543482"
-      },
-      {
-        "file": ".gitignore",
-        "hash": "3326181247358675835"
-      },
-      {
-        "file": ".changeset/README.md",
-        "hash": "4888845876018830777"
+        "file": "package.json",
+        "hash": "16817104143314398375"
       },
       {
         "file": ".github/workflows/README.md",
         "hash": "12290553284265915329"
       },
       {
-        "file": "package.json",
-        "hash": "16817104143314398375"
-      },
-      {
         "file": "tsconfig.base.json",
         "hash": "13502933863921274315"
+      },
+      {
+        "file": "vitest.config.ts",
+        "hash": "17696468095981323063"
+      },
+      {
+        "file": ".claude/commands/setup-build-config.md",
+        "hash": "14311847385471376996"
+      },
+      {
+        "file": ".github/workflows/codeql.yml.disabled",
+        "hash": "13443043018540950874"
+      },
+      {
+        "file": ".claude/commands/scaffold-package.md",
+        "hash": "13774620936177920178"
+      },
+      {
+        "file": "nx.json",
+        "hash": "731019651267700296"
+      },
+      {
+        "file": ".prettierrc",
+        "hash": "14808059657890296164"
+      },
+      {
+        "file": ".claude/commands/workflow.md",
+        "hash": "8525223545704196616"
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "hash": "17662001520221541411"
+      },
+      {
+        "file": ".github/dependabot.yml",
+        "hash": "5494285431413543482"
+      },
+      {
+        "file": ".github/workflows/release.yml",
+        "hash": "5452793647848367243"
+      },
+      {
+        "file": "pnpm-workspace.yaml",
+        "hash": "5174843801328762164"
+      },
+      {
+        "file": "lerna.json",
+        "hash": "17494716379267711819"
+      },
+      {
+        "file": "CLAUDE.md",
+        "hash": "10370836458644780609"
       }
     ],
     "projectFileMap": {
@@ -1764,7 +1764,7 @@
         },
         {
           "file": "packages/view/src/helpers/reconcile.ts",
-          "hash": "9657165679219433049"
+          "hash": "12878862119574011702"
         },
         {
           "file": "packages/view/src/helpers/scope.test.ts",
@@ -1796,7 +1796,7 @@
         },
         {
           "file": "packages/view/src/map.ts",
-          "hash": "5549979302748113826"
+          "hash": "418794927043872460"
         },
         {
           "file": "packages/view/src/match.test.ts",
@@ -1878,7 +1878,7 @@
         },
         {
           "file": "packages/examples/view/src/components/ConditionalExample.ts",
-          "hash": "14105308427859030991"
+          "hash": "4556718643195708887"
         },
         {
           "file": "packages/examples/view/src/components/Counter.ts",
@@ -1890,11 +1890,11 @@
         },
         {
           "file": "packages/examples/view/src/components/TodoItem.ts",
-          "hash": "10823983261288402214"
+          "hash": "13141308091125191323"
         },
         {
           "file": "packages/examples/view/src/components/TodoList.ts",
-          "hash": "78939311753864381"
+          "hash": "7233578031935435511"
         },
         {
           "file": "packages/examples/view/src/main.ts",
@@ -1902,7 +1902,7 @@
         },
         {
           "file": "packages/examples/view/src/service.ts",
-          "hash": "4877635064281714540"
+          "hash": "7395929429036817044"
         },
         {
           "file": "packages/examples/view/src/types.ts",

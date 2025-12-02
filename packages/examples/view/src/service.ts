@@ -10,10 +10,7 @@ import {
   defaultHelpers as defaultViewHelpers,
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import {
-  createDOMAdapter,
-  DOMAdapterConfig,
-} from '@lattice/view/adapters/dom';
+import { createDOMAdapter, DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createText } from '@lattice/view/helpers/text';
@@ -28,7 +25,7 @@ const createViewApi = () => {
   const svc = {
     ...signalsSvc,
     ...viewSvc,
-    addEventListener: createAddEventListener(viewHelpers.batch),
+    on: createAddEventListener(viewHelpers.batch),
     t: createText(signalsSvc.computed),
   };
 
@@ -45,7 +42,7 @@ const createViewApi = () => {
 export const { service, mount, svc } = createViewApi();
 
 export const {
-  addEventListener,
+  on,
   batch,
   computed,
   effect,

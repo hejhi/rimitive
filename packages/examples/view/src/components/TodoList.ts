@@ -7,7 +7,10 @@
 
 import { useTodoList, type Todo } from '../behaviors/useTodoList';
 import { TodoItem } from './TodoItem';
-import { el, map, signal, computed, addEventListener } from '../service';
+import { el, map, signal, computed, on } from '../service';
+
+const button = el('button');
+const div = el('div');
 
 export const TodoList = () => {
   // Create headless behavior
@@ -26,63 +29,66 @@ export const TodoList = () => {
   };
 
   // Create input with event listeners
-  const todoInput = el('input').props({
-    className: 'todo-input',
-    type: 'text',
-    placeholder: 'What needs to be done?',
-    value: inputValue,
-  })
+  const todoInput = el('input')
+    .props({
+      className: 'todo-input',
+      type: 'text',
+      placeholder: 'What needs to be done?',
+      value: inputValue,
+    })
     .ref(
-      addEventListener('input', (e: Event) =>
+      on('input', (e: Event) =>
         inputValue((e.target as HTMLInputElement).value)
-      )
-    )
-    .ref(
-      addEventListener('keydown', (e: KeyboardEvent) => {
+      ),
+      on('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter') handleAdd();
       })
     )();
 
   // Create "Add Todo" button
-  const addBtn = el('button').ref(
-    addEventListener('click', handleAdd)
-  )('Add Todo');
+  const addBtn = button.ref(on('click', handleAdd))('Add Todo');
 
   // Create filter buttons
-  const allBtn = el('button').props({
-    className: computed(() => (todoList.filter() === 'all' ? 'active' : '')),
-  }).ref(addEventListener('click', () => todoList.setFilter('all')))('All');
+  const allBtn = button
+    .props({
+      className: computed(() => (todoList.filter() === 'all' ? 'active' : '')),
+    })
+    .ref(on('click', () => todoList.setFilter('all')))('All');
 
-  const activeBtn = el('button').props({
-    className: computed(() => (todoList.filter() === 'active' ? 'active' : '')),
-  }).ref(addEventListener('click', () => todoList.setFilter('active')))('Active');
+  const activeBtn = button
+    .props({
+      className: computed(() =>
+        todoList.filter() === 'active' ? 'active' : ''
+      ),
+    })
+    .ref(on('click', () => todoList.setFilter('active')))('Active');
 
-  const completedBtn = el('button').props({
-    className: computed(() =>
-      todoList.filter() === 'completed' ? 'active' : ''
-    ),
-  }).ref(
-    addEventListener('click', () => todoList.setFilter('completed'))
-  )('Completed');
+  const completedBtn = button
+    .props({
+      className: computed(() =>
+        todoList.filter() === 'completed' ? 'active' : ''
+      ),
+    })
+    .ref(on('click', () => todoList.setFilter('completed')))('Completed');
 
-  const clearBtn = el('button').ref(
-    addEventListener('click', () => todoList.clearCompleted())
-  )('Clear Completed');
+  const clearBtn = button.ref(on('click', () => todoList.clearCompleted()))(
+    'Clear Completed'
+  );
 
-  return el('div').props({ className: 'example' })(
+  return div.props({ className: 'example' })(
     el('h2')('Todo List Example'),
     el('p')(
       'Demonstrates reactive lists with map, filtering, and complex state.'
     ),
 
     // Input section
-    el('div')(todoInput, addBtn),
+    div(todoInput, addBtn),
 
     // Filter buttons
-    el('div').props({ className: 'filter-buttons' })(allBtn, activeBtn, completedBtn),
+    div.props({ className: 'filter-buttons' })(allBtn, activeBtn, completedBtn),
 
     // Todo list using map with composed TodoItem component
-    el('div').props({ className: 'todo-list' })(
+    div.props({ className: 'todo-list' })(
       map(
         todoList.filteredTodos,
         (todo: Todo) => todo.id // Key function for immutable updates
@@ -96,7 +102,7 @@ export const TodoList = () => {
     ),
 
     // Stats
-    el('div').props({ className: 'todo-stats' })(
+    div.props({ className: 'todo-stats' })(
       computed(
         () =>
           `Active: ${todoList.activeCount()} | Completed: ${todoList.completedCount()} | `

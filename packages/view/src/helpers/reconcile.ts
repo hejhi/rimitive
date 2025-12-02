@@ -34,8 +34,11 @@ export interface ReconcileHooks<T, TNode extends ReconcileNode> {
   /**
    * Called when an existing item's data should be updated
    * Should update the item's signal/state but not move DOM
+   *
+   * If the item needs to be recreated (e.g., plain value changed),
+   * return the new node. The reconciler will update its tracking.
    */
-  onUpdate: (item: T, node: TNode) => void;
+  onUpdate: (item: T, node: TNode) => TNode | void;
 
   /**
    * Called when an item needs to be repositioned in DOM
@@ -194,8 +197,15 @@ export function createReconciler<
         node.position = i;
         node.reconcileStatus = VISITED;
 
-        // Call update hook if provided
-        onUpdate(item, node);
+        // Call update hook - may return replacement node for plain value changes
+        const replacement = onUpdate(item, node);
+        if (replacement) {
+          // Node was recreated - update tracking
+          replacement.position = i;
+          replacement.reconcileStatus = VISITED;
+          itemsByKey.set(key, replacement);
+          node = replacement;
+        }
       } else {
         // New node - create via hook
         const nodeRef = onCreate(item, key);

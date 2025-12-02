@@ -5,7 +5,7 @@
  */
 
 import type { Todo } from '../behaviors/useTodoList';
-import { el, addEventListener } from '../service';
+import { el, on } from '../service';
 
 export const TodoItem = (
   todo: Todo,
@@ -13,20 +13,26 @@ export const TodoItem = (
   onRemove: (id: number) => void
 ) => {
   // Create checkbox with event listener
-  const checkbox = el('input').props({
-    type: 'checkbox',
-    checked: todo.completed,
-  }).ref(addEventListener('change', () => onToggle(todo.id)))();
+  const checkbox = el('input')
+    .props({
+      type: 'checkbox',
+      checked: todo.completed,
+    })
+    .ref(on('change', () => onToggle(todo.id)))();
 
   // Create remove button with event listener
-  const removeBtn = el('button').props({ className: 'todo-remove' }).ref(
-    addEventListener('click', () => onRemove(todo.id))
-  )('x');
+  const removeBtn = el('button')
+    .props({ className: 'todo-remove' })
+    .ref(on('click', () => onRemove(todo.id)))('x');
 
   // Todo text with completed styling
   const todoText = el('span').props({
     className: todo.completed ? 'todo-text completed' : 'todo-text',
   })(todo.text);
 
-  return el('div').props({ className: 'todo-item' })(checkbox, todoText, removeBtn);
+  return el('div').props({ className: 'todo-item' })(
+    checkbox,
+    todoText,
+    removeBtn
+  );
 };

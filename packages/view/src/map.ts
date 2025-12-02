@@ -58,6 +58,30 @@ export interface MapProps<TBaseElement> {
 type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<T>;
 
 /**
+ * Shallow equality check for items
+ * For primitives: strict equality
+ * For objects: compare own enumerable properties (one level deep)
+ */
+function shallowEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object') return false;
+  if (a === null || b === null) return false;
+
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+
+  for (const key of keysA) {
+    if (
+      (a as Record<string, unknown>)[key] !==
+      (b as Record<string, unknown>)[key]
+    )
+      return false;
+  }
+  return true;
+}
+
+/**
  * Map primitive - instantiatable extension using the create pattern
  * Similar to Signal() in signals preset
  */
@@ -141,6 +165,78 @@ export const Map = defineService(
                     ? (nextSibling as TRecNode)
                     : undefined;
 
+                /**
+                 * Create a node for an item, optionally replacing an existing node
+                 */
+                const createItemNode = (
+                  item: T,
+                  replaceNode?: TRecNode
+                ): TRecNode => {
+                  let elRef: TRecNode;
+
+                  const isolate = scopedEffect(() => {
+                    // Render the item directly - no signal wrapping
+                    elRef = render(item).create<TRecNode>(api);
+
+                    if (replaceNode) {
+                      // Replace: insert before old node, then remove old node
+                      insertNodeBefore(
+                        api,
+                        parent.element,
+                        elRef,
+                        replaceNode,
+                        nextSibling
+                      );
+
+                      // Update linked list - new node takes old node's position
+                      elRef.prev = replaceNode.prev;
+                      elRef.next = replaceNode.next;
+                      if (replaceNode.prev) replaceNode.prev.next = elRef;
+                      if (replaceNode.next) replaceNode.next.prev = elRef;
+
+                      // Update fragment boundaries if replacing a boundary node
+                      if (fragment.firstChild === replaceNode)
+                        fragment.firstChild = elRef;
+                      if (fragment.lastChild === replaceNode)
+                        fragment.lastChild = elRef;
+
+                      // Remove old node from DOM
+                      removeNode(parent.element, replaceNode);
+                    } else {
+                      // Insert: append at boundary position
+                      insertNodeBefore(
+                        api,
+                        parent.element,
+                        elRef,
+                        undefined,
+                        nextSibling
+                      );
+
+                      // Update fragment boundaries and link items
+                      if (!fragment.firstChild) {
+                        fragment.firstChild = elRef;
+                        fragment.lastChild = elRef;
+                        elRef.prev = null;
+                        elRef.next = null;
+                      } else {
+                        const prevLast = fragment.lastChild;
+                        if (prevLast) {
+                          prevLast.next = elRef;
+                          elRef.prev = prevLast;
+                        }
+                        elRef.next = null;
+                        fragment.lastChild = elRef;
+                      }
+                    }
+
+                    // Store item for update detection
+                    elRef.data = item;
+                  });
+
+                  isolate(); // Dispose immediately after it runs
+                  return elRef!;
+                };
+
                 // Create reconciler with internal state management and hooks
                 const { reconcile, dispose } = createReconciler<
                   T,
@@ -151,69 +247,29 @@ export const Map = defineService(
                   parentRef: parent,
                   nextSibling: nextElementSibling,
 
-                  onCreate: (item) => {
-                    // Use nested effect to isolate render callback and lifecycle from tracking
-                    // This prevents signals read in render/lifecycle from being tracked by map's effect
-                    let elRef: TRecNode;
-
-                    const isolate = scopedEffect(() => {
-                      // Render the item directly - no signal wrapping
-                      elRef = render(item).create<TRecNode>(api);
-
-                      // Insert into DOM - use parent.element directly
-                      insertNodeBefore(
-                        api,
-                        parent.element,
-                        elRef,
-                        undefined,
-                        nextSibling
-                      );
-
-                      // Update fragment boundaries and link items
-                      // insertNodeBefore may not link items when there's no boundary nextSibling,
-                      // so we manually maintain the doubly-linked list within the fragment
-                      if (!fragment.firstChild) {
-                        // First item in fragment
-                        fragment.firstChild = elRef;
-                        fragment.lastChild = elRef;
-                        elRef.prev = null;
-                        elRef.next = null;
-                      } else {
-                        // Appending at end - link to previous lastChild
-                        const prevLast = fragment.lastChild;
-                        if (prevLast) {
-                          prevLast.next = elRef;
-                          elRef.prev = prevLast;
-                        }
-                        elRef.next = null;
-                        fragment.lastChild = elRef;
-                      }
-
-                      // Store item for update detection
-                      elRef.data = item;
-                    });
-
-                    isolate(); // Dispose immediately after it runs
-
-                    return elRef!;
-                  },
+                  onCreate: (item) => createItemNode(item),
 
                   // onUpdate: called when existing item's data should be updated
+                  // Returns replacement node if item was recreated
                   onUpdate(item, node) {
                     const prevItem = node.data;
 
                     // If previous item is a function (signal), push new value into it
                     if (typeof prevItem === 'function') {
-                      // Read value from new item if it's also a signal
                       const newValue =
                         typeof item === 'function'
                           ? (item as () => unknown)()
                           : item;
                       (prevItem as (v: unknown) => void)(newValue);
+                      node.data = item;
+                      return; // Keep existing node
                     }
 
-                    // Update stored item reference
-                    node.data = item;
+                    // Plain value - check if changed using shallow equality
+                    if (shallowEqual(prevItem, item)) return; // No change
+
+                    // Different value - recreate node
+                    return createItemNode(item, node);
                   },
 
                   // onMove: called when item needs repositioning

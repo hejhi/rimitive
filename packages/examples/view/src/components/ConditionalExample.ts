@@ -1,4 +1,4 @@
-import { el, signal, computed, addEventListener, match } from '../service';
+import { el, signal, computed, on, match } from '../service';
 
 export const ConditionalExample = () => {
   // State for various conditional examples
@@ -9,7 +9,7 @@ export const ConditionalExample = () => {
 
   // Toggle message visibility
   const toggleBtn = el('button').ref(
-    addEventListener('click', () => showMessage(!showMessage()))
+    on('click', () => showMessage(!showMessage()))
   )('Toggle Message');
 
   // Conditional message - renders null when hidden
@@ -23,24 +23,26 @@ export const ConditionalExample = () => {
 
   // Toggle edit mode
   const editToggleBtn = el('button').ref(
-    addEventListener('click', () => isEditMode(!isEditMode()))
+    on('click', () => isEditMode(!isEditMode()))
   )(computed(() => (isEditMode() ? 'Save' : 'Edit')));
 
   // Pattern 1: Match with conditional element types
   // Use match to switch between input and span based on edit mode
   const editableText = match(isEditMode)((isEdit: boolean) =>
     isEdit
-      ? el('input').props({
-          type: 'text',
-          className: 'edit-input',
-          value: editText,
-        }).ref((input: HTMLInputElement) => {
-          const handler = (e: Event) => {
-            editText((e.target as HTMLInputElement).value);
-          };
-          input.addEventListener('input', handler);
-          return () => input.removeEventListener('input', handler);
-        })()
+      ? el('input')
+          .props({
+            type: 'text',
+            className: 'edit-input',
+            value: editText,
+          })
+          .ref((input: HTMLInputElement) => {
+            const handler = (e: Event) => {
+              editText((e.target as HTMLInputElement).value);
+            };
+            input.addEventListener('input', handler);
+            return () => input.removeEventListener('input', handler);
+          })()
       : el('span').props({ className: 'display-text' })(editText)
   );
 
@@ -50,17 +52,19 @@ export const ConditionalExample = () => {
     // Input (only renders in edit mode) with all its specific props
     match(isEditMode)((isEdit: boolean) =>
       isEdit
-        ? el('input').props({
-            type: 'text',
-            className: 'edit-input',
-            value: editText,
-          }).ref((input: HTMLInputElement) => {
-            const handler = (e: Event) => {
-              editText((e.target as HTMLInputElement).value);
-            };
-            input.addEventListener('input', handler);
-            return () => input.removeEventListener('input', handler);
-          })()
+        ? el('input')
+            .props({
+              type: 'text',
+              className: 'edit-input',
+              value: editText,
+            })
+            .ref((input: HTMLInputElement) => {
+              const handler = (e: Event) => {
+                editText((e.target as HTMLInputElement).value);
+              };
+              input.addEventListener('input', handler);
+              return () => input.removeEventListener('input', handler);
+            })()
         : null
     ),
     // Span (only renders in display mode)
@@ -71,7 +75,7 @@ export const ConditionalExample = () => {
 
   // Cycle button type
   const cycleTypeBtn = el('button').ref(
-    addEventListener('click', () => {
+    on('click', () => {
       const types: Array<'primary' | 'danger' | 'success'> = [
         'primary',
         'danger',
