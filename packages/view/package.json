@@ -94,10 +94,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/signals": "workspace:*"
+    "@lattice/lattice": "workspace:*"
   },
   "devDependencies": {
+    "@lattice/signals": "workspace:*",
     "@types/node": "^22.10.2",
     "esbuild": "^0.25.8",
     "happy-dom": "^15.11.7",

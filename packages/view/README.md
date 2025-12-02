@@ -1,437 +1,368 @@
 # @lattice/view
 
-Reactive DOM primitives for building UIs with push-pull FRP.
+Reactive DOM primitives for Lattice. A lightweight, SSR-compatible view layer built on fine-grained signals.
 
-## Key Features
+## Features
 
-✅ **No Compilation** - Pure JavaScript/TypeScript, no JSX transform needed
-✅ **No VDOM** - Direct DOM manipulation via reactive effects
-✅ **No Keys** (usually) - Identity-based list tracking
-✅ **Element-Scoped Reactivity** - Automatic cleanup when elements are removed
-✅ **Fine-Grained Updates** - Only changed DOM nodes update
+- **Fine-grained reactivity** - Only what changes updates, no virtual DOM diffing
+- **Performance** - Best-in-class performance—see the benchmarks
+- **SSR compatible** - Works with `@lattice/islands` for server-side rendering and hydration
+- **Portable** - Built-in (but not limited to) DOM and SSR adapters
+- **Composable** - Built on `@lattice/lattice` extension system
+- **Extensible** - Add custom primitives, instrument any function, compose your own service, down to the reactive model itself
+- **Type-safe** - Full TypeScript support down to element-specific inference
+- **Tiny** - <4kb with all batteries included, and fully tree-shakeable—use only what you need
 
-## Architecture
+## Installation
 
-`@lattice/view` implements a **dual-graph architecture**:
-
-```
-┌─────────────────────────────┐
-│   Signal Graph (State)      │
-│   signals → computed        │
-│            ↓ (observes)     │
-└─────────────────────────────┘
-              ↓
-┌─────────────────────────────┐
-│   View Graph (DOM)          │
-│   Elements with bindings    │
-└─────────────────────────────┘
+```bash
+npm install @lattice/view @lattice/lattice
 ```
 
-- **Signal graph** manages state and dependencies
-- **View graph** contains actual DOM elements
-- **Bindings** (via effects) connect signals to DOM updates
+## Quick Start
 
-## Primitives
+```typescript
+import { composeFrom } from '@lattice/lattice';
+import { createSignalsApi } from '@lattice/signals/presets/core';
+import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
+import { createDOMRenderer } from '@lattice/view/renderers/dom';
 
-### `el(spec)` - Create reactive elements
+// Create your service
+const signals = createSignalsApi();
+const renderer = createDOMRenderer();
+const view = composeFrom(
+  defaultExtensions(),
+  defaultHelpers(renderer, signals)
+);
 
-Creates real DOM elements with automatic reactivity detection.
+const { el, map, match, when } = view;
+const { signal, computed } = signals;
 
-```ts
-el(['tag', { props }, ...children]);
+// Create a component
+const Counter = (initial = 0) => {
+  const count = signal(initial);
+
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),
+    el('button', { onclick: () => count((c) => c + 1) })('+')
+  );
+};
+
+// Mount to DOM
+const ref = Counter(10).create({ ...signals, ...view });
+document.body.appendChild(ref.element);
 ```
 
-**Features:**
+## Core API
 
-- Auto-detects reactive values (signals/computeds) in props and children
-- Creates effects automatically for reactive bindings
-- Each element gets its own disposal scope
-- Cleanup happens automatically when elements are removed
+### `el(tag, props)(children)`
 
-**Example:**
+Creates elements with reactive props and children.
 
-```ts
-const count = signal(0);
+```typescript
+// Basic element
+el('div', { className: 'container' })('Hello');
 
-el([
-  'div',
-  { className: 'counter' },
+// Reactive props
+const isActive = signal(false);
+el('button', {
+  className: computed(() => (isActive() ? 'active' : '')),
+  onclick: () => isActive((v) => !v),
+})('Toggle');
 
-  // Reactive text
-  el(['h1', computed(() => `Count: ${count()}`)]),
+// Nested elements
+el('div')(el('h1')('Title'), el('p')('Paragraph'));
+```
 
-  // Reactive prop
-  el([
-    'button',
-    {
-      className: computed(() => (count() > 10 ? 'high' : 'low')),
-      onClick: () => count(count() + 1),
-    },
-    'Increment',
-  ]),
+**Props support:**
+
+- Static values: `{ className: 'foo' }`
+- Reactive values: `{ className: computed(() => ...) }`
+- Event handlers: `{ onclick: handler, oninput: e => ... }`
+- Any DOM attribute: `{ 'data-id': '123', 'aria-label': 'Close' }`
+
+### `map(items, keyFn)(render)`
+
+Efficient list rendering with keyed reconciliation.
+
+```typescript
+const todos = signal([
+  { id: 1, text: 'Learn Lattice' },
+  { id: 2, text: 'Build something' },
 ]);
+
+el('ul')(map(todos, (todo) => todo.id)((todo) => el('li')(todo.text)));
 ```
 
-### `map(itemsSignal, renderFn, keyFn?)` - Reactive lists
+**Key function is required for objects** - ensures efficient updates when items change order or are removed.
 
-Renders lists efficiently without explicit keys.
+### `match(reactive)(matcher)`
 
-```ts
-map(
-  itemsSignal, // Signal<T[]>
-  (itemSignal) => el, // Render function receiving Signal<T>
-  (item) => item.id // Optional key extractor
+Switches between different elements based on a reactive value. Disposes and recreates children when the value changes.
+
+```typescript
+const currentTab = signal<'home' | 'settings'>('home');
+
+match(currentTab)((tab) => (tab === 'home' ? HomePage() : SettingsPage()));
+
+// Return null to render nothing
+match(isLoggedIn)((loggedIn) => (loggedIn ? UserPanel() : null));
+```
+
+Use `match` for polymorphic rendering where the value determines _what_ to render.
+
+### `when(condition)(children)`
+
+Conditionally shows/hides children based on a truthy condition. More efficient than `match` for simple show/hide.
+
+```typescript
+const showDetails = signal(false);
+
+when(showDetails)(
+  el('div', { className: 'details' })(el('p')('These are the details...'))
 );
 ```
 
-**Features:**
+Use `when` for boolean show/hide. Use `match` when switching between different component types.
 
-- Uses object identity by default (no keys needed)
-- Optional key function for immutable data patterns
-- Efficient reconciliation (add/remove/move detection)
-- Each item gets its own reactive scope
+## Reactive Text
 
-**Example:**
+### Using `computed()`
 
-```ts
-const todos = signal([
-  { id: 1, text: 'Learn FRP', done: false },
-  { id: 2, text: 'Build UI', done: false },
-]);
+Wrap reactive expressions in `computed()` for dynamic text:
 
-el([
-  'ul',
-  map(
-    todos,
-    (todoSignal) =>
-      el([
-        'li',
-        {
-          className: computed(() => (todoSignal().done ? 'done' : 'active')),
-        },
-        computed(() => todoSignal().text),
-      ]),
-    (todo) => todo.id // Optional key
-  ),
-]);
-```
-
-### `on(element, event, handler)` - Event listeners with automatic batching
-
-Attaches event listeners with automatic cleanup and performance optimization.
-
-```ts
-on(
-  element,          // HTMLElement
-  event,            // Event name (e.g., 'click', 'input')
-  handler,          // Event handler function
-  options?          // Optional addEventListener options
-)
-```
-
-**Features:**
-
-- Automatic batching: Multiple signal updates trigger one re-render
-- Returns cleanup function for manual removal
-- Integrates with element lifecycle callbacks
-- Type-safe event inference
-
-**Example:**
-
-```ts
-import { createOnFactory } from '@lattice/view/on';
-
-// Create factory with scheduler
-const onFactory = createOnFactory({ startBatch, endBatch });
-const on = onFactory.impl;
-
+```typescript
 const count = signal(0);
-const lastUpdated = signal(Date.now());
 
-const button = el(['button', 'Update']);
+el('div')(computed(() => `Count: ${count()}`));
+```
 
-// Attach event listener with automatic batching
-button((element) => {
-  return on(element, 'click', () => {
-    // Both updates happen in a batch - only ONE re-render!
-    count(count() + 1);
-    lastUpdated(Date.now());
-  });
+### Using Template Literals
+
+For cleaner syntax, use the `createText` helper:
+
+```typescript
+import { createText } from '@lattice/view/helpers/text';
+
+const t = createText(computed);
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+
+el('div')(t`Count: ${count} (doubled: ${doubled})`);
+```
+
+Signals and computeds are automatically unwrapped in the template.
+
+## Lifecycle Callbacks
+
+Add lifecycle callbacks by calling the RefSpec with callback functions:
+
+```typescript
+el('input', { type: 'text' })()((element) => {
+  // Called when element is created (within reactive scope)
+  element.focus();
+
+  // Return cleanup function (optional)
+  return () => {
+    console.log('Element removed');
+  };
 });
 ```
 
-**Without batching:**
+### `addEventListener` Helper
 
-```
-User clicks → count updates → re-render
-           → lastUpdated updates → re-render
-Result: 2 re-renders per click 😱
-```
+For event listeners that need cleanup:
 
-**With batching:**
+```typescript
+import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
-```
-User clicks → startBatch()
-           → count updates (marks dirty)
-           → lastUpdated updates (marks dirty)
-           → endBatch() → ONE re-render
-Result: 1 re-render per click ✨
+const addEventListener = createAddEventListener(batch);
+
+el('div')()(addEventListener('scroll', handleScroll, { passive: true }));
 ```
 
-## How It Works
+## Components
 
-### Component Functions Run Once
+Components are just functions that return RefSpecs:
 
-Unlike React or Vue, component functions execute **once**:
+```typescript
+// Simple component
+const Button = (label: string, onclick: () => void) =>
+  el('button', { onclick })(label);
 
-```ts
-function Counter() {
-  const count = signal(0); // Runs once
+// Component with state
+const Counter = (initial = 0) => {
+  const count = signal(initial);
 
-  return el([
-    'div', // Runs once
-    el([
-      'button',
-      {
-        // Runs once
-        onClick: () => count(count() + 1),
-      },
-    ]),
+  return el('div')(
+    el('span')(computed(() => `${count()}`)),
+    Button('+', () => count((c) => c + 1)),
+    Button('-', () => count((c) => c - 1))
+  );
+};
 
-    // Only this computed re-runs when count changes
-    computed(() => `Count: ${count()}`),
-  ]);
-}
+// Usage
+el('div')(Counter(10), Counter(20));
 ```
 
-### Element-Scoped Reactivity
+## Behaviors (Headless Components)
 
-Each element creates a disposal scope for its reactive subscriptions:
+Separate logic from UI with the `use*` pattern:
 
-```ts
-el([
-  'div',
-  // This computed is scoped to the div
-  computed(() => state()),
-
-  el([
-    'span',
-    // This computed is scoped to the span
-    computed(() => otherState()),
-  ]),
-]);
-```
-
-When an element is removed from the DOM, its scope automatically disposes all subscriptions.
-
-### Identity-Based Lists
-
-Lists track items by object reference, not explicit keys:
-
-```ts
-const item1 = { id: 1, text: 'A' };
-const item2 = { id: 2, text: 'B' };
-
-todos([item1, item2]); // Initial render
-todos([item1, item2]); // No-op (same references)
-todos([item2, item1]); // Reorder DOM nodes
-todos([item2]); // Remove item1's DOM node
-```
-
-**Key insight:** If you maintain stable object references, you don't need explicit keys!
-
-For immutable patterns, provide a key function:
-
-```ts
-map(
-  todos,
-  renderFn,
-  (todo) => todo.id // Use id as key
-);
-```
-
-## Complete Example
-
-```ts
-import { composeFrom } from '@lattice/lattice';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
-import { createBaseContext } from '@lattice/signals/context';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createElFactory } from '@lattice/view/el';
-import { createElMapFactory } from '@lattice/view/map';
-import { createLatticeContext } from '@lattice/view/context';
-
-// Create context (concurrency-safe)
-function createContext() {
-  const ctx = createBaseContext();
-  const { detachAll, track, trackDependency } = createGraphEdges({ ctx });
-  const { withPropagate, dispose } = createScheduler({ detachAll });
-  const pullPropagator = createPullPropagator({ track });
-  const viewCtx = createLatticeContext();
+```typescript
+// behaviors/useCounter.ts
+const useCounter = (initial = 0) => {
+  const count = signal(initial);
+  const doubled = computed(() => count() * 2);
 
   return {
-    ctx,
-    trackDependency,
-    propagate: withPropagate(() => {}),
-    track,
-    dispose,
-    pullUpdates: pullPropagator.pullUpdates,
-    shallowPropagate: pullPropagator.shallowPropagate,
-    viewCtx,
+    count,
+    doubled,
+    increment: () => count((c) => c + 1),
+    decrement: () => count((c) => c - 1),
+    reset: () => count(initial),
   };
+};
+
+// components/Counter.ts
+const Counter = (initial = 0) => {
+  const { count, doubled, increment, decrement } = useCounter(initial);
+
+  return el('div')(
+    computed(() => `${count()} (×2 = ${doubled()})`),
+    el('button', { onclick: increment })('+'),
+    el('button', { onclick: decrement })('-')
+  );
+};
+```
+
+Behaviors are portable - use them with Lattice, React, Vue, or any framework.
+
+## Custom Renderers
+
+Create adapters for any tree-based target:
+
+```typescript
+import type { Renderer, RendererConfig } from '@lattice/view/renderer';
+
+interface MyConfig extends RendererConfig {
+  props: {
+    /* tag -> props mapping */
+  };
+  elements: {
+    /* tag -> element type mapping */
+  };
+  events: {
+    /* event name -> event type mapping */
+  };
+  baseElement: MyNodeType;
 }
 
-const context = createContext();
-
-// Create API with view primitives
-const api = composeFrom(
-  {
-    signal: createSignalFactory,
-    computed: createComputedFactory,
-    effect: createEffectFactory,
-    el: (ctx) => createElFactory({ ctx: context.viewCtx, effect: ctx.effect }),
-    map: (ctx) =>
-      createElMapFactory({
-        ctx: context.viewCtx,
-        signal: ctx.signal,
-        effect: ctx.effect,
-      }),
+const myRenderer: Renderer<MyConfig> = {
+  createNode: (type, props) => {
+    /* ... */
   },
-  context
+  setProperty: (node, key, value) => {
+    /* ... */
+  },
+  appendChild: (parent, child) => {
+    /* ... */
+  },
+  removeChild: (parent, child) => {
+    /* ... */
+  },
+  insertBefore: (parent, child, reference) => {
+    /* ... */
+  },
+};
+```
+
+See `@lattice/view/renderers/dom` for a complete example.
+
+## SSR & Hydration
+
+Use with `@lattice/islands` for server-side rendering:
+
+```typescript
+import { createIslandsApp } from '@lattice/islands';
+import { island } from './service';
+
+// Define an island (interactive component)
+const Counter = island(
+  'counter',
+  ({ el, signal }) =>
+    (props: { initial: number }) => {
+      const count = signal(props.initial);
+      return el('button', { onclick: () => count((c) => c + 1) })(
+        computed(() => `Count: ${count()}`)
+      );
+    }
 );
 
-function TodoApp() {
-  const { signal, computed, el, map } = api;
+// Static content (no JS shipped to client)
+const Header = () => el('header')(el('h1')('My App'));
 
-  const todos = signal([]);
-  const filter = signal('all');
-
-  const filteredTodos = computed(() => {
-    const f = filter();
-    return todos().filter(
-      (t) =>
-        f === 'all' || (f === 'active' && !t.done) || (f === 'done' && t.done)
-    );
-  });
-
-  return el([
-    'div',
-    el([
-      'input',
-      {
-        placeholder: 'Add todo...',
-        onKeypress: (e) => {
-          if (e.key === 'Enter') {
-            todos([
-              ...todos(),
-              {
-                id: Date.now(),
-                text: e.target.value,
-                done: false,
-              },
-            ]);
-            e.target.value = '';
-          }
-        },
-      },
-    ]),
-
-    el([
-      'ul',
-      map(
-        filteredTodos,
-        (todoSignal) =>
-          el([
-            'li',
-            el([
-              'input',
-              {
-                type: 'checkbox',
-                checked: computed(() => todoSignal().done),
-                onChange: () => {
-                  const todo = todoSignal();
-                  todos(
-                    todos().map((t) =>
-                      t.id === todo.id ? { ...t, done: !t.done } : t
-                    )
-                  );
-                },
-              },
-            ]),
-            computed(() => todoSignal().text),
-          ]),
-        (todo) => todo.id
-      ),
-    ]),
-  ]);
-}
-
-document.body.appendChild(TodoApp());
+// Compose them
+const App = () =>
+  el('div')(
+    Header(), // Static - rendered as HTML only
+    Counter({ initial: 0 }) // Island - hydrated on client
+  );
 ```
 
-## Comparison
+## TypeScript
 
-| Feature                 | @lattice/view | React           | Vue             | Solid       |
-| ----------------------- | ------------- | --------------- | --------------- | ----------- |
-| Compilation             | ❌ No         | ⚠️ Optional JSX | ⚠️ SFC          | ⚠️ JSX      |
-| VDOM                    | ❌ No         | ✅ Yes          | ✅ Yes          | ❌ No       |
-| Keys for lists          | ⚠️ Optional   | ✅ Required     | ✅ Required     | ✅ Required |
-| Component re-runs       | ❌ Once       | ✅ Every render | ⚠️ Once (setup) | ❌ Once     |
-| Fine-grained reactivity | ✅ Yes        | ❌ No           | ⚠️ Composition  | ✅ Yes      |
+Full type inference for elements and props:
 
-## Implementation Details
+```typescript
+// Props are inferred from tag name
+el('input', {
+  type: 'text', // ✓ valid
+  value: 'hello', // ✓ valid
+  checked: true, // ✓ valid (though semantically for checkbox)
+});
 
-### Concurrency-Safe Context
-
-Like `@lattice/signals`, the view layer uses a context object (`LatticeContext`) for tracking the current scope:
-
-```ts
-interface LatticeContext {
-  activeScope: RenderScope | null;
-  trackingVersion: number;
-  elementScopes: WeakMap<object, RenderScope>;
-}
+// Custom attributes work too
+el('div', {
+  'data-testid': 'my-div',
+  'aria-label': 'Description',
+});
 ```
 
-This ensures the view layer is concurrency-safe - multiple independent component trees can coexist without interference.
+## API Reference
 
-### Scope Management
+### Primitives
 
-Each element gets a `Scope` that tracks all reactive subscriptions created within it:
+| Export  | Description                |
+| ------- | -------------------------- |
+| `el`    | Element builder            |
+| `map`   | Keyed list rendering       |
+| `match` | Reactive element switching |
+| `when`  | Conditional rendering      |
 
-```ts
-interface Scope {
-  run<T>(fn: () => T): T;
-  track(disposable: Disposable): void;
-  dispose(): void;
-}
-```
+### Helpers
 
-When `computed()` or `effect()` is called within an element's scope, it's automatically tracked.
+| Export                   | Path                                     | Description                 |
+| ------------------------ | ---------------------------------------- | --------------------------- |
+| `createAddEventListener` | `@lattice/view/helpers/addEventListener` | Event listener with cleanup |
+| `createText`             | `@lattice/view/helpers/text`             | Reactive template literals  |
+| `createSpec`             | `@lattice/view/helpers`                  | Low-level RefSpec creation  |
 
-### List Reconciliation
+### Renderers
 
-`map` uses an efficient reconciliation algorithm:
+| Export               | Path                           | Description          |
+| -------------------- | ------------------------------ | -------------------- |
+| `createDOMRenderer`  | `@lattice/view/renderers/dom`  | Browser DOM renderer |
+| `createTestRenderer` | `@lattice/view/renderers/test` | Testing renderer     |
 
-1. **Removal Pass**: Dispose items no longer in the list
-2. **Addition & Move Pass**: Create new items, reposition existing ones
+### Presets
 
-The algorithm uses `Map<key, itemNode>` for O(1) lookup and `Set<key>` for existence checks.
+| Export              | Path                         | Description              |
+| ------------------- | ---------------------------- | ------------------------ |
+| `defaultExtensions` | `@lattice/view/presets/core` | Standard view extensions |
+| `defaultHelpers`    | `@lattice/view/presets/core` | Standard view helpers    |
+| `createViewApi`     | `@lattice/view/presets/core` | Quick setup helper       |
 
-### Memory Management
+## License
 
-All reactive subscriptions (effects, computeds) must be disposed when no longer needed. This happens automatically:
-
-- Elements dispose their scope when removed from DOM
-- List items dispose their scope when removed from the list
-- Scopes dispose all tracked subscriptions recursively
-
-## Status
-
-🚧 **Experimental** - API may change
-
-This package explores reactive DOM rendering without VDOM. Feedback welcome!
+MIT
