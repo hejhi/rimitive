@@ -12,7 +12,7 @@ import { canvas, dom } from '../service';
 import { ShapeEditor } from './ShapeEditor';
 import { Toolbar } from './Toolbar';
 
-const { on, canvasRoot } = canvas;
+const { on, canvas: root } = canvas;
 const { div, p, strong, code, h1 } = dom;
 
 interface AppProps {
@@ -52,7 +52,7 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
     div.props({ className: 'canvas-container' })(
       // Canvas element: DOM node externally, scene graph root internally
       // Event listeners attached via lifecycle callbacks with hit testing
-      canvasRoot
+      root
         .props({
           width: canvasWidth,
           height: canvasHeight,

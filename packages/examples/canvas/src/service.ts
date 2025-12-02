@@ -98,7 +98,7 @@ export const dom = {
 };
 
 export const canvas = {
-  canvasRoot: canvasSvc.el('canvas'),
+  canvas: canvasSvc.el('canvas'),
   circle: canvasSvc.el('circle'),
   group: canvasSvc.el('group'),
   ...canvasSvc,
