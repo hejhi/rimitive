@@ -1,6 +1,6 @@
-import type { Renderer, RendererConfig } from '../renderer';
+import type { Adapter, AdapterConfig } from '../adapter';
 
-export interface DOMRendererConfig extends RendererConfig {
+export interface DOMAdapterConfig extends AdapterConfig {
   props: HTMLElementTagNameMap & { text: Text };
   elements: HTMLElementTagNameMap & { text: Text };
   events: HTMLElementEventMap;
@@ -8,9 +8,9 @@ export interface DOMRendererConfig extends RendererConfig {
 }
 
 /**
- * Create a DOM renderer for browser environments
+ * Create a DOM adapter for browser environments
  */
-export function createDOMRenderer(): Renderer<DOMRendererConfig> {
+export function createDOMAdapter(): Adapter<DOMAdapterConfig> {
   return {
     createNode: (type, props) => {
       if (type === 'text') {

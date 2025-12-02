@@ -6,7 +6,7 @@
  * that gets rendered to an HTML canvas element.
  */
 
-import type { RendererConfig } from '@lattice/view/types';
+import type { AdapterConfig } from '@lattice/view/types';
 
 // ============================================================================
 // Runtime types (used internally by adapter)
@@ -246,7 +246,7 @@ export interface ImageElement extends CanvasNode, ImageProps {}
 // Adapter config
 // ============================================================================
 
-export interface CanvasAdapterConfig extends RendererConfig {
+export interface CanvasAdapterConfig extends AdapterConfig {
   props: {
     canvas: CanvasProps;
     group: GroupProps;

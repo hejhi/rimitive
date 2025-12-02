@@ -35,12 +35,12 @@ import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
-import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
-import type { DOMRendererConfig } from '../renderers/dom-hydration';
-import { createIslandsRenderer } from '../renderers/islands';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createDOMHydrationAdapter } from '../adapters/dom-hydration';
+import type { DOMAdapterConfig } from '../adapters/dom-hydration';
+import { createIslandsAdapter } from '../adapters/islands';
 import { composeFrom } from '@lattice/lattice';
-import type { RefSpec, Renderer } from '@lattice/view/types';
+import type { RefSpec, Adapter } from '@lattice/view/types';
 import type { GetContext } from '../types';
 import { setClientContext } from '../client-context.browser';
 
@@ -100,23 +100,23 @@ export function createSSRClientApp<TContext = unknown>(
 
   setClientContext(contextGetter);
 
-  // Create hybrid renderer: hydration mode first, then fallback to regular DOM
-  const hydrationRenderer = container
-    ? createDOMHydrationRenderer(container)
-    : createDOMRenderer();
-  const fallbackRenderer = createDOMRenderer();
-  const hybridRenderer = createIslandsRenderer(
-    hydrationRenderer,
-    fallbackRenderer
+  // Create hybrid adapter: hydration mode first, then fallback to regular DOM
+  const hydrationAdapter = container
+    ? createDOMHydrationAdapter(container)
+    : createDOMAdapter();
+  const fallbackAdapter = createDOMAdapter();
+  const hybridAdapter = createIslandsAdapter(
+    hydrationAdapter,
+    fallbackAdapter
   );
 
-  // Cast to base renderer type for createSpec (switchToFallback is still accessible)
-  const renderer: Renderer<DOMRendererConfig> = hybridRenderer;
+  // Cast to base adapter type for createSpec (switchToFallback is still accessible)
+  const adapter: Adapter<DOMAdapterConfig> = hybridAdapter;
 
   // Create view API
-  const viewHelpers = createSpec(renderer, signals);
+  const viewHelpers = createSpec(adapter, signals);
   const views = composeFrom(
-    defaultViewExtensions<DOMRendererConfig>(),
+    defaultViewExtensions<DOMAdapterConfig>(),
     viewHelpers
   );
 
@@ -134,7 +134,7 @@ export function createSSRClientApp<TContext = unknown>(
     const result = spec.create(svc);
     if (!switched) {
       switched = true;
-      hybridRenderer.switchToFallback();
+      hybridAdapter.switchToFallback();
     }
     return result;
   };
@@ -142,16 +142,16 @@ export function createSSRClientApp<TContext = unknown>(
   /**
    * API factory for island hydrator
    *
-   * Creates a fresh API instance for each island using the provided renderer.
+   * Creates a fresh API instance for each island using the provided adapter.
    * Returns both the API and createElementScope for proper cleanup.
    */
   const createApi = (
-    islandRenderer: Renderer<DOMRendererConfig>,
+    islandAdapter: Adapter<DOMAdapterConfig>,
     islandSignals: ReturnType<typeof createSignalsApi>
   ) => {
-    const islandViewHelpers = createSpec(islandRenderer, islandSignals);
+    const islandViewHelpers = createSpec(islandAdapter, islandSignals);
     const islandViews = composeFrom(
-      defaultViewExtensions<DOMRendererConfig>(),
+      defaultViewExtensions<DOMAdapterConfig>(),
       islandViewHelpers
     );
     return {
@@ -190,5 +190,5 @@ export function createSSRClientApp<TContext = unknown>(
 }
 
 // Re-export types for convenience
-export type { DOMRendererConfig } from '../renderers/dom-hydration';
+export type { DOMAdapterConfig } from '../adapters/dom-hydration';
 export type { GetContext } from '../types';

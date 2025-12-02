@@ -2,20 +2,20 @@
  * Client-side hydration with routing
  *
  * Demonstrates composable islands architecture:
- * 1. Create the primitives (signals, renderer, view)
+ * 1. Create the primitives (signals, adapter, view)
  * 2. Wire them together with createIslandsApp
  * 3. Add router at app layer
  */
 import { createIslandsApp } from '@lattice/islands';
 import {
-  createDOMHydrationRenderer,
-  createIslandsRenderer,
+  createDOMHydrationAdapter,
+  createIslandsAdapter,
 } from '@lattice/islands/client';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createViewApi } from '@lattice/view/presets/core';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import { createRouter, type ViewApi } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { appRoutes } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
@@ -25,23 +25,23 @@ import { buildAppContext, type AppContext } from './service.js';
 // 1. Create the primitives
 const container = document.querySelector('.app') as HTMLElement;
 const signals = createSignalsApi();
-const renderer = createIslandsRenderer(
-  createDOMHydrationRenderer(container),
-  createDOMRenderer()
+const adapter = createIslandsAdapter(
+  createDOMHydrationAdapter(container),
+  createDOMAdapter()
 );
-const view = createViewApi<DOMRendererConfig>(renderer, signals);
+const view = createViewApi<DOMAdapterConfig>(adapter, signals);
 
 // 2. Wire them for islands
 const app = createIslandsApp<AppContext>({
   signals,
-  renderer,
+  adapter,
   view,
   context: () => buildAppContext(window.location.href),
 });
 
 // 3. Add router at app layer
-const router = createRouter<DOMRendererConfig>(
-  app.service as ViewApi<DOMRendererConfig>,
+const router = createRouter<DOMAdapterConfig>(
+  app.service as ViewApi<DOMAdapterConfig>,
   { initialPath: location.pathname + location.search + location.hash }
 );
 

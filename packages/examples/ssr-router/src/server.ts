@@ -10,11 +10,11 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createIslandsApp, createDOMServerRenderer } from '@lattice/islands/server';
+import { createIslandsApp, createDOMServerAdapter } from '@lattice/islands/server';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createViewApi } from '@lattice/view/presets/core';
 import { createRouter, type ViewApi } from '@lattice/router';
-import { type DOMRendererConfig } from '@lattice/view/renderers/dom';
+import { type DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { appRoutes } from './routes.js';
 import { buildAppContext } from './service.js';
 
@@ -350,8 +350,8 @@ const server = createServer((req, res) => {
 
   // 1. Create the primitives (fresh per request)
   const signals = createSignalsApi();
-  const renderer = createDOMServerRenderer();
-  const view = createViewApi<DOMRendererConfig>(renderer, signals);
+  const adapter = createDOMServerAdapter();
+  const view = createViewApi<DOMAdapterConfig>(adapter, signals);
 
   // 2. Wire them for islands
   const app = createIslandsApp({
@@ -361,8 +361,8 @@ const server = createServer((req, res) => {
   });
 
   // 3. Add router and render
-  const router = createRouter<DOMRendererConfig>(
-    app.service as ViewApi<DOMRendererConfig>,
+  const router = createRouter<DOMAdapterConfig>(
+    app.service as ViewApi<DOMAdapterConfig>,
     { initialPath: path }
   );
 

@@ -1,7 +1,7 @@
 /**
- * Test/Mock Renderer for unit testing
+ * Test/Mock Adapter for unit testing
  *
- * A lightweight in-memory renderer that captures all operations for assertions.
+ * A lightweight in-memory adapter that captures all operations for assertions.
  * No DOM dependency - runs in any JS environment.
  *
  * Features:
@@ -11,7 +11,7 @@
  * - Serialization to string for snapshot testing
  */
 
-import type { Renderer, RendererConfig } from '../renderer';
+import type { Adapter, AdapterConfig } from '../adapter';
 
 /**
  * A mock node in the test tree
@@ -24,9 +24,9 @@ export interface TestNode {
 }
 
 /**
- * Renderer config for test renderer
+ * Adapter config for test adapter
  */
-export interface TestRendererConfig extends RendererConfig {
+export interface TestAdapterConfig extends AdapterConfig {
   elements: Record<string, TestNode> & { text: TestNode };
   events: Record<string, Event>;
   baseElement: TestNode;
@@ -35,7 +35,7 @@ export interface TestRendererConfig extends RendererConfig {
 /**
  * Operation types for logging
  */
-export type TestRendererOperation =
+export type TestAdapterOperation =
   | { type: 'createNode'; nodeType: string; props?: Record<string, unknown>; node: TestNode }
   | { type: 'setProperty'; node: TestNode; key: string; value: unknown }
   | { type: 'appendChild'; parent: TestNode; child: TestNode }
@@ -43,11 +43,11 @@ export type TestRendererOperation =
   | { type: 'insertBefore'; parent: TestNode; child: TestNode; reference: TestNode | null };
 
 /**
- * Test renderer instance with additional utilities
+ * Test adapter instance with additional utilities
  */
-export interface TestRenderer extends Renderer<TestRendererConfig> {
+export interface TestAdapter extends Adapter<TestAdapterConfig> {
   /** All operations performed, in order */
-  operations: TestRendererOperation[];
+  operations: TestAdapterOperation[];
 
   /** Clear operation log */
   clearOperations(): void;
@@ -81,12 +81,12 @@ function createTestNode(
 }
 
 /**
- * Create a test renderer for unit testing
+ * Create a test adapter for unit testing
  */
-export function createTestRenderer(): TestRenderer {
-  const operations: TestRendererOperation[] = [];
+export function createTestAdapter(): TestAdapter {
+  const operations: TestAdapterOperation[] = [];
 
-  const renderer: TestRenderer = {
+  const adapter: TestAdapter = {
     operations,
 
     createNode: (type, props) => {
@@ -174,7 +174,7 @@ export function createTestRenderer(): TestRenderer {
       }
 
       const childrenStr = node.children
-        .map((c) => renderer.serialize(c, indent + 1))
+        .map((c) => adapter.serialize(c, indent + 1))
         .join('\n');
 
       return `${pad}${opening}\n${childrenStr}\n${pad}</${node.type}>`;
@@ -217,11 +217,11 @@ export function createTestRenderer(): TestRenderer {
         return String(node.props.value ?? '');
       }
 
-      return node.children.map((c) => renderer.getTextContent(c)).join('');
+      return node.children.map((c) => adapter.getTextContent(c)).join('');
     },
   };
 
-  return renderer;
+  return adapter;
 }
 
 /**

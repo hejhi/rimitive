@@ -5,9 +5,9 @@
  * created with this API are automatically instrumented for devtools.
  */
 import {
-  createDOMRenderer,
-  type DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
+  createDOMAdapter,
+  type DOMAdapterConfig,
+} from '@lattice/view/adapters/dom';
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/map';
 import { Signal } from '@lattice/signals/signal';
@@ -54,12 +54,12 @@ const createInstrumentedSignals = () => {
 
 const createInstrumentedViewApi = () => {
   const signalSvc = createInstrumentedSignals();
-  const viewHelpers = defaultViewHelpers(createDOMRenderer(), signalSvc);
+  const viewHelpers = defaultViewHelpers(createDOMAdapter(), signalSvc);
   const viewSvc = composeFrom(
     {
-      el: El<DOMRendererConfig>({ instrument: instrumentEl }),
-      map: Map<DOMRendererConfig>({ instrument: instrumentMap }),
-      match: Match<DOMRendererConfig>(),
+      el: El<DOMAdapterConfig>({ instrument: instrumentEl }),
+      map: Map<DOMAdapterConfig>({ instrument: instrumentMap }),
+      match: Match<DOMAdapterConfig>(),
     },
     viewHelpers
   );

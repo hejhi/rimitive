@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { El } from './el';
 import {
-  createMockRenderer,
+  createMockAdapter,
   createSignal,
   MockElement,
-  MockRendererConfig,
+  MockAdapterConfig,
 } from './test-utils';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
@@ -15,7 +15,7 @@ const asElement = <T>(nodeRef: NodeRef<T>): T =>
 
 // Helper to create test environment
 function createTestEnv(effectFn?: (fn: () => void) => () => void) {
-  const { renderer } = createMockRenderer();
+  const { adapter } = createMockAdapter();
   const effect =
     effectFn ||
     ((fn: () => void) => {
@@ -38,7 +38,7 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
   };
 
   return {
-    renderer,
+    adapter,
     effect,
     scopedEffect,
     createElementScope,
@@ -48,11 +48,11 @@ function createTestEnv(effectFn?: (fn: () => void) => () => void) {
 
 describe('el primitive - lazy scope creation', () => {
   it('creates scope for fully static elements (always creates scopes)', () => {
-    const { renderer, scopedEffect, createElementScope, onCleanup } =
+    const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect,
-      renderer,
+      adapter,
       createElementScope,
       onCleanup,
     }).impl;
@@ -68,15 +68,15 @@ describe('el primitive - lazy scope creation', () => {
 
   it('creates scope for elements with reactive props', () => {
     const { read: text, subscribers } = createSignal('initial');
-    const { renderer, scopedEffect, createElementScope, onCleanup } =
+    const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect,
-      renderer,
+      adapter,
       createElementScope,
       onCleanup,
     }).impl;
@@ -92,15 +92,15 @@ describe('el primitive - lazy scope creation', () => {
 
   it('creates scope for elements with reactive children', () => {
     const { read: text, subscribers } = createSignal('dynamic');
-    const { renderer, scopedEffect, createElementScope, onCleanup } =
+    const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv((fn: () => void) => {
         subscribers.add(fn);
         fn();
         return () => subscribers.delete(fn);
       });
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect,
-      renderer,
+      adapter,
       createElementScope,
       onCleanup,
     }).impl;
@@ -115,11 +115,11 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('creates scope for elements with lifecycle cleanup via .ref()', () => {
-    const { renderer, scopedEffect, createElementScope, onCleanup } =
+    const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect,
-      renderer,
+      adapter,
       createElementScope,
       onCleanup,
     }).impl;
@@ -137,11 +137,11 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('does not register scope when lifecycle callback returns undefined (no disposables)', () => {
-    const { renderer, scopedEffect, createElementScope, onCleanup } =
+    const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect,
-      renderer,
+      adapter,
       createElementScope,
       onCleanup,
     }).impl;
@@ -159,11 +159,11 @@ describe('el primitive - lazy scope creation', () => {
   });
 
   it('nested static elements do not register scopes (no disposables)', () => {
-    const { renderer, scopedEffect, createElementScope, onCleanup } =
+    const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect,
-      renderer,
+      adapter,
       createElementScope,
       onCleanup,
     }).impl;

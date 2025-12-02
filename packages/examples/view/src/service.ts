@@ -11,18 +11,18 @@ import {
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import {
-  createDOMRenderer,
-  DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
+  createDOMAdapter,
+  DOMAdapterConfig,
+} from '@lattice/view/adapters/dom';
 import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createText } from '@lattice/view/helpers/text';
 
 const createViewApi = () => {
   const signalsSvc = createSignalsApi();
-  const viewHelpers = defaultViewHelpers(createDOMRenderer(), signalsSvc);
+  const viewHelpers = defaultViewHelpers(createDOMAdapter(), signalsSvc);
   const viewSvc = composeFrom(
-    defaultViewExtensions<DOMRendererConfig>(),
+    defaultViewExtensions<DOMAdapterConfig>(),
     viewHelpers
   );
   const svc = {

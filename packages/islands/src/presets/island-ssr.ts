@@ -1,10 +1,10 @@
 /**
  * Island SSR Preset
  *
- * Exports the island-aware SSR renderer for server-side rendering.
+ * Exports the island-aware SSR adapter for server-side rendering.
  */
 
 export {
-  createDOMServerRenderer,
-  type DOMServerRendererConfig,
-} from '../renderers/dom-server';
+  createDOMServerAdapter,
+  type DOMServerAdapterConfig,
+} from '../adapters/dom-server';

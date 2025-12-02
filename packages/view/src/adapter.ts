@@ -1,5 +1,5 @@
 /**
- * TreeAdapter interface - abstracts tree manipulation for any node-based target
+ * Adapter interface - abstracts tree manipulation for any node-based target
  *
  * This allows el() and map() to be pure reactive primitives that work
  * with any tree target (DOM, Three.js scene graph, etc.)
@@ -17,18 +17,18 @@ import type { NodeRef, ParentContext } from './types';
 export type Node = object;
 
 /**
- * RendererConfig defines the type-level contract for a tree adapter:
+ * AdapterConfig defines the type-level contract for a tree adapter:
  * - props: Maps tag names to their prop types for el() autocomplete
  * - elements: Maps tag names to their node types for RefSpec<T> (e.g., 'div' -> HTMLDivElement)
  * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
  * - baseElement: Base node type for this adapter (e.g., Node for DOM)
  *
- * Separating `props` from `elements` allows renderers to have clean prop autocomplete
+ * Separating `props` from `elements` allows adapters to have clean prop autocomplete
  * without exposing internal node properties (like canvas's bounds, dirty, etc).
  *
  * Note: Text is just another node type created via createNode('text', { value: '...' })
  */
-export interface RendererConfig {
+export interface AdapterConfig {
   props: object;
   elements: object;
   events: object;
@@ -36,14 +36,14 @@ export interface RendererConfig {
 }
 
 /**
- * Renderer interface - core tree operations
+ * Adapter interface - core tree operations
  *
  * Generic over:
- * - TConfig: The renderer configuration (elements, events, baseElement)
+ * - TConfig: The adapter configuration (elements, events, baseElement)
  *
  * ## Lifecycle Hooks
  *
- * The renderer supports six symmetric lifecycle hooks across three phases:
+ * The adapter supports six symmetric lifecycle hooks across three phases:
  *
  * | Phase   | Before         | After (on) |
  * |---------|----------------|------------|
@@ -57,10 +57,10 @@ export interface RendererConfig {
  *
  * ### Hydration
  *
- * For hydration-specific position tracking, use the HydrationRenderer extension
+ * For hydration-specific position tracking, use the HydrationAdapter extension
  * which adds `seekToPosition` and `skipContent` methods.
  */
-export interface Renderer<TConfig extends RendererConfig> {
+export interface Adapter<TConfig extends AdapterConfig> {
   // ============================================================================
   // Core Tree Operations
   // ============================================================================

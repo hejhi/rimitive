@@ -8,7 +8,7 @@
 
 import { createRouteFactory } from '../route';
 import { createLocationFactory } from '../location';
-import type { RendererConfig } from '@lattice/view/types';
+import type { AdapterConfig } from '@lattice/view/types';
 
 export type { RouteFactory } from '../types';
 export type { LocationFactory } from '../types';
@@ -17,7 +17,7 @@ export type { LocationFactory } from '../types';
  * Default router extensions
  * Returns factory functions for route and location
  */
-export const defaultExtensions = <TConfig extends RendererConfig>() => ({
+export const defaultExtensions = <TConfig extends AdapterConfig>() => ({
   route: createRouteFactory<TConfig>(),
   location: createLocationFactory(),
 });

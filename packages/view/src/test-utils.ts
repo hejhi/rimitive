@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { Renderer, RendererConfig } from './renderer';
+import type { Adapter, AdapterConfig } from './adapter';
 import type { Reactive, RefSpec, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
 import { createScopes } from './helpers/scope';
@@ -129,9 +129,9 @@ export interface MockTextProps {
 }
 
 /**
- * Mock renderer configuration - maps tag names to MockElement and events to MockEvent
+ * Mock adapter configuration - maps tag names to MockElement and events to MockEvent
  */
-export interface MockRendererConfig extends RendererConfig {
+export interface MockAdapterConfig extends AdapterConfig {
   props: {
     div: MockElementProps;
     span: MockElementProps;
@@ -199,10 +199,10 @@ export interface MockRendererConfig extends RendererConfig {
 }
 
 /**
- * Creates a mock renderer for testing
+ * Creates a mock adapter for testing
  */
-export function createMockRenderer() {
-  const renderer: Renderer<MockRendererConfig> = {
+export function createMockAdapter() {
+  const adapter: Adapter<MockAdapterConfig> = {
     createNode: vi.fn((type: string, props?: Record<string, unknown>) => {
       if (type === 'text') {
         return new MockText(
@@ -275,7 +275,7 @@ export function createMockRenderer() {
     ),
   };
 
-  return { renderer };
+  return { adapter };
 }
 
 /**
@@ -365,10 +365,10 @@ export function getTextContent(
 }
 
 /**
- * Creates a complete test environment with renderer and reactive primitives
+ * Creates a complete test environment with adapter and reactive primitives
  */
 export function createTestEnv() {
-  const { renderer } = createMockRenderer();
+  const { adapter } = createMockAdapter();
 
   // Use real signals integration for proper reactive updates
   const graphEdges = createGraphEdges();
@@ -405,7 +405,7 @@ export function createTestEnv() {
 
   return {
     consumer: graphEdges.consumer,
-    renderer,
+    adapter,
     signal,
     effect,
     disposeScope,

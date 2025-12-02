@@ -13,7 +13,7 @@ import type {
   ParentContext,
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
-import type { Renderer, RendererConfig } from './renderer';
+import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createProcessChildren } from './helpers/processChildren';
 
@@ -37,7 +37,7 @@ type ReactiveProps<T> = {
  * - Tag: The element tag name (must be a key in TConfig['props'])
  */
 export type ElementProps<
-  TConfig extends RendererConfig,
+  TConfig extends AdapterConfig,
   Tag extends keyof TConfig['props'],
 > = ReactiveProps<TConfig['props'][Tag]> & {
   status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
@@ -52,14 +52,14 @@ export type ElementProps<
  * - TElement: Base element type
  * - TText: Text node type
  */
-export type ElOpts<TConfig extends RendererConfig> = {
+export type ElOpts<TConfig extends AdapterConfig> = {
   createElementScope: CreateScopes['createElementScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
-  renderer: Renderer<TConfig>;
+  adapter: Adapter<TConfig>;
 };
 
-export type ElProps<TConfig extends RendererConfig> = {
+export type ElProps<TConfig extends AdapterConfig> = {
   instrument?: (
     impl: ElFactory<TConfig>['impl'],
     instrumentation: InstrumentationContext,
@@ -76,7 +76,7 @@ export type ElProps<TConfig extends RendererConfig> = {
  * - Tag: The element tag name (must exist in both props and elements)
  */
 export type TagFactory<
-  TConfig extends RendererConfig,
+  TConfig extends AdapterConfig,
   Tag extends keyof TConfig['props'] & keyof TConfig['elements'],
 > = {
   /**
@@ -115,7 +115,7 @@ export type TagFactory<
  * Generic over:
  * - TConfig: The renderer configuration
  */
-export type ElFactory<TConfig extends RendererConfig> = ServiceDefinition<
+export type ElFactory<TConfig extends AdapterConfig> = ServiceDefinition<
   'el',
   {
     // Tag selector - returns a TagFactory
@@ -135,9 +135,9 @@ export type ElFactory<TConfig extends RendererConfig> = ServiceDefinition<
  * - TText: Text node type
  */
 export const El = defineService(
-  <TConfig extends RendererConfig>({
+  <TConfig extends AdapterConfig>({
     scopedEffect,
-    renderer,
+    adapter,
     createElementScope,
     onCleanup,
   }: ElOpts<TConfig>) =>
@@ -150,9 +150,9 @@ export const El = defineService(
       const { instrument } = props;
       const { processChildren } = createProcessChildren<TConfig>({
         scopedEffect,
-        renderer,
+        adapter,
       });
-      const { setProperty, createNode } = renderer;
+      const { setProperty, createNode } = adapter;
 
       /**
        * Helper to create a RefSpec
@@ -218,7 +218,7 @@ export const El = defineService(
 
             // Create context for children - they'll see this element as their parent
             const childContext: ParentContext<TBaseElement> = {
-              renderer,
+              adapter,
               element,
             };
 

@@ -1,0 +1,109 @@
+{
+  "run": {
+    "command": "cli run build",
+    "startTime": "2025-12-02T17:29:48.271Z",
+    "endTime": "2025-12-02T17:29:48.370Z",
+    "inner": false
+  },
+  "tasks": [
+    {
+      "taskId": "@lattice/lattice:build",
+      "target": "build",
+      "projectName": "@lattice/lattice",
+      "hash": "13577947036960617025",
+      "startTime": "2025-12-02T17:29:48.315Z",
+      "endTime": "2025-12-02T17:29:48.319Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "docs:build",
+      "target": "build",
+      "projectName": "docs",
+      "hash": "4842439866051955543",
+      "startTime": "2025-12-02T17:29:48.315Z",
+      "endTime": "2025-12-02T17:29:48.325Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@lattice/signals:build",
+      "target": "build",
+      "projectName": "@lattice/signals",
+      "hash": "16654395768368297020",
+      "startTime": "2025-12-02T17:29:48.328Z",
+      "endTime": "2025-12-02T17:29:48.335Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@lattice/view:build",
+      "target": "build",
+      "projectName": "@lattice/view",
+      "hash": "12973743629008933790",
+      "startTime": "2025-12-02T17:29:48.339Z",
+      "endTime": "2025-12-02T17:29:48.342Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@lattice/react:build",
+      "target": "build",
+      "projectName": "@lattice/react",
+      "hash": "3727656759959040669",
+      "startTime": "2025-12-02T17:29:48.339Z",
+      "endTime": "2025-12-02T17:29:48.345Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@lattice/benchmarks:build",
+      "target": "build",
+      "projectName": "@lattice/benchmarks",
+      "hash": "15575077083939134184",
+      "startTime": "2025-12-02T17:29:48.339Z",
+      "endTime": "2025-12-02T17:29:48.345Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@lattice/router:build",
+      "target": "build",
+      "projectName": "@lattice/router",
+      "hash": "9076873464754840558",
+      "startTime": "2025-12-02T17:29:48.348Z",
+      "endTime": "2025-12-02T17:29:48.355Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@lattice/islands:build",
+      "target": "build",
+      "projectName": "@lattice/islands",
+      "hash": "14618258886359258678",
+      "startTime": "2025-12-02T17:29:48.348Z",
+      "endTime": "2025-12-02T17:29:48.357Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@lattice/devtools-extension:build",
+      "target": "build",
+      "projectName": "@lattice/devtools-extension",
+      "hash": "7200990862598083579",
+      "startTime": "2025-12-02T17:29:48.351Z",
+      "endTime": "2025-12-02T17:29:48.360Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    }
+  ]
+}

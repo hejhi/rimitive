@@ -11,7 +11,7 @@ import type {
   LifecycleCallback,
 } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import type { ElementProps } from '@lattice/view/el';
 import type { ElMethod } from '@lattice/view/component';
 import { getActiveRouterContext } from './ssr-context';
@@ -20,10 +20,10 @@ import { getActiveRouterContext } from './ssr-context';
  * Link builder function
  *
  * Link is inherently DOM-coupled (uses window.history, MouseEvent, href, onclick).
- * Routers are web browser concepts - no need for renderer abstraction here.
+ * Routers are web browser concepts - no need for adapter abstraction here.
  */
 export function Link(
-  props: ElementProps<DOMRendererConfig, 'a'> & { href: string }
+  props: ElementProps<DOMAdapterConfig, 'a'> & { href: string }
 ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement> {
   return (...children: ElRefSpecChild[]): RefSpec<HTMLAnchorElement> => {
     const lifecycleCallbacks: LifecycleCallback<HTMLAnchorElement>[] = [];
@@ -36,7 +36,7 @@ export function Link(
     };
 
     refSpec.status = STATUS_REF_SPEC;
-    refSpec.create = (api: { el: ElMethod<DOMRendererConfig> }) => {
+    refSpec.create = (api: { el: ElMethod<DOMAdapterConfig> }) => {
       const { el } = api;
       const { href, onclick: userOnClick, ...restProps } = props;
 

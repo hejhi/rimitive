@@ -15,7 +15,7 @@ import {
   createTestEnv,
   MockElement,
   getTextContent,
-  MockRendererConfig,
+  MockAdapterConfig,
 } from '../test-utils';
 import { El } from '../el';
 import { Map } from '../map';
@@ -24,16 +24,16 @@ import type { RefSpec } from '../types';
 describe('List reconciliation - Complex reorderings', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const mapFactory = Map<MockRendererConfig>().create({
+    const mapFactory = Map<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       disposeScope: env.disposeScope,
       getElementScope: env.getElementScope,
     });
@@ -463,16 +463,16 @@ describe('List reconciliation - Complex reorderings', () => {
 describe('List reconciliation - Edge cases', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const mapFactory = Map<MockRendererConfig>().create({
+    const mapFactory = Map<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       disposeScope: env.disposeScope,
       getElementScope: env.getElementScope,
     });

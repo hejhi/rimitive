@@ -1,8 +1,8 @@
 import { connect, type ConnectedApi } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 export const About = connect(
-  ({ el }: ConnectedApi<DOMRendererConfig>) =>
+  ({ el }: ConnectedApi<DOMAdapterConfig>) =>
     () => {
       return el('div').props({ className: 'page about-page' })(
         el('h2')('About This Example'),

@@ -1,23 +1,23 @@
 /**
- * Island-aware linkedom renderer for SSR
+ * Island-aware linkedom adapter for SSR
  *
- * Standalone linkedom renderer with island support and fragment decoration
+ * Standalone linkedom adapter with island support and fragment decoration
  */
 
 import { parseHTML } from 'linkedom';
 import type {
-  Renderer,
+  Adapter,
   FragmentRef,
   NodeRef,
   ElementRef,
 } from '@lattice/view/types';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { IslandNodeMeta } from '../types';
 import { registerIsland } from '../ssr-context';
 
-// Re-export DOMRendererConfig as DOMServerRendererConfig for backwards compatibility
-export type { DOMRendererConfig as DOMServerRendererConfig } from '@lattice/view/renderers/dom';
+// Re-export DOMAdapterConfig as DOMServerAdapterConfig for backwards compatibility
+export type { DOMAdapterConfig as DOMServerAdapterConfig } from '@lattice/view/adapters/dom';
 
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
@@ -56,10 +56,10 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
 }
 
 /**
- * Create an island-aware linkedom renderer that decorates island fragments
+ * Create an island-aware linkedom adapter that decorates island fragments
  * with script tags for hydration
  */
-export function createDOMServerRenderer(): Renderer<DOMRendererConfig> {
+export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 

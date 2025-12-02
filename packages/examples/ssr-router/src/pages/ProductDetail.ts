@@ -5,7 +5,7 @@
  * Demonstrates using an island inside a connected route component.
  */
 import { connect, type ConnectedApi } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { AddToCart } from '../islands/AddToCart.js';
 
 // Same product data as Products page - in a real app this would come from an API
@@ -56,7 +56,7 @@ const products = [
 
 export const ProductDetail = connect(
   (
-    { el, navigate, computed, match }: ConnectedApi<DOMRendererConfig>,
+    { el, navigate, computed, match }: ConnectedApi<DOMAdapterConfig>,
     { params }
   ) =>
     () => {

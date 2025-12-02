@@ -7,7 +7,7 @@
 export { createDOMHydrator } from '../hydrators/dom';
 export type { IslandHydrator, MountFn } from '../hydrators/dom';
 
-// Client renderers
-export { createDOMHydrationRenderer } from '../renderers/dom-hydration';
-export type { DOMRendererConfig } from '../renderers/dom-hydration';
-export { createIslandsRenderer } from '../renderers/islands';
+// Client adapters
+export { createDOMHydrationAdapter } from '../adapters/dom-hydration';
+export type { DOMAdapterConfig } from '../adapters/dom-hydration';
+export { createIslandsAdapter } from '../adapters/islands';

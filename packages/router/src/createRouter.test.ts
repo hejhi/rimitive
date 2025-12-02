@@ -10,7 +10,7 @@ import type {
   RouteContext,
   ConnectedComponent,
 } from './createRouter';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { RefSpec, STATUS_REF_SPEC } from '@lattice/view/types';
 
 // Helper function to create mock computed (used outside beforeEach)
@@ -21,7 +21,7 @@ const createMockComputed = <T>(fn: () => T) => {
 };
 
 describe('createRouter', () => {
-  let mockViewApi: ViewApi<DOMRendererConfig>;
+  let mockViewApi: ViewApi<DOMAdapterConfig>;
   let originalWindow: typeof globalThis.window;
   let originalLocation: Location;
   let originalHistory: History;
@@ -35,33 +35,33 @@ describe('createRouter', () => {
     // Create mock signal and computed with proper typing
     const mockSignal = <T>(
       value: T
-    ): ReturnType<ViewApi<DOMRendererConfig>['signal']> => {
+    ): ReturnType<ViewApi<DOMAdapterConfig>['signal']> => {
       let current = value;
       const fn = ((newValue?: T) => {
         if (newValue !== undefined) {
           current = newValue;
         }
         return current;
-      }) as ReturnType<ViewApi<DOMRendererConfig>['signal']>;
+      }) as ReturnType<ViewApi<DOMAdapterConfig>['signal']>;
       fn.peek = () => current;
       return fn;
     };
 
     const mockComputed = <T>(
       fn: () => T
-    ): ReturnType<ViewApi<DOMRendererConfig>['computed']> => {
+    ): ReturnType<ViewApi<DOMAdapterConfig>['computed']> => {
       const computedFn = (() => fn()) as ReturnType<
-        ViewApi<DOMRendererConfig>['computed']
+        ViewApi<DOMAdapterConfig>['computed']
       >;
       computedFn.peek = fn;
       return computedFn;
     };
 
     mockViewApi = {
-      signal: mockSignal as ViewApi<DOMRendererConfig>['signal'],
-      computed: mockComputed as ViewApi<DOMRendererConfig>['computed'],
-      el: (() => {}) as unknown as ViewApi<DOMRendererConfig>['el'],
-      match: (() => {}) as unknown as ViewApi<DOMRendererConfig>['match'],
+      signal: mockSignal as ViewApi<DOMAdapterConfig>['signal'],
+      computed: mockComputed as ViewApi<DOMAdapterConfig>['computed'],
+      el: (() => {}) as unknown as ViewApi<DOMAdapterConfig>['el'],
+      match: (() => {}) as unknown as ViewApi<DOMAdapterConfig>['match'],
     };
   });
 
@@ -191,13 +191,13 @@ describe('createRouter', () => {
               lastChild: null,
             }),
           };
-        }) as unknown as ViewApi<DOMRendererConfig>['match'];
+        }) as unknown as ViewApi<DOMAdapterConfig>['match'];
     });
 
     it('should accept a path and connected component', () => {
       const router = createRouter(mockViewApi, { initialPath: '/' });
 
-      const mockConnected: ConnectedComponent<DOMRendererConfig> = () =>
+      const mockConnected: ConnectedComponent<DOMAdapterConfig> = () =>
         ({
           status: STATUS_REF_SPEC,
           create: () => ({
@@ -224,7 +224,7 @@ describe('createRouter', () => {
 
       let capturedParams: Record<string, string> = {};
 
-      const mockConnected = (routeContext: RouteContext<DOMRendererConfig>) => {
+      const mockConnected = (routeContext: RouteContext<DOMAdapterConfig>) => {
         capturedParams = routeContext.params();
         return {
           status: STATUS_REF_SPEC,
@@ -251,8 +251,8 @@ describe('createRouter', () => {
 
       let capturedChildren: unknown = undefined;
 
-      const mockConnected: ConnectedComponent<DOMRendererConfig> = (
-        routeContext: RouteContext<DOMRendererConfig>
+      const mockConnected: ConnectedComponent<DOMAdapterConfig> = (
+        routeContext: RouteContext<DOMAdapterConfig>
       ) => {
         capturedChildren = routeContext.children;
         return {
@@ -282,8 +282,8 @@ describe('createRouter', () => {
 
       let childParams: Record<string, string> = {};
 
-      const childConnected: ConnectedComponent<DOMRendererConfig> = (
-        routeContext: RouteContext<DOMRendererConfig>
+      const childConnected: ConnectedComponent<DOMAdapterConfig> = (
+        routeContext: RouteContext<DOMAdapterConfig>
       ) => {
         childParams = routeContext.params();
         return {
@@ -300,7 +300,7 @@ describe('createRouter', () => {
         } as RefSpec<HTMLElement>;
       };
 
-      const parentConnected: ConnectedComponent<DOMRendererConfig> = () => {
+      const parentConnected: ConnectedComponent<DOMAdapterConfig> = () => {
         return {
           status: STATUS_REF_SPEC,
           create: () => ({
@@ -397,11 +397,11 @@ describe('createRouter', () => {
 
     it('should provide route context to instantiate', () => {
       const router = createRouter(mockViewApi);
-      let capturedRouteContext: RouteContext<DOMRendererConfig> | null = null;
+      let capturedRouteContext: RouteContext<DOMAdapterConfig> | null = null;
 
       const wrapper = (
         _routeApi: RouteApi,
-        routeContext: RouteContext<DOMRendererConfig>
+        routeContext: RouteContext<DOMAdapterConfig>
       ): (() => RefSpec<HTMLElement>) => {
         capturedRouteContext = routeContext;
         return () => createMockRefSpec();
@@ -411,7 +411,7 @@ describe('createRouter', () => {
       const connected = connectedFactory({});
 
       const mockParams = createMockComputed(() => ({ id: '123' }));
-      const routeContext: RouteContext<DOMRendererConfig> = {
+      const routeContext: RouteContext<DOMAdapterConfig> = {
         children: null,
         params: mockParams,
       };
@@ -421,7 +421,7 @@ describe('createRouter', () => {
       // TypeScript assertion - we know this will be set after instantiate
       expect(capturedRouteContext).not.toBeNull();
       const context =
-        capturedRouteContext as unknown as RouteContext<DOMRendererConfig>;
+        capturedRouteContext as unknown as RouteContext<DOMAdapterConfig>;
       expect(context).toHaveProperty('children', null);
       expect(context).toHaveProperty('params');
       expect(context.params()).toEqual({ id: '123' });
@@ -472,7 +472,7 @@ describe('createRouter', () => {
       // Simulate the create() pattern from the requirements
       const wrapper = (
         { currentPath }: RouteApi,
-        routeContext: RouteContext<DOMRendererConfig>
+        routeContext: RouteContext<DOMAdapterConfig>
       ): ((userProps: {
         theme: string;
         title: string;

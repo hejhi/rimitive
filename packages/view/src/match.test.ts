@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestEnv, MockRendererConfig, MockElement } from './test-utils';
+import { createTestEnv, MockAdapterConfig, MockElement } from './test-utils';
 import { Match } from './match';
 import { El } from './el';
 import type { FragmentRef, ElementRef } from './types';
@@ -12,16 +12,16 @@ import { STATUS_ELEMENT } from './types';
 describe('match() - reactive element switching', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -33,7 +33,7 @@ describe('match() - reactive element switching', () => {
 
   describe('Untracked lifecycle callbacks', () => {
     it('should not track outer reactive state in lifecycle callbacks', () => {
-      const { el, match, signal, renderer } = setup();
+      const { el, match, signal, adapter } = setup();
 
       const showDiv = signal(true);
       const outerState = signal('outer-value');
@@ -55,7 +55,7 @@ describe('match() - reactive element switching', () => {
       });
 
       // Create parent and initialize fragment
-      const parent = renderer.createNode('div') as MockElement;
+      const parent = adapter.createNode('div') as MockElement;
       const parentRef: ElementRef<MockElement> = {
         status: STATUS_ELEMENT,
         element: parent,

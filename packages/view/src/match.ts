@@ -12,20 +12,20 @@ import type {
   ElementRef,
 } from './types';
 import { STATUS_ELEMENT, STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
-import type { Renderer, RendererConfig } from './renderer';
+import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createNodeHelpers } from './helpers/node-helpers';
 
 /**
  * Options passed to Match factory
  */
-export type MatchOpts<TConfig extends RendererConfig> = {
+export type MatchOpts<TConfig extends AdapterConfig> = {
   createElementScope: CreateScopes['createElementScope'];
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
   getElementScope: CreateScopes['getElementScope'];
-  renderer: Renderer<TConfig>;
+  adapter: Adapter<TConfig>;
 };
 
 export type MatchProps<TBaseElement> = {
@@ -89,9 +89,9 @@ export type MatchFactory<TBaseElement> = ServiceDefinition<
  * a RefSpec. It is NOT a reactive tracking scope - it's a pure mapping function.
  */
 export const Match = defineService(
-  <TConfig extends RendererConfig>({
+  <TConfig extends AdapterConfig>({
     scopedEffect,
-    renderer,
+    adapter,
     createElementScope,
     disposeScope,
     onCleanup,
@@ -103,7 +103,7 @@ export const Match = defineService(
 
       const { instrument } = props ?? {};
       const { insertNodeBefore, removeNode } = createNodeHelpers({
-        renderer,
+        adapter,
         disposeScope,
         getElementScope,
       });

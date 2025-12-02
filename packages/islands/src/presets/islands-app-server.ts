@@ -18,7 +18,7 @@ import {
   runWithSSRContext,
   getIslandScripts,
 } from '../ssr-context';
-import type { DOMServerRendererConfig } from '../renderers/dom-server';
+import type { DOMServerAdapterConfig } from '../adapters/dom-server';
 import { renderToString } from '../helpers/renderToString';
 
 // ============================================================================
@@ -31,9 +31,9 @@ import { renderToString } from '../helpers/renderToString';
 type SignalsApi = ReturnType<typeof createSignalsApi>;
 
 /**
- * View API type for server renderer
+ * View API type for server adapter
  */
-type ViewsApi = ReturnType<typeof createViewApi<DOMServerRendererConfig>>;
+type ViewsApi = ReturnType<typeof createViewApi<DOMServerAdapterConfig>>;
 
 /**
  * Full service type - signals + views + addEventListener
@@ -46,9 +46,9 @@ export type IslandsServerService = SignalsApi &
 /**
  * Server app options - accepts primitives as dependencies
  *
- * Note: Unlike the client, the server doesn't need the renderer directly
- * since there's no hybrid renderer switching. The view already incorporates
- * the renderer.
+ * Note: Unlike the client, the server doesn't need the adapter directly
+ * since there's no hybrid adapter switching. The view already incorporates
+ * the adapter.
  */
 export interface ServerOptions<TContext> {
   /**
@@ -59,7 +59,7 @@ export interface ServerOptions<TContext> {
 
   /**
    * View API instance
-   * Create with: createViewApi(renderer, signals)
+   * Create with: createViewApi(adapter, signals)
    */
   view: ViewsApi;
 
@@ -96,7 +96,7 @@ export interface ServerApp {
 /**
  * Create an islands app for server-side rendering
  *
- * Accepts signals, renderer, and view as dependencies - does not create them internally.
+ * Accepts signals, adapter, and view as dependencies - does not create them internally.
  * This allows maximum composability and custom extensions.
  *
  * For client-side hydration, import from '@lattice/islands':

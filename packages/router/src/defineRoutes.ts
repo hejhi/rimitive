@@ -10,20 +10,20 @@
  * - Clean SSR without proxy patterns
  */
 
-import type { RendererConfig, RefSpec } from '@lattice/view/types';
+import type { AdapterConfig, RefSpec } from '@lattice/view/types';
 import type { RouteContext } from './createRouter';
 
 /**
  * Connected component type - a function that receives route context
  */
-export type ConnectedComponent<TConfig extends RendererConfig> = (
+export type ConnectedComponent<TConfig extends AdapterConfig> = (
   routeContext: RouteContext<TConfig>
 ) => RefSpec<TConfig['baseElement']>;
 
 /**
  * A single route node in the tree
  */
-export interface RouteNode<TConfig extends RendererConfig> {
+export interface RouteNode<TConfig extends AdapterConfig> {
   /** The path pattern for this route (relative) */
   path: string;
   /** The component to render when this route matches */
@@ -35,7 +35,7 @@ export interface RouteNode<TConfig extends RendererConfig> {
 /**
  * The complete route tree returned by defineRoutes().create()
  */
-export interface RouteTree<TConfig extends RendererConfig> {
+export interface RouteTree<TConfig extends AdapterConfig> {
   /** Root path (typically '/') */
   rootPath: string;
   /** Root layout component */
@@ -47,7 +47,7 @@ export interface RouteTree<TConfig extends RendererConfig> {
 /**
  * A route builder - returned by route() before children are applied
  */
-export interface RouteBuilder<TConfig extends RendererConfig> {
+export interface RouteBuilder<TConfig extends AdapterConfig> {
   (...children: RouteBuilder<TConfig>[]): RouteBuilder<TConfig>;
   /** Internal: get the node data */
   _node: RouteNode<TConfig>;
@@ -56,7 +56,7 @@ export interface RouteBuilder<TConfig extends RendererConfig> {
 /**
  * Context returned by defineRoutes() - mirrors router.root() API
  */
-export interface DefineRoutesContext<TConfig extends RendererConfig> {
+export interface DefineRoutesContext<TConfig extends AdapterConfig> {
   /**
    * Create the route tree with child routes
    */
@@ -77,7 +77,7 @@ export interface DefineRoutesContext<TConfig extends RendererConfig> {
  * Returns the same API shape as router.root() but produces pure data
  * that can be bound to a router later via router.mount().
  */
-export function defineRoutes<TConfig extends RendererConfig>(
+export function defineRoutes<TConfig extends AdapterConfig>(
   rootPath: string,
   rootComponent: ConnectedComponent<TConfig>
 ): DefineRoutesContext<TConfig> {

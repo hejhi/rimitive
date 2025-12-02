@@ -16,7 +16,7 @@ import type {
   LifecycleCallback,
 } from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
-import type { Renderer, RendererConfig } from './renderer';
+import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createReconciler, ReconcileNode } from './helpers/reconcile';
 import { createNodeHelpers } from './helpers/node-helpers';
@@ -40,9 +40,9 @@ export type MapFactory<TBaseElement> = ServiceDefinition<
   }
 >;
 
-export interface MapOpts<TConfig extends RendererConfig> {
+export interface MapOpts<TConfig extends AdapterConfig> {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
-  renderer: Renderer<TConfig>;
+  adapter: Adapter<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
 }
@@ -62,9 +62,9 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<T>;
  * Similar to Signal() in signals preset
  */
 export const Map = defineService(
-  <TConfig extends RendererConfig>({
+  <TConfig extends AdapterConfig>({
     scopedEffect,
-    renderer,
+    adapter,
     disposeScope,
     getElementScope,
   }: MapOpts<TConfig>) =>
@@ -74,7 +74,7 @@ export const Map = defineService(
 
       const { instrument } = props ?? {};
       const { insertNodeBefore, removeNode } = createNodeHelpers({
-        renderer,
+        adapter,
         disposeScope,
         getElementScope,
       });

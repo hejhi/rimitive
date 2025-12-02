@@ -7,7 +7,7 @@
 
 import { type RefSpec, type Reactive, type ElRefSpecChild } from './types';
 import type { ElementProps as ElElementProps } from './el';
-import type { RendererConfig } from './renderer';
+import type { AdapterConfig } from './adapter';
 
 /**
  * Signal function with both getter and setter
@@ -31,7 +31,7 @@ export interface ComputedFunction<T> {
  * Callable with children to create RefSpec, or use .props() to add properties
  */
 export interface TagFactory<
-  TConfig extends RendererConfig,
+  TConfig extends AdapterConfig,
   Tag extends keyof TConfig['props'] & keyof TConfig['elements'],
 > {
   /**
@@ -60,7 +60,7 @@ export interface TagFactory<
  * Type for the el method - returns a TagFactory
  * Generic over TConfig to match the renderer configuration
  */
-export interface ElMethod<TConfig extends RendererConfig> {
+export interface ElMethod<TConfig extends AdapterConfig> {
   // Static element builder - returns TagFactory with .props() method
   <Tag extends string & keyof TConfig['elements']>(
     tag: Tag

@@ -1,15 +1,15 @@
 /**
  * Island Client Preset
  *
- * Exports island-specific client renderers for hydration.
- * - createDOMHydrationRenderer: Walks existing DOM during hydration
- * - createIslandsRenderer: Switches from hydration to regular rendering
+ * Exports island-specific client adapters for hydration.
+ * - createDOMHydrationAdapter: Walks existing DOM during hydration
+ * - createIslandsAdapter: Switches from hydration to regular rendering
  */
 
 export {
-  createDOMHydrationRenderer,
-  type DOMRendererConfig,
+  createDOMHydrationAdapter,
+  type DOMAdapterConfig,
   HydrationMismatch,
-} from '../renderers/dom-hydration';
+} from '../adapters/dom-hydration';
 
-export { createIslandsRenderer } from '../renderers/islands';
+export { createIslandsAdapter } from '../adapters/islands';

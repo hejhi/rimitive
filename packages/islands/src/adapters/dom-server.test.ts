@@ -9,8 +9,8 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  createDOMServerRenderer,
-  type DOMServerRendererConfig,
+  createDOMServerAdapter,
+  type DOMServerAdapterConfig,
 } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
@@ -27,9 +27,9 @@ import type { IslandNodeMeta } from '../types';
  * Uses explicit composition to preserve full type inference
  */
 function createTestSSRService(signals = createSignalsApi()) {
-  const renderer = createDOMServerRenderer();
+  const renderer = createDOMServerAdapter();
   const viewHelpers = createSpec(renderer, signals);
-  const baseExtensions = defaultViewExtensions<DOMServerRendererConfig>();
+  const baseExtensions = defaultViewExtensions<DOMServerAdapterConfig>();
   const views = composeFrom(baseExtensions, viewHelpers);
 
   const svc = {
@@ -50,7 +50,7 @@ function createTestSSRService(signals = createSignalsApi()) {
 
 describe('Basic DOM Operations', () => {
   it('should create elements with correct tag names', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -60,7 +60,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should create text nodes with correct content', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const text = renderer.createNode('text', { value: 'Hello' });
 
@@ -68,7 +68,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should append children to parent', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -80,7 +80,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should insert child before reference node', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div');
     const first = renderer.createNode('text', { value: 'first' });
@@ -94,7 +94,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should update text node content', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const text = renderer.createNode('text', { value: 'before' });
     renderer.setProperty(text, 'value', 'after');
@@ -109,7 +109,7 @@ describe('Basic DOM Operations', () => {
 
 describe('Attribute Handling', () => {
   it('should skip event handler attributes', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const button = renderer.createNode('button') as HTMLElement;
     renderer.setProperty(button, 'onClick', () => {});
@@ -119,7 +119,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should map className to class attribute', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'className', 'container');
@@ -129,7 +129,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should stringify primitive values', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'data-count', 42);
@@ -140,7 +140,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should skip object values', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'data-config', { foo: 'bar' });
@@ -149,7 +149,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should skip function values', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'ref', () => {});
@@ -158,7 +158,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should skip null and false values', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'disabled', null);
@@ -175,7 +175,7 @@ describe('Attribute Handling', () => {
 
 describe('Fragment Decoration (Non-Island)', () => {
   it('should add fragment-start and fragment-end comments', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
     const child1 = renderer.createNode('span') as HTMLElement;
@@ -223,7 +223,7 @@ describe('Fragment Decoration (Non-Island)', () => {
   });
 
   it('should place comments around fragment children', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
     const span1 = renderer.createNode('span') as HTMLElement;
@@ -275,7 +275,7 @@ describe('Fragment Decoration (Non-Island)', () => {
   });
 
   it('should skip empty fragments', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
 
@@ -305,7 +305,7 @@ describe('Fragment Decoration (Non-Island)', () => {
 describe('Fragment Island Decoration', () => {
   it('should wrap island fragment in div with script tag', () => {
     const ctx = createSSRContext();
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     runWithSSRContext(ctx, () => {
       const container = renderer.createNode('div') as HTMLElement;
@@ -358,7 +358,7 @@ describe('Fragment Island Decoration', () => {
 
   it('should preserve fragment children inside island wrapper', () => {
     const ctx = createSSRContext();
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     runWithSSRContext(ctx, () => {
       const container = renderer.createNode('div') as HTMLElement;
@@ -426,7 +426,7 @@ describe('Fragment Island Decoration', () => {
 describe('Element Island Decoration', () => {
   it('should add script tag after island element', () => {
     const ctx = createSSRContext();
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     runWithSSRContext(ctx, () => {
       const container = renderer.createNode('div') as HTMLElement;
@@ -465,7 +465,7 @@ describe('Element Island Decoration', () => {
 
   it('should place script tag as next sibling of element', () => {
     const ctx = createSSRContext();
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     runWithSSRContext(ctx, () => {
       const container = renderer.createNode('div') as HTMLElement;
@@ -500,7 +500,7 @@ describe('Element Island Decoration', () => {
   });
 
   it('should skip decoration for non-island elements', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -530,7 +530,7 @@ describe('Element Island Decoration', () => {
 
 describe('SSR-Specific Behaviors', () => {
   it('should generate valid HTML from DOM tree', () => {
-    const renderer = createDOMServerRenderer();
+    const renderer = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const h1 = renderer.createNode('h1') as HTMLElement;

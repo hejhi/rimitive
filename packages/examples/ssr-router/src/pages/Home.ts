@@ -1,8 +1,8 @@
 import { connect, type ConnectedApi } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 export const Home = connect(
-  ({ el, navigate }: ConnectedApi<DOMRendererConfig>) =>
+  ({ el, navigate }: ConnectedApi<DOMAdapterConfig>) =>
     () => {
       return el('div').props({ className: 'page home-page' })(
         el('h2')('Welcome to SSR + Router'),

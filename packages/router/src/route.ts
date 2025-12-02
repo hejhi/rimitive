@@ -3,7 +3,7 @@
  */
 
 import { defineService } from '@lattice/lattice';
-import type { RendererConfig, RefSpec } from '@lattice/view/types';
+import type { AdapterConfig, RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 
 // Import types
@@ -30,7 +30,7 @@ export { matchPath } from './helpers/matching';
  * Create route factory that handles route matching and rendering
  */
 export const createRouteFactory = defineService(
-  <TConfig extends RendererConfig>(routeOpts: RouteOpts<TConfig>) =>
+  <TConfig extends AdapterConfig>(routeOpts: RouteOpts<TConfig>) =>
     () => {
       const { computed, el, match, currentPath } = routeOpts;
       // Create navigate function that updates path and history
@@ -94,7 +94,7 @@ export const createRouteFactory = defineService(
                 // This is a route child - rebuild with composed path, then unwrap
                 const composedPath = composePath(path, metadata.relativePath);
                 const rebuiltRouteSpec = metadata.rebuild(composedPath);
-                // Unwrap to get the inner RefSpec for the renderer
+                // Unwrap to get the inner RefSpec for the adapter
                 processedChildren.push(rebuiltRouteSpec.unwrap());
               } else {
                 // Regular child (not a route) - keep as-is

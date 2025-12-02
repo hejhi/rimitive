@@ -64,15 +64,15 @@ export default defineConfig({
           __dirname,
           'src/helpers/renderToString.ts'
         ),
-        'renderers/dom-server': resolve(
+        'adapters/dom-server': resolve(
           __dirname,
-          'src/renderers/dom-server.ts'
+          'src/adapters/dom-server.ts'
         ),
-        'renderers/dom-hydration': resolve(
+        'adapters/dom-hydration': resolve(
           __dirname,
-          'src/renderers/dom-hydration.ts'
+          'src/adapters/dom-hydration.ts'
         ),
-        'renderers/islands': resolve(__dirname, 'src/renderers/islands.ts'),
+        'adapters/islands': resolve(__dirname, 'src/adapters/islands.ts'),
         'presets/island-ssr': resolve(__dirname, 'src/presets/island-ssr.ts'),
         'presets/island-client': resolve(
           __dirname,

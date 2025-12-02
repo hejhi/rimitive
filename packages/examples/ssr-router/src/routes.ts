@@ -6,7 +6,7 @@
  * then bound to a router via router.mount().
  */
 import { defineRoutes } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { AppLayout } from './layouts/AppLayout.js';
 import { Home } from './pages/Home.js';
 import { About } from './pages/About.js';
@@ -21,7 +21,7 @@ import { ProductDetail } from './pages/ProductDetail.js';
  * - No singleton router at module load time
  * - Clean SSR without proxy patterns
  */
-const { create, route } = defineRoutes<DOMRendererConfig>('/', AppLayout());
+const { create, route } = defineRoutes<DOMAdapterConfig>('/', AppLayout());
 
 export const appRoutes = create(
   route('', Home())(),

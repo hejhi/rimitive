@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createTestEnv,
-  MockRendererConfig,
+  MockAdapterConfig,
   MockElement,
   getTextContent,
 } from './test-utils';
@@ -17,16 +17,16 @@ import { STATUS_ELEMENT } from './types';
 describe('when() - conditional children rendering', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const when = When<MockRendererConfig>().create({
+    const when = When<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -40,12 +40,12 @@ describe('when() - conditional children rendering', () => {
    * Helper to create a parent and attach a fragment
    */
   function attachFragment(
-    renderer: MockRendererConfig['baseElement'] extends infer E
+    adapter: MockAdapterConfig['baseElement'] extends infer E
       ? { createNode: (tag: string, props?: Record<string, unknown>) => E }
       : never,
     spec: ReturnType<ReturnType<ReturnType<typeof setup>['when']>>
   ) {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -64,12 +64,12 @@ describe('when() - conditional children rendering', () => {
 
   describe('Basic conditional rendering', () => {
     it('should render children when condition is true', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
       const spec = when(show)(el.impl('p')('conditional content'));
 
-      const { parent } = attachFragment(renderer, spec);
+      const { parent } = attachFragment(adapter, spec);
 
       expect(parent.children.length).toBe(1);
       const child = parent.children[0] as MockElement;
@@ -78,23 +78,23 @@ describe('when() - conditional children rendering', () => {
     });
 
     it('should not render children when condition is false', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
       const spec = when(show)(el.impl('p')('conditional content'));
 
-      const { parent } = attachFragment(renderer, spec);
+      const { parent } = attachFragment(adapter, spec);
 
       expect(parent.children.length).toBe(0);
     });
 
     it('should add children when condition becomes true', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
       const spec = when(show)(el.impl('p')('conditional'));
 
-      const { parent } = attachFragment(renderer, spec);
+      const { parent } = attachFragment(adapter, spec);
 
       expect(parent.children.length).toBe(0);
 
@@ -107,12 +107,12 @@ describe('when() - conditional children rendering', () => {
     });
 
     it('should remove children when condition becomes false', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
       const spec = when(show)(el.impl('p')('conditional'));
 
-      const { parent } = attachFragment(renderer, spec);
+      const { parent } = attachFragment(adapter, spec);
 
       expect(parent.children.length).toBe(1);
 
@@ -125,7 +125,7 @@ describe('when() - conditional children rendering', () => {
 
   describe('Multiple children', () => {
     it('should handle multiple children', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
       const spec = when(show)(
@@ -134,7 +134,7 @@ describe('when() - conditional children rendering', () => {
         el.impl('p')('third')
       );
 
-      const { parent } = attachFragment(renderer, spec);
+      const { parent } = attachFragment(adapter, spec);
 
       expect(parent.children.length).toBe(3);
       expect((parent.children[0] as MockElement).tag).toBe('p');
@@ -153,12 +153,12 @@ describe('when() - conditional children rendering', () => {
 
   describe('Toggling behavior', () => {
     it('should handle rapid toggling', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
       const spec = when(show)(el.impl('div')('content'));
 
-      const { parent } = attachFragment(renderer, spec);
+      const { parent } = attachFragment(adapter, spec);
 
       expect(parent.children.length).toBe(0);
 
@@ -180,7 +180,7 @@ describe('when() - conditional children rendering', () => {
     });
 
     it('should not rebuild when condition stays the same', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(true);
       let createCount = 0;
 
@@ -190,7 +190,7 @@ describe('when() - conditional children rendering', () => {
         })('content')
       );
 
-      attachFragment(renderer, spec);
+      attachFragment(adapter, spec);
 
       expect(createCount).toBe(1);
 
@@ -206,7 +206,7 @@ describe('when() - conditional children rendering', () => {
 
   describe('Fragment boundaries', () => {
     it('should correctly update fragment boundaries on show', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
       const spec = when(show)(
@@ -214,7 +214,7 @@ describe('when() - conditional children rendering', () => {
         el.impl('span')('last')
       );
 
-      const { fragRef } = attachFragment(renderer, spec);
+      const { fragRef } = attachFragment(adapter, spec);
 
       // Initially no children
       expect(fragRef.firstChild).toBe(null);
@@ -229,7 +229,7 @@ describe('when() - conditional children rendering', () => {
     });
 
     it('should correctly clear fragment boundaries on hide', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
       const spec = when(show)(
@@ -237,7 +237,7 @@ describe('when() - conditional children rendering', () => {
         el.impl('span')('last')
       );
 
-      const { fragRef } = attachFragment(renderer, spec);
+      const { fragRef } = attachFragment(adapter, spec);
 
       expect(fragRef.firstChild).not.toBe(null);
       expect(fragRef.lastChild).not.toBe(null);
@@ -251,7 +251,7 @@ describe('when() - conditional children rendering', () => {
 
   describe('Lifecycle callbacks', () => {
     it('should call lifecycle callbacks when children are created', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(false);
       let callbackCalled = false;
 
@@ -261,7 +261,7 @@ describe('when() - conditional children rendering', () => {
         })('content')
       );
 
-      attachFragment(renderer, spec);
+      attachFragment(adapter, spec);
 
       expect(callbackCalled).toBe(false);
 
@@ -271,7 +271,7 @@ describe('when() - conditional children rendering', () => {
     });
 
     it('should dispose children properly when hidden', () => {
-      const { el, when, signal, renderer } = setup();
+      const { el, when, signal, adapter } = setup();
       const show = signal(true);
       let disposed = false;
 
@@ -283,7 +283,7 @@ describe('when() - conditional children rendering', () => {
         })('content')
       );
 
-      const { parent } = attachFragment(renderer, spec);
+      const { parent } = attachFragment(adapter, spec);
 
       expect(disposed).toBe(false);
       expect(parent.children.length).toBe(1);

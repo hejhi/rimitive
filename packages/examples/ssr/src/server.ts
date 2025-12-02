@@ -19,8 +19,8 @@ import {
 } from '@lattice/islands/ssr-context';
 import { renderToString } from '@lattice/islands/helpers/renderToString';
 import {
-  createDOMServerRenderer,
-  type DOMServerRendererConfig,
+  createDOMServerAdapter,
+  type DOMServerAdapterConfig,
 } from '@lattice/islands/presets/island-ssr';
 import type { RefSpec } from '@lattice/view/types';
 
@@ -33,9 +33,9 @@ const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
 // Create island-aware SSR API (fresh per-request in real app, shared here for simplicity)
 const signals = createSignalsApi();
-const renderer = createDOMServerRenderer();
-const viewHelpers = createSpec(renderer, signals);
-const baseExtensions = defaultViewExtensions<DOMServerRendererConfig>();
+const adapter = createDOMServerAdapter();
+const viewHelpers = createSpec(adapter, signals);
+const baseExtensions = defaultViewExtensions<DOMServerAdapterConfig>();
 const views = composeFrom(baseExtensions, viewHelpers);
 const svc = { ...signals, ...views };
 const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);

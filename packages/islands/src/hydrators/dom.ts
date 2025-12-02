@@ -6,7 +6,7 @@
  *    - Element islands: script's previousElementSibling is island root
  *    - Fragment islands: script's parent is the wrapper div container
  * 2. For element islands: use the island's parent as the container
- * 3. Creating hydrating renderer targeting the container
+ * 3. Creating hydrating adapter targeting the container
  * 4. Running component with hydrating API (queued effects)
  * 5. On success: activate effects, remove script tag, unwrap fragment containers
  * 6. On failure: fallback to client-side render with regular API
@@ -15,10 +15,10 @@
 import type { IslandMetaData, IslandRegistryEntry, GetContext } from '../types';
 import type { RefSpec, ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import { createDOMRenderer } from '@lattice/view/renderers/dom';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import { HydrationMismatch, ISLAND_META } from '../types';
-import { createIslandsRenderer } from '../renderers/islands';
-import { createDOMHydrationRenderer } from '../renderers/dom-hydration';
+import { createIslandsAdapter } from '../adapters/islands';
+import { createDOMHydrationAdapter } from '../adapters/dom-hydration';
 import { createHydrationApi } from '../hydration-api';
 import type { EffectAPI } from '../hydration-api';
 import { getClientContext } from '../client-context.browser';
@@ -77,7 +77,7 @@ export interface CreateAPIResult {
  */
 export function createDOMHydrator<TSignals extends EffectAPI>(
   createAPI: (
-    renderer: ReturnType<typeof createIslandsRenderer>,
+    adapter: ReturnType<typeof createIslandsAdapter>,
     signals: TSignals
   ) => CreateAPIResult,
   signals: TSignals,
@@ -164,13 +164,13 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
         let fragmentParentRef: ElementRef<unknown> | null = null;
 
         try {
-          const renderer = createIslandsRenderer(
-            createDOMHydrationRenderer(container),
-            createDOMRenderer()
+          const adapter = createIslandsAdapter(
+            createDOMHydrationAdapter(container),
+            createDOMAdapter()
           );
 
-          // Create API with hydrating renderer - includes scope helper
-          const { api, createElementScope } = createAPI(renderer, signals);
+          // Create API with hydrating adapter - includes scope helper
+          const { api, createElementScope } = createAPI(adapter, signals);
           const { hydratingApi, activate } = createHydrationApi(api);
 
           // Get the context getter
@@ -184,10 +184,10 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           // attach() is where map() creates the reconciler and binds event handlers
           if (isFragment && nodeRef.status === STATUS_FRAGMENT) {
             // CRITICAL: Enter the container's children first
-            // The hydrating renderer starts at position [] (the container itself)
+            // The hydrating adapter starts at position [] (the container itself)
             // We need to advance to position [0], [1], etc. (inside the container)
             // Calling createElement('div') matches the container and enters its children
-            renderer.createNode('div');
+            adapter.createNode('div');
 
             // Create a parent ref for the wrapper div (needed for hydration to work)
             // Save it so we can update it later before unwrapping
@@ -211,8 +211,8 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           }
 
           // Success! Hydration complete
-          // Switch renderer to fallback mode for future reactive updates
-          renderer.switchToFallback();
+          // Switch adapter to fallback mode for future reactive updates
+          adapter.switchToFallback();
 
           // Activate remaining queued effects (for element islands)
           // Fragment islands already activated above
@@ -273,9 +273,9 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             // - For element islands: remove island and script, mount fresh
             // - For fragment islands: clear the container div and mount fresh
             // Create a regular API for client-side rendering
-            const fallbackRenderer = createDOMRenderer();
+            const fallbackAdapter = createDOMAdapter();
             const { api: fallbackApi } = createAPI(
-              createIslandsRenderer(fallbackRenderer, fallbackRenderer),
+              createIslandsAdapter(fallbackAdapter, fallbackAdapter),
               signals
             );
 

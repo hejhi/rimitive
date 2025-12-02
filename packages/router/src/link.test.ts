@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Link } from './link';
 import {
   createTestEnv,
-  type MockRendererConfig,
+  type MockAdapterConfig,
   type MockElement,
   type MockText,
   getTextContent,
@@ -14,9 +14,9 @@ import { STATUS_ELEMENT } from '@lattice/view/types';
 describe('Link component - basic rendering', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -38,9 +38,9 @@ describe('Link component - basic rendering', () => {
   const mountElement = (
     spec: unknown,
     api: { el: unknown; navigate?: (path: string) => void },
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -62,10 +62,10 @@ describe('Link component - basic rendering', () => {
   };
 
   it('renders anchor element with href', () => {
-    const { Link, renderer, api } = setup();
+    const { Link, adapter, api } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
 
     expect(parent.children.length).toBe(1);
     const anchor = parent.children[0] as MockElement;
@@ -75,7 +75,7 @@ describe('Link component - basic rendering', () => {
   });
 
   it('accepts standard anchor attributes', () => {
-    const { Link, renderer, api } = setup();
+    const { Link, adapter, api } = setup();
 
     const linkSpec = Link({
       href: '/products',
@@ -84,7 +84,7 @@ describe('Link component - basic rendering', () => {
       title: 'View Products',
     })('Products');
 
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     expect(anchor?.props.className).toBe('nav-link');
@@ -93,14 +93,14 @@ describe('Link component - basic rendering', () => {
   });
 
   it('accepts multiple children', () => {
-    const { Link, el, renderer, api } = setup();
+    const { Link, el, adapter, api } = setup();
 
     const linkSpec = Link({ href: '/home' })(
       el.impl('span')('Go to '),
       el.impl('strong')('Home')
     );
 
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     expect(getTextContent(parent)).toContain('Go to');
     expect(getTextContent(parent)).toContain('Home');
   });
@@ -109,9 +109,9 @@ describe('Link component - basic rendering', () => {
 describe('Link component - click handling', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -135,9 +135,9 @@ describe('Link component - click handling', () => {
   const mountElement = (
     spec: unknown,
     api: { el: unknown; navigate?: (path: string) => void },
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -159,10 +159,10 @@ describe('Link component - click handling', () => {
   };
 
   it('intercepts click on internal link', () => {
-    const { Link, renderer, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, api } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -184,10 +184,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept click with metaKey (cmd+click)', () => {
-    const { Link, renderer, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, api } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -209,10 +209,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept click with ctrlKey', () => {
-    const { Link, renderer, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, api } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -234,10 +234,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept right-click', () => {
-    const { Link, renderer, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, api } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -259,10 +259,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept external http link', () => {
-    const { Link, renderer, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, api } = setup();
 
     const linkSpec = Link({ href: 'http://example.com' })('External');
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -284,10 +284,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept external https link', () => {
-    const { Link, renderer, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, api } = setup();
 
     const linkSpec = Link({ href: 'https://example.com' })('External');
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -309,7 +309,7 @@ describe('Link component - click handling', () => {
   });
 
   it('merges user onclick with navigation handler', () => {
-    const { Link, renderer, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, api } = setup();
 
     const userClicks: string[] = [];
     const linkSpec = Link({
@@ -319,7 +319,7 @@ describe('Link component - click handling', () => {
       },
     })('About');
 
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -344,9 +344,9 @@ describe('Link component - click handling', () => {
 describe('Link component - lifecycle callbacks', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -368,9 +368,9 @@ describe('Link component - lifecycle callbacks', () => {
   const mountElement = (
     spec: unknown,
     api: { el: unknown; navigate?: (path: string) => void },
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -392,11 +392,11 @@ describe('Link component - lifecycle callbacks', () => {
   };
 
   it('renders correctly as a sealed spec', () => {
-    const { Link, renderer, api } = setup();
+    const { Link, adapter, api } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
 
-    const parent = mountElement(linkSpec, api, renderer);
+    const parent = mountElement(linkSpec, api, adapter);
     expect(parent.children.length).toBe(1);
     const anchor = parent.children[0] as MockElement;
     expect(anchor?.tag).toBe('a');

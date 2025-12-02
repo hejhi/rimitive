@@ -1,5 +1,5 @@
 /**
- * Coordinate-Based Hydrating DOM Renderer
+ * Coordinate-Based Hydrating DOM Adapter
  *
  * Uses explicit tree coordinates and range tracking instead of
  * imperative cursor manipulation. More algorithmic, easier to reason about.
@@ -11,8 +11,8 @@
  * - All position transformations are pure functions
  */
 
-import type { Renderer, NodeRef } from '@lattice/view/types';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { Adapter, NodeRef } from '@lattice/view/types';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_FRAGMENT } from '@lattice/view/types';
 import {
   type Position,
@@ -25,8 +25,8 @@ import {
   positionFromPath,
 } from '../helpers/hydrate-dom';
 
-// Re-export DOMRendererConfig for consumers that import from here
-export type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+// Re-export DOMAdapterConfig for consumers that import from here
+export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 /**
  * Hydration mismatch error
@@ -225,12 +225,12 @@ function findFragmentContentIndex(
 }
 
 // ============================================================================
-// Renderer Implementation
+// Adapter Implementation
 // ============================================================================
 
-export function createDOMHydrationRenderer(
+export function createDOMHydrationAdapter(
   containerEl: HTMLElement
-): Renderer<DOMRendererConfig> {
+): Adapter<DOMAdapterConfig> {
   // Position tracks where we are in the tree (empty = at root before entering)
   let position: Position = { path: null, depth: 0, ranges: null };
 

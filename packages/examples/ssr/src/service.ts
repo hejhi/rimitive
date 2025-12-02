@@ -8,9 +8,9 @@ import { composeFrom } from '@lattice/lattice';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
 import {
-  createDOMRenderer,
-  type DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
+  createDOMAdapter,
+  type DOMAdapterConfig,
+} from '@lattice/view/adapters/dom';
 import { createIsland } from '@lattice/islands/factory';
 import type { RefSpec } from '@lattice/view/types';
 import type { ElFactory } from '@lattice/view/el';
@@ -29,9 +29,9 @@ export type Service = {
   computed: <T>(fn: () => T) => ComputedFunction<T>;
   effect: (fn: () => void | (() => void)) => () => void;
   batch: <T>(fn: () => T) => T;
-  el: ElFactory<DOMRendererConfig>['impl'];
-  map: MapFactory<DOMRendererConfig['baseElement']>['impl'];
-  match: MatchFactory<DOMRendererConfig['baseElement']>['impl'];
+  el: ElFactory<DOMAdapterConfig>['impl'];
+  map: MapFactory<DOMAdapterConfig['baseElement']>['impl'];
+  match: MatchFactory<DOMAdapterConfig['baseElement']>['impl'];
 };
 
 /**
@@ -42,10 +42,10 @@ export const island = createIsland<Service>();
 // Create view API (for client-side)
 const createViewApi = () => {
   const signalSvc = createSignalsApi();
-  const renderer = createDOMRenderer();
-  const viewHelpers = defaultHelpers(renderer, signalSvc);
+  const adapter = createDOMAdapter();
+  const viewHelpers = defaultHelpers(adapter, signalSvc);
   const viewSvc = composeFrom(
-    defaultExtensions<DOMRendererConfig>(),
+    defaultExtensions<DOMAdapterConfig>(),
     viewHelpers
   );
 

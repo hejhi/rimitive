@@ -4,7 +4,7 @@
  * This page includes an interactive island component.
  */
 import { connect, type ConnectedApi } from '@lattice/router';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { ProductFilter } from '../islands/ProductFilter.js';
 
 const products = [
@@ -19,7 +19,7 @@ const products = [
 const productFilter = ProductFilter({ products });
 
 export const Products = connect(
-  ({ el }: ConnectedApi<DOMRendererConfig>) =>
+  ({ el }: ConnectedApi<DOMAdapterConfig>) =>
     () => {
       return el('div').props({ className: 'page products-page' })(
         el('h2')('Products'),

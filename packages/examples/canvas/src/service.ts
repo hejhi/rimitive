@@ -20,10 +20,10 @@ import {
   type CanvasAdapterConfig,
 } from './canvas-adapter';
 import {
-  createDOMRenderer,
-  type DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
-import type { RefSpec, Renderer } from '@lattice/view/types';
+  createDOMAdapter,
+  type DOMAdapterConfig,
+} from '@lattice/view/adapters/dom';
+import type { RefSpec, Adapter } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
 // ============================================================================
@@ -36,10 +36,10 @@ const signalsSvc = createSignalsApi();
 // DOM Adapter (for toolbar/UI)
 // ============================================================================
 
-const domAdapter = createDOMRenderer();
+const domAdapter = createDOMAdapter();
 const domViewHelpers = defaultViewHelpers(domAdapter, signalsSvc);
 const domViewSvc = composeFrom(
-  defaultViewExtensions<DOMRendererConfig>(),
+  defaultViewExtensions<DOMAdapterConfig>(),
   domViewHelpers
 );
 
@@ -58,7 +58,7 @@ const canvasAdapter = createCanvasAdapter({
 });
 
 const canvasViewHelpers = defaultViewHelpers<CanvasAdapterConfig>(
-  canvasAdapter as Renderer<CanvasAdapterConfig>,
+  canvasAdapter as Adapter<CanvasAdapterConfig>,
   signalsSvc
 );
 const { el: canvasEl, ...canvasViewSvc } = composeFrom(

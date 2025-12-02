@@ -1,0 +1,72 @@
+
+> docs@0.0.1 build /Users/henryivry/repos/lattice/packages/docs
+> astro build
+
+[2m12:29:12[22m [34m[content][39m Syncing content
+[2m12:29:12[22m [34m[content][39m Synced content
+[2m12:29:12[22m [34m[types][39m Generated [2m272ms[22m
+[2m12:29:12[22m [34m[build][39m output: [34m"static"[39m
+[2m12:29:12[22m [34m[build][39m mode: [34m"static"[39m
+[2m12:29:12[22m [34m[build][39m directory: [34m/Users/henryivry/repos/lattice/packages/docs/dist/[39m
+[2m12:29:12[22m [34m[build][39m Collecting build info...
+[2m12:29:12[22m [34m[build][39m [32m✓ Completed in 375ms.[39m
+[2m12:29:12[22m [34m[build][39m Building static entrypoints...
+[2m12:29:14[22m [34m[vite][39m [32m✓ built in 1.78s[39m
+[2m12:29:14[22m [34m[build][39m [32m✓ Completed in 1.79s.[39m
+
+[42m[30m building client (vite) [39m[49m
+[2m12:29:14[22m [34m[vite][39m transforming...
+[2m12:29:14[22m [34m[vite][39m [32m✓[39m 17 modules transformed.
+[2m12:29:14[22m [34m[vite][39m rendering chunks...
+[2m12:29:14[22m [34m[vite][39m computing gzip size...
+[2m12:29:14[22m [34m[vite][39m [2mdist/[22m[2m_astro/[22m[32mec.8zarh.js                                                             [39m[1m[2m 2.42 kB[22m[1m[22m
+[2m12:29:14[22m [34m[vite][39m [2mdist/[22m[2m_astro/[22m[35mec.v4551.css                                                            [39m[1m[2m18.22 kB[22m[1m[22m[2m │ gzip:  3.94 kB[22m
+[2m12:29:14[22m [34m[vite][39m [2mdist/[22m[2m_astro/[22m[36mMobileTableOfContents.astro_astro_type_script_index_0_lang.C181hMzK.js  [39m[1m[2m 0.67 kB[22m[1m[22m[2m │ gzip:  0.40 kB[22m
+[2m12:29:14[22m [34m[vite][39m [2mdist/[22m[2m_astro/[22m[36mTableOfContents.astro_astro_type_script_index_0_lang.CKWWgpjV.js        [39m[1m[2m 1.67 kB[22m[1m[22m[2m │ gzip:  0.87 kB[22m
+[2m12:29:14[22m [34m[vite][39m [2mdist/[22m[2m_astro/[22m[36mpage.7qqag-5g.js                                                        [39m[1m[2m 2.17 kB[22m[1m[22m[2m │ gzip:  0.97 kB[22m
+[2m12:29:14[22m [34m[vite][39m [2mdist/[22m[2m_astro/[22m[36mSearch.astro_astro_type_script_index_0_lang.DMZ5WJ-J.js                 [39m[1m[2m 2.69 kB[22m[1m[22m[2m │ gzip:  1.39 kB[22m
+[2m12:29:14[22m [34m[vite][39m [2mdist/[22m[2m_astro/[22m[36mui-core.Ft0Z9wO7.js                                                     [39m[1m[2m68.07 kB[22m[1m[22m[2m │ gzip: 21.34 kB[22m
+[2m12:29:14[22m [34m[vite][39m [32m✓ built in 88ms[39m
+
+[42m[30m generating static routes [39m[49m
+[2m12:29:14[22m [32m▶[39m /404
+[2m12:29:14[22m   [34m└─[39m [2m/404.html[22mEntry docs → 404 was not found.
+ [2m(+10ms)[22m 
+[2m12:29:14[22m [32m▶[39m /[...slug]
+[2m12:29:14[22m   [34m├─[39m [2m/index.html[22m [2m(+4ms)[22m 
+[2m12:29:14[22m   [34m└─[39m [2m/guides/getting-started/index.html[22m [2m(+4ms)[22m 
+[2m12:29:14[22m [32m✓ Completed in 54ms.
+[39m
+(node:29030) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+npm warn Unknown env config "npm-globalconfig". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+
+Running Pagefind v1.3.0 (Extended)
+Running from: "/Users/henryivry/repos/lattice/node_modules/.pnpm/@astrojs+starlight@0.34.4_astro@5.9.3_@types+node@24.10.0_encoding@0.1.13_jiti@2.6.1_li_ccdbebf1656404c3fba6e1871f6eb96e/node_modules/@astrojs/starlight"
+Source:       "../../../../../../packages/docs/dist"
+Output:       "../../../../../../packages/docs/dist/pagefind"
+
+[Walking source directory]
+Found 3 files matching **/*.{html}
+
+[Parsing files]
+Found a data-pagefind-body element on the site.
+↳ Ignoring pages without this tag.
+
+[Reading languages]
+Discovered 1 language: en
+
+[Building search indexes]
+Total: 
+  Indexed 1 language
+  Indexed 2 pages
+  Indexed 41 words
+  Indexed 0 filters
+  Indexed 0 sorts
+
+Finished in 0.004 seconds
+[2m12:29:14[22m [34m[@astrojs/sitemap][39m `sitemap-index.xml` created at `dist`
+[2m12:29:14[22m [34m[build][39m 3 page(s) built in [1m2.62s[22m
+[2m12:29:14[22m [34m[build][39m [1mComplete![22m

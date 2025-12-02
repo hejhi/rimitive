@@ -11,7 +11,7 @@ import type {
   SignalFunction,
   ComputedFunction,
 } from '@lattice/signals/presets/core';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import type { ElFactory } from '@lattice/view/el';
 import type { MapFactory } from '@lattice/view/map';
 import type { MatchFactory } from '@lattice/view/match';
@@ -57,9 +57,9 @@ export type Service = {
   batch: <T>(fn: () => T) => T;
 
   // Views
-  el: ElFactory<DOMRendererConfig>['impl'];
-  map: MapFactory<DOMRendererConfig['baseElement']>['impl'];
-  match: MatchFactory<DOMRendererConfig['baseElement']>['impl'];
+  el: ElFactory<DOMAdapterConfig>['impl'];
+  map: MapFactory<DOMAdapterConfig['baseElement']>['impl'];
+  match: MatchFactory<DOMAdapterConfig['baseElement']>['impl'];
 
   // Router (injected by client.ts via createApiWithRouter)
   navigate: (path: string) => void;

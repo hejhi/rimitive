@@ -15,21 +15,21 @@ import type {
   ParentContext,
 } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
-import type { Renderer, RendererConfig } from '../renderer';
+import type { Adapter, AdapterConfig } from '../adapter';
 
-export function createProcessChildren<TConfig extends RendererConfig>(opts: {
+export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
-  renderer: Renderer<TConfig>;
+  adapter: Adapter<TConfig>;
 }) {
   type TNode = TConfig['baseElement'];
   type ViewChild = RefSpec<TNode> | FragmentRef<TNode>;
 
-  const { scopedEffect, renderer } = opts;
+  const { scopedEffect, adapter } = opts;
   const createTextEffect =
     (child: () => string | number, textNode: TNode) => () => {
       const value = child();
       const stringValue = value == null ? '' : String(value);
-      renderer.setProperty(textNode, 'value', stringValue);
+      adapter.setProperty(textNode, 'value', stringValue);
     };
 
   const handleChild = (
@@ -46,10 +46,10 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
 
     // Static primitive (string, number)
     if (childType === 'string' || childType === 'number') {
-      const textNode = renderer.createNode('text', {
+      const textNode = adapter.createNode('text', {
         value: String(child as string | number),
       });
-      renderer.appendChild(element, textNode);
+      adapter.appendChild(element, textNode);
       return null; // Text nodes don't participate in ref node chain
     }
 
@@ -71,12 +71,12 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
         );
         // Only append actual DOM nodes (elements), not fragments
         if (childRef.status === STATUS_ELEMENT) {
-          renderer.appendChild(element, childRef.element);
+          adapter.appendChild(element, childRef.element);
           // Lifecycle hook: onCreate for elements (e.g., SSR adds island markers)
-          renderer.onCreate?.(childRef, element);
+          adapter.onCreate?.(childRef, element);
         } else if (childRef.status === STATUS_FRAGMENT) {
           // Lifecycle hook: onCreate for fragments (e.g., hydration skips past content)
-          renderer.onCreate?.(childRef, element);
+          adapter.onCreate?.(childRef, element);
         }
         return childRef;
       }
@@ -84,9 +84,9 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
 
     // Bare function (reactive computed or effect) - wrap in scopedEffect
     if (childType === 'function') {
-      const textNode = renderer.createNode('text', { value: '' });
+      const textNode = adapter.createNode('text', { value: '' });
       scopedEffect(createTextEffect(child as () => string, textNode));
-      renderer.appendChild(element, textNode);
+      adapter.appendChild(element, textNode);
       return null;
     }
 
@@ -140,12 +140,12 @@ export function createProcessChildren<TConfig extends RendererConfig>(opts: {
               : null;
 
         // Lifecycle hook: beforeAttach for fragments (e.g., hydration seeks to position)
-        renderer.beforeAttach?.(lastChildRef, parent.element, nextElement);
+        adapter.beforeAttach?.(lastChildRef, parent.element, nextElement);
 
         lastChildRef.attach(parent, lastChildRef.next, api);
 
         // Lifecycle hook: onAttach for fragments (e.g., SSR adds markers)
-        renderer.onAttach?.(lastChildRef, parent.element);
+        adapter.onAttach?.(lastChildRef, parent.element);
       }
       lastChildRef = lastChildRef.prev;
     }

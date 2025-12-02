@@ -2,7 +2,7 @@
  * Router API - separate app-level API for routing
  */
 
-import type { RendererConfig, RefSpec } from '@lattice/view/types';
+import type { AdapterConfig, RefSpec } from '@lattice/view/types';
 import type {
   ElMethod,
   SignalFunction,
@@ -33,7 +33,7 @@ import type { RouteTree, RouteNode } from './defineRoutes';
  * ```
  */
 export function connect<
-  TConfig extends RendererConfig,
+  TConfig extends AdapterConfig,
   TElement extends TConfig['baseElement'] = TConfig['baseElement'],
   TUserProps = Record<string, unknown>,
 >(
@@ -57,7 +57,7 @@ export function connect<
 /**
  * View API that the router depends on
  */
-export type ViewApi<TConfig extends RendererConfig> = {
+export type ViewApi<TConfig extends AdapterConfig> = {
   el: ElMethod<TConfig>;
   match: MatchFactory<TConfig['baseElement']>['impl'];
   signal: <T>(value: T) => SignalFunction<T>;
@@ -87,10 +87,10 @@ export type RouteApi = {
  * Connected API - merged view API + route API
  *
  * This is the API passed to connected components, enabling them to use
- * whatever renderer is provided (hydrating or regular) rather than
+ * whatever adapter is provided (hydrating or regular) rather than
  * pulling from a singleton.
  */
-export type ConnectedApi<TConfig extends RendererConfig> = ViewApi<TConfig> &
+export type ConnectedApi<TConfig extends AdapterConfig> = ViewApi<TConfig> &
   RouteApi;
 
 /**
@@ -99,7 +99,7 @@ export type ConnectedApi<TConfig extends RendererConfig> = ViewApi<TConfig> &
  * Contains route-specific data (children, params) and the merged API
  * for rendering. The API is always populated by router.mount().
  */
-export type RouteContext<TConfig extends RendererConfig> = {
+export type RouteContext<TConfig extends AdapterConfig> = {
   children: RefSpec<TConfig['baseElement']>[] | null;
   params: ComputedFunction<RouteParams>;
   /** Merged API (view + route) - populated by router.mount() */
@@ -109,14 +109,14 @@ export type RouteContext<TConfig extends RendererConfig> = {
 /**
  * A connected component that can be instantiated with route context
  */
-export type ConnectedComponent<TConfig extends RendererConfig> = (
+export type ConnectedComponent<TConfig extends AdapterConfig> = (
   routeContext: RouteContext<TConfig>
 ) => RefSpec<TConfig['baseElement']>;
 
 /**
  * The connect impl signature
  */
-export type ConnectMethod<TConfig extends RendererConfig> = <
+export type ConnectMethod<TConfig extends AdapterConfig> = <
   TElement extends TConfig['baseElement'],
   TUserProps = Record<string, unknown>,
 >(
@@ -131,7 +131,7 @@ export type ConnectMethod<TConfig extends RendererConfig> = <
 /**
  * Route method signature
  */
-export type RouteMethod<TConfig extends RendererConfig> = (
+export type RouteMethod<TConfig extends AdapterConfig> = (
   path: string,
   connectedComponent: (
     routeContext: RouteContext<TConfig>
@@ -144,7 +144,7 @@ export type RouteMethod<TConfig extends RendererConfig> = (
  * Root context returned by router.root()
  * Provides scoped route creation and a create method for finalizing the route tree
  */
-export type RootContext<TConfig extends RendererConfig> = {
+export type RootContext<TConfig extends AdapterConfig> = {
   /**
    * Create the root element with its child routes
    * Returns a RefSpec that renders the root layout with children
@@ -162,7 +162,7 @@ export type RootContext<TConfig extends RendererConfig> = {
 /**
  * Root method signature - defines the always-rendered root layout
  */
-export type RootMethod<TConfig extends RendererConfig> = (
+export type RootMethod<TConfig extends AdapterConfig> = (
   path: string,
   connectedComponent: (
     routeContext: RouteContext<TConfig>
@@ -171,9 +171,9 @@ export type RootMethod<TConfig extends RendererConfig> = (
 
 /**
  * Router object returned by createRouter
- * Generic over TConfig for type safety with renderer-specific implementations
+ * Generic over TConfig for type safety with adapter-specific implementations
  */
-export type Router<TConfig extends RendererConfig> = {
+export type Router<TConfig extends AdapterConfig> = {
   /**
    * Define the root layout that's always rendered
    * Unlike route(), root() doesn't wrap in match() since the root is always visible
@@ -233,7 +233,7 @@ export type Router<TConfig extends RendererConfig> = {
   mount: (routeTree: RouteTree<TConfig>) => RefSpec<TConfig['baseElement']>;
 
   /**
-   * Internal: renderer config type marker (not used at runtime)
+   * Internal: adapter config type marker (not used at runtime)
    * This ensures TConfig is part of the type signature for type safety
    */
   _configType?: TConfig;
@@ -264,7 +264,7 @@ function getInitialPath(config: RouterConfig): string {
  * The router is a separate app-level API that takes a view API as input.
  * It manages navigation state and provides routing primitives.
  */
-export function createRouter<TConfig extends RendererConfig>(
+export function createRouter<TConfig extends AdapterConfig>(
   viewApi: ViewApi<TConfig>,
   config: RouterConfig = {}
 ): Router<TConfig> {
@@ -355,7 +355,7 @@ export function createRouter<TConfig extends RendererConfig>(
           // Rebuild with composed path, then unwrap
           const composedPath = composePath(path, metadata.relativePath);
           const rebuiltRouteSpec = metadata.rebuild(composedPath);
-          // Unwrap to get the inner RefSpec for the renderer
+          // Unwrap to get the inner RefSpec for the adapter
           processedChildren.push(rebuiltRouteSpec.unwrap());
         }
 
@@ -453,7 +453,7 @@ export function createRouter<TConfig extends RendererConfig>(
         if (!matchResult) return null;
 
         // Build RouteContext fresh for each match
-        // Include merged API so components can render with appropriate renderer
+        // Include merged API so components can render with appropriate adapter
         const routeContext: RouteContext<TConfig> = {
           children: processedChildren.length > 0 ? processedChildren : null,
           params: viewApi.computed(() => matchResult.params),
@@ -571,7 +571,7 @@ export function createRouter<TConfig extends RendererConfig>(
         // Rebuild with composed path
         const composedPath = composePath(path, metadata.relativePath);
         const rebuiltRouteSpec = metadata.rebuild(composedPath);
-        // Unwrap to get the inner RefSpec for the renderer
+        // Unwrap to get the inner RefSpec for the adapter
         processedChildren.push(rebuiltRouteSpec.unwrap());
       }
 
@@ -581,7 +581,7 @@ export function createRouter<TConfig extends RendererConfig>(
 
       // Build RouteContext for the root component
       // Root always matches, so params are empty
-      // Include merged API so components can render with appropriate renderer
+      // Include merged API so components can render with appropriate adapter
       const routeContext: RouteContext<TConfig> = {
         children: processedChildren.length > 0 ? processedChildren : null,
         params: viewApi.computed(() => ({})),

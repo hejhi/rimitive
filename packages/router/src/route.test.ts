@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { matchPath, createRouteFactory } from './route';
 import {
   createTestEnv,
-  type MockRendererConfig,
+  type MockAdapterConfig,
   type MockElement,
   type MockText,
   getTextContent,
@@ -64,16 +64,16 @@ describe('matchPath - path parameters', () => {
 describe('route() - single route rendering', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -94,14 +94,14 @@ describe('route() - single route rendering', () => {
       return result;
     };
 
-    const route = createRouteFactory<MockRendererConfig>().create({
+    const route = createRouteFactory<MockAdapterConfig>().create({
       signal: env.signal,
       computed,
       el: el.impl as never,
       match: match.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -112,9 +112,9 @@ describe('route() - single route rendering', () => {
   // Helper to create and mount a route spec
   const mountRoute = (
     spec: RefSpec<MockElement | MockText>,
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -161,7 +161,7 @@ describe('route() - single route rendering', () => {
   };
 
   it('renders component when path matches', () => {
-    const { route, renderer } = setup();
+    const { route, adapter } = setup();
 
     const HomeComponent = ({
       el: elFn,
@@ -176,12 +176,12 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/', HomeComponent)();
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toBe('Home Page');
   });
 
   it('renders component for non-root path when path matches', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     const AboutComponent = ({
       el: elFn,
@@ -198,12 +198,12 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/about', AboutComponent)();
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toBe('About Page');
   });
 
   it('renders nothing when path does not match', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     const AboutComponent = ({
       el: elFn,
@@ -220,12 +220,12 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/about', AboutComponent)();
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(parent.children.length).toBe(0);
   });
 
   it('reactively updates when path changes', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     const HomeComponent = ({
       el: elFn,
@@ -240,7 +240,7 @@ describe('route() - single route rendering', () => {
 
     const routeSpec = route('/', HomeComponent)();
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toBe('Home Page');
 
     currentPath('/about');
@@ -251,7 +251,7 @@ describe('route() - single route rendering', () => {
   });
 
   it('route with no children works as RefSpec', () => {
-    const { route, renderer } = setup();
+    const { route, adapter } = setup();
 
     const HomeComponent = ({
       el: elFn,
@@ -267,7 +267,7 @@ describe('route() - single route rendering', () => {
     // Route without children can be used directly as a RefSpec
     const routeSpec = route('/', HomeComponent)();
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toBe('Home Page');
   });
 });
@@ -275,16 +275,16 @@ describe('route() - single route rendering', () => {
 describe('multiple routes - reactive switching', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -303,14 +303,14 @@ describe('multiple routes - reactive switching', () => {
       return result;
     };
 
-    const route = createRouteFactory<MockRendererConfig>().create({
+    const route = createRouteFactory<MockAdapterConfig>().create({
       signal: env.signal,
       computed,
       el: el.impl as never,
       match: match.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -320,9 +320,9 @@ describe('multiple routes - reactive switching', () => {
 
   const mountRoute = (
     spec: RefSpec<MockElement | MockText>,
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -368,7 +368,7 @@ describe('multiple routes - reactive switching', () => {
   };
 
   it('only renders the matched route', () => {
-    const { route, el, renderer } = setup();
+    const { route, el, adapter } = setup();
 
     const Home = ({
       el: elFn,
@@ -394,12 +394,12 @@ describe('multiple routes - reactive switching', () => {
       route('/products', Products)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Home');
   });
 
   it('switches from Home to About when path changes', () => {
-    const { route, el, currentPath, renderer } = setup();
+    const { route, el, currentPath, adapter } = setup();
 
     const Home = ({
       el: elFn,
@@ -418,7 +418,7 @@ describe('multiple routes - reactive switching', () => {
       route('/about', About)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Home');
 
     currentPath('/about');
@@ -426,7 +426,7 @@ describe('multiple routes - reactive switching', () => {
   });
 
   it('renders nothing when path matches no routes', () => {
-    const { route, el, currentPath, renderer } = setup();
+    const { route, el, currentPath, adapter } = setup();
 
     const Home = ({
       el: elFn,
@@ -445,7 +445,7 @@ describe('multiple routes - reactive switching', () => {
       route('/about', About)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Home');
 
     currentPath('/unknown');
@@ -453,7 +453,7 @@ describe('multiple routes - reactive switching', () => {
   });
 
   it('first matching route wins when multiple routes match', () => {
-    const { route, el, currentPath, renderer } = setup();
+    const { route, el, currentPath, adapter } = setup();
 
     const First = ({
       el: elFn,
@@ -474,12 +474,12 @@ describe('multiple routes - reactive switching', () => {
       route('/test', Second)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('First');
   });
 
   it('switches between all routes as path changes', () => {
-    const { route, el, currentPath, renderer } = setup();
+    const { route, el, currentPath, adapter } = setup();
 
     const Home = ({
       el: elFn,
@@ -505,7 +505,7 @@ describe('multiple routes - reactive switching', () => {
       route('/products', Products)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Home');
 
     currentPath('/products');
@@ -522,16 +522,16 @@ describe('multiple routes - reactive switching', () => {
 describe('params - component access to route parameters', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -550,14 +550,14 @@ describe('params - component access to route parameters', () => {
       return result;
     };
 
-    const route = createRouteFactory<MockRendererConfig>().create({
+    const route = createRouteFactory<MockAdapterConfig>().create({
       signal: env.signal,
       computed,
       el: el.impl as never,
       match: match.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -567,9 +567,9 @@ describe('params - component access to route parameters', () => {
 
   const mountRoute = (
     spec: RefSpec<MockElement | MockText>,
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -615,7 +615,7 @@ describe('params - component access to route parameters', () => {
   };
 
   it('provides single param via api.params()', () => {
-    const { route, currentPath, renderer, computed } = setup();
+    const { route, currentPath, adapter, computed } = setup();
 
     currentPath('/products/123');
 
@@ -631,13 +631,13 @@ describe('params - component access to route parameters', () => {
       ) as RefSpec<MockElement>;
 
     const routeSpec = route('/products/:id', Product)();
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
 
     expect(getTextContent(parent)).toBe('Product: 123');
   });
 
   it('provides multiple params via api.params()', () => {
-    const { route, currentPath, renderer, computed } = setup();
+    const { route, currentPath, adapter, computed } = setup();
 
     currentPath('/users/42/posts/99');
 
@@ -653,13 +653,13 @@ describe('params - component access to route parameters', () => {
       ) as RefSpec<MockElement>;
 
     const routeSpec = route('/users/:userId/posts/:postId', UserPost)();
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
 
     expect(getTextContent(parent)).toBe('User 42, Post 99');
   });
 
   it('params are empty for routes without parameters', () => {
-    const { route, currentPath, renderer, computed } = setup();
+    const { route, currentPath, adapter, computed } = setup();
 
     currentPath('/about');
 
@@ -675,13 +675,13 @@ describe('params - component access to route parameters', () => {
       ) as RefSpec<MockElement>;
 
     const routeSpec = route('/about', About)();
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
 
     expect(getTextContent(parent)).toBe('Params: {}');
   });
 
   it('params update reactively when path changes', () => {
-    const { route, currentPath, renderer, computed } = setup();
+    const { route, currentPath, adapter, computed } = setup();
 
     currentPath('/products/123');
 
@@ -697,7 +697,7 @@ describe('params - component access to route parameters', () => {
       ) as RefSpec<MockElement>;
 
     const routeSpec = route('/products/:id', Product)();
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
 
     expect(getTextContent(parent)).toBe('Product: 123');
 
@@ -712,16 +712,16 @@ describe('params - component access to route parameters', () => {
 describe('nested routes - structure and path composition', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -740,14 +740,14 @@ describe('nested routes - structure and path composition', () => {
       return result;
     };
 
-    const route = createRouteFactory<MockRendererConfig>().create({
+    const route = createRouteFactory<MockAdapterConfig>().create({
       signal: env.signal,
       computed,
       el: el.impl as never,
       match: match.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -757,9 +757,9 @@ describe('nested routes - structure and path composition', () => {
 
   const mountRoute = (
     spec: RefSpec<MockElement | MockText>,
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -805,7 +805,7 @@ describe('nested routes - structure and path composition', () => {
   };
 
   it('child path is relative to parent', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/about');
 
@@ -826,12 +826,12 @@ describe('nested routes - structure and path composition', () => {
     // Parent receives result of calling child route (leaf has no children)
     const routeSpec = route('/', App)(route('about', About)());
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toContain('About');
   });
 
   it('nested child paths compose correctly', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/products/123');
 
@@ -863,12 +863,12 @@ describe('nested routes - structure and path composition', () => {
       App
     )(route('products', Products)(route(':id', Product)()));
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toContain('Product');
   });
 
   it('handles multiple nesting levels', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/admin/users/42/settings');
 
@@ -926,12 +926,12 @@ describe('nested routes - structure and path composition', () => {
       )
     );
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toContain('Settings');
   });
 
   it('parent matches when child path is active', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/products/123');
 
@@ -963,7 +963,7 @@ describe('nested routes - structure and path composition', () => {
       App
     )(route('products', Products)(route(':id', Product)()));
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     const content = getTextContent(parent);
 
     // Both parent layouts and child content should be present
@@ -973,7 +973,7 @@ describe('nested routes - structure and path composition', () => {
   });
 
   it('params work with nested parameterized routes', () => {
-    const { route, currentPath, renderer, computed } = setup();
+    const { route, currentPath, adapter, computed } = setup();
 
     currentPath('/users/42/posts/99');
 
@@ -1016,7 +1016,7 @@ describe('nested routes - structure and path composition', () => {
       App
     )(route('users/:userId', Users)(route('posts/:postId', Posts)()));
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     const content = getTextContent(parent);
 
     expect(content).toContain('User: 42');
@@ -1027,16 +1027,16 @@ describe('nested routes - structure and path composition', () => {
 describe('programmatic navigation', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -1055,14 +1055,14 @@ describe('programmatic navigation', () => {
       return result;
     };
 
-    const route = createRouteFactory<MockRendererConfig>().create({
+    const route = createRouteFactory<MockAdapterConfig>().create({
       signal: env.signal,
       computed,
       el: el.impl as never,
       match: match.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -1072,9 +1072,9 @@ describe('programmatic navigation', () => {
 
   const mountRoute = (
     spec: RefSpec<MockElement | MockText>,
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -1120,7 +1120,7 @@ describe('programmatic navigation', () => {
   };
 
   it('navigate updates current route', () => {
-    const { route, el, renderer } = setup();
+    const { route, el, adapter } = setup();
 
     let navigateFn: ((path: string) => void) | undefined;
 
@@ -1146,7 +1146,7 @@ describe('programmatic navigation', () => {
       route('/about', About)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Home');
 
     if (!navigateFn) throw new Error('navigate not set');
@@ -1155,7 +1155,7 @@ describe('programmatic navigation', () => {
   });
 
   it('navigate works with parameterized paths', () => {
-    const { route, el, renderer, computed } = setup();
+    const { route, el, adapter, computed } = setup();
 
     let navigateFn: ((path: string) => void) | undefined;
 
@@ -1186,7 +1186,7 @@ describe('programmatic navigation', () => {
       route('/products/:id', Product)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Home');
 
     if (!navigateFn) throw new Error('navigate not set');
@@ -1195,7 +1195,7 @@ describe('programmatic navigation', () => {
   });
 
   it('navigate updates browser history', () => {
-    const { route, renderer } = setup();
+    const { route, adapter } = setup();
 
     const pushStateSpy = { calls: [] as Array<[unknown, string, string]> };
     const originalPushState = window.history.pushState.bind(window.history);
@@ -1222,7 +1222,7 @@ describe('programmatic navigation', () => {
     };
 
     const routeSpec = route('/', Home)();
-    mountRoute(routeSpec.unwrap(), renderer);
+    mountRoute(routeSpec.unwrap(), adapter);
 
     if (!navigateFn) throw new Error('navigate not set');
     navigateFn('/about');
@@ -1234,7 +1234,7 @@ describe('programmatic navigation', () => {
   });
 
   it('multiple navigations work correctly', () => {
-    const { route, el, renderer } = setup();
+    const { route, el, adapter } = setup();
 
     let navigateFn: ((path: string) => void) | undefined;
 
@@ -1267,7 +1267,7 @@ describe('programmatic navigation', () => {
       route('/products', Products)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Home');
 
     if (!navigateFn) throw new Error('navigate not set');
@@ -1282,7 +1282,7 @@ describe('programmatic navigation', () => {
   });
 
   it('components are recreated on each navigation to the route', () => {
-    const { route, el, renderer, computed } = setup();
+    const { route, el, adapter, computed } = setup();
 
     let navigateFn: ((path: string) => void) | undefined;
     let componentCreationCount = 0;
@@ -1315,7 +1315,7 @@ describe('programmatic navigation', () => {
       route('/about', About)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(componentCreationCount).toBe(1); // Created once on initial render
 
     if (!navigateFn) throw new Error('navigate not set');
@@ -1332,16 +1332,16 @@ describe('programmatic navigation', () => {
 describe('wildcard routes - catch-all behavior', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -1360,14 +1360,14 @@ describe('wildcard routes - catch-all behavior', () => {
       return result;
     };
 
-    const route = createRouteFactory<MockRendererConfig>().create({
+    const route = createRouteFactory<MockAdapterConfig>().create({
       signal: env.signal,
       computed,
       el: el.impl as never,
       match: match.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -1377,9 +1377,9 @@ describe('wildcard routes - catch-all behavior', () => {
 
   const mountRoute = (
     spec: RefSpec<MockElement | MockText>,
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -1425,7 +1425,7 @@ describe('wildcard routes - catch-all behavior', () => {
   };
 
   it('wildcard matches any path when no other route matches', () => {
-    const { route, el, currentPath, renderer } = setup();
+    const { route, el, currentPath, adapter } = setup();
 
     currentPath('/unknown');
 
@@ -1446,12 +1446,12 @@ describe('wildcard routes - catch-all behavior', () => {
       route('*', NotFound)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Not Found');
   });
 
   it('wildcard does not match when earlier route matches', () => {
-    const { route, el, currentPath, renderer } = setup();
+    const { route, el, currentPath, adapter } = setup();
 
     currentPath('/about');
 
@@ -1472,12 +1472,12 @@ describe('wildcard routes - catch-all behavior', () => {
       route('*', NotFound)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('About');
   });
 
   it('wildcard works with nested routes', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/unknown');
 
@@ -1506,12 +1506,12 @@ describe('wildcard routes - catch-all behavior', () => {
       route('*', NotFound)()
     );
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toContain('Not Found');
   });
 
   it('wildcard matches multi-segment paths', () => {
-    const { route, el, currentPath, renderer } = setup();
+    const { route, el, currentPath, adapter } = setup();
 
     currentPath('/some/deep/unknown/path');
 
@@ -1532,7 +1532,7 @@ describe('wildcard routes - catch-all behavior', () => {
       route('*', NotFound)().unwrap()
     );
 
-    const parent = mountRoute(routesSpec, renderer);
+    const parent = mountRoute(routesSpec, adapter);
     expect(getTextContent(parent)).toBe('Not Found');
   });
 });
@@ -1540,16 +1540,16 @@ describe('wildcard routes - catch-all behavior', () => {
 describe('outlet - parent components render matched children', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockRendererConfig>().create({
+    const el = El<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockRendererConfig>().create({
+    const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
       onCleanup: env.onCleanup,
@@ -1568,14 +1568,14 @@ describe('outlet - parent components render matched children', () => {
       return result;
     };
 
-    const route = createRouteFactory<MockRendererConfig>().create({
+    const route = createRouteFactory<MockAdapterConfig>().create({
       signal: env.signal,
       computed,
       el: el.impl as never,
       match: match.impl,
       currentPath,
       scopedEffect: env.scopedEffect,
-      renderer: env.renderer,
+      adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
@@ -1585,9 +1585,9 @@ describe('outlet - parent components render matched children', () => {
 
   const mountRoute = (
     spec: RefSpec<MockElement | MockText>,
-    renderer: { createNode: (tag: string) => MockElement | MockText }
+    adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
-    const parent = renderer.createNode('div') as MockElement;
+    const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
       status: STATUS_ELEMENT,
       element: parent,
@@ -1633,7 +1633,7 @@ describe('outlet - parent components render matched children', () => {
   };
 
   it('layout renders matched child via outlet', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/about');
 
@@ -1658,7 +1658,7 @@ describe('outlet - parent components render matched children', () => {
 
     const routeSpec = route('/', Layout)(route('about', About)());
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     const content = getTextContent(parent);
 
     expect(content).toContain('Header');
@@ -1667,7 +1667,7 @@ describe('outlet - parent components render matched children', () => {
   });
 
   it('outlet switches child when path changes', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/about');
 
@@ -1701,7 +1701,7 @@ describe('outlet - parent components render matched children', () => {
       route('products', Products)()
     );
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     expect(getTextContent(parent)).toContain('About Page');
     expect(getTextContent(parent)).not.toContain('Products Page');
 
@@ -1715,7 +1715,7 @@ describe('outlet - parent components render matched children', () => {
   });
 
   it('outlet renders nothing when no child matches', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/unknown');
 
@@ -1740,7 +1740,7 @@ describe('outlet - parent components render matched children', () => {
 
     const routeSpec = route('/', Layout)(route('about', About)());
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     const content = getTextContent(parent);
 
     expect(content).toContain('Header');
@@ -1749,7 +1749,7 @@ describe('outlet - parent components render matched children', () => {
   });
 
   it('multiple outlet levels work', () => {
-    const { route, currentPath, renderer } = setup();
+    const { route, currentPath, adapter } = setup();
 
     currentPath('/admin/users/settings');
 
@@ -1798,7 +1798,7 @@ describe('outlet - parent components render matched children', () => {
       )(route('users', UsersLayout)(route('settings', Settings)()))
     );
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     const content = getTextContent(parent);
 
     expect(content).toContain('Main Nav');
@@ -1808,7 +1808,7 @@ describe('outlet - parent components render matched children', () => {
   });
 
   it('outlet child receives composed params from all parent routes', () => {
-    const { route, currentPath, renderer, computed } = setup();
+    const { route, currentPath, adapter, computed } = setup();
 
     currentPath('/users/42/posts/99/edit');
 
@@ -1871,7 +1871,7 @@ describe('outlet - parent components render matched children', () => {
       )(route('posts/:postId', PostSection)(route('edit', EditPage)()))
     );
 
-    const parent = mountRoute(routeSpec.unwrap(), renderer);
+    const parent = mountRoute(routeSpec.unwrap(), adapter);
     const content = getTextContent(parent);
 
     expect(content).toContain('User: 42');

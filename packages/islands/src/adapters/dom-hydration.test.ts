@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDOMHydrationRenderer, HydrationMismatch } from './dom-hydration';
+import { createDOMHydrationAdapter, HydrationMismatch } from './dom-hydration';
 import { STATUS_FRAGMENT, type FragmentRef } from '@lattice/view/types';
 
 /**
@@ -51,7 +51,7 @@ function setupHTML(html: string): HTMLElement {
 describe('Basic Element Hydration', () => {
   it('should hydrate existing element and enter its children', () => {
     const container = setupHTML('<div></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     const div = renderer.createNode('div') as HTMLElement;
 
@@ -61,7 +61,7 @@ describe('Basic Element Hydration', () => {
 
   it('should throw on tag mismatch', () => {
     const container = setupHTML('<div></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     expect(() => {
       renderer.createNode('span');
@@ -73,7 +73,7 @@ describe('Basic Element Hydration', () => {
 
   it('should hydrate nested elements in sequence', () => {
     const container = setupHTML('<div><button></button></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     const div = renderer.createNode('div') as HTMLElement;
     const button = renderer.createNode('button') as HTMLElement;
@@ -84,7 +84,7 @@ describe('Basic Element Hydration', () => {
 
   it('should hydrate sibling elements in sequence', () => {
     const container = setupHTML('<div><span></span><p></p></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const span = renderer.createNode('span') as HTMLElement;
@@ -107,7 +107,7 @@ describe('Basic Element Hydration', () => {
 describe('Text Node Hydration', () => {
   it('should hydrate existing text node', () => {
     const container = setupHTML('<div>Hello</div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const text = renderer.createNode('text', { value: 'Hello' });
@@ -117,7 +117,7 @@ describe('Text Node Hydration', () => {
 
   it('should throw on text node position mismatch', () => {
     const container = setupHTML('<div><span></span></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -131,7 +131,7 @@ describe('Text Node Hydration', () => {
 
   it('should update text content if differs (data race handling)', () => {
     const container = setupHTML('<div>old</div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const text = renderer.createNode('text', { value: 'new' });
@@ -141,7 +141,7 @@ describe('Text Node Hydration', () => {
 
   it('should preserve text content if matches', () => {
     const container = setupHTML('<div>same</div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const text = renderer.createNode('text', { value: 'same' });
@@ -159,7 +159,7 @@ describe('Fragment Range Hydration', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><span>1</span><span>2</span><!--fragment-end--></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const span1 = renderer.createNode('span') as HTMLElement; // Should detect marker and enter range
@@ -172,7 +172,7 @@ describe('Fragment Range Hydration', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><span>a</span><span>b</span><span>c</span><!--fragment-end--></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -197,7 +197,7 @@ describe('Fragment Range Hydration', () => {
     const container = setupHTML(
       '<div><p>before</p><!--fragment-start--><span>inside</span><!--fragment-end--><p>after</p></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const p1 = renderer.createNode('p') as HTMLElement;
@@ -217,7 +217,7 @@ describe('Fragment Range Hydration', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><span>a</span><span>b</span><!--fragment-end--></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -235,7 +235,7 @@ describe('Fragment Range Hydration', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><span>1</span><!--fragment-end--><p>after</p></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -258,7 +258,7 @@ describe('Nested Fragment Ranges', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><section><!--fragment-start--><span>inner</span><!--fragment-end--></section><!--fragment-end--></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const section = renderer.createNode('section') as HTMLElement;
@@ -272,7 +272,7 @@ describe('Nested Fragment Ranges', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><section><!--fragment-start--><span>a</span><span>b</span><!--fragment-end--></section><section><!--fragment-start--><span>c</span><!--fragment-end--></section><!--fragment-end--><p>after</p></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -306,7 +306,7 @@ describe('Nested Fragment Ranges', () => {
 describe('Position Bookkeeping', () => {
   it('should detect element exit via appendChild', () => {
     const container = setupHTML('<div><button>Click</button></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const button = renderer.createNode('button') as HTMLElement;
@@ -321,7 +321,7 @@ describe('Position Bookkeeping', () => {
 
   it('should handle insertBefore for position tracking', () => {
     const container = setupHTML('<div><span>a</span><span>b</span></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const span = renderer.createNode('span') as HTMLElement;
@@ -336,7 +336,7 @@ describe('Position Bookkeeping', () => {
 
   it('should no-op appendChild when child not in parent', () => {
     const container = setupHTML('<div></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     const div = renderer.createNode('div') as HTMLElement;
     const orphan = document.createElement('span');
@@ -347,7 +347,7 @@ describe('Position Bookkeeping', () => {
 
   it('should no-op removeChild during hydration', () => {
     const container = setupHTML('<div><span></span></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     const div = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -367,7 +367,7 @@ describe('Position Bookkeeping', () => {
 describe('Attribute and Event Handling', () => {
   it('should set attributes on hydrated elements', () => {
     const container = setupHTML('<div></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'className', 'hydrated');
@@ -385,7 +385,7 @@ describe('Complex Hydration Scenarios', () => {
     const container = setupHTML(
       '<div><section><article><h1>Title</h1><p>Content</p></article></section></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     renderer.createNode('section');
@@ -406,7 +406,7 @@ describe('Complex Hydration Scenarios', () => {
     const container = setupHTML(
       '<div><header>Header</header><!--fragment-start--><section>Section 1</section><section>Section 2</section><!--fragment-end--><footer>Footer</footer></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -435,7 +435,7 @@ describe('Complex Hydration Scenarios', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><span>solo</span><!--fragment-end--></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const span = renderer.createNode('span') as HTMLElement;
@@ -447,7 +447,7 @@ describe('Complex Hydration Scenarios', () => {
 
   it('should handle empty elements', () => {
     const container = setupHTML('<div><button></button></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     const button = renderer.createNode('button') as HTMLElement;
@@ -464,7 +464,7 @@ describe('Complex Hydration Scenarios', () => {
 describe('Hydration Mismatch Errors', () => {
   it('should throw on missing child', () => {
     const container = setupHTML('<div></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -480,7 +480,7 @@ describe('Hydration Mismatch Errors', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><button>wrong</button><!--fragment-end--></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
 
@@ -495,7 +495,7 @@ describe('Hydration Mismatch Errors', () => {
 
   it('should provide helpful error messages with path', () => {
     const container = setupHTML('<div><section><p></p></section></div>');
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
 
     renderer.createNode('div');
     renderer.createNode('section');
@@ -523,7 +523,7 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
     const container = setupHTML(
       '<div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const mockFragRef = createMockFragmentRef();
 
     // Forward pass: create div
@@ -568,7 +568,7 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
     const container = setupHTML(
       '<div><!--fragment-start--><h1>first</h1><!--fragment-end--><section>after</section></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const mockFragRef = createMockFragmentRef();
 
     const div = renderer.createNode('div') as HTMLElement;
@@ -597,7 +597,7 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
     const container = setupHTML(
       '<div><section>before</section><!--fragment-start--><h1>last</h1><!--fragment-end--></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const mockFragRef = createMockFragmentRef();
 
     const div = renderer.createNode('div') as HTMLElement;
@@ -626,7 +626,7 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
     const container = setupHTML(
       '<div><h2>title</h2><!--fragment-start--><p>frag1</p><!--fragment-end--><!--fragment-start--><span>frag2</span><!--fragment-end--><footer>end</footer></div>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const mockFragRef = createMockFragmentRef();
 
     const div = renderer.createNode('div') as HTMLElement;
@@ -688,7 +688,7 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
     const container = setupHTML(
       '<main><!--fragment-start--><div><h2>Products</h2><section>intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section>filter</section></div><!--fragment-end--></main>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const mockFragRef = createMockFragmentRef();
 
     // Enter main
@@ -754,7 +754,7 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
     const container = setupHTML(
       '<main><!--fragment-start--><div>Products page</div><!--fragment-end--></main>'
     );
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const mockFragRef = createMockFragmentRef();
 
     // Enter main
@@ -800,7 +800,7 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
 
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createViewApi } from '@lattice/view/presets/core';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types'; // Separate import for integration tests
 
 describe('Integration: match() hydration with full view API', () => {
@@ -823,9 +823,9 @@ describe('Integration: match() hydration with full view API', () => {
       '<div class="products-page"><h2>Products</h2><section class="intro">intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section class="filter">filter</section></div>'
     );
 
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const signals = createSignalsApi();
-    const views = createViewApi<DOMRendererConfig>(renderer, signals);
+    const views = createViewApi<DOMAdapterConfig>(renderer, signals);
 
     // Combine signals and views to get full API
     const api = { ...signals, ...views };
@@ -882,9 +882,9 @@ describe('Integration: match() hydration with full view API', () => {
       '<div class="app"><nav>nav</nav><main><!--fragment-start--><div class="products-page"><h2>Products</h2><section class="intro">intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section class="filter">filter</section></div><!--fragment-end--></main></div>'
     );
 
-    const renderer = createDOMHydrationRenderer(container);
+    const renderer = createDOMHydrationAdapter(container);
     const signals = createSignalsApi();
-    const views = createViewApi<DOMRendererConfig>(renderer, signals);
+    const views = createViewApi<DOMAdapterConfig>(renderer, signals);
 
     // Combine signals and views to get full API
     const api = { ...signals, ...views };

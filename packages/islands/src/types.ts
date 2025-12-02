@@ -6,7 +6,7 @@
  */
 
 import type { RefSpec } from '@lattice/view/types';
-import { HydrationMismatch } from './renderers/dom-hydration';
+import { HydrationMismatch } from './adapters/dom-hydration';
 
 // Re-export HydrationMismatch for convenience
 export { HydrationMismatch };

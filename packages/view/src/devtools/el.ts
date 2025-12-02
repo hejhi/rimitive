@@ -5,12 +5,12 @@
 import type { InstrumentationContext } from '@lattice/lattice';
 import type { ElFactory, TagFactory, ElementProps } from '../el';
 import type { RefSpec, ElRefSpecChild } from '../types';
-import type { RendererConfig } from '../renderer';
+import type { AdapterConfig } from '../adapter';
 
 /**
  * Instrument an el factory to emit events
  */
-export function instrumentEl<TConfig extends RendererConfig>(
+export function instrumentEl<TConfig extends AdapterConfig>(
   impl: ElFactory<TConfig>['impl'],
   instrumentation: InstrumentationContext
 ): ElFactory<TConfig>['impl'] {

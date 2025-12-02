@@ -11,20 +11,20 @@ import {
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import {
-  createDOMRenderer,
-  DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
+  createDOMAdapter,
+  DOMAdapterConfig,
+} from '@lattice/view/adapters/dom';
 import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createRouter } from '@lattice/router';
 
 const createViewApi = () => {
   const signalSvc = createSignalsApi();
-  const renderer = createDOMRenderer();
-  const viewHelpers = defaultViewHelpers(renderer, signalSvc);
+  const adapter = createDOMAdapter();
+  const viewHelpers = defaultViewHelpers(adapter, signalSvc);
 
   // Create base extensions
-  const baseExtensions = defaultViewExtensions<DOMRendererConfig>();
+  const baseExtensions = defaultViewExtensions<DOMAdapterConfig>();
 
   // Create the views API (without route - that's separate now)
   const viewSvc = composeFrom(baseExtensions, viewHelpers);

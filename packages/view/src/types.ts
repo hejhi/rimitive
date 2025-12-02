@@ -4,19 +4,19 @@
 
 import type { Service } from '@lattice/lattice';
 
-// Re-export renderer types so they're available from @lattice/view/types
-export type { Renderer, RendererConfig } from './renderer';
+// Re-export adapter types so they're available from @lattice/view/types
+export type { Adapter, AdapterConfig } from './adapter';
 export type { ReactiveAdapter } from './reactive-adapter';
 
 /**
- * Parent context passed to RefSpec.create() for renderer composition
- * Allows child RefSpecs to know their parent's renderer and element
+ * Parent context passed to RefSpec.create() for adapter composition
+ * Allows child RefSpecs to know their parent's adapter and element
  *
- * Note: renderer uses 'unknown' for variance - any Renderer<T> is assignable
+ * Note: adapter uses 'unknown' for variance - any Adapter<T> is assignable
  */
 export interface ParentContext<TElement> {
-  /** The parent's renderer - enables cross-renderer composition */
-  renderer: unknown;
+  /** The parent's adapter - enables cross-adapter composition */
+  adapter: unknown;
   /** The parent element (already created when children are processed) */
   element: TElement;
 }

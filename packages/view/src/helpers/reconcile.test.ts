@@ -27,7 +27,7 @@ describe('reconcileWithKeys', () => {
 
   function setup() {
     const env = createTestEnv();
-    const parent = env.renderer.createNode('ul') as MockElement;
+    const parent = env.adapter.createNode('ul') as MockElement;
 
     // Create reconciler instance with hooks
     const reconciler = createReconciler<
@@ -37,10 +37,10 @@ describe('reconcileWithKeys', () => {
     >({
       parentElement: parent,
       onCreate: (item: Item) => {
-        const li = env.renderer.createNode('li') as MockElement;
-        const textNode = env.renderer.createNode('text', { value: item.text });
-        env.renderer.appendChild(li, textNode);
-        env.renderer.insertBefore(parent, li, null);
+        const li = env.adapter.createNode('li') as MockElement;
+        const textNode = env.adapter.createNode('text', { value: item.text });
+        env.adapter.appendChild(li, textNode);
+        env.adapter.insertBefore(parent, li, null);
 
         return {
           status: 1,
@@ -53,7 +53,7 @@ describe('reconcileWithKeys', () => {
         // Update text content if needed
         const li = (node as ElementRef<MockElement>).element;
         if (li.children[0]) {
-          env.renderer.setProperty(li.children[0] as MockText, 'value', item.text);
+          env.adapter.setProperty(li.children[0] as MockText, 'value', item.text);
         }
       },
       onMove: (node, nextSibling) => {
@@ -61,7 +61,7 @@ describe('reconcileWithKeys', () => {
         const nextEl = nextSibling
           ? (nextSibling as ElementRef<MockElement>).element
           : null;
-        env.renderer.insertBefore(parent, li, nextEl);
+        env.adapter.insertBefore(parent, li, nextEl);
       },
       onRemove: (node) => {
         const li = (node as ElementRef<MockElement>).element;
@@ -69,7 +69,7 @@ describe('reconcileWithKeys', () => {
         if (scope) {
           env.disposeScope(scope);
         }
-        env.renderer.removeChild(parent, li);
+        env.adapter.removeChild(parent, li);
       },
     });
 
@@ -689,7 +689,7 @@ describe('reconcileWithKeys', () => {
   describe('Key fallback behavior', () => {
     it('should use index as key when key is undefined', () => {
       const env = createTestEnv();
-      const parent = env.renderer.createNode('ul') as MockElement;
+      const parent = env.adapter.createNode('ul') as MockElement;
 
       // Create reconciler that uses index as key
       const reconciler = createReconciler<
@@ -699,10 +699,10 @@ describe('reconcileWithKeys', () => {
       >({
         parentElement: parent,
         onCreate: (item: { text: string }) => {
-          const li = env.renderer.createNode('li') as MockElement;
-          const textNode = env.renderer.createNode('text', { value: item.text });
-          env.renderer.appendChild(li, textNode);
-          env.renderer.insertBefore(parent, li, null);
+          const li = env.adapter.createNode('li') as MockElement;
+          const textNode = env.adapter.createNode('text', { value: item.text });
+          env.adapter.appendChild(li, textNode);
+          env.adapter.insertBefore(parent, li, null);
 
           return {
             status: 1,
@@ -717,11 +717,11 @@ describe('reconcileWithKeys', () => {
           const nextEl = nextSibling
             ? (nextSibling as ElementRef<MockElement>).element
             : null;
-          env.renderer.insertBefore(parent, li, nextEl);
+          env.adapter.insertBefore(parent, li, nextEl);
         },
         onRemove: (node) => {
           const li = (node as ElementRef<MockElement>).element;
-          env.renderer.removeChild(parent, li);
+          env.adapter.removeChild(parent, li);
         },
       });
 

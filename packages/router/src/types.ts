@@ -1,10 +1,10 @@
 import type {
-  RendererConfig,
+  AdapterConfig,
   RefSpec,
   Reactive,
   ElRefSpecChild,
 } from '@lattice/view/types';
-import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import type { CreateScopes } from '@lattice/view/helpers/scope';
 import type { ServiceDefinition } from '@lattice/lattice';
 import type { ElementProps } from '@lattice/view/el';
@@ -32,7 +32,7 @@ export const STATUS_ROUTE_SPEC = 32; // 100000
 /**
  * Route-specific metadata
  */
-export interface RouteMetadata<TConfig extends RendererConfig> {
+export interface RouteMetadata<TConfig extends AdapterConfig> {
   relativePath: string;
   rebuild: (parentPath: string) => RouteSpec<TConfig['baseElement']>;
 }
@@ -48,8 +48,8 @@ export interface RouteMetadata<TConfig extends RendererConfig> {
  */
 export interface RouteSpec<TElement> {
   status: typeof STATUS_ROUTE_SPEC;
-  routeMetadata: RouteMetadata<RendererConfig>;
-  // Unwrap method to get the inner RefSpec for renderer
+  routeMetadata: RouteMetadata<AdapterConfig>;
+  // Unwrap method to get the inner RefSpec for adapter
   unwrap(): RefSpec<TElement>;
   create<TExt = Record<string, unknown>>(
     api?: unknown,
@@ -88,7 +88,7 @@ export interface MatchFunction<TBaseElement> {
  * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
  * Options passed to old route factory
  */
-export type RouteOpts<TConfig extends RendererConfig> = {
+export type RouteOpts<TConfig extends AdapterConfig> = {
   signal: <T>(value: T) => SignalFunction<T>;
   computed: <T>(fn: () => T) => ComputedFunction<T>;
   el: <Tag extends string & keyof TConfig['elements']>(
@@ -98,7 +98,7 @@ export type RouteOpts<TConfig extends RendererConfig> = {
   match: MatchFunction<TConfig['baseElement']>;
   currentPath: Reactive<string>;
   scopedEffect: CreateScopes['scopedEffect'];
-  renderer: import('@lattice/view/types').Renderer<TConfig>;
+  adapter: import('@lattice/view/types').Adapter<TConfig>;
   createElementScope: CreateScopes['createElementScope'];
   onCleanup: CreateScopes['onCleanup'];
 };
@@ -108,7 +108,7 @@ export type RouteOpts<TConfig extends RendererConfig> = {
  * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
  * Component that receives the API
  */
-export type RouteComponent<TConfig extends RendererConfig> =
+export type RouteComponent<TConfig extends AdapterConfig> =
   | RefSpec<TConfig['baseElement']>
   | ((
       api: RouteOpts<TConfig> & {
@@ -123,7 +123,7 @@ export type RouteComponent<TConfig extends RendererConfig> =
  * DEPRECATED: Only used by route.ts (old implementation kept temporarily)
  * Route factory type
  */
-export type RouteFactory<TConfig extends RendererConfig> = ServiceDefinition<
+export type RouteFactory<TConfig extends AdapterConfig> = ServiceDefinition<
   'route',
   {
     (
@@ -144,20 +144,20 @@ export type RouteFactory<TConfig extends RendererConfig> = ServiceDefinition<
  * Link is DOM-only - routing with window.history is a web browser concept
  */
 export type LinkOpts = {
-  el: ElMethod<DOMRendererConfig>;
+  el: ElMethod<DOMAdapterConfig>;
   navigate: (path: string) => void;
 };
 
 /**
  * Link factory type
  *
- * Link is DOM-only - no need for generic renderer abstraction
+ * Link is DOM-only - no need for generic adapter abstraction
  */
 export type LinkFactory = ServiceDefinition<
   'Link',
   {
     (
-      props: ElementProps<DOMRendererConfig, 'a'> & { href: string }
+      props: ElementProps<DOMAdapterConfig, 'a'> & { href: string }
     ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
   }
 >;

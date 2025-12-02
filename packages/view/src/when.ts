@@ -44,20 +44,20 @@ import type {
   NodeRef,
 } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
-import type { Renderer, RendererConfig } from './renderer';
+import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createNodeHelpers } from './helpers/node-helpers';
 
 /**
  * Options passed to When factory
  */
-export type WhenOpts<TConfig extends RendererConfig> = {
+export type WhenOpts<TConfig extends AdapterConfig> = {
   createElementScope: CreateScopes['createElementScope'];
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
   getElementScope: CreateScopes['getElementScope'];
-  renderer: Renderer<TConfig>;
+  adapter: Adapter<TConfig>;
 };
 
 export type WhenProps<TBaseElement> = {
@@ -93,9 +93,9 @@ export type WhenFactory<TBaseElement> = ServiceDefinition<
  * Much more efficient than match() for simple show/hide scenarios.
  */
 export const When = defineService(
-  <TConfig extends RendererConfig>({
+  <TConfig extends AdapterConfig>({
     scopedEffect,
-    renderer,
+    adapter,
     disposeScope,
     getElementScope,
   }: WhenOpts<TConfig>) =>
@@ -105,7 +105,7 @@ export const When = defineService(
 
       const { instrument } = props ?? {};
       const { insertNodeBefore, removeNode } = createNodeHelpers({
-        renderer,
+        adapter,
         disposeScope,
         getElementScope,
       });

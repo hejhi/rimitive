@@ -16,10 +16,10 @@ import {
 import { createSpec } from '@lattice/view/helpers';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { composeFrom } from '@lattice/lattice';
-import type { RefSpec, Renderer, NodeRef } from '@lattice/view/types';
+import type { RefSpec, Adapter, NodeRef } from '@lattice/view/types';
 import type { GetContext } from '../types';
 import { ISLAND_META } from '../types';
-import type { DOMRendererConfig } from '../renderers/dom-hydration';
+import type { DOMAdapterConfig } from '../adapters/dom-hydration';
 import { setClientContext } from '../client-context.browser';
 import { createDOMHydrator } from '../hydrators/dom';
 
@@ -33,14 +33,14 @@ import { createDOMHydrator } from '../hydrators/dom';
 type SignalsApi = ReturnType<typeof createSignalsApi>;
 
 /**
- * View API type for DOM renderer
+ * View API type for DOM adapter
  */
-type ViewsApi = ReturnType<typeof createViewApi<DOMRendererConfig>>;
+type ViewsApi = ReturnType<typeof createViewApi<DOMAdapterConfig>>;
 
 /**
- * Hybrid renderer type (from createIslandsRenderer)
+ * Hybrid adapter type (from createIslandsAdapter)
  */
-type HybridRenderer = Renderer<DOMRendererConfig> & {
+type HybridAdapter = Adapter<DOMAdapterConfig> & {
   switchToFallback: () => void;
 };
 
@@ -63,14 +63,14 @@ export interface ClientOptions<TContext> {
   signals: SignalsApi;
 
   /**
-   * Hybrid renderer (hydration → fallback)
-   * Create with: createIslandsRenderer(hydrationRenderer, fallbackRenderer)
+   * Hybrid adapter (hydration → fallback)
+   * Create with: createIslandsAdapter(hydrationAdapter, fallbackAdapter)
    */
-  renderer: HybridRenderer;
+  adapter: HybridAdapter;
 
   /**
    * View API instance
-   * Create with: createViewApi(renderer, signals)
+   * Create with: createViewApi(adapter, signals)
    */
   view: ViewsApi;
 
@@ -117,7 +117,7 @@ export interface ClientApp {
    * API factory for island hydrator (advanced use)
    */
   createApi: (
-    renderer: Renderer<DOMRendererConfig>,
+    adapter: Adapter<DOMAdapterConfig>,
     signals: SignalsApi
   ) => {
     api: IslandsClientService;
@@ -135,7 +135,7 @@ export interface ClientApp {
 /**
  * Create an islands app for client-side hydration
  *
- * Accepts signals, renderer, and view as dependencies - does not create them internally.
+ * Accepts signals, adapter, and view as dependencies - does not create them internally.
  * This allows maximum composability and custom extensions.
  *
  * For server-side rendering, import from '@lattice/islands/server':
@@ -146,7 +146,7 @@ export interface ClientApp {
 export function createIslandsApp<TContext = unknown>(
   options: ClientOptions<TContext>
 ): ClientApp {
-  const { signals, renderer, view, context: getContext } = options;
+  const { signals, adapter, view, context: getContext } = options;
 
   // Create reactive context signal if getContext is provided
   const contextSignal = getContext
@@ -167,7 +167,7 @@ export function createIslandsApp<TContext = unknown>(
     addEventListener: createAddEventListener(signals.batch),
   } as IslandsClientService;
 
-  // Track whether we've switched to fallback renderer
+  // Track whether we've switched to fallback adapter
   let switched = false;
 
   // Mount function with auto-switch after first mount
@@ -178,19 +178,19 @@ export function createIslandsApp<TContext = unknown>(
     const result = spec.create(svc);
     if (!switched) {
       switched = true;
-      renderer.switchToFallback();
+      adapter.switchToFallback();
     }
     return result;
   };
 
   // API factory for island hydrator
   const createApi = (
-    islandRenderer: Renderer<DOMRendererConfig>,
+    islandAdapter: Adapter<DOMAdapterConfig>,
     islandSignals: SignalsApi
   ) => {
-    const islandViewHelpers = createSpec(islandRenderer, islandSignals);
+    const islandViewHelpers = createSpec(islandAdapter, islandSignals);
     const islandViews = composeFrom(
-      defaultViewExtensions<DOMRendererConfig>(),
+      defaultViewExtensions<DOMAdapterConfig>(),
       islandViewHelpers
     );
     const api: IslandsClientService = {
@@ -227,5 +227,5 @@ export function createIslandsApp<TContext = unknown>(
 }
 
 // Re-export types for convenience
-export type { DOMRendererConfig } from '../renderers/dom-hydration';
+export type { DOMAdapterConfig } from '../adapters/dom-hydration';
 export type { GetContext } from '../types';

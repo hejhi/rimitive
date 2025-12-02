@@ -23,7 +23,7 @@
  * ```
  */
 
-import type { Renderer, ParentContext } from '@lattice/view/types';
+import type { Adapter, ParentContext } from '@lattice/view/types';
 import type {
   CanvasAdapterConfig,
   CanvasNode,
@@ -339,7 +339,7 @@ export interface CanvasAdapterOptions {
   clearColor?: string;
 }
 
-export interface CanvasAdapterInstance extends Renderer<CanvasAdapterConfig> {
+export interface CanvasAdapterInstance extends Adapter<CanvasAdapterConfig> {
   /** Perform hit testing on a specific canvas at a point */
   hitTest: (canvas: CanvasBridgeElement, x: number, y: number) => CanvasNode | null;
 }
@@ -347,7 +347,7 @@ export interface CanvasAdapterInstance extends Renderer<CanvasAdapterConfig> {
 /**
  * Create a canvas node adapter for composable DOM + Canvas rendering
  *
- * This adapter implements the Renderer interface, allowing canvas primitives
+ * This adapter implements the Adapter interface, allowing canvas primitives
  * to be composed with DOM elements using the same el()/map()/when() patterns.
  *
  * The 'canvas' element type creates an HTMLCanvasElement that acts as a bridge
@@ -540,7 +540,7 @@ export function createCanvasAdapter(
 
       // For non-bridge types, validate that parent renderer is this canvas adapter
       // This catches errors like: dom.el('div')(canvas.el('circle')()) - missing canvas boundary
-      if (parentContext && parentContext.renderer !== adapterInstance) {
+      if (parentContext && parentContext.adapter !== adapterInstance) {
         throw new Error(
           `Canvas primitive '${type}' must be nested inside a canvas element. ` +
             `Use canvas.el('canvas', {...})(...) to create a canvas boundary.`

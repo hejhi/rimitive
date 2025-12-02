@@ -54,17 +54,17 @@
       "import": "./dist/helpers/renderToString.js",
       "types": "./dist/helpers/renderToString.d.ts"
     },
-    "./renderers/dom-server": {
-      "import": "./dist/renderers/dom-server.js",
-      "types": "./dist/renderers/dom-server.d.ts"
+    "./adapters/dom-server": {
+      "import": "./dist/adapters/dom-server.js",
+      "types": "./dist/adapters/dom-server.d.ts"
     },
-    "./renderers/dom-hydration": {
-      "import": "./dist/renderers/dom-hydration.js",
-      "types": "./dist/renderers/dom-hydration.d.ts"
+    "./adapters/dom-hydration": {
+      "import": "./dist/adapters/dom-hydration.js",
+      "types": "./dist/adapters/dom-hydration.d.ts"
     },
-    "./renderers/islands": {
-      "import": "./dist/renderers/islands.js",
-      "types": "./dist/renderers/islands.d.ts"
+    "./adapters/islands": {
+      "import": "./dist/adapters/islands.js",
+      "types": "./dist/adapters/islands.d.ts"
     },
     "./presets/island-ssr": {
       "import": "./dist/presets/island-ssr.js",

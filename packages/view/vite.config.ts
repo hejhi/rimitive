@@ -51,8 +51,8 @@ export default defineConfig({
         component: resolve(__dirname, 'src/component.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         map: resolve(__dirname, 'src/map.ts'),
-        'renderers/dom': resolve(__dirname, 'src/renderers/dom.ts'),
-        'renderers/test': resolve(__dirname, 'src/renderers/test.ts'),
+        'adapters/dom': resolve(__dirname, 'src/adapters/dom.ts'),
+        'adapters/test': resolve(__dirname, 'src/adapters/test.ts'),
         'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
         'helpers/processChildren': resolve(
           __dirname,

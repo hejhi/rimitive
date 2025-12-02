@@ -11,9 +11,9 @@ import {
 } from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import {
-  createDOMRenderer,
-  DOMRendererConfig,
-} from '@lattice/view/renderers/dom';
+  createDOMAdapter,
+  DOMAdapterConfig,
+} from '@lattice/view/adapters/dom';
 import type { RefSpec } from '@lattice/view/types';
 import { useDialog } from '../../useDialog';
 import { useSelect, type SelectOption } from '../../useSelect';
@@ -23,9 +23,9 @@ import { useSelect, type SelectOption } from '../../useSelect';
 // ============================================================================
 
 const signalsSvc = createSignalsApi();
-const viewHelpers = defaultViewHelpers(createDOMRenderer(), signalsSvc);
+const viewHelpers = defaultViewHelpers(createDOMAdapter(), signalsSvc);
 const viewSvc = composeFrom(
-  defaultExtensions<DOMRendererConfig>(),
+  defaultExtensions<DOMAdapterConfig>(),
   viewHelpers
 );
 const svc = {

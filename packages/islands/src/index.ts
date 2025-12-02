@@ -27,11 +27,11 @@ export { HydrationMismatch, ISLAND_META } from './types';
 export { createDOMHydrator } from './hydrators/dom';
 export type { IslandHydrator, MountFn } from './hydrators/dom';
 
-// Island-aware client renderers (hydration)
+// Island-aware client adapters (hydration)
 export {
-  createDOMHydrationRenderer,
-  createIslandsRenderer,
-  type DOMRendererConfig,
+  createDOMHydrationAdapter,
+  createIslandsAdapter,
+  type DOMAdapterConfig,
 } from './presets/island-client';
 
 // Service adapter type

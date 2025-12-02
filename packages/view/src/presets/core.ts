@@ -3,7 +3,7 @@ import { Map } from '../map';
 import { Match } from '../match';
 import { When } from '../when';
 import { createSpec } from '../helpers';
-import type { Renderer, RendererConfig } from '../renderer';
+import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef, ReactiveAdapter } from '../types';
 import { composeFrom } from '@lattice/lattice';
 
@@ -13,7 +13,7 @@ export type { MapFactory } from '../map';
 export type { MatchFactory } from '../match';
 export type { WhenFactory } from '../when';
 
-export const defaultExtensions = <TConfig extends RendererConfig>() => ({
+export const defaultExtensions = <TConfig extends AdapterConfig>() => ({
   el: El<TConfig>(),
   map: Map<TConfig>(),
   match: Match<TConfig>(),
@@ -33,8 +33,8 @@ export type ComponentFactory<TApi> = <TArgs extends unknown[], TElement>(
 
 export const defaultHelpers = createSpec;
 
-export const createViewApi = <TConfig extends RendererConfig>(
-  renderer: Renderer<TConfig>,
+export const createViewApi = <TConfig extends AdapterConfig>(
+  adapter: Adapter<TConfig>,
   signals: ReactiveAdapter
 ) =>
-  composeFrom(defaultExtensions<TConfig>(), defaultHelpers(renderer, signals));
+  composeFrom(defaultExtensions<TConfig>(), defaultHelpers(adapter, signals));
