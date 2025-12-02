@@ -1,0 +1,96 @@
+
+> @lattice/islands@0.0.1 check /Users/henryivry/repos/lattice/packages/islands
+> pnpm typecheck && pnpm test && pnpm lint
+
+
+> @lattice/islands@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/islands
+> tsc --noEmit
+
+
+> @lattice/islands@0.0.1 test /Users/henryivry/repos/lattice/packages/islands
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90m/Users/henryivry/repos/lattice/packages/islands[39m
+
+ [32m✓[39m src/helpers/renderToString.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/ssr-context.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m src/helpers/hydrate-dom.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/island.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/adapters/islands.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/hydrators/dom.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+[90mstdout[2m | src/adapters/dom-server.test.ts[2m > [22m[2mFull SSR Integration[2m > [22m[2mshould render all items in map() during SSR
+[22m[39mRendered HTML: <div class="container"><!--fragment-start--><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><!--fragment-end--></div>
+
+[90mstdout[2m | src/adapters/dom-server.test.ts[2m > [22m[2mFull SSR Integration[2m > [22m[2mshould render all items when map() uses computed
+[22m[39mRendered HTML with computed: <div class="container"><!--fragment-start--><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><!--fragment-end--></div>
+
+ [32m✓[39m src/adapters/dom-hydration.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [31m❯[39m src/adapters/dom-server.test.ts [2m([22m[2m22 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 19[2mms[22m[39m
+   [32m✓[39m Basic DOM Operations[2m > [22mshould create elements with correct tag names[32m 2[2mms[22m[39m
+   [32m✓[39m Basic DOM Operations[2m > [22mshould create text nodes with correct content[32m 0[2mms[22m[39m
+   [32m✓[39m Basic DOM Operations[2m > [22mshould append children to parent[32m 0[2mms[22m[39m
+   [32m✓[39m Basic DOM Operations[2m > [22mshould insert child before reference node[32m 0[2mms[22m[39m
+   [32m✓[39m Basic DOM Operations[2m > [22mshould update text node content[32m 0[2mms[22m[39m
+   [32m✓[39m Attribute Handling[2m > [22mshould skip event handler attributes[32m 0[2mms[22m[39m
+   [32m✓[39m Attribute Handling[2m > [22mshould map className to class attribute[32m 0[2mms[22m[39m
+   [32m✓[39m Attribute Handling[2m > [22mshould stringify primitive values[32m 0[2mms[22m[39m
+   [32m✓[39m Attribute Handling[2m > [22mshould skip object values[32m 0[2mms[22m[39m
+   [32m✓[39m Attribute Handling[2m > [22mshould skip function values[32m 0[2mms[22m[39m
+   [32m✓[39m Attribute Handling[2m > [22mshould skip null and false values[32m 0[2mms[22m[39m
+   [32m✓[39m Fragment Decoration (Non-Island)[2m > [22mshould add fragment-start and fragment-end comments[32m 0[2mms[22m[39m
+   [32m✓[39m Fragment Decoration (Non-Island)[2m > [22mshould place comments around fragment children[32m 0[2mms[22m[39m
+   [32m✓[39m Fragment Decoration (Non-Island)[2m > [22mshould skip empty fragments[32m 0[2mms[22m[39m
+   [32m✓[39m Fragment Island Decoration[2m > [22mshould wrap island fragment in div with script tag[32m 1[2mms[22m[39m
+   [32m✓[39m Fragment Island Decoration[2m > [22mshould preserve fragment children inside island wrapper[32m 0[2mms[22m[39m
+   [32m✓[39m Element Island Decoration[2m > [22mshould add script tag after island element[32m 0[2mms[22m[39m
+   [32m✓[39m Element Island Decoration[2m > [22mshould place script tag as next sibling of element[32m 0[2mms[22m[39m
+   [32m✓[39m Element Island Decoration[2m > [22mshould skip decoration for non-island elements[32m 0[2mms[22m[39m
+   [32m✓[39m SSR-Specific Behaviors[2m > [22mshould generate valid HTML from DOM tree[32m 0[2mms[22m[39m
+[31m   [31m×[31m Full SSR Integration[2m > [22mshould render all items in map() during SSR[39m[32m 10[2mms[22m[39m
+[31m     → expected '<div class="container"><!--fragment-s…' to contain 'Item 1'[39m
+[31m   [31m×[31m Full SSR Integration[2m > [22mshould render all items when map() uses computed[39m[32m 1[2mms[22m[39m
+[31m     → expected '<div class="container"><!--fragment-s…' to contain 'Item 1'[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/adapters/dom-server.test.ts[2m > [22mFull SSR Integration[2m > [22mshould render all items in map() during SSR
+[31m[1mAssertionError[22m: expected '<div class="container"><!--fragment-s…' to contain 'Item 1'[39m
+
+Expected: [32m"Item 1"[39m
+Received: [31m"<div class="container"><!--fragment-start--><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><!--fragment-end--></div>"[39m
+
+[36m [2m❯[22m src/adapters/dom-server.test.ts:[2m572:18[22m[39m
+    [90m570| [39m    [90m// Assert ALL items appear in the output[39m
+    [90m571| [39m    // This test should FAIL, demonstrating the bug where only functio…
+    [90m572| [39m    [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m'Item 1'[39m)[33m;[39m
+    [90m   | [39m                 [31m^[39m
+    [90m573| [39m    [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m'Item 2'[39m)[33m;[39m
+    [90m574| [39m    [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m'Item 3'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/adapters/dom-server.test.ts[2m > [22mFull SSR Integration[2m > [22mshould render all items when map() uses computed
+[31m[1mAssertionError[22m: expected '<div class="container"><!--fragment-s…' to contain 'Item 1'[39m
+
+Expected: [32m"Item 1"[39m
+Received: [31m"<div class="container"><!--fragment-start--><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><div class="item">Item function () { [native code] }</div><!--fragment-end--></div>"[39m
+
+[36m [2m❯[22m src/adapters/dom-server.test.ts:[2m597:18[22m[39m
+    [90m595| [39m    console[33m.[39m[34mlog[39m([32m'Rendered HTML with computed:'[39m[33m,[39m html)[33m;[39m
+    [90m596| [39m
+    [90m597| [39m    [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m'Item 1'[39m)[33m;[39m
+    [90m   | [39m                 [31m^[39m
+    [90m598| [39m    [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m'Item 2'[39m)[33m;[39m
+    [90m599| [39m    [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m'Item 3'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m7 passed[39m[22m[90m (8)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m155 passed[39m[22m[90m (157)[39m
+[2m   Start at [22m 17:17:43
+[2m   Duration [22m 2.22s[2m (transform 2.73s, setup 0ms, collect 5.73s, tests 106ms, environment 4.97s, prepare 1.41s)[22m
+
+[41m[30m ELIFECYCLE [39m[49m [31mTest failed. See above for more details.[39m
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m

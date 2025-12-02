@@ -22,9 +22,7 @@ describe('match() - reactive element switching', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 

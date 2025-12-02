@@ -112,7 +112,7 @@ export const TodoList = useSvc(
           map(
             filteredTodos,
             (todo) => todo.id
-          )((todo) => TodoItem(todo, toggleTodo))
+          )((todoSignal) => TodoItem(todoSignal(), toggleTodo))
         ),
 
         // Stats

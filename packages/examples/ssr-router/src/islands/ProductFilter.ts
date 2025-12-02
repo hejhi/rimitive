@@ -56,7 +56,8 @@ export const ProductFilter = island(
       });
 
       // Inline ProductCard - uses el from outer closure, product from map
-      const productCards = map(filteredProducts, (p) => p.id)((product) => {
+      const productCards = map(filteredProducts, (p) => p.id)((productSignal) => {
+        const product = productSignal();
         return el('div').props({
           className: 'product-card clickable',
           onclick: () => navigate(`/products/${product.id}`),
@@ -67,9 +68,10 @@ export const ProductFilter = island(
           el('span').props({ className: 'view-details' })('View details →')
         );
       });
-      const categoryValues = map(categories)((cat) =>
-        el('option').props({ value: cat })(cat.charAt(0).toUpperCase() + cat.slice(1))
-      );
+      const categoryValues = map(categories)((catSignal) => {
+        const cat = catSignal();
+        return el('option').props({ value: cat })(cat.charAt(0).toUpperCase() + cat.slice(1));
+      });
 
       const count = computed(
         () =>

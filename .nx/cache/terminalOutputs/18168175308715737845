@@ -1,0 +1,42 @@
+
+> @lattice/signals@0.0.1 check /Users/henryivry/repos/lattice/packages/signals
+> pnpm typecheck && pnpm test && pnpm lint
+
+
+> @lattice/signals@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/signals
+> tsc --noEmit
+
+
+> @lattice/signals@0.0.1 test /Users/henryivry/repos/lattice/packages/signals
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90m/Users/henryivry/repos/lattice/packages/signals[39m
+
+ [32m✓[39m src/helpers/graph-traversal.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 129[2mms[22m[39m
+ [32m✓[39m src/helpers/scheduler.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m src/signal.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/computed.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/helpers/graph-edges.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/helpers/pull-propagator.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/tests/topology-effects.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/untrack.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/effect.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/batch.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/topology-optimization.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/subscribe.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/topology-diamonds.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/tests/topology-subscriptions.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/topology-propagation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/topology-dynamic.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/multiple-effects.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m17 passed[39m[22m[90m (17)[39m
+[2m      Tests [22m [1m[32m150 passed[39m[22m[90m (150)[39m
+[2m   Start at [22m 17:18:40
+[2m   Duration [22m 2.11s[2m (transform 718ms, setup 0ms, collect 1.19s, tests 203ms, environment 0ms, prepare 220ms)[22m
+
+
+> @lattice/signals@0.0.1 lint /Users/henryivry/repos/lattice/packages/signals
+> eslint . --ext .ts,.tsx
+

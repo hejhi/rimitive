@@ -4,14 +4,8 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type {
-  LifecycleCallback,
-  RefSpec,
-  Reactive,
-  FragmentRef,
-  ElementRef,
-} from './types';
-import { STATUS_ELEMENT, STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
+import type { RefSpec, Reactive, FragmentRef, ElementRef } from './types';
+import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createNodeHelpers } from './helpers/node-helpers';
@@ -20,10 +14,8 @@ import { createNodeHelpers } from './helpers/node-helpers';
  * Options passed to Match factory
  */
 export type MatchOpts<TConfig extends AdapterConfig> = {
-  createElementScope: CreateScopes['createElementScope'];
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
-  onCleanup: CreateScopes['onCleanup'];
   getElementScope: CreateScopes['getElementScope'];
   adapter: Adapter<TConfig>;
 };
@@ -92,9 +84,7 @@ export const Match = defineService(
   <TConfig extends AdapterConfig>({
     scopedEffect,
     adapter,
-    createElementScope,
     disposeScope,
-    onCleanup,
     getElementScope,
   }: MatchOpts<TConfig>) =>
     (props?: MatchProps<TConfig['baseElement']>) => {
@@ -109,28 +99,16 @@ export const Match = defineService(
       });
 
       /**
-       * Helper to create a RefSpec that accumulates lifecycle callbacks
-       * and returns a FragmentRef on creation
+       * Helper to create a RefSpec for fragments
        */
       const createMatchSpec = <TElement>(
-        createFragmentFn: (
-          lifecycleCallbacks: LifecycleCallback<TElement>[],
-          api?: unknown
-        ) => TFragRef
+        createFragmentFn: (api?: unknown) => TFragRef
       ): RefSpec<TElement> => {
-        const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
-
-        const refSpec: RefSpec<TElement> = (
-          ...callbacks: LifecycleCallback<TElement>[]
-        ) => {
-          lifecycleCallbacks.push(...callbacks);
-          return refSpec;
-        };
+        const refSpec = (() => refSpec) as unknown as RefSpec<TElement>;
 
         refSpec.status = STATUS_REF_SPEC;
         refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const fragRef = createFragmentFn(lifecycleCallbacks, api);
-          // If no extensions, return the ref directly to preserve mutability
+          const fragRef = createFragmentFn(api);
           if (!extensions || Object.keys(extensions).length === 0)
             return fragRef as FragmentRef<TElement> & TExt;
 
@@ -149,7 +127,7 @@ export const Match = defineService(
         matcher: (value: T) => RefSpec<TElement> | null
       ) => RefSpec<TElement> {
         return (matcher: (value: T) => RefSpec<TElement> | null) => {
-          return createMatchSpec<TElement>((lifecycleCallbacks) => {
+          return createMatchSpec<TElement>((api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -158,7 +136,7 @@ export const Match = defineService(
               next: null,
               firstChild: null,
               lastChild: null,
-              attach(parent, nextSibling, api) {
+              attach(parent, nextSibling) {
                 let currentNode:
                   | ElementRef<TBaseElement>
                   | TFragRef
@@ -166,21 +144,9 @@ export const Match = defineService(
                 let currentValue: T | undefined;
                 let isFirstRun = true;
 
-                // Run lifecycle callbacks for element
-                const runLifecycleCallbacks = (element: TElement) => {
-                  createElementScope(element, () => {
-                    for (const callback of lifecycleCallbacks) {
-                      const cleanup = callback(element);
-                      if (cleanup) onCleanup(cleanup);
-                    }
-                  });
-                };
-
                 // Update function - called when reactive value changes
                 const updateElement = (value: T) => {
                   // Skip update if value hasn't changed (after first run)
-                  // This prevents unnecessary teardown/recreation when the
-                  // matched value stays the same
                   if (!isFirstRun && value === currentValue) {
                     return;
                   }
@@ -213,11 +179,6 @@ export const Match = defineService(
 
                   currentNode = nodeRef;
 
-                  // Execute lifecycle callbacks from match level
-                  if (nodeRef.status === STATUS_ELEMENT) {
-                    runLifecycleCallbacks(nodeRef.element);
-                  }
-
                   // Insert into DOM
                   insertNodeBefore(
                     api,
@@ -228,9 +189,7 @@ export const Match = defineService(
                   );
                 };
 
-                // Effect only tracks the reactive value, then calls updateElement
-                // Use nested effect to isolate updateElement from tracking
-                // The inner effect creates a tracking boundary, then we dispose it
+                // Effect tracks the reactive value, then calls updateElement
                 return scopedEffect(() => {
                   const value = reactive();
                   const isolate = scopedEffect(() => {

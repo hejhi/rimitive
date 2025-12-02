@@ -27,9 +27,7 @@ describe('when() - conditional children rendering', () => {
     const when = When<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 

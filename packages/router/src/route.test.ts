@@ -74,9 +74,7 @@ describe('route() - single route rendering', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 
@@ -285,9 +283,7 @@ describe('multiple routes - reactive switching', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 
@@ -532,9 +528,7 @@ describe('params - component access to route parameters', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 
@@ -722,9 +716,7 @@ describe('nested routes - structure and path composition', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 
@@ -1037,9 +1029,7 @@ describe('programmatic navigation', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 
@@ -1342,9 +1332,7 @@ describe('wildcard routes - catch-all behavior', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 
@@ -1550,9 +1538,7 @@ describe('outlet - parent components render matched children', () => {
     const match = Match<MockAdapterConfig>().create({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
-      createElementScope: env.createElementScope,
       disposeScope: env.disposeScope,
-      onCleanup: env.onCleanup,
       getElementScope: env.getElementScope,
     });
 

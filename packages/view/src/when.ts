@@ -36,13 +36,7 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type {
-  LifecycleCallback,
-  RefSpec,
-  Reactive,
-  FragmentRef,
-  NodeRef,
-} from './types';
+import type { RefSpec, Reactive, FragmentRef, NodeRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
@@ -52,10 +46,8 @@ import { createNodeHelpers } from './helpers/node-helpers';
  * Options passed to When factory
  */
 export type WhenOpts<TConfig extends AdapterConfig> = {
-  createElementScope: CreateScopes['createElementScope'];
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
-  onCleanup: CreateScopes['onCleanup'];
   getElementScope: CreateScopes['getElementScope'];
   adapter: Adapter<TConfig>;
 };
@@ -111,27 +103,16 @@ export const When = defineService(
       });
 
       /**
-       * Helper to create a RefSpec that accumulates lifecycle callbacks
-       * and returns a FragmentRef on creation
+       * Helper to create a RefSpec for fragments
        */
       const createWhenSpec = <TElement>(
-        createFragmentFn: (
-          lifecycleCallbacks: LifecycleCallback<TElement>[],
-          api?: unknown
-        ) => TFragRef
+        createFragmentFn: (api?: unknown) => TFragRef
       ): RefSpec<TElement> => {
-        const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
-
-        const refSpec: RefSpec<TElement> = (
-          ...callbacks: LifecycleCallback<TElement>[]
-        ) => {
-          lifecycleCallbacks.push(...callbacks);
-          return refSpec;
-        };
+        const refSpec = (() => refSpec) as unknown as RefSpec<TElement>;
 
         refSpec.status = STATUS_REF_SPEC;
         refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const fragRef = createFragmentFn(lifecycleCallbacks, api);
+          const fragRef = createFragmentFn(api);
           if (!extensions || Object.keys(extensions).length === 0)
             return fragRef as FragmentRef<TElement> & TExt;
 
@@ -148,7 +129,7 @@ export const When = defineService(
         condition: Reactive<unknown>
       ): (...children: RefSpec<TElement>[]) => RefSpec<TElement> {
         return (...childSpecs: RefSpec<TElement>[]) => {
-          return createWhenSpec<TElement>((lifecycleCallbacks) => {
+          return createWhenSpec<TElement>((api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -157,7 +138,7 @@ export const When = defineService(
               next: null,
               firstChild: null,
               lastChild: null,
-              attach(parent, nextSibling, api) {
+              attach(parent, nextSibling) {
                 // Track created child nodes for cleanup
                 let childNodes: NodeRef<TElement>[] = [];
                 let isShowing = false;
@@ -207,26 +188,6 @@ export const When = defineService(
                   fragment.lastChild = null;
                 };
 
-                // Run lifecycle callbacks when showing
-                const runLifecycleCallbacks = () => {
-                  // Lifecycle callbacks receive the parent element since
-                  // when() doesn't create its own element
-                  for (const callback of lifecycleCallbacks) {
-                    const cleanup = callback(parent.element as TElement);
-                    // Note: cleanup is handled by the fragment's scope disposal
-                    if (cleanup) {
-                      // Store cleanup to be called when fragment is removed
-                      const existingCleanup = fragment.cleanup;
-                      fragment.cleanup = existingCleanup
-                        ? () => {
-                            existingCleanup();
-                            cleanup();
-                          }
-                        : cleanup;
-                    }
-                  }
-                };
-
                 // Effect that reacts to condition changes
                 return scopedEffect(() => {
                   const shouldShow = !!condition(); // Coerce to boolean
@@ -237,7 +198,6 @@ export const When = defineService(
                     // Create and insert children
                     const isolate = scopedEffect(() => {
                       createChildren();
-                      runLifecycleCallbacks();
                     });
                     isolate(); // Dispose immediately - children have their own scopes
                   } else {

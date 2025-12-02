@@ -8,13 +8,7 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type {
-  RefSpec,
-  FragmentRef,
-  Reactive,
-  ElementRef,
-  LifecycleCallback,
-} from './types';
+import type { RefSpec, FragmentRef, Reactive, ElementRef } from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
@@ -90,27 +84,16 @@ export const Map = defineService(
       });
 
       /**
-       * Helper to create a RefSpec for fragments with lifecycle callback chaining
+       * Helper to create a RefSpec for fragments
        */
       const createRefSpec = (
-        createFragmentRef: (
-          callbacks: LifecycleCallback<TBaseElement>[],
-          api?: unknown
-        ) => TFragRef
+        createFragmentRef: (api?: unknown) => TFragRef
       ): RefSpec<TBaseElement> => {
-        const lifecycleCallbacks: LifecycleCallback<TBaseElement>[] = [];
-
-        const refSpec: RefSpec<TBaseElement> = (
-          ...callbacks: LifecycleCallback<TBaseElement>[]
-        ) => {
-          lifecycleCallbacks.push(...callbacks);
-          return refSpec;
-        };
+        const refSpec = (() => refSpec) as unknown as RefSpec<TBaseElement>;
 
         refSpec.status = STATUS_REF_SPEC;
         refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const fragRef = createFragmentRef(lifecycleCallbacks, api);
-          // If no extensions, return the ref directly to preserve mutability
+          const fragRef = createFragmentRef(api);
           if (!extensions || Object.keys(extensions).length === 0)
             return fragRef;
 
@@ -132,7 +115,7 @@ export const Map = defineService(
         type TRecNode = RecNode<T, TBaseElement>;
 
         return (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) =>
-          createRefSpec((lifecycleCallbacks, api) => {
+          createRefSpec((api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -245,13 +228,6 @@ export const Map = defineService(
                   },
                 });
 
-                // Execute lifecycle callbacks within parent's scope
-                const lifecycleCleanups: (() => void)[] = [];
-                for (const callback of lifecycleCallbacks) {
-                  const cleanup = callback(parent.element);
-                  if (cleanup) lifecycleCleanups.push(cleanup);
-                }
-
                 // Create effect within parent's scope - auto-tracked!
                 const effectDispose = scopedEffect(() => {
                   // Get items - handle both array and function
@@ -283,15 +259,8 @@ export const Map = defineService(
 
                 // Return cleanup function
                 return () => {
-                  // Dispose the effect
                   effectDispose();
-
-                  // Dispose all remaining items via reconciler
-                  // This calls onRemove hook for each tracked item
                   dispose();
-
-                  // Run lifecycle cleanups
-                  for (const cleanup of lifecycleCleanups) cleanup();
                 };
               },
             };
