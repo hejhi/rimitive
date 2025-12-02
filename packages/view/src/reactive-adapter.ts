@@ -9,15 +9,16 @@
  * as long as it implements these three primitives.
  */
 
-import type { Writable } from './types';
+import type { Reactive, Writable } from './types';
 
 /**
  * Minimal reactive system interface that view can integrate with.
  *
- * Consists of three fundamental primitives:
+ * Consists of four fundamental primitives:
  * 1. signal - Create reactive state that notifies dependents on change
- * 2. effect - React to changes by auto-tracking dependencies
- * 3. batch - Optimize multiple updates into a single reactive cycle
+ * 2. computed - Create derived reactive state
+ * 3. effect - React to changes by auto-tracking dependencies
+ * 4. batch - Optimize multiple updates into a single reactive cycle
  */
 export interface ReactiveAdapter {
   /**
@@ -34,6 +35,19 @@ export interface ReactiveAdapter {
    * count();      // => 5
    */
   signal: <T>(initialValue: T) => Writable<T>;
+
+  /**
+   * Create derived reactive state from a computation.
+   * Auto-tracks dependencies and recomputes when they change.
+   * Read-only - cannot be written to directly.
+   *
+   * @example
+   * const firstName = signal('Alice');
+   * const lastName = signal('Smith');
+   * const fullName = computed(() => `${firstName()} ${lastName()}`);
+   * fullName(); // => 'Alice Smith'
+   */
+  computed: <T>(fn: () => T) => Reactive<T>;
 
   /**
    * React to changes in reactive state.

@@ -26,9 +26,11 @@ import { removeFromFragment } from './helpers/fragment-boundaries';
  * Map factory type - curried for element builder pattern
  *
  * Items can be a static array or a reactive signal of array.
- * The render callback receives items directly (not wrapped in signals).
- * If items are signals themselves, updates push new values into them.
- * If items are plain values, components are recreated on update.
+ * The render callback receives a signal wrapping each item, enabling
+ * reactive updates without recreating elements.
+ *
+ * When the source array updates, map pushes new values into the item
+ * signals, triggering reactive updates in computeds that read them.
  */
 export type MapFactory<TBaseElement> = ServiceDefinition<
   'map',
@@ -36,11 +38,15 @@ export type MapFactory<TBaseElement> = ServiceDefinition<
     <T, TEl>(
       items: T[] | Reactive<T[]>,
       keyFn?: (item: T) => string | number
-    ): (render: (item: T) => RefSpec<TEl>) => RefSpec<TBaseElement>;
+    ): (
+      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+    ) => RefSpec<TBaseElement>;
   }
 >;
 
 export interface MapOpts<TConfig extends AdapterConfig> {
+  signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
+  computed: <T>(fn: () => T) => Reactive<T>;
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   adapter: Adapter<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
@@ -55,31 +61,9 @@ export interface MapProps<TBaseElement> {
   ) => MapFactory<TBaseElement>['impl'];
 }
 
-type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<T>;
-
-/**
- * Shallow equality check for items
- * For primitives: strict equality
- * For objects: compare own enumerable properties (one level deep)
- */
-function shallowEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (typeof a !== 'object' || typeof b !== 'object') return false;
-  if (a === null || b === null) return false;
-
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
-
-  for (const key of keysA) {
-    if (
-      (a as Record<string, unknown>)[key] !==
-      (b as Record<string, unknown>)[key]
-    )
-      return false;
-  }
-  return true;
-}
+// RecNode stores the item signal (not the item value) for reactive updates
+type ItemSignal<T> = Reactive<T> & ((value: T) => void);
+type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<ItemSignal<T>>;
 
 /**
  * Map primitive - instantiatable extension using the create pattern
@@ -87,6 +71,8 @@ function shallowEqual(a: unknown, b: unknown): boolean {
  */
 export const Map = defineService(
   <TConfig extends AdapterConfig>({
+    signal,
+    computed,
     scopedEffect,
     adapter,
     disposeScope,
@@ -140,10 +126,12 @@ export const Map = defineService(
       function map<T, TEl>(
         items: T[] | Reactive<T[]>,
         keyFn?: (item: T) => string | number
-      ): (render: (item: T) => RefSpec<TEl>) => RefSpec<TBaseElement> {
+      ): (
+        render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+      ) => RefSpec<TBaseElement> {
         type TRecNode = RecNode<T, TBaseElement>;
 
-        return (render: (item: T) => RefSpec<TEl>) =>
+        return (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) =>
           createRefSpec((lifecycleCallbacks, api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
@@ -165,45 +153,37 @@ export const Map = defineService(
                     ? (nextSibling as TRecNode)
                     : undefined;
 
-                /**
-                 * Create a node for an item, optionally replacing an existing node
-                 */
-                const createItemNode = (
-                  item: T,
-                  replaceNode?: TRecNode
-                ): TRecNode => {
-                  let elRef: TRecNode;
+                // Create reconciler with internal state management and hooks
+                const { reconcile, dispose } = createReconciler<
+                  T,
+                  TBaseElement,
+                  TRecNode
+                >({
+                  parentElement: parent.element,
+                  parentRef: parent,
+                  nextSibling: nextElementSibling,
 
-                  const isolate = scopedEffect(() => {
-                    // Render the item directly - no signal wrapping
-                    elRef = render(item).create<TRecNode>(api);
+                  onCreate: (item) => {
+                    // Create internal signal for reactive updates
+                    const itemSignal = signal<T>(
+                      typeof item === 'function'
+                        ? item() // Unwrap if item is already a signal
+                        : item // Otherwise return directly
+                    );
 
-                    if (replaceNode) {
-                      // Replace: insert before old node, then remove old node
-                      insertNodeBefore(
-                        api,
-                        parent.element,
-                        elRef,
-                        replaceNode,
-                        nextSibling
-                      );
+                    // Wrap in computed for read-only access to user
+                    const readOnlyItem = computed(() => itemSignal());
 
-                      // Update linked list - new node takes old node's position
-                      elRef.prev = replaceNode.prev;
-                      elRef.next = replaceNode.next;
-                      if (replaceNode.prev) replaceNode.prev.next = elRef;
-                      if (replaceNode.next) replaceNode.next.prev = elRef;
+                    let elRef: TRecNode;
 
-                      // Update fragment boundaries if replacing a boundary node
-                      if (fragment.firstChild === replaceNode)
-                        fragment.firstChild = elRef;
-                      if (fragment.lastChild === replaceNode)
-                        fragment.lastChild = elRef;
+                    // This is a reactive ("hot") closure because reconcile() runs inside a scopedEffect below.
+                    // We isolate the render() call in an inner, temporary effect to protect it from getting
+                    // caught in the parent effect.
+                    const isolate = scopedEffect(() => {
+                      // Pass read-only computed to render
+                      elRef = render(readOnlyItem).create<TRecNode>(api);
 
-                      // Remove old node from DOM
-                      removeNode(parent.element, replaceNode);
-                    } else {
-                      // Insert: append at boundary position
+                      // Insert into DOM
                       insertNodeBefore(
                         api,
                         parent.element,
@@ -227,49 +207,20 @@ export const Map = defineService(
                         elRef.next = null;
                         fragment.lastChild = elRef;
                       }
-                    }
 
-                    // Store item for update detection
-                    elRef.data = item;
-                  });
+                      // Store the signal (not the item) for updates
+                      elRef.data = itemSignal;
+                    });
 
-                  isolate(); // Dispose immediately after it runs
-                  return elRef!;
-                };
+                    isolate(); // Dispose immediately after it runs
+                    return elRef!;
+                  },
 
-                // Create reconciler with internal state management and hooks
-                const { reconcile, dispose } = createReconciler<
-                  T,
-                  TBaseElement,
-                  TRecNode
-                >({
-                  parentElement: parent.element,
-                  parentRef: parent,
-                  nextSibling: nextElementSibling,
-
-                  onCreate: (item) => createItemNode(item),
-
-                  // onUpdate: called when existing item's data should be updated
-                  // Returns replacement node if item was recreated
+                  // onUpdate: push new value into the item signal
+                  // No recreation needed - computeds will react to signal change
                   onUpdate(item, node) {
-                    const prevItem = node.data;
-
-                    // If previous item is a function (signal), push new value into it
-                    if (typeof prevItem === 'function') {
-                      const newValue =
-                        typeof item === 'function'
-                          ? (item as () => unknown)()
-                          : item;
-                      (prevItem as (v: unknown) => void)(newValue);
-                      node.data = item;
-                      return; // Keep existing node
-                    }
-
-                    // Plain value - check if changed using shallow equality
-                    if (shallowEqual(prevItem, item)) return; // No change
-
-                    // Different value - recreate node
-                    return createItemNode(item, node);
+                    // Push into our internal signal
+                    node.data(typeof item === 'function' ? item() : item);
                   },
 
                   // onMove: called when item needs repositioning
@@ -290,7 +241,6 @@ export const Map = defineService(
 
                     // Update fragment boundaries if removing a boundary node
                     removeFromFragment(fragment, node);
-
                     removeNode(parent.element, node);
                   },
                 });

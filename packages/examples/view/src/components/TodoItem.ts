@@ -1,22 +1,28 @@
 /**
  * TodoItem UI Component
  *
- * Renders a single todo item with checkbox, text, and remove button
+ * Renders a single todo item with checkbox, text, and remove button.
+ * Receives a signal wrapping the todo, enabling reactive updates
+ * without recreating the element.
  */
 
+import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/useTodoList';
-import { el, on } from '../service';
+import { el, on, computed } from '../service';
 
 export const TodoItem = (
-  todo: Todo,
+  todoSignal: Reactive<Todo>,
   onToggle: (id: number) => void,
   onRemove: (id: number) => void
 ) => {
-  // Create checkbox with event listener
+  // Read initial value for event handlers (id doesn't change)
+  const todo = todoSignal();
+
+  // Create checkbox with reactive checked state
   const checkbox = el('input')
     .props({
       type: 'checkbox',
-      checked: todo.completed,
+      checked: computed(() => todoSignal().completed),
     })
     .ref(on('change', () => onToggle(todo.id)))();
 
@@ -25,10 +31,12 @@ export const TodoItem = (
     .props({ className: 'todo-remove' })
     .ref(on('click', () => onRemove(todo.id)))('x');
 
-  // Todo text with completed styling
+  // Todo text with reactive completed styling
   const todoText = el('span').props({
-    className: todo.completed ? 'todo-text completed' : 'todo-text',
-  })(todo.text);
+    className: computed(() =>
+      todoSignal().completed ? 'todo-text completed' : 'todo-text'
+    ),
+  })(computed(() => todoSignal().text));
 
   return el('div').props({ className: 'todo-item' })(
     checkbox,

@@ -32,6 +32,8 @@ describe('List reconciliation - Complex reorderings', () => {
     });
 
     const mapFactory = Map<MockAdapterConfig>().create({
+      signal: env.signal,
+      computed: env.computed,
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       disposeScope: env.disposeScope,
@@ -56,8 +58,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -101,8 +103,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -149,8 +151,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (num) => num // Key function (number itself)
       )(
-        (num) =>
-          el.impl('li')(String(num)) as unknown as RefSpec<MockElement>
+        (numSignal) =>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -192,8 +194,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -235,8 +237,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -276,8 +278,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -314,8 +316,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (num) => num // Key function (number itself)
       )(
-        (num) =>
-          el.impl('li')(String(num)) as unknown as RefSpec<MockElement>
+        (numSignal) =>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -353,8 +355,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -393,8 +395,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -435,8 +437,8 @@ describe('List reconciliation - Complex reorderings', () => {
         () => items(),
         (num) => num // Key function (number itself)
       )(
-        (num) =>
-          el.impl('li')(String(num)) as unknown as RefSpec<MockElement>
+        (numSignal) =>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -471,6 +473,8 @@ describe('List reconciliation - Edge cases', () => {
     });
 
     const mapFactory = Map<MockAdapterConfig>().create({
+      signal: env.signal,
+      computed: env.computed,
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       disposeScope: env.disposeScope,
@@ -490,8 +494,8 @@ describe('List reconciliation - Edge cases', () => {
         () => items(),
         (item) => item.id // Key function
       )(
-        (item) =>
-          el.impl('li')(item.name) as unknown as RefSpec<MockElement>
+        (itemSignal) =>
+          el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -515,8 +519,8 @@ describe('List reconciliation - Edge cases', () => {
         () => items(),
         (num) => num // Key function (number itself)
       )(
-        (num) =>
-          el.impl('li')(String(num)) as unknown as RefSpec<MockElement>
+        (numSignal) =>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 
@@ -550,8 +554,8 @@ describe('List reconciliation - Edge cases', () => {
         () => items(),
         (num) => num // Key function (number itself)
       )(
-        (num) =>
-          el.impl('li')(String(num)) as unknown as RefSpec<MockElement>
+        (numSignal) =>
+          el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
     );
 

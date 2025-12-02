@@ -10,6 +10,7 @@ export function createSpec<TConfig extends AdapterConfig>(
     adapter,
     ...createScopes({ baseEffect: signals.effect }),
     signal: signals.signal,
+    computed: signals.computed,
     effect: signals.effect,
     batch: signals.batch,
   };

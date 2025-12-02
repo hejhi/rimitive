@@ -33,7 +33,7 @@ export function instrumentMap<TBaseElement>(
     const renderApplicator = impl<T, TEl>(items, keyFn);
 
     // Wrap the render applicator
-    return (render: (item: T) => RefSpec<TEl>): RefSpec<TBaseElement> => {
+    return (render: (itemSignal: Reactive<T>) => RefSpec<TEl>): RefSpec<TBaseElement> => {
       instrumentation.emit({
         type: 'MAP_RENDER_ATTACHED',
         timestamp: Date.now(),
@@ -43,7 +43,7 @@ export function instrumentMap<TBaseElement>(
       });
 
       // Track reconciliation operations by wrapping the render function
-      const instrumentedRender = (item: T): RefSpec<TEl> => {
+      const instrumentedRender = (itemSignal: Reactive<T>): RefSpec<TEl> => {
         const itemId = crypto.randomUUID();
 
         instrumentation.emit({
@@ -55,7 +55,7 @@ export function instrumentMap<TBaseElement>(
           },
         });
 
-        return render(item);
+        return render(itemSignal);
       };
 
       // Call base render applicator with instrumented render

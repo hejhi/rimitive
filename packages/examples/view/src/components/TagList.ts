@@ -3,14 +3,18 @@
  *
  * This demonstrates that components can return fragments directly using map()
  */
-import { el, map, signal } from '../service';
+import { el, map, signal, computed } from '../service';
 
 export const TagList = (props: { tags: string[] }) => {
   const tags = signal(props.tags);
 
   // Return fragment - multiple span elements without a wrapper
   // map() returns a RefSpec that creates a FragmentRef when instantiated
-  return map(tags)((tag: string) => {
+  // Render callback receives a signal wrapping each tag
+  return map(tags)((tagSignal) => {
+    // Read initial value for the click handler
+    const tag = tagSignal();
+
     return el('span').props({
       className: 'tag',
       onclick: () => {
@@ -18,6 +22,6 @@ export const TagList = (props: { tags: string[] }) => {
         const current = tags();
         tags(current.filter((t) => t !== tag));
       },
-    })(`${tag} x`);
+    })(computed(() => `${tagSignal()} x`));
   });
 };

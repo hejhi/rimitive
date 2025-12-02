@@ -7,7 +7,9 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { Signal } from '@lattice/signals/signal';
+import { Computed } from '@lattice/signals/computed';
 import { Effect } from '@lattice/signals/effect';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -386,6 +388,19 @@ export function createTestEnv() {
   // Use real signal
   const signal = signalFactory.impl;
 
+  // Create pull propagator for computed
+  const pullPropagator = createPullPropagator({ track: graphEdges.track });
+
+  // Use real computed from signals
+  const computedFactory = Computed().create({
+    consumer: graphEdges.consumer,
+    track: graphEdges.track,
+    trackDependency: graphEdges.trackDependency,
+    pullUpdates: pullPropagator.pullUpdates,
+    shallowPropagate: pullPropagator.shallowPropagate,
+  });
+  const computed = computedFactory.impl;
+
   // Use real effect from signals
   const effectFactory = Effect().create({
     track: graphEdges.track,
@@ -407,6 +422,7 @@ export function createTestEnv() {
     consumer: graphEdges.consumer,
     adapter,
     signal,
+    computed,
     effect,
     disposeScope,
     scopedEffect,

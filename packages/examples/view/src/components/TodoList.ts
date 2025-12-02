@@ -88,13 +88,15 @@ export const TodoList = () => {
     div.props({ className: 'filter-buttons' })(allBtn, activeBtn, completedBtn),
 
     // Todo list using map with composed TodoItem component
+    // map() wraps each item in a signal, enabling reactive updates
     div.props({ className: 'todo-list' })(
       map(
         todoList.filteredTodos,
-        (todo: Todo) => todo.id // Key function for immutable updates
-      )((todo: Todo) =>
+        (todo: Todo) => todo.id // Key function receives plain value
+      )((todoSignal) =>
+        // Render callback receives signal - TodoItem uses computed() for reactive bindings
         TodoItem(
-          todo,
+          todoSignal,
           (id) => todoList.toggleTodo(id),
           (id) => todoList.removeTodo(id)
         )
