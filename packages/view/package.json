@@ -54,6 +54,10 @@
       "import": "./dist/helpers/addEventListener.js",
       "types": "./dist/helpers/addEventListener.d.ts"
     },
+    "./helpers/text": {
+      "import": "./dist/helpers/text.js",
+      "types": "./dist/helpers/text.d.ts"
+    },
     "./helpers": {
       "import": "./dist/helpers/index.js",
       "types": "./dist/helpers/index.d.ts"

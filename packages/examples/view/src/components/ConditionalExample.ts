@@ -41,9 +41,7 @@ export const ConditionalExample = () => {
           input.addEventListener('input', handler);
           return () => input.removeEventListener('input', handler);
         })
-      : el('span', {
-          className: 'display-text',
-        })(editText)
+      : el('span', { className: 'display-text' })(editText)
   );
 
   // Pattern 2: Alternative - use separate conditional elements with match
@@ -79,13 +77,12 @@ export const ConditionalExample = () => {
         'danger',
         'success',
       ];
-      const current = buttonType();
-      const currentIndex = types.indexOf(current);
+      const currentIndex = types.indexOf(buttonType());
       const nextIndex = (currentIndex + 1) % types.length;
       const nextType = types[nextIndex];
-      if (nextType !== undefined) {
-        buttonType(nextType);
-      }
+
+      if (nextType === undefined) return;
+      buttonType(nextType);
     })
   );
 

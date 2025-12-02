@@ -16,6 +16,7 @@ import {
 } from '@lattice/view/renderers/dom';
 import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createText } from '@lattice/view/helpers/text';
 
 const createViewApi = () => {
   const signalsSvc = createSignalsApi();
@@ -28,6 +29,7 @@ const createViewApi = () => {
     ...signalsSvc,
     ...viewSvc,
     addEventListener: createAddEventListener(viewHelpers.batch),
+    t: createText(signalsSvc.computed),
   };
 
   return {
@@ -52,6 +54,7 @@ export const {
   match,
   signal,
   subscribe,
+  t,
 } = svc;
 
 export type Service = typeof service;
