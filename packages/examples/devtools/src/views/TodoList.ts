@@ -47,39 +47,52 @@ export const TodoList = useSvc(
       };
 
       // Create input and attach events
-      const todoInput = el('input').props({
-        type: 'text',
-        placeholder: 'What needs to be done?',
-        value: inputValue,
-      })()(
-        addEventListener('input', (e) =>
-          inputValue((e.target as HTMLInputElement).value)
-        ),
-        addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') handleAddTodo();
+      const todoInput = el('input')
+        .props({
+          type: 'text',
+          placeholder: 'What needs to be done?',
+          value: inputValue,
         })
-      );
+        .ref(
+          addEventListener('input', (e) =>
+            inputValue((e.target as HTMLInputElement).value)
+          )
+        )
+        .ref(
+          addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleAddTodo();
+          })
+        )
+        ();
 
-      const addBtn = el('button')('Add Todo')(
+      const addBtn = el('button').ref(
         addEventListener('click', handleAddTodo)
-      );
+      )('Add Todo');
 
       // Filter buttons
-      const allBtn = el('button').props({
-        className: computed(() =>
-          currentFilter() === 'all' ? 'filter active' : 'filter'
-        ),
-      })('All')(addEventListener('click', () => setFilter('all')));
-      const activeBtn = el('button').props({
-        className: computed(() =>
-          currentFilter() === 'active' ? 'filter active' : 'filter'
-        ),
-      })('Active')(addEventListener('click', () => setFilter('active')));
-      const completedBtn = el('button').props({
-        className: computed(() =>
-          currentFilter() === 'completed' ? 'filter active' : 'filter'
-        ),
-      })('Completed')(addEventListener('click', () => setFilter('completed')));
+      const allBtn = el('button')
+        .props({
+          className: computed(() =>
+            currentFilter() === 'all' ? 'filter active' : 'filter'
+          ),
+        })
+        .ref(addEventListener('click', () => setFilter('all')))('All');
+      const activeBtn = el('button')
+        .props({
+          className: computed(() =>
+            currentFilter() === 'active' ? 'filter active' : 'filter'
+          ),
+        })
+        .ref(addEventListener('click', () => setFilter('active')))('Active');
+      const completedBtn = el('button')
+        .props({
+          className: computed(() =>
+            currentFilter() === 'completed' ? 'filter active' : 'filter'
+          ),
+        })
+        .ref(addEventListener('click', () => setFilter('completed')))(
+        'Completed'
+      );
 
       return el('section').props({ className: 'todo-section' })(
         el('h2')('Todo List Example'),

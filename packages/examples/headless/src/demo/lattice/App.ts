@@ -56,37 +56,37 @@ function createDialogDemo(): RefSpec<HTMLElement> {
   const dialog = useDialog({ signal, computed, effect })({});
 
   // Dialog content element
-  const dialogContent = el('div').props({
-    className: 'dialog-content',
-    role: dialog.dialogProps.role,
-    tabIndex: -1,
-    ariaModal: 'true',
-    ariaLabel: 'Dialog',
-    onkeydown: dialog.dialogProps.onkeydown,
-  })(
-    el('h4')('Headless Dialog'),
-    el('p')(
-      'This dialog is built with the ',
-      el('code')('useDialog'),
-      ' headless behavior. It handles focus trapping, keyboard navigation (ESC to close), and returns focus to the trigger on close.'
-    ),
-    el('div').props({ className: 'dialog-actions' })(
-      el('button').props({
-        className: 'dialog-close',
-        onclick: dialog.closeButtonProps.onclick,
-      })('Cancel'),
-      el('button').props({
-        className: 'dialog-confirm',
-        onclick: dialog.close,
-      })('Confirm')
-    )
-  )(
-    // Lifecycle: Set up ARIA attributes and ref
-    (elem: HTMLDivElement) => {
+  const dialogContent = el('div')
+    .props({
+      className: 'dialog-content',
+      role: dialog.dialogProps.role,
+      tabIndex: -1,
+      ariaModal: 'true',
+      ariaLabel: 'Dialog',
+      onkeydown: dialog.dialogProps.onkeydown,
+    })
+    .ref((elem: HTMLDivElement) => {
+      // Lifecycle: Set up ARIA attributes and ref
       dialog.dialogProps.ref(elem);
       return () => dialog.dialogProps.ref(null);
-    }
-  );
+    })(
+      el('h4')('Headless Dialog'),
+      el('p')(
+        'This dialog is built with the ',
+        el('code')('useDialog'),
+        ' headless behavior. It handles focus trapping, keyboard navigation (ESC to close), and returns focus to the trigger on close.'
+      ),
+      el('div').props({ className: 'dialog-actions' })(
+        el('button').props({
+          className: 'dialog-close',
+          onclick: dialog.closeButtonProps.onclick,
+        })('Cancel'),
+        el('button').props({
+          className: 'dialog-confirm',
+          onclick: dialog.close,
+        })('Confirm')
+      )
+    );
 
   // Dialog overlay (captures clicks outside)
   const dialogOverlay = el('div').props({
@@ -97,19 +97,19 @@ function createDialogDemo(): RefSpec<HTMLElement> {
   })(dialogContent);
 
   // Trigger button
-  const triggerButton = el('button').props({
-    className: 'dialog-trigger',
-    onclick: dialog.triggerProps.onclick,
-  })('Open Dialog')(
-    // Lifecycle: Set up ARIA attributes
-    (elem: HTMLButtonElement) => {
+  const triggerButton = el('button')
+    .props({
+      className: 'dialog-trigger',
+      onclick: dialog.triggerProps.onclick,
+    })
+    .ref((elem: HTMLButtonElement) => {
+      // Lifecycle: Set up ARIA attributes
       elem.setAttribute('aria-haspopup', 'dialog');
       // Update aria-expanded reactively
       return effect(() => {
         elem.setAttribute('aria-expanded', String(dialog.isOpen()));
       });
-    }
-  );
+    })('Open Dialog');
 
   return el('div').props({ className: 'demo-section' })(
     el('h3')('Dialog'),
@@ -157,30 +157,31 @@ function createSelectDemo(): RefSpec<HTMLElement> {
   });
 
   // Listbox (dropdown)
-  const listbox = el('ul').props({
-    className: computed(() =>
-      select.isOpen() ? 'select-listbox' : 'select-listbox hidden'
-    ),
-    role: select.listboxProps.role,
-  })(...optionElements)(
-    // Lifecycle: Set data attribute
-    (elem: HTMLUListElement) => {
+  const listbox = el('ul')
+    .props({
+      className: computed(() =>
+        select.isOpen() ? 'select-listbox' : 'select-listbox hidden'
+      ),
+      role: select.listboxProps.role,
+    })
+    .ref((elem: HTMLUListElement) => {
+      // Lifecycle: Set data attribute
       elem.dataset.selectId = select.listboxProps['data-select-id'];
-    }
-  );
+    })(...optionElements);
 
   // Trigger button
-  const trigger = el('button').props({
-    className: 'select-trigger',
-    role: select.triggerProps.role,
-    onclick: select.triggerProps.onclick,
-    ariaHasPopup: 'listbox',
-    onkeydown: select.triggerProps.onkeydown,
-    ariaExpanded: computed(() => String(select.isOpen())),
-    dataSelectId: select.triggerProps['data-select-id'],
-  })(select.selectedLabel)(
-    // Lifecycle: Set up ARIA attributes and keyboard handler
-    (elem: HTMLButtonElement) => {
+  const trigger = el('button')
+    .props({
+      className: 'select-trigger',
+      role: select.triggerProps.role,
+      onclick: select.triggerProps.onclick,
+      ariaHasPopup: 'listbox',
+      onkeydown: select.triggerProps.onkeydown,
+      ariaExpanded: computed(() => String(select.isOpen())),
+      dataSelectId: select.triggerProps['data-select-id'],
+    })
+    .ref((elem: HTMLButtonElement) => {
+      // Lifecycle: Set up ARIA attributes and keyboard handler
       const disposeDescendant = effect(() => {
         const active = select.triggerProps['aria-activedescendant']();
         if (active) {
@@ -193,8 +194,7 @@ function createSelectDemo(): RefSpec<HTMLElement> {
       return () => {
         disposeDescendant();
       };
-    }
-  );
+    })(select.selectedLabel);
 
   return el('div').props({ className: 'demo-section' })(
     el('h3')('Select'),

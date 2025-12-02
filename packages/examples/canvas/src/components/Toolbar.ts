@@ -7,7 +7,7 @@
 import { dom } from '../service';
 import type { ShapeType } from '../behaviors/useShapeEditor';
 
-const { el, addEventListener } = dom;
+const { div, button, on } = dom;
 
 interface ToolbarProps {
   onAddShape: (type: ShapeType) => void;
@@ -17,15 +17,13 @@ interface ToolbarProps {
 export const Toolbar = (props: ToolbarProps) => {
   const { onAddShape, onClearAll } = props;
 
-  return el('div').props({ className: 'controls' })(
-    el('button')('Add Circle')(
-      addEventListener('click', () => onAddShape('circle'))
-    ),
-    el('button').props({ className: 'secondary' })('Add Rectangle')(
-      addEventListener('click', () => onAddShape('rect'))
-    ),
-    el('button').props({ className: 'secondary' })('Clear All')(
-      addEventListener('click', () => onClearAll())
-    )
+  return div.props({ className: 'controls' })(
+    button.ref(on('click', () => onAddShape('circle')))('Add Circle'),
+    button
+      .props({ className: 'secondary' })
+      .ref(on('click', () => onAddShape('rect')))('Add Rectangle'),
+    button
+      .props({ className: 'secondary' })
+      .ref(on('click', () => onClearAll()))('Clear All')
   );
 };

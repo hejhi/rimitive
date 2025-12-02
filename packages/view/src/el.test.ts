@@ -203,7 +203,7 @@ describe('el primitive', () => {
       expect(subscribers.size).toBe(1);
     });
 
-    it('calls lifecycle cleanup function', () => {
+    it('calls lifecycle cleanup function via .ref()', () => {
       const { renderer, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
       const el = El<MockRendererConfig>().create({
@@ -214,7 +214,7 @@ describe('el primitive', () => {
       }).impl;
 
       const cleanup = vi.fn();
-      const ref = el('div')()(() => cleanup);
+      const ref = el('div').ref(() => cleanup)();
 
       // Create instance - lifecycle callback runs immediately
       const element: MockElement = asElement(ref.create());
@@ -290,6 +290,90 @@ describe('el primitive', () => {
       expect(el2.props.className).toBe('container');
       expect(getTextContent(el1)).toBe('Hello');
       expect(getTextContent(el2)).toBe('World');
+    });
+  });
+
+  describe('ref builder pattern', () => {
+    it('allows .ref() to add lifecycle callbacks', () => {
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = El<MockRendererConfig>().create({
+        scopedEffect,
+        renderer,
+        createElementScope,
+        onCleanup,
+      }).impl;
+
+      const lifecycleCalled = vi.fn();
+      const ref = el('div').ref(lifecycleCalled)('content');
+
+      asElement(ref.create());
+      expect(lifecycleCalled).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows chaining multiple .ref() calls', () => {
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = El<MockRendererConfig>().create({
+        scopedEffect,
+        renderer,
+        createElementScope,
+        onCleanup,
+      }).impl;
+
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+      const ref = el('div').ref(callback1).ref(callback2)('content');
+
+      asElement(ref.create());
+      expect(callback1).toHaveBeenCalledTimes(1);
+      expect(callback2).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows mixing .props() and .ref() in any order', () => {
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = El<MockRendererConfig>().create({
+        scopedEffect,
+        renderer,
+        createElementScope,
+        onCleanup,
+      }).impl;
+
+      const lifecycleCalled = vi.fn();
+      const ref = el('div')
+        .props({ className: 'test' })
+        .ref(lifecycleCalled)
+        .props({ id: 'myId' })('content');
+
+      const element: MockElement = asElement(ref.create());
+      expect(element.props.className).toBe('test');
+      expect(element.props.id).toBe('myId');
+      expect(lifecycleCalled).toHaveBeenCalledTimes(1);
+    });
+
+    it('creates reusable factories with baked-in lifecycle', () => {
+      const { renderer, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = El<MockRendererConfig>().create({
+        scopedEffect,
+        renderer,
+        createElementScope,
+        onCleanup,
+      }).impl;
+
+      const callCount = { value: 0 };
+      const autoFocus = el('input')
+        .props({ type: 'text' })
+        .ref(() => {
+          callCount.value++;
+        });
+
+      // Create two instances from same factory
+      asElement(autoFocus().create());
+      asElement(autoFocus().create());
+
+      expect(callCount.value).toBe(2);
     });
   });
 });

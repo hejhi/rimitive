@@ -2,7 +2,6 @@ import type {
   RendererConfig,
   RefSpec,
   Reactive,
-  LifecycleCallback,
   ElRefSpecChild,
 } from '@lattice/view/types';
 import type { DOMRendererConfig } from '@lattice/view/renderers/dom';
@@ -45,14 +44,13 @@ export interface RouteMetadata<TConfig extends RendererConfig> {
  * The wrapped RefSpec is kept internal and accessed via delegation
  *
  * Note: Does not extend RefSpec to avoid status type conflict.
- * Instead, provides same callable/create interface through delegation.
+ * Instead, provides same create interface through delegation.
  */
 export interface RouteSpec<TElement> {
   status: typeof STATUS_ROUTE_SPEC;
   routeMetadata: RouteMetadata<RendererConfig>;
   // Unwrap method to get the inner RefSpec for renderer
   unwrap(): RefSpec<TElement>;
-  (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RouteSpec<TElement>;
   create<TExt = Record<string, unknown>>(
     api?: unknown,
     extensions?: TExt

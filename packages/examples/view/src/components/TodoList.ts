@@ -5,7 +5,7 @@
  * Uses the headless todo-list behavior for logic
  */
 
-import { useTodoList } from '../behaviors/useTodoList';
+import { useTodoList, type Todo } from '../behaviors/useTodoList';
 import { TodoItem } from './TodoItem';
 import { el, map, signal, computed, addEventListener } from '../service';
 
@@ -31,40 +31,43 @@ export const TodoList = () => {
     type: 'text',
     placeholder: 'What needs to be done?',
     value: inputValue,
-  })()(
-    addEventListener('input', (e) =>
-      inputValue((e.target as HTMLInputElement).value)
-    ),
-    addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleAdd();
-    })
-  );
+  })
+    .ref(
+      addEventListener('input', (e: Event) =>
+        inputValue((e.target as HTMLInputElement).value)
+      )
+    )
+    .ref(
+      addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') handleAdd();
+      })
+    )();
 
   // Create "Add Todo" button
-  const addBtn = el('button')('Add Todo')(
+  const addBtn = el('button').ref(
     addEventListener('click', handleAdd)
-  );
+  )('Add Todo');
 
   // Create filter buttons
   const allBtn = el('button').props({
     className: computed(() => (todoList.filter() === 'all' ? 'active' : '')),
-  })('All')(addEventListener('click', () => todoList.setFilter('all')));
+  }).ref(addEventListener('click', () => todoList.setFilter('all')))('All');
 
   const activeBtn = el('button').props({
     className: computed(() => (todoList.filter() === 'active' ? 'active' : '')),
-  })('Active')(addEventListener('click', () => todoList.setFilter('active')));
+  }).ref(addEventListener('click', () => todoList.setFilter('active')))('Active');
 
   const completedBtn = el('button').props({
     className: computed(() =>
       todoList.filter() === 'completed' ? 'active' : ''
     ),
-  })('Completed')(
+  }).ref(
     addEventListener('click', () => todoList.setFilter('completed'))
-  );
+  )('Completed');
 
-  const clearBtn = el('button')('Clear Completed')(
+  const clearBtn = el('button').ref(
     addEventListener('click', () => todoList.clearCompleted())
-  );
+  )('Clear Completed');
 
   return el('div').props({ className: 'example' })(
     el('h2')('Todo List Example'),
@@ -82,8 +85,8 @@ export const TodoList = () => {
     el('div').props({ className: 'todo-list' })(
       map(
         todoList.filteredTodos,
-        (todo) => todo.id // Key function for immutable updates
-      )((todo) =>
+        (todo: Todo) => todo.id // Key function for immutable updates
+      )((todo: Todo) =>
         TodoItem(
           todo,
           (id) => todoList.toggleTodo(id),

@@ -16,15 +16,15 @@ interface CounterInstance {
 export const Counter = useSvc(
   ({ el, addEventListener, computed }) =>
     ({ set, count, doubled, isEven }: CounterInstance) => {
-      const incrementBtn = el('button')('Increment')(
+      const incrementBtn = el('button').ref(
         addEventListener('click', () => set(count() + 1))
-      );
-      const decrementBtn = el('button')('Decrement')(
+      )('Increment');
+      const decrementBtn = el('button').ref(
         addEventListener('click', () => set(count() - 1))
-      );
-      const resetBtn = el('button')('Reset')(
+      )('Decrement');
+      const resetBtn = el('button').ref(
         addEventListener('click', () => set(0))
-      );
+      )('Reset');
 
       return el('section').props({ className: 'counter-section' })(
         el('h2')('Counter Example'),

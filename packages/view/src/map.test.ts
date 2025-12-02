@@ -1039,11 +1039,10 @@ describe('map() - User-facing behavior', () => {
           items,
           (item) => item.id // Key function
         )((item) =>
-          el.impl('li')(item.name)((element) => {
+          el.impl('li').ref((element: MockElement) => {
             // Simulate attaching custom state during lifecycle
-            (element as unknown as MockElement).__customState =
-              `state-${item.id}`;
-          })
+            element.__customState = `state-${item.id}`;
+          })(item.name)
         )
       );
 
@@ -1194,7 +1193,7 @@ describe('map() - User-facing behavior', () => {
           (item) => item.id
         )((item) => {
           renderCount++;
-          return el.impl('li')(item.name)(
+          return el.impl('li').ref(
             // Lifecycle callback reads a signal
             () => {
               lifecycleCallCount++;
@@ -1203,7 +1202,7 @@ describe('map() - User-facing behavior', () => {
               // Just read the signal - we don't need to use the value
               void value;
             }
-          );
+          )(item.name);
         })
       );
 

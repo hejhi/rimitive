@@ -47,6 +47,13 @@ export interface TagFactory<
       | ElElementProps<TConfig, Tag>
       | ((current: ElElementProps<TConfig, Tag>) => ElElementProps<TConfig, Tag>)
   ): TagFactory<TConfig, Tag>;
+
+  /**
+   * Add a lifecycle callback, returning a new TagFactory
+   */
+  ref(
+    callback: (element: TConfig['elements'][Tag]) => void | (() => void)
+  ): TagFactory<TConfig, Tag>;
 }
 
 /**

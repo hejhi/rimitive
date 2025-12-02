@@ -54,7 +54,7 @@ const App = () => {
       el('h2')('Static Section'),
       el('p')('This content is rendered on the server and stays static.'),
       el('p')('No JavaScript needed for this part!')
-    )(),
+    ),
 
     // Interactive islands - JS shipped only for these
     el('section').props({ className: 'islands-section' })(
@@ -69,9 +69,9 @@ const App = () => {
         TagList({
           tags: ['TypeScript', 'SSR', 'Islands', 'Hydration', 'Reactive'],
         })
-      )()
-    )()
-  )();
+      )
+    )
+  );
 };
 
 // Create HTTP server

@@ -114,7 +114,7 @@ describe('el primitive - lazy scope creation', () => {
     expect(element).toBeDefined();
   });
 
-  it('creates scope for elements with lifecycle cleanup', () => {
+  it('creates scope for elements with lifecycle cleanup via .ref()', () => {
     const { renderer, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
     const el = El<MockRendererConfig>().create({
@@ -125,9 +125,10 @@ describe('el primitive - lazy scope creation', () => {
     }).impl;
 
     // Static element with lifecycle callback that returns cleanup
-    const ref = el('div')('Static content')(() => () => {
-      // cleanup function
-    });
+    const ref = el('div')
+      .ref(() => () => {
+        // cleanup function
+      })('Static content');
 
     const element: MockElement = asElement(ref.create());
 
@@ -146,9 +147,10 @@ describe('el primitive - lazy scope creation', () => {
     }).impl;
 
     // Static element with lifecycle callback that returns nothing
-    const ref = el('div')('Static content')(() => {
-      // no cleanup
-    });
+    const ref = el('div')
+      .ref(() => {
+        // no cleanup
+      })('Static content');
 
     const element: MockElement = asElement(ref.create());
 

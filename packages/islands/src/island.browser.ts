@@ -5,7 +5,7 @@
  * Creates a wrapper with metadata for the hydrator.
  */
 
-import type { LifecycleCallback, RefSpec } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { IslandComponent, IslandStrategy, GetContext } from './types';
 import { ISLAND_META } from './types';
@@ -48,31 +48,19 @@ export function island<TProps, TApi = Record<string, unknown>, TContext = unknow
 
   // Create wrapper function
   const wrapper = (props: TProps) => {
-    const lifecycleCallbacks: LifecycleCallback<unknown>[] = [];
-
     // Create a deferred RefSpec that delays factory execution until create(api) is called
-    const deferredSpec = Object.assign(
-      (...callbacks: LifecycleCallback<unknown>[]) => {
-        // Collect lifecycle callbacks
-        lifecycleCallbacks.push(...callbacks);
-        return deferredSpec;
+    const deferredSpec: RefSpec<unknown> = {
+      status: STATUS_REF_SPEC,
+      create(api: TApi) {
+        // Get the context getter
+        const getContext = getContextGetter() as GetContext<TContext>;
+
+        const component = factory(api, getContext); // Pass API and context getter
+        const spec = component(props); // Call component with props to get the actual RefSpec
+
+        return spec.create(api);
       },
-      {
-        status: STATUS_REF_SPEC,
-        create(api: TApi) {
-          // Get the context getter
-          const getContext = getContextGetter() as GetContext<TContext>;
-
-          const component = factory(api, getContext); // Pass API and context getter
-          const spec = component(props); // Call component with props to get the actual RefSpec
-
-          // Apply collected lifecycle callbacks to the spec
-          if (lifecycleCallbacks.length > 0) spec(...lifecycleCallbacks);
-
-          return spec.create(api);
-        },
-      } as const
-    );
+    };
 
     return deferredSpec;
   };

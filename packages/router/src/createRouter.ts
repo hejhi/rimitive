@@ -2,12 +2,7 @@
  * Router API - separate app-level API for routing
  */
 
-import type {
-  RendererConfig,
-  RefSpec,
-  LifecycleCallback,
-} from '@lattice/view/types';
-import { STATUS_REF_SPEC } from '@lattice/view/types';
+import type { RendererConfig, RefSpec } from '@lattice/view/types';
 import type {
   ElMethod,
   SignalFunction,
@@ -468,56 +463,27 @@ export function createRouter<TConfig extends RendererConfig>(
         // Instantiate the connected component with route context
         const sealedSpec = connectedComponent(routeContext);
 
-        // Wrap sealedSpec in lifecycle callback collector
-        const lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[] =
-          [];
-
-        const componentRefSpec: RefSpec<TConfig['baseElement']> = (
-          ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
-        ) => {
-          lifecycleCallbacks.push(...callbacks);
-          return componentRefSpec;
-        };
-
-        componentRefSpec.status = STATUS_REF_SPEC;
-        componentRefSpec.create = <TExt>(api?: unknown) => {
-          const nodeRef = sealedSpec.create(api);
-          // Apply lifecycle callbacks
-          for (const callback of lifecycleCallbacks) {
-            callback(nodeRef);
-          }
-          return nodeRef as typeof nodeRef & TExt;
-        };
-
-        return componentRefSpec;
+        // Return the sealed spec directly - lifecycle callbacks use .ref() on elements
+        return sealedSpec;
       });
 
-      // Create true wrapper that delegates to baseRefSpec via closure
-      const routeSpec: RouteSpec<TConfig['baseElement']> = (
-        ...lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[]
-      ) => {
-        // Delegate to base spec and return this wrapper for chaining
-        baseRefSpec(...lifecycleCallbacks);
-        return routeSpec;
-      };
-
-      // Set properties
-      routeSpec.status = STATUS_ROUTE_SPEC;
-      routeSpec.routeMetadata = {
-        relativePath,
-        rebuild: (parentPath: string) =>
-          route(parentPath, connectedComponent)(...children),
-      };
-
-      // Unwrap method returns the wrapped RefSpec
-      routeSpec.unwrap = () => baseRefSpec;
-
-      // Delegate create method to base spec
-      routeSpec.create = <TExt = Record<string, unknown>>(
-        api?: unknown,
-        extensions?: TExt
-      ) => {
-        return baseRefSpec.create(api, extensions);
+      // Create wrapper that delegates to baseRefSpec via closure
+      const routeSpec: RouteSpec<TConfig['baseElement']> = {
+        status: STATUS_ROUTE_SPEC,
+        routeMetadata: {
+          relativePath,
+          rebuild: (parentPath: string) =>
+            route(parentPath, connectedComponent)(...children),
+        },
+        // Unwrap method returns the wrapped RefSpec
+        unwrap: () => baseRefSpec,
+        // Delegate create method to base spec
+        create: <TExt = Record<string, unknown>>(
+          api?: unknown,
+          extensions?: TExt
+        ) => {
+          return baseRefSpec.create(api, extensions);
+        },
       };
 
       return routeSpec;

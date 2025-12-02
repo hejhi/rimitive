@@ -10,7 +10,7 @@ export const TagList = (props: { tags: string[] }) => {
 
   // Return fragment - multiple span elements without a wrapper
   // map() returns a RefSpec that creates a FragmentRef when instantiated
-  return map(tags)((tag) => {
+  return map(tags)((tag: string) => {
     return el('span').props({
       className: 'tag',
       onclick: () => {

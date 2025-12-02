@@ -107,7 +107,6 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
  */
 export interface RefSpec<TElement> extends Service<NodeRef<TElement>, unknown> {
   status: typeof STATUS_REF_SPEC;
-  (...lifecycleCallbacks: LifecycleCallback<TElement>[]): RefSpec<TElement>; // Register lifecycle callback(s) (chainable)
   // Instantiate blueprint → creates DOM element with optional extensions
   // api parameter is optional - only needed for components created with create()
   // parentContext enables cross-renderer composition (e.g., canvas inside DOM)

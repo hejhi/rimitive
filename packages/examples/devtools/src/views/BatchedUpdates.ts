@@ -14,9 +14,9 @@ interface BatchedUpdateHandlers {
 export const BatchedUpdates = useSvc(
   ({ el, addEventListener }) =>
     ({ onBatchedUpdate }: BatchedUpdateHandlers) => {
-      const batchBtn = el('button')('Run Batched Updates')(
+      const batchBtn = el('button').ref(
         addEventListener('click', onBatchedUpdate)
-      );
+      )('Run Batched Updates');
 
       return el('section').props({ className: 'batched-section' })(
         el('h2')('Batched Updates Example'),

@@ -64,29 +64,26 @@ export function instrumentMap<TBaseElement>(
       // Wrap create to instrument the fragment ref creation
       const originalCreate = refSpec.create.bind(refSpec);
 
-      const instrumentedRefSpec: RefSpec<TBaseElement> = (...callbacks) => {
-        refSpec(...callbacks);
-        return instrumentedRefSpec;
-      };
+      const instrumentedRefSpec: RefSpec<TBaseElement> = {
+        status: STATUS_REF_SPEC,
+        create: (api, extensions) => {
+          const fragmentRef = originalCreate(
+            api,
+            extensions
+          ) as FragmentRef<TBaseElement>;
 
-      instrumentedRefSpec.status = STATUS_REF_SPEC;
-      instrumentedRefSpec.create = (api, extensions) => {
-        const fragmentRef = originalCreate(
-          api,
-          extensions
-        ) as FragmentRef<TBaseElement>;
+          // TODO: Add instrumentation for fragment initialization
+          // (fragments no longer have attach() - initialized in processChildren)
+          instrumentation.emit({
+            type: 'MAP_MOUNTED',
+            timestamp: Date.now(),
+            data: {
+              mapId,
+            },
+          });
 
-        // TODO: Add instrumentation for fragment initialization
-        // (fragments no longer have attach() - initialized in processChildren)
-        instrumentation.emit({
-          type: 'MAP_MOUNTED',
-          timestamp: Date.now(),
-          data: {
-            mapId,
-          },
-        });
-
-        return fragmentRef;
+          return fragmentRef;
+        },
       };
 
       return instrumentedRefSpec;

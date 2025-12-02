@@ -3,11 +3,7 @@
  */
 
 import { defineService } from '@lattice/lattice';
-import type {
-  RendererConfig,
-  RefSpec,
-  LifecycleCallback,
-} from '@lattice/view/types';
+import type { RendererConfig, RefSpec } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 
 // Import types
@@ -236,25 +232,13 @@ export const createRouteFactory = defineService(
 
             // Create component with fresh api
             if ('create' in component && typeof component.create === 'function') {
-              const lifecycleCallbacks: LifecycleCallback<
-                TConfig['baseElement']
-              >[] = [];
-
-              const refSpec: RefSpec<TConfig['baseElement']> = (
-                ...callbacks: LifecycleCallback<TConfig['baseElement']>[]
-              ) => {
-                lifecycleCallbacks.push(...callbacks);
-                return refSpec;
-              };
-
-              refSpec.status = STATUS_REF_SPEC;
-              refSpec.create = <TExt>() => {
-                const nodeRef = component.create(componentApi);
-                // Apply lifecycle callbacks
-                for (const callback of lifecycleCallbacks) {
-                  callback(nodeRef);
-                }
-                return nodeRef as typeof nodeRef & TExt;
+              // Component has create method - wrap it in a RefSpec
+              const refSpec: RefSpec<TConfig['baseElement']> = {
+                status: STATUS_REF_SPEC,
+                create: <TExt>() => {
+                  const nodeRef = component.create(componentApi);
+                  return nodeRef as typeof nodeRef & TExt;
+                },
               };
 
               return refSpec;
@@ -268,33 +252,23 @@ export const createRouteFactory = defineService(
             }
           });
 
-          // Create true wrapper that delegates to baseRefSpec via closure
-          // No mutation - full ownership through closure
-          const routeSpec: RouteSpec<TConfig['baseElement']> = (
-            ...lifecycleCallbacks: LifecycleCallback<TConfig['baseElement']>[]
-          ) => {
-            // Delegate to base spec and return this wrapper for chaining
-            baseRefSpec(...lifecycleCallbacks);
-            return routeSpec;
-          };
-
-          // Set properties - no mutation, we own this object
-          routeSpec.status = STATUS_ROUTE_SPEC_CONST;
-          routeSpec.routeMetadata = {
-            relativePath,
-            rebuild: (parentPath: string) =>
-              route(parentPath, component)(...children),
-          };
-
-          // Unwrap method returns the wrapped RefSpec
-          routeSpec.unwrap = () => baseRefSpec;
-
-          // Delegate create method to base spec
-          routeSpec.create = <TExt = Record<string, unknown>>(
-            api?: unknown,
-            extensions?: TExt
-          ) => {
-            return baseRefSpec.create(api, extensions);
+          // Create wrapper that delegates to baseRefSpec via closure
+          const routeSpec: RouteSpec<TConfig['baseElement']> = {
+            status: STATUS_ROUTE_SPEC_CONST,
+            routeMetadata: {
+              relativePath,
+              rebuild: (parentPath: string) =>
+                route(parentPath, component)(...children),
+            },
+            // Unwrap method returns the wrapped RefSpec
+            unwrap: () => baseRefSpec,
+            // Delegate create method to base spec
+            create: <TExt = Record<string, unknown>>(
+              api?: unknown,
+              extensions?: TExt
+            ) => {
+              return baseRefSpec.create(api, extensions);
+            },
           };
 
           return routeSpec;

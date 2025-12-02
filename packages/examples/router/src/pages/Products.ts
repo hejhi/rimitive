@@ -32,7 +32,7 @@ export const Products = router.connect((_route, { children }) =>
               ),
               el('div').props({ className: 'product-price' })(product.price)
             )
-          )()
+          )
         )
       ),
       // Render child route (Product detail) here

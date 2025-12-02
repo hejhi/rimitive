@@ -234,18 +234,43 @@ Signals and computeds are automatically unwrapped in the template.
 
 ## Lifecycle Callbacks
 
-Add lifecycle callbacks by calling the RefSpec with callback functions:
+Add lifecycle callbacks using the `.ref()` method on the element factory:
 
 ```typescript
-el('input').props({ type: 'text' })()((element) => {
-  // Called when element is created (within reactive scope)
-  element.focus();
+el('input')
+  .props({ type: 'text' })
+  .ref((element) => {
+    // Called when element is created (within reactive scope)
+    element.focus();
 
-  // Return cleanup function (optional)
-  return () => {
-    console.log('Element removed');
-  };
-});
+    // Return cleanup function (optional)
+    return () => {
+      console.log('Element removed');
+    };
+  })();
+```
+
+Multiple callbacks can be passed to a single `.ref()` call:
+
+```typescript
+el('canvas')
+  .ref(
+    addEventListener('pointerdown', handleDown),
+    addEventListener('pointermove', handleMove),
+    addEventListener('pointerup', handleUp)
+  )();
+```
+
+Lifecycle callbacks can be baked into reusable factories:
+
+```typescript
+const autoFocusInput = el('input')
+  .props({ type: 'text' })
+  .ref((el) => el.focus());
+
+// Every instance auto-focuses
+autoFocusInput();
+autoFocusInput();
 ```
 
 ### `addEventListener` Helper
@@ -257,7 +282,7 @@ import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
 const addEventListener = createAddEventListener(batch);
 
-el('div')()(addEventListener('scroll', handleScroll, { passive: true }));
+el('div').ref(addEventListener('scroll', handleScroll, { passive: true }))();
 ```
 
 ## Components

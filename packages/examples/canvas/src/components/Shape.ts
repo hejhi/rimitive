@@ -13,7 +13,7 @@
 import { canvas, computed } from '../service';
 import type { ShapeData } from '../behaviors/useShapeEditor';
 
-const { cvs } = canvas;
+const { circle } = canvas;
 
 /**
  * Circle shape component
@@ -21,7 +21,7 @@ const { cvs } = canvas;
  * Returns a RefSpec that can accept lifecycle callbacks.
  */
 export const Circle = (shape: ShapeData) => {
-  return cvs('circle').props({
+  return circle.props({
     x: shape.x,
     y: shape.y,
     radius: shape.size,
@@ -38,7 +38,7 @@ export const Circle = (shape: ShapeData) => {
 export const Rect = (shape: ShapeData) => {
   const halfSize = shape.size;
 
-  return cvs('rect').props({
+  return circle.props({
     x: computed(() => shape.x() - halfSize),
     y: computed(() => shape.y() - halfSize),
     width: halfSize * 2,

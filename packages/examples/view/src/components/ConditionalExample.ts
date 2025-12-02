@@ -8,12 +8,12 @@ export const ConditionalExample = () => {
   const buttonType = signal<'primary' | 'danger' | 'success'>('primary');
 
   // Toggle message visibility
-  const toggleBtn = el('button')('Toggle Message')(
+  const toggleBtn = el('button').ref(
     addEventListener('click', () => showMessage(!showMessage()))
-  );
+  )('Toggle Message');
 
   // Conditional message - renders null when hidden
-  const conditionalMessage = match(showMessage)((show) =>
+  const conditionalMessage = match(showMessage)((show: boolean) =>
     show
       ? el('div').props({ className: 'conditional-message' })(
           el('span')('👋 This message can be toggled on and off!')
@@ -22,25 +22,25 @@ export const ConditionalExample = () => {
   );
 
   // Toggle edit mode
-  const editToggleBtn = el('button')(
-    computed(() => (isEditMode() ? 'Save' : 'Edit'))
-  )(addEventListener('click', () => isEditMode(!isEditMode())));
+  const editToggleBtn = el('button').ref(
+    addEventListener('click', () => isEditMode(!isEditMode()))
+  )(computed(() => (isEditMode() ? 'Save' : 'Edit')));
 
   // Pattern 1: Match with conditional element types
   // Use match to switch between input and span based on edit mode
-  const editableText = match(isEditMode)((isEdit) =>
+  const editableText = match(isEditMode)((isEdit: boolean) =>
     isEdit
       ? el('input').props({
           type: 'text',
           className: 'edit-input',
           value: editText,
-        })()((input) => {
+        }).ref((input: HTMLInputElement) => {
           const handler = (e: Event) => {
             editText((e.target as HTMLInputElement).value);
           };
           input.addEventListener('input', handler);
           return () => input.removeEventListener('input', handler);
-        })
+        })()
       : el('span').props({ className: 'display-text' })(editText)
   );
 
@@ -48,29 +48,29 @@ export const ConditionalExample = () => {
   // Multiple conditional elements can be composed
   const editableTextAlt = el('div').props({ className: 'editable-wrapper' })(
     // Input (only renders in edit mode) with all its specific props
-    match(isEditMode)((isEdit) =>
+    match(isEditMode)((isEdit: boolean) =>
       isEdit
         ? el('input').props({
             type: 'text',
             className: 'edit-input',
             value: editText,
-          })()((input) => {
+          }).ref((input: HTMLInputElement) => {
             const handler = (e: Event) => {
               editText((e.target as HTMLInputElement).value);
             };
             input.addEventListener('input', handler);
             return () => input.removeEventListener('input', handler);
-          })
+          })()
         : null
     ),
     // Span (only renders in display mode)
-    match(isEditMode)((isEdit) =>
+    match(isEditMode)((isEdit: boolean) =>
       !isEdit ? el('span').props({ className: 'display-text' })(editText) : null
     )
   );
 
   // Cycle button type
-  const cycleTypeBtn = el('button')('Change Button Style')(
+  const cycleTypeBtn = el('button').ref(
     addEventListener('click', () => {
       const types: Array<'primary' | 'danger' | 'success'> = [
         'primary',
@@ -84,7 +84,7 @@ export const ConditionalExample = () => {
       if (nextType === undefined) return;
       buttonType(nextType);
     })
-  );
+  )('Change Button Style');
 
   // Dynamic button that changes based on state
   // Static button element with reactive props and children

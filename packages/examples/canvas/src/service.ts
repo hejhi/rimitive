@@ -43,9 +43,9 @@ const domViewSvc = composeFrom(
   domViewHelpers
 );
 
-export const dom = {
+const domSvc = {
   ...domViewSvc,
-  addEventListener: createAddEventListener(domViewHelpers.batch),
+  on: createAddEventListener(domViewHelpers.batch),
   mount: <TElement>(spec: RefSpec<TElement>) => spec.create(domViewSvc),
 };
 
@@ -66,9 +66,9 @@ const { el: canvasEl, ...canvasViewSvc } = composeFrom(
   canvasViewHelpers
 );
 
-export const canvas = {
+export const canvasSvc = {
   ...canvasViewSvc,
-  cvs: canvasEl,
+  el: canvasEl,
   adapter: canvasAdapter,
   on: createCanvasAddEventListener(canvasAdapter, signalsSvc.batch),
   mount: <TElement>(spec: RefSpec<TElement>) => spec.create(canvasViewSvc),
@@ -86,3 +86,20 @@ export type {
   CanvasPointerEvent,
   CanvasBridgeElement,
 } from './canvas-adapter';
+
+export const dom = {
+  div: domSvc.el('div'),
+  h1: domSvc.el('h1'),
+  p: domSvc.el('p'),
+  strong: domSvc.el('strong'),
+  code: domSvc.el('code'),
+  button: domSvc.el('button'),
+  ...domSvc,
+};
+
+export const canvas = {
+  canvasRoot: canvasSvc.el('canvas'),
+  circle: canvasSvc.el('circle'),
+  group: canvasSvc.el('group'),
+  ...canvasSvc,
+};

@@ -12,8 +12,8 @@ import { canvas, dom } from '../service';
 import { ShapeEditor } from './ShapeEditor';
 import { Toolbar } from './Toolbar';
 
-const { cvs, on } = canvas;
-const { el } = dom;
+const { on, canvasRoot } = canvas;
+const { div, p, strong, code, h1 } = dom;
 
 interface AppProps {
   canvasWidth: number;
@@ -43,24 +43,26 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
 
   // Single composed tree: DOM with embedded canvas
   // canvas.el('canvas') creates an HTMLCanvasElement that acts as the boundary
-  return el('div').props({ className: 'app' })(
-    el('h1')('Lattice Canvas'),
-    el('p').props({ className: 'subtitle' })(
+  return div.props({ className: 'app' })(
+    h1('Lattice Canvas'),
+    p.props({ className: 'subtitle' })(
       'Reactive canvas rendering with signals'
     ),
 
-    el('div').props({ className: 'canvas-container' })(
+    div.props({ className: 'canvas-container' })(
       // Canvas element: DOM node externally, scene graph root internally
       // Event listeners attached via lifecycle callbacks with hit testing
-      cvs('canvas').props({
-        width: canvasWidth,
-        height: canvasHeight,
-        clearColor: '#16213e',
-      })(shapes)(
-        on('pointerdown', handlePointerDown),
-        on('pointermove', handlePointerMove),
-        on('pointerup', handlePointerUp)
-      )
+      canvasRoot
+        .props({
+          width: canvasWidth,
+          height: canvasHeight,
+          clearColor: '#16213e',
+        })
+        .ref(
+          on('pointerdown', handlePointerDown),
+          on('pointermove', handlePointerMove),
+          on('pointerup', handlePointerUp)
+        )(shapes)
     ),
 
     // DOM toolbar - passes actions to canvas scene
@@ -69,12 +71,12 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
       onClearAll: clearAll,
     }),
 
-    el('div').props({ className: 'info' })(
-      el('strong')('Click on shapes'),
+    div.props({ className: 'info' })(
+      strong('Click on shapes'),
       ' to select them. ',
-      el('strong')('Drag'),
+      strong('Drag'),
       ' to move selected shape. Shapes are reactive - powered by ',
-      el('code')('@lattice/signals'),
+      code('@lattice/signals'),
       ' and rendered with a custom canvas adapter.'
     )
   );

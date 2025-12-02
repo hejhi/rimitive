@@ -185,9 +185,9 @@ describe('when() - conditional children rendering', () => {
       let createCount = 0;
 
       const spec = when(show)(
-        el.impl('div')('content')(() => {
+        el.impl('div').ref(() => {
           createCount++;
-        })
+        })('content')
       );
 
       attachFragment(renderer, spec);
@@ -256,9 +256,9 @@ describe('when() - conditional children rendering', () => {
       let callbackCalled = false;
 
       const spec = when(show)(
-        el.impl('div')('content')(() => {
+        el.impl('div').ref(() => {
           callbackCalled = true;
-        })
+        })('content')
       );
 
       attachFragment(renderer, spec);
@@ -276,11 +276,11 @@ describe('when() - conditional children rendering', () => {
       let disposed = false;
 
       const spec = when(show)(
-        el.impl('div')('content')(() => {
+        el.impl('div').ref(() => {
           return () => {
             disposed = true;
           };
-        })
+        })('content')
       );
 
       const { parent } = attachFragment(renderer, spec);

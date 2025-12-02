@@ -69,7 +69,7 @@ export type ElProps<TConfig extends RendererConfig> = {
 
 /**
  * Tag factory - returned from el(tag)
- * Callable with children to create RefSpec, or use .props() to add properties
+ * Callable with children to create RefSpec, or use .props()/.ref() to configure
  *
  * Generic over:
  * - TConfig: The renderer configuration
@@ -93,6 +93,14 @@ export type TagFactory<
       | ElementProps<TConfig, Tag>
       | ((current: ElementProps<TConfig, Tag>) => ElementProps<TConfig, Tag>)
   ): TagFactory<TConfig, Tag>;
+
+  /**
+   * Add lifecycle callback(s), returning a new TagFactory
+   * Callbacks receive the element when created and can return cleanup functions
+   */
+  ref(
+    ...callbacks: LifecycleCallback<TConfig['elements'][Tag]>[]
+  ): TagFactory<TConfig, Tag>;
 };
 
 /**
@@ -101,8 +109,8 @@ export type TagFactory<
  * Element construction is separated into phases:
  * 1. Tag phase: el(tag) - Returns TagFactory
  * 2. Props phase (optional): factory.props({}) - Returns new TagFactory with props
- * 3. Children phase: factory(children) - Returns RefSpec blueprint
- * 4. Behavior phase: refSpec(lifecycle) - Attaches side effects
+ * 3. Ref phase (optional): factory.ref(callback) - Returns new TagFactory with lifecycle
+ * 4. Children phase: factory(children) - Returns RefSpec blueprint
  *
  * Generic over:
  * - TConfig: The renderer configuration
@@ -147,24 +155,16 @@ export const El = defineService(
       const { setProperty, createNode } = renderer;
 
       /**
-       * Helper to create a RefSpec with lifecycle callback chaining
+       * Helper to create a RefSpec
        * Generic over El - the element type (no longer constrained to HTMLElement)
        */
       const createRefSpec = <El>(
         createElement: (
-          callbacks: LifecycleCallback<El>[],
           api?: unknown,
           parentContext?: ParentContext<unknown>
         ) => ElementRef<El>
       ): RefSpec<El> => {
-        const lifecycleCallbacks: LifecycleCallback<El>[] = [];
-
-        const refSpec: RefSpec<El> = (
-          ...callbacks: LifecycleCallback<El>[]
-        ) => {
-          lifecycleCallbacks.push(...callbacks);
-          return refSpec;
-        };
+        const refSpec = {} as RefSpec<El>;
 
         refSpec.status = STATUS_REF_SPEC;
         refSpec.create = <TExt>(
@@ -172,7 +172,7 @@ export const El = defineService(
           extensions?: TExt,
           parentContext?: ParentContext<unknown>
         ) => {
-          const elRef = createElement(lifecycleCallbacks, api, parentContext);
+          const elRef = createElement(api, parentContext);
           // If no extensions, return the ref directly to preserve mutability
           // This is critical for FragmentRef which gets firstChild set after creation
           if (!extensions || Object.keys(extensions).length === 0) return elRef;
@@ -189,15 +189,16 @@ export const El = defineService(
       };
 
       /**
-       * Create a TagFactory for a given tag with accumulated props
+       * Create a TagFactory for a given tag with accumulated props and lifecycle callbacks
        */
       function createTagFactory<Tag extends string & TElementKeys>(
         tag: Tag,
-        accumulatedProps: ElementProps<TConfig, Tag>
+        accumulatedProps: ElementProps<TConfig, Tag>,
+        accumulatedCallbacks: LifecycleCallback<TElements[Tag]>[]
       ): TagFactory<TConfig, Tag> {
         // The callable part - applies children and returns RefSpec
         const factory = (...children: ElRefSpecChild[]) => {
-          return createRefSpec((lifecycleCallbacks, api, parentContext) => {
+          return createRefSpec((api, parentContext) => {
             // Pass initial props to createNode - needed for renderers that require
             // props at creation time (e.g., canvas renderer needs width/height)
             const element = createNode(
@@ -238,7 +239,7 @@ export const El = defineService(
               processChildren(elRef, children, api, childContext);
 
               // Execute lifecycle callbacks within scope
-              for (const callback of lifecycleCallbacks) {
+              for (const callback of accumulatedCallbacks) {
                 const cleanup = callback(element as TElements[Tag]);
                 if (cleanup) onCleanup(cleanup);
               }
@@ -260,7 +261,17 @@ export const El = defineService(
             typeof propsOrFn === 'function'
               ? propsOrFn(accumulatedProps)
               : { ...accumulatedProps, ...propsOrFn };
-          return createTagFactory(tag, newProps);
+          return createTagFactory(tag, newProps, accumulatedCallbacks);
+        };
+
+        // Add .ref() method
+        factory.ref = (
+          ...callbacks: LifecycleCallback<TElements[Tag]>[]
+        ): TagFactory<TConfig, Tag> => {
+          return createTagFactory(tag, accumulatedProps, [
+            ...accumulatedCallbacks,
+            ...callbacks,
+          ]);
         };
 
         return factory as TagFactory<TConfig, Tag>;
@@ -270,7 +281,11 @@ export const El = defineService(
       function el<Tag extends string & TElementKeys>(
         tag: Tag
       ): TagFactory<TConfig, Tag> {
-        return createTagFactory(tag, {} as ElementProps<TConfig, Tag>);
+        return createTagFactory(
+          tag,
+          {} as ElementProps<TConfig, Tag>,
+          []
+        );
       }
 
       const extension: ElFactory<TConfig> = {

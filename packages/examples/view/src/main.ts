@@ -15,7 +15,7 @@ const App = () => {
         TagList({ tags: ['React', 'Vue', 'Svelte', 'Solid', 'Lattice'] })
       )
     )
-  )();
+  );
 };
 
 const app = mount(App());

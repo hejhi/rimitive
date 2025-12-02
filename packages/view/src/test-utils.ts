@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import type { Renderer, RendererConfig } from './renderer';
-import type { Reactive, RefSpec, LifecycleCallback, NodeRef } from './types';
+import type { Reactive, RefSpec, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
 import { createScopes } from './helpers/scope';
 import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
@@ -316,31 +316,20 @@ export function createMockDisposable(): {
  * Creates an RefSpec from an element for testing
  */
 export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
-  // Store lifecycle callbacks
-  const lifecycleCallbacks: LifecycleCallback<TElement>[] = [];
-
-  const ref = ((
-    lifecycleCallback: LifecycleCallback<TElement>
-  ): RefSpec<TElement> => {
-    lifecycleCallbacks.push(lifecycleCallback);
-    return ref;
-  }) as RefSpec<TElement>;
-
-  ref.status = STATUS_REF_SPEC;
-
-  // Factory method - for tests, return element wrapped in NodeRef with extensions
-  ref.create = <TExt>(extensions?: TExt): NodeRef<TElement> & TExt => {
-    // In tests, we create the element once and reuse it
-    // Call lifecycle callbacks if any
-    for (const callback of lifecycleCallbacks) {
-      callback(element);
-    }
-    return {
-      status: 1 as const, // STATUS_ELEMENT
-      element,
-      next: undefined,
-      ...extensions, // Spread extensions to override/add fields
-    } as NodeRef<TElement> & TExt;
+  const ref: RefSpec<TElement> = {
+    status: STATUS_REF_SPEC,
+    // Factory method - for tests, return element wrapped in NodeRef with extensions
+    create: <TExt>(
+      _api?: unknown,
+      extensions?: TExt
+    ): NodeRef<TElement> & TExt => {
+      return {
+        status: 1 as const, // STATUS_ELEMENT
+        element,
+        next: undefined,
+        ...extensions, // Spread extensions to override/add fields
+      } as NodeRef<TElement> & TExt;
+    },
   };
 
   return ref;

@@ -44,13 +44,13 @@ describe('match() - reactive element switching', () => {
       const spec = match(showDiv)((show) => {
         matcherCallCount++;
         return show
-          ? el.impl('div')('Content')(() => {
+          ? el.impl('div').ref(() => {
               lifecycleCallCount++;
               // This read should NOT become a dependency of match's effect
               const value = outerState();
               // Just read it to test tracking - don't need to use it
               void value;
-            })
+            })('Content')
           : null;
       });
 

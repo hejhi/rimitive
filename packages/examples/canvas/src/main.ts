@@ -19,9 +19,7 @@ const appRef = dom.mount(
 
 // Append to document
 const root = document.getElementById('root');
-if (root) {
-  root.appendChild(appRef.element as Node);
-}
+root!.appendChild(appRef.element!);
 
 console.log('Lattice Canvas Example loaded!');
 console.log('- Click shapes to select');
