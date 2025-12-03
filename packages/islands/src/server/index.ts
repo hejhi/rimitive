@@ -23,4 +23,4 @@ export {
   type ServerApp,
   type ServerOptions,
   type IslandsServerService,
-} from '../presets/islands-app-server';
+} from '../presets/core.server';

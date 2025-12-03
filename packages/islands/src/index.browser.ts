@@ -23,9 +23,9 @@ export type { IslandHydrator, MountFn } from './hydrators/dom';
 // Island-aware client adapters (hydration)
 export {
   createDOMHydrationAdapter,
-  createIslandsAdapter,
   type DOMAdapterConfig,
-} from './presets/island-client';
+} from './adapters/dom-hydration';
+export { createIslandsAdapter } from './adapters/islands';
 
 // Service adapter type
 export type { ServiceResult } from './types';
@@ -36,7 +36,7 @@ export {
   type ClientApp,
   type ClientOptions,
   type IslandsClientService,
-} from './presets/islands-app';
+} from './presets/core.client';
 
 // Island factory for typed islands - browser version
 export { createIsland, type IslandFactory } from './factory.browser';

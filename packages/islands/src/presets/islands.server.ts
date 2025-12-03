@@ -1,14 +1,14 @@
 /**
- * SSR Preset
+ * Islands Server Preset
  *
  * Pre-configured bundle for server-side rendering with islands.
  * Combines signals, view primitives, and SSR-specific helpers.
  *
  * @example
  * ```ts
- * import { createSSRSvc } from '@lattice/islands/presets/ssr';
+ * import { createIslandsServerApp } from '@lattice/islands/presets/islands.server';
  *
- * const { el, signal, render } = createSSRSvc();
+ * const { el, signal, render } = createIslandsServerApp();
  *
  * const App = () => el('div')(
  *   el('h1')('Hello SSR'),
@@ -37,7 +37,7 @@ import type { GetContext } from '../types';
 
 export type { DOMServerAdapterConfig } from '../adapters/dom-server';
 
-export interface SSRSvcOptions<TContext = unknown> {
+export interface IslandsServerOptions<TContext = unknown> {
   context?: GetContext<TContext>;
 }
 
@@ -46,10 +46,13 @@ const createViewSvc = (
 ) => composeFrom(defaultExtensions<DOMServerAdapterConfig>(), helpers);
 
 /**
- * Create a fully-configured SSR service
+ * Create a fully-configured islands server app
+ *
+ * Batteries-included preset that creates signals, view, and SSR rendering.
+ * For custom composition, use `@lattice/islands/presets/core.server` instead.
  */
-export const createSSRSvc = <TContext = unknown>(
-  options: SSRSvcOptions<TContext> = {}
+export const createIslandsServerApp = <TContext = unknown>(
+  options: IslandsServerOptions<TContext> = {}
 ) => {
   const signalsSvc = createSignalsApi();
   const adapter = createDOMServerAdapter();
@@ -70,7 +73,16 @@ export const createSSRSvc = <TContext = unknown>(
   return { ...svc, mount, render };
 };
 
-export type SSRSvc = ReturnType<typeof createSSRSvc>;
+export type IslandsServerApp = ReturnType<typeof createIslandsServerApp>;
+
+/** @deprecated Use createIslandsServerApp instead */
+export const createSSRApp = createIslandsServerApp;
+
+/** @deprecated Use IslandsServerApp instead */
+export type SSRApp = IslandsServerApp;
+
+/** @deprecated Use IslandsServerApp instead */
+export type SSRSvc = IslandsServerApp;
 
 /**
  * Island API type - the service interface available to island components

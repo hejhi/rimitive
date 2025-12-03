@@ -66,29 +66,21 @@
       "import": "./dist/adapters/islands.js",
       "types": "./dist/adapters/islands.d.ts"
     },
-    "./presets/island-ssr": {
-      "import": "./dist/presets/island-ssr.js",
-      "types": "./dist/presets/island-ssr.d.ts"
+    "./presets/core.client": {
+      "import": "./dist/presets/core.client.js",
+      "types": "./dist/presets/core.client.d.ts"
     },
-    "./presets/island-client": {
-      "import": "./dist/presets/island-client.js",
-      "types": "./dist/presets/island-client.d.ts"
+    "./presets/core.server": {
+      "import": "./dist/presets/core.server.js",
+      "types": "./dist/presets/core.server.d.ts"
     },
-    "./presets/ssr-client": {
-      "import": "./dist/presets/ssr-client.js",
-      "types": "./dist/presets/ssr-client.d.ts"
+    "./presets/islands.client": {
+      "import": "./dist/presets/islands.client.js",
+      "types": "./dist/presets/islands.client.d.ts"
     },
-    "./presets/islands-app": {
-      "import": "./dist/presets/islands-app.js",
-      "types": "./dist/presets/islands-app.d.ts"
-    },
-    "./presets/ssr": {
-      "import": "./dist/presets/ssr.js",
-      "types": "./dist/presets/ssr.d.ts"
-    },
-    "./presets/hydrate": {
-      "import": "./dist/presets/hydrate.js",
-      "types": "./dist/presets/hydrate.d.ts"
+    "./presets/islands.server": {
+      "import": "./dist/presets/islands.server.js",
+      "types": "./dist/presets/islands.server.d.ts"
     },
     "./types": {
       "import": "./dist/types.js",

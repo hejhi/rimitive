@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createSSRSvc } from '@lattice/islands/presets/ssr';
+import { createIslandsServerApp } from '@lattice/islands/presets/islands.server';
 
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
@@ -16,8 +16,8 @@ import { TagList } from './islands/TagList.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
-// Create SSR service
-const { el, render } = createSSRSvc();
+// Create islands server app
+const { el, render } = createIslandsServerApp();
 
 const div = el('div');
 const p = el('p');

@@ -73,25 +73,10 @@ export default defineConfig({
           'src/adapters/dom-hydration.ts'
         ),
         'adapters/islands': resolve(__dirname, 'src/adapters/islands.ts'),
-        'presets/island-ssr': resolve(__dirname, 'src/presets/island-ssr.ts'),
-        'presets/island-client': resolve(
-          __dirname,
-          'src/presets/island-client.ts'
-        ),
-        'presets/ssr-client': resolve(
-          __dirname,
-          'src/presets/ssr-client.ts'
-        ),
-        'presets/islands-app': resolve(
-          __dirname,
-          'src/presets/islands-app.ts'
-        ),
-        'presets/islands-app-server': resolve(
-          __dirname,
-          'src/presets/islands-app-server.ts'
-        ),
-        'presets/ssr': resolve(__dirname, 'src/presets/ssr.ts'),
-        'presets/hydrate': resolve(__dirname, 'src/presets/hydrate.ts'),
+        'presets/core.client': resolve(__dirname, 'src/presets/core.client.ts'),
+        'presets/core.server': resolve(__dirname, 'src/presets/core.server.ts'),
+        'presets/islands.client': resolve(__dirname, 'src/presets/islands.client.ts'),
+        'presets/islands.server': resolve(__dirname, 'src/presets/islands.server.ts'),
       },
       formats: ['es'],
     },

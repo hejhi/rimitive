@@ -1,16 +1,16 @@
 /**
- * Hydration Preset
+ * Islands Client Preset
  *
  * Pre-configured bundle for client-side hydration of islands.
  * Combines signals, view primitives, and hydration helpers.
  *
  * @example
  * ```ts
- * import { createHydrateSvc } from '@lattice/islands/presets/hydrate';
+ * import { createIslandsClientApp } from '@lattice/islands/presets/islands.client';
  * import { Counter } from './islands/Counter';
  * import { TodoList } from './islands/TodoList';
  *
- * const { hydrate } = createHydrateSvc();
+ * const { hydrate } = createIslandsClientApp();
  *
  * hydrate(Counter, TodoList);
  * ```
@@ -30,9 +30,12 @@ export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 type IslandComponent = { [ISLAND_META]?: unknown };
 
 /**
- * Create a fully-configured hydration service
+ * Create a fully-configured islands client app
+ *
+ * Batteries-included preset that creates signals, view, and hydration.
+ * For custom composition, use `@lattice/islands/presets/core.client` instead.
  */
-export const createHydrateSvc = () => {
+export const createIslandsClientApp = () => {
   const signalsSvc = createSignalsApi();
 
   // Create DOM adapter for post-hydration rendering
@@ -68,4 +71,13 @@ export const createHydrateSvc = () => {
   return { ...svc, mount, hydrate };
 };
 
-export type HydrateSvc = ReturnType<typeof createHydrateSvc>;
+export type IslandsClientApp = ReturnType<typeof createIslandsClientApp>;
+
+/** @deprecated Use createIslandsClientApp instead */
+export const createHydrateApp = createIslandsClientApp;
+
+/** @deprecated Use IslandsClientApp instead */
+export type HydrateApp = IslandsClientApp;
+
+/** @deprecated Use IslandsClientApp instead */
+export type HydrateSvc = IslandsClientApp;
