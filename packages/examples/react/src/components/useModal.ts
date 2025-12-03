@@ -1,21 +1,54 @@
 /**
- * Modal Behavior - Design System Pattern
+ * useModal - Portable Modal Behavior
  *
- * Creates isolated signal state for each modal instance.
- * Used with useComponent to create isolated instances per React component.
+ * Simple open/close state for modals.
+ * Framework-agnostic - works with any signals implementation.
+ *
+ * For a more complete implementation with ARIA support, focus trapping,
+ * and keyboard handling, see @lattice/headless useDialog.
+ *
+ * @example
+ * ```ts
+ * // With Lattice signals
+ * const modal = useModal({ signal, computed, effect })();
+ *
+ * // With React (via createHook)
+ * const useModalHook = createHook(useModal);
+ * const modal = useModalHook();
+ * ```
  */
-import type { Service } from '../service';
+import type { SignalsApi, Signal } from './types';
 
-export const useModal = (api: Service) => {
-  const isOpen = api.signal(false);
+export interface ModalState {
+  /** Whether the modal is open */
+  isOpen: Signal<boolean>;
 
-  return {
-    // Reactive state
-    isOpen,
+  /** Open the modal */
+  open: () => void;
+  /** Close the modal */
+  close: () => void;
+  /** Toggle the modal */
+  toggle: () => void;
+}
 
-    // Actions
-    open: () => isOpen(true),
-    close: () => isOpen(false),
-    toggle: () => isOpen(!isOpen()),
+/**
+ * Creates a portable modal behavior
+ *
+ * @param api - Signals API (signal, computed, effect)
+ * @returns Factory function that creates modal state
+ */
+export const useModal =
+  (api: SignalsApi) =>
+  (): ModalState => {
+    const { signal } = api;
+
+    const isOpen = signal(false);
+
+    return {
+      isOpen,
+
+      open: () => isOpen(true),
+      close: () => isOpen(false),
+      toggle: () => isOpen(!isOpen()),
+    };
   };
-};

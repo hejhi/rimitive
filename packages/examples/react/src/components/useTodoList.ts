@@ -1,10 +1,22 @@
 /**
- * TodoList Behavior - React Version
+ * useTodoList - Portable TodoList Behavior
  *
  * A todo list with computed values for filtering and counting.
- * Used with useComponent to create isolated instances per React component.
+ * Framework-agnostic - works with any signals implementation.
+ *
+ * @example
+ * ```ts
+ * // With Lattice signals
+ * const todoList = useTodoList({ signal, computed, effect })({
+ *   initialTodos: [{ id: 1, text: 'Learn Lattice', completed: false }]
+ * });
+ *
+ * // With React (via createHook)
+ * const useTodoListHook = createHook(useTodoList);
+ * const todoList = useTodoListHook({ initialTodos: [...] });
+ * ```
  */
-import type { Service } from '../service';
+import type { SignalsApi, Signal, Computed } from './types';
 
 export interface Todo {
   id: number;
@@ -12,40 +24,70 @@ export interface Todo {
   completed: boolean;
 }
 
-export const useTodoList = (api: Service, initialTodos: Todo[] = []) => {
-  const todos = api.signal<Todo[]>(initialTodos);
+export interface UseTodoListOptions {
+  /** Initial list of todos */
+  initialTodos?: Todo[];
+}
 
-  const allCompleted = api.computed(() => {
-    const list = todos();
-    return list.length > 0 && list.every((todo) => todo.completed);
-  });
+export interface TodoListState {
+  /** All todos */
+  todos: Signal<Todo[]>;
+  /** Whether all todos are completed */
+  allCompleted: Computed<boolean>;
+  /** Number of active (not completed) todos */
+  activeCount: Computed<number>;
 
-  const activeCount = api.computed(() =>
-    todos().filter((todo) => !todo.completed).length
-  );
+  /** Add a new todo */
+  addTodo: (text: string) => void;
+  /** Toggle a todo's completed state */
+  toggleTodo: (id: number) => void;
+  /** Toggle all todos' completed state */
+  toggleAll: () => void;
+}
 
-  return {
-    // Reactive state
-    todos,
-    allCompleted,
-    activeCount,
+/**
+ * Creates a portable todo list behavior
+ *
+ * @param api - Signals API (signal, computed, effect)
+ * @returns Factory function that creates todo list state
+ */
+export const useTodoList =
+  (api: SignalsApi) =>
+  (options: UseTodoListOptions = {}): TodoListState => {
+    const { signal, computed } = api;
+    const { initialTodos = [] } = options;
 
-    // Actions
-    addTodo: (text: string) => {
-      todos([...todos(), { id: Date.now(), text, completed: false }]);
-    },
+    const todos = signal<Todo[]>(initialTodos);
 
-    toggleTodo: (id: number) => {
-      todos(
-        todos().map((todo) =>
-          todo.id === id ? { ...todo, completed: !todo.completed } : todo
-        )
-      );
-    },
+    const allCompleted = computed(() => {
+      const list = todos();
+      return list.length > 0 && list.every((todo) => todo.completed);
+    });
 
-    toggleAll: () => {
-      const shouldComplete = !allCompleted();
-      todos(todos().map((todo) => ({ ...todo, completed: shouldComplete })));
-    },
+    const activeCount = computed(() =>
+      todos().filter((todo) => !todo.completed).length
+    );
+
+    return {
+      todos,
+      allCompleted,
+      activeCount,
+
+      addTodo: (text: string) => {
+        todos([...todos(), { id: Date.now(), text, completed: false }]);
+      },
+
+      toggleTodo: (id: number) => {
+        todos(
+          todos().map((todo) =>
+            todo.id === id ? { ...todo, completed: !todo.completed } : todo
+          )
+        );
+      },
+
+      toggleAll: () => {
+        const shouldComplete = !allCompleted();
+        todos(todos().map((todo) => ({ ...todo, completed: shouldComplete })));
+      },
+    };
   };
-};

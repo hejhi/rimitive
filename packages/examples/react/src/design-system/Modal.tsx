@@ -1,7 +1,7 @@
 /**
  * Modal Design System Component
  *
- * Demonstrates isolated component state using the parent SignalProvider.
+ * Demonstrates isolated component state using portable behaviors.
  * Each Modal instance has its own signal instances (isolated state),
  * but shares the reactive infrastructure (shared graph).
  *
@@ -10,8 +10,11 @@
  */
 
 import { ReactNode } from 'react';
-import { useComponent, useSubscribe } from '@lattice/react';
+import { createHook, useSubscribe } from '@lattice/react';
 import { useModal } from '../components/useModal';
+
+// Create React hook from portable behavior (once at module level)
+const useModalHook = createHook(useModal);
 
 export interface ModalProps {
   title: string;
@@ -22,7 +25,7 @@ export interface ModalProps {
 /**
  * Modal Component - Isolated state, shared infrastructure
  *
- * Each Modal instance creates its own signal instance via useComponent,
+ * Each Modal instance creates its own signal instance via createHook,
  * giving it isolated state. But all Modals share the parent SignalProvider's
  * reactive graph infrastructure (SignalsContext, scheduler, propagation).
  *
@@ -34,9 +37,8 @@ export interface ModalProps {
  * ```
  */
 export function Modal({ title, children, trigger }: ModalProps) {
-  // useComponent gets API from parent SignalProvider
-  // Each call creates a new signal instance (isolated state)
-  const modal = useComponent(useModal);
+  // createHook creates a new signal instance per component (isolated state)
+  const modal = useModalHook();
   const isOpen = useSubscribe(modal.isOpen);
 
   return (

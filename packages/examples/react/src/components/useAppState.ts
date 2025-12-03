@@ -1,28 +1,66 @@
 /**
- * App State Behavior - Demonstrates Fine-Grained Reactivity
+ * useAppState - Portable App State Behavior
  *
- * Manages multiple pieces of state to show that only components
- * subscribed to specific signals will re-render when those signals change.
+ * Manages multiple pieces of state to demonstrate fine-grained reactivity.
+ * Framework-agnostic - works with any signals implementation.
+ *
+ * @example
+ * ```ts
+ * // With Lattice signals
+ * const appState = useAppState({ signal, computed, effect })();
+ *
+ * // With React (via createHook)
+ * const useAppStateHook = createHook(useAppState);
+ * const appState = useAppStateHook();
+ * ```
  */
-import type { Service } from '../service';
+import type { SignalsApi, Signal } from './types';
 
-export const useAppState = (api: Service) => {
-  const userName = api.signal('Alice');
-  const userEmail = api.signal('alice@example.com');
-  const theme = api.signal<'light' | 'dark'>('light');
-  const clickCount = api.signal(0);
+export interface AppStateState {
+  /** User's display name */
+  userName: Signal<string>;
+  /** User's email address */
+  userEmail: Signal<string>;
+  /** Current theme */
+  theme: Signal<'light' | 'dark'>;
+  /** Click counter */
+  clickCount: Signal<number>;
 
-  return {
-    // Reactive state
-    userName,
-    userEmail,
-    theme,
-    clickCount,
+  /** Update user name */
+  setUserName: (name: string) => void;
+  /** Update user email */
+  setUserEmail: (email: string) => void;
+  /** Toggle between light and dark theme */
+  toggleTheme: () => void;
+  /** Increment click counter */
+  incrementClicks: () => void;
+}
 
-    // Actions
-    setUserName: (name: string) => userName(name),
-    setUserEmail: (email: string) => userEmail(email),
-    toggleTheme: () => theme(theme() === 'light' ? 'dark' : 'light'),
-    incrementClicks: () => clickCount(clickCount() + 1),
+/**
+ * Creates a portable app state behavior
+ *
+ * @param api - Signals API (signal, computed, effect)
+ * @returns Factory function that creates app state
+ */
+export const useAppState =
+  (api: SignalsApi) =>
+  (): AppStateState => {
+    const { signal } = api;
+
+    const userName = signal('Alice');
+    const userEmail = signal('alice@example.com');
+    const theme = signal<'light' | 'dark'>('light');
+    const clickCount = signal(0);
+
+    return {
+      userName,
+      userEmail,
+      theme,
+      clickCount,
+
+      setUserName: (name: string) => userName(name),
+      setUserEmail: (email: string) => userEmail(email),
+      toggleTheme: () => theme(theme() === 'light' ? 'dark' : 'light'),
+      incrementClicks: () => clickCount(clickCount() + 1),
+    };
   };
-};

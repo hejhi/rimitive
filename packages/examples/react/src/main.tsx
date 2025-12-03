@@ -1,18 +1,18 @@
 /**
- * Lattice React Component Pattern Example
+ * Lattice React - Portable Behaviors Example
  *
  * This example demonstrates:
- * 1. Using the component pattern in React with useComponent
- * 2. Reusing the same components from the devtools example
+ * 1. Using portable behaviors with createHook for clean React integration
+ * 2. Framework-agnostic behaviors that work in React, Vue, Svelte, etc.
  * 3. DevTools integration to debug reactive state
- * 4. Multiple use cases for the same component (counter -> steps, slides, etc.)
+ * 4. Fine-grained reactivity - only subscribed components re-render
  */
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { SignalProvider, useComponent, useSubscribe } from '@lattice/react';
+import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
 
-// Import our React-compatible components
+// Import portable behaviors
 import { useCounter } from './components/useCounter';
 import { useTodoList } from './components/useTodoList';
 import { useFilter } from './components/useFilter';
@@ -20,12 +20,18 @@ import { useAppState } from './components/useAppState';
 import { Modal } from './design-system/Modal';
 import { service } from './service';
 
+// Create React hooks from portable behaviors (once at module level)
+const useCounterHook = createHook(useCounter);
+const useTodoListHook = createHook(useTodoList);
+const useFilterHook = createHook(useFilter);
+const useAppStateHook = createHook(useAppState);
+
 /**
  * Example 1: Step Counter
- * Using the counter component to track steps in a multi-step process
+ * Using the counter behavior to track steps in a multi-step process
  */
 function StepCounter() {
-  const counter = useComponent(useCounter);
+  const counter = useCounterHook();
   const step = useSubscribe(counter.count);
   const isEven = useSubscribe(counter.isEven);
 
@@ -33,7 +39,7 @@ function StepCounter() {
     <div className="example-section">
       <h2>Step Counter</h2>
       <p>
-        Using <code>createCounter</code> to build a step-by-step wizard
+        Using <code>useCounter</code> to build a step-by-step wizard
       </p>
 
       <div className="counter-display">Step {step} / 5</div>
@@ -58,18 +64,18 @@ function StepCounter() {
 
 /**
  * Example 2: Slide Carousel
- * Same counter component, completely different UI and use case
+ * Same counter behavior, completely different UI and use case
  */
 function SlideCarousel() {
   const slides = [
     'Introduction to Lattice',
-    'Creating Components',
+    'Creating Portable Behaviors',
     'Using in React',
     'Using in Vue',
     'Building a Design System',
   ];
 
-  const counter = useComponent(useCounter);
+  const counter = useCounterHook();
   const current = useSubscribe(counter.count);
   const doubled = useSubscribe(counter.doubled);
 
@@ -77,7 +83,7 @@ function SlideCarousel() {
     <div className="example-section">
       <h2>Slide Carousel</h2>
       <p>
-        Same <code>createCounter</code> component, different use case
+        Same <code>useCounter</code> behavior, different use case
       </p>
 
       <div
@@ -117,16 +123,18 @@ function SlideCarousel() {
 
 /**
  * Example 3: Todo Application
- * Using todoList + filter components together - composition!
+ * Using todoList + filter behaviors together - composition!
  */
 function TodoApp() {
-  const todoList = useComponent(useTodoList, [
-    { id: 1, text: 'Learn Lattice', completed: false },
-    { id: 2, text: 'Build a React app', completed: false },
-    { id: 3, text: 'Try the component pattern', completed: true },
-  ]);
+  const todoList = useTodoListHook({
+    initialTodos: [
+      { id: 1, text: 'Learn Lattice', completed: false },
+      { id: 2, text: 'Build a React app', completed: false },
+      { id: 3, text: 'Try portable behaviors', completed: true },
+    ],
+  });
 
-  const filter = useComponent(useFilter);
+  const filter = useFilterHook();
 
   // Subscribe to reactive values
   const allTodos = useSubscribe(todoList.todos);
@@ -148,8 +156,7 @@ function TodoApp() {
     <div className="example-section">
       <h2>Todo Application</h2>
       <p>
-        Composing <code>createTodoList</code> + <code>createFilter</code>{' '}
-        components
+        Composing <code>useTodoList</code> + <code>useFilter</code> behaviors
       </p>
 
       <div style={{ marginBottom: '1rem' }}>
@@ -222,7 +229,7 @@ function TodoApp() {
  * Shows that we don't have React Context re-render problems
  */
 function FineGrainedReactivityDemo() {
-  const appState = useComponent(useAppState);
+  const appState = useAppStateHook();
 
   // Track render counts
   const renderCounts = React.useRef({
@@ -363,8 +370,8 @@ function FineGrainedReactivityDemo() {
           borderRadius: '4px',
         }}
       >
-        <strong>🎯 Key Point:</strong> With traditional React Context, changing
-        any value would cause ALL four components to re-render. With Lattice
+        <strong>Key Point:</strong> With traditional React Context, changing any
+        value would cause ALL four components to re-render. With Lattice
         signals, only the specific component subscribed to the changed signal
         re-renders. This is <strong>fine-grained reactivity</strong>!
       </div>
@@ -435,8 +442,8 @@ function DesignSystemDemo() {
         }}
       >
         <strong>Key Pattern:</strong> Each <code>{'<Modal>'}</code> creates its
-        own signal instance via <code>useComponent(createModal)</code>, giving
-        it isolated state. All modals share the parent's reactive infrastructure
+        own signal instance via <code>createHook(useModal)()</code>, giving it
+        isolated state. All modals share the parent's reactive infrastructure
         (context, scheduler). This is like React's <code>useState</code> - each
         component gets isolated state, but all use the same React reconciliation
         system. Perfect for reusable design system components!
@@ -451,28 +458,30 @@ function DesignSystemDemo() {
 function App() {
   return (
     <div className="container">
-      <h1>Lattice React Component Pattern</h1>
+      <h1>Lattice React - Portable Behaviors</h1>
 
       <div className="info">
         <strong>Open Chrome DevTools → "Lattice" tab</strong> to see reactive
         state updates in real-time!
         <br />
         <br />
-        This example demonstrates multiple component patterns:
+        This example demonstrates portable behaviors:
         <ul>
-          <li>
-            <strong>Shared Infrastructure:</strong> All components use the same
-            SignalProvider (one reactive graph, one scheduler, one
-            SignalsContext)
-          </li>
-          <li>
-            <strong>Isolated State:</strong> Each component instance (
-            <code>Counter</code>, <code>Modal</code>, etc.) gets its own signal
-            instances, like React's <code>useState</code>
-          </li>
           <li>
             <strong>Framework Agnostic:</strong> All behaviors work in React,
             Vue, Svelte, or vanilla JS
+          </li>
+          <li>
+            <strong>createHook Pattern:</strong> Convert portable behaviors to
+            React hooks with one line
+          </li>
+          <li>
+            <strong>Fine-Grained Reactivity:</strong> Only subscribed components
+            re-render
+          </li>
+          <li>
+            <strong>Isolated State:</strong> Each component instance gets its
+            own signal instances
           </li>
         </ul>
       </div>
