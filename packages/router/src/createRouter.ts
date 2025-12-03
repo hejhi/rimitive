@@ -91,14 +91,12 @@ export type ConnectedApi<TConfig extends AdapterConfig> = ViewApi<TConfig> &
 /**
  * Route context passed to connect wrapper
  *
- * Contains route-specific data (children, params) and the merged API
- * for rendering. The API is always populated by router.mount().
+ * Contains route-specific data (children, params) for routing.
+ * Service injection is handled separately via the api() middleware pattern.
  */
 export type RouteContext<TConfig extends AdapterConfig> = {
   children: RefSpec<TConfig['baseElement']>[] | null;
   params: ComputedFunction<RouteParams>;
-  /** Merged API (view + route) - populated by router.mount() */
-  api?: ConnectedApi<TConfig>;
 };
 
 /**
@@ -470,11 +468,9 @@ export function createRouter<TConfig extends AdapterConfig>(
         if (!matchResult) return null;
 
         // Build RouteContext fresh for each match
-        // Include merged API so components can render with appropriate adapter
         const routeContext: RouteContext<TConfig> = {
           children: processedChildren.length > 0 ? processedChildren : null,
           params: viewApi.computed(() => matchResult.params),
-          api: connectedApi,
         };
 
         // Instantiate the connected component with route context
@@ -597,11 +593,9 @@ export function createRouter<TConfig extends AdapterConfig>(
 
       // Build RouteContext for the root component
       // Root always matches, so params are empty
-      // Include merged API so components can render with appropriate adapter
       const routeContext: RouteContext<TConfig> = {
         children: processedChildren.length > 0 ? processedChildren : null,
         params: viewApi.computed(() => ({})),
-        api: connectedApi,
       };
 
       // Return the component RefSpec directly (not wrapped in match())
@@ -712,7 +706,6 @@ export function createRouter<TConfig extends AdapterConfig>(
           const routeContext: RouteContext<TConfig> = {
             children: childRefSpecs.length > 0 ? childRefSpecs : null,
             params: viewApi.computed(() => matchResult.params),
-            api: connectedApi,
           };
 
           // Create the component RefSpec
@@ -731,7 +724,6 @@ export function createRouter<TConfig extends AdapterConfig>(
     const rootContext: RouteContext<TConfig> = {
       children: childRefSpecs.length > 0 ? childRefSpecs : null,
       params: viewApi.computed(() => ({})),
-      api: connectedApi,
     };
 
     // Return the root component (not wrapped in match - always visible)

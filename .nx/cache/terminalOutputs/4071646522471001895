@@ -1,0 +1,4 @@
+
+> @lattice/view@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/view
+> tsc --noEmit
+

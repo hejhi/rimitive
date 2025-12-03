@@ -1,10 +1,10 @@
-import { connect, type ConnectedApi } from '@lattice/router';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { connect } from '@lattice/router';
+import { api } from '../service.js';
 
 export const About = connect(
-  ({ el }: ConnectedApi<DOMAdapterConfig>) =>
-    () => {
-      return el('div').props({ className: 'page about-page' })(
+  api((svc) => () => {
+    const { el } = svc;
+    return el('div').props({ className: 'page about-page' })(
         el('h2')('About This Example'),
 
         el('section').props({ className: 'card' })(
@@ -46,5 +46,5 @@ export const About = connect(
           )
         )
       );
-    }
+  })
 );

@@ -10,6 +10,7 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   createIslandsApp,
   createDOMServerAdapter,
@@ -19,7 +20,21 @@ import { createViewApi } from '@lattice/view/presets/core';
 import { createRouter, type ViewApi } from '@lattice/router';
 import { type DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { appRoutes } from './routes.js';
-import { buildAppContext } from './service.js';
+import { buildAppContext, setServiceGetter, type Service } from './service.js';
+
+/**
+ * AsyncLocalStorage for per-request service injection
+ */
+const serviceStorage = new AsyncLocalStorage<Service>();
+
+// Configure service lookup to use AsyncLocalStorage
+setServiceGetter(() => {
+  const svc = serviceStorage.getStore();
+  if (!svc) {
+    throw new Error('Service not available - are you inside a request context?');
+  }
+  return svc;
+});
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
@@ -364,8 +379,17 @@ const server = createServer((req, res) => {
     { initialPath: path }
   );
 
-  // Render the route tree to HTML
-  const { html, scripts } = app.render(router.mount(appRoutes));
+  // Build full service with router methods
+  const service: Service = {
+    ...app.service,
+    navigate: router.navigate,
+    currentPath: router.currentPath,
+  };
+
+  // Render the route tree to HTML within service context
+  const { html, scripts } = serviceStorage.run(service, () =>
+    app.render(router.mount(appRoutes))
+  );
 
   // Generate full HTML page
   const fullHtml = template(html, scripts);

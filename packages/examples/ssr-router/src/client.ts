@@ -14,13 +14,18 @@ import {
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createViewApi } from '@lattice/view/presets/core';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createRouter, type ViewApi } from '@lattice/router';
+import { createRouter } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { appRoutes } from './routes.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 import { AddToCart } from './islands/AddToCart.js';
-import { buildAppContext, type AppContext } from './service.js';
+import {
+  buildAppContext,
+  setServiceGetter,
+  type AppContext,
+  type Service,
+} from './service.js';
 
 // 1. Create the primitives
 const container = document.querySelector('.app') as HTMLElement;
@@ -40,10 +45,9 @@ const app = createIslandsApp<AppContext>({
 });
 
 // 3. Add router at app layer
-const router = createRouter<DOMAdapterConfig>(
-  app.service as ViewApi<DOMAdapterConfig>,
-  { initialPath: location.pathname + location.search + location.hash }
-);
+const router = createRouter<DOMAdapterConfig>(app.service, {
+  initialPath: location.pathname + location.search + location.hash,
+});
 
 // Wrap navigate to also update context for islands
 const navigate = (path: string) => {
@@ -56,16 +60,18 @@ window.addEventListener('popstate', () => {
   app.updateContext();
 });
 
-// Service with navigate for connected components
-const serviceWithNav = {
+// Build full service with router methods
+const service: Service = {
   ...app.service,
   navigate,
   currentPath: router.currentPath,
 };
 
+// Configure service lookup to use singleton
+setServiceGetter(() => service);
+
 // Mount routes - hydrates existing SSR'd DOM, then auto-switches renderer
-// Pass serviceWithNav so navigate is available throughout the route tree
-app.mount(router.mount(appRoutes), serviceWithNav);
+app.mount(router.mount(appRoutes), service);
 
 // Hydrate islands
 app.hydrate(ProductFilter, Navigation, AddToCart);

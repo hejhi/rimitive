@@ -1,0 +1,4 @@
+
+> @lattice/examples@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/examples
+> tsc --noEmit
+

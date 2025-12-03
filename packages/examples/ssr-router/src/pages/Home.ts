@@ -1,10 +1,10 @@
-import { connect, type ConnectedApi } from '@lattice/router';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { connect } from '@lattice/router';
+import { api } from '../service.js';
 
 export const Home = connect(
-  ({ el, navigate }: ConnectedApi<DOMAdapterConfig>) =>
-    () => {
-      return el('div').props({ className: 'page home-page' })(
+  api((svc) => () => {
+    const { el, navigate } = svc;
+    return el('div').props({ className: 'page home-page' })(
         el('h2')('Welcome to SSR + Router'),
         el('p').props({ className: 'lead' })(
           'This example demonstrates server-side rendering with routing using the universal API.'
@@ -30,5 +30,5 @@ export const Home = connect(
           })('Learn More →')
         )
       );
-    }
+  })
 );

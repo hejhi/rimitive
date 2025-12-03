@@ -83,3 +83,50 @@ export type Service = {
  * ```
  */
 export const island = createIsland<Service, AppContext>();
+
+/**
+ * Service getter - set by server (AsyncLocalStorage) or client (singleton)
+ */
+let getService: () => Service;
+
+/**
+ * Configure the service lookup
+ *
+ * Called once at startup:
+ * - Server: passes AsyncLocalStorage-based getter
+ * - Client: passes singleton getter
+ */
+export function setServiceGetter(getter: () => Service): void {
+  getService = getter;
+}
+
+/**
+ * SSR middleware - injects service as first parameter
+ *
+ * Generic middleware that prepends the current service to any function call.
+ * Works with connect(), standalone components, or any other pattern.
+ *
+ * @example
+ * ```ts
+ * // With connect (route context)
+ * export const AppLayout = connect(api(
+ *   (svc, { children }) => () => {
+ *     const { el } = svc;
+ *     return el('div')(...(children || []));
+ *   }
+ * ));
+ *
+ * // Standalone component
+ * export const About = api(
+ *   (svc) => () => {
+ *     const { el } = svc;
+ *     return el('div')('About');
+ *   }
+ * );
+ * ```
+ */
+export function api<TArgs extends unknown[], TResult>(
+  factory: (svc: Service, ...args: TArgs) => TResult
+): (...args: TArgs) => TResult {
+  return (...args) => factory(getService(), ...args);
+}

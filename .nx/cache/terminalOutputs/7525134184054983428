@@ -1,0 +1,4 @@
+
+> @lattice/benchmarks@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/benchmarks
+> tsc --noEmit
+

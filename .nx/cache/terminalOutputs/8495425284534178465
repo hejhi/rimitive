@@ -1,0 +1,4 @@
+
+> docs@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/docs
+> tsc --noEmit
+

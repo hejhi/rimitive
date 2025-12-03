@@ -4,8 +4,9 @@
  * Shows details for a single product based on route params.
  * Demonstrates using an island inside a connected route component.
  */
-import { connect, type ConnectedApi } from '@lattice/router';
+import { connect, type RouteContext } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { api } from '../service.js';
 import { AddToCart } from '../islands/AddToCart.js';
 
 // Same product data as Products page - in a real app this would come from an API
@@ -55,12 +56,10 @@ const products = [
 ];
 
 export const ProductDetail = connect(
-  (
-    { el, navigate, computed, match }: ConnectedApi<DOMAdapterConfig>,
-    { params }
-  ) =>
-    () => {
-      const product = computed(() => {
+  api((svc, routeCtx: RouteContext<DOMAdapterConfig>) => () => {
+    const { el, navigate, computed, match } = svc;
+    const { params } = routeCtx;
+    const product = computed(() => {
         const idParam = params().id;
         if (!idParam) return null;
         const id = parseInt(idParam, 10);
@@ -129,5 +128,5 @@ export const ProductDetail = connect(
               )
             )
       );
-    }
+  })
 );

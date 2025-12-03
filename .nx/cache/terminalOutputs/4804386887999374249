@@ -1,0 +1,4 @@
+
+> @lattice/islands@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/islands
+> tsc --noEmit
+
