@@ -46,32 +46,29 @@ export const TodoList = () => {
     )();
 
   // Create "Add Todo" button
-  const addBtn = button.ref(on('click', handleAdd))('Add Todo');
+  const addBtn = button.props({ onclick: handleAdd })('Add Todo');
 
   // Create filter buttons
-  const allBtn = button
-    .props({
-      className: computed(() => (todoList.filter() === 'all' ? 'active' : '')),
-    })
-    .ref(on('click', () => todoList.setFilter('all')))('All');
+  const allBtn = button.props({
+    className: computed(() => (todoList.filter() === 'all' ? 'active' : '')),
+    onclick: () => todoList.setFilter('all'),
+  })('All');
 
-  const activeBtn = button
-    .props({
-      className: computed(() =>
-        todoList.filter() === 'active' ? 'active' : ''
-      ),
-    })
-    .ref(on('click', () => todoList.setFilter('active')))('Active');
+  const activeBtn = button.props({
+    className: computed(() =>
+      todoList.filter() === 'active' ? 'active' : ''
+    ),
+    onclick: () => todoList.setFilter('active'),
+  })('Active');
 
-  const completedBtn = button
-    .props({
-      className: computed(() =>
-        todoList.filter() === 'completed' ? 'active' : ''
-      ),
-    })
-    .ref(on('click', () => todoList.setFilter('completed')))('Completed');
+  const completedBtn = button.props({
+    className: computed(() =>
+      todoList.filter() === 'completed' ? 'active' : ''
+    ),
+    onclick: () => todoList.setFilter('completed'),
+  })('Completed');
 
-  const clearBtn = button.ref(on('click', () => todoList.clearCompleted()))(
+  const clearBtn = button.props({ onclick: () => todoList.clearCompleted() })(
     'Clear Completed'
   );
 

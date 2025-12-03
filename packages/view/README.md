@@ -157,10 +157,29 @@ blueCard.props({ id: 'main' })('Specific blue card');
 
 - Static values: `{ className: 'foo' }`
 - Reactive values: `{ className: computed(() => ...) }`
-- Event handlers: `{ onclick: handler, oninput: e => ... }`
+- Event handlers: `{ onclick: handler, oninput: e => ... }` (transparent DOM assignment)
 - Type-safe DOM attributes: `{ 'data-id': '123', 'aria-label': 'Close' }`
 
-### `map(items, keyFn)(render)`
+**Event handling:**
+
+For most cases, use event props directly - they're transparent DOM property assignment:
+
+```typescript
+el('button').props({ onclick: () => count((c) => c + 1) })('Increment');
+el('input').props({ oninput: (e) => text(e.target.value) })();
+```
+
+For advanced cases requiring automatic batching (multiple signal updates) or explicit cleanup, use the `on()` helper with `.ref()`:
+
+```typescript
+el('button').ref(on('click', () => {
+  // Multiple updates batched into one re-render
+  count((c) => c + 1);
+  lastClicked(Date.now());
+}))('Increment');
+```
+
+### `map(items, keyFn, render)`
 
 Efficient list rendering with keyed reconciliation.
 
@@ -170,34 +189,40 @@ const todos = signal([
   { id: 2, text: 'Build something' },
 ]);
 
-el('ul')(map(todos, (todo) => todo.id)((todo) => el('li')(todo.text)));
+el('ul')(
+  map(todos, (todo) => todo.id, (todo) => el('li')(todo().text))
+);
 ```
 
-**Key function is required for objects** - ensures efficient updates when items change order or are removed.
+**Key function is required for objects** - ensures efficient updates when items change order or are removed. For primitives, the key function can be omitted:
 
-### `match(reactive)(matcher)`
+```typescript
+map(['a', 'b', 'c'], (item) => el('li')(item()));
+```
+
+### `match(reactive, matcher)`
 
 Switches between different elements based on a reactive value. Disposes and recreates children when the value changes.
 
 ```typescript
 const currentTab = signal<'home' | 'settings'>('home');
 
-match(currentTab)((tab) => (tab === 'home' ? HomePage() : SettingsPage()));
+match(currentTab, (tab) => (tab === 'home' ? HomePage() : SettingsPage()));
 
 // Return null to render nothing
-match(isLoggedIn)((loggedIn) => (loggedIn ? UserPanel() : null));
+match(isLoggedIn, (loggedIn) => (loggedIn ? UserPanel() : null));
 ```
 
 Use `match` for polymorphic rendering where the value determines _what_ to render.
 
-### `when(condition)(children)`
+### `when(condition, ...children)`
 
 Conditionally shows/hides children based on a truthy condition. More efficient than `match` for simple show/hide.
 
 ```typescript
 const showDetails = signal(false);
 
-when(showDetails)(
+when(showDetails,
   el('div').props({ className: 'details' })(el('p')('These are the details...'))
 );
 ```
@@ -273,16 +298,38 @@ autoFocusInput();
 autoFocusInput();
 ```
 
-### `addEventListener` Helper
+### `on()` Helper
 
-For event listeners that need cleanup:
+The `on()` helper (created via `createAddEventListener`) provides automatic batching and cleanup. Use it when:
+
+- Your handler updates multiple signals (batching prevents multiple re-renders)
+- You need explicit `removeEventListener` cleanup
+- You need `addEventListener` options like `{ passive: true, capture: true }`
 
 ```typescript
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
-const addEventListener = createAddEventListener(batch);
+const on = createAddEventListener(batch);
 
-el('div').ref(addEventListener('scroll', handleScroll, { passive: true }))();
+// Multiple handlers with options
+el('canvas').ref(
+  on('pointerdown', handleDown),
+  on('pointermove', handleMove, { passive: true }),
+  on('pointerup', handleUp)
+)();
+
+// Handler with multiple signal updates (auto-batched)
+el('button').ref(on('click', () => {
+  items([...items(), newItem]);
+  selectedId(newItem.id);
+  isEditing(true);
+}))('Add');
+```
+
+For simple single-signal handlers, prefer props - they're simpler and more transparent:
+
+```typescript
+el('button').props({ onclick: () => count((c) => c + 1) })('Increment');
 ```
 
 ## Components

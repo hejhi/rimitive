@@ -50,32 +50,29 @@ export const TodoList = (
       })
     )();
 
-  const addBtn = el('button').ref(on('click', handleAddTodo))('Add Todo');
+  const addBtn = el('button').props({ onclick: handleAddTodo })('Add Todo');
 
   // Filter buttons
-  const allBtn = el('button')
-    .props({
-      className: computed(() =>
-        currentFilter() === 'all' ? 'filter active' : 'filter'
-      ),
-    })
-    .ref(on('click', () => setFilter('all')))('All');
+  const allBtn = el('button').props({
+    className: computed(() =>
+      currentFilter() === 'all' ? 'filter active' : 'filter'
+    ),
+    onclick: () => setFilter('all'),
+  })('All');
 
-  const activeBtn = el('button')
-    .props({
-      className: computed(() =>
-        currentFilter() === 'active' ? 'filter active' : 'filter'
-      ),
-    })
-    .ref(on('click', () => setFilter('active')))('Active');
+  const activeBtn = el('button').props({
+    className: computed(() =>
+      currentFilter() === 'active' ? 'filter active' : 'filter'
+    ),
+    onclick: () => setFilter('active'),
+  })('Active');
 
-  const completedBtn = el('button')
-    .props({
-      className: computed(() =>
-        currentFilter() === 'completed' ? 'filter active' : 'filter'
-      ),
-    })
-    .ref(on('click', () => setFilter('completed')))('Completed');
+  const completedBtn = el('button').props({
+    className: computed(() =>
+      currentFilter() === 'completed' ? 'filter active' : 'filter'
+    ),
+    onclick: () => setFilter('completed'),
+  })('Completed');
 
   return el('section').props({ className: 'todo-section' })(
     el('h2')('Todo List Example'),

@@ -1,7 +1,7 @@
 /**
  * Counter View Component
  */
-import { el, on, computed } from '../service';
+import { el, computed } from '../service';
 import { useCounter } from '../behaviors/useCounter';
 
 export const Counter = (initialCount = 0) => {
@@ -15,9 +15,9 @@ export const Counter = (initialCount = 0) => {
       el('p')(computed(() => `Is Even: ${isEven() ? 'Yes' : 'No'}`))
     ),
     el('div').props({ className: 'counter-controls' })(
-      el('button').ref(on('click', () => set(count() + 1)))('Increment'),
-      el('button').ref(on('click', () => set(count() - 1)))('Decrement'),
-      el('button').ref(on('click', () => set(0)))('Reset')
+      el('button').props({ onclick: () => set(count() + 1) })('Increment'),
+      el('button').props({ onclick: () => set(count() - 1) })('Decrement'),
+      el('button').props({ onclick: () => set(0) })('Reset')
     )
   );
 };

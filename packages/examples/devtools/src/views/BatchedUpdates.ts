@@ -3,14 +3,14 @@
  *
  * Demonstrates batched updates - multiple state changes in a single render cycle.
  */
-import { el, on } from '../service';
+import { el } from '../service';
 
 interface BatchedUpdateHandlers {
   onBatchedUpdate: () => void;
 }
 
 export const BatchedUpdates = ({ onBatchedUpdate }: BatchedUpdateHandlers) => {
-  const batchBtn = el('button').ref(on('click', onBatchedUpdate))(
+  const batchBtn = el('button').props({ onclick: onBatchedUpdate })(
     'Run Batched Updates'
   );
 

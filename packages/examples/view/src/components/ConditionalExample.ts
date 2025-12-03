@@ -1,4 +1,4 @@
-import { el, signal, computed, on, match } from '../service';
+import { el, signal, computed, match } from '../service';
 
 export const ConditionalExample = () => {
   // State for various conditional examples
@@ -8,9 +8,9 @@ export const ConditionalExample = () => {
   const buttonType = signal<'primary' | 'danger' | 'success'>('primary');
 
   // Toggle message visibility
-  const toggleBtn = el('button').ref(
-    on('click', () => showMessage(!showMessage()))
-  )('Toggle Message');
+  const toggleBtn = el('button').props({
+    onclick: () => showMessage(!showMessage()),
+  })('Toggle Message');
 
   // Conditional message - renders null when hidden
   const conditionalMessage = match(showMessage, (show: boolean) =>
@@ -22,9 +22,9 @@ export const ConditionalExample = () => {
   );
 
   // Toggle edit mode
-  const editToggleBtn = el('button').ref(
-    on('click', () => isEditMode(!isEditMode()))
-  )(computed(() => (isEditMode() ? 'Save' : 'Edit')));
+  const editToggleBtn = el('button').props({
+    onclick: () => isEditMode(!isEditMode()),
+  })(computed(() => (isEditMode() ? 'Save' : 'Edit')));
 
   // Pattern 1: Match with conditional element types
   // Use match to switch between input and span based on edit mode
@@ -36,7 +36,7 @@ export const ConditionalExample = () => {
             className: 'edit-input',
             value: editText,
           })
-          .ref((input: HTMLInputElement) => {
+          .ref((input) => {
             const handler = (e: Event) => {
               editText((e.target as HTMLInputElement).value);
             };
@@ -58,7 +58,7 @@ export const ConditionalExample = () => {
               className: 'edit-input',
               value: editText,
             })
-            .ref((input: HTMLInputElement) => {
+            .ref((input) => {
               const handler = (e: Event) => {
                 editText((e.target as HTMLInputElement).value);
               };
@@ -74,8 +74,8 @@ export const ConditionalExample = () => {
   );
 
   // Cycle button type
-  const cycleTypeBtn = el('button').ref(
-    on('click', () => {
+  const cycleTypeBtn = el('button').props({
+    onclick: () => {
       const types: Array<'primary' | 'danger' | 'success'> = [
         'primary',
         'danger',
@@ -87,8 +87,8 @@ export const ConditionalExample = () => {
 
       if (nextType === undefined) return;
       buttonType(nextType);
-    })
-  )('Change Button Style');
+    },
+  })('Change Button Style');
 
   // Dynamic button that changes based on state
   // Static button element with reactive props and children

@@ -8,7 +8,7 @@
 
 import type { Reactive } from '@lattice/view/types';
 import type { Todo } from '../behaviors/useTodoList';
-import { el, on, computed } from '../service';
+import { el, computed } from '../service';
 
 export const TodoItem = (
   todoSignal: Reactive<Todo>,
@@ -19,17 +19,17 @@ export const TodoItem = (
   const todo = todoSignal();
 
   // Create checkbox with reactive checked state
-  const checkbox = el('input')
-    .props({
-      type: 'checkbox',
-      checked: computed(() => todoSignal().completed),
-    })
-    .ref(on('change', () => onToggle(todo.id)))();
+  const checkbox = el('input').props({
+    type: 'checkbox',
+    checked: computed(() => todoSignal().completed),
+    onchange: () => onToggle(todo.id),
+  })();
 
   // Create remove button with event listener
-  const removeBtn = el('button')
-    .props({ className: 'todo-remove' })
-    .ref(on('click', () => onRemove(todo.id)))('x');
+  const removeBtn = el('button').props({
+    className: 'todo-remove',
+    onclick: () => onRemove(todo.id),
+  })('x');
 
   // Todo text with reactive completed styling
   const todoText = el('span').props({

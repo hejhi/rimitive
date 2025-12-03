@@ -12,8 +12,15 @@ import { useSelect, type SelectOption } from '../../useSelect';
 // Create Lattice API
 // ============================================================================
 
-const { el, signal, computed, effect, match, portal, mount: mountSpec } =
-  createDOMSvc();
+const {
+  el,
+  signal,
+  computed,
+  effect,
+  match,
+  portal,
+  mount: mountSpec,
+} = createDOMSvc();
 
 // ============================================================================
 // Demo Data
@@ -50,23 +57,23 @@ function DialogDemo() {
       dialog.dialogProps.ref(elem);
       return () => dialog.dialogProps.ref(null);
     })(
-      el('h4')('Headless Dialog'),
-      el('p')(
-        'This dialog is built with the ',
-        el('code')('useDialog'),
-        ' headless behavior. It handles focus trapping, keyboard navigation (ESC to close), and returns focus to the trigger on close.'
-      ),
-      el('div').props({ className: 'dialog-actions' })(
-        el('button').props({
-          className: 'dialog-close',
-          onclick: dialog.closeButtonProps.onclick,
-        })('Cancel'),
-        el('button').props({
-          className: 'dialog-confirm',
-          onclick: dialog.close,
-        })('Confirm')
-      )
-    );
+    el('h4')('Headless Dialog'),
+    el('p')(
+      'This dialog is built with the ',
+      el('code')('useDialog'),
+      ' headless behavior. It handles focus trapping, keyboard navigation (ESC to close), and returns focus to the trigger on close.'
+    ),
+    el('div').props({ className: 'dialog-actions' })(
+      el('button').props({
+        className: 'dialog-close',
+        onclick: dialog.closeButtonProps.onclick,
+      })('Cancel'),
+      el('button').props({
+        className: 'dialog-confirm',
+        onclick: dialog.close,
+      })('Confirm')
+    )
+  );
 
   // Dialog overlay (captures clicks outside)
   const dialogOverlay = el('div').props({
@@ -82,7 +89,7 @@ function DialogDemo() {
       className: 'dialog-trigger',
       onclick: dialog.triggerProps.onclick,
     })
-    .ref((elem: HTMLButtonElement) => {
+    .ref((elem) => {
       // Lifecycle: Set up ARIA attributes
       elem.setAttribute('aria-haspopup', 'dialog');
       // Update aria-expanded reactively
@@ -98,8 +105,9 @@ function DialogDemo() {
     ),
     triggerButton,
     // Portal dialog to document.body when open
-    match(() => dialog.isOpen(), (isOpen) =>
-      isOpen ? portal()(dialogOverlay) : null
+    match(
+      () => dialog.isOpen(),
+      (isOpen) => (isOpen ? portal()(dialogOverlay) : null)
     )
   );
 }
@@ -144,7 +152,7 @@ function SelectDemo() {
       ),
       role: select.listboxProps.role,
     })
-    .ref((elem: HTMLUListElement) => {
+    .ref((elem) => {
       // Lifecycle: Set data attribute
       elem.dataset.selectId = select.listboxProps['data-select-id'];
     })(...optionElements);
@@ -160,7 +168,7 @@ function SelectDemo() {
       ariaExpanded: computed(() => String(select.isOpen())),
       dataSelectId: select.triggerProps['data-select-id'],
     })
-    .ref((elem: HTMLButtonElement) => {
+    .ref((elem) => {
       // Lifecycle: Set up ARIA attributes and keyboard handler
       const disposeDescendant = effect(() => {
         const active = select.triggerProps['aria-activedescendant']();

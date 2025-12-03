@@ -847,11 +847,15 @@ describe('map() - User-facing behavior', () => {
       const mode = signal<Mode>('loading');
 
       const view = el.impl('div')(
-        map(() => [mode()], (modeSignal) => {
-          if (modeSignal() === 'loading') return el.impl('div')('Loading...');
-          if (modeSignal() === 'error') return el.impl('div')('Error occurred');
-          return el.impl('div')('Success!');
-        })
+        map(
+          () => [mode()],
+          (modeSignal) => {
+            if (modeSignal() === 'loading') return el.impl('div')('Loading...');
+            if (modeSignal() === 'error')
+              return el.impl('div')('Error occurred');
+            return el.impl('div')('Success!');
+          }
+        )
       );
 
       const div = view.create().element as MockElement;
@@ -1072,7 +1076,7 @@ describe('map() - User-facing behavior', () => {
           items,
           (item) => item.id, // Key function
           (itemSignal) =>
-            el.impl('li').ref((element: MockElement) => {
+            el.impl('li').ref((element) => {
               // Simulate attaching custom state during lifecycle
               element.__customState = `state-${itemSignal().id}`;
             })(itemSignal().name)
