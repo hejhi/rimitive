@@ -40,8 +40,6 @@ import { createNodeHelpers } from './helpers/node-helpers';
 export type PortalOpts<TConfig extends AdapterConfig> = {
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
-  createElementScope: CreateScopes['createElementScope'];
-  onCleanup: CreateScopes['onCleanup'];
   adapter: Adapter<TConfig>;
 };
 
@@ -92,8 +90,6 @@ export const Portal = defineService(
     adapter,
     disposeScope,
     getElementScope,
-    createElementScope,
-    onCleanup,
   }: PortalOpts<TConfig>) =>
     (props?: PortalProps<TConfig['baseElement']>) => {
       type TBaseElement = TConfig['baseElement'];
@@ -169,24 +165,8 @@ export const Portal = defineService(
                   const createdChild = child.create(api);
                   childRef = createdChild;
 
-                  if (createdChild.status === STATUS_ELEMENT) {
-                    adapter.appendChild(portalRoot, createdChild.element);
-                  } else {
-                    // Fragment: create a synthetic parent ref for attachment
-                    const fragmentChild = createdChild as FragmentRef<TElement>;
-                    const syntheticParent: ElementRef<TElement> = {
-                      status: STATUS_ELEMENT,
-                      element: portalRoot as TElement,
-                      parent: null,
-                      prev: null,
-                      next: null,
-                      firstChild: null,
-                      lastChild: null,
-                    };
-                    // Attach fragment to portal root
-                    const cleanup = fragmentChild.attach(syntheticParent, null, api);
-                    if (cleanup) fragmentChild.cleanup = cleanup;
-                  }
+                  // insertNodeBefore handles both elements and fragments
+                  insertNodeBefore(api, portalRoot, createdChild, undefined, null);
                 } else if (container === undefined) {
                   // Default container - create a plain div
                   containerElement = adapter.createNode('div', {}) as TElement;
@@ -194,25 +174,19 @@ export const Portal = defineService(
                   // Append container to portal root
                   adapter.appendChild(portalRoot, containerElement);
 
-                  // Create scope for container and child within it
-                  createElementScope(containerElement, () => {
-                    // Register a no-op cleanup to ensure this scope is stored
-                    onCleanup(() => {});
-
-                    // Create and insert child into container
-                    const createdChild = child.create(api);
-                    childRef = createdChild;
-                    insertNodeBefore(
-                      api,
-                      containerElement!,
-                      createdChild,
-                      undefined,
-                      null
-                    );
-                  });
+                  // Create and insert child into container
+                  // Child gets its own scope from create() - no wrapper scope needed
+                  const createdChild = child.create(api);
+                  childRef = createdChild;
+                  insertNodeBefore(
+                    api,
+                    containerElement,
+                    createdChild,
+                    undefined,
+                    null
+                  );
                 } else {
                   // Custom container RefSpec provided
-                  // First create the container element
                   const containerRef = container.create(api) as ElementRef<TElement>;
 
                   if (containerRef.status !== STATUS_ELEMENT) {
@@ -226,26 +200,17 @@ export const Portal = defineService(
                   // Append container to portal root
                   adapter.appendChild(portalRoot, containerElement);
 
-                  // Create a scope for child creation that we can track
-                  // The container may not have a scope if it had no reactive content,
-                  // so we create a new one to ensure proper cleanup
-                  createElementScope(containerElement, () => {
-                    // Register a no-op cleanup to ensure this scope is stored
-                    // in elementScopes map. Without this, the scope would be
-                    // discarded if neither container nor child have effects,
-                    // which would break disposal of child ref callbacks.
-                    onCleanup(() => {});
-
-                    const createdChild = child.create(api);
-                    childRef = createdChild;
-                    insertNodeBefore(
-                      api,
-                      containerElement!,
-                      createdChild,
-                      undefined,
-                      null
-                    );
-                  });
+                  // Create and insert child into container
+                  // Both container and child get their own scopes from create()
+                  const createdChild = child.create(api);
+                  childRef = createdChild;
+                  insertNodeBefore(
+                    api,
+                    containerElement,
+                    createdChild,
+                    undefined,
+                    null
+                  );
                 }
 
                 // Return cleanup function
@@ -256,7 +221,11 @@ export const Portal = defineService(
                       removeNode(portalRoot, childRef);
                     }
                   } else if (containerElement) {
-                    // Remove container (and its children) from portal root
+                    // Remove child from container first (handles child scope disposal)
+                    if (childRef) {
+                      removeNode(containerElement, childRef);
+                    }
+                    // Then dispose container scope and remove from portal root
                     const scope = getElementScope(containerElement);
                     if (scope) disposeScope(scope);
                     adapter.removeChild(portalRoot, containerElement);

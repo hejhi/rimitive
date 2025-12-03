@@ -286,5 +286,34 @@ describe('portal', () => {
 
       expect(cleanedUp).toBe(true);
     });
+
+    it('should cleanup container ref callbacks when portal is removed', () => {
+      const { el, portal, mount, match, signal } = svc;
+      const show = signal(true);
+      let containerCleanedUp = false;
+      let childCleanedUp = false;
+
+      const spec = match(show)((s) =>
+        s
+          ? portal(
+              el('div')
+                .props({ className: 'container-cleanup' })
+                .ref(() => () => { containerCleanedUp = true; })()
+            )(
+              el('span').ref(() => () => { childCleanedUp = true; })('Child')
+            )
+          : null
+      );
+
+      mount(el('div')(spec));
+
+      expect(containerCleanedUp).toBe(false);
+      expect(childCleanedUp).toBe(false);
+
+      show(false);
+
+      expect(containerCleanedUp).toBe(true);
+      expect(childCleanedUp).toBe(true);
+    });
   });
 });
