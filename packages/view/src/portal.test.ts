@@ -89,8 +89,8 @@ describe('portal', () => {
     });
   });
 
-  describe('with default container', () => {
-    it('should create a plain div container when no container specified', () => {
+  describe('with no container (undefined)', () => {
+    it('should append child directly to portal root when no container specified', () => {
       const { el, portal, mount } = svc;
 
       const spec = portal()(
@@ -99,11 +99,10 @@ describe('portal', () => {
 
       mount(el('div')(spec));
 
-      // Should have created a div in body
+      // Child should be directly in body (no wrapper)
       const content = document.body.querySelector('.content');
       expect(content).toBeTruthy();
-      expect(content?.parentElement?.tagName).toBe('DIV');
-      expect(content?.parentElement?.parentElement).toBe(document.body);
+      expect(content?.parentElement).toBe(document.body);
     });
   });
 

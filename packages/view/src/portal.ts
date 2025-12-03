@@ -11,11 +11,8 @@
  *   el('div').props({ className: 'modal-dialog' })('Content')
  * )
  *
- * // Default container (plain div appended to body)
- * portal()(modalContent)
- *
  * // No container - child appended directly to body
- * portal(null)(tooltipElement)
+ * portal()(tooltipElement)
  * ```
  *
  * The portal's lifecycle is tied to its logical parent - when the parent
@@ -28,7 +25,7 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type { RefSpec, FragmentRef, ElementRef, NodeRef } from './types';
+import type { RefSpec, FragmentRef, ElementRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT, STATUS_ELEMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
@@ -156,79 +153,48 @@ export const Portal = defineService(
                 // SSR or no root - skip rendering
                 if (!portalRoot) return;
 
-                let containerElement: TElement | null = null;
-                let childRef: NodeRef<TElement> | null = null;
+                if (!container) {
+                  // No container (null or undefined) - child goes directly into portal root
+                  const childRef = child.create(api);
+                  insertNodeBefore(api, portalRoot, childRef, undefined, null);
 
-                if (container === null) {
-                  // No container - child goes directly into portal root
-                  const createdChild = child.create(api);
-                  childRef = createdChild;
+                  return () => {
+                    removeNode(portalRoot, childRef);
+                  };
+                }
 
-                  // insertNodeBefore handles both elements and fragments
-                  insertNodeBefore(api, portalRoot, createdChild, undefined, null);
-                } else if (container === undefined) {
-                  // Default container - create a plain div
-                  containerElement = adapter.createNode('div', {}) as TElement;
+                // Container RefSpec provided
+                const containerRef = container.create(api) as ElementRef<TElement>;
 
-                  // Append container to portal root
-                  adapter.appendChild(portalRoot, containerElement);
-
-                  // Create and insert child into container
-                  // Child gets its own scope from create() - no wrapper scope needed
-                  const createdChild = child.create(api);
-                  childRef = createdChild;
-                  insertNodeBefore(
-                    api,
-                    containerElement,
-                    createdChild,
-                    undefined,
-                    null
-                  );
-                } else {
-                  // Custom container RefSpec provided
-                  const containerRef = container.create(api) as ElementRef<TElement>;
-
-                  if (containerRef.status !== STATUS_ELEMENT) {
-                    throw new Error(
-                      'Portal container must be an element RefSpec, not a fragment'
-                    );
-                  }
-
-                  containerElement = containerRef.element;
-
-                  // Append container to portal root
-                  adapter.appendChild(portalRoot, containerElement);
-
-                  // Create and insert child into container
-                  // Both container and child get their own scopes from create()
-                  const createdChild = child.create(api);
-                  childRef = createdChild;
-                  insertNodeBefore(
-                    api,
-                    containerElement,
-                    createdChild,
-                    undefined,
-                    null
+                if (containerRef.status !== STATUS_ELEMENT) {
+                  throw new Error(
+                    'Portal container must be an element RefSpec, not a fragment'
                   );
                 }
 
+                const containerElement = containerRef.element;
+
+                // Append container to portal root
+                adapter.appendChild(portalRoot, containerElement);
+
+                // Create and insert child into container
+                const childRef = child.create(api);
+                insertNodeBefore(
+                  api,
+                  containerElement,
+                  childRef,
+                  undefined,
+                  null
+                );
+
                 // Return cleanup function
                 return () => {
-                  if (container === null) {
-                    // No container - remove child directly from portal root
-                    if (childRef) {
-                      removeNode(portalRoot, childRef);
-                    }
-                  } else if (containerElement) {
-                    // Remove child from container first (handles child scope disposal)
-                    if (childRef) {
-                      removeNode(containerElement, childRef);
-                    }
-                    // Then dispose container scope and remove from portal root
-                    const scope = getElementScope(containerElement);
-                    if (scope) disposeScope(scope);
-                    adapter.removeChild(portalRoot, containerElement);
-                  }
+                  // Remove child from container first (handles child scope disposal)
+                  removeNode(containerElement, childRef);
+                  // Then dispose container scope and remove from portal root
+                  const scope = getElementScope(containerElement);
+                  if (scope) disposeScope(scope);
+                  adapter.removeChild(portalRoot, containerElement);
                 };
               },
             };
