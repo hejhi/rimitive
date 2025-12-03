@@ -43,8 +43,8 @@ export const TodoList = (
       placeholder: 'What needs to be done?',
       value: inputValue,
     })
-    .ref(on('input', (e) => inputValue((e.target as HTMLInputElement).value)))
     .ref(
+      on('input', (e) => inputValue((e.target as HTMLInputElement).value)),
       on('keydown', (e) => {
         if (e.key === 'Enter') handleAddTodo();
       })
