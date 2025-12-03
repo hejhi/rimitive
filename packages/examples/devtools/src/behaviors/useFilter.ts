@@ -4,13 +4,12 @@
  * Provides filtering functionality for a todo list.
  * Demonstrates composition - this behavior works with any todo list.
  */
-
-import { useSvc } from '../service';
+import { signal } from '../service';
 import type { Todo } from './useTodoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export const useFilter = useSvc(({ signal }) => () => {
+export const useFilter = () => {
   const currentFilter = signal<FilterType>('all');
 
   return {
@@ -28,4 +27,4 @@ export const useFilter = useSvc(({ signal }) => () => {
       return todos;
     },
   };
-});
+};

@@ -18,14 +18,9 @@ interface ProductFilterProps {
   products: Product[];
 }
 
-// Helper hook - takes computed directly instead of using useSvc
-// (useSvc is for components that return RefSpecs, not hooks that return values)
 const useFilters = (
   computed: <T>(fn: () => T) => Reactive<T>,
-  {
-    products,
-    category,
-  }: ProductFilterProps & { category: Reactive<string> }
+  { products, category }: ProductFilterProps & { category: Reactive<string> }
 ) => {
   const filteredProducts = computed(() => {
     const selCategory = category();
@@ -56,7 +51,10 @@ export const ProductFilter = island(
       });
 
       // Inline ProductCard - uses el from outer closure, product from map
-      const productCards = map(filteredProducts, (p) => p.id)((productSignal) => {
+      const productCards = map(
+        filteredProducts,
+        (p) => p.id
+      )((productSignal) => {
         const product = productSignal();
         return el('div').props({
           className: 'product-card clickable',
@@ -70,7 +68,9 @@ export const ProductFilter = island(
       });
       const categoryValues = map(categories)((catSignal) => {
         const cat = catSignal();
-        return el('option').props({ value: cat })(cat.charAt(0).toUpperCase() + cat.slice(1));
+        return el('option').props({ value: cat })(
+          cat.charAt(0).toUpperCase() + cat.slice(1)
+        );
       });
 
       const count = computed(

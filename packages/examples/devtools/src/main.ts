@@ -1,16 +1,20 @@
-// Import headless behaviors
+/**
+ * Devtools Example - Main Entry Point
+ *
+ * Demonstrates instrumented signals and view primitives for devtools integration.
+ */
 import { useCounter } from './behaviors/useCounter';
 import { useTodoList } from './behaviors/useTodoList';
 import { useFilter } from './behaviors/useFilter';
 import { useTodoStats } from './behaviors/useTodoStats';
 
-// Import view components
 import { Counter } from './views/Counter';
 import { TodoList } from './views/TodoList';
-import { BatchedUpdates as BatchedUpdatesView } from './views/BatchedUpdates';
-import { useSvc, mount } from './service';
+import { BatchedUpdates } from './views/BatchedUpdates';
 
-const App = useSvc(({ el, computed, batch }) => () => {
+import { el, computed, batch, mount } from './service';
+
+const App = () => {
   const counter = useCounter();
   const todoList = useTodoList([
     { id: 1, text: 'Learn Lattice', completed: false },
@@ -24,9 +28,9 @@ const App = useSvc(({ el, computed, batch }) => () => {
 
   return el('div').props({ className: 'app' })(
     el('h1')('Lattice DevTools Example'),
-    Counter(counter),
+    Counter(),
     TodoList(todoList, filter, filteredTodos, todoStats),
-    BatchedUpdatesView({
+    BatchedUpdates({
       onBatchedUpdate: () => {
         batch(() => {
           setCounter(10);
@@ -37,7 +41,7 @@ const App = useSvc(({ el, computed, batch }) => () => {
       },
     })
   );
-});
+};
 
 // Mount the app
 const app = mount(App());

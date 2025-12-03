@@ -1,8 +1,8 @@
 /**
- * App-level component factory with instrumentation
+ * App-level API with instrumentation
  *
- * Instrumentation is configured here at the API level, so all components
- * created with this API are automatically instrumented for devtools.
+ * Demonstrates how to configure instrumentation at the service level.
+ * All components using this API are automatically instrumented for devtools.
  */
 import {
   createDOMAdapter,
@@ -10,6 +10,7 @@ import {
 } from '@lattice/view/adapters/dom';
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/map';
+import { Match } from '@lattice/view/match';
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
 import { Effect } from '@lattice/signals/effect';
@@ -27,62 +28,57 @@ import {
   devtoolsProvider,
 } from '@lattice/lattice';
 import { defaultHelpers } from '@lattice/signals/presets/core';
-import { Match } from '@lattice/view/match';
 import { defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
 import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
-const createInstrumentedSignals = () => {
-  const instrumentation = createInstrumentation({
-    providers: [devtoolsProvider()],
-    enabled: true,
-  });
-  const signalSvc = composeFrom(
-    {
-      signal: Signal({ instrument: instrumentSignal }),
-      computed: Computed({ instrument: instrumentComputed }),
-      effect: Effect({ instrument: instrumentEffect }),
-      batch: Batch({ instrument: instrumentBatch }),
-      subscribe: Subscribe({ instrument: instrumentSubscribe }),
-    },
-    defaultHelpers(),
-    { instrumentation }
-  );
+// Create instrumentation
+const instrumentation = createInstrumentation({
+  providers: [devtoolsProvider()],
+  enabled: true,
+});
 
-  return signalSvc;
+// Create instrumented signals
+const signalsSvc = composeFrom(
+  {
+    signal: Signal({ instrument: instrumentSignal }),
+    computed: Computed({ instrument: instrumentComputed }),
+    effect: Effect({ instrument: instrumentEffect }),
+    batch: Batch({ instrument: instrumentBatch }),
+    subscribe: Subscribe({ instrument: instrumentSubscribe }),
+  },
+  defaultHelpers(),
+  { instrumentation }
+);
+
+// Create instrumented view
+const adapter = createDOMAdapter();
+const viewHelpers = defaultViewHelpers(adapter, signalsSvc);
+const viewSvc = composeFrom(
+  {
+    el: El<DOMAdapterConfig>({ instrument: instrumentEl }),
+    map: Map<DOMAdapterConfig>({ instrument: instrumentMap }),
+    match: Match<DOMAdapterConfig>(),
+  },
+  viewHelpers
+);
+
+// Combined service
+const svc = {
+  ...signalsSvc,
+  ...viewSvc,
+  on: createAddEventListener(viewHelpers.batch),
 };
 
-const createInstrumentedViewApi = () => {
-  const signalSvc = createInstrumentedSignals();
-  const viewHelpers = defaultViewHelpers(createDOMAdapter(), signalSvc);
-  const viewSvc = composeFrom(
-    {
-      el: El<DOMAdapterConfig>({ instrument: instrumentEl }),
-      map: Map<DOMAdapterConfig>({ instrument: instrumentMap }),
-      match: Match<DOMAdapterConfig>(),
-    },
-    viewHelpers
-  );
-  const svc = {
-    ...signalSvc,
-    ...viewSvc,
-    addEventListener: createAddEventListener(viewHelpers.batch),
-  };
+// Export primitives for direct import
+export const { signal, computed, effect, batch, subscribe } = signalsSvc;
+export const { el, map, match } = viewSvc;
+export const { on } = svc;
 
-  type Service = typeof svc;
+// Export mount helper
+export const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 
-  return {
-    service: {
-      signals: signalSvc,
-      view: viewSvc,
-    },
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(viewSvc),
-    useSvc: <TReturn>(fn: (svc: Service) => TReturn): TReturn => fn(svc),
-  };
-};
-
-export const { service, mount, useSvc } = createInstrumentedViewApi();
-
-export type Service = typeof service;
-export type Signals = Service['signals'];
-export type DOMViews = Service['view'];
+// Export types
+export type Service = typeof svc;
+export type Signals = typeof signalsSvc;
+export type Views = typeof viewSvc;
