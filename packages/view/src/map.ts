@@ -8,7 +8,7 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type { RefSpec, FragmentRef, Reactive, ElementRef } from './types';
+import type { RefSpec, FragmentRef, Reactive, ElementRef, Accessor } from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
@@ -26,6 +26,9 @@ import { removeFromFragment } from './helpers/fragment-boundaries';
  * When the source array updates, map pushes new values into the item
  * signals, triggering reactive updates in computeds that read them.
  *
+ * Note: Uses function overloads with Accessor first to ensure proper
+ * type inference when passing signals directly.
+ *
  * @example
  * ```ts
  * // Without key function (for primitives)
@@ -38,15 +41,29 @@ import { removeFromFragment } from './helpers/fragment-boundaries';
 export type MapFactory<TBaseElement> = ServiceDefinition<
   'map',
   {
-    // Overload 1: with key function
+    // 3-arg overloads (with key function) - must come first
+    // Overload 1a: Accessor items (signal-like) - for proper inference
     <T, TEl>(
-      items: T[] | Reactive<T[]>,
+      items: Accessor<T[]>,
       keyFn: (item: T) => string | number,
       render: (itemSignal: Reactive<T>) => RefSpec<TEl>
     ): RefSpec<TBaseElement>;
-    // Overload 2: without key function (for primitives)
+    // Overload 1b: Plain getter or static array
     <T, TEl>(
-      items: T[] | Reactive<T[]>,
+      items: T[] | (() => T[]),
+      keyFn: (item: T) => string | number,
+      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+    ): RefSpec<TBaseElement>;
+
+    // 2-arg overloads (without key function) - for primitives
+    // Overload 2a: Accessor items (signal-like) - for proper inference
+    <T, TEl>(
+      items: Accessor<T[]>,
+      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+    ): RefSpec<TBaseElement>;
+    // Overload 2b: Plain getter or static array
+    <T, TEl>(
+      items: T[] | (() => T[]),
       render: (itemSignal: Reactive<T>) => RefSpec<TEl>
     ): RefSpec<TBaseElement>;
   }
@@ -120,9 +137,28 @@ export const Map = defineService(
         return refSpec;
       };
 
-      // Implementation handles both overloads
+      // Overload signatures for proper type inference
       function map<T, TEl>(
-        items: T[] | Reactive<T[]>,
+        items: Accessor<T[]>,
+        keyFn: (item: T) => string | number,
+        render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+      ): RefSpec<TBaseElement>;
+      function map<T, TEl>(
+        items: T[] | (() => T[]),
+        keyFn: (item: T) => string | number,
+        render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+      ): RefSpec<TBaseElement>;
+      function map<T, TEl>(
+        items: Accessor<T[]>,
+        render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+      ): RefSpec<TBaseElement>;
+      function map<T, TEl>(
+        items: T[] | (() => T[]),
+        render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+      ): RefSpec<TBaseElement>;
+      // Implementation handles all overloads
+      function map<T, TEl>(
+        items: T[] | Accessor<T[]> | (() => T[]),
         keyFnOrRender:
           | ((item: T) => string | number)
           | ((itemSignal: Reactive<T>) => RefSpec<TEl>),

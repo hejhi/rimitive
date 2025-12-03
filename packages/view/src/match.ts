@@ -4,7 +4,7 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type { RefSpec, Reactive, FragmentRef, ElementRef } from './types';
+import type { RefSpec, Accessor, FragmentRef, ElementRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
@@ -30,17 +30,26 @@ export type MatchProps<TBaseElement> = {
 };
 
 /**
- * Match factory type - reactive element switching based on a Reactive<T>
+ * Match factory type - reactive element switching based on a reactive value
  *
- * Takes a Reactive<T> (signal, computed, or () => T) and a matcher function.
+ * Takes a signal, computed, or () => T and a matcher function.
  * When the reactive value changes, the current element is disposed and
  * replaced with a new one from the matcher.
  *
  * The matcher function is NOT a reactive scope - it's a pure function that
  * receives the current value and returns a RefSpec.
  *
+ * Uses function overloads with Accessor<T> first to ensure proper
+ * type inference when passing signals directly (without arrow function wrapper).
+ *
  * @example
  * ```ts
+ * // Signal passed directly - type infers correctly
+ * match(dialog.isOpen, (isOpen) =>
+ *   isOpen ? OpenDialog() : null
+ * )
+ *
+ * // Computed or arrow function also works
  * match(currentTab, (tab) =>
  *   tab === 'home' ? HomePage() : SettingsPage()
  * )
@@ -49,8 +58,14 @@ export type MatchProps<TBaseElement> = {
 export type MatchFactory<TBaseElement> = ServiceDefinition<
   'match',
   {
+    // Overload 1: Accessor<T> (signal-like) - must be first for proper inference
     <T, TElement extends TBaseElement>(
-      reactive: Reactive<T>,
+      reactive: Accessor<T>,
+      matcher: (value: T) => RefSpec<TElement> | null
+    ): RefSpec<TElement>;
+    // Overload 2: Plain getter () => T (computed, arrow functions)
+    <T, TElement extends TBaseElement>(
+      reactive: () => T,
       matcher: (value: T) => RefSpec<TElement> | null
     ): RefSpec<TElement>;
   }
@@ -126,8 +141,18 @@ export const Match = defineService(
         return refSpec;
       };
 
+      // Overload signatures for proper type inference
       function match<T, TElement extends TBaseElement>(
-        reactive: Reactive<T>,
+        reactive: Accessor<T>,
+        matcher: (value: T) => RefSpec<TElement> | null
+      ): RefSpec<TElement>;
+      function match<T, TElement extends TBaseElement>(
+        reactive: () => T,
+        matcher: (value: T) => RefSpec<TElement> | null
+      ): RefSpec<TElement>;
+      // Implementation signature
+      function match<T, TElement extends TBaseElement>(
+        reactive: Accessor<T> | (() => T),
         matcher: (value: T) => RefSpec<TElement> | null
       ): RefSpec<TElement> {
         return createMatchSpec<TElement>((api) => {

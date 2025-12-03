@@ -36,7 +36,7 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type { RefSpec, Reactive, FragmentRef, NodeRef } from './types';
+import type { RefSpec, FragmentRef, NodeRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
@@ -63,7 +63,7 @@ export type WhenProps<TBaseElement> = {
 /**
  * When factory type - conditional rendering based on any reactive value (coerced to boolean)
  *
- * Takes any Reactive<T> condition (truthy = show, falsy = hide) and RefSpec children.
+ * Takes any reactive condition (truthy = show, falsy = hide) and RefSpec children.
  * For deferred/dynamic rendering, compose with map().
  *
  * Generic over:
@@ -73,7 +73,7 @@ export type WhenFactory<TBaseElement> = ServiceDefinition<
   'when',
   {
     <TElement extends TBaseElement>(
-      condition: Reactive<unknown>,
+      condition: { (): unknown },
       ...children: RefSpec<TElement>[]
     ): RefSpec<TElement>;
   }
@@ -127,7 +127,7 @@ export const When = defineService(
       };
 
       function when<TElement extends TBaseElement>(
-        condition: Reactive<unknown>,
+        condition: { (): unknown },
         ...childSpecs: RefSpec<TElement>[]
       ): RefSpec<TElement> {
         return createWhenSpec<TElement>((api) => {

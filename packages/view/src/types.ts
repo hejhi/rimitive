@@ -134,6 +134,41 @@ export interface Writable<T> extends Readable<T> {
   (value: T): void; // Function call with argument for write
 }
 
+/**
+ * Accessor type - represents a signal-like callable with both getter and setter.
+ *
+ * This type exists to solve TypeScript's overload inference problem:
+ * When Signal<T> (which has (): T and (value: T): void signatures) is passed
+ * to a function expecting () => T, TypeScript may infer T as void from the
+ * setter signature instead of the getter.
+ *
+ * By using Accessor<T> in function overloads (placed FIRST), we ensure TypeScript
+ * matches against this more specific signature and infers T correctly from the
+ * getter's return type.
+ *
+ * @example
+ * // Function with proper overloads for signal inference:
+ * function match<T>(reactive: Accessor<T>, fn: (value: T) => void): void;
+ * function match<T>(reactive: () => T, fn: (value: T) => void): void;
+ */
+export interface Accessor<T> {
+  (): T;
+  (value: T): void;
+}
+
+/**
+ * Helper type to extract the return type of a zero-arg callable.
+ * Works correctly with both simple getters and signal-like accessors.
+ *
+ * For signals with both getter and setter signatures, this extracts
+ * the getter's return type (not void from the setter).
+ */
+export type ReadValue<F> = F extends { (): infer R; (value: unknown): void }
+  ? R
+  : F extends { (): infer R }
+    ? R
+    : never;
+
 export type Reactive<T> = Readable<T> | Writable<T>;
 
 /**

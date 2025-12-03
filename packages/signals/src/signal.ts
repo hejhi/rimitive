@@ -13,7 +13,7 @@
  * - The edge tracks version numbers for efficient cache invalidation
  * - This enables automatic dependency discovery during execution
  */
-import type { ProducerNode, Dependency, Writable } from './types';
+import type { ProducerNode, Dependency } from './types';
 import type {
   ServiceDefinition,
   InstrumentationContext,
@@ -29,7 +29,17 @@ const { CLEAN, PRODUCER, DIRTY } = CONSTANTS;
 const SIGNAL_CLEAN = PRODUCER | CLEAN;
 const SIGNAL_DIRTY = PRODUCER | DIRTY;
 
-export interface SignalFunction<T> extends Writable<T> {
+/**
+ * Signal function type - a callable that acts as both getter and setter.
+ *
+ * Note: This is intentionally a flat interface (not extending Writable<T>)
+ * because TypeScript's type inference handles call signatures better when
+ * they're declared in the same interface rather than inherited. This ensures
+ * proper type inference when signals are passed to functions expecting () => T.
+ */
+export interface SignalFunction<T> {
+  (): T; // Read: signal()
+  (value: T): void; // Write: signal(newValue)
   peek(): T; // Non-tracking read
 }
 

@@ -105,10 +105,8 @@ function DialogDemo() {
     ),
     triggerButton,
     // Portal dialog to document.body when open
-    match(
-      () => dialog.isOpen(),
-      (isOpen) => (isOpen ? portal()(dialogOverlay) : null)
-    )
+    // Note: dialog.isOpen is passed directly - no arrow function wrapper needed
+    match(dialog.isOpen, (isOpen) => (isOpen ? portal()(dialogOverlay) : null))
   );
 }
 
