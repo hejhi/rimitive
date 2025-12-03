@@ -17,7 +17,7 @@ import { createNodeHelpers } from './helpers/node-helpers';
 import { removeFromFragment } from './helpers/fragment-boundaries';
 
 /**
- * Map factory type - curried for element builder pattern
+ * Map factory type
  *
  * Items can be a static array or a reactive signal of array.
  * The render callback receives a signal wrapping each item, enabling
@@ -25,16 +25,30 @@ import { removeFromFragment } from './helpers/fragment-boundaries';
  *
  * When the source array updates, map pushes new values into the item
  * signals, triggering reactive updates in computeds that read them.
+ *
+ * @example
+ * ```ts
+ * // Without key function (for primitives)
+ * map(['a', 'b', 'c'], (item) => el('li')(item))
+ *
+ * // With key function (for objects)
+ * map(users, (u) => u.id, (user) => el('li')(user().name))
+ * ```
  */
 export type MapFactory<TBaseElement> = ServiceDefinition<
   'map',
   {
+    // Overload 1: with key function
     <T, TEl>(
       items: T[] | Reactive<T[]>,
-      keyFn?: (item: T) => string | number
-    ): (
+      keyFn: (item: T) => string | number,
       render: (itemSignal: Reactive<T>) => RefSpec<TEl>
-    ) => RefSpec<TBaseElement>;
+    ): RefSpec<TBaseElement>;
+    // Overload 2: without key function (for primitives)
+    <T, TEl>(
+      items: T[] | Reactive<T[]>,
+      render: (itemSignal: Reactive<T>) => RefSpec<TEl>
+    ): RefSpec<TBaseElement>;
   }
 >;
 
@@ -106,16 +120,25 @@ export const Map = defineService(
         return refSpec;
       };
 
+      // Implementation handles both overloads
       function map<T, TEl>(
         items: T[] | Reactive<T[]>,
-        keyFn?: (item: T) => string | number
-      ): (
-        render: (itemSignal: Reactive<T>) => RefSpec<TEl>
-      ) => RefSpec<TBaseElement> {
+        keyFnOrRender:
+          | ((item: T) => string | number)
+          | ((itemSignal: Reactive<T>) => RefSpec<TEl>),
+        maybeRender?: (itemSignal: Reactive<T>) => RefSpec<TEl>
+      ): RefSpec<TBaseElement> {
+        // Determine which overload was used
+        const keyFn = maybeRender
+          ? (keyFnOrRender as (item: T) => string | number)
+          : undefined;
+        const render = maybeRender
+          ? maybeRender
+          : (keyFnOrRender as (itemSignal: Reactive<T>) => RefSpec<TEl>);
+
         type TRecNode = RecNode<T, TBaseElement>;
 
-        return (render: (itemSignal: Reactive<T>) => RefSpec<TEl>) =>
-          createRefSpec((api) => {
+        return createRefSpec((api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -246,7 +269,7 @@ export const Map = defineService(
                       throw new Error(
                         'map() requires a key function when mapping over objects. ' +
                           'Without a key function, all objects become "[object Object]" which breaks reconciliation. ' +
-                          'Example: map(items, (item) => item.id)((item) => ...)'
+                          'Example: map(items, (item) => item.id, (item) => ...)'
                       );
                     }
                   }

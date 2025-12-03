@@ -202,7 +202,7 @@ export const createRouteFactory = defineService(
 
             // Wrap children in a match() to make them reactive
             // This allows the outlet to update when the path changes
-            return match(shouldRender)(() => {
+            return match(shouldRender, () => {
               // Find the first child that's currently matched
               // Since processedChildren are already wrapped in match(),
               // they will handle their own visibility
@@ -215,7 +215,7 @@ export const createRouteFactory = defineService(
 
           // Use match() to control component rendering based on route match
           // match() recreates the component on every param change
-          const baseRefSpec = match(shouldRender)((matchResult) => {
+          const baseRefSpec = match(shouldRender, (matchResult) => {
             if (!matchResult) return null;
 
             // Create params computed fresh for this match

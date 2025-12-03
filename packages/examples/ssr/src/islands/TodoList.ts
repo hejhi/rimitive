@@ -32,7 +32,7 @@ export const TodoList = island(
           })(),
           el('button').props({ onclick: addTodo })('Add')
         ),
-        el('ul')(map(todos)((todo) => el('li')(todo)))
+        el('ul')(map(todos, (todo) => el('li')(todo)))
       );
     }
 );

@@ -79,8 +79,9 @@ export interface ComputedFunction<T> {
  */
 export interface MatchFunction<TBaseElement> {
   <T, TElement extends TBaseElement>(
-    reactive: Reactive<T>
-  ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement>;
+    reactive: Reactive<T>,
+    matcher: (value: T) => RefSpec<TElement> | null
+  ): RefSpec<TElement>;
 }
 
 /**

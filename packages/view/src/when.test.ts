@@ -41,7 +41,7 @@ describe('when() - conditional children rendering', () => {
     adapter: MockAdapterConfig['baseElement'] extends infer E
       ? { createNode: (tag: string, props?: Record<string, unknown>) => E }
       : never,
-    spec: ReturnType<ReturnType<ReturnType<typeof setup>['when']>>
+    spec: ReturnType<ReturnType<typeof setup>['when']>
   ) {
     const parent = adapter.createNode('div') as MockElement;
     const parentRef: ElementRef<MockElement> = {
@@ -65,7 +65,7 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
-      const spec = when(show)(el.impl('p')('conditional content'));
+      const spec = when(show, el.impl('p')('conditional content'));
 
       const { parent } = attachFragment(adapter, spec);
 
@@ -79,7 +79,7 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
-      const spec = when(show)(el.impl('p')('conditional content'));
+      const spec = when(show, el.impl('p')('conditional content'));
 
       const { parent } = attachFragment(adapter, spec);
 
@@ -90,7 +90,7 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
-      const spec = when(show)(el.impl('p')('conditional'));
+      const spec = when(show, el.impl('p')('conditional'));
 
       const { parent } = attachFragment(adapter, spec);
 
@@ -108,7 +108,7 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
-      const spec = when(show)(el.impl('p')('conditional'));
+      const spec = when(show, el.impl('p')('conditional'));
 
       const { parent } = attachFragment(adapter, spec);
 
@@ -126,7 +126,8 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
-      const spec = when(show)(
+      const spec = when(
+        show,
         el.impl('p')('first'),
         el.impl('p')('second'),
         el.impl('p')('third')
@@ -154,7 +155,7 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
-      const spec = when(show)(el.impl('div')('content'));
+      const spec = when(show, el.impl('div')('content'));
 
       const { parent } = attachFragment(adapter, spec);
 
@@ -182,7 +183,8 @@ describe('when() - conditional children rendering', () => {
       const show = signal(true);
       let createCount = 0;
 
-      const spec = when(show)(
+      const spec = when(
+        show,
         el.impl('div').ref(() => {
           createCount++;
         })('content')
@@ -207,7 +209,8 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(false);
 
-      const spec = when(show)(
+      const spec = when(
+        show,
         el.impl('span')('first'),
         el.impl('span')('last')
       );
@@ -230,7 +233,8 @@ describe('when() - conditional children rendering', () => {
       const { el, when, signal, adapter } = setup();
       const show = signal(true);
 
-      const spec = when(show)(
+      const spec = when(
+        show,
         el.impl('span')('first'),
         el.impl('span')('last')
       );
@@ -253,7 +257,8 @@ describe('when() - conditional children rendering', () => {
       const show = signal(false);
       let callbackCalled = false;
 
-      const spec = when(show)(
+      const spec = when(
+        show,
         el.impl('div').ref(() => {
           callbackCalled = true;
         })('content')
@@ -273,7 +278,8 @@ describe('when() - conditional children rendering', () => {
       const show = signal(true);
       let disposed = false;
 
-      const spec = when(show)(
+      const spec = when(
+        show,
         el.impl('div').ref(() => {
           return () => {
             disposed = true;

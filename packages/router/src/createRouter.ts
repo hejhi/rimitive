@@ -464,7 +464,7 @@ export function createRouter<TConfig extends AdapterConfig>(
 
       // Use match() to control component rendering based on route match
       // match() recreates the component on every param change
-      const baseRefSpec = viewApi.match(shouldRender)((matchResult) => {
+      const baseRefSpec = viewApi.match(shouldRender, (matchResult) => {
         if (!matchResult) return null;
 
         // Build RouteContext fresh for each match
@@ -699,7 +699,7 @@ export function createRouter<TConfig extends AdapterConfig>(
           : [];
 
         // Use match() for conditional rendering - recreates component on param change
-        return viewApi.match(shouldRender)((matchResult) => {
+        return viewApi.match(shouldRender, (matchResult) => {
           if (!matchResult) return null;
 
           // Build route context fresh for each match

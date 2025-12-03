@@ -12,8 +12,8 @@ export const TagList = island(
       const tags = signal(initialTags);
 
       // Return fragment - multiple span elements without a wrapper
-      // map() takes items and optional keyFn, then returns a function that takes render callback
-      return map(tags)((tagSignal) => {
+      // map() takes items and optional keyFn, then render callback
+      return map(tags, (tagSignal) => {
         const tag = tagSignal();
         return el('span').props({
           className: 'tag',

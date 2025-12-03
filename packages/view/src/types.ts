@@ -8,6 +8,12 @@ import type { Service } from '@lattice/lattice';
 export type { Adapter, AdapterConfig } from './adapter';
 export type { ReactiveAdapter } from './reactive-adapter';
 
+// Re-export factory types for public API
+export type { PortalFactory, PortalTarget, PortalOpts } from './portal';
+export type { MapFactory } from './map';
+export type { MatchFactory } from './match';
+export type { WhenFactory } from './when';
+
 /**
  * Parent context passed to RefSpec.create() for adapter composition
  * Allows child RefSpecs to know their parent's adapter and element

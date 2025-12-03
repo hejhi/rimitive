@@ -53,7 +53,7 @@ describe('portal', () => {
       const { el, portal, mount, match, signal } = svc;
       const show = signal(true);
 
-      const spec = match(show)((s) =>
+      const spec = match(show, (s) =>
         s
           ? portal()(el('div').props({ className: 'portal-content' })('Portaled'))
           : null
@@ -161,7 +161,7 @@ describe('portal', () => {
       const modalRoot = signal<HTMLElement | null>(targetEl);
 
       // Portal content that targets the ref
-      const portalSpec = match(show)((s) =>
+      const portalSpec = match(show, (s) =>
         s
           ? portal(modalRoot)(
               el('div').props({ className: 'modal-content' })('Modal!')
@@ -240,10 +240,10 @@ describe('portal', () => {
       const show = signal(true);
       const items = signal(['a', 'b', 'c']);
 
-      const spec = match(show)((s) =>
+      const spec = match(show, (s) =>
         s
           ? portal()(
-              map(items)((item) =>
+              map(items, (item) =>
                 el('span').props({ className: 'fragment-item' })(item)
               )
             )
@@ -314,7 +314,7 @@ describe('portal', () => {
 
       const spec = portal()(
         el('ul').props({ className: 'counter-portal' })(
-          map(items)((item) => el('li').props({ className: 'list-item' })(item))
+          map(items, (item) => el('li').props({ className: 'list-item' })(item))
         )
       );
 
@@ -382,7 +382,7 @@ describe('portal', () => {
       const show = signal(true);
       let cleanedUp = false;
 
-      const spec = match(show)((s) =>
+      const spec = match(show, (s) =>
         s
           ? portal()(
               el('span')
@@ -409,7 +409,7 @@ describe('portal', () => {
       let outerCleanedUp = false;
       let innerCleanedUp = false;
 
-      const spec = match(show)((s) =>
+      const spec = match(show, (s) =>
         s
           ? portal()(
               el('div')

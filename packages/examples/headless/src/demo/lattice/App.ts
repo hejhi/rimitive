@@ -12,7 +12,8 @@ import { useSelect, type SelectOption } from '../../useSelect';
 // Create Lattice API
 // ============================================================================
 
-const { el, signal, computed, effect, mount: mountSpec } = createDOMSvc();
+const { el, signal, computed, effect, match, portal, mount: mountSpec } =
+  createDOMSvc();
 
 // ============================================================================
 // Demo Data
@@ -96,10 +97,10 @@ function DialogDemo() {
       'Accessible modal with focus trapping, ESC to close, and focus restoration.'
     ),
     triggerButton,
-    // Conditionally show dialog overlay
-    el('div').props({
-      className: computed(() => (dialog.isOpen() ? '' : 'hidden')),
-    })(dialogOverlay)
+    // Portal dialog to document.body when open
+    match(() => dialog.isOpen(), (isOpen) =>
+      isOpen ? portal()(dialogOverlay) : null
+    )
   );
 }
 

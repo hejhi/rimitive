@@ -691,10 +691,10 @@ importers:
       '@lattice/lattice':
         specifier: workspace:*
         version: link:../lattice
+    devDependencies:
       '@lattice/signals':
         specifier: workspace:*
         version: link:../signals
-    devDependencies:
       '@types/node':
         specifier: ^22.10.2
         version: 22.15.3

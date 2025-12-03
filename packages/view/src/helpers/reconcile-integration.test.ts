@@ -56,8 +56,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -101,8 +100,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -149,8 +147,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (num) => num // Key function (number itself)
-      )(
+        (num) => num, // Key function (number itself)
         (numSignal) =>
           el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
@@ -192,8 +189,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -235,8 +231,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -276,8 +271,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -314,8 +308,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (num) => num // Key function (number itself)
-      )(
+        (num) => num, // Key function (number itself)
         (numSignal) =>
           el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
@@ -353,8 +346,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -393,8 +385,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -435,8 +426,7 @@ describe('List reconciliation - Complex reorderings', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (num) => num // Key function (number itself)
-      )(
+        (num) => num, // Key function (number itself)
         (numSignal) =>
           el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
@@ -492,8 +482,7 @@ describe('List reconciliation - Edge cases', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (item) => item.id // Key function
-      )(
+        (item) => item.id, // Key function
         (itemSignal) =>
           el.impl('li')(itemSignal().name) as unknown as RefSpec<MockElement>
       )
@@ -517,8 +506,7 @@ describe('List reconciliation - Edge cases', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (num) => num // Key function (number itself)
-      )(
+        (num) => num, // Key function (number itself)
         (numSignal) =>
           el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )
@@ -552,8 +540,7 @@ describe('List reconciliation - Edge cases', () => {
     const list = el.impl('ul')(
       map(
         () => items(),
-        (num) => num // Key function (number itself)
-      )(
+        (num) => num, // Key function (number itself)
         (numSignal) =>
           el.impl('li')(String(numSignal())) as unknown as RefSpec<MockElement>
       )

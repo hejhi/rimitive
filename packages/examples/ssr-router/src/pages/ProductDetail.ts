@@ -81,7 +81,7 @@ export const ProductDetail = connect(
             })
           : null;
 
-        return match(product)((p) =>
+        return match(product, (p) =>
           p === null
             ? el('div').props({ className: 'page product-detail-page' })(
                 el('h2')('Product Not Found'),

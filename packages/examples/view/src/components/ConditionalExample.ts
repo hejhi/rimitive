@@ -13,7 +13,7 @@ export const ConditionalExample = () => {
   )('Toggle Message');
 
   // Conditional message - renders null when hidden
-  const conditionalMessage = match(showMessage)((show: boolean) =>
+  const conditionalMessage = match(showMessage, (show: boolean) =>
     show
       ? el('div').props({ className: 'conditional-message' })(
           el('span')('👋 This message can be toggled on and off!')
@@ -28,7 +28,7 @@ export const ConditionalExample = () => {
 
   // Pattern 1: Match with conditional element types
   // Use match to switch between input and span based on edit mode
-  const editableText = match(isEditMode)((isEdit: boolean) =>
+  const editableText = match(isEditMode, (isEdit: boolean) =>
     isEdit
       ? el('input')
           .props({
@@ -50,7 +50,7 @@ export const ConditionalExample = () => {
   // Multiple conditional elements can be composed
   const editableTextAlt = el('div').props({ className: 'editable-wrapper' })(
     // Input (only renders in edit mode) with all its specific props
-    match(isEditMode)((isEdit: boolean) =>
+    match(isEditMode, (isEdit: boolean) =>
       isEdit
         ? el('input')
             .props({
@@ -68,7 +68,7 @@ export const ConditionalExample = () => {
         : null
     ),
     // Span (only renders in display mode)
-    match(isEditMode)((isEdit: boolean) =>
+    match(isEditMode, (isEdit: boolean) =>
       !isEdit ? el('span').props({ className: 'display-text' })(editText) : null
     )
   );
@@ -109,7 +109,7 @@ export const ConditionalExample = () => {
   return el('div').props({ className: 'example conditional-example' })(
     el('h2')('Conditional Element Example'),
     el('p')(
-      'Demonstrates reactive conditional rendering with match(reactive)((value) => refSpec | null).'
+      'Demonstrates reactive conditional rendering with match(reactive, (value) => refSpec | null).'
     ),
 
     // Example 1: Toggle visibility

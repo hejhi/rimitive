@@ -92,14 +92,14 @@ export const TodoList = () => {
     div.props({ className: 'todo-list' })(
       map(
         todoList.filteredTodos,
-        (todo: Todo) => todo.id // Key function receives plain value
-      )((todoSignal) =>
-        // Render callback receives signal - TodoItem uses computed() for reactive bindings
-        TodoItem(
-          todoSignal,
-          (id) => todoList.toggleTodo(id),
-          (id) => todoList.removeTodo(id)
-        )
+        (todo: Todo) => todo.id, // Key function receives plain value
+        (todoSignal) =>
+          // Render callback receives signal - TodoItem uses computed() for reactive bindings
+          TodoItem(
+            todoSignal,
+            (id) => todoList.toggleTodo(id),
+            (id) => todoList.removeTodo(id)
+          )
       )
     ),
 

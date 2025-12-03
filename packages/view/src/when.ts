@@ -13,19 +13,19 @@
  * Usage:
  * ```typescript
  * // Boolean condition
- * when(showDetails)(
+ * when(showDetails,
  *   el('p')('Details go here'),
  *   el('p')('More details')
  * )
  *
  * // Truthy coercion - any reactive works
- * when(userCount)(  // 0 = hidden, >0 = shown
+ * when(userCount,  // 0 = hidden, >0 = shown
  *   el('div')('Users online')
  * )
  *
  * // Recursive structures - compose with map()
- * when(shouldBranch)(
- *   map([0, 1, 2])(i => Branch(depth + 1))
+ * when(shouldBranch,
+ *   map([0, 1, 2], i => Branch(depth + 1))
  * )
  * ```
  */
@@ -73,8 +73,9 @@ export type WhenFactory<TBaseElement> = ServiceDefinition<
   'when',
   {
     <TElement extends TBaseElement>(
-      condition: Reactive<unknown>
-    ): (...children: RefSpec<TElement>[]) => RefSpec<TElement>;
+      condition: Reactive<unknown>,
+      ...children: RefSpec<TElement>[]
+    ): RefSpec<TElement>;
   }
 >;
 
@@ -126,10 +127,10 @@ export const When = defineService(
       };
 
       function when<TElement extends TBaseElement>(
-        condition: Reactive<unknown>
-      ): (...children: RefSpec<TElement>[]) => RefSpec<TElement> {
-        return (...childSpecs: RefSpec<TElement>[]) => {
-          return createWhenSpec<TElement>((api) => {
+        condition: Reactive<unknown>,
+        ...childSpecs: RefSpec<TElement>[]
+      ): RefSpec<TElement> {
+        return createWhenSpec<TElement>((api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -211,7 +212,6 @@ export const When = defineService(
             };
             return fragment;
           });
-        };
       }
 
       const extension: WhenFactory<TBaseElement> = {

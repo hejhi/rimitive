@@ -557,7 +557,7 @@ describe('Full SSR Integration', () => {
     // Create component with map() that renders 6 items
     const items = signal([1, 2, 3, 4, 5, 6]);
     const App = el('div').props({ className: 'container' })(
-      map(items)((itemSignal) => el('div').props({ className: 'item' })(`Item ${itemSignal()}`))
+      map(items, (itemSignal) => el('div').props({ className: 'item' })(`Item ${itemSignal()}`))
     );
 
     // Render to string
@@ -585,7 +585,7 @@ describe('Full SSR Integration', () => {
     // Use computed() like ProductFilter does
     const items = computed(() => [1, 2, 3, 4, 5, 6]);
     const App = el('div').props({ className: 'container' })(
-      map(items)((itemSignal) => el('div').props({ className: 'item' })(`Item ${itemSignal()}`))
+      map(items, (itemSignal) => el('div').props({ className: 'item' })(`Item ${itemSignal()}`))
     );
 
     const rendered = mount(App);

@@ -172,25 +172,24 @@ describe('createRouter', () => {
   describe('route method', () => {
     beforeEach(() => {
       // Mock match() to call the reactive and pass its result to the matcher
-      mockViewApi.match = (<T>(reactive: () => T) =>
-        (matcher: (value: T) => unknown) => {
-          // Call the reactive to get the actual match result (with real params)
-          const matchResult = reactive();
-          const result = matcher(matchResult);
-          // Return a RefSpec wrapper around the result
-          return result ?? {
-            status: STATUS_REF_SPEC,
-            create: () => ({
-              status: 1,
-              element: null,
-              parent: null,
-              prev: null,
-              next: null,
-              firstChild: null,
-              lastChild: null,
-            }),
-          };
-        }) as unknown as ViewApi<DOMAdapterConfig>['match'];
+      mockViewApi.match = (<T>(reactive: () => T, matcher: (value: T) => unknown) => {
+        // Call the reactive to get the actual match result (with real params)
+        const matchResult = reactive();
+        const result = matcher(matchResult);
+        // Return a RefSpec wrapper around the result
+        return result ?? {
+          status: STATUS_REF_SPEC,
+          create: () => ({
+            status: 1,
+            element: null,
+            parent: null,
+            prev: null,
+            next: null,
+            firstChild: null,
+            lastChild: null,
+          }),
+        };
+      }) as unknown as ViewApi<DOMAdapterConfig>['match'];
     });
 
     it('should accept a path and connected component', () => {

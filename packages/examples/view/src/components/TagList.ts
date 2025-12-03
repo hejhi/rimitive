@@ -11,7 +11,7 @@ export const TagList = (props: { tags: string[] }) => {
   // Return fragment - multiple span elements without a wrapper
   // map() returns a RefSpec that creates a FragmentRef when instantiated
   // Render callback receives a signal wrapping each tag
-  return map(tags)((tagSignal) => {
+  return map(tags, (tagSignal) => {
     // Read initial value for the click handler
     const tag = tagSignal();
 

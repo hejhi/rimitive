@@ -94,8 +94,9 @@ export const TodoList = (
     el('ul').props({ id: 'todoList' })(
       map(
         filteredTodos,
-        (todo) => todo.id
-      )((todoSignal) => TodoItem(todoSignal(), toggleTodo))
+        (todo) => todo.id,
+        (todoSignal) => TodoItem(todoSignal(), toggleTodo)
+      )
     ),
 
     // Stats

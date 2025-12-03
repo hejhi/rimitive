@@ -39,16 +39,20 @@ export type MatchProps<TBaseElement> = {
  * The matcher function is NOT a reactive scope - it's a pure function that
  * receives the current value and returns a RefSpec.
  *
- * Generic over:
- * - T: The reactive value type
- * - TElement: The element type (must extend base element from renderer config)
+ * @example
+ * ```ts
+ * match(currentTab, (tab) =>
+ *   tab === 'home' ? HomePage() : SettingsPage()
+ * )
+ * ```
  */
 export type MatchFactory<TBaseElement> = ServiceDefinition<
   'match',
   {
     <T, TElement extends TBaseElement>(
-      reactive: Reactive<T>
-    ): (matcher: (value: T) => RefSpec<TElement> | null) => RefSpec<TElement>;
+      reactive: Reactive<T>,
+      matcher: (value: T) => RefSpec<TElement> | null
+    ): RefSpec<TElement>;
   }
 >;
 
@@ -67,13 +71,13 @@ export type MatchFactory<TBaseElement> = ServiceDefinition<
  * const currentTab = signal<'home' | 'settings'>('home');
  *
  * // Switch between different views based on tab
- * match(currentTab)((tab) =>
+ * match(currentTab, (tab) =>
  *   tab === 'home' ? HomePage() : SettingsPage()
  * )
  *
  * // With computed
  * const viewMode = computed(() => user().isAdmin ? 'admin' : 'user');
- * match(viewMode)((mode) =>
+ * match(viewMode, (mode) =>
  *   mode === 'admin' ? AdminPanel() : UserPanel()
  * )
  * ```
@@ -123,12 +127,10 @@ export const Match = defineService(
       };
 
       function match<T, TElement extends TBaseElement>(
-        reactive: Reactive<T>
-      ): (
+        reactive: Reactive<T>,
         matcher: (value: T) => RefSpec<TElement> | null
-      ) => RefSpec<TElement> {
-        return (matcher: (value: T) => RefSpec<TElement> | null) => {
-          return createMatchSpec<TElement>((api) => {
+      ): RefSpec<TElement> {
+        return createMatchSpec<TElement>((api) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -193,7 +195,6 @@ export const Match = defineService(
             };
             return fragment;
           });
-        };
       }
 
       const extension: MatchFactory<TBaseElement> = {

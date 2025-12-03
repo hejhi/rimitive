@@ -22,7 +22,7 @@ interface SelectionIndicatorProps {
 export const SelectionIndicator = (props: SelectionIndicatorProps) => {
   const { selectedShape } = props;
 
-  return match(selectedShape)((shape) =>
+  return match(selectedShape, (shape) =>
     shape
       ? circle.props({
           x: shape.x,

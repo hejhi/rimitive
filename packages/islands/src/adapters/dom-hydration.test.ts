@@ -835,7 +835,7 @@ describe('Integration: match() hydration with full view API', () => {
     const pageSpec = el('div').props({ className: 'products-page' })(
       el('h2')('Products'),
       el('section').props({ className: 'intro' })('intro'),
-      match(computed(() => true))((visible) =>
+      match(computed(() => true), (visible) =>
         visible ? el('h1')('hello') : null
       ),
       el('section').props({ className: 'filter' })('filter')
@@ -895,18 +895,18 @@ describe('Integration: match() hydration with full view API', () => {
       el('div').props({ className: 'products-page' })(
         el('h2')('Products'),
         el('section').props({ className: 'intro' })('intro'),
-        match(computed(() => true))((visible) =>
+        match(computed(() => true), (visible) =>
           visible ? el('h1')('hello') : null
         ),
         el('section').props({ className: 'filter' })('filter')
       );
 
     // Build the app structure with route match
-    // match(reactive)((value) => RefSpec | null) - renders content based on value
+    // match(reactive, (value) => RefSpec | null) - renders content based on value
     const appSpec = el('div').props({ className: 'app' })(
       el('nav')('nav'),
       el('main')(
-        match(computed(() => 'products'))((value) =>
+        match(computed(() => 'products'), (value) =>
           value === 'products' ? ProductsPage() : null
         )
       )

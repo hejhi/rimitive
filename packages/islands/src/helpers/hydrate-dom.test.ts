@@ -303,7 +303,7 @@ describe('Tree Traversal Scenarios', () => {
   });
 
   it('should traverse fragment: map 3 items', () => {
-    // el('ul')(map([1,2,3])(item => el('li')(item)))
+    // el('ul')(map([1,2,3], item => el('li')(item)))
 
     let pos = emptyPos();
 
@@ -358,7 +358,7 @@ describe('Tree Traversal Scenarios', () => {
   });
 
   it('should handle nested elements in fragment', () => {
-    // map([items])(item => el('div')(el('span')(item)))
+    // map([items], item => el('div')(el('span')(item)))
 
     let pos = emptyPos();
 
@@ -393,7 +393,7 @@ describe('Tree Traversal Scenarios', () => {
   });
 
   it('should handle nested fragments', () => {
-    // map(items)(item => el('div')(map(item.children)(child => el('span')(child))))
+    // map(items, item => el('div')(map(item.children, child => el('span')(child))))
 
     let pos = emptyPos();
 

@@ -39,7 +39,7 @@ describe('match() - reactive element switching', () => {
       let matcherCallCount = 0;
 
       // Create match where lifecycle callback reads outerState
-      const spec = match(showDiv)((show) => {
+      const spec = match(showDiv, (show) => {
         matcherCallCount++;
         return show
           ? el.impl('div').ref(() => {
