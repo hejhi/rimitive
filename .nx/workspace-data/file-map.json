@@ -6,52 +6,24 @@
   "fileMap": {
     "nonProjectFiles": [
       {
-        "file": ".claude/commands/scaffold-package.md",
-        "hash": "13774620936177920178"
-      },
-      {
-        "file": ".github/workflows/release.yml",
-        "hash": "5452793647848367243"
-      },
-      {
-        "file": "CONTRIBUTING.md",
-        "hash": "17685745596151304086"
-      },
-      {
-        "file": "CLAUDE.md",
-        "hash": "10370836458644780609"
-      },
-      {
-        "file": "tsconfig.json",
-        "hash": "11347180060375909959"
-      },
-      {
-        "file": ".claude/agents/frp-algorithm-architect.md",
-        "hash": "15724924189583160224"
-      },
-      {
-        "file": ".github/workflows/ci.yml",
-        "hash": "7442783079896346100"
-      },
-      {
-        "file": "eslint.config.js",
-        "hash": "12404005700077585307"
-      },
-      {
-        "file": ".prettierrc",
-        "hash": "14808059657890296164"
-      },
-      {
-        "file": ".github/workflows/pr-title.yml",
-        "hash": "9053157152279884607"
+        "file": ".github/workflows/README.md",
+        "hash": "12290553284265915329"
       },
       {
         "file": "tsconfig.base.json",
         "hash": "13502933863921274315"
       },
       {
-        "file": "nx.json",
-        "hash": "731019651267700296"
+        "file": ".gitignore",
+        "hash": "3326181247358675835"
+      },
+      {
+        "file": ".claude/commands/scaffold-package.md",
+        "hash": "13774620936177920178"
+      },
+      {
+        "file": ".changeset/config.json",
+        "hash": "6358243731074469076"
       },
       {
         "file": ".changeset/README.md",
@@ -62,24 +34,60 @@
         "hash": "3244421341483603138"
       },
       {
-        "file": ".claude/workflows/create-package.md",
-        "hash": "8656968389793282740"
+        "file": "tsconfig.json",
+        "hash": "11347180060375909959"
+      },
+      {
+        "file": ".github/workflows/release.yml",
+        "hash": "5452793647848367243"
+      },
+      {
+        "file": ".github/workflows/codeql.yml.disabled",
+        "hash": "13443043018540950874"
       },
       {
         "file": ".claude/commands/setup-build-config.md",
         "hash": "14311847385471376996"
       },
       {
+        "file": "eslint.config.js",
+        "hash": "12404005700077585307"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "hash": "7442783079896346100"
+      },
+      {
+        "file": "CLAUDE.md",
+        "hash": "10370836458644780609"
+      },
+      {
+        "file": ".claude/workflows/create-package.md",
+        "hash": "8656968389793282740"
+      },
+      {
+        "file": ".prettierrc",
+        "hash": "14808059657890296164"
+      },
+      {
         "file": "lerna.json",
         "hash": "17494716379267711819"
       },
       {
-        "file": ".github/dependabot.yml",
-        "hash": "5494285431413543482"
+        "file": ".claude/commands/workflow.md",
+        "hash": "8525223545704196616"
       },
       {
-        "file": ".github/workflows/README.md",
-        "hash": "12290553284265915329"
+        "file": "pnpm-workspace.yaml",
+        "hash": "5174843801328762164"
+      },
+      {
+        "file": ".claude/agents/frp-algorithm-architect.md",
+        "hash": "15724924189583160224"
+      },
+      {
+        "file": "CONTRIBUTING.md",
+        "hash": "17685745596151304086"
       },
       {
         "file": "vitest.config.ts",
@@ -90,168 +98,232 @@
         "hash": "16592980121871338732"
       },
       {
-        "file": ".changeset/config.json",
-        "hash": "6358243731074469076"
+        "file": "nx.json",
+        "hash": "731019651267700296"
       },
       {
-        "file": "pnpm-workspace.yaml",
-        "hash": "5174843801328762164"
+        "file": ".github/workflows/pr-title.yml",
+        "hash": "9053157152279884607"
       },
       {
-        "file": "package.json",
-        "hash": "16817104143314398375"
-      },
-      {
-        "file": ".gitignore",
-        "hash": "3326181247358675835"
-      },
-      {
-        "file": ".github/workflows/codeql.yml.disabled",
-        "hash": "13443043018540950874"
-      },
-      {
-        "file": ".claude/commands/workflow.md",
-        "hash": "8525223545704196616"
+        "file": ".github/dependabot.yml",
+        "hash": "5494285431413543482"
       },
       {
         "file": "pnpm-lock.yaml",
         "hash": "17662001520221541411"
+      },
+      {
+        "file": "package.json",
+        "hash": "16817104143314398375"
       }
     ],
     "projectFileMap": {
-      "@lattice/react": [
+      "@lattice/view": [
         {
-          "file": "packages/react/README.md",
-          "hash": "5230321779751202109"
+          "file": "packages/view/README.md",
+          "hash": "11339314627469235350"
         },
         {
-          "file": "packages/react/package.json",
-          "hash": "10254638355208907399",
+          "file": "packages/view/package.json",
+          "hash": "3289581689929293806",
           "deps": [
-            "npm:react@18.3.1",
-            "npm:@types/react@18.3.22",
-            "npm:@testing-library/react@16.3.0",
-            "npm:@testing-library/jest-dom",
-            "npm:react-dom@18.3.1",
+            "@lattice/signals",
+            "npm:@types/node@22.15.3",
+            "npm:esbuild@0.25.8",
+            "npm:happy-dom@15.11.7",
             "npm:rimraf@6.0.1",
+            "npm:terser",
             "npm:typescript",
             "npm:vite",
             "npm:vite-plugin-dts",
             "npm:vitest",
-            "npm:jsdom@26.1.0",
-            "npm:@vitest/browser",
-            "npm:eslint-plugin-react-hooks",
-            "@lattice/lattice",
-            "@lattice/signals"
+            "@lattice/lattice"
           ]
         },
         {
-          "file": "packages/react/src/index.ts",
-          "hash": "12967893886475352706"
+          "file": "packages/view/src/adapter.ts",
+          "hash": "15648155369937136120"
         },
         {
-          "file": "packages/react/src/lattice/context-hooks.test.tsx",
-          "hash": "2894482392204602313"
+          "file": "packages/view/src/adapters/dom.ts",
+          "hash": "6223665934878540049"
         },
         {
-          "file": "packages/react/src/lattice/context-hooks.ts",
-          "hash": "16994903828206487675"
+          "file": "packages/view/src/adapters/test.test.ts",
+          "hash": "5288762623784429099"
         },
         {
-          "file": "packages/react/src/lattice/index.ts",
-          "hash": "14854025905047408198"
+          "file": "packages/view/src/adapters/test.ts",
+          "hash": "4866251485103535706"
         },
         {
-          "file": "packages/react/src/signals/context.tsx",
-          "hash": "9300126165140170493"
+          "file": "packages/view/src/component.ts",
+          "hash": "14974875953187675646"
         },
         {
-          "file": "packages/react/src/signals/hooks.test.tsx",
-          "hash": "9901022501231905103"
+          "file": "packages/view/src/devtools/README.md",
+          "hash": "9910215292316194785"
         },
         {
-          "file": "packages/react/src/signals/hooks.ts",
-          "hash": "4715135724410190332"
+          "file": "packages/view/src/devtools/el.ts",
+          "hash": "16739494710937642256"
         },
         {
-          "file": "packages/react/src/signals/index.ts",
-          "hash": "4243007512429714235"
+          "file": "packages/view/src/devtools/index.ts",
+          "hash": "7553879850489858685"
         },
         {
-          "file": "packages/react/src/signals/types.ts",
-          "hash": "15012247360192153362"
+          "file": "packages/view/src/devtools/map.ts",
+          "hash": "1802144465771872148"
         },
         {
-          "file": "packages/react/src/test-setup.ts",
-          "hash": "1215626655253284351"
+          "file": "packages/view/src/el-lazy-scope.test.ts",
+          "hash": "2798525607580032320"
         },
         {
-          "file": "packages/react/tsconfig.json",
-          "hash": "13267521483692274720"
+          "file": "packages/view/src/el.test.ts",
+          "hash": "250958260850484062"
         },
         {
-          "file": "packages/react/vite.config.ts",
-          "hash": "15137151876007403385"
+          "file": "packages/view/src/el.ts",
+          "hash": "17000137105856135100"
         },
         {
-          "file": "packages/react/vitest.config.ts",
-          "hash": "5825143757828983445"
-        }
-      ],
-      "@lattice/example-ssr": [
-        {
-          "file": "packages/examples/ssr/README.md",
-          "hash": "4066407037754096119"
+          "file": "packages/view/src/findLIS.test.ts",
+          "hash": "15375090199137907441"
         },
         {
-          "file": "packages/examples/ssr/package.json",
-          "hash": "5300481897820210111",
-          "deps": [
-            "npm:@types/node@22.15.3",
-            "npm:tsx",
-            "npm:typescript@5.9.3",
-            "npm:vite",
-            "@lattice/islands",
-            "@lattice/lattice",
-            "@lattice/signals",
-            "@lattice/view"
-          ]
+          "file": "packages/view/src/helpers/addEventListener.test.ts",
+          "hash": "12700833335285802293"
         },
         {
-          "file": "packages/examples/ssr/src/client.ts",
-          "hash": "10825740033692274499"
+          "file": "packages/view/src/helpers/addEventListener.ts",
+          "hash": "14937089779330645600"
         },
         {
-          "file": "packages/examples/ssr/src/islands/Counter.ts",
-          "hash": "11411512589263004999"
+          "file": "packages/view/src/helpers/fragment-boundaries.test.ts",
+          "hash": "15742115506785633580"
         },
         {
-          "file": "packages/examples/ssr/src/islands/TagList.ts",
-          "hash": "16186037145638978937"
+          "file": "packages/view/src/helpers/fragment-boundaries.ts",
+          "hash": "5902674472157437839"
         },
         {
-          "file": "packages/examples/ssr/src/islands/TodoList.ts",
-          "hash": "15556227897841208735"
+          "file": "packages/view/src/helpers/index.ts",
+          "hash": "6143823144242853650"
         },
         {
-          "file": "packages/examples/ssr/src/server.ts",
-          "hash": "14962561646431766886"
+          "file": "packages/view/src/helpers/linked-list.test.ts",
+          "hash": "14086685824974164715"
         },
         {
-          "file": "packages/examples/ssr/src/service.ts",
-          "hash": "4055407263380221224"
+          "file": "packages/view/src/helpers/linked-list.ts",
+          "hash": "3412366314455916566"
         },
         {
-          "file": "packages/examples/ssr/tsconfig.json",
-          "hash": "7112619493296729596"
+          "file": "packages/view/src/helpers/node-helpers.ts",
+          "hash": "3834260664453320735"
         },
         {
-          "file": "packages/examples/ssr/tsconfig.server.json",
-          "hash": "1535076340171870889"
+          "file": "packages/view/src/helpers/processChildren.ts",
+          "hash": "11438496829608228880"
         },
         {
-          "file": "packages/examples/ssr/vite.config.ts",
-          "hash": "2474849976485888063"
+          "file": "packages/view/src/helpers/reconcile-integration.test.ts",
+          "hash": "9899323606430664081"
+        },
+        {
+          "file": "packages/view/src/helpers/reconcile.test.ts",
+          "hash": "14276105716165952628"
+        },
+        {
+          "file": "packages/view/src/helpers/reconcile.ts",
+          "hash": "12878862119574011702"
+        },
+        {
+          "file": "packages/view/src/helpers/scope.test.ts",
+          "hash": "7436033494183952186"
+        },
+        {
+          "file": "packages/view/src/helpers/scope.ts",
+          "hash": "17536165447500599118"
+        },
+        {
+          "file": "packages/view/src/helpers/scoped-effect.test.ts",
+          "hash": "8933970221920428579"
+        },
+        {
+          "file": "packages/view/src/helpers/text.test.ts",
+          "hash": "12975111410776924033"
+        },
+        {
+          "file": "packages/view/src/helpers/text.ts",
+          "hash": "14738842489917770295"
+        },
+        {
+          "file": "packages/view/src/helpers/with-scope.test.ts",
+          "hash": "1778538053406855702"
+        },
+        {
+          "file": "packages/view/src/map.test.ts",
+          "hash": "16917296198187675625"
+        },
+        {
+          "file": "packages/view/src/map.ts",
+          "hash": "3506917874520985793"
+        },
+        {
+          "file": "packages/view/src/match.test.ts",
+          "hash": "15971780681296972640"
+        },
+        {
+          "file": "packages/view/src/match.ts",
+          "hash": "3557890133087493442"
+        },
+        {
+          "file": "packages/view/src/presets/core.ts",
+          "hash": "16051583818127082342"
+        },
+        {
+          "file": "packages/view/src/presets/dom.ts",
+          "hash": "10515390841419319829"
+        },
+        {
+          "file": "packages/view/src/reactive-adapter.ts",
+          "hash": "14486698869029119278"
+        },
+        {
+          "file": "packages/view/src/test-helpers.ts",
+          "hash": "5571525883810507542"
+        },
+        {
+          "file": "packages/view/src/test-utils.ts",
+          "hash": "16829534476552785346"
+        },
+        {
+          "file": "packages/view/src/types.ts",
+          "hash": "8747841356841326639"
+        },
+        {
+          "file": "packages/view/src/when.test.ts",
+          "hash": "17150342048249022920"
+        },
+        {
+          "file": "packages/view/src/when.ts",
+          "hash": "18323564173834074625"
+        },
+        {
+          "file": "packages/view/tsconfig.json",
+          "hash": "17913389414862367194"
+        },
+        {
+          "file": "packages/view/vite.config.ts",
+          "hash": "8397538623647577211"
+        },
+        {
+          "file": "packages/view/vitest.config.ts",
+          "hash": "11052509985156853815"
         }
       ],
       "@lattice/router": [
@@ -350,144 +422,103 @@
           "hash": "11052509985156853815"
         }
       ],
-      "@lattice/headless": [
+      "js-framework-benchmark-lattice": [
         {
-          "file": "packages/examples/headless/index.html",
-          "hash": "18205043809470140995"
+          "file": "packages/benchmarks/frameworks/lattice-keyed/.gitignore",
+          "hash": "18104714500540107774"
         },
         {
-          "file": "packages/examples/headless/package.json",
-          "hash": "12310695929353000432",
+          "file": "packages/benchmarks/frameworks/lattice-keyed/README.md",
+          "hash": "13897222350467542304"
+        },
+        {
+          "file": "packages/benchmarks/frameworks/lattice-keyed/index.html",
+          "hash": "3598634573961007188"
+        },
+        {
+          "file": "packages/benchmarks/frameworks/lattice-keyed/package.json",
+          "hash": "1476718811882334445",
           "deps": [
-            "npm:@vitejs/plugin-react@4.6.0",
-            "npm:@types/react@18.3.22",
-            "npm:@types/react-dom@18.3.7",
+            "npm:@rollup/plugin-node-resolve",
+            "npm:@rollup/plugin-terser",
+            "npm:@rollup/plugin-typescript",
+            "npm:rollup@4.28.1",
+            "npm:tslib",
+            "npm:typescript",
+            "@lattice/signals",
+            "@lattice/view",
+            "@lattice/lattice"
+          ]
+        },
+        {
+          "file": "packages/benchmarks/frameworks/lattice-keyed/rollup.config.js",
+          "hash": "3339626722358080902"
+        },
+        {
+          "file": "packages/benchmarks/frameworks/lattice-keyed/src/main.ts",
+          "hash": "9062617503522015924"
+        }
+      ],
+      "@lattice/example-router": [
+        {
+          "file": "packages/examples/router/README.md",
+          "hash": "15638573287594486483"
+        },
+        {
+          "file": "packages/examples/router/index.html",
+          "hash": "1614136906338834410"
+        },
+        {
+          "file": "packages/examples/router/package.json",
+          "hash": "9384394818275184148",
+          "deps": [
             "npm:typescript@5.9.3",
             "npm:vite@6.4.1",
             "@lattice/lattice",
             "@lattice/signals",
             "@lattice/view",
-            "@lattice/react",
-            "npm:react@18.3.1",
-            "npm:react-dom@18.3.1"
+            "@lattice/router"
           ]
         },
         {
-          "file": "packages/examples/headless/src/demo/lattice/App.ts",
-          "hash": "8347964828440323636"
+          "file": "packages/examples/router/src/layouts/AppLayout.ts",
+          "hash": "1178388444468969299"
         },
         {
-          "file": "packages/examples/headless/src/demo/main.tsx",
-          "hash": "6950064446925897327"
+          "file": "packages/examples/router/src/main.ts",
+          "hash": "4831435471477242729"
         },
         {
-          "file": "packages/examples/headless/src/demo/react/App.tsx",
-          "hash": "5392835100933184555"
+          "file": "packages/examples/router/src/pages/About.ts",
+          "hash": "109541279382346626"
         },
         {
-          "file": "packages/examples/headless/src/index.ts",
-          "hash": "8556501230477357893"
+          "file": "packages/examples/router/src/pages/Home.ts",
+          "hash": "8345605084113259702"
         },
         {
-          "file": "packages/examples/headless/src/types.ts",
-          "hash": "17542363331150095214"
+          "file": "packages/examples/router/src/pages/NotFound.ts",
+          "hash": "9195873503931502775"
         },
         {
-          "file": "packages/examples/headless/src/useDialog.ts",
-          "hash": "11653419352263441668"
+          "file": "packages/examples/router/src/pages/Product.ts",
+          "hash": "13722067473245049886"
         },
         {
-          "file": "packages/examples/headless/src/useSelect.ts",
-          "hash": "10290151907120845520"
+          "file": "packages/examples/router/src/pages/Products.ts",
+          "hash": "15688070523643143139"
         },
         {
-          "file": "packages/examples/headless/tsconfig.json",
-          "hash": "12553914286957833056"
+          "file": "packages/examples/router/src/service.ts",
+          "hash": "2438238624766363287"
         },
         {
-          "file": "packages/examples/headless/vite.config.ts",
-          "hash": "15487512964186083533"
-        }
-      ],
-      "@lattice/example-ssr-router": [
-        {
-          "file": "packages/examples/ssr-router/README.md",
-          "hash": "16873919142158519910"
+          "file": "packages/examples/router/tsconfig.json",
+          "hash": "1697410767646565910"
         },
         {
-          "file": "packages/examples/ssr-router/package.json",
-          "hash": "2717927744772588214",
-          "deps": [
-            "npm:@types/node@22.15.3",
-            "npm:tsx",
-            "npm:typescript@5.9.3",
-            "npm:vite",
-            "@lattice/islands",
-            "@lattice/lattice",
-            "@lattice/router",
-            "@lattice/signals",
-            "@lattice/view"
-          ]
-        },
-        {
-          "file": "packages/examples/ssr-router/src/client.ts",
-          "hash": "1771024501431788401"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/islands/AddToCart.ts",
-          "hash": "16516840138530876428"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/islands/Navigation.ts",
-          "hash": "10709321534271026550"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/islands/ProductFilter.ts",
-          "hash": "13535295224156712695"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/layouts/AppLayout.ts",
-          "hash": "1027031289568530355"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/pages/About.ts",
-          "hash": "9182048187424027192"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/pages/Home.ts",
-          "hash": "518232563876830962"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/pages/ProductDetail.ts",
-          "hash": "8922229569506650804"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/pages/Products.ts",
-          "hash": "17377589703126852045"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/routes.ts",
-          "hash": "1772829353760338584"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/server.ts",
-          "hash": "5843575783246858405"
-        },
-        {
-          "file": "packages/examples/ssr-router/src/service.ts",
-          "hash": "5298385950823979466"
-        },
-        {
-          "file": "packages/examples/ssr-router/tsconfig.json",
-          "hash": "7112619493296729596"
-        },
-        {
-          "file": "packages/examples/ssr-router/tsconfig.server.json",
-          "hash": "14394990283587402985"
-        },
-        {
-          "file": "packages/examples/ssr-router/vite.config.ts",
-          "hash": "1910354121029854391"
+          "file": "packages/examples/router/vite.config.ts",
+          "hash": "2921377104421858968"
         }
       ],
       "@lattice/benchmarks": [
@@ -600,81 +631,149 @@
           "hash": "13611625499430042282"
         }
       ],
-      "@lattice/lattice": [
+      "@lattice/react": [
         {
-          "file": "packages/lattice/README.md",
-          "hash": "9240240145603155624"
+          "file": "packages/react/README.md",
+          "hash": "5230321779751202109"
         },
         {
-          "file": "packages/lattice/package.json",
-          "hash": "14649906115932690587",
+          "file": "packages/react/package.json",
+          "hash": "10254638355208907399",
           "deps": [
+            "npm:react@18.3.1",
+            "npm:@types/react@18.3.22",
+            "npm:@testing-library/react@16.3.0",
+            "npm:@testing-library/jest-dom",
+            "npm:react-dom@18.3.1",
             "npm:rimraf@6.0.1",
             "npm:typescript",
             "npm:vite",
             "npm:vite-plugin-dts",
-            "npm:vitest"
+            "npm:vitest",
+            "npm:jsdom@26.1.0",
+            "npm:@vitest/browser",
+            "npm:eslint-plugin-react-hooks",
+            "@lattice/lattice",
+            "@lattice/signals"
           ]
         },
         {
-          "file": "packages/lattice/src/compose.test.ts",
-          "hash": "16051712095492499557"
+          "file": "packages/react/src/index.ts",
+          "hash": "12967893886475352706"
         },
         {
-          "file": "packages/lattice/src/compose.ts",
-          "hash": "5234790248571559311"
+          "file": "packages/react/src/lattice/context-hooks.test.tsx",
+          "hash": "2894482392204602313"
         },
         {
-          "file": "packages/lattice/src/composeFrom.ts",
-          "hash": "14843548935063169609"
+          "file": "packages/react/src/lattice/context-hooks.ts",
+          "hash": "16994903828206487675"
         },
         {
-          "file": "packages/lattice/src/defineService.ts",
-          "hash": "17680032769572338830"
+          "file": "packages/react/src/lattice/index.ts",
+          "hash": "14854025905047408198"
         },
         {
-          "file": "packages/lattice/src/index.ts",
-          "hash": "8127388545796722132"
+          "file": "packages/react/src/signals/context.tsx",
+          "hash": "9300126165140170493"
         },
         {
-          "file": "packages/lattice/src/instrumentation/compose.ts",
-          "hash": "9808076584896818165"
+          "file": "packages/react/src/signals/hooks.test.tsx",
+          "hash": "9901022501231905103"
         },
         {
-          "file": "packages/lattice/src/instrumentation/index.ts",
-          "hash": "16214308166890719840"
+          "file": "packages/react/src/signals/hooks.ts",
+          "hash": "4715135724410190332"
         },
         {
-          "file": "packages/lattice/src/instrumentation/providers/devtools.ts",
-          "hash": "16477446629097519"
+          "file": "packages/react/src/signals/index.ts",
+          "hash": "4243007512429714235"
         },
         {
-          "file": "packages/lattice/src/instrumentation/providers/index.ts",
-          "hash": "4749356092348718476"
+          "file": "packages/react/src/signals/types.ts",
+          "hash": "15012247360192153362"
         },
         {
-          "file": "packages/lattice/src/instrumentation/types.ts",
-          "hash": "14894271843259649757"
+          "file": "packages/react/src/test-setup.ts",
+          "hash": "1215626655253284351"
         },
         {
-          "file": "packages/lattice/src/instrumentation/with-instrumentation.ts",
-          "hash": "1484137130201364655"
+          "file": "packages/react/tsconfig.json",
+          "hash": "13267521483692274720"
         },
         {
-          "file": "packages/lattice/src/types.ts",
-          "hash": "337208817604103922"
+          "file": "packages/react/vite.config.ts",
+          "hash": "15137151876007403385"
         },
         {
-          "file": "packages/lattice/tsconfig.json",
-          "hash": "13768032360931697204"
+          "file": "packages/react/vitest.config.ts",
+          "hash": "5825143757828983445"
+        }
+      ],
+      "@lattice/example-react": [
+        {
+          "file": "packages/examples/react/README.md",
+          "hash": "530371652436255634"
         },
         {
-          "file": "packages/lattice/vite.config.ts",
-          "hash": "2656289770694978607"
+          "file": "packages/examples/react/index.html",
+          "hash": "1252367102016738327"
         },
         {
-          "file": "packages/lattice/vitest.config.ts",
-          "hash": "11000601217548331042"
+          "file": "packages/examples/react/package.json",
+          "hash": "7196261593059802579",
+          "deps": [
+            "npm:@vitejs/plugin-react@4.6.0",
+            "npm:@types/react@18.3.22",
+            "npm:@types/react-dom@18.3.7",
+            "npm:vite@6.3.5",
+            "npm:typescript",
+            "@lattice/lattice",
+            "@lattice/signals",
+            "@lattice/react",
+            "npm:react@18.3.1",
+            "npm:react-dom@18.3.1"
+          ]
+        },
+        {
+          "file": "packages/examples/react/src/components/useAppState.ts",
+          "hash": "10085960956568047604"
+        },
+        {
+          "file": "packages/examples/react/src/components/useCounter.ts",
+          "hash": "1244367043113775336"
+        },
+        {
+          "file": "packages/examples/react/src/components/useFilter.ts",
+          "hash": "2731393073278138187"
+        },
+        {
+          "file": "packages/examples/react/src/components/useModal.ts",
+          "hash": "2281660559894671670"
+        },
+        {
+          "file": "packages/examples/react/src/components/useTodoList.ts",
+          "hash": "1460588478622443714"
+        },
+        {
+          "file": "packages/examples/react/src/design-system/Modal.tsx",
+          "hash": "8004522684814012897"
+        },
+        {
+          "file": "packages/examples/react/src/main.tsx",
+          "hash": "16279803632446919251"
+        },
+        {
+          "file": "packages/examples/react/src/service.ts",
+          "hash": "6285264892911383189"
+        },
+        {
+          "file": "packages/examples/react/tsconfig.json",
+          "hash": "12553914286957833056"
+        },
+        {
+          "file": "packages/examples/react/vite.config.ts",
+          "hash": "11332553690105299903"
         }
       ],
       "@lattice/islands": [
@@ -841,66 +940,277 @@
           "hash": "11052509985156853815"
         }
       ],
-      "@lattice/example-router": [
+      "@lattice/example-ssr-router": [
         {
-          "file": "packages/examples/router/README.md",
-          "hash": "15638573287594486483"
+          "file": "packages/examples/ssr-router/README.md",
+          "hash": "16873919142158519910"
         },
         {
-          "file": "packages/examples/router/index.html",
-          "hash": "1614136906338834410"
-        },
-        {
-          "file": "packages/examples/router/package.json",
-          "hash": "9384394818275184148",
+          "file": "packages/examples/ssr-router/package.json",
+          "hash": "2717927744772588214",
           "deps": [
+            "npm:@types/node@22.15.3",
+            "npm:tsx",
+            "npm:typescript@5.9.3",
+            "npm:vite",
+            "@lattice/islands",
+            "@lattice/lattice",
+            "@lattice/router",
+            "@lattice/signals",
+            "@lattice/view"
+          ]
+        },
+        {
+          "file": "packages/examples/ssr-router/src/client.ts",
+          "hash": "1771024501431788401"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/islands/AddToCart.ts",
+          "hash": "16516840138530876428"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/islands/Navigation.ts",
+          "hash": "10709321534271026550"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/islands/ProductFilter.ts",
+          "hash": "13535295224156712695"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/layouts/AppLayout.ts",
+          "hash": "1027031289568530355"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/pages/About.ts",
+          "hash": "9182048187424027192"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/pages/Home.ts",
+          "hash": "518232563876830962"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/pages/ProductDetail.ts",
+          "hash": "8922229569506650804"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/pages/Products.ts",
+          "hash": "17377589703126852045"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/routes.ts",
+          "hash": "1772829353760338584"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/server.ts",
+          "hash": "5843575783246858405"
+        },
+        {
+          "file": "packages/examples/ssr-router/src/service.ts",
+          "hash": "5298385950823979466"
+        },
+        {
+          "file": "packages/examples/ssr-router/tsconfig.json",
+          "hash": "7112619493296729596"
+        },
+        {
+          "file": "packages/examples/ssr-router/tsconfig.server.json",
+          "hash": "14394990283587402985"
+        },
+        {
+          "file": "packages/examples/ssr-router/vite.config.ts",
+          "hash": "1910354121029854391"
+        }
+      ],
+      "@lattice/example-ssr": [
+        {
+          "file": "packages/examples/ssr/README.md",
+          "hash": "4066407037754096119"
+        },
+        {
+          "file": "packages/examples/ssr/package.json",
+          "hash": "5300481897820210111",
+          "deps": [
+            "npm:@types/node@22.15.3",
+            "npm:tsx",
+            "npm:typescript@5.9.3",
+            "npm:vite",
+            "@lattice/islands",
+            "@lattice/lattice",
+            "@lattice/signals",
+            "@lattice/view"
+          ]
+        },
+        {
+          "file": "packages/examples/ssr/src/client.ts",
+          "hash": "10825740033692274499"
+        },
+        {
+          "file": "packages/examples/ssr/src/islands/Counter.ts",
+          "hash": "11411512589263004999"
+        },
+        {
+          "file": "packages/examples/ssr/src/islands/TagList.ts",
+          "hash": "16186037145638978937"
+        },
+        {
+          "file": "packages/examples/ssr/src/islands/TodoList.ts",
+          "hash": "15556227897841208735"
+        },
+        {
+          "file": "packages/examples/ssr/src/server.ts",
+          "hash": "14962561646431766886"
+        },
+        {
+          "file": "packages/examples/ssr/src/service.ts",
+          "hash": "4055407263380221224"
+        },
+        {
+          "file": "packages/examples/ssr/tsconfig.json",
+          "hash": "7112619493296729596"
+        },
+        {
+          "file": "packages/examples/ssr/tsconfig.server.json",
+          "hash": "1535076340171870889"
+        },
+        {
+          "file": "packages/examples/ssr/vite.config.ts",
+          "hash": "2474849976485888063"
+        }
+      ],
+      "@lattice/lattice": [
+        {
+          "file": "packages/lattice/README.md",
+          "hash": "9240240145603155624"
+        },
+        {
+          "file": "packages/lattice/package.json",
+          "hash": "14649906115932690587",
+          "deps": [
+            "npm:rimraf@6.0.1",
+            "npm:typescript",
+            "npm:vite",
+            "npm:vite-plugin-dts",
+            "npm:vitest"
+          ]
+        },
+        {
+          "file": "packages/lattice/src/compose.test.ts",
+          "hash": "16051712095492499557"
+        },
+        {
+          "file": "packages/lattice/src/compose.ts",
+          "hash": "5234790248571559311"
+        },
+        {
+          "file": "packages/lattice/src/composeFrom.ts",
+          "hash": "14843548935063169609"
+        },
+        {
+          "file": "packages/lattice/src/defineService.ts",
+          "hash": "17680032769572338830"
+        },
+        {
+          "file": "packages/lattice/src/index.ts",
+          "hash": "8127388545796722132"
+        },
+        {
+          "file": "packages/lattice/src/instrumentation/compose.ts",
+          "hash": "9808076584896818165"
+        },
+        {
+          "file": "packages/lattice/src/instrumentation/index.ts",
+          "hash": "16214308166890719840"
+        },
+        {
+          "file": "packages/lattice/src/instrumentation/providers/devtools.ts",
+          "hash": "16477446629097519"
+        },
+        {
+          "file": "packages/lattice/src/instrumentation/providers/index.ts",
+          "hash": "4749356092348718476"
+        },
+        {
+          "file": "packages/lattice/src/instrumentation/types.ts",
+          "hash": "14894271843259649757"
+        },
+        {
+          "file": "packages/lattice/src/instrumentation/with-instrumentation.ts",
+          "hash": "1484137130201364655"
+        },
+        {
+          "file": "packages/lattice/src/types.ts",
+          "hash": "337208817604103922"
+        },
+        {
+          "file": "packages/lattice/tsconfig.json",
+          "hash": "13768032360931697204"
+        },
+        {
+          "file": "packages/lattice/vite.config.ts",
+          "hash": "2656289770694978607"
+        },
+        {
+          "file": "packages/lattice/vitest.config.ts",
+          "hash": "11000601217548331042"
+        }
+      ],
+      "@lattice/headless": [
+        {
+          "file": "packages/examples/headless/index.html",
+          "hash": "18205043809470140995"
+        },
+        {
+          "file": "packages/examples/headless/package.json",
+          "hash": "12310695929353000432",
+          "deps": [
+            "npm:@vitejs/plugin-react@4.6.0",
+            "npm:@types/react@18.3.22",
+            "npm:@types/react-dom@18.3.7",
             "npm:typescript@5.9.3",
             "npm:vite@6.4.1",
             "@lattice/lattice",
             "@lattice/signals",
             "@lattice/view",
-            "@lattice/router"
+            "@lattice/react",
+            "npm:react@18.3.1",
+            "npm:react-dom@18.3.1"
           ]
         },
         {
-          "file": "packages/examples/router/src/layouts/AppLayout.ts",
-          "hash": "1178388444468969299"
+          "file": "packages/examples/headless/src/demo/lattice/App.ts",
+          "hash": "8347964828440323636"
         },
         {
-          "file": "packages/examples/router/src/main.ts",
-          "hash": "4831435471477242729"
+          "file": "packages/examples/headless/src/demo/main.tsx",
+          "hash": "6950064446925897327"
         },
         {
-          "file": "packages/examples/router/src/pages/About.ts",
-          "hash": "109541279382346626"
+          "file": "packages/examples/headless/src/demo/react/App.tsx",
+          "hash": "5392835100933184555"
         },
         {
-          "file": "packages/examples/router/src/pages/Home.ts",
-          "hash": "8345605084113259702"
+          "file": "packages/examples/headless/src/index.ts",
+          "hash": "8556501230477357893"
         },
         {
-          "file": "packages/examples/router/src/pages/NotFound.ts",
-          "hash": "9195873503931502775"
+          "file": "packages/examples/headless/src/types.ts",
+          "hash": "17542363331150095214"
         },
         {
-          "file": "packages/examples/router/src/pages/Product.ts",
-          "hash": "13722067473245049886"
+          "file": "packages/examples/headless/src/useDialog.ts",
+          "hash": "11653419352263441668"
         },
         {
-          "file": "packages/examples/router/src/pages/Products.ts",
-          "hash": "15688070523643143139"
+          "file": "packages/examples/headless/src/useSelect.ts",
+          "hash": "10290151907120845520"
         },
         {
-          "file": "packages/examples/router/src/service.ts",
-          "hash": "2438238624766363287"
+          "file": "packages/examples/headless/tsconfig.json",
+          "hash": "12553914286957833056"
         },
         {
-          "file": "packages/examples/router/tsconfig.json",
-          "hash": "1697410767646565910"
-        },
-        {
-          "file": "packages/examples/router/vite.config.ts",
-          "hash": "2921377104421858968"
+          "file": "packages/examples/headless/vite.config.ts",
+          "hash": "15487512964186083533"
         }
       ],
       "@lattice/example-canvas": [
@@ -976,132 +1286,260 @@
           "hash": "11681886137066647296"
         }
       ],
-      "docs": [
+      "@lattice/signals": [
         {
-          "file": "packages/docs/.gitignore",
-          "hash": "15612394528433788405"
+          "file": "packages/signals/README.md",
+          "hash": "11497785640053432767"
         },
         {
-          "file": "packages/docs/.vscode/extensions.json",
-          "hash": "4591125310708873372"
-        },
-        {
-          "file": "packages/docs/.vscode/launch.json",
-          "hash": "1679638439007128934"
-        },
-        {
-          "file": "packages/docs/README.md",
-          "hash": "9800481857666626973"
-        },
-        {
-          "file": "packages/docs/astro.config.mjs",
-          "hash": "14559883851719187300"
-        },
-        {
-          "file": "packages/docs/package.json",
-          "hash": "5069634947705943537",
+          "file": "packages/signals/package.json",
+          "hash": "18245541885323191252",
           "deps": [
-            "npm:@astrojs/starlight",
-            "npm:astro",
-            "npm:sharp@0.32.6"
+            "npm:alien-signals@2.0.5",
+            "npm:esbuild@0.25.8",
+            "npm:rimraf@6.0.1",
+            "npm:tdd-guard-vitest",
+            "npm:terser",
+            "npm:typescript",
+            "npm:vite",
+            "npm:vite-plugin-dts",
+            "npm:vitest",
+            "@lattice/lattice"
           ]
         },
         {
-          "file": "packages/docs/src/assets/houston.webp",
-          "hash": "17403492182263883673"
+          "file": "packages/signals/src/batch.test.ts",
+          "hash": "13293136637956396160"
         },
         {
-          "file": "packages/docs/src/content.config.ts",
-          "hash": "10524422491699351718"
+          "file": "packages/signals/src/batch.ts",
+          "hash": "7855638056726166035"
         },
         {
-          "file": "packages/docs/src/content/docs/guides/getting-started.mdx",
-          "hash": "3437940197504267815"
+          "file": "packages/signals/src/computed.test.ts",
+          "hash": "9698963466180131841"
         },
         {
-          "file": "packages/docs/src/content/docs/index.mdx",
-          "hash": "8970038728569872156"
+          "file": "packages/signals/src/computed.ts",
+          "hash": "12598608783985613337"
         },
         {
-          "file": "packages/docs/src/styles/custom.css",
-          "hash": "14925684798153730418"
+          "file": "packages/signals/src/constants.ts",
+          "hash": "15154588333349254343"
         },
         {
-          "file": "packages/docs/tsconfig.json",
-          "hash": "11734694662231194405"
+          "file": "packages/signals/src/devtools/batch.ts",
+          "hash": "4042799844474626826"
+        },
+        {
+          "file": "packages/signals/src/devtools/computed.ts",
+          "hash": "9181671726444000376"
+        },
+        {
+          "file": "packages/signals/src/devtools/effect.ts",
+          "hash": "17271041035272772504"
+        },
+        {
+          "file": "packages/signals/src/devtools/signal.ts",
+          "hash": "9130540438085009273"
+        },
+        {
+          "file": "packages/signals/src/devtools/subscribe.ts",
+          "hash": "5977108231360468317"
+        },
+        {
+          "file": "packages/signals/src/effect.test.ts",
+          "hash": "8602932194855826126"
+        },
+        {
+          "file": "packages/signals/src/effect.ts",
+          "hash": "9653489675618564017"
+        },
+        {
+          "file": "packages/signals/src/helpers/graph-edges.test.ts",
+          "hash": "6838763233328470834"
+        },
+        {
+          "file": "packages/signals/src/helpers/graph-edges.ts",
+          "hash": "7151008862138119075"
+        },
+        {
+          "file": "packages/signals/src/helpers/graph-traversal.test.ts",
+          "hash": "8935845109951302897"
+        },
+        {
+          "file": "packages/signals/src/helpers/graph-traversal.ts",
+          "hash": "14886299155409978847"
+        },
+        {
+          "file": "packages/signals/src/helpers/index.ts",
+          "hash": "13442740351239469635"
+        },
+        {
+          "file": "packages/signals/src/helpers/pull-propagator.test.ts",
+          "hash": "4404448989842872397"
+        },
+        {
+          "file": "packages/signals/src/helpers/pull-propagator.ts",
+          "hash": "11315455074604253250"
+        },
+        {
+          "file": "packages/signals/src/helpers/scheduler.test.ts",
+          "hash": "3429094748886672344"
+        },
+        {
+          "file": "packages/signals/src/helpers/scheduler.ts",
+          "hash": "14811913123054882841"
+        },
+        {
+          "file": "packages/signals/src/multiple-effects.test.ts",
+          "hash": "12513846774302046182"
+        },
+        {
+          "file": "packages/signals/src/presets/core.ts",
+          "hash": "8288664663849695919"
+        },
+        {
+          "file": "packages/signals/src/signal.test.ts",
+          "hash": "13124777647142036327"
+        },
+        {
+          "file": "packages/signals/src/signal.ts",
+          "hash": "9413775801932458474"
+        },
+        {
+          "file": "packages/signals/src/subscribe.test.ts",
+          "hash": "3060012248292161425"
+        },
+        {
+          "file": "packages/signals/src/subscribe.ts",
+          "hash": "16356565202456002736"
+        },
+        {
+          "file": "packages/signals/src/test-setup.ts",
+          "hash": "16135030168500407001"
+        },
+        {
+          "file": "packages/signals/src/tests/topology-diamonds.test.ts",
+          "hash": "5434120624413193475"
+        },
+        {
+          "file": "packages/signals/src/tests/topology-dynamic.test.ts",
+          "hash": "3257052377902747869"
+        },
+        {
+          "file": "packages/signals/src/tests/topology-effects.test.ts",
+          "hash": "13819524365531766400"
+        },
+        {
+          "file": "packages/signals/src/tests/topology-optimization.test.ts",
+          "hash": "16028372972143091021"
+        },
+        {
+          "file": "packages/signals/src/tests/topology-propagation.test.ts",
+          "hash": "9639039328254985516"
+        },
+        {
+          "file": "packages/signals/src/tests/topology-subscriptions.test.ts",
+          "hash": "15634027706610615217"
+        },
+        {
+          "file": "packages/signals/src/tests/untrack.test.ts",
+          "hash": "8610774768045446094"
+        },
+        {
+          "file": "packages/signals/src/types.ts",
+          "hash": "4296014678344163267"
+        },
+        {
+          "file": "packages/signals/src/untrack.ts",
+          "hash": "7640208141746498774"
+        },
+        {
+          "file": "packages/signals/src/util/env.ts",
+          "hash": "8274176241029677817"
+        },
+        {
+          "file": "packages/signals/tsconfig.json",
+          "hash": "3442895130324803122"
+        },
+        {
+          "file": "packages/signals/vite.config.ts",
+          "hash": "12272399706440125815"
+        },
+        {
+          "file": "packages/signals/vitest.config.ts",
+          "hash": "10264544837864269838"
         }
       ],
-      "@lattice/example-devtools": [
+      "@lattice/example-view": [
         {
-          "file": "packages/examples/devtools/README.md",
-          "hash": "11846727284292967312"
+          "file": "packages/examples/view/README.md",
+          "hash": "10084862924485293058"
         },
         {
-          "file": "packages/examples/devtools/index.html",
-          "hash": "10037937584895609247"
+          "file": "packages/examples/view/index.html",
+          "hash": "11089517500316129355"
         },
         {
-          "file": "packages/examples/devtools/package.json",
-          "hash": "1773498693959913099",
+          "file": "packages/examples/view/package.json",
+          "hash": "11999756615684493432",
           "deps": [
-            "npm:vite@6.3.5",
+            "npm:rollup-plugin-visualizer",
             "npm:typescript",
+            "npm:vite@6.3.5",
             "@lattice/lattice",
             "@lattice/signals",
             "@lattice/view"
           ]
         },
         {
-          "file": "packages/examples/devtools/src/behaviors/useCounter.ts",
-          "hash": "15066313707501540377"
+          "file": "packages/examples/view/src/behaviors/useCounter.ts",
+          "hash": "5533689841049881268"
         },
         {
-          "file": "packages/examples/devtools/src/behaviors/useFilter.ts",
-          "hash": "13690661268481563372"
+          "file": "packages/examples/view/src/behaviors/useTodoList.ts",
+          "hash": "12847955966768477239"
         },
         {
-          "file": "packages/examples/devtools/src/behaviors/useTodoList.ts",
-          "hash": "9078237610116756179"
+          "file": "packages/examples/view/src/components/ConditionalExample.ts",
+          "hash": "4556718643195708887"
         },
         {
-          "file": "packages/examples/devtools/src/behaviors/useTodoStats.ts",
-          "hash": "13251260269041737453"
+          "file": "packages/examples/view/src/components/Counter.ts",
+          "hash": "13708017343439305774"
         },
         {
-          "file": "packages/examples/devtools/src/main.ts",
-          "hash": "1760299626130399547"
+          "file": "packages/examples/view/src/components/TagList.ts",
+          "hash": "11193691590574026129"
         },
         {
-          "file": "packages/examples/devtools/src/service.ts",
-          "hash": "7749875638234437808"
+          "file": "packages/examples/view/src/components/TodoItem.ts",
+          "hash": "3109104058750297772"
         },
         {
-          "file": "packages/examples/devtools/src/types.ts",
-          "hash": "3140486883928033401"
+          "file": "packages/examples/view/src/components/TodoList.ts",
+          "hash": "3707512253717371856"
         },
         {
-          "file": "packages/examples/devtools/src/views/BatchedUpdates.ts",
-          "hash": "16923447426835481645"
+          "file": "packages/examples/view/src/main.ts",
+          "hash": "16382716602486540307"
         },
         {
-          "file": "packages/examples/devtools/src/views/Counter.ts",
-          "hash": "605544929079826256"
+          "file": "packages/examples/view/src/service.ts",
+          "hash": "10091873360478981851"
         },
         {
-          "file": "packages/examples/devtools/src/views/TodoItem.ts",
-          "hash": "10465053120560912871"
+          "file": "packages/examples/view/src/types.ts",
+          "hash": "4627747634777253817"
         },
         {
-          "file": "packages/examples/devtools/src/views/TodoList.ts",
-          "hash": "2630176070601994814"
+          "file": "packages/examples/view/tsconfig.json",
+          "hash": "992548745302118915"
         },
         {
-          "file": "packages/examples/devtools/tsconfig.json",
-          "hash": "5513002181258088976"
-        },
-        {
-          "file": "packages/examples/devtools/vite.config.js",
-          "hash": "14562134061609915012"
+          "file": "packages/examples/view/vite.config.ts",
+          "hash": "6308557964321200696"
         }
       ],
       "@lattice/devtools-extension": [
@@ -1334,6 +1772,134 @@
           "hash": "13590556536729641516"
         }
       ],
+      "@lattice/example-devtools": [
+        {
+          "file": "packages/examples/devtools/README.md",
+          "hash": "11846727284292967312"
+        },
+        {
+          "file": "packages/examples/devtools/index.html",
+          "hash": "10037937584895609247"
+        },
+        {
+          "file": "packages/examples/devtools/package.json",
+          "hash": "1773498693959913099",
+          "deps": [
+            "npm:vite@6.3.5",
+            "npm:typescript",
+            "@lattice/lattice",
+            "@lattice/signals",
+            "@lattice/view"
+          ]
+        },
+        {
+          "file": "packages/examples/devtools/src/behaviors/useCounter.ts",
+          "hash": "15066313707501540377"
+        },
+        {
+          "file": "packages/examples/devtools/src/behaviors/useFilter.ts",
+          "hash": "13690661268481563372"
+        },
+        {
+          "file": "packages/examples/devtools/src/behaviors/useTodoList.ts",
+          "hash": "9078237610116756179"
+        },
+        {
+          "file": "packages/examples/devtools/src/behaviors/useTodoStats.ts",
+          "hash": "13251260269041737453"
+        },
+        {
+          "file": "packages/examples/devtools/src/main.ts",
+          "hash": "1760299626130399547"
+        },
+        {
+          "file": "packages/examples/devtools/src/service.ts",
+          "hash": "7749875638234437808"
+        },
+        {
+          "file": "packages/examples/devtools/src/types.ts",
+          "hash": "3140486883928033401"
+        },
+        {
+          "file": "packages/examples/devtools/src/views/BatchedUpdates.ts",
+          "hash": "16923447426835481645"
+        },
+        {
+          "file": "packages/examples/devtools/src/views/Counter.ts",
+          "hash": "605544929079826256"
+        },
+        {
+          "file": "packages/examples/devtools/src/views/TodoItem.ts",
+          "hash": "10465053120560912871"
+        },
+        {
+          "file": "packages/examples/devtools/src/views/TodoList.ts",
+          "hash": "2630176070601994814"
+        },
+        {
+          "file": "packages/examples/devtools/tsconfig.json",
+          "hash": "5513002181258088976"
+        },
+        {
+          "file": "packages/examples/devtools/vite.config.js",
+          "hash": "14562134061609915012"
+        }
+      ],
+      "docs": [
+        {
+          "file": "packages/docs/.gitignore",
+          "hash": "15612394528433788405"
+        },
+        {
+          "file": "packages/docs/.vscode/extensions.json",
+          "hash": "4591125310708873372"
+        },
+        {
+          "file": "packages/docs/.vscode/launch.json",
+          "hash": "1679638439007128934"
+        },
+        {
+          "file": "packages/docs/README.md",
+          "hash": "9800481857666626973"
+        },
+        {
+          "file": "packages/docs/astro.config.mjs",
+          "hash": "14559883851719187300"
+        },
+        {
+          "file": "packages/docs/package.json",
+          "hash": "5069634947705943537",
+          "deps": [
+            "npm:@astrojs/starlight",
+            "npm:astro",
+            "npm:sharp@0.32.6"
+          ]
+        },
+        {
+          "file": "packages/docs/src/assets/houston.webp",
+          "hash": "17403492182263883673"
+        },
+        {
+          "file": "packages/docs/src/content.config.ts",
+          "hash": "10524422491699351718"
+        },
+        {
+          "file": "packages/docs/src/content/docs/guides/getting-started.mdx",
+          "hash": "3437940197504267815"
+        },
+        {
+          "file": "packages/docs/src/content/docs/index.mdx",
+          "hash": "8970038728569872156"
+        },
+        {
+          "file": "packages/docs/src/styles/custom.css",
+          "hash": "14925684798153730418"
+        },
+        {
+          "file": "packages/docs/tsconfig.json",
+          "hash": "11734694662231194405"
+        }
+      ],
       "@lattice/examples": [
         {
           "file": "packages/examples/README.md",
@@ -1353,568 +1919,6 @@
         {
           "file": "packages/examples/tsconfig.json",
           "hash": "2937720822438727885"
-        }
-      ],
-      "js-framework-benchmark-lattice": [
-        {
-          "file": "packages/benchmarks/frameworks/lattice-keyed/.gitignore",
-          "hash": "18104714500540107774"
-        },
-        {
-          "file": "packages/benchmarks/frameworks/lattice-keyed/README.md",
-          "hash": "13897222350467542304"
-        },
-        {
-          "file": "packages/benchmarks/frameworks/lattice-keyed/index.html",
-          "hash": "3598634573961007188"
-        },
-        {
-          "file": "packages/benchmarks/frameworks/lattice-keyed/package.json",
-          "hash": "1476718811882334445",
-          "deps": [
-            "npm:@rollup/plugin-node-resolve",
-            "npm:@rollup/plugin-terser",
-            "npm:@rollup/plugin-typescript",
-            "npm:rollup@4.28.1",
-            "npm:tslib",
-            "npm:typescript",
-            "@lattice/signals",
-            "@lattice/view",
-            "@lattice/lattice"
-          ]
-        },
-        {
-          "file": "packages/benchmarks/frameworks/lattice-keyed/rollup.config.js",
-          "hash": "3339626722358080902"
-        },
-        {
-          "file": "packages/benchmarks/frameworks/lattice-keyed/src/main.ts",
-          "hash": "9062617503522015924"
-        }
-      ],
-      "@lattice/signals": [
-        {
-          "file": "packages/signals/README.md",
-          "hash": "11497785640053432767"
-        },
-        {
-          "file": "packages/signals/package.json",
-          "hash": "18245541885323191252",
-          "deps": [
-            "npm:alien-signals@2.0.5",
-            "npm:esbuild@0.25.8",
-            "npm:rimraf@6.0.1",
-            "npm:tdd-guard-vitest",
-            "npm:terser",
-            "npm:typescript",
-            "npm:vite",
-            "npm:vite-plugin-dts",
-            "npm:vitest",
-            "@lattice/lattice"
-          ]
-        },
-        {
-          "file": "packages/signals/src/batch.test.ts",
-          "hash": "13293136637956396160"
-        },
-        {
-          "file": "packages/signals/src/batch.ts",
-          "hash": "7855638056726166035"
-        },
-        {
-          "file": "packages/signals/src/computed.test.ts",
-          "hash": "9698963466180131841"
-        },
-        {
-          "file": "packages/signals/src/computed.ts",
-          "hash": "12598608783985613337"
-        },
-        {
-          "file": "packages/signals/src/constants.ts",
-          "hash": "15154588333349254343"
-        },
-        {
-          "file": "packages/signals/src/devtools/batch.ts",
-          "hash": "4042799844474626826"
-        },
-        {
-          "file": "packages/signals/src/devtools/computed.ts",
-          "hash": "9181671726444000376"
-        },
-        {
-          "file": "packages/signals/src/devtools/effect.ts",
-          "hash": "17271041035272772504"
-        },
-        {
-          "file": "packages/signals/src/devtools/signal.ts",
-          "hash": "9130540438085009273"
-        },
-        {
-          "file": "packages/signals/src/devtools/subscribe.ts",
-          "hash": "5977108231360468317"
-        },
-        {
-          "file": "packages/signals/src/effect.test.ts",
-          "hash": "8602932194855826126"
-        },
-        {
-          "file": "packages/signals/src/effect.ts",
-          "hash": "9653489675618564017"
-        },
-        {
-          "file": "packages/signals/src/helpers/graph-edges.test.ts",
-          "hash": "6838763233328470834"
-        },
-        {
-          "file": "packages/signals/src/helpers/graph-edges.ts",
-          "hash": "7151008862138119075"
-        },
-        {
-          "file": "packages/signals/src/helpers/graph-traversal.test.ts",
-          "hash": "8935845109951302897"
-        },
-        {
-          "file": "packages/signals/src/helpers/graph-traversal.ts",
-          "hash": "14886299155409978847"
-        },
-        {
-          "file": "packages/signals/src/helpers/index.ts",
-          "hash": "13442740351239469635"
-        },
-        {
-          "file": "packages/signals/src/helpers/pull-propagator.test.ts",
-          "hash": "4404448989842872397"
-        },
-        {
-          "file": "packages/signals/src/helpers/pull-propagator.ts",
-          "hash": "11315455074604253250"
-        },
-        {
-          "file": "packages/signals/src/helpers/scheduler.test.ts",
-          "hash": "3429094748886672344"
-        },
-        {
-          "file": "packages/signals/src/helpers/scheduler.ts",
-          "hash": "14811913123054882841"
-        },
-        {
-          "file": "packages/signals/src/multiple-effects.test.ts",
-          "hash": "12513846774302046182"
-        },
-        {
-          "file": "packages/signals/src/presets/core.ts",
-          "hash": "8288664663849695919"
-        },
-        {
-          "file": "packages/signals/src/signal.test.ts",
-          "hash": "13124777647142036327"
-        },
-        {
-          "file": "packages/signals/src/signal.ts",
-          "hash": "9413775801932458474"
-        },
-        {
-          "file": "packages/signals/src/subscribe.test.ts",
-          "hash": "3060012248292161425"
-        },
-        {
-          "file": "packages/signals/src/subscribe.ts",
-          "hash": "16356565202456002736"
-        },
-        {
-          "file": "packages/signals/src/test-setup.ts",
-          "hash": "16135030168500407001"
-        },
-        {
-          "file": "packages/signals/src/tests/topology-diamonds.test.ts",
-          "hash": "5434120624413193475"
-        },
-        {
-          "file": "packages/signals/src/tests/topology-dynamic.test.ts",
-          "hash": "3257052377902747869"
-        },
-        {
-          "file": "packages/signals/src/tests/topology-effects.test.ts",
-          "hash": "13819524365531766400"
-        },
-        {
-          "file": "packages/signals/src/tests/topology-optimization.test.ts",
-          "hash": "16028372972143091021"
-        },
-        {
-          "file": "packages/signals/src/tests/topology-propagation.test.ts",
-          "hash": "9639039328254985516"
-        },
-        {
-          "file": "packages/signals/src/tests/topology-subscriptions.test.ts",
-          "hash": "15634027706610615217"
-        },
-        {
-          "file": "packages/signals/src/tests/untrack.test.ts",
-          "hash": "8610774768045446094"
-        },
-        {
-          "file": "packages/signals/src/types.ts",
-          "hash": "4296014678344163267"
-        },
-        {
-          "file": "packages/signals/src/untrack.ts",
-          "hash": "7640208141746498774"
-        },
-        {
-          "file": "packages/signals/src/util/env.ts",
-          "hash": "8274176241029677817"
-        },
-        {
-          "file": "packages/signals/tsconfig.json",
-          "hash": "3442895130324803122"
-        },
-        {
-          "file": "packages/signals/vite.config.ts",
-          "hash": "12272399706440125815"
-        },
-        {
-          "file": "packages/signals/vitest.config.ts",
-          "hash": "10264544837864269838"
-        }
-      ],
-      "@lattice/example-react": [
-        {
-          "file": "packages/examples/react/README.md",
-          "hash": "530371652436255634"
-        },
-        {
-          "file": "packages/examples/react/index.html",
-          "hash": "1252367102016738327"
-        },
-        {
-          "file": "packages/examples/react/package.json",
-          "hash": "7196261593059802579",
-          "deps": [
-            "npm:@vitejs/plugin-react@4.6.0",
-            "npm:@types/react@18.3.22",
-            "npm:@types/react-dom@18.3.7",
-            "npm:vite@6.3.5",
-            "npm:typescript",
-            "@lattice/lattice",
-            "@lattice/signals",
-            "@lattice/react",
-            "npm:react@18.3.1",
-            "npm:react-dom@18.3.1"
-          ]
-        },
-        {
-          "file": "packages/examples/react/src/components/useAppState.ts",
-          "hash": "10085960956568047604"
-        },
-        {
-          "file": "packages/examples/react/src/components/useCounter.ts",
-          "hash": "1244367043113775336"
-        },
-        {
-          "file": "packages/examples/react/src/components/useFilter.ts",
-          "hash": "2731393073278138187"
-        },
-        {
-          "file": "packages/examples/react/src/components/useModal.ts",
-          "hash": "2281660559894671670"
-        },
-        {
-          "file": "packages/examples/react/src/components/useTodoList.ts",
-          "hash": "1460588478622443714"
-        },
-        {
-          "file": "packages/examples/react/src/design-system/Modal.tsx",
-          "hash": "8004522684814012897"
-        },
-        {
-          "file": "packages/examples/react/src/main.tsx",
-          "hash": "16279803632446919251"
-        },
-        {
-          "file": "packages/examples/react/src/service.ts",
-          "hash": "6285264892911383189"
-        },
-        {
-          "file": "packages/examples/react/tsconfig.json",
-          "hash": "12553914286957833056"
-        },
-        {
-          "file": "packages/examples/react/vite.config.ts",
-          "hash": "11332553690105299903"
-        }
-      ],
-      "@lattice/view": [
-        {
-          "file": "packages/view/README.md",
-          "hash": "11339314627469235350"
-        },
-        {
-          "file": "packages/view/package.json",
-          "hash": "12131341409705918885",
-          "deps": [
-            "@lattice/signals",
-            "npm:@types/node@22.15.3",
-            "npm:esbuild@0.25.8",
-            "npm:happy-dom@15.11.7",
-            "npm:rimraf@6.0.1",
-            "npm:terser",
-            "npm:typescript",
-            "npm:vite",
-            "npm:vite-plugin-dts",
-            "npm:vitest",
-            "@lattice/lattice"
-          ]
-        },
-        {
-          "file": "packages/view/src/adapter.ts",
-          "hash": "15648155369937136120"
-        },
-        {
-          "file": "packages/view/src/adapters/dom.ts",
-          "hash": "6223665934878540049"
-        },
-        {
-          "file": "packages/view/src/adapters/test.test.ts",
-          "hash": "5288762623784429099"
-        },
-        {
-          "file": "packages/view/src/adapters/test.ts",
-          "hash": "4866251485103535706"
-        },
-        {
-          "file": "packages/view/src/component.ts",
-          "hash": "14974875953187675646"
-        },
-        {
-          "file": "packages/view/src/devtools/README.md",
-          "hash": "9910215292316194785"
-        },
-        {
-          "file": "packages/view/src/devtools/el.ts",
-          "hash": "16739494710937642256"
-        },
-        {
-          "file": "packages/view/src/devtools/index.ts",
-          "hash": "7553879850489858685"
-        },
-        {
-          "file": "packages/view/src/devtools/map.ts",
-          "hash": "1802144465771872148"
-        },
-        {
-          "file": "packages/view/src/el-lazy-scope.test.ts",
-          "hash": "2798525607580032320"
-        },
-        {
-          "file": "packages/view/src/el.test.ts",
-          "hash": "250958260850484062"
-        },
-        {
-          "file": "packages/view/src/el.ts",
-          "hash": "17000137105856135100"
-        },
-        {
-          "file": "packages/view/src/findLIS.test.ts",
-          "hash": "15375090199137907441"
-        },
-        {
-          "file": "packages/view/src/helpers/addEventListener.test.ts",
-          "hash": "12700833335285802293"
-        },
-        {
-          "file": "packages/view/src/helpers/addEventListener.ts",
-          "hash": "14937089779330645600"
-        },
-        {
-          "file": "packages/view/src/helpers/fragment-boundaries.test.ts",
-          "hash": "15742115506785633580"
-        },
-        {
-          "file": "packages/view/src/helpers/fragment-boundaries.ts",
-          "hash": "5902674472157437839"
-        },
-        {
-          "file": "packages/view/src/helpers/index.ts",
-          "hash": "6143823144242853650"
-        },
-        {
-          "file": "packages/view/src/helpers/linked-list.test.ts",
-          "hash": "14086685824974164715"
-        },
-        {
-          "file": "packages/view/src/helpers/linked-list.ts",
-          "hash": "3412366314455916566"
-        },
-        {
-          "file": "packages/view/src/helpers/node-helpers.ts",
-          "hash": "3834260664453320735"
-        },
-        {
-          "file": "packages/view/src/helpers/processChildren.ts",
-          "hash": "11438496829608228880"
-        },
-        {
-          "file": "packages/view/src/helpers/reconcile-integration.test.ts",
-          "hash": "9899323606430664081"
-        },
-        {
-          "file": "packages/view/src/helpers/reconcile.test.ts",
-          "hash": "14276105716165952628"
-        },
-        {
-          "file": "packages/view/src/helpers/reconcile.ts",
-          "hash": "12878862119574011702"
-        },
-        {
-          "file": "packages/view/src/helpers/scope.test.ts",
-          "hash": "7436033494183952186"
-        },
-        {
-          "file": "packages/view/src/helpers/scope.ts",
-          "hash": "17536165447500599118"
-        },
-        {
-          "file": "packages/view/src/helpers/scoped-effect.test.ts",
-          "hash": "8933970221920428579"
-        },
-        {
-          "file": "packages/view/src/helpers/text.test.ts",
-          "hash": "12975111410776924033"
-        },
-        {
-          "file": "packages/view/src/helpers/text.ts",
-          "hash": "14738842489917770295"
-        },
-        {
-          "file": "packages/view/src/helpers/with-scope.test.ts",
-          "hash": "1778538053406855702"
-        },
-        {
-          "file": "packages/view/src/map.test.ts",
-          "hash": "16917296198187675625"
-        },
-        {
-          "file": "packages/view/src/map.ts",
-          "hash": "3506917874520985793"
-        },
-        {
-          "file": "packages/view/src/match.test.ts",
-          "hash": "15971780681296972640"
-        },
-        {
-          "file": "packages/view/src/match.ts",
-          "hash": "3557890133087493442"
-        },
-        {
-          "file": "packages/view/src/presets/core.ts",
-          "hash": "16051583818127082342"
-        },
-        {
-          "file": "packages/view/src/reactive-adapter.ts",
-          "hash": "14486698869029119278"
-        },
-        {
-          "file": "packages/view/src/test-helpers.ts",
-          "hash": "5571525883810507542"
-        },
-        {
-          "file": "packages/view/src/test-utils.ts",
-          "hash": "16829534476552785346"
-        },
-        {
-          "file": "packages/view/src/types.ts",
-          "hash": "8747841356841326639"
-        },
-        {
-          "file": "packages/view/src/when.test.ts",
-          "hash": "17150342048249022920"
-        },
-        {
-          "file": "packages/view/src/when.ts",
-          "hash": "18323564173834074625"
-        },
-        {
-          "file": "packages/view/tsconfig.json",
-          "hash": "17913389414862367194"
-        },
-        {
-          "file": "packages/view/vite.config.ts",
-          "hash": "16921520986522167654"
-        },
-        {
-          "file": "packages/view/vitest.config.ts",
-          "hash": "11052509985156853815"
-        }
-      ],
-      "@lattice/example-view": [
-        {
-          "file": "packages/examples/view/README.md",
-          "hash": "10084862924485293058"
-        },
-        {
-          "file": "packages/examples/view/index.html",
-          "hash": "11089517500316129355"
-        },
-        {
-          "file": "packages/examples/view/package.json",
-          "hash": "11999756615684493432",
-          "deps": [
-            "npm:rollup-plugin-visualizer",
-            "npm:typescript",
-            "npm:vite@6.3.5",
-            "@lattice/lattice",
-            "@lattice/signals",
-            "@lattice/view"
-          ]
-        },
-        {
-          "file": "packages/examples/view/src/behaviors/useCounter.ts",
-          "hash": "5533689841049881268"
-        },
-        {
-          "file": "packages/examples/view/src/behaviors/useTodoList.ts",
-          "hash": "12847955966768477239"
-        },
-        {
-          "file": "packages/examples/view/src/components/ConditionalExample.ts",
-          "hash": "4556718643195708887"
-        },
-        {
-          "file": "packages/examples/view/src/components/Counter.ts",
-          "hash": "13708017343439305774"
-        },
-        {
-          "file": "packages/examples/view/src/components/TagList.ts",
-          "hash": "11193691590574026129"
-        },
-        {
-          "file": "packages/examples/view/src/components/TodoItem.ts",
-          "hash": "3109104058750297772"
-        },
-        {
-          "file": "packages/examples/view/src/components/TodoList.ts",
-          "hash": "3707512253717371856"
-        },
-        {
-          "file": "packages/examples/view/src/main.ts",
-          "hash": "16382716602486540307"
-        },
-        {
-          "file": "packages/examples/view/src/service.ts",
-          "hash": "7395929429036817044"
-        },
-        {
-          "file": "packages/examples/view/src/types.ts",
-          "hash": "4627747634777253817"
-        },
-        {
-          "file": "packages/examples/view/tsconfig.json",
-          "hash": "992548745302118915"
-        },
-        {
-          "file": "packages/examples/view/vite.config.ts",
-          "hash": "6308557964321200696"
         }
       ]
     }

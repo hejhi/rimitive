@@ -4,56 +4,9 @@
  * All components in this app use this shared API.
  * This ensures consistent renderer configuration across the entire app.
  */
-import { composeFrom } from '@lattice/lattice';
-import {
-  defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createDOMAdapter, DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { RefSpec } from '@lattice/view/types';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { createText } from '@lattice/view/helpers/text';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 
-const createViewApi = () => {
-  const signalsSvc = createSignalsApi();
-  const viewHelpers = defaultViewHelpers(createDOMAdapter(), signalsSvc);
-  const viewSvc = composeFrom(
-    defaultViewExtensions<DOMAdapterConfig>(),
-    viewHelpers
-  );
-  const svc = {
-    ...signalsSvc,
-    ...viewSvc,
-    on: createAddEventListener(viewHelpers.batch),
-    t: createText(signalsSvc.computed),
-  };
+export const { signal, computed, on, match, el, t, map, mount } =
+  createDOMSvc();
 
-  return {
-    service: {
-      signals: signalsSvc,
-      view: viewSvc,
-    },
-    svc,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
-  };
-};
-
-export const { service, mount, svc } = createViewApi();
-
-export const {
-  on,
-  batch,
-  computed,
-  effect,
-  el,
-  map,
-  match,
-  signal,
-  subscribe,
-  t,
-} = svc;
-
-export type Service = typeof service;
-export type Signals = Service['signals'];
-export type DOMViews = Service['view'];
+export type { DOMSvc, DOMSignals, DOMView } from '@lattice/view/presets/dom';

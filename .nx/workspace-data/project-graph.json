@@ -2214,6 +2214,10 @@
                 "import": "./dist/presets/core.js",
                 "types": "./dist/presets/core.d.ts"
               },
+              "./presets/dom": {
+                "import": "./dist/presets/dom.js",
+                "types": "./dist/presets/dom.d.ts"
+              },
               "./devtools": {
                 "import": "./dist/devtools/index.js",
                 "types": "./dist/devtools/index.d.ts"
@@ -42088,5 +42092,5 @@
   },
   "version": "6.0",
   "errors": [],
-  "computedAt": 1764713899108
+  "computedAt": 1764720214423
 }
