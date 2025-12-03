@@ -6,13 +6,20 @@
  *
  * Usage:
  * ```typescript
- * // With custom container (appended to document.body)
- * portal(el('div').props({ className: 'modal-backdrop' }))(
- *   el('div').props({ className: 'modal-dialog' })('Content')
+ * // Portal to document.body (default)
+ * portal()(
+ *   el('div').props({ className: 'modal-backdrop' })(
+ *     el('div').props({ className: 'modal' })('Content')
+ *   )
  * )
  *
- * // No container - child appended directly to body
- * portal()(tooltipElement)
+ * // Portal to a specific element via signal ref
+ * const modalRoot = signal<HTMLElement | null>(null);
+ * el('div').ref((el) => { modalRoot(el); return () => modalRoot(null); })
+ * portal(modalRoot)(tooltipContent)
+ *
+ * // Portal to element via getter
+ * portal(() => document.getElementById('modal-root'))(content)
  * ```
  *
  * The portal's lifecycle is tied to its logical parent - when the parent
@@ -25,11 +32,22 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type { RefSpec, FragmentRef, ElementRef } from './types';
-import { STATUS_REF_SPEC, STATUS_FRAGMENT, STATUS_ELEMENT } from './types';
+import type { RefSpec, FragmentRef } from './types';
+import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createNodeHelpers } from './helpers/node-helpers';
+
+/**
+ * Portal target - where content should be rendered
+ * - undefined: use default (document.body)
+ * - Element: use directly
+ * - () => Element | null: getter/signal (called to resolve target)
+ */
+export type PortalTarget<TElement> =
+  | TElement
+  | (() => TElement | null)
+  | undefined;
 
 /**
  * Options passed to Portal factory
@@ -42,11 +60,12 @@ export type PortalOpts<TConfig extends AdapterConfig> = {
 
 export type PortalProps<TBaseElement> = {
   /**
-   * SSR-safe function to get the portal root element.
+   * SSR-safe function to get the default portal target.
+   * Used when no target is provided to portal().
    * Defaults to document.body in browser environments.
    * Return null to skip portal rendering (e.g., during SSR).
    */
-  getPortalRoot?: () => TBaseElement | null;
+  getDefaultTarget?: () => TBaseElement | null;
   instrument?: (
     impl: PortalFactory<TBaseElement>['impl'],
     instrumentation: InstrumentationContext,
@@ -55,10 +74,10 @@ export type PortalProps<TBaseElement> = {
 };
 
 /**
- * Portal factory type - renders children into a portal root (default: document.body)
+ * Portal factory type - renders children into a target element
  *
- * Takes an optional container RefSpec (or null for no container) and a child RefSpec.
- * The container is appended to the portal root, and the child is rendered inside it.
+ * Takes an optional target (element, getter, or signal) and a child RefSpec.
+ * The child is rendered into the target element.
  *
  * Generic over:
  * - TBaseElement: The base element type from renderer config
@@ -67,7 +86,7 @@ export type PortalFactory<TBaseElement> = ServiceDefinition<
   'portal',
   {
     <TElement extends TBaseElement>(
-      container?: RefSpec<TElement> | null
+      target?: PortalTarget<TElement>
     ): (child: RefSpec<TElement>) => RefSpec<TElement>;
   }
 >;
@@ -76,7 +95,7 @@ export type PortalFactory<TBaseElement> = ServiceDefinition<
  * Portal primitive - renders content into a different DOM location
  *
  * Creates a fragment in the logical tree that attaches its children
- * to a different DOM location (portal root). This enables modals,
+ * to a different DOM location (target element). This enables modals,
  * tooltips, and other overlay patterns while preserving:
  * - Reactive scope inheritance
  * - Automatic cleanup when logical parent disposes
@@ -91,21 +110,39 @@ export const Portal = defineService(
       type TBaseElement = TConfig['baseElement'];
       type TFragRef = FragmentRef<TBaseElement>;
 
-      const { instrument, getPortalRoot: customGetPortalRoot } = props ?? {};
+      const { instrument, getDefaultTarget: customGetDefaultTarget } =
+        props ?? {};
 
-      // Default portal root getter - SSR-safe
-      const getPortalRoot = customGetPortalRoot ?? (() => {
-        if (typeof document !== 'undefined') {
-          return document.body as TBaseElement;
-        }
-        return null;
-      });
+      // Default target getter - SSR-safe
+      const getDefaultTarget =
+        customGetDefaultTarget ??
+        (() => {
+          if (typeof document !== 'undefined') {
+            return document.body as TBaseElement;
+          }
+          return null;
+        });
 
       const { insertNodeBefore, removeNode } = createNodeHelpers({
         adapter,
         disposeScope,
         getElementScope,
       });
+
+      /**
+       * Resolve target to an element
+       */
+      const resolveTarget = <TElement extends TBaseElement>(
+        target: PortalTarget<TElement>
+      ): TElement | null => {
+        if (target === undefined) {
+          return getDefaultTarget() as TElement | null;
+        }
+        if (typeof target === 'function') {
+          return (target as () => TElement | null)();
+        }
+        return target;
+      };
 
       /**
        * Helper to create a RefSpec for portal fragments
@@ -131,7 +168,7 @@ export const Portal = defineService(
       };
 
       function portal<TElement extends TBaseElement>(
-        container?: RefSpec<TElement> | null
+        target?: PortalTarget<TElement>
       ): (child: RefSpec<TElement>) => RefSpec<TElement> {
         return (child: RefSpec<TElement>) => {
           return createPortalSpec<TElement>((api) => {
@@ -143,58 +180,19 @@ export const Portal = defineService(
               next: null,
               firstChild: null,
               lastChild: null,
-              attach(logicalParent, nextSibling) {
-                // Portal ignores logical parent and sibling - it attaches to portal root instead
-                void logicalParent;
-                void nextSibling;
+              attach() {
+                const targetElement = resolveTarget(target);
 
-                const portalRoot = getPortalRoot();
+                // SSR or no target - skip rendering
+                if (!targetElement) return;
 
-                // SSR or no root - skip rendering
-                if (!portalRoot) return;
-
-                if (!container) {
-                  // No container (null or undefined) - child goes directly into portal root
-                  const childRef = child.create(api);
-                  insertNodeBefore(api, portalRoot, childRef, undefined, null);
-
-                  return () => {
-                    removeNode(portalRoot, childRef);
-                  };
-                }
-
-                // Container RefSpec provided
-                const containerRef = container.create(api) as ElementRef<TElement>;
-
-                if (containerRef.status !== STATUS_ELEMENT) {
-                  throw new Error(
-                    'Portal container must be an element RefSpec, not a fragment'
-                  );
-                }
-
-                const containerElement = containerRef.element;
-
-                // Append container to portal root
-                adapter.appendChild(portalRoot, containerElement);
-
-                // Create and insert child into container
+                // Create and insert child into target
                 const childRef = child.create(api);
-                insertNodeBefore(
-                  api,
-                  containerElement,
-                  childRef,
-                  undefined,
-                  null
-                );
+                insertNodeBefore(api, targetElement, childRef, undefined, null);
 
                 // Return cleanup function
                 return () => {
-                  // Remove child from container first (handles child scope disposal)
-                  removeNode(containerElement, childRef);
-                  // Then dispose container scope and remove from portal root
-                  const scope = getElementScope(containerElement);
-                  if (scope) disposeScope(scope);
-                  adapter.removeChild(portalRoot, containerElement);
+                  removeNode(targetElement, childRef);
                 };
               },
             };

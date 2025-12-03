@@ -17,54 +17,35 @@ describe('portal', () => {
     // Clean up test container and any portaled elements
     testContainer.remove();
     // Remove any leftover portaled elements from body
-    document.body.querySelectorAll('.modal-backdrop, .modal-content, .portal-container, .direct-child, .direct-portal, .outer, .inner, .counter-portal, .list-portal, .clickable-portal, .ref-portal, .cleanup-portal, .inactive, .active').forEach(el => el.remove());
+    document.body
+      .querySelectorAll(
+        '.modal-backdrop, .modal-content, .portal-content, .direct-child, ' +
+          '.outer, .inner, .counter-portal, .list-item, .clickable-portal, ' +
+          '.ref-portal, .cleanup-portal, .target-content, .fragment-item'
+      )
+      .forEach((el) => el.remove());
   });
 
-  describe('with container RefSpec', () => {
-    it('should render container and child into document.body', () => {
+  describe('with default target (document.body)', () => {
+    it('should render child into document.body when no target specified', () => {
       const { el, portal, mount } = svc;
 
-      // Note: el('div').props({...})() - call with empty children to get RefSpec
-      const spec = portal(
-        el('div').props({ className: 'modal-backdrop' })()
-      )(
-        el('div').props({ className: 'modal-content' })('Hello')
+      const spec = portal()(
+        el('div').props({ className: 'modal-backdrop' })(
+          el('div').props({ className: 'modal-content' })('Hello')
+        )
       );
 
       mount(el('div')(spec));
 
-      // Container should be in body
+      // Content should be in body
       const backdrop = document.body.querySelector('.modal-backdrop');
       expect(backdrop).toBeTruthy();
       expect(backdrop?.parentElement).toBe(document.body);
 
-      // Child should be inside container
       const content = backdrop?.querySelector('.modal-content');
       expect(content).toBeTruthy();
       expect(content?.textContent).toBe('Hello');
-    });
-
-    it('should support reactive props on container', () => {
-      const { el, portal, mount, signal, computed } = svc;
-      const isActive = signal(false);
-
-      const spec = portal(
-        el('div').props({
-          className: computed(() => isActive() ? 'active' : 'inactive')
-        })()
-      )(
-        el('span')('Content')
-      );
-
-      mount(el('div')(spec));
-
-      const container = document.body.querySelector('.inactive');
-      expect(container).toBeTruthy();
-
-      isActive(true);
-
-      expect(document.body.querySelector('.active')).toBeTruthy();
-      expect(document.body.querySelector('.inactive')).toBeFalsy();
     });
 
     it('should cleanup when parent is removed', () => {
@@ -73,82 +54,154 @@ describe('portal', () => {
 
       const spec = match(show)((s) =>
         s
-          ? portal(el('div').props({ className: 'portal-container' })())(
-              el('span')('Portaled')
+          ? portal()(el('div').props({ className: 'portal-content' })('Portaled'))
+          : null
+      );
+
+      mount(el('div')(spec));
+
+      expect(document.body.querySelector('.portal-content')).toBeTruthy();
+
+      show(false);
+
+      expect(document.body.querySelector('.portal-content')).toBeFalsy();
+    });
+  });
+
+  describe('with element target', () => {
+    it('should render into target element directly', () => {
+      const { el, portal, mount } = svc;
+
+      const targetEl = document.createElement('div');
+      targetEl.id = 'portal-target';
+      document.body.appendChild(targetEl);
+
+      const spec = portal(targetEl)(
+        el('div').props({ className: 'target-content' })('In target')
+      );
+
+      mount(el('div')(spec));
+
+      const content = targetEl.querySelector('.target-content');
+      expect(content).toBeTruthy();
+      expect(content?.parentElement).toBe(targetEl);
+
+      targetEl.remove();
+    });
+  });
+
+  describe('with getter target', () => {
+    it('should render into element returned by getter', () => {
+      const { el, portal, mount } = svc;
+
+      const targetEl = document.createElement('div');
+      targetEl.id = 'getter-target';
+      document.body.appendChild(targetEl);
+
+      const spec = portal(() => document.getElementById('getter-target'))(
+        el('div').props({ className: 'target-content' })('Via getter')
+      );
+
+      mount(el('div')(spec));
+
+      const content = targetEl.querySelector('.target-content');
+      expect(content).toBeTruthy();
+      expect(content?.parentElement).toBe(targetEl);
+
+      targetEl.remove();
+    });
+
+    it('should skip rendering when getter returns null', () => {
+      const { el, portal, mount } = svc;
+
+      const spec = portal(() => null)(
+        el('div').props({ className: 'target-content' })('Should not render')
+      );
+
+      mount(el('div')(spec));
+
+      expect(document.body.querySelector('.target-content')).toBeFalsy();
+    });
+  });
+
+  describe('with signal target', () => {
+    it('should render into element from signal', () => {
+      const { el, portal, mount, signal } = svc;
+
+      const targetEl = document.createElement('div');
+      targetEl.id = 'signal-target';
+      document.body.appendChild(targetEl);
+
+      const targetSignal = signal<HTMLElement | null>(targetEl);
+
+      const spec = portal(targetSignal)(
+        el('div').props({ className: 'target-content' })('Via signal')
+      );
+
+      mount(el('div')(spec));
+
+      const content = targetEl.querySelector('.target-content');
+      expect(content).toBeTruthy();
+      expect(content?.parentElement).toBe(targetEl);
+
+      targetEl.remove();
+    });
+
+    it('should support ref pattern for capturing element', () => {
+      const { el, portal, mount, signal, match } = svc;
+      const show = signal(false);
+
+      // Create target element outside the tree first
+      const targetEl = document.createElement('div');
+      targetEl.className = 'modal-root';
+      document.body.appendChild(targetEl);
+
+      // Signal holds the target
+      const modalRoot = signal<HTMLElement | null>(targetEl);
+
+      // Portal content that targets the ref
+      const portalSpec = match(show)((s) =>
+        s
+          ? portal(modalRoot)(
+              el('div').props({ className: 'modal-content' })('Modal!')
             )
           : null
       );
 
-      mount(el('div')(spec));
+      mount(el('div')(portalSpec));
 
-      expect(document.body.querySelector('.portal-container')).toBeTruthy();
+      // Initially hidden
+      expect(document.querySelector('.modal-content')).toBeFalsy();
 
-      show(false);
+      // Show modal
+      show(true);
 
-      expect(document.body.querySelector('.portal-container')).toBeFalsy();
-    });
-  });
-
-  describe('with no container (undefined)', () => {
-    it('should append child directly to portal root when no container specified', () => {
-      const { el, portal, mount } = svc;
-
-      const spec = portal()(
-        el('span').props({ className: 'content' })('Hello')
-      );
-
-      mount(el('div')(spec));
-
-      // Child should be directly in body (no wrapper)
-      const content = document.body.querySelector('.content');
+      const content = document.querySelector('.modal-content');
       expect(content).toBeTruthy();
-      expect(content?.parentElement).toBe(document.body);
+      expect(content?.parentElement?.classList.contains('modal-root')).toBe(
+        true
+      );
+
+      // Hide modal
+      show(false);
+      expect(document.querySelector('.modal-content')).toBeFalsy();
+
+      targetEl.remove();
     });
   });
 
-  describe('with null container', () => {
-    it('should append child directly to portal root', () => {
-      const { el, portal, mount } = svc;
-
-      const spec = portal(null)(
-        el('div').props({ className: 'direct-child' })('Direct')
-      );
-
-      mount(el('div')(spec));
-
-      const child = document.body.querySelector('.direct-child');
-      expect(child).toBeTruthy();
-      expect(child?.parentElement).toBe(document.body);
-    });
-
-    it('should cleanup direct child when parent disposes', () => {
-      const { el, portal, mount, match, signal } = svc;
-      const show = signal(true);
-
-      const spec = match(show)((s) =>
-        s
-          ? portal(null)(el('div').props({ className: 'direct-portal' })('Content'))
-          : null
-      );
-
-      mount(el('div')(spec));
-
-      expect(document.body.querySelector('.direct-portal')).toBeTruthy();
-
-      show(false);
-
-      expect(document.body.querySelector('.direct-portal')).toBeFalsy();
-    });
-
-    it('should handle fragment child (map) with null container', () => {
+  describe('with fragment child', () => {
+    it('should handle map() as child', () => {
       const { el, portal, mount, map, match, signal } = svc;
       const show = signal(true);
       const items = signal(['a', 'b', 'c']);
 
       const spec = match(show)((s) =>
         s
-          ? portal(null)(
-              map(items)((item) => el('span').props({ className: 'fragment-item' })(item))
+          ? portal()(
+              map(items)((item) =>
+                el('span').props({ className: 'fragment-item' })(item)
+              )
             )
           : null
       );
@@ -171,15 +224,15 @@ describe('portal', () => {
     it('should support portals inside portals', () => {
       const { el, portal, mount } = svc;
 
-      const spec = portal(el('div').props({ className: 'outer' })())(
-        portal(el('div').props({ className: 'inner' })())(
-          el('span')('Nested')
+      const spec = portal()(
+        el('div').props({ className: 'outer' })(
+          portal()(el('div').props({ className: 'inner' })('Nested'))
         )
       );
 
       mount(el('div')(spec));
 
-      // Both portals should be in body (not nested in DOM)
+      // Both should be in body (inner is also portaled to body)
       const outer = document.body.querySelector('.outer');
       const inner = document.body.querySelector('.inner');
 
@@ -190,13 +243,15 @@ describe('portal', () => {
     });
   });
 
-  describe('with reactive content', () => {
+  describe('reactive content', () => {
     it('should update portaled content reactively', () => {
       const { el, portal, mount, signal, computed } = svc;
       const count = signal(0);
 
-      const spec = portal(el('div').props({ className: 'counter-portal' })())(
-        el('span')(computed(() => `Count: ${count()}`))
+      const spec = portal()(
+        el('div').props({ className: 'counter-portal' })(
+          el('span')(computed(() => `Count: ${count()}`))
+        )
       );
 
       mount(el('div')(spec));
@@ -213,19 +268,21 @@ describe('portal', () => {
       const { el, portal, mount, map, signal } = svc;
       const items = signal(['a', 'b', 'c']);
 
-      const spec = portal(el('ul').props({ className: 'list-portal' })())(
-        map(items)((item) => el('li')(item))
+      const spec = portal()(
+        el('ul').props({ className: 'counter-portal' })(
+          map(items)((item) => el('li').props({ className: 'list-item' })(item))
+        )
       );
 
       mount(el('div')(spec));
 
-      const listItems = document.body.querySelectorAll('.list-portal li');
+      const listItems = document.body.querySelectorAll('.list-item');
       expect(listItems.length).toBe(3);
       expect(listItems[0]?.textContent).toBe('a');
 
       items(['x', 'y']);
 
-      const updatedItems = document.body.querySelectorAll('.list-portal li');
+      const updatedItems = document.body.querySelectorAll('.list-item');
       expect(updatedItems.length).toBe(2);
       expect(updatedItems[0]?.textContent).toBe('x');
     });
@@ -236,13 +293,21 @@ describe('portal', () => {
       const { el, portal, mount, on } = svc;
       let clicked = false;
 
-      const spec = portal(el('div').props({ className: 'clickable-portal' })())(
-        el('button').ref(on('click', () => { clicked = true; }))('Click me')
+      const spec = portal()(
+        el('div').props({ className: 'clickable-portal' })(
+          el('button').ref(
+            on('click', () => {
+              clicked = true;
+            })
+          )('Click me')
+        )
       );
 
       mount(el('div')(spec));
 
-      const button = document.body.querySelector('.clickable-portal button') as HTMLButtonElement;
+      const button = document.body.querySelector(
+        '.clickable-portal button'
+      ) as HTMLButtonElement;
       button.click();
 
       expect(clicked).toBe(true);
@@ -254,8 +319,12 @@ describe('portal', () => {
       const { el, portal, mount } = svc;
       let refElement: HTMLElement | null = null;
 
-      const spec = portal(el('div').props({ className: 'ref-portal' })())(
-        el('span').ref((el) => { refElement = el; })('With ref')
+      const spec = portal()(
+        el('div').props({ className: 'ref-portal' })(
+          el('span').ref((el) => {
+            refElement = el;
+          })('With ref')
+        )
       );
 
       mount(el('div')(spec));
@@ -271,8 +340,12 @@ describe('portal', () => {
 
       const spec = match(show)((s) =>
         s
-          ? portal(el('div').props({ className: 'cleanup-portal' })())(
-              el('span').ref(() => () => { cleanedUp = true; })('Cleanup test')
+          ? portal()(
+              el('span')
+                .props({ className: 'cleanup-portal' })
+                .ref(() => () => {
+                  cleanedUp = true;
+                })('Cleanup test')
             )
           : null
       );
@@ -286,33 +359,37 @@ describe('portal', () => {
       expect(cleanedUp).toBe(true);
     });
 
-    it('should cleanup container ref callbacks when portal is removed', () => {
+    it('should cleanup nested ref callbacks when portal is removed', () => {
       const { el, portal, mount, match, signal } = svc;
       const show = signal(true);
-      let containerCleanedUp = false;
-      let childCleanedUp = false;
+      let outerCleanedUp = false;
+      let innerCleanedUp = false;
 
       const spec = match(show)((s) =>
         s
-          ? portal(
+          ? portal()(
               el('div')
-                .props({ className: 'container-cleanup' })
-                .ref(() => () => { containerCleanedUp = true; })()
-            )(
-              el('span').ref(() => () => { childCleanedUp = true; })('Child')
+                .props({ className: 'cleanup-outer' })
+                .ref(() => () => {
+                  outerCleanedUp = true;
+                })(
+                  el('span').ref(() => () => {
+                    innerCleanedUp = true;
+                  })('Nested cleanup')
+                )
             )
           : null
       );
 
       mount(el('div')(spec));
 
-      expect(containerCleanedUp).toBe(false);
-      expect(childCleanedUp).toBe(false);
+      expect(outerCleanedUp).toBe(false);
+      expect(innerCleanedUp).toBe(false);
 
       show(false);
 
-      expect(containerCleanedUp).toBe(true);
-      expect(childCleanedUp).toBe(true);
+      expect(outerCleanedUp).toBe(true);
+      expect(innerCleanedUp).toBe(true);
     });
   });
 });
