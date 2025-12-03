@@ -1,26 +1,16 @@
 /**
  * SSR Server with Router Support
  *
- * Demonstrates composable islands architecture on the server:
- * 1. Create the primitives (signals, renderer, view) per request
- * 2. Wire them together with createIslandsApp
- * 3. Add router and render to HTML
+ * Uses the SSR preset for per-request service creation.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import {
-  createIslandsApp,
-  createDOMServerAdapter,
-} from '@lattice/islands/server';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createViewApi } from '@lattice/view/presets/core';
-import { createRouter, type ViewApi } from '@lattice/router';
-import { type DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { appRoutes } from './routes.js';
 import { buildAppContext, setServiceGetter, type Service } from './service.js';
+import { createSSRApp } from './preset.js';
 
 /**
  * AsyncLocalStorage for per-request service injection
@@ -359,37 +349,16 @@ const server = createServer((req, res) => {
     req.url || '/',
     `http://${req.headers.host || 'localhost'}`
   );
-  const path = url.pathname;
 
-  // 1. Create the primitives (fresh per request)
-  const signals = createSignalsApi();
-  const adapter = createDOMServerAdapter();
-  const view = createViewApi<DOMAdapterConfig>(adapter, signals);
-
-  // 2. Wire them for islands
-  const app = createIslandsApp({
-    signals,
-    view,
-    context: () => buildAppContext(url),
+  // Create SSR app with routing (per request)
+  const { service, render } = createSSRApp({
+    url,
+    buildContext: buildAppContext,
+    routes: appRoutes,
   });
 
-  // 3. Add router and render
-  const router = createRouter<DOMAdapterConfig>(
-    app.service as ViewApi<DOMAdapterConfig>,
-    { initialPath: path }
-  );
-
-  // Build full service with router methods
-  const service: Service = {
-    ...app.service,
-    navigate: router.navigate,
-    currentPath: router.currentPath,
-  };
-
-  // Render the route tree to HTML within service context
-  const { html, scripts } = serviceStorage.run(service, () =>
-    app.render(router.mount(appRoutes))
-  );
+  // Render within service context
+  const { html, scripts } = serviceStorage.run(service, render);
 
   // Generate full HTML page
   const fullHtml = template(html, scripts);

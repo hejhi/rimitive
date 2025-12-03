@@ -3,18 +3,11 @@
  *
  * Provides shared exports for both server and client:
  * - island factory for creating typed islands
- * - Service type for API typing
+ * - Service type (derived from preset)
  * - AppContext type for island context
  */
 import { createIsland } from '@lattice/islands/factory';
-import type {
-  SignalFunction,
-  ComputedFunction,
-} from '@lattice/signals/presets/core';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import type { ElFactory } from '@lattice/view/el';
-import type { MapFactory } from '@lattice/view/map';
-import type { MatchFactory } from '@lattice/view/match';
+import type { SSRService } from './preset.js';
 
 /**
  * App context - user-defined context available to islands
@@ -34,7 +27,8 @@ export interface AppContext {
  * Build AppContext from a URL
  */
 export function buildAppContext(url: URL | string): AppContext {
-  const urlObj = typeof url === 'string' ? new URL(url, 'http://localhost') : url;
+  const urlObj =
+    typeof url === 'string' ? new URL(url, 'http://localhost') : url;
   return {
     pathname: urlObj.pathname,
     search: urlObj.search,
@@ -42,45 +36,15 @@ export function buildAppContext(url: URL | string): AppContext {
 }
 
 /**
- * Service type - the API available to components
- *
- * Includes:
- * - Signals: signal, computed, effect, batch
- * - Views: el, map, match
- * - Router: navigate, currentPath (injected by client.ts)
+ * Service type - derived from the SSR preset factory
  */
-export type Service = {
-  // Signals
-  signal: <T>(value: T) => SignalFunction<T>;
-  computed: <T>(fn: () => T) => ComputedFunction<T>;
-  effect: (fn: () => void | (() => void)) => () => void;
-  batch: <T>(fn: () => T) => T;
-
-  // Views
-  el: ElFactory<DOMAdapterConfig>['impl'];
-  map: MapFactory<DOMAdapterConfig['baseElement']>['impl'];
-  match: MatchFactory<DOMAdapterConfig['baseElement']>['impl'];
-
-  // Router (injected by client.ts via createApiWithRouter)
-  navigate: (path: string) => void;
-  currentPath: ComputedFunction<string>;
-};
+export type Service = SSRService;
 
 /**
  * Typed island factory
  *
  * Creates islands with Service and AppContext types baked in.
  * Props are inferred from the factory function - no generics needed!
- *
- * @example
- * ```ts
- * export const Counter = island('counter', ({ el, signal }) =>
- *   (props: { initial: number }) => {
- *     const count = signal(props.initial);
- *     return el('div')(count);
- *   }
- * );
- * ```
  */
 export const island = createIsland<Service, AppContext>();
 
@@ -105,27 +69,8 @@ export function setServiceGetter(getter: () => Service): void {
  *
  * Generic middleware that prepends the current service to any function call.
  * Works with connect(), standalone components, or any other pattern.
- *
- * @example
- * ```ts
- * // With connect (route context)
- * export const AppLayout = connect(api(
- *   (svc, { children }) => () => {
- *     const { el } = svc;
- *     return el('div')(...(children || []));
- *   }
- * ));
- *
- * // Standalone component
- * export const About = api(
- *   (svc) => () => {
- *     const { el } = svc;
- *     return el('div')('About');
- *   }
- * );
- * ```
  */
-export function api<TArgs extends unknown[], TResult>(
+export function withSvc<TArgs extends unknown[], TResult>(
   factory: (svc: Service, ...args: TArgs) => TResult
 ): (...args: TArgs) => TResult {
   return (...args) => factory(getService(), ...args);
