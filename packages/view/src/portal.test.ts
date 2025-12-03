@@ -21,7 +21,8 @@ describe('portal', () => {
       .querySelectorAll(
         '.modal-backdrop, .modal-content, .portal-content, .direct-child, ' +
           '.outer, .inner, .counter-portal, .list-item, .clickable-portal, ' +
-          '.ref-portal, .cleanup-portal, .target-content, .fragment-item'
+          '.ref-portal, .cleanup-portal, .target-content, .fragment-item, ' +
+          '.moving-content'
       )
       .forEach((el) => el.remove());
   });
@@ -187,6 +188,49 @@ describe('portal', () => {
       expect(document.querySelector('.modal-content')).toBeFalsy();
 
       targetEl.remove();
+    });
+
+    it('should move content when signal target changes', () => {
+      const { el, portal, mount, signal } = svc;
+
+      const targetA = document.createElement('div');
+      targetA.id = 'target-a';
+      document.body.appendChild(targetA);
+
+      const targetB = document.createElement('div');
+      targetB.id = 'target-b';
+      document.body.appendChild(targetB);
+
+      const targetSignal = signal<HTMLElement | null>(targetA);
+
+      const spec = portal(targetSignal)(
+        el('div').props({ className: 'moving-content' })('I move!')
+      );
+
+      mount(el('div')(spec));
+
+      // Initially in target A
+      expect(targetA.querySelector('.moving-content')).toBeTruthy();
+      expect(targetB.querySelector('.moving-content')).toBeFalsy();
+
+      // Change to target B
+      targetSignal(targetB);
+
+      // Now in target B
+      expect(targetA.querySelector('.moving-content')).toBeFalsy();
+      expect(targetB.querySelector('.moving-content')).toBeTruthy();
+
+      // Change to null - should be removed
+      targetSignal(null);
+      expect(targetA.querySelector('.moving-content')).toBeFalsy();
+      expect(targetB.querySelector('.moving-content')).toBeFalsy();
+
+      // Change back to A - should reappear
+      targetSignal(targetA);
+      expect(targetA.querySelector('.moving-content')).toBeTruthy();
+
+      targetA.remove();
+      targetB.remove();
     });
   });
 

@@ -55,6 +55,7 @@ export type PortalTarget<TElement> =
 export type PortalOpts<TConfig extends AdapterConfig> = {
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
+  scopedEffect: CreateScopes['scopedEffect'];
   adapter: Adapter<TConfig>;
 };
 
@@ -105,6 +106,7 @@ export const Portal = defineService(
     adapter,
     disposeScope,
     getElementScope,
+    scopedEffect,
   }: PortalOpts<TConfig>) =>
     (props?: PortalProps<TConfig['baseElement']>) => {
       type TBaseElement = TConfig['baseElement'];
@@ -170,6 +172,10 @@ export const Portal = defineService(
       function portal<TElement extends TBaseElement>(
         target?: PortalTarget<TElement>
       ): (child: RefSpec<TElement>) => RefSpec<TElement> {
+        // Static target (element or undefined) - no reactivity needed
+        const isStaticTarget =
+          target === undefined || typeof target !== 'function';
+
         return (child: RefSpec<TElement>) => {
           return createPortalSpec<TElement>((api) => {
             const fragment: FragmentRef<TBaseElement> = {
@@ -181,19 +187,49 @@ export const Portal = defineService(
               firstChild: null,
               lastChild: null,
               attach() {
-                const targetElement = resolveTarget(target);
+                if (isStaticTarget) {
+                  // Static target - simple insert, no effect needed
+                  const targetElement = resolveTarget(target);
+                  if (!targetElement) return;
 
-                // SSR or no target - skip rendering
-                if (!targetElement) return;
+                  const childRef = child.create(api);
+                  insertNodeBefore(
+                    api,
+                    targetElement,
+                    childRef,
+                    undefined,
+                    null
+                  );
 
-                // Create and insert child into target
-                const childRef = child.create(api);
-                insertNodeBefore(api, targetElement, childRef, undefined, null);
+                  return () => {
+                    removeNode(targetElement, childRef);
+                  };
+                }
 
-                // Return cleanup function
-                return () => {
-                  removeNode(targetElement, childRef);
-                };
+                // Reactive target (function/signal) - track changes
+                // Each target change recreates the child (state is lost, but
+                // this matches expected portal behavior when moving containers)
+                return scopedEffect(() => {
+                  const targetElement = resolveTarget(target);
+
+                  // No target - nothing to render
+                  if (!targetElement) return;
+
+                  // Create and insert child
+                  const childRef = child.create(api);
+                  insertNodeBefore(
+                    api,
+                    targetElement,
+                    childRef,
+                    undefined,
+                    null
+                  );
+
+                  // Cleanup when target changes or portal disposes
+                  return () => {
+                    removeNode(targetElement, childRef);
+                  };
+                });
               },
             };
             return fragment;
