@@ -9,4 +9,4 @@ import { createDOMSvc } from '@lattice/view/presets/dom';
 export const { signal, computed, on, match, el, t, map, mount } =
   createDOMSvc();
 
-export type { DOMSvc, DOMSignals, DOMView } from '@lattice/view/presets/dom';
+export type { DOMSvc, DOMSignals } from '@lattice/view/presets/dom';

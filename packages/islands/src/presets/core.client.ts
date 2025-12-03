@@ -85,7 +85,7 @@ export interface ClientOptions<TContext> {
  * Island component type for hydrate()
  * Uses unknown for metadata to allow heterogeneous island collections
  */
-type IslandComponent = { [ISLAND_META]?: unknown };
+export type IslandComponent = { [ISLAND_META]?: unknown };
 
 /**
  * Client app - for hydration and SPA
@@ -229,3 +229,4 @@ export function createIslandsApp<TContext = unknown>(
 // Re-export types for convenience
 export type { DOMAdapterConfig } from '../adapters/dom-hydration';
 export type { GetContext } from '../types';
+export { ISLAND_META } from '../types';
