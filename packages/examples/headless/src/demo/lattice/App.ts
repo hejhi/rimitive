@@ -4,17 +4,7 @@
  * Demonstrates how the same headless behaviors work with Lattice's
  * native signals and view system.
  */
-import { composeFrom } from '@lattice/lattice';
-import {
-  defaultExtensions,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import {
-  createDOMAdapter,
-  DOMAdapterConfig,
-} from '@lattice/view/adapters/dom';
-import type { RefSpec } from '@lattice/view/types';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 import { useDialog } from '../../useDialog';
 import { useSelect, type SelectOption } from '../../useSelect';
 
@@ -22,18 +12,7 @@ import { useSelect, type SelectOption } from '../../useSelect';
 // Create Lattice API
 // ============================================================================
 
-const signalsSvc = createSignalsApi();
-const viewHelpers = defaultViewHelpers(createDOMAdapter(), signalsSvc);
-const viewSvc = composeFrom(
-  defaultExtensions<DOMAdapterConfig>(),
-  viewHelpers
-);
-const svc = {
-  ...signalsSvc,
-  ...viewSvc,
-};
-
-const { el, signal, computed, effect } = svc;
+const { el, signal, computed, effect, mount: mountSpec } = createDOMSvc();
 
 // ============================================================================
 // Demo Data
@@ -51,7 +30,7 @@ const selectOptions: SelectOption[] = [
 // Dialog Demo
 // ============================================================================
 
-function createDialogDemo(): RefSpec<HTMLElement> {
+function DialogDemo() {
   // Create headless dialog with Lattice signals
   const dialog = useDialog({ signal, computed, effect })({});
 
@@ -128,7 +107,7 @@ function createDialogDemo(): RefSpec<HTMLElement> {
 // Select Demo
 // ============================================================================
 
-function createSelectDemo(): RefSpec<HTMLElement> {
+function SelectDemo() {
   // Create headless select with Lattice signals
   const select = useSelect<string>({ signal, computed, effect })({
     options: selectOptions,
@@ -209,12 +188,11 @@ function createSelectDemo(): RefSpec<HTMLElement> {
 // Main App
 // ============================================================================
 
-export function createLatticeApp(): RefSpec<HTMLElement> {
-  return el('div')(createDialogDemo(), createSelectDemo());
+export function App() {
+  return el('div')(DialogDemo(), SelectDemo());
 }
 
 export function mount(container: HTMLElement) {
-  const app = createLatticeApp();
-  const ref = app.create(svc);
+  const ref = mountSpec(App());
   container.appendChild(ref.element as Node);
 }
