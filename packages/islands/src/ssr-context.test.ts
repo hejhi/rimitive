@@ -162,8 +162,12 @@ describe('SSR Context', () => {
       });
 
       const scripts = getIslandScripts(ctx);
-      expect(scripts).toBe(
-        `<script>window.__hydrate("counter-0","counter",{"initialCount":5},${STATUS_ELEMENT});</script>`
+      // Should include bootstrap script
+      expect(scripts).toContain('window.__islands = [];');
+      expect(scripts).toContain('window.__hydrate = (id, type, props, status)');
+      // Should include island hydration call
+      expect(scripts).toContain(
+        `window.__hydrate("counter-0","counter",{"initialCount":5},${STATUS_ELEMENT})`
       );
     });
 
@@ -175,10 +179,10 @@ describe('SSR Context', () => {
       });
 
       const scripts = getIslandScripts(ctx);
-      const lines = scripts.split('\n');
-      expect(lines).toHaveLength(2);
-      expect(lines[0]).toContain('counter-0');
-      expect(lines[1]).toContain('form-1');
+      // Bootstrap + 2 island scripts
+      expect(scripts).toContain('window.__islands = [];');
+      expect(scripts).toContain('counter-0');
+      expect(scripts).toContain('form-1');
     });
 
     it('should escape < and > in props JSON', () => {

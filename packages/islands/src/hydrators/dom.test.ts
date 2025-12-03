@@ -284,9 +284,9 @@ describe('Queue Processing', () => {
 
     // Queue island hydration
     (window as unknown as { __islands: unknown[] }).__islands.push({
-      i: 'counter-1',
-      t: 'counter',
-      p: { initialCount: 5 },
+      id: 'counter-1',
+      type: 'counter',
+      props: { initialCount: 5 },
     });
 
     const { createAPI, signals, mount } = createMocks();
@@ -320,8 +320,8 @@ describe('Queue Processing', () => {
 
     // Queue multiple islands
     (window as unknown as { __islands: unknown[] }).__islands.push(
-      { i: 'counter-1', t: 'counter', p: {} },
-      { i: 'todo-1', t: 'todo', p: {} }
+      { id: 'counter-1', type: 'counter', props: {} },
+      { id: 'todo-1', type: 'todo', props: {} }
     );
 
     const { createAPI, signals, mount } = createMocks();

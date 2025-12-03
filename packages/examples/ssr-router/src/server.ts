@@ -10,7 +10,10 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createIslandsApp, createDOMServerAdapter } from '@lattice/islands/server';
+import {
+  createIslandsApp,
+  createDOMServerAdapter,
+} from '@lattice/islands/server';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createViewApi } from '@lattice/view/presets/core';
 import { createRouter, type ViewApi } from '@lattice/router';
@@ -312,11 +315,6 @@ const template = (content: string, scripts: string) => `
       cursor: default;
     }
   </style>
-  <script>
-    // Queue islands for hydration
-    window.__islands = [];
-    window.__hydrate = (i, t, p) => __islands.push({ i, t, p });
-  </script>
 </head>
 <body>
   ${content}

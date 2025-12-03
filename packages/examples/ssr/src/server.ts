@@ -168,11 +168,6 @@ const server = createServer((req, res) => {
       background: #0056b3;
     }
   </style>
-  <script>
-    // Queue islands for hydration
-    window.__islands = [];
-    window.__hydrate = (i, t, p) => __islands.push({ i, t, p });
-  </script>
 </head>
 <body>
   ${html}

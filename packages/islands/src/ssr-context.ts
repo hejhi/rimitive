@@ -64,13 +64,20 @@ export function getActiveSSRContext(): SSRContext | undefined {
 }
 
 /**
- * Generate inline hydration scripts for collected islands
+ * Generate hydration scripts for collected islands.
  *
- * Emits <script> tags that call window.__hydrate for each island.
- * These scripts run immediately when encountered, starting hydration.
+ * Includes the bootstrap script (sets up queue) followed by
+ * individual island hydration calls. Returns empty string if no islands.
  */
 export function getIslandScripts(ctx: SSRContext): string {
-  return ctx.islands
+  if (ctx.islands.length === 0) return '';
+
+  const bootstrap = `<script>
+window.__islands = [];
+window.__hydrate = (id, type, props, status) => __islands.push({ id, type, props, status });
+</script>`;
+
+  const islandScripts = ctx.islands
     .map((island) => {
       // Escape JSON for safe embedding in script tag
       const propsJson = JSON.stringify(island.props)
@@ -80,6 +87,8 @@ export function getIslandScripts(ctx: SSRContext): string {
       return `<script>window.__hydrate("${island.id}","${island.type}",${propsJson},${island.status});</script>`;
     })
     .join('\n');
+
+  return `${bootstrap}\n${islandScripts}`;
 }
 
 /**

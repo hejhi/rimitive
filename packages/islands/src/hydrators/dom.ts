@@ -305,12 +305,17 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
       // Process islands queued by inline scripts
       const queuedIslands = (
         window as unknown as {
-          __islands?: Array<{ i: string; t: string; p: unknown; s: number }>;
+          __islands?: Array<{
+            id: string;
+            type: string;
+            props: unknown;
+            status: number;
+          }>;
         }
       ).__islands;
 
       if (!queuedIslands) return;
-      queuedIslands.forEach(({ i, t, p, s }) => {
+      queuedIslands.forEach(({ id, type, props, status }) => {
         const hydrateFn = (
           window as unknown as {
             __hydrate: (
@@ -321,7 +326,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             ) => void;
           }
         ).__hydrate;
-        hydrateFn(i, t, p, s);
+        hydrateFn(id, type, props, status);
       });
     },
   };

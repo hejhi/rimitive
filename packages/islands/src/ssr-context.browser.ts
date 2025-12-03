@@ -36,6 +36,15 @@ export function getActiveSSRContext(): SSRContext | undefined {
 }
 
 /**
+ * Generate the bootstrap script that sets up island hydration queue.
+ *
+ * In browser: returns empty string (bootstrap is for server-rendered HTML)
+ */
+export function getIslandBootstrapScript(): string {
+  return '';
+}
+
+/**
  * Generate inline hydration scripts for collected islands
  *
  * In browser: returns empty string (scripts are for server-rendered HTML)
