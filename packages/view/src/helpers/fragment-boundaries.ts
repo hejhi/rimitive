@@ -3,7 +3,8 @@
  * Functions to update firstChild/lastChild when fragment contents change
  */
 
-import type { FragmentRef, LinkedNode } from '../types';
+import type { FragmentRef, LinkedNode, NodeRef } from '../types';
+import { STATUS_ELEMENT } from '../types';
 
 /**
  * Add a node to a fragment's range
@@ -130,4 +131,30 @@ export function countFragmentNodes<T>(fragment: FragmentRef<T>): number {
   }
 
   return count;
+}
+
+/**
+ * Set a fragment's boundaries to wrap a single child node.
+ * If child is an element, fragment wraps that element.
+ * If child is a fragment, fragment adopts its boundaries (transparent wrapper).
+ * If child is null, clears the fragment.
+ *
+ * @param fragment - Fragment to update
+ * @param child - Child node to wrap, or null to clear
+ */
+export function setFragmentChild<T>(
+  fragment: FragmentRef<T>,
+  child: NodeRef<T> | null
+): void {
+  if (!child) {
+    fragment.firstChild = null;
+    fragment.lastChild = null;
+  } else if (child.status === STATUS_ELEMENT) {
+    fragment.firstChild = child;
+    fragment.lastChild = child;
+  } else {
+    // Fragment child - adopt its boundaries
+    fragment.firstChild = child.firstChild;
+    fragment.lastChild = child.lastChild;
+  }
 }

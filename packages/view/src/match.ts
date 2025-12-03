@@ -9,6 +9,7 @@ import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createNodeHelpers } from './helpers/node-helpers';
+import { setFragmentChild } from './helpers/fragment-boundaries';
 
 /**
  * Options passed to Match factory
@@ -160,23 +161,14 @@ export const Match = defineService(
                   const refSpec = matcher(value);
 
                   if (refSpec === null) {
-                    fragment.firstChild = null;
-                    fragment.lastChild = null;
+                    setFragmentChild(fragment, null);
                     currentNode = undefined;
                     return;
                   }
 
                   // Create the element/fragment from the spec
                   const nodeRef = refSpec.create(api);
-
-                  if (nodeRef.status === STATUS_FRAGMENT) {
-                    fragment.firstChild = nodeRef.firstChild;
-                    fragment.lastChild = nodeRef.lastChild;
-                  } else {
-                    fragment.firstChild = nodeRef;
-                    fragment.lastChild = nodeRef;
-                  }
-
+                  setFragmentChild(fragment, nodeRef);
                   currentNode = nodeRef;
 
                   // Insert into DOM

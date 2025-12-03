@@ -33,10 +33,11 @@ import type {
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
 import type { RefSpec, FragmentRef } from './types';
-import { STATUS_REF_SPEC, STATUS_FRAGMENT, STATUS_ELEMENT } from './types';
+import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
 import { createNodeHelpers } from './helpers/node-helpers';
+import { setFragmentChild } from './helpers/fragment-boundaries';
 
 /**
  * Portal target - where content should be rendered
@@ -187,29 +188,13 @@ export const Portal = defineService(
               firstChild: null,
               lastChild: null,
               attach() {
-                // Helper to update fragment boundaries
-                const updateBoundaries = (
-                  childRef: ReturnType<typeof child.create> | null
-                ) => {
-                  if (!childRef) {
-                    fragment.firstChild = null;
-                    fragment.lastChild = null;
-                  } else if (childRef.status === STATUS_ELEMENT) {
-                    fragment.firstChild = childRef;
-                    fragment.lastChild = childRef;
-                  } else if (childRef.status === STATUS_FRAGMENT) {
-                    fragment.firstChild = childRef.firstChild;
-                    fragment.lastChild = childRef.lastChild;
-                  }
-                };
-
                 if (isStaticTarget) {
                   // Static target - simple insert, no effect needed
                   const targetElement = resolveTarget(target);
                   if (!targetElement) return;
 
                   const childRef = child.create(api);
-                  updateBoundaries(childRef);
+                  setFragmentChild(fragment, childRef);
                   insertNodeBefore(
                     api,
                     targetElement,
@@ -219,7 +204,7 @@ export const Portal = defineService(
                   );
 
                   return () => {
-                    updateBoundaries(null);
+                    setFragmentChild(fragment, null);
                     removeNode(targetElement, childRef);
                   };
                 }
@@ -232,13 +217,13 @@ export const Portal = defineService(
 
                   // No target - nothing to render
                   if (!targetElement) {
-                    updateBoundaries(null);
+                    setFragmentChild(fragment, null);
                     return;
                   }
 
                   // Create and insert child
                   const childRef = child.create(api);
-                  updateBoundaries(childRef);
+                  setFragmentChild(fragment, childRef);
                   insertNodeBefore(
                     api,
                     targetElement,
@@ -249,7 +234,7 @@ export const Portal = defineService(
 
                   // Cleanup when target changes or portal disposes
                   return () => {
-                    updateBoundaries(null);
+                    setFragmentChild(fragment, null);
                     removeNode(targetElement, childRef);
                   };
                 });
