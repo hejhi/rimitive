@@ -83,7 +83,6 @@ export type PortalFactory<TBaseElement> = ServiceDefinition<
  * tooltips, and other overlay patterns while preserving:
  * - Reactive scope inheritance
  * - Automatic cleanup when logical parent disposes
- * - Event bubbling through the logical tree (via React-style portals)
  */
 export const Portal = defineService(
   <TConfig extends AdapterConfig>({
