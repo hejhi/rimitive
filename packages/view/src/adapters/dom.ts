@@ -23,25 +23,28 @@ export function createDOMAdapter(): Adapter<DOMAdapterConfig> {
 
     setProperty: (node, key, value) => {
       // Text nodes only support 'value' -> textContent
-      if (node instanceof Text) {
+      // Use nodeType check instead of instanceof for test environment compatibility
+      // (happy-dom's Text class is different from global Text)
+      if (node.nodeType === 3) {
         if (key === 'value') {
-          node.textContent = value != null ? String(value) : '';
+          (node as Text).textContent = value != null ? String(value) : '';
         }
         return;
       }
 
-      // Element nodes
-      if (node instanceof Element) {
+      // Element nodes (nodeType === 1)
+      if (node.nodeType === 1) {
+        const element = node as Element;
         // Hyphenated keys (data-*, aria-*, custom attributes) use setAttribute
         // Everything else uses property assignment for proper type handling
         if (key.includes('-')) {
           if (value == null) {
-            node.removeAttribute(key);
+            element.removeAttribute(key);
           } else {
-            node.setAttribute(key, String(value));
+            element.setAttribute(key, String(value));
           }
         } else {
-          Reflect.set(node, key, value);
+          Reflect.set(element, key, value);
         }
       }
     },
