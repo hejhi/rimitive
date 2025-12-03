@@ -10,6 +10,9 @@ build
 out
 *.tsbuildinfo
 
+# Nx
+.nx/
+
 # Test coverage
 coverage
 

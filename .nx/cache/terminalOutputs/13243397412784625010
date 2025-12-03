@@ -1,9 +1,0 @@
-
-> @lattice/devtools-extension@0.0.1 typecheck /Users/henryivry/repos/lattice/packages/devtools-extension
-> wxt prepare && tsc --noEmit
-
-
-[90mWXT[39m [90m[1m0.20.11[22m[39m
-[dotenv@17.2.3] injecting env (0) from .env.production.chrome.local,.env.production.chrome,.env.chrome.local,.env.chrome,.env.production.local,.env.production,.env.local,.env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
-[36mℹ[39m Generating types...
-[32m✔[39m Finished in 476 ms
