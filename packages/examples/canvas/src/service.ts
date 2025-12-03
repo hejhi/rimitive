@@ -4,89 +4,31 @@
  * Demonstrates how to compose custom adapters with the view system.
  * This example shows mixing DOM and Canvas rendering in a single tree,
  * both sharing the same signals service for reactive state.
- *
- * The canvas adapter is a reference implementation showing how to build
- * custom NodeAdapters for non-DOM targets.
  */
-import { composeFrom } from '@lattice/lattice';
-import {
-  defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import {
-  createCanvasAdapter,
-  createCanvasAddEventListener,
-  type CanvasAdapterConfig,
-} from './canvas-adapter';
-import {
-  createDOMAdapter,
-  type DOMAdapterConfig,
-} from '@lattice/view/adapters/dom';
-import type { RefSpec, Adapter } from '@lattice/view/types';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createDOMViewSvc } from '@lattice/view/presets/dom';
+import { createCanvasViewSvc } from './canvas-adapter';
 
-// ============================================================================
-// Shared Signals Service
-// ============================================================================
+// Shared signals service
+const signals = createSignalsApi();
 
-const signalsSvc = createSignalsApi();
+// DOM view (for toolbar/UI)
+const domSvc = createDOMViewSvc(signals);
 
-// ============================================================================
-// DOM Adapter (for toolbar/UI)
-// ============================================================================
+// Canvas view (for scene)
+const canvasSvc = createCanvasViewSvc(signals, { clearColor: '#16213e' });
 
-const domAdapter = createDOMAdapter();
-const domViewHelpers = defaultViewHelpers(domAdapter, signalsSvc);
-const domViewSvc = composeFrom(
-  defaultViewExtensions<DOMAdapterConfig>(),
-  domViewHelpers
-);
+// Export signals
+export const { signal, computed, effect, batch, subscribe } = signals;
 
-const domSvc = {
-  ...domViewSvc,
-  on: createAddEventListener(domViewHelpers.batch),
-  mount: <TElement>(spec: RefSpec<TElement>) => spec.create(domViewSvc),
-};
-
-// ============================================================================
-// Canvas Adapter (for scene)
-// ============================================================================
-
-const canvasAdapter = createCanvasAdapter({
-  clearColor: '#16213e',
-});
-
-const canvasViewHelpers = defaultViewHelpers<CanvasAdapterConfig>(
-  canvasAdapter as Adapter<CanvasAdapterConfig>,
-  signalsSvc
-);
-const { el: canvasEl, ...canvasViewSvc } = composeFrom(
-  defaultViewExtensions<CanvasAdapterConfig>(),
-  canvasViewHelpers
-);
-
-export const canvasSvc = {
-  ...canvasViewSvc,
-  el: canvasEl,
-  adapter: canvasAdapter,
-  on: createCanvasAddEventListener(canvasAdapter, signalsSvc.batch),
-  mount: <TElement>(spec: RefSpec<TElement>) => spec.create(canvasViewSvc),
-};
-
-// ============================================================================
-// Shared Signals Exports
-// ============================================================================
-
-export const { signal, computed, effect, batch, subscribe } = signalsSvc;
-
-// Re-export types from canvas adapter
+// Export canvas types
 export type {
   CanvasNode,
   CanvasPointerEvent,
   CanvasBridgeElement,
 } from './canvas-adapter';
 
+// Pre-bound element factories for ergonomic usage
 export const dom = {
   div: domSvc.el('div'),
   h1: domSvc.el('h1'),
