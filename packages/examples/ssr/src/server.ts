@@ -2,27 +2,12 @@
  * SSR Server Example
  *
  * Demonstrates server-side rendering with islands hydration.
- * Composes services manually using signals/view/islands primitives.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
-import { createSpec } from '@lattice/view/helpers';
-import { composeFrom } from '@lattice/lattice';
-import {
-  createSSRContext,
-  runWithSSRContext,
-  getIslandScripts,
-} from '@lattice/islands/ssr-context';
-import { renderToString } from '@lattice/islands/helpers/renderToString';
-import {
-  createDOMServerAdapter,
-  type DOMServerAdapterConfig,
-} from '@lattice/islands/presets/island-ssr';
-import type { RefSpec } from '@lattice/view/types';
+import { createSSRSvc } from '@lattice/islands/presets/ssr';
 
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
@@ -31,48 +16,41 @@ import { TagList } from './islands/TagList.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientBundlePath = join(__dirname, '../dist/client/client.js');
 
-// Create island-aware SSR API (fresh per-request in real app, shared here for simplicity)
-const signals = createSignalsApi();
-const adapter = createDOMServerAdapter();
-const viewHelpers = createSpec(adapter, signals);
-const baseExtensions = defaultViewExtensions<DOMServerAdapterConfig>();
-const views = composeFrom(baseExtensions, viewHelpers);
-const svc = { ...signals, ...views };
-const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
-const { el } = svc;
+// Create SSR service
+const { el, render } = createSSRSvc();
+
+const div = el('div');
+const p = el('p');
+const section = el('section');
 
 // Define the app component
-const App = () => {
-  return el('div').props({ className: 'app' })(
-    el('h1')('Lattice SSR Example'),
-    el('p').props({ className: 'subtitle' })(
-      'Static content with interactive islands'
-    ),
+const App = div.props({ className: 'app' })(
+  el('h1')('Lattice SSR Example'),
+  p.props({ className: 'subtitle' })('Static content with interactive islands'),
 
-    // Static section - no JS shipped
-    el('section').props({ className: 'static-section' })(
-      el('h2')('Static Section'),
-      el('p')('This content is rendered on the server and stays static.'),
-      el('p')('No JavaScript needed for this part!')
-    ),
+  // Static section - no JS shipped
+  section.props({ className: 'static-section' })(
+    el('h2')('Static Section'),
+    p('This content is rendered on the server and stays static.'),
+    p('No JavaScript needed for this part!')
+  ),
 
-    // Interactive islands - JS shipped only for these
-    el('section').props({ className: 'islands-section' })(
-      el('h2')('Interactive Islands'),
-      Counter({ initialCount: 0 }),
-      TodoList({ initialTodos: ['Learn Lattice', 'Build an app', 'Ship it!'] }),
-      el('div').props({ className: 'tag-container' })(
-        el('h3')('Interactive Tags (Fragment Island)'),
-        el('p')(
-          'Click tags to remove them. This island returns multiple elements without a root wrapper.'
-        ),
-        TagList({
-          tags: ['TypeScript', 'SSR', 'Islands', 'Hydration', 'Reactive'],
-        })
-      )
+  // Interactive islands - JS shipped only for these
+  section.props({ className: 'islands-section' })(
+    el('h2')('Interactive Islands'),
+    Counter({ initialCount: 0 }),
+    TodoList({ initialTodos: ['Learn Lattice', 'Build an app', 'Ship it!'] }),
+    div.props({ className: 'tag-container' })(
+      el('h3')('Interactive Tags (Fragment Island)'),
+      p(
+        'Click tags to remove them. This island returns multiple elements without a root wrapper.'
+      ),
+      TagList({
+        tags: ['TypeScript', 'SSR', 'Islands', 'Hydration', 'Reactive'],
+      })
     )
-  );
-};
+  )
+);
 
 // Create HTTP server
 const server = createServer((req, res) => {
@@ -90,17 +68,8 @@ const server = createServer((req, res) => {
   }
 
   if (req.url === '/') {
-    // Create SSR context for this request
-    const ctx = createSSRContext();
-
-    // Render app to HTML within SSR context
-    const html = runWithSSRContext(ctx, () => {
-      const rendered = mount(App());
-      return renderToString(rendered);
-    });
-
-    // Get island hydration scripts
-    const scripts = getIslandScripts(ctx);
+    // Render app to HTML with island scripts
+    const { html, scripts } = render(App);
 
     // Send complete HTML page
     res.writeHead(200, { 'Content-Type': 'text/html' });

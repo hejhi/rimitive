@@ -8,8 +8,8 @@ import { island } from '../service.js';
 export const TagList = island(
   'taglist',
   ({ el, map, signal }) =>
-    (props: { tags: string[] }) => {
-      const tags = signal(props.tags);
+    ({ tags: initialTags }: { tags: string[] }) => {
+      const tags = signal(initialTags);
 
       // Return fragment - multiple span elements without a wrapper
       // map() takes items and optional keyFn, then returns a function that takes render callback

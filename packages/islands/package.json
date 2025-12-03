@@ -82,6 +82,14 @@
       "import": "./dist/presets/islands-app.js",
       "types": "./dist/presets/islands-app.d.ts"
     },
+    "./presets/ssr": {
+      "import": "./dist/presets/ssr.js",
+      "types": "./dist/presets/ssr.d.ts"
+    },
+    "./presets/hydrate": {
+      "import": "./dist/presets/hydrate.js",
+      "types": "./dist/presets/hydrate.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

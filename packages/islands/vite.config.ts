@@ -90,6 +90,8 @@ export default defineConfig({
           __dirname,
           'src/presets/islands-app-server.ts'
         ),
+        'presets/ssr': resolve(__dirname, 'src/presets/ssr.ts'),
+        'presets/hydrate': resolve(__dirname, 'src/presets/hydrate.ts'),
       },
       formats: ['es'],
     },
