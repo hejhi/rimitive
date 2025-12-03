@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createRouter } from './createRouter';
 import type {
   ViewApi,
-  RouteApi,
   RouteContext,
   ConnectedComponent,
 } from './createRouter';
@@ -370,37 +369,11 @@ describe('createRouter', () => {
       expect(typeof connected).toBe('function');
     });
 
-    it('should provide route API to wrapper function', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/test' });
-      let capturedRouteApi: RouteApi | null = null;
-
-      const wrapper = (routeApi: RouteApi): (() => RefSpec<HTMLElement>) => {
-        capturedRouteApi = routeApi;
-        return () => createMockRefSpec();
-      };
-
-      const connectedFactory = router.connect(wrapper);
-      const connected = connectedFactory({});
-
-      // Instantiate to trigger wrapper call
-      const mockParams = createMockComputed(() => ({}));
-      connected({ children: null, params: mockParams });
-
-      // TypeScript assertion - we know this will be set after instantiate
-      expect(capturedRouteApi).not.toBeNull();
-      const api = capturedRouteApi as unknown as RouteApi;
-      expect(api).toHaveProperty('navigate');
-      expect(api).toHaveProperty('currentPath');
-      expect(typeof api.navigate).toBe('function');
-      expect(typeof api.currentPath).toBe('function');
-    });
-
-    it('should provide route context to instantiate', () => {
+    it('should provide route context to wrapper function', () => {
       const router = createRouter(mockViewApi);
       let capturedRouteContext: RouteContext<DOMAdapterConfig> | null = null;
 
       const wrapper = (
-        _routeApi: RouteApi,
         routeContext: RouteContext<DOMAdapterConfig>
       ): (() => RefSpec<HTMLElement>) => {
         capturedRouteContext = routeContext;
@@ -471,7 +444,6 @@ describe('createRouter', () => {
 
       // Simulate the create() pattern from the requirements
       const wrapper = (
-        { currentPath }: RouteApi,
         routeContext: RouteContext<DOMAdapterConfig>
       ): ((userProps: {
         theme: string;
@@ -486,7 +458,7 @@ describe('createRouter', () => {
               // In real usage, this would construct the component using el()
               const div = document.createElement('div');
               div.className = userProps.theme;
-              div.textContent = `${userProps.title} - ${currentPath()}`;
+              div.textContent = `${userProps.title} - ${router.currentPath()}`;
               return {
                 status: 1,
                 element: div,
@@ -509,33 +481,6 @@ describe('createRouter', () => {
       const sealedSpec = AppLayout({ children: null, params: mockParams });
       expect(sealedSpec.status).toBe(STATUS_REF_SPEC);
       expect(typeof sealedSpec.create).toBe('function');
-    });
-
-    it('should allow navigate and currentPath to be used in wrapper', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/initial' });
-      let usedNavigate = false;
-      let readPath = '';
-
-      const wrapper = ({
-        navigate,
-        currentPath,
-      }: RouteApi): (() => RefSpec<HTMLElement>) => {
-        return () => {
-          readPath = currentPath();
-          navigate('/new-path');
-          usedNavigate = true;
-          return createMockRefSpec();
-        };
-      };
-
-      const connectedFactory = router.connect(wrapper);
-      const connected = connectedFactory({});
-      const mockParams = createMockComputed(() => ({}));
-      connected({ children: null, params: mockParams });
-
-      expect(usedNavigate).toBe(true);
-      expect(readPath).toBe('/initial');
-      expect(router.currentPath()).toBe('/new-path');
     });
   });
 

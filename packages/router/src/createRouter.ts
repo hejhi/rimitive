@@ -17,18 +17,16 @@ import type { RouteTree, RouteNode } from './defineRoutes';
 /**
  * Standalone connect function - doesn't require a router instance
  *
- * Creates a connected component that receives a merged API (view + route)
+ * Creates a connected component that receives route context (children, params)
  * when mounted via router.mount(). Works identically on server and client.
- *
- * The API-first pattern enables hydration - components use whatever API
- * is passed to them (hydrating or regular) rather than pulling from a singleton.
  *
  * @example
  * ```ts
  * import { connect } from '@lattice/router';
+ * import { el } from './service';
  *
- * export const Home = connect((api, { params }) => () =>
- *   api.el('div')('Home page')
+ * export const Home = connect(({ params }) => () =>
+ *   el('div')(`Product: ${params().id}`)
  * );
  * ```
  */
@@ -38,7 +36,6 @@ export function connect<
   TUserProps = Record<string, unknown>,
 >(
   wrapper: (
-    api: ConnectedApi<TConfig>,
     routeContext: RouteContext<TConfig>
   ) => (userProps: TUserProps) => RefSpec<TElement>
 ): (
@@ -46,9 +43,7 @@ export function connect<
 ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
   return (...args: [TUserProps?]) =>
     (routeContext: RouteContext<TConfig>) => {
-      // API is always populated by router.mount()
-      const api = routeContext.api!;
-      const componentFactory = wrapper(api, routeContext);
+      const componentFactory = wrapper(routeContext);
       const userProps = args[0] ?? ({} as TUserProps);
       return componentFactory(userProps);
     };
@@ -121,7 +116,6 @@ export type ConnectMethod<TConfig extends AdapterConfig> = <
   TUserProps = Record<string, unknown>,
 >(
   wrapper: (
-    api: ConnectedApi<TConfig>,
     routeContext: RouteContext<TConfig>
   ) => (userProps: TUserProps) => RefSpec<TElement>
 ) => (
@@ -231,6 +225,29 @@ export type Router<TConfig extends AdapterConfig> = {
    * ```
    */
   mount: (routeTree: RouteTree<TConfig>) => RefSpec<TConfig['baseElement']>;
+
+  /**
+   * Render a RefSpec with the router's connected API
+   *
+   * Use this instead of the view service's mount() to ensure Link components
+   * receive the navigate function and can intercept clicks.
+   *
+   * @param spec - The RefSpec to render (typically from router.root().create())
+   * @returns ElementRef ready to append to DOM
+   *
+   * @example
+   * ```ts
+   * const App = router.root('/', AppLayout).create(
+   *   route('/', Home)(),
+   *   route('*', NotFound)()
+   * );
+   * const appRef = router.renderApp(App);
+   * container.appendChild(appRef.element);
+   * ```
+   */
+  renderApp: <TElement extends TConfig['baseElement']>(
+    spec: RefSpec<TElement>
+  ) => ReturnType<RefSpec<TElement>['create']>;
 
   /**
    * Internal: adapter config type marker (not used at runtime)
@@ -491,18 +508,16 @@ export function createRouter<TConfig extends AdapterConfig>(
   }
 
   /**
-   * Connect method - implements the outer wrapper pattern
+   * Connect method - wraps a component to receive route context
    *
-   * Takes a wrapper function that receives merged API and route context,
-   * and returns a function that can be called with user props to create
-   * a connected component.
+   * Takes a wrapper function that receives route context (children, params),
+   * and returns a function that can be called with user props.
    */
   function connect<
     TElement extends TConfig['baseElement'],
     TUserProps = Record<string, unknown>,
   >(
     wrapper: (
-      api: ConnectedApi<TConfig>,
       routeContext: RouteContext<TConfig>
     ) => (userProps: TUserProps) => RefSpec<TElement>
   ): (
@@ -510,7 +525,7 @@ export function createRouter<TConfig extends AdapterConfig>(
   ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
     return (...args: [TUserProps?]) =>
       (routeContext: RouteContext<TConfig>) => {
-        const componentFactory = wrapper(connectedApi, routeContext);
+        const componentFactory = wrapper(routeContext);
         // Use empty object as default if no props provided
         const userProps = args[0] ?? ({} as TUserProps);
         return componentFactory(userProps);
@@ -557,18 +572,19 @@ export function createRouter<TConfig extends AdapterConfig>(
       // Process children - compose their paths with the root path
       const processedChildren: RefSpec<TConfig['baseElement']>[] = [];
 
-      // Save and reset route group for children
+      // Save current route group state
       const savedRouteGroup = activeRouteGroup;
       const savedGroupDepth = groupCreationDepth;
+
+      // Reset route group ONCE before processing - all children are siblings
+      // in the same group and compete for matching
+      activeRouteGroup = null;
+      groupCreationDepth = 0;
 
       for (const child of children) {
         const metadata = child.routeMetadata;
 
-        // Reset route group so children form their own group
-        activeRouteGroup = null;
-        groupCreationDepth = 0;
-
-        // Rebuild with composed path
+        // Rebuild with composed path (route group is shared across siblings)
         const composedPath = composePath(path, metadata.relativePath);
         const rebuiltRouteSpec = metadata.rebuild(composedPath);
         // Unwrap to get the inner RefSpec for the adapter
@@ -722,6 +738,18 @@ export function createRouter<TConfig extends AdapterConfig>(
     return routeTree.rootComponent(rootContext);
   }
 
+  /**
+   * Render a RefSpec with the router's connected API
+   *
+   * Passes connectedApi (which includes navigate) to spec.create(),
+   * ensuring Link components can intercept clicks for SPA navigation.
+   */
+  function renderApp<TElement extends TConfig['baseElement']>(
+    spec: RefSpec<TElement>
+  ): ReturnType<RefSpec<TElement>['create']> {
+    return spec.create(connectedApi);
+  }
+
   // Return the router object
   return {
     root,
@@ -731,5 +759,6 @@ export function createRouter<TConfig extends AdapterConfig>(
     currentPath,
     useCurrentPath,
     mount,
+    renderApp,
   };
 }

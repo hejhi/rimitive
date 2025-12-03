@@ -1,4 +1,5 @@
-import { router, useSvc } from '../service';
+import { el, computed, navigate } from '../service';
+import { router } from '../service';
 
 const products: Record<
   string,
@@ -41,8 +42,8 @@ const products: Record<
   },
 };
 
-export const Product = router.connect(({ navigate }, { params }) =>
-  useSvc(({ el, computed }) => () => {
+export const Product = router.connect(
+  ({ params }) => () => {
     const id = computed(() => params().id || '');
     const productData = computed(() => products[id()]);
 
@@ -76,5 +77,5 @@ export const Product = router.connect(({ navigate }, { params }) =>
         })('Home')
       )
     );
-  })
+  }
 );

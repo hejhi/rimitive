@@ -1,4 +1,4 @@
-import { mount, router } from './service';
+import { router } from './service';
 import { AppLayout } from './layouts/AppLayout';
 import { Home } from './pages/Home';
 import { About } from './pages/About';
@@ -11,15 +11,15 @@ import { NotFound } from './pages/NotFound';
 const { create, route } = router.root('/', AppLayout());
 
 const App = create(
-  route('', Home())(),
-  route('about', About())(),
+  route('', Home)(),
+  route('about', About)(),
   route('products', Products())(route(':id', Product())()),
   // Catch-all route for 404
-  route('*', NotFound())()
+  route('*', NotFound)()
 );
 
-// Mount the app to the #app container
+// Use router.renderApp instead of mount to pass navigate to Link components
 const container = document.querySelector('#app');
-const appRef = mount(App);
+const appRef = router.renderApp(App);
 
 if (container) container.appendChild(appRef.element as HTMLElement);

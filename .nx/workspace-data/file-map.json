@@ -6,36 +6,52 @@
   "fileMap": {
     "nonProjectFiles": [
       {
-        "file": "CONTRIBUTING.md",
-        "hash": "17685745596151304086"
-      },
-      {
-        "file": "pnpm-lock.yaml",
-        "hash": "17662001520221541411"
-      },
-      {
         "file": ".claude/commands/setup-build-config.md",
         "hash": "14311847385471376996"
       },
       {
-        "file": ".changeset/.gitkeep",
-        "hash": "3244421341483603138"
+        "file": ".github/workflows/README.md",
+        "hash": "12290553284265915329"
       },
       {
-        "file": ".prettierrc",
-        "hash": "14808059657890296164"
+        "file": "README.md",
+        "hash": "16592980121871338732"
       },
       {
-        "file": ".claude/workflows/create-package.md",
-        "hash": "8656968389793282740"
+        "file": ".github/workflows/codeql.yml.disabled",
+        "hash": "13443043018540950874"
+      },
+      {
+        "file": ".claude/agents/frp-algorithm-architect.md",
+        "hash": "15724924189583160224"
+      },
+      {
+        "file": "tsconfig.json",
+        "hash": "11347180060375909959"
+      },
+      {
+        "file": "nx.json",
+        "hash": "731019651267700296"
+      },
+      {
+        "file": ".github/dependabot.yml",
+        "hash": "5494285431413543482"
+      },
+      {
+        "file": "vitest.config.ts",
+        "hash": "17696468095981323063"
       },
       {
         "file": ".github/workflows/release.yml",
         "hash": "5452793647848367243"
       },
       {
-        "file": ".github/workflows/ci.yml",
-        "hash": "7442783079896346100"
+        "file": ".claude/workflows/create-package.md",
+        "hash": "8656968389793282740"
+      },
+      {
+        "file": "pnpm-workspace.yaml",
+        "hash": "5174843801328762164"
       },
       {
         "file": "CLAUDE.md",
@@ -46,76 +62,60 @@
         "hash": "8525223545704196616"
       },
       {
-        "file": "package.json",
-        "hash": "16817104143314398375"
-      },
-      {
-        "file": ".gitignore",
-        "hash": "3326181247358675835"
+        "file": ".changeset/.gitkeep",
+        "hash": "3244421341483603138"
       },
       {
         "file": ".claude/commands/scaffold-package.md",
         "hash": "13774620936177920178"
       },
       {
-        "file": ".claude/agents/frp-algorithm-architect.md",
-        "hash": "15724924189583160224"
+        "file": ".github/workflows/ci.yml",
+        "hash": "7442783079896346100"
       },
       {
-        "file": ".github/dependabot.yml",
-        "hash": "5494285431413543482"
-      },
-      {
-        "file": ".github/workflows/README.md",
-        "hash": "12290553284265915329"
-      },
-      {
-        "file": ".changeset/config.json",
-        "hash": "6358243731074469076"
-      },
-      {
-        "file": ".changeset/README.md",
-        "hash": "4888845876018830777"
-      },
-      {
-        "file": "lerna.json",
-        "hash": "17494716379267711819"
-      },
-      {
-        "file": "vitest.config.ts",
-        "hash": "17696468095981323063"
+        "file": ".gitignore",
+        "hash": "3326181247358675835"
       },
       {
         "file": "eslint.config.js",
         "hash": "12404005700077585307"
       },
       {
-        "file": "tsconfig.base.json",
-        "hash": "13502933863921274315"
+        "file": ".changeset/config.json",
+        "hash": "6358243731074469076"
       },
       {
-        "file": "pnpm-workspace.yaml",
-        "hash": "5174843801328762164"
-      },
-      {
-        "file": ".github/workflows/codeql.yml.disabled",
-        "hash": "13443043018540950874"
-      },
-      {
-        "file": "tsconfig.json",
-        "hash": "11347180060375909959"
+        "file": "package.json",
+        "hash": "16817104143314398375"
       },
       {
         "file": ".github/workflows/pr-title.yml",
         "hash": "9053157152279884607"
       },
       {
-        "file": "nx.json",
-        "hash": "731019651267700296"
+        "file": "CONTRIBUTING.md",
+        "hash": "17685745596151304086"
       },
       {
-        "file": "README.md",
-        "hash": "16592980121871338732"
+        "file": "tsconfig.base.json",
+        "hash": "13502933863921274315"
+      },
+      {
+        "file": "lerna.json",
+        "hash": "17494716379267711819"
+      },
+      {
+        "file": ".changeset/README.md",
+        "hash": "4888845876018830777"
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "hash": "17662001520221541411"
+      },
+      {
+        "file": ".prettierrc",
+        "hash": "14808059657890296164"
       }
     ],
     "projectFileMap": {
@@ -753,35 +753,35 @@
         },
         {
           "file": "packages/examples/router/src/layouts/AppLayout.ts",
-          "hash": "1178388444468969299"
+          "hash": "13077405621424836411"
         },
         {
           "file": "packages/examples/router/src/main.ts",
-          "hash": "4831435471477242729"
+          "hash": "305690623170877181"
         },
         {
           "file": "packages/examples/router/src/pages/About.ts",
-          "hash": "109541279382346626"
+          "hash": "6040107027657870833"
         },
         {
           "file": "packages/examples/router/src/pages/Home.ts",
-          "hash": "8345605084113259702"
+          "hash": "14109450750887146481"
         },
         {
           "file": "packages/examples/router/src/pages/NotFound.ts",
-          "hash": "9195873503931502775"
+          "hash": "2344993526062555269"
         },
         {
           "file": "packages/examples/router/src/pages/Product.ts",
-          "hash": "13722067473245049886"
+          "hash": "7737715779739802718"
         },
         {
           "file": "packages/examples/router/src/pages/Products.ts",
-          "hash": "15688070523643143139"
+          "hash": "17128029412735983590"
         },
         {
           "file": "packages/examples/router/src/service.ts",
-          "hash": "2438238624766363287"
+          "hash": "12037561086364686382"
         },
         {
           "file": "packages/examples/router/tsconfig.json",
@@ -1722,11 +1722,11 @@
         },
         {
           "file": "packages/router/src/createRouter.test.ts",
-          "hash": "14183946789800972707"
+          "hash": "12998409723760239619"
         },
         {
           "file": "packages/router/src/createRouter.ts",
-          "hash": "6678273701987964563"
+          "hash": "10116480755319953674"
         },
         {
           "file": "packages/router/src/defineRoutes.ts",

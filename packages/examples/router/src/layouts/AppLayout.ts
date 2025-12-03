@@ -1,9 +1,10 @@
-import { router, useSvc } from '../service';
+import { el, computed, currentPath } from '../service';
+import { router } from '../service';
 import { Link } from '@lattice/router';
 
-export const AppLayout = router.connect(({ currentPath }, { children }) =>
-  useSvc(({ el, computed }) => () => {
-    return el('div').props({ className: 'app-layout' })(
+export const AppLayout = router.connect(
+  ({ children }) => () =>
+    el('div').props({ className: 'app-layout' })(
       el('nav').props({ className: 'navbar' })(
         el('div').props({ className: 'nav-brand' })(el('h1')('🧩 Lattice Router')),
         el('div').props({ className: 'nav-links' })(
@@ -30,6 +31,5 @@ export const AppLayout = router.connect(({ currentPath }, { children }) =>
         )
       ),
       el('main').props({ className: 'main-content' })(...(children || []))
-    );
-  })
+    )
 );
