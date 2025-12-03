@@ -1,74 +1,51 @@
 /**
- * TodoList Component - React Version
+ * TodoList Behavior - React Version
  *
- * Returns actual signal/computed functions for use with useSubscribe
+ * A todo list with computed values for filtering and counting.
+ * Used with useComponent to create isolated instances per React component.
  */
+import type { Service } from '../service';
 
-import type { SignalFunction } from '@lattice/signals/signal';
-import type { ComputedFunction } from '@lattice/signals/computed';
-
-export interface UseTodo {
+export interface Todo {
   id: number;
   text: string;
   completed: boolean;
 }
 
-export interface UseTodoList {
-  todos: SignalFunction<UseTodo[]>;
-  allCompleted: ComputedFunction<boolean>;
-  activeCount: ComputedFunction<number>;
-  addTodo(text: string): void;
-  toggleTodo(id: number): void;
-  toggleAll(): void;
-}
-
-export function useTodoList(
-  api: {
-    signal: <T>(value: T) => SignalFunction<T>;
-    computed: <T>(compute: () => T) => ComputedFunction<T>;
-  },
-  initialTodos: UseTodo[] = []
-): UseTodoList {
-  const todos = api.signal<UseTodo[]>(initialTodos);
+export const useTodoList = (api: Service, initialTodos: Todo[] = []) => {
+  const todos = api.signal<Todo[]>(initialTodos);
 
   const allCompleted = api.computed(() => {
     const list = todos();
-    return list.length > 0 && list.every((todo: UseTodo) => todo.completed);
+    return list.length > 0 && list.every((todo) => todo.completed);
   });
 
-  const activeCount = api.computed(() => {
-    return todos().filter((todo: UseTodo) => !todo.completed).length;
-  });
+  const activeCount = api.computed(() =>
+    todos().filter((todo) => !todo.completed).length
+  );
 
   return {
-    // Signals/Computed - for useSubscribe
+    // Reactive state
     todos,
     allCompleted,
     activeCount,
 
     // Actions
-    addTodo(text: string) {
-      const newTodo: UseTodo = {
-        id: Date.now(),
-        text,
-        completed: false,
-      };
-      todos([...todos(), newTodo]);
+    addTodo: (text: string) => {
+      todos([...todos(), { id: Date.now(), text, completed: false }]);
     },
 
-    toggleTodo(id: number) {
+    toggleTodo: (id: number) => {
       todos(
-        todos().map((todo: UseTodo) =>
+        todos().map((todo) =>
           todo.id === id ? { ...todo, completed: !todo.completed } : todo
         )
       );
     },
 
-    toggleAll() {
+    toggleAll: () => {
       const shouldComplete = !allCompleted();
-      todos(
-        todos().map((todo: UseTodo) => ({ ...todo, completed: shouldComplete }))
-      );
+      todos(todos().map((todo) => ({ ...todo, completed: shouldComplete })));
     },
   };
-}
+};

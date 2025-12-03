@@ -41,7 +41,7 @@ const selectOptions: SelectOption[] = [
 
 function DialogDemo() {
   // Clean, familiar React hook API
-  const dialog = useDialogHook({});
+  const dialog = useDialogHook();
 
   // Subscribe to reactive values for React re-renders
   const isOpen = useSubscribe(dialog.isOpen);

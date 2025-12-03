@@ -1,3 +1,9 @@
+/**
+ * App-level API with instrumentation
+ *
+ * Creates an instrumented signals service for React.
+ * All behaviors using this service are automatically instrumented for devtools.
+ */
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
 import { Effect } from '@lattice/signals/effect';
@@ -7,29 +13,28 @@ import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import {
-  devtoolsProvider,
-  createInstrumentation,
   composeFrom,
+  createInstrumentation,
+  devtoolsProvider,
 } from '@lattice/lattice';
+import { defaultHelpers } from '@lattice/signals/presets/core';
 
-import { createPushPullSchedule } from '@lattice/signals/helpers';
+// Create instrumented signals service
+const instrumentation = createInstrumentation({
+  providers: [devtoolsProvider()],
+  enabled: true,
+});
 
-function createSignalApi() {
-  const instrumentation = createInstrumentation({
-    providers: [devtoolsProvider()],
-    enabled: true,
-  });
+export const service = composeFrom(
+  {
+    signal: Signal({ instrument: instrumentSignal }),
+    computed: Computed({ instrument: instrumentComputed }),
+    effect: Effect({ instrument: instrumentEffect }),
+    batch: Batch({ instrument: instrumentBatch }),
+  },
+  defaultHelpers(),
+  { instrumentation }
+);
 
-  return composeFrom(
-    {
-      signal: Signal({ instrument: instrumentSignal }),
-      computed: Computed({ instrument: instrumentComputed }),
-      effect: Effect({ instrument: instrumentEffect }),
-      batch: Batch({ instrument: instrumentBatch }),
-    },
-    createPushPullSchedule(),
-    { instrumentation }
-  );
-}
-
-export const service = createSignalApi();
+// Export the service type for behaviors
+export type Service = typeof service;

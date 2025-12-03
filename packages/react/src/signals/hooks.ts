@@ -252,7 +252,7 @@ export interface ReactiveAdapter {
  * Create a React hook from a double-function behavior pattern.
  *
  * This is designed for portable headless components that follow the pattern:
- * `(api) => (options) => Result`
+ * `(api) => (...args) => Result`
  *
  * The returned hook handles SignalAPI injection automatically and creates
  * one instance per React component (like useComponent).
@@ -281,26 +281,28 @@ export interface ReactiveAdapter {
  *
  * @example
  * ```tsx
- * // Works with any double-function behavior
- * import { useSelect, useTooltip } from '@my-design-system/headless';
+ * // Works with behaviors that take no arguments
+ * const useCounterHook = createHook(useCounter);
+ * const counter = useCounterHook(); // No args required!
  *
+ * // Works with optional arguments
+ * const useDialogHook = createHook(useDialog);
+ * const dialog = useDialogHook(); // Optional args
+ * const dialog2 = useDialogHook({ initialOpen: true });
+ *
+ * // Works with required arguments
  * const useSelectHook = createHook(useSelect);
- * const useTooltipHook = createHook(useTooltip);
- *
- * function MySelect() {
- *   const select = useSelectHook({ options: myOptions });
- *   // ...
- * }
+ * const select = useSelectHook({ options: myOptions }); // Required args
  * ```
  *
- * Note: Options are captured once when the component mounts (like useRef's
+ * Note: Arguments are captured once when the component mounts (like useRef's
  * initial value). If you need reactive options, pass signals as option values
  * and read them inside the behavior.
  */
-export function createHook<Api extends ReactiveAdapter, Options, Result>(
-  behavior: (api: Api) => (options: Options) => Result
-): (options: Options) => Result {
-  return function useHook(options: Options): Result {
+export function createHook<Api extends ReactiveAdapter, Args extends unknown[], Result>(
+  behavior: (api: Api) => (...args: Args) => Result
+): (...args: Args) => Result {
+  return function useHook(...args: Args): Result {
     const api = useSignalAPI();
 
     // Create behavior instance once on mount
@@ -308,7 +310,7 @@ export function createHook<Api extends ReactiveAdapter, Options, Result>(
 
     if (instanceRef.current === null) {
       // Cast is safe because SignalAPI satisfies ReactiveAdapter
-      instanceRef.current = behavior(api as unknown as Api)(options);
+      instanceRef.current = behavior(api as unknown as Api)(...args);
     }
 
     return instanceRef.current;

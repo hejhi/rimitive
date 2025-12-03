@@ -1,40 +1,30 @@
 /**
- * Filter Component - React Version
+ * Filter Behavior - React Version
  *
- * Returns actual signal/computed functions for use with useSubscribe
+ * A simple filter for todo lists.
+ * Used with useComponent to create isolated instances per React component.
  */
-
-import type { SignalFunction } from '@lattice/signals/signal';
-import type { UseTodo } from './useTodoList';
+import type { Service } from '../service';
+import type { Todo } from './useTodoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export interface UseFilter {
-  currentFilter: SignalFunction<FilterType>;
-  setFilter(filter: FilterType): void;
-  filterTodos(todos: UseTodo[]): UseTodo[];
-}
-
-export function useFilter(api: {
-  signal: <T>(value: T) => SignalFunction<T>;
-}): UseFilter {
+export const useFilter = (api: Service) => {
   const currentFilter = api.signal<FilterType>('all');
 
   return {
-    // Signal - for useSubscribe
+    // Reactive state
     currentFilter,
 
     // Actions
-    setFilter(filter: FilterType) {
-      currentFilter(filter);
-    },
+    setFilter: (filter: FilterType) => currentFilter(filter),
 
     // Utility - filter any todo list
-    filterTodos(todos: UseTodo[]): UseTodo[] {
+    filterTodos: (todos: Todo[]): Todo[] => {
       const filter = currentFilter();
       if (filter === 'active') return todos.filter((t) => !t.completed);
       if (filter === 'completed') return todos.filter((t) => t.completed);
       return todos;
     },
   };
-}
+};

@@ -1,31 +1,18 @@
 /**
- * Counter Component - React Version
+ * Counter Behavior - React Version
  *
- * Returns actual signal/computed functions for use with useSubscribe
+ * A simple counter with derived values for doubled and isEven.
+ * Used with useComponent to create isolated instances per React component.
  */
+import type { Service } from '../service';
 
-import type { SignalFunction } from '@lattice/signals/signal';
-import type { ComputedFunction } from '@lattice/signals/computed';
-
-export interface UseCounter {
-  count: SignalFunction<number>;
-  doubled: ComputedFunction<number>;
-  isEven: ComputedFunction<boolean>;
-  increment(): void;
-  decrement(): void;
-  set(value: number): void;
-}
-
-export function useCounter(api: {
-  signal: <T>(value: T) => SignalFunction<T>;
-  computed: <T>(compute: () => T) => ComputedFunction<T>;
-}): UseCounter {
-  const count = api.signal(0);
+export const useCounter = (api: Service, initialCount = 0) => {
+  const count = api.signal(initialCount);
   const doubled = api.computed(() => count() * 2);
   const isEven = api.computed(() => count() % 2 === 0);
 
   return {
-    // Signals/Computed - for useSubscribe
+    // Reactive state
     count,
     doubled,
     isEven,
@@ -35,4 +22,4 @@ export function useCounter(api: {
     decrement: () => count(count() - 1),
     set: (value: number) => count(value),
   };
-}
+};
