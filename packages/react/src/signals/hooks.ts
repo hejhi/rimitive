@@ -157,74 +157,6 @@ export function useSelector<T, R>(
 }
 
 /**
- * Create a component instance that is scoped to the component lifecycle.
- * Components are plain functions that accept a SignalAPI and return behavior.
- *
- * This enables the "component pattern" - building reusable, framework-agnostic
- * UI behaviors that can be shared across React, Vue, Svelte, etc.
- *
- * @example
- * ```tsx
- * // Define a component once
- * function createCounter(api: SignalAPI) {
- *   const count = api.signal(0);
- *   return {
- *     count: () => count(),
- *     increment: () => count(count() + 1),
- *   };
- * }
- *
- * // Use in React
- * function StepCounter() {
- *   const counter = useComponent(createCounter);
- *   const count = useSubscribe(counter.count);
- *   return <button onClick={counter.increment}>Step {count}</button>;
- * }
- *
- * // Use in Vue
- * const counter = useComponent(createCounter);
- * const count = ref(counter.count());
- *
- * // Same component, different frameworks!
- * ```
- *
- * @example
- * ```tsx
- * // Component with initialization arguments
- * function createTodoList(api: SignalAPI, initialTodos: Todo[]) {
- *   const todos = api.signal(initialTodos);
- *   return {
- *     todos: () => todos(),
- *     addTodo: (text: string) => todos([...todos(), { text, done: false }]),
- *   };
- * }
- *
- * function TodoApp() {
- *   const todoList = useComponent(createTodoList, [
- *     { text: 'Learn Lattice', done: false }
- *   ]);
- *   const todos = useSubscribe(todoList.todos);
- *   return <div>{todos.length} todos</div>;
- * }
- * ```
- */
-export function useComponent<T, Args extends unknown[]>(
-  factory: (api: ReturnType<typeof useSignalAPI>, ...args: Args) => T,
-  ...args: Args
-): T {
-  const api = useSignalAPI();
-
-  // Create component instance once on mount
-  const componentRef = useRef<T | null>(null);
-
-  if (componentRef.current === null) {
-    componentRef.current = factory(api, ...args);
-  }
-
-  return componentRef.current;
-}
-
-/**
  * Portable readable signal type - can be read by calling with no args.
  */
 export interface Readable<T> {
@@ -255,7 +187,6 @@ export interface ReactiveAdapter {
  * `(api) => (...args) => Result`
  *
  * The returned hook handles SignalAPI injection automatically and creates
- * one instance per React component (like useComponent).
  *
  * @example
  * ```tsx
@@ -299,7 +230,11 @@ export interface ReactiveAdapter {
  * initial value). If you need reactive options, pass signals as option values
  * and read them inside the behavior.
  */
-export function createHook<Api extends ReactiveAdapter, Args extends unknown[], Result>(
+export function createHook<
+  Api extends ReactiveAdapter,
+  Args extends unknown[],
+  Result,
+>(
   behavior: (api: Api) => (...args: Args) => Result
 ): (...args: Args) => Result {
   return function useHook(...args: Args): Result {

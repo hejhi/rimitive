@@ -3,7 +3,6 @@ export {
   useSubscribe,
   useSignal,
   useSelector,
-  useComponent,
   createHook,
   SignalProvider,
   useSignalAPI,

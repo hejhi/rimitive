@@ -1,10 +1,16 @@
 # Lattice
 
-A toolkit of fine-grained reactive libraries for building UI applications.
+A collection of extensible, lightweight, and portable reactive libraries for building UI applications.
 
-Choose the pieces you need—signals, view primitives, routing, SSR—and compose them however you want. Lattice separates **reactivity** from **rendering**, so the same behavior and UI attributes work across React, native DOM, Canvas, or any adapter you write.
+The signals implementation uses a push-pull algorithm similar to:
 
-Use presets to get started, or wire up primitives yourself for full control. Each library is independent and tree-shakeable.
+- [Vue 3.4's reactivity system](https://github.com/vuejs/core)
+- [Preact Signals' double-linked-list approach](https://preactjs.com/blog/signal-boosting/)
+- [alien-signals](https://github.com/nickmccurdy/alien-signals)
+
+The view layer separates reactivity from rendering through an adapter system—the same component logic can target DOM, Canvas, SSR, or custom renderers.
+
+Each package is independent. Use presets for convenience, or wire primitives manually.
 
 ## Core Concepts
 
@@ -23,9 +29,9 @@ count(); // read → 1
 count.peek(); // read without tracking
 ```
 
-### Derived Values Are Lazy
+### Computeds
 
-Computeds only recompute when read AND when dependencies changed:
+Lazy evaluation—only recompute when read and dependencies changed:
 
 ```typescript
 const doubled = computed(() => count() * 2);
@@ -36,7 +42,7 @@ count(5); // marks doubled as stale (doesn't recompute yet)
 doubled(); // recomputes: 10
 ```
 
-### Effects Run Automatically
+### Effects
 
 ```typescript
 effect(() => {
@@ -47,7 +53,7 @@ count(1); // logs: "Count is 1"
 count(2); // logs: "Count is 2"
 ```
 
-### Batching Prevents Redundant Work
+### Batching
 
 ```typescript
 const { signal, effect, batch } = createSignalsApi();
@@ -59,12 +65,12 @@ batch(() => {
   count(1);
   count(2);
   count(3);
-}); // effect runs once with final value: 3
+}); // effect runs once, logs: 3
 ```
 
 ## View Primitives
 
-Lattice includes declarative DOM primitives that integrate with signals:
+DOM primitives that work with signals:
 
 ```typescript
 import { createDOMSvc } from '@lattice/view/presets/dom';
@@ -133,7 +139,7 @@ match(currentTab, (tab) =>
 | `@lattice/view`    | Declarative view primitives with adapter system                  |
 | `@lattice/router`  | Client-side routing                                              |
 | `@lattice/islands` | SSR and hydration support                                        |
-| `@lattice/react`   | React bindings (useSignal, useSubscribe, useComponent)           |
+| `@lattice/react`   | React bindings (useSignal, useSubscribe)                         |
 
 ## Installation
 
@@ -147,38 +153,42 @@ For React integration:
 pnpm add @lattice/react
 ```
 
-## Headless Components
+## Portable Behaviors
 
-Write portable logic that works across frameworks:
+Behaviors are curried functions that accept a signal API, then arguments. As a convention (but not a rule), they're prefixed with `use*`, which should feel familiar to reactive frameworks (_cough cough_ React):
 
 ```typescript
-// behaviors/createCounter.ts - framework agnostic
+// behaviors/useCounter.ts
 interface SignalAPI {
   signal: <T>(value: T) => { (): T; (v: T): void };
   computed: <T>(fn: () => T) => () => T;
 }
 
-export const createCounter = (api: SignalAPI, initialCount = 0) => {
-  const count = api.signal(initialCount);
-  const doubled = api.computed(() => count() * 2);
+export const useCounter =
+  (api: SignalAPI) =>
+  (initialCount = 0) => {
+    const count = api.signal(initialCount);
+    const doubled = api.computed(() => count() * 2);
 
-  return {
-    count,
-    doubled,
-    increment: () => count(count() + 1),
-    decrement: () => count(count() - 1),
+    return {
+      count,
+      doubled,
+      increment: () => count(count() + 1),
+      decrement: () => count(count() - 1),
+    };
   };
-};
 ```
 
 Use in React:
 
 ```typescript
-import { useComponent, useSubscribe } from '@lattice/react';
-import { createCounter } from './behaviors/createCounter';
+import { createHook, useSubscribe } from '@lattice/react';
+import { useCounter } from './behaviors/useCounter';
+
+const useCounterHook = createHook(useCounter);
 
 function Counter() {
-  const counter = useComponent(createCounter, 10); // api injected automatically
+  const counter = useCounterHook(10);
   const count = useSubscribe(counter.count);
 
   return <button onClick={counter.increment}>Count: {count}</button>;
@@ -189,25 +199,21 @@ Use in Lattice view:
 
 ```typescript
 const { signal, computed, el, t } = createDOMSvc();
-const counter = createCounter({ signal, computed }, 10);
+const counter = useCounter({ signal, computed })(10);
 
 el('button').props({ onclick: counter.increment })(t`Count: ${counter.count}`);
 ```
 
 ## Architecture
 
-### Push-Pull Reactivity
-
-Lattice uses a **push-pull algorithm**:
+### Push-Pull Algorithm
 
 - **Push**: When a signal changes, dependents are marked stale (not recomputed)
 - **Pull**: Computeds recompute lazily when read
 
-This prevents cascading recomputes and ensures minimal work.
+This avoids cascading recomputes.
 
-### Composable by Design
-
-Each package is independent. Use signals alone, add view primitives, bring your own renderer:
+### Package Structure
 
 ```
 @lattice/signals ─── standalone reactivity
@@ -217,7 +223,7 @@ Each package is independent. Use signals alone, add view primitives, bring your 
        │        ├── DOM adapter
        │        ├── Canvas adapter
        │        ├── SSR adapter
-       │        └── your own adapter
+       │        └── custom adapters
        │
        ├── @lattice/react ─── React bindings
        │
@@ -226,7 +232,7 @@ Each package is independent. Use signals alone, add view primitives, bring your 
        └── @lattice/islands ─── SSR + hydration
 ```
 
-Use `@lattice/lattice` to compose these pieces (or anything else) into your own service API.
+`@lattice/lattice` provides a composition layer for wiring these together.
 
 ## Development
 

@@ -1,10 +1,4 @@
-export {
-  useSubscribe,
-  useSignal,
-  useSelector,
-  useComponent,
-  createHook,
-} from './hooks';
+export { useSubscribe, useSignal, useSelector, createHook } from './hooks';
 
 export { SignalProvider, useSignalAPI } from './context';
 
