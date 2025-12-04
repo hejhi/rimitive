@@ -23,14 +23,6 @@ export { HydrationMismatch };
  * On client: reactive, called on init and navigation (popstate)
  *
  * If no context is configured, the getter returns undefined.
- *
- * @example
- * ```ts
- * const MyIsland = island('my-island', (api, getContext) => {
- *   const ctx = getContext(); // User-defined shape or undefined
- *   return (props) => api.el('div')(props.label);
- * });
- * ```
  */
 export type GetContext<TContext = unknown> = () => TContext | undefined;
 
@@ -121,14 +113,6 @@ export type IslandStrategy<
 > = {
   /**
    * Called when hydration fails
-   *
-   * @param error - The hydration mismatch error
-   * @param containerEl - The island container element
-   * @param props - Props for this island instance
-   * @param Component - The island component factory function
-   * @param mount - Mount function for client-side rendering
-   * @returns false to skip default fallback, undefined to proceed with fallback
-   * @throws Error to propagate error up
    */
   onMismatch?: (
     error: HydrationMismatch,
