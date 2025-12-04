@@ -5,8 +5,8 @@
  * native signals and view system.
  */
 import { createDOMSvc } from '@lattice/view/presets/dom';
-import { useDialog } from '../../useDialog';
-import { useSelect, type SelectOption } from '../../useSelect';
+import { dialog } from '../../dialog';
+import { select, type SelectOption } from '../../select';
 
 // ============================================================================
 // Create Lattice API
@@ -14,13 +14,17 @@ import { useSelect, type SelectOption } from '../../useSelect';
 
 const {
   el,
-  signal,
   computed,
   effect,
   match,
   portal,
   mount: mountSpec,
+  use,
 } = createDOMSvc();
+
+// Bind behaviors to this service
+const useDialog = use(dialog);
+const useSelect = use(select<string>);
 
 // ============================================================================
 // Demo Data
@@ -39,23 +43,23 @@ const selectOptions: SelectOption[] = [
 // ============================================================================
 
 function DialogDemo() {
-  // Create headless dialog with Lattice signals
-  const dialog = useDialog({ signal, computed, effect })({});
+  // Create headless dialog
+  const dlg = useDialog();
 
   // Dialog content element
   const dialogContent = el('div')
     .props({
       className: 'dialog-content',
-      role: dialog.dialogProps.role,
+      role: dlg.dialogProps.role,
       tabIndex: -1,
       ariaModal: 'true',
       ariaLabel: 'Dialog',
-      onkeydown: dialog.dialogProps.onkeydown,
+      onkeydown: dlg.dialogProps.onkeydown,
     })
     .ref((elem: HTMLDivElement) => {
       // Lifecycle: Set up ARIA attributes and ref
-      dialog.dialogProps.ref(elem);
-      return () => dialog.dialogProps.ref(null);
+      dlg.dialogProps.ref(elem);
+      return () => dlg.dialogProps.ref(null);
     })(
     el('h4')('Headless Dialog'),
     el('p')(
@@ -66,11 +70,11 @@ function DialogDemo() {
     el('div').props({ className: 'dialog-actions' })(
       el('button').props({
         className: 'dialog-close',
-        onclick: dialog.closeButtonProps.onclick,
+        onclick: dlg.closeButtonProps.onclick,
       })('Cancel'),
       el('button').props({
         className: 'dialog-confirm',
-        onclick: dialog.close,
+        onclick: dlg.close,
       })('Confirm')
     )
   );
@@ -79,7 +83,7 @@ function DialogDemo() {
   const dialogOverlay = el('div').props({
     className: 'dialog-overlay',
     onclick: (e: Event) => {
-      if (e.target === e.currentTarget) dialog.close();
+      if (e.target === e.currentTarget) dlg.close();
     },
   })(dialogContent);
 
@@ -87,14 +91,14 @@ function DialogDemo() {
   const triggerButton = el('button')
     .props({
       className: 'dialog-trigger',
-      onclick: dialog.triggerProps.onclick,
+      onclick: dlg.triggerProps.onclick,
     })
     .ref((elem) => {
       // Lifecycle: Set up ARIA attributes
       elem.setAttribute('aria-haspopup', 'dialog');
       // Update aria-expanded reactively
       return effect(() => {
-        elem.setAttribute('aria-expanded', String(dialog.isOpen()));
+        elem.setAttribute('aria-expanded', String(dlg.isOpen()));
       });
     })('Open Dialog');
 
@@ -105,8 +109,7 @@ function DialogDemo() {
     ),
     triggerButton,
     // Portal dialog to document.body when open
-    // Note: dialog.isOpen is passed directly - no arrow function wrapper needed
-    match(dialog.isOpen, (isOpen) => (isOpen ? portal()(dialogOverlay) : null))
+    match(dlg.isOpen, (isOpen) => (isOpen ? portal()(dialogOverlay) : null))
   );
 }
 
@@ -115,15 +118,15 @@ function DialogDemo() {
 // ============================================================================
 
 function SelectDemo() {
-  // Create headless select with Lattice signals
-  const select = useSelect<string>({ signal, computed, effect })({
+  // Create headless select
+  const sel = useSelect({
     options: selectOptions,
     placeholder: 'Choose a fruit...',
   });
 
   // Build option elements
   const optionElements = selectOptions.map((option, index) => {
-    const props = select.getOptionProps(option, index);
+    const props = sel.getOptionProps(option, index);
 
     return el('li').props({
       id: props.id,
@@ -131,7 +134,7 @@ function SelectDemo() {
       className: computed(() => {
         const classes = ['select-option'];
         if (props['aria-selected']()) classes.push('selected');
-        if (select.highlightedIndex() === index) classes.push('highlighted');
+        if (sel.highlightedIndex() === index) classes.push('highlighted');
         if (option.disabled) classes.push('disabled');
         return classes.join(' ');
       }),
@@ -146,30 +149,30 @@ function SelectDemo() {
   const listbox = el('ul')
     .props({
       className: computed(() =>
-        select.isOpen() ? 'select-listbox' : 'select-listbox hidden'
+        sel.isOpen() ? 'select-listbox' : 'select-listbox hidden'
       ),
-      role: select.listboxProps.role,
+      role: sel.listboxProps.role,
     })
     .ref((elem) => {
       // Lifecycle: Set data attribute
-      elem.dataset.selectId = select.listboxProps['data-select-id'];
+      elem.dataset.selectId = sel.listboxProps['data-select-id'];
     })(...optionElements);
 
   // Trigger button
   const trigger = el('button')
     .props({
       className: 'select-trigger',
-      role: select.triggerProps.role,
-      onclick: select.triggerProps.onclick,
+      role: sel.triggerProps.role,
+      onclick: sel.triggerProps.onclick,
       ariaHasPopup: 'listbox',
-      onkeydown: select.triggerProps.onkeydown,
-      ariaExpanded: computed(() => String(select.isOpen())),
-      dataSelectId: select.triggerProps['data-select-id'],
+      onkeydown: sel.triggerProps.onkeydown,
+      ariaExpanded: computed(() => String(sel.isOpen())),
+      dataSelectId: sel.triggerProps['data-select-id'],
     })
     .ref((elem) => {
       // Lifecycle: Set up ARIA attributes and keyboard handler
       const disposeDescendant = effect(() => {
-        const active = select.triggerProps['aria-activedescendant']();
+        const active = sel.triggerProps['aria-activedescendant']();
         if (active) {
           elem.setAttribute('aria-activedescendant', active);
         } else {
@@ -180,7 +183,7 @@ function SelectDemo() {
       return () => {
         disposeDescendant();
       };
-    })(select.selectedLabel);
+    })(sel.selectedLabel);
 
   return el('div').props({ className: 'demo-section' })(
     el('h3')('Select'),

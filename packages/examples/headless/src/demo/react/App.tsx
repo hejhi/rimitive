@@ -6,8 +6,8 @@
  */
 import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
 import { createSignalsApi } from '@lattice/signals/presets/core';
-import { useDialog } from '../../useDialog';
-import { useSelect, type SelectOption } from '../../useSelect';
+import { dialog } from '../../dialog';
+import { select, type SelectOption } from '../../select';
 
 // ============================================================================
 // Create Lattice Signals Service (singleton for the React tree)
@@ -20,8 +20,8 @@ const signalsSvc = createSignalsApi();
 // ============================================================================
 
 // These are created at module level - clean, declarative pattern
-const useDialogHook = createHook(useDialog);
-const useSelectHook = createHook(useSelect);
+const useDialog = createHook(dialog);
+const useSelect = createHook(select);
 
 // ============================================================================
 // Demo Data
@@ -41,7 +41,7 @@ const selectOptions: SelectOption[] = [
 
 function DialogDemo() {
   // Clean, familiar React hook API
-  const dialog = useDialogHook();
+  const dialog = useDialog();
 
   // Subscribe to reactive values for React re-renders
   const isOpen = useSubscribe(dialog.isOpen);
@@ -106,7 +106,7 @@ function DialogDemo() {
 
 function SelectDemo() {
   // Clean, familiar React hook API with options
-  const select = useSelectHook({
+  const select = useSelect({
     options: selectOptions,
     placeholder: 'Choose a fruit...',
   });

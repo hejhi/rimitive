@@ -1,23 +1,8 @@
 /**
  * useDialog - Headless Dialog Behavior
  *
- * A framework-agnostic, accessible dialog (modal) behavior.
+ * Example of framework-agnostic, accessible dialog (modal) behaviors.
  * Provides state management, ARIA attributes, keyboard handling, and focus management.
- *
- * WAI-ARIA: https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/
- *
- * @example
- * ```ts
- * // With Lattice signals
- * import { useDialog } from '@lattice/headless/useDialog';
- * import { signal, computed, effect } from './my-signals';
- *
- * const dialog = useDialog({ signal, computed, effect })({ initialOpen: false });
- *
- * // Use in your UI framework:
- * // <button {...dialog.triggerProps}>Open</button>
- * // <div {...dialog.dialogProps}>Content</div>
- * ```
  */
 import type { SignalsApi, Signal, Computed } from './types';
 
@@ -70,7 +55,7 @@ export interface DialogState {
  * @param api - Signals API (signal, computed, effect)
  * @returns Factory function that creates dialog state
  */
-export const useDialog =
+export const dialog =
   (api: SignalsApi) =>
   (options: UseDialogOptions = {}): DialogState => {
     const { signal, computed, effect } = api;

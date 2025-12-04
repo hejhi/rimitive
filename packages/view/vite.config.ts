@@ -65,6 +65,7 @@ export default defineConfig({
         ),
         'helpers/text': resolve(__dirname, 'src/helpers/text.ts'),
         'helpers/index': resolve(__dirname, 'src/helpers/index.ts'),
+        'helpers/use': resolve(__dirname, 'src/helpers/use.ts'),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
         'presets/dom': resolve(__dirname, 'src/presets/dom.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),

@@ -7,10 +7,7 @@ import {
   defaultHelpers as defaultViewHelpers,
 } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import {
-  createDOMAdapter,
-  DOMAdapterConfig,
-} from '@lattice/view/adapters/dom';
+import { createDOMAdapter, DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
 import { composeFrom } from '@lattice/lattice';
 
@@ -175,12 +172,15 @@ const select = (id: number) => {
 // Components
 // ============================================================================
 
-const Button = (id: string, label: string) =>
-  el('button').props({
-    className: 'btn btn-primary btn-block col-sm-6 smallpad',
-    type: 'button',
-    id,
-  })(label)();
+const Button = (id: string, label: string, onclick: (ev: MouseEvent) => void) =>
+  el('button')
+    .props({
+      className: 'btn btn-primary btn-block col-sm-6 smallpad',
+      type: 'button',
+      id,
+    })
+    // Use more performant addEventListener for batching
+    .ref(addEventListener('click', onclick))(label);
 
 const Row = (data: Reactive<RowData>, children: ElRefSpecChild[] = []) => {
   const id = data().id;
@@ -188,54 +188,48 @@ const Row = (data: Reactive<RowData>, children: ElRefSpecChild[] = []) => {
   const rowClass = computed(() => (selected() === id ? 'danger' : ''));
 
   return el('tr').props({ className: rowClass })(
-    el('td').props({ className: 'col-md-1' })(String(id))(),
+    el('td').props({ className: 'col-md-1' })(String(id)),
     el('td').props({ className: 'col-md-4' })(
-      el('a')(label)(addEventListener('click', () => select(id)))
-    )(),
+      el('a').props({ onclick: () => select(id) })(label)
+    ),
     el('td').props({ className: 'col-md-1' })(
-      el('a')(
+      el('a').props({ onclick: () => remove(id) })(
         el('span').props({
           className: 'glyphicon glyphicon-remove',
           ariaHidden: 'true',
         })()
-      )(addEventListener('click', () => remove(id)))
-    )(),
+      )
+    ),
     el('td').props({ className: 'col-md-6' })(),
     ...children
-  )();
+  );
 };
 
 const App = () => {
   return el('div').props({ className: 'container' })(
     el('div').props({ className: 'jumbotron' })(
       el('div').props({ className: 'row' })(
-        el('div').props({ className: 'col-md-6' })(el('h1')('Lattice-keyed')())(),
+        el('div').props({ className: 'col-md-6' })(el('h1')('Lattice-keyed')),
         el('div').props({ className: 'col-md-6' })(
           el('div').props({ className: 'row' })(
-            Button('run', 'Create 1,000 rows')(addEventListener('click', run)),
-            Button(
-              'runlots',
-              'Create 10,000 rows'
-            )(addEventListener('click', runLots)),
-            Button('add', 'Append 1,000 rows')(addEventListener('click', add)),
-            Button(
-              'update',
-              'Update every 10th row'
-            )(addEventListener('click', update)),
-            Button('clear', 'Clear')(addEventListener('click', clear)),
-            Button('swaprows', 'Swap Rows')(addEventListener('click', swapRows))
-          )()
-        )()
-      )()
-    )(),
-    el('table').props({ className: 'table table-hover table-striped test-data' })(
-      el('tbody')(map(data, (rowData: RowData) => rowData.id)(Row))()
-    )(),
+            Button('run', 'Create 1,000 rows', run),
+            Button('runlots', 'Create 10,000 rows', runLots),
+            Button('add', 'Append 1,000 rows', add),
+            Button('update', 'Update every 10th row', update),
+            Button('clear', 'Clear', clear),
+            Button('swaprows', 'Swap Rows', swapRows)
+          )
+        )
+      )
+    ),
+    el('table').props({
+      className: 'table table-hover table-striped test-data',
+    })(el('tbody')(map(data, (rowData: RowData) => rowData.id, Row))),
     el('span').props({
       className: 'preloadicon glyphicon glyphicon-remove',
       ariaHidden: 'true',
-    })()
-  )();
+    })
+  );
 };
 
 // ============================================================================

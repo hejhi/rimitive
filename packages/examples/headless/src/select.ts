@@ -83,7 +83,10 @@ export interface SelectState<T = string> {
   };
 
   /** Get props for an individual option */
-  getOptionProps: (option: SelectOption<T>, index: number) => {
+  getOptionProps: (
+    option: SelectOption<T>,
+    index: number
+  ) => {
     role: 'option';
     id: string;
     'aria-selected': Computed<boolean>;
@@ -102,7 +105,7 @@ let selectIdCounter = 0;
  * @param api - Signals API (signal, computed, effect)
  * @returns Factory function that creates select state
  */
-export const useSelect =
+export const select =
   <T = string>(api: SignalsApi) =>
   (options: UseSelectOptions<T>): SelectState<T> => {
     const { signal, computed, effect } = api;
@@ -141,7 +144,10 @@ export const useSelect =
         .map(({ i }) => i);
 
     // Helper: find next/prev enabled option
-    const findNextEnabled = (currentIndex: number, direction: 1 | -1): number => {
+    const findNextEnabled = (
+      currentIndex: number,
+      direction: 1 | -1
+    ): number => {
       const enabled = getEnabledIndices();
       if (enabled.length === 0) return -1;
 
@@ -305,7 +311,8 @@ export const useSelect =
       };
 
       document.addEventListener('click', handleClickOutside, true);
-      return () => document.removeEventListener('click', handleClickOutside, true);
+      return () =>
+        document.removeEventListener('click', handleClickOutside, true);
     });
 
     return {

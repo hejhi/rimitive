@@ -20,4 +20,4 @@ const App = () => {
 
 const app = mount(App());
 const container = document.querySelector('#app');
-container?.appendChild(app.element as Node);
+container?.appendChild(app.element!);

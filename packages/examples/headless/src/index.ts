@@ -19,10 +19,10 @@
  * ```
  */
 
-export { useDialog } from './useDialog';
-export type { UseDialogOptions, DialogState } from './useDialog';
+export { dialog } from './dialog';
+export type { UseDialogOptions, DialogState } from './dialog';
 
-export { useSelect } from './useSelect';
-export type { UseSelectOptions, SelectOption, SelectState } from './useSelect';
+export { select } from './select';
+export type { UseSelectOptions, SelectOption, SelectState } from './select';
 
 export type { SignalsApi, Signal, Computed } from './types';

@@ -11,10 +11,10 @@
 
 import { ReactNode } from 'react';
 import { createHook, useSubscribe } from '@lattice/react';
-import { useModal } from '../components/useModal';
+import { modal } from '../behaviors/modal';
 
 // Create React hook from portable behavior (once at module level)
-const useModalHook = createHook(useModal);
+const useModal = createHook(modal);
 
 export interface ModalProps {
   title: string;
@@ -22,35 +22,18 @@ export interface ModalProps {
   trigger?: ReactNode;
 }
 
-/**
- * Modal Component - Isolated state, shared infrastructure
- *
- * Each Modal instance creates its own signal instance via createHook,
- * giving it isolated state. But all Modals share the parent SignalProvider's
- * reactive graph infrastructure (SignalsContext, scheduler, propagation).
- *
- * Usage:
- * ```tsx
- * <Modal title="Settings">
- *   <p>Modal content here</p>
- * </Modal>
- * ```
- */
 export function Modal({ title, children, trigger }: ModalProps) {
-  // createHook creates a new signal instance per component (isolated state)
-  const modal = useModalHook();
+  const modal = useModal();
   const isOpen = useSubscribe(modal.isOpen);
 
   return (
     <>
-      {/* Trigger button */}
       {trigger ? (
         <div onClick={() => modal.open()}>{trigger}</div>
       ) : (
         <button onClick={() => modal.open()}>Open {title}</button>
       )}
 
-      {/* Modal overlay and content */}
       {isOpen && (
         <>
           <div

@@ -1,21 +1,3 @@
-/**
- * useTodoList - Portable TodoList Behavior
- *
- * A todo list with computed values for filtering and counting.
- * Framework-agnostic - works with any signals implementation.
- *
- * @example
- * ```ts
- * // With Lattice signals
- * const todoList = useTodoList({ signal, computed, effect })({
- *   initialTodos: [{ id: 1, text: 'Learn Lattice', completed: false }]
- * });
- *
- * // With React (via createHook)
- * const useTodoListHook = createHook(useTodoList);
- * const todoList = useTodoListHook({ initialTodos: [...] });
- * ```
- */
 import type { SignalsApi, Signal, Computed } from './types';
 
 export interface Todo {
@@ -24,36 +6,24 @@ export interface Todo {
   completed: boolean;
 }
 
-export interface UseTodoListOptions {
-  /** Initial list of todos */
+export interface TodoListOptions {
   initialTodos?: Todo[];
 }
 
 export interface TodoListState {
-  /** All todos */
   todos: Signal<Todo[]>;
-  /** Whether all todos are completed */
   allCompleted: Computed<boolean>;
-  /** Number of active (not completed) todos */
   activeCount: Computed<number>;
 
-  /** Add a new todo */
+  // Actions
   addTodo: (text: string) => void;
-  /** Toggle a todo's completed state */
   toggleTodo: (id: number) => void;
-  /** Toggle all todos' completed state */
   toggleAll: () => void;
 }
 
-/**
- * Creates a portable todo list behavior
- *
- * @param api - Signals API (signal, computed, effect)
- * @returns Factory function that creates todo list state
- */
-export const useTodoList =
+export const todoList =
   (api: SignalsApi) =>
-  (options: UseTodoListOptions = {}): TodoListState => {
+  (options: TodoListOptions = {}): TodoListState => {
     const { signal, computed } = api;
     const { initialTodos = [] } = options;
 
@@ -64,8 +34,8 @@ export const useTodoList =
       return list.length > 0 && list.every((todo) => todo.completed);
     });
 
-    const activeCount = computed(() =>
-      todos().filter((todo) => !todo.completed).length
+    const activeCount = computed(
+      () => todos().filter((todo) => !todo.completed).length
     );
 
     return {

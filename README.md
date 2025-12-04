@@ -155,17 +155,14 @@ pnpm add @lattice/react
 
 ## Portable Behaviors
 
-Behaviors are curried functions that accept a signal API, then arguments. As a convention (but not a rule), they're prefixed with `use*`, which should feel familiar to reactive frameworks (_cough cough_ React):
+Behaviors are curried functions: `(api) => (...args) => Result`
 
 ```typescript
-// behaviors/useCounter.ts
-interface SignalAPI {
-  signal: <T>(value: T) => { (): T; (v: T): void };
-  computed: <T>(fn: () => T) => () => T;
-}
+// behaviors/counter.ts
+import type { ReactiveAdapter } from '@lattice/view/reactive-adapter';
 
-export const useCounter =
-  (api: SignalAPI) =>
+export const counter =
+  (api: ReactiveAdapter) =>
   (initialCount = 0) => {
     const count = api.signal(initialCount);
     const doubled = api.computed(() => count() * 2);
@@ -179,29 +176,33 @@ export const useCounter =
   };
 ```
 
-Use in React:
+Use in Lattice view with `use`:
+
+```typescript
+import { createDOMSvc } from '@lattice/view/presets/dom';
+import { counter } from './behaviors/counter';
+
+const { use, el, t } = createDOMSvc();
+const useCounter = use(counter);
+
+const c = useCounter(10);
+el('button').props({ onclick: c.increment })(t`Count: ${c.count}`);
+```
+
+Use in React with `createHook`:
 
 ```typescript
 import { createHook, useSubscribe } from '@lattice/react';
-import { useCounter } from './behaviors/useCounter';
+import { counter } from './behaviors/counter';
 
-const useCounterHook = createHook(useCounter);
+const useCounter = createHook(counter);
 
 function Counter() {
-  const counter = useCounterHook(10);
-  const count = useSubscribe(counter.count);
+  const c = useCounter(10);
+  const count = useSubscribe(c.count);
 
-  return <button onClick={counter.increment}>Count: {count}</button>;
+  return <button onClick={c.increment}>Count: {count}</button>;
 }
-```
-
-Use in Lattice view:
-
-```typescript
-const { signal, computed, el, t } = createDOMSvc();
-const counter = useCounter({ signal, computed })(10);
-
-el('button').props({ onclick: counter.increment })(t`Count: ${counter.count}`);
 ```
 
 ## Architecture

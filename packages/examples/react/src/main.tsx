@@ -13,25 +13,25 @@ import { createRoot } from 'react-dom/client';
 import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
 
 // Import portable behaviors
-import { useCounter } from './components/useCounter';
-import { useTodoList } from './components/useTodoList';
-import { useFilter } from './components/useFilter';
-import { useAppState } from './components/useAppState';
+import { counter } from './behaviors/counter';
+import { todoList } from './behaviors/todoList';
+import { filter } from './behaviors/filter';
+import { appState } from './behaviors/appState';
 import { Modal } from './design-system/Modal';
 import { service } from './service';
 
 // Create React hooks from portable behaviors (once at module level)
-const useCounterHook = createHook(useCounter);
-const useTodoListHook = createHook(useTodoList);
-const useFilterHook = createHook(useFilter);
-const useAppStateHook = createHook(useAppState);
+const useCounter = createHook(counter);
+const useTodoList = createHook(todoList);
+const useFilter = createHook(filter);
+const useAppState = createHook(appState);
 
 /**
  * Example 1: Step Counter
  * Using the counter behavior to track steps in a multi-step process
  */
 function StepCounter() {
-  const counter = useCounterHook();
+  const counter = useCounter();
   const step = useSubscribe(counter.count);
   const isEven = useSubscribe(counter.isEven);
 
@@ -75,7 +75,7 @@ function SlideCarousel() {
     'Building a Design System',
   ];
 
-  const counter = useCounterHook();
+  const counter = useCounter();
   const current = useSubscribe(counter.count);
   const doubled = useSubscribe(counter.doubled);
 
@@ -126,7 +126,7 @@ function SlideCarousel() {
  * Using todoList + filter behaviors together - composition!
  */
 function TodoApp() {
-  const todoList = useTodoListHook({
+  const todoList = useTodoList({
     initialTodos: [
       { id: 1, text: 'Learn Lattice', completed: false },
       { id: 2, text: 'Build a React app', completed: false },
@@ -134,7 +134,7 @@ function TodoApp() {
     ],
   });
 
-  const filter = useFilterHook();
+  const filter = useFilter();
 
   // Subscribe to reactive values
   const allTodos = useSubscribe(todoList.todos);
@@ -229,7 +229,7 @@ function TodoApp() {
  * Shows that we don't have React Context re-render problems
  */
 function FineGrainedReactivityDemo() {
-  const appState = useAppStateHook();
+  const appState = useAppState();
 
   // Track render counts
   const renderCounts = React.useRef({

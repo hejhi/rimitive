@@ -27,6 +27,7 @@ import { createSignalsApi } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import { createAddEventListener } from '../helpers/addEventListener';
 import { createText } from '../helpers/text';
+import { createUse } from '../helpers/use';
 import { defaultExtensions, defaultHelpers } from './core';
 import type { RefSpec, ReactiveAdapter } from '../types';
 
@@ -54,7 +55,10 @@ export type { DOMAdapterConfig } from '../adapters/dom';
 export const createDOMViewSvc = (signals: ReactiveAdapter) => {
   const adapter = createDOMAdapter();
   const viewHelpers = defaultHelpers(adapter, signals);
-  const viewSvc = composeFrom(defaultExtensions<DOMAdapterConfig>(), viewHelpers);
+  const viewSvc = composeFrom(
+    defaultExtensions<DOMAdapterConfig>(),
+    viewHelpers
+  );
 
   const svc = {
     ...viewSvc,
@@ -86,10 +90,14 @@ export const createDOMViewSvc = (signals: ReactiveAdapter) => {
 export const createDOMSvc = () => {
   const signals = createSignalsApi();
   const dom = createDOMViewSvc(signals);
-
-  return {
+  const svc = {
     ...signals,
     ...dom,
+  };
+
+  return {
+    ...svc,
+    use: createUse(svc),
   };
 };
 

@@ -1,11 +1,3 @@
-/**
- * TodoList Behavior - Framework Agnostic
- *
- * Component Pattern (see COMPONENT_PATTERN.md)
- * This is a headless component - pure logic with no UI concerns.
- * Can be used with any signals implementation (Lattice, Solid, Preact Signals, etc.)
- */
-
 import { signal, computed } from '../service';
 
 export interface Todo {
