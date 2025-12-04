@@ -16,9 +16,6 @@ import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { IslandNodeMeta } from '../types';
 import { registerIsland } from '../ssr-context';
 
-// Re-export DOMAdapterConfig as DOMServerAdapterConfig for backwards compatibility
-export type { DOMAdapterConfig as DOMServerAdapterConfig } from '@lattice/view/adapters/dom';
-
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
  */

@@ -19,7 +19,10 @@
 import { composeFrom } from '@lattice/lattice';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
-import { createDOMAdapter, type DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import {
+  createDOMAdapter,
+  type DOMAdapterConfig,
+} from '@lattice/view/adapters/dom';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import type { RefSpec, Adapter } from '@lattice/view/types';
 import { createDOMHydrator } from '../hydrators/dom';
@@ -41,7 +44,10 @@ export const createIslandsClientApp = () => {
   // Create DOM adapter for post-hydration rendering
   const domAdapter = createDOMAdapter();
   const viewHelpers = defaultHelpers(domAdapter, signalsSvc);
-  const viewSvc = composeFrom(defaultExtensions<DOMAdapterConfig>(), viewHelpers);
+  const viewSvc = composeFrom(
+    defaultExtensions<DOMAdapterConfig>(),
+    viewHelpers
+  );
 
   const on = createAddEventListener(signalsSvc.batch);
 
@@ -55,9 +61,16 @@ export const createIslandsClientApp = () => {
     islandSignals: ReturnType<typeof createSignalsApi>
   ) => {
     const helpers = defaultHelpers(islandAdapter, islandSignals);
-    const islandViews = composeFrom(defaultExtensions<DOMAdapterConfig>(), helpers);
+    const islandViews = composeFrom(
+      defaultExtensions<DOMAdapterConfig>(),
+      helpers
+    );
     return {
-      api: { ...islandSignals, ...islandViews, on: createAddEventListener(islandSignals.batch) },
+      api: {
+        ...islandSignals,
+        ...islandViews,
+        on: createAddEventListener(islandSignals.batch),
+      },
       createElementScope: helpers.createElementScope,
     };
   };
@@ -66,18 +79,10 @@ export const createIslandsClientApp = () => {
     element: mount(spec),
   }));
 
-  const hydrate = (...islands: IslandComponent[]) => hydrator.hydrate(...islands);
+  const hydrate = (...islands: IslandComponent[]) =>
+    hydrator.hydrate(...islands);
 
   return { ...svc, mount, hydrate };
 };
 
 export type IslandsClientApp = ReturnType<typeof createIslandsClientApp>;
-
-/** @deprecated Use createIslandsClientApp instead */
-export const createHydrateApp = createIslandsClientApp;
-
-/** @deprecated Use IslandsClientApp instead */
-export type HydrateApp = IslandsClientApp;
-
-/** @deprecated Use IslandsClientApp instead */
-export type HydrateSvc = IslandsClientApp;

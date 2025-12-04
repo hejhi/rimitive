@@ -8,12 +8,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  createDOMServerAdapter,
-  type DOMServerAdapterConfig,
-} from './dom-server';
+import { createDOMServerAdapter } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
@@ -29,7 +27,7 @@ import type { IslandNodeMeta } from '../types';
 function createTestSSRService(signals = createSignalsApi()) {
   const renderer = createDOMServerAdapter();
   const viewHelpers = createSpec(renderer, signals);
-  const baseExtensions = defaultViewExtensions<DOMServerAdapterConfig>();
+  const baseExtensions = defaultViewExtensions<DOMAdapterConfig>();
   const views = composeFrom(baseExtensions, viewHelpers);
 
   const svc = {

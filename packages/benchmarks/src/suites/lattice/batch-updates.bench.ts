@@ -25,7 +25,7 @@ import {
   endBatch as alienEndBatch,
 } from 'alien-signals';
 import { createApi } from './helpers/signal-computed-batch';
-import { type ComputedFunction } from '@lattice/signals/computed';
+import { Readable } from '@lattice/signals/types';
 
 const ITERATIONS = 10000;
 const latticeAPI = createApi();
@@ -52,7 +52,7 @@ group('Batch Multiple Updates - Scaling', () => {
           );
 
           // Multiple layers of computeds to show cascade effects
-          const partialSums: ComputedFunction<number>[] = [];
+          const partialSums: Readable<number>[] = [];
           for (let i = 0; i < signalCount; i += 2) {
             const s1 = signals[i]!;
             const s2 = signals[i + 1] || signals[i]!;
@@ -86,7 +86,7 @@ group('Batch Multiple Updates - Scaling', () => {
             latticeSignal(0)
           );
 
-          const partialSums: ComputedFunction<number>[] = [];
+          const partialSums: Readable<number>[] = [];
           for (let i = 0; i < signalCount; i += 2) {
             const s1 = signals[i]!;
             const s2 = signals[i + 1] || signals[i]!;

@@ -15,7 +15,6 @@ export { renderToString } from '../helpers/renderToString';
 
 // Server adapter
 export { createDOMServerAdapter } from '../adapters/dom-server';
-export type { DOMServerAdapterConfig } from '../adapters/dom-server';
 
 // Unified islands app preset (server version)
 export {

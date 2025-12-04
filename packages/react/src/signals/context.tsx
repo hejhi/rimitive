@@ -1,11 +1,10 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react';
-import type { ComputedFunction } from '@lattice/signals/computed';
-import { SignalFunction } from '@lattice/signals/signal';
+import { Readable, Writable } from './hooks';
 
 // Minimal API shape used by React bindings
 export type SignalAPI = {
-  signal: <T>(value: T) => SignalFunction<T>;
-  computed: <T>(compute: () => T) => ComputedFunction<T>;
+  signal: <T>(value: T) => Writable<T>;
+  computed: <T>(compute: () => T) => Readable<T>;
   effect: (fn: () => void | (() => void)) => () => void;
   batch: <T>(fn: () => T) => T;
   dispose: () => void;

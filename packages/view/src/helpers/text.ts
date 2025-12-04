@@ -3,26 +3,9 @@
  *
  * Creates a computed that interpolates signals/computeds in a template string.
  * Designed for use as el() children.
- *
- * @example
- * ```typescript
- * import { createText } from '@lattice/view/helpers/text';
- *
- * // In service setup
- * const t = createText(computed);
- *
- * // In components
- * const count = signal(0);
- * const doubled = computed(() => count() * 2);
- *
- * el('div')(
- *   t`Count: ${count} (doubled: ${doubled})`,
- *   el('button').props({ onclick: () => count(c => c + 1) })('+')
- * )
- * ```
  */
 
-type ComputedFn = <T>(fn: () => T) => () => T;
+import { Readable } from 'src/types';
 
 /**
  * Create a reactive template literal tag function
@@ -30,7 +13,7 @@ type ComputedFn = <T>(fn: () => T) => () => T;
  * @param computed - The computed function from signals service
  * @returns A tagged template function that creates reactive text
  */
-export function createText(computed: ComputedFn) {
+export function createText(computed: <T>(fn: () => T) => Readable<T>) {
   return (strings: TemplateStringsArray, ...values: unknown[]) =>
     computed(() => {
       let result = strings[0] ?? '';

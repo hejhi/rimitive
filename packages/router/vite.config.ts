@@ -62,7 +62,6 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        route: resolve(__dirname, 'src/route.ts'),
         link: resolve(__dirname, 'src/link.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),

@@ -23,10 +23,8 @@ import { composeFrom } from '@lattice/lattice';
 import { createSignalsApi } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
 import type { RefSpec } from '@lattice/view/types';
-import {
-  createDOMServerAdapter,
-  type DOMServerAdapterConfig,
-} from '../adapters/dom-server';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { createDOMServerAdapter } from '../adapters/dom-server';
 import {
   createSSRContext,
   runWithSSRContext,
@@ -35,15 +33,13 @@ import {
 import { renderToString } from '../helpers/renderToString';
 import type { GetContext } from '../types';
 
-export type { DOMServerAdapterConfig } from '../adapters/dom-server';
-
 export type IslandsServerOptions<TContext = unknown> = {
   context?: GetContext<TContext>;
 };
 
 const createViewSvc = (
-  helpers: ReturnType<typeof defaultHelpers<DOMServerAdapterConfig>>
-) => composeFrom(defaultExtensions<DOMServerAdapterConfig>(), helpers);
+  helpers: ReturnType<typeof defaultHelpers<DOMAdapterConfig>>
+) => composeFrom(defaultExtensions<DOMAdapterConfig>(), helpers);
 
 /**
  * Create a fully-configured islands server app
@@ -74,15 +70,6 @@ export const createIslandsServerApp = <TContext = unknown>(
 };
 
 export type IslandsServerApp = ReturnType<typeof createIslandsServerApp>;
-
-/** @deprecated Use createIslandsServerApp instead */
-export const createSSRApp = createIslandsServerApp;
-
-/** @deprecated Use IslandsServerApp instead */
-export type SSRApp = IslandsServerApp;
-
-/** @deprecated Use IslandsServerApp instead */
-export type SSRSvc = IslandsServerApp;
 
 /**
  * Island API type - the service type available to island components

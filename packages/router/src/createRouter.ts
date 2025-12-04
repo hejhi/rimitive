@@ -14,7 +14,6 @@ import type { RouteParams, RouteSpec, RouteMatch } from './types';
 import { STATUS_ROUTE_SPEC } from './types';
 import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
 import type { RouteTree, RouteNode } from './defineRoutes';
-import { ComputedFunction } from '@lattice/signals/computed';
 
 /**
  * Standalone connect function - doesn't require a router instance
@@ -58,7 +57,7 @@ export type ViewApi<TConfig extends AdapterConfig> = {
   el: ElMethod<TConfig>;
   match: MatchFactory<TConfig['baseElement']>['impl'];
   signal: <T>(value: T) => Writable<T>;
-  computed: <T>(fn: () => T) => ComputedFunction<T>;
+  computed: <T>(fn: () => T) => Readable<T>;
 };
 
 /**
@@ -533,7 +532,7 @@ export function createRouter<TConfig extends AdapterConfig>(
    * @param initialPath - The initial path value to use during SSR (from props)
    * @returns A computed signal containing the current path
    */
-  function useCurrentPath(initialPath: string): ComputedFunction<string> {
+  function useCurrentPath(initialPath: string): Readable<string> {
     return viewApi.computed(() =>
       typeof window === 'undefined' ? initialPath : currentPath()
     );

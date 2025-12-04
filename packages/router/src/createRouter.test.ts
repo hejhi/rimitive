@@ -47,7 +47,6 @@ describe('createRouter', () => {
       const computedFn = (() => fn()) as ReturnType<
         ViewApi<DOMAdapterConfig>['computed']
       >;
-      computedFn.peek = fn;
       return computedFn;
     };
 

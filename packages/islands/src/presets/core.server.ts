@@ -18,7 +18,7 @@ import {
   runWithSSRContext,
   getIslandScripts,
 } from '../ssr-context';
-import type { DOMServerAdapterConfig } from '../adapters/dom-server';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { renderToString } from '../helpers/renderToString';
 
 // ============================================================================
@@ -33,7 +33,7 @@ type SignalsApi = ReturnType<typeof createSignalsApi>;
 /**
  * View API type for server adapter
  */
-type ViewsApi = ReturnType<typeof createViewApi<DOMServerAdapterConfig>>;
+type ViewsApi = ReturnType<typeof createViewApi<DOMAdapterConfig>>;
 
 /**
  * Full service type - signals + views + addEventListener
