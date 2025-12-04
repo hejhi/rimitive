@@ -1,8 +1,8 @@
 /**
  * Headless Component Types
  *
- * These types define the minimal signals API required by headless components.
- * Any framework that provides these primitives can use these behaviors.
+ * These types are equivalent to the centralized types in @lattice/signals/types.
+ * We inline them here for now due to TypeScript module resolution complexities.
  */
 
 /**
@@ -22,7 +22,7 @@ export type Computed<T> = () => T;
  * Minimal signals API required by headless components
  */
 export interface SignalsApi {
-  signal: <T>(initial: T) => Signal<T>;
+  signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(fn: () => T) => Computed<T>;
   effect: (fn: () => void | (() => void)) => () => void;
 }

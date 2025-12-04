@@ -1,82 +1,8 @@
 /**
- * ReactiveAdapter - Minimal interface for reactive systems to integrate with @lattice/view
+ * ReactiveAdapter - Re-exported from @lattice/signals for convenience.
  *
- * This defines the protocol for what it means to be a reactive system compatible
- * with @lattice/view. Similar to React's useSyncExternalStore, this establishes
- * a clear contract between the view layer and the underlying reactive system.
- *
- * Any reactive system (Solid, Vue, MobX, Preact Signals, etc.) can power @lattice/view
- * as long as it implements these three primitives.
+ * The canonical definition lives in @lattice/signals/types.
+ * This re-export allows view consumers to import from either location.
  */
 
-import type { Reactive, Writable } from './types';
-
-/**
- * Minimal reactive system interface that view can integrate with.
- *
- * Consists of four fundamental primitives:
- * 1. signal - Create reactive state that notifies dependents on change
- * 2. computed - Create derived reactive state
- * 3. effect - React to changes by auto-tracking dependencies
- * 4. batch - Optimize multiple updates into a single reactive cycle
- */
-export interface ReactiveAdapter {
-  /**
-   * Create reactive state that notifies on change.
-   *
-   * Returns a readable/writable signal:
-   * - Call with no args to read (tracks dependency)
-   * - Call with arg to write (notifies dependents)
-   *
-   * @example
-   * const count = signal(0);
-   * count();      // => 0 (read)
-   * count(5);     // => void (write)
-   * count();      // => 5
-   */
-  signal: <T>(initialValue: T) => Writable<T>;
-
-  /**
-   * Create derived reactive state from a computation.
-   * Auto-tracks dependencies and recomputes when they change.
-   * Read-only - cannot be written to directly.
-   *
-   * @example
-   * const firstName = signal('Alice');
-   * const lastName = signal('Smith');
-   * const fullName = computed(() => `${firstName()} ${lastName()}`);
-   * fullName(); // => 'Alice Smith'
-   */
-  computed: <T>(fn: () => T) => Reactive<T>;
-
-  /**
-   * React to changes in reactive state.
-   * Auto-tracks signals read during execution and re-runs when they change.
-   *
-   * Returns a dispose function to stop tracking.
-   * The effect function can optionally return a cleanup function.
-   *
-   * @example
-   * const dispose = effect(() => {
-   *   console.log('Count is:', count());
-   *   return () => console.log('Cleanup');
-   * });
-   */
-  effect: (fn: () => void | (() => void)) => () => void;
-
-  /**
-   * Batch multiple updates into a single reactive cycle.
-   * Defers effect execution until the batch completes.
-   *
-   * Critical for performance when multiple signals are updated together
-   * (e.g., in event handlers).
-   *
-   * @example
-   * batch(() => {
-   *   firstName.set('Alice');
-   *   lastName.set('Smith');
-   *   age.set(30);
-   * }); // Only triggers one effect execution
-   */
-  batch: <T>(fn: () => T) => T;
-}
+export type { ReactiveAdapter } from '@lattice/signals/types';

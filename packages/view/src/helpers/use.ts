@@ -5,7 +5,7 @@
  * Behaviors are curried functions: (api) => (...args) => Result
  */
 
-import type { ReactiveAdapter } from '../reactive-adapter';
+import type { ReactiveAdapter } from '@lattice/signals/types';
 
 /**
  * Creates a `use` helper bound to a specific reactive API.

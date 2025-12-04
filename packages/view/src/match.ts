@@ -4,7 +4,7 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import type { RefSpec, Accessor, FragmentRef, ElementRef } from './types';
+import type { RefSpec, Writable, FragmentRef, ElementRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './helpers/scope';
@@ -39,7 +39,7 @@ export type MatchProps<TBaseElement> = {
  * The matcher function is NOT a reactive scope - it's a pure function that
  * receives the current value and returns a RefSpec.
  *
- * Uses function overloads with Accessor<T> first to ensure proper
+ * Uses function overloads with Writable<T> first to ensure proper
  * type inference when passing signals directly (without arrow function wrapper).
  *
  * @example
@@ -58,9 +58,9 @@ export type MatchProps<TBaseElement> = {
 export type MatchFactory<TBaseElement> = ServiceDefinition<
   'match',
   {
-    // Overload 1: Accessor<T> (signal-like) - must be first for proper inference
+    // Overload 1: Writable<T> (signal-like) - must be first for proper inference
     <T, TElement extends TBaseElement>(
-      reactive: Accessor<T>,
+      reactive: Writable<T>,
       matcher: (value: T) => RefSpec<TElement> | null
     ): RefSpec<TElement>;
     // Overload 2: Plain getter () => T (computed, arrow functions)
@@ -143,7 +143,7 @@ export const Match = defineService(
 
       // Overload signatures for proper type inference
       function match<T, TElement extends TBaseElement>(
-        reactive: Accessor<T>,
+        reactive: Writable<T>,
         matcher: (value: T) => RefSpec<TElement> | null
       ): RefSpec<TElement>;
       function match<T, TElement extends TBaseElement>(
@@ -152,74 +152,71 @@ export const Match = defineService(
       ): RefSpec<TElement>;
       // Implementation signature
       function match<T, TElement extends TBaseElement>(
-        reactive: Accessor<T> | (() => T),
+        reactive: Writable<T> | (() => T),
         matcher: (value: T) => RefSpec<TElement> | null
       ): RefSpec<TElement> {
         return createMatchSpec<TElement>((api) => {
-            const fragment: FragmentRef<TBaseElement> = {
-              status: STATUS_FRAGMENT,
-              element: null,
-              parent: null,
-              prev: null,
-              next: null,
-              firstChild: null,
-              lastChild: null,
-              attach(parent, nextSibling) {
-                let currentNode:
-                  | ElementRef<TBaseElement>
-                  | TFragRef
-                  | undefined;
-                let currentValue: T | undefined;
-                let isFirstRun = true;
+          const fragment: FragmentRef<TBaseElement> = {
+            status: STATUS_FRAGMENT,
+            element: null,
+            parent: null,
+            prev: null,
+            next: null,
+            firstChild: null,
+            lastChild: null,
+            attach(parent, nextSibling) {
+              let currentNode: ElementRef<TBaseElement> | TFragRef | undefined;
+              let currentValue: T | undefined;
+              let isFirstRun = true;
 
-                // Update function - called when reactive value changes
-                const updateElement = (value: T) => {
-                  // Skip update if value hasn't changed (after first run)
-                  if (!isFirstRun && value === currentValue) {
-                    return;
-                  }
-                  isFirstRun = false;
-                  currentValue = value;
+              // Update function - called when reactive value changes
+              const updateElement = (value: T) => {
+                // Skip update if value hasn't changed (after first run)
+                if (!isFirstRun && value === currentValue) {
+                  return;
+                }
+                isFirstRun = false;
+                currentValue = value;
 
-                  // Clean up old element or fragment
-                  if (currentNode) removeNode(parent.element, currentNode);
+                // Clean up old element or fragment
+                if (currentNode) removeNode(parent.element, currentNode);
 
-                  // Get RefSpec from matcher (pure function call)
-                  const refSpec = matcher(value);
+                // Get RefSpec from matcher (pure function call)
+                const refSpec = matcher(value);
 
-                  if (refSpec === null) {
-                    setFragmentChild(fragment, null);
-                    currentNode = undefined;
-                    return;
-                  }
+                if (refSpec === null) {
+                  setFragmentChild(fragment, null);
+                  currentNode = undefined;
+                  return;
+                }
 
-                  // Create the element/fragment from the spec
-                  const nodeRef = refSpec.create(api);
-                  setFragmentChild(fragment, nodeRef);
-                  currentNode = nodeRef;
+                // Create the element/fragment from the spec
+                const nodeRef = refSpec.create(api);
+                setFragmentChild(fragment, nodeRef);
+                currentNode = nodeRef;
 
-                  // Insert into DOM
-                  insertNodeBefore(
-                    api,
-                    parent.element,
-                    nodeRef,
-                    undefined,
-                    nextSibling
-                  );
-                };
+                // Insert into DOM
+                insertNodeBefore(
+                  api,
+                  parent.element,
+                  nodeRef,
+                  undefined,
+                  nextSibling
+                );
+              };
 
-                // Effect tracks the reactive value, then calls updateElement
-                return scopedEffect(() => {
-                  const value = reactive();
-                  const isolate = scopedEffect(() => {
-                    updateElement(value);
-                  });
-                  isolate(); // Dispose immediately after it runs
+              // Effect tracks the reactive value, then calls updateElement
+              return scopedEffect(() => {
+                const value = reactive();
+                const isolate = scopedEffect(() => {
+                  updateElement(value);
                 });
-              },
-            };
-            return fragment;
-          });
+                isolate(); // Dispose immediately after it runs
+              });
+            },
+          };
+          return fragment;
+        });
       }
 
       const extension: MatchFactory<TBaseElement> = {

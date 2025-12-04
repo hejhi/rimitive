@@ -159,7 +159,7 @@ Behaviors are curried functions: `(api) => (...args) => Result`
 
 ```typescript
 // behaviors/counter.ts
-import type { ReactiveAdapter } from '@lattice/view/reactive-adapter';
+import type { ReactiveAdapter } from '@lattice/signals/types';
 
 export const counter =
   (api: ReactiveAdapter) =>

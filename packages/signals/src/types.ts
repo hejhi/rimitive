@@ -7,12 +7,43 @@ export interface ReactiveNode {
   status: number; // Current node status (CLEAN, PENDING, DIRTY, DISPOSED) + node type flags (PRODUCER, CONSUMER, SCHEDULED)
 }
 
-export interface Readable<T> {
-  (): T;
-}
+/**
+ * Portable signal types for framework-agnostic behaviors.
+ * Import these types to define portable behaviors that work with any
+ * reactive system that implements the same interface.
+ *
+ * Note: Using type intersections instead of interface extends ensures
+ * TypeScript's overload resolution correctly infers T from the getter
+ * signature rather than void from the setter.
+ */
 
-export interface Writable<T> extends Readable<T> {
-  (value: T): void; // Function call with argument for write
+export type Readable<T> = { (): T };
+
+export type Writable<T> = Readable<T> & { (value: T): void };
+
+export type Reactive<T> = Readable<T> | Writable<T>;
+
+/**
+ * Minimal reactive system interface for portable behaviors.
+ *
+ * Any reactive system (Lattice, Solid, Preact Signals, etc.) can satisfy
+ * this interface. Use this to type the `api` parameter in portable behaviors.
+ *
+ * @example
+ * ```ts
+ * import type { ReactiveAdapter } from '@lattice/signals/types';
+ *
+ * export const counter = (api: ReactiveAdapter) => (initial = 0) => {
+ *   const count = api.signal(initial);
+ *   return { count, increment: () => count(count() + 1) };
+ * };
+ * ```
+ */
+export interface ReactiveAdapter {
+  signal: <T>(initialValue: T) => Writable<T>;
+  computed: <T>(fn: () => T) => Readable<T>;
+  effect: (fn: () => void | (() => void)) => () => void;
+  batch: <T>(fn: () => T) => T;
 }
 
 // ALGORITHM: Producer-Consumer Pattern

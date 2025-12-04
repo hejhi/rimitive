@@ -124,37 +124,17 @@ export interface RefSpec<TElement> extends Service<NodeRef<TElement>, unknown> {
 }
 
 /**
- * A reactive value that can be read as a signal or computed
+ * Portable signal types - re-exported from @lattice/signals
  */
-export interface Readable<T> {
-  (): T;
-}
+import type {
+  Readable as ReadableType,
+  Writable as WritableType,
+  Reactive as ReactiveType,
+} from '@lattice/signals/types';
 
-export interface Writable<T> extends Readable<T> {
-  (value: T): void; // Function call with argument for write
-}
-
-/**
- * Accessor type - represents a signal-like callable with both getter and setter.
- *
- * This type exists to solve TypeScript's overload inference problem:
- * When Signal<T> (which has (): T and (value: T): void signatures) is passed
- * to a function expecting () => T, TypeScript may infer T as void from the
- * setter signature instead of the getter.
- *
- * By using Accessor<T> in function overloads (placed FIRST), we ensure TypeScript
- * matches against this more specific signature and infers T correctly from the
- * getter's return type.
- *
- * @example
- * // Function with proper overloads for signal inference:
- * function match<T>(reactive: Accessor<T>, fn: (value: T) => void): void;
- * function match<T>(reactive: () => T, fn: (value: T) => void): void;
- */
-export interface Accessor<T> {
-  (): T;
-  (value: T): void;
-}
+export type Readable<T> = ReadableType<T>;
+export type Writable<T> = WritableType<T>;
+export type Reactive<T> = ReactiveType<T>;
 
 /**
  * Helper type to extract the return type of a zero-arg callable.
@@ -168,8 +148,6 @@ export type ReadValue<F> = F extends { (): infer R; (value: unknown): void }
   : F extends { (): infer R }
     ? R
     : never;
-
-export type Reactive<T> = Readable<T> | Writable<T>;
 
 /**
  * Lifecycle callback for element connection/disconnection

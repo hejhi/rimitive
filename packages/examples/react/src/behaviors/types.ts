@@ -1,11 +1,10 @@
 /**
  * Portable Behavior Types
  *
- * These types define the minimal signals API required by portable behaviors.
- * Any framework that provides these primitives can use these behaviors.
- *
- * This matches the pattern used in @lattice/headless.
+ * These types are equivalent to the centralized types in @lattice/signals/types.
+ * We inline them here for now due to TypeScript module resolution complexities.
  */
+
 export type Signal<T> = {
   (): T;
   (value: T): void;
@@ -14,7 +13,7 @@ export type Signal<T> = {
 export type Computed<T> = () => T;
 
 export interface SignalsApi {
-  signal: <T>(initial: T) => Signal<T>;
+  signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(fn: () => T) => Computed<T>;
   effect: (fn: () => void | (() => void)) => () => void;
 }
