@@ -1,6 +1,6 @@
 import type { SignalsApi, Signal } from './types';
 
-export interface AppStateState {
+export type AppStateState = {
   userName: Signal<string>;
   userEmail: Signal<string>;
   theme: Signal<'light' | 'dark'>;
@@ -11,7 +11,7 @@ export interface AppStateState {
   setUserEmail: (email: string) => void;
   toggleTheme: () => void;
   incrementClicks: () => void;
-}
+};
 
 export const appState = (api: SignalsApi) => (): AppStateState => {
   const { signal } = api;

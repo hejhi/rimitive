@@ -195,7 +195,12 @@ function drawNode(ctx: CanvasRenderingContext2D, node: CanvasNode): void {
       if (props.stroke !== undefined) ctx.stroke();
 
       // Update bounds for hit testing
-      node.bounds = { x: -radiusX, y: -radiusY, width: radiusX * 2, height: radiusY * 2 };
+      node.bounds = {
+        x: -radiusX,
+        y: -radiusY,
+        width: radiusX * 2,
+        height: radiusY * 2,
+      };
       break;
     }
 
@@ -236,7 +241,8 @@ function drawNode(ctx: CanvasRenderingContext2D, node: CanvasNode): void {
       const fontSize = (props.fontSize as number) ?? 16;
       const fontFamily = (props.fontFamily as string) ?? 'sans-serif';
       const textAlign = (props.textAlign as CanvasTextAlign) ?? 'left';
-      const textBaseline = (props.textBaseline as CanvasTextBaseline) ?? 'alphabetic';
+      const textBaseline =
+        (props.textBaseline as CanvasTextBaseline) ?? 'alphabetic';
 
       ctx.font = `${fontSize}px ${fontFamily}`;
       ctx.textAlign = textAlign;
@@ -251,7 +257,8 @@ function drawNode(ctx: CanvasRenderingContext2D, node: CanvasNode): void {
         x: 0,
         y: -metrics.actualBoundingBoxAscent,
         width: metrics.width,
-        height: metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent,
+        height:
+          metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent,
       };
       break;
     }
@@ -326,7 +333,7 @@ function isSceneNode(node: CanvasElement): node is CanvasNode {
   return 'type' in node && 'children' in node && !('__sceneRoot' in node);
 }
 
-export interface CanvasAdapterOptions {
+export type CanvasAdapterOptions = {
   /**
    * If true, automatically clear the canvas before each paint.
    * Default: true
@@ -337,17 +344,21 @@ export interface CanvasAdapterOptions {
    * Background color to fill when clearing. If not set, clears to transparent.
    */
   clearColor?: string;
-}
+};
 
-export interface CanvasAdapterInstance extends Adapter<CanvasAdapterConfig> {
+export type CanvasAdapterInstance = Adapter<CanvasAdapterConfig> & {
   /** Perform hit testing on a specific canvas at a point */
-  hitTest: (canvas: CanvasBridgeElement, x: number, y: number) => CanvasNode | null;
-}
+  hitTest: (
+    canvas: CanvasBridgeElement,
+    x: number,
+    y: number
+  ) => CanvasNode | null;
+};
 
 /**
  * Create a canvas node adapter for composable DOM + Canvas rendering
  *
- * This adapter implements the Adapter interface, allowing canvas primitives
+ * This adapter implements the Adapter type, allowing canvas primitives
  * to be composed with DOM elements using the same el()/map()/when() patterns.
  *
  * The 'canvas' element type creates an HTMLCanvasElement that acts as a bridge

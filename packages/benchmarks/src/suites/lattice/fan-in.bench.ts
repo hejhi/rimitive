@@ -34,10 +34,10 @@ const ITERATIONS = 25000;
 const latticeAPI = createApi();
 const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-interface BenchState {
+type BenchState = {
   get(name: 'sources'): number;
   get(name: string): unknown;
-}
+};
 
 group('Fan-In Convergence Scaling', () => {
   summary(() => {

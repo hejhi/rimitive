@@ -1,17 +1,17 @@
 /**
- * Adapter interface - abstracts tree manipulation for any node-based target
+ * Adapter type - abstracts tree manipulation for any node-based target
  *
  * This allows el() and map() to be pure reactive primitives that work
  * with any tree target (DOM, Three.js scene graph, etc.)
  *
- * The interface is intentionally minimal - just the core tree operations.
+ * The type is intentionally minimal - just the core tree operations.
  * DOM-specific concerns (events, hydration) are layered on top.
  */
 
 import type { NodeRef, ParentContext } from './types';
 
 /**
- * Generic node interface - platform-agnostic
+ * Generic node type - platform-agnostic
  * Adapters can extend this with their own node types
  */
 export type Node = object;
@@ -28,15 +28,15 @@ export type Node = object;
  *
  * Note: Text is just another node type created via createNode('text', { value: '...' })
  */
-export interface AdapterConfig {
+export type AdapterConfig = {
   props: object;
   elements: object;
   events: object;
   baseElement: object;
-}
+};
 
 /**
- * Adapter interface - core tree operations
+ * Adapter type - core tree operations
  *
  * Generic over:
  * - TConfig: The adapter configuration (elements, events, baseElement)
@@ -60,7 +60,7 @@ export interface AdapterConfig {
  * For hydration-specific position tracking, use the HydrationAdapter extension
  * which adds `seekToPosition` and `skipContent` methods.
  */
-export interface Adapter<TConfig extends AdapterConfig> {
+export type Adapter<TConfig extends AdapterConfig> = {
   // ============================================================================
   // Core Tree Operations
   // ============================================================================
@@ -218,4 +218,4 @@ export interface Adapter<TConfig extends AdapterConfig> {
     ref: NodeRef<TConfig['baseElement']>,
     parent: TConfig['baseElement']
   ) => void;
-}
+};

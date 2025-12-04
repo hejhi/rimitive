@@ -1,4 +1,3 @@
-import type { SignalFunction } from '@lattice/signals/signal';
 import type { ContextInfo, LogEntry } from './types';
 
 import { composeFrom } from '@lattice/lattice';
@@ -13,22 +12,7 @@ export const devtoolsContext = composeFrom(
   defaultHelpers()
 );
 
-// Create signals for each piece of state
-interface DevtoolsStateSignals {
-  connected: SignalFunction<boolean>;
-  contexts: SignalFunction<ContextInfo[]>;
-  selectedContext: SignalFunction<string | null>;
-  selectedTransaction: SignalFunction<string | null>;
-  selectedTab: SignalFunction<'logs' | 'timeline'>;
-  filter: SignalFunction<{
-    type: string;
-    search: string;
-    hideInternal: boolean;
-  }>;
-  logEntries: SignalFunction<LogEntry[]>;
-}
-
-export const devtoolsState: DevtoolsStateSignals = {
+export const devtoolsState = {
   connected: devtoolsContext.signal(false),
   contexts: devtoolsContext.signal<ContextInfo[]>([]),
   selectedContext: devtoolsContext.signal<string | null>(null),

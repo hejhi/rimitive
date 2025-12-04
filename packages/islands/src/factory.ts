@@ -41,9 +41,9 @@ type ServiceOf<TApp> = TApp extends { service: infer S } ? S : never;
 /**
  * Islands app shape - matches both ClientApp and ServerApp
  */
-interface IslandsApp {
+type IslandsApp = {
   service: Record<string, unknown>;
-}
+};
 
 // ============================================================================
 // Factory Types
@@ -55,7 +55,7 @@ interface IslandsApp {
  * This is the function you use to define islands. Props are inferred
  * from the inline type annotation on the factory's inner function.
  */
-export interface IslandFactory<TService, TContext> {
+export type IslandFactory<TService, TContext> = {
   /**
    * Define an island component
    *
@@ -99,7 +99,7 @@ export interface IslandFactory<TService, TContext> {
       getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>
   ): IslandComponent<TProps>;
-}
+};
 
 // ============================================================================
 // Factory Implementation
@@ -133,7 +133,7 @@ export interface IslandFactory<TService, TContext> {
  * // In service.ts - explicit types (recommended for universal code)
  * import { createIsland } from '@lattice/islands/factory';
  *
- * interface AppContext { pathname: string; }
+ * type AppContext { pathname: string; }
  * type Service = { el: ...; signal: ...; computed: ...; };
  *
  * export const island = createIsland<Service, AppContext>();

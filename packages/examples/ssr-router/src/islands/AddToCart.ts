@@ -20,11 +20,11 @@ const products = [
   { id: 6, name: 'Blender', price: 59 },
 ];
 
-interface AddToCartProps {
+type AddToCartProps = {
   productId: number;
   productName: string;
   price: number;
-}
+};
 
 export const AddToCart = island(
   'AddToCart',

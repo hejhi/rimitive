@@ -28,10 +28,10 @@ const ITERATIONS = 10000;
 const latticeAPI = createApi();
 const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-interface BenchState {
+type BenchState = {
   get(name: 'depth'): number;
   get(name: string): unknown;
-}
+};
 
 group('Computed Chain - Variable Depth', () => {
   summary(() => {

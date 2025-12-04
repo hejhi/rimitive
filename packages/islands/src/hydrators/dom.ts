@@ -41,15 +41,15 @@ function getContextGetter(): GetContext<unknown> {
 type RegisterableIsland = { [ISLAND_META]?: unknown };
 
 /**
- * Hydrator interface
+ * Hydrator type
  */
-export interface IslandHydrator {
+export type IslandHydrator = {
   /**
    * Hydrate all islands on the page
    * @param islands - Island components to register (can have different prop types)
    */
   hydrate: (...islands: RegisterableIsland[]) => void;
-}
+};
 
 /**
  * Mount function type for client-side rendering fallback
@@ -59,13 +59,13 @@ export type MountFn = (spec: RefSpec<unknown>) => { element: unknown };
 /**
  * Result type from createAPI - includes both the API and scope helper
  */
-export interface CreateAPIResult {
+export type CreateAPIResult = {
   api: EffectAPI & Record<string, unknown>;
   createElementScope: <TElement extends object>(
     element: TElement,
     fn: () => void
   ) => unknown;
-}
+};
 
 /**
  * Create a DOM island hydrator
@@ -284,7 +284,10 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
 
             if (isFragment) {
               container.innerHTML = '';
-              const fallbackComponentFn = Component(fallbackApi, fallbackGetContext);
+              const fallbackComponentFn = Component(
+                fallbackApi,
+                fallbackGetContext
+              );
               const instance = mount(fallbackComponentFn(props));
               if (instance.element)
                 container.appendChild(instance.element as Node);
@@ -293,7 +296,10 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
               const parent = islandElement?.parentNode;
               if (islandElement) islandElement.remove();
               script.remove();
-              const fallbackComponentFn = Component(fallbackApi, fallbackGetContext);
+              const fallbackComponentFn = Component(
+                fallbackApi,
+                fallbackGetContext
+              );
               const instance = mount(fallbackComponentFn(props));
               if (instance.element && parent)
                 parent.appendChild(instance.element as Node);

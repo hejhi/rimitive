@@ -18,14 +18,14 @@ import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 /**
  * Options for creating a client app
  */
-export interface ClientAppOptions<TContext> {
+export type ClientAppOptions<TContext> = {
   /** Container element to hydrate */
   container: HTMLElement;
   /** Context builder from current location */
   buildContext: () => TContext;
   /** Route tree to mount */
   routes: RouteTree<DOMAdapterConfig>;
-}
+};
 
 /**
  * Create a client app with hydration and routing

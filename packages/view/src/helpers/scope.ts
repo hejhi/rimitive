@@ -70,11 +70,11 @@ export function createScopes({
     if (rootScope.status & DISPOSED) return;
 
     // Stack node: tracks parent (for cleanup) and next sibling (for traversal)
-    interface StackNode {
+    type StackNode = {
       parent: RenderScope<TElement>; // Parent to cleanup after all children done
       nextSibling: RenderScope<TElement> | undefined; // Next sibling to process
       prev: StackNode | undefined;
-    }
+    };
 
     let stack: StackNode | undefined;
     let scope = rootScope;

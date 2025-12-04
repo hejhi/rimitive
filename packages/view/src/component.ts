@@ -12,28 +12,28 @@ import type { AdapterConfig } from './adapter';
 /**
  * Signal function with both getter and setter
  */
-export interface SignalFunction<T> {
+export type SignalFunction<T> = {
   (): T; // Read operation
   (value: T): void; // Write operation
   peek(): T; // Non-tracking read
-}
+};
 
 /**
  * Computed function (read-only)
  */
-export interface ComputedFunction<T> {
+export type ComputedFunction<T> = {
   (): T; // Read operation
   peek(): T; // Non-tracking read
-}
+};
 
 /**
  * Tag factory - returned from el(tag)
  * Callable with children to create RefSpec, or use .props() to add properties
  */
-export interface TagFactory<
+export type TagFactory<
   TConfig extends AdapterConfig,
   Tag extends keyof TConfig['props'] & keyof TConfig['elements'],
-> {
+> = {
   /**
    * Apply children to create a RefSpec
    */
@@ -45,7 +45,9 @@ export interface TagFactory<
   props(
     propsOrFn:
       | ElElementProps<TConfig, Tag>
-      | ((current: ElElementProps<TConfig, Tag>) => ElElementProps<TConfig, Tag>)
+      | ((
+          current: ElElementProps<TConfig, Tag>
+        ) => ElElementProps<TConfig, Tag>)
   ): TagFactory<TConfig, Tag>;
 
   /**
@@ -54,13 +56,13 @@ export interface TagFactory<
   ref(
     callback: (element: TConfig['elements'][Tag]) => void | (() => void)
   ): TagFactory<TConfig, Tag>;
-}
+};
 
 /**
  * Type for the el method - returns a TagFactory
  * Generic over TConfig to match the renderer configuration
  */
-export interface ElMethod<TConfig extends AdapterConfig> {
+export type ElMethod<TConfig extends AdapterConfig> = {
   // Static element builder - returns TagFactory with .props() method
   <Tag extends string & keyof TConfig['elements']>(
     tag: Tag
@@ -70,4 +72,4 @@ export interface ElMethod<TConfig extends AdapterConfig> {
     reactive: Reactive<Tag | null>,
     props?: Record<string, unknown>
   ): (...children: ElRefSpecChild[]) => RefSpec<TConfig['baseElement']>;
-}
+};

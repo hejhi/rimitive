@@ -19,10 +19,10 @@ export type RouteParams = Record<string, string>;
 /**
  * Matched route information
  */
-export interface RouteMatch {
+export type RouteMatch = {
   path: string;
   params: RouteParams;
-}
+};
 
 /**
  * Status bit for route specs - next power of 2 after STATUS_COMMENT (16)
@@ -32,10 +32,10 @@ export const STATUS_ROUTE_SPEC = 32; // 100000
 /**
  * Route-specific metadata
  */
-export interface RouteMetadata<TConfig extends AdapterConfig> {
+export type RouteMetadata<TConfig extends AdapterConfig> = {
   relativePath: string;
   rebuild: (parentPath: string) => RouteSpec<TConfig['baseElement']>;
-}
+};
 
 /**
  * RouteSpec wraps a RefSpec with routing metadata
@@ -44,9 +44,9 @@ export interface RouteMetadata<TConfig extends AdapterConfig> {
  * The wrapped RefSpec is kept internal and accessed via delegation
  *
  * Note: Does not extend RefSpec to avoid status type conflict.
- * Instead, provides same create interface through delegation.
+ * Instead, provides same create type through delegation.
  */
-export interface RouteSpec<TElement> {
+export type RouteSpec<TElement> = {
   status: typeof STATUS_ROUTE_SPEC;
   routeMetadata: RouteMetadata<AdapterConfig>;
   // Unwrap method to get the inner RefSpec for adapter
@@ -55,34 +55,34 @@ export interface RouteSpec<TElement> {
     api?: unknown,
     extensions?: TExt
   ): import('@lattice/view/types').NodeRef<TElement> & TExt;
-}
+};
 
 /**
  * Signal function with both getter and setter
  */
-export interface SignalFunction<T> {
+export type SignalFunction<T> = {
   (): T;
   (value: T): void;
   peek(): T;
-}
+};
 
 /**
  * Computed function (read-only reactive)
  */
-export interface ComputedFunction<T> {
+export type ComputedFunction<T> = {
   (): T;
   peek(): T;
-}
+};
 
 /**
  * Match function type
  */
-export interface MatchFunction<TBaseElement> {
+export type MatchFunction<TBaseElement> = {
   <T, TElement extends TBaseElement>(
     reactive: Reactive<T>,
     matcher: (value: T) => RefSpec<TElement> | null
   ): RefSpec<TElement>;
-}
+};
 
 /**
  * @internal
@@ -166,12 +166,12 @@ export type LinkFactory = ServiceDefinition<
 /**
  * Location API - reactive access to URL components
  */
-export interface LocationAPI {
+export type LocationAPI = {
   pathname: ComputedFunction<string>;
   search: ComputedFunction<string>;
   hash: ComputedFunction<string>;
   query: ComputedFunction<Record<string, string>>;
-}
+};
 
 /**
  * Options passed to location factory

@@ -6,7 +6,7 @@
  * via the Canvas 2D API.
  *
  * Key concepts demonstrated:
- * - Implementing the Renderer (NodeAdapter) interface
+ * - Implementing the Renderer (NodeAdapter) type
  * - Bridge elements that connect different rendering contexts
  * - Scene graph management with parent/child relationships
  * - Dirty tracking and batched repainting
@@ -18,24 +18,15 @@
  */
 
 import { composeFrom } from '@lattice/lattice';
-import {
-  defaultExtensions,
-  defaultHelpers,
-} from '@lattice/view/presets/core';
+import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
 import type { ReactiveAdapter, RefSpec, Adapter } from '@lattice/view/types';
-import {
-  createCanvasAdapter,
-  type CanvasAdapterOptions,
-} from './adapter';
+import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
 import type { CanvasAdapterConfig } from './types';
 
 export { createCanvasAdapter } from './adapter';
 export { createCanvasAddEventListener } from './addEventListener';
-export type {
-  CanvasAdapterOptions,
-  CanvasAdapterInstance,
-} from './adapter';
+export type { CanvasAdapterOptions, CanvasAdapterInstance } from './adapter';
 export type { CanvasEventType } from './addEventListener';
 export type {
   CanvasNode,

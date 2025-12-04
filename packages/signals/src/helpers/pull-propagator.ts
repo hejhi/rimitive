@@ -16,15 +16,15 @@ const PC_CLEAN = PRODUCER | CONSUMER | CLEAN;
 const PRODUCER_CLEAN = PRODUCER | CLEAN;
 
 // Minimal stack node for pull traversal
-interface StackNode {
+type StackNode = {
   dep: Dependency;
   prev: StackNode | undefined;
-}
+};
 
-export interface PullPropagator {
+export type PullPropagator = {
   pullUpdates: (node: DerivedNode) => boolean;
   shallowPropagate: (sub: Dependency) => void;
-}
+};
 
 // Upgrade PENDING siblings to DIRTY
 const shallowPropagate = (sub: Dependency) => {

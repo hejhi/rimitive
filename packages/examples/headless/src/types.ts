@@ -21,8 +21,8 @@ export type Computed<T> = () => T;
 /**
  * Minimal signals API required by headless components
  */
-export interface SignalsApi {
+export type SignalsApi = {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(fn: () => T) => Computed<T>;
   effect: (fn: () => void | (() => void)) => () => void;
-}
+};

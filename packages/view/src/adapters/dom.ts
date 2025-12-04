@@ -1,11 +1,11 @@
 import type { Adapter, AdapterConfig } from '../adapter';
 
-export interface DOMAdapterConfig extends AdapterConfig {
+export type DOMAdapterConfig = AdapterConfig & {
   props: HTMLElementTagNameMap & { text: Text };
   elements: HTMLElementTagNameMap & { text: Text };
   events: HTMLElementEventMap;
   baseElement: Node;
-}
+};
 
 /**
  * Create a DOM adapter for browser environments

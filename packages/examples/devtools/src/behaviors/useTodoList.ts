@@ -6,11 +6,11 @@
  */
 import { signal, computed } from '../service';
 
-export interface Todo {
+export type Todo = {
   id: number;
   text: string;
   completed: boolean;
-}
+};
 
 export const useTodoList = (initialTodos: Todo[] = []) => {
   const todos = signal<Todo[]>(initialTodos);

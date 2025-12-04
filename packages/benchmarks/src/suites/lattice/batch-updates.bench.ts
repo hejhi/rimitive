@@ -35,10 +35,10 @@ const {
   batch: latticeBatch,
 } = latticeAPI;
 
-interface BenchState {
+type BenchState = {
   get(name: 'signals'): number;
   get(name: string): unknown;
-}
+};
 
 group('Batch Multiple Updates - Scaling', () => {
   summary(() => {

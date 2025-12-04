@@ -1,24 +1,24 @@
 /**
  * TodoList View Component
  *
- * Main todo list interface with input, filters, and stats.
+ * Main todo list type with input, filters, and stats.
  */
 import { el, map, on, signal, computed } from '../service';
 import type { Todo, UseTodoList } from '../behaviors/useTodoList';
 import type { FilterType } from '../behaviors/useFilter';
 import { TodoItem } from './TodoItem';
 
-interface FilterInstance {
+type FilterInstance = {
   currentFilter: () => FilterType;
   setFilter: (filter: FilterType) => void;
-}
+};
 
-interface TodoStatsInstance {
+type TodoStatsInstance = {
   total: () => number;
   active: () => number;
   completed: () => number;
   completionRate: () => number;
-}
+};
 
 export const TodoList = (
   { addTodo, toggleTodo }: Pick<UseTodoList, 'addTodo' | 'toggleTodo'>,

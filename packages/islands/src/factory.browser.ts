@@ -16,14 +16,14 @@ type ServiceOf<TApp> = TApp extends { service: infer S } ? S : never;
 /**
  * Islands app shape - matches both ClientApp and ServerApp
  */
-interface IslandsApp {
+type IslandsApp = {
   service: Record<string, unknown>;
-}
+};
 
 /**
  * Island factory function - returned by createIsland
  */
-export interface IslandFactory<TService, TContext> {
+export type IslandFactory<TService, TContext> = {
   <TProps>(
     id: string,
     factory: (
@@ -40,7 +40,7 @@ export interface IslandFactory<TService, TContext> {
       getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>
   ): IslandComponent<TProps>;
-}
+};
 
 /**
  * Create a typed island factory (browser version)

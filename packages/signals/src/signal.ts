@@ -13,7 +13,7 @@
  * - The edge tracks version numbers for efficient cache invalidation
  * - This enables automatic dependency discovery during execution
  */
-import type { ProducerNode, Dependency } from './types';
+import type { ProducerNode, Dependency, Writable } from './types';
 import type {
   ServiceDefinition,
   InstrumentationContext,
@@ -32,16 +32,10 @@ const SIGNAL_DIRTY = PRODUCER | DIRTY;
 /**
  * Signal function type - a callable that acts as both getter and setter.
  *
- * Note: This is intentionally a flat interface (not extending Writable<T>)
- * because TypeScript's type inference handles call signatures better when
- * they're declared in the same interface rather than inherited. This ensures
- * proper type inference when signals are passed to functions expecting () => T.
+ * Uses intersection with Writable<T> to ensure TypeScript correctly infers T
+ * from the getter signature rather than void from the setter.
  */
-export interface SignalFunction<T> {
-  (): T; // Read: signal()
-  (value: T): void; // Write: signal(newValue)
-  peek(): T; // Non-tracking read
-}
+export type SignalFunction<T> = Writable<T> & { peek(): T };
 
 export type SignalOpts = {
   consumer: Consumer;
@@ -61,10 +55,10 @@ export type SignalProps = {
 export type { Consumer } from './helpers/graph-edges';
 export type { GraphEdges } from './helpers/graph-edges';
 
-interface SignalNode<T> extends ProducerNode {
+type SignalNode<T> = ProducerNode & {
   __type: 'signal';
   value: T;
-}
+};
 
 // Export the factory return type for better type inference
 export type SignalFactory = ServiceDefinition<

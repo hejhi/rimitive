@@ -16,12 +16,12 @@ import type { SSRService } from './preset.js';
  * On server: provided to createSSRContext
  * On client: built from window.location on init and navigation
  */
-export interface AppContext {
+export type AppContext = {
   /** URL pathname (e.g., "/products/123") */
   pathname: string;
   /** URL search string (e.g., "?sort=price") */
   search: string;
-}
+};
 
 /**
  * Build AppContext from a URL

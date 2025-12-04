@@ -9,11 +9,11 @@ import type { LogEntry } from '../store/types';
 import { getCategoryColors } from '../store/eventTypeManager';
 import { useIsNarrowViewport } from '../hooks';
 
-interface TimelineViewProps {
+type TimelineViewProps = {
   transactions: LogEntry[];
   selectedTransaction: string | null;
   onTransactionSelect: (id: string | null) => void;
-}
+};
 
 export function TimelineView({
   transactions,
@@ -72,11 +72,11 @@ export function TimelineView({
   );
 }
 
-interface TransactionItemProps {
+type TransactionItemProps = {
   transaction: LogEntry;
   isSelected: boolean;
   onSelect: () => void;
-}
+};
 
 function TransactionItem({
   transaction,

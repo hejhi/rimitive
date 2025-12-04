@@ -25,11 +25,11 @@ export type RangeNode = Readonly<{
   prev: RangeNode | null;
 }>;
 
-export interface Position {
+export type Position = {
   readonly path: PathNode | null;
   readonly depth: number;
   readonly ranges: RangeNode | null;
-}
+};
 
 // Legacy type alias for compatibility
 export type TreePath = number[];

@@ -1,10 +1,10 @@
 import type { SignalsApi, Signal, Computed } from './types';
 
-export interface CounterOptions {
+export type CounterOptions = {
   initialCount?: number;
-}
+};
 
-export interface CounterState {
+export type CounterState = {
   count: Signal<number>;
   doubled: Computed<number>;
   isEven: Computed<boolean>;
@@ -13,7 +13,7 @@ export interface CounterState {
   increment: () => void;
   decrement: () => void;
   set: (value: number) => void;
-}
+};
 
 export const counter =
   (api: SignalsApi) =>

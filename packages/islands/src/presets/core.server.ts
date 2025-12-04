@@ -50,7 +50,7 @@ export type IslandsServerService = SignalsApi &
  * since there's no hybrid adapter switching. The view already incorporates
  * the adapter.
  */
-export interface ServerOptions<TContext> {
+export type ServerOptions<TContext> = {
   /**
    * Signals API instance
    * Create with: createSignalsApi()
@@ -68,12 +68,12 @@ export interface ServerOptions<TContext> {
    * Called once per render, passed to islands
    */
   context?: GetContext<TContext>;
-}
+};
 
 /**
  * Server app - for SSR
  */
-export interface ServerApp {
+export type ServerApp = {
   /** Full service (signals + views) - use with router and components */
   service: IslandsServerService;
   /** Signals API */
@@ -87,7 +87,7 @@ export interface ServerApp {
     html: string;
     scripts: string;
   };
-}
+};
 
 // ============================================================================
 // Implementation

@@ -24,7 +24,7 @@ export type ReconcileNode<TData = unknown> = {
 /**
  * Lifecycle hooks for reconciliation
  */
-export interface ReconcileHooks<T, TNode extends ReconcileNode> {
+export type ReconcileHooks<T, TNode extends ReconcileNode> = {
   /**
    * Called when a new item needs to be created
    * Should return the created NodeRef
@@ -51,22 +51,25 @@ export interface ReconcileHooks<T, TNode extends ReconcileNode> {
    * Should dispose scopes and remove from DOM
    */
   onRemove: (node: TNode) => void;
-}
+};
 
 /**
  * Options for creating a reconciler
  */
-export interface ReconcilerOptions<T, TElement, TNode extends ReconcileNode>
-  extends ReconcileHooks<T, TNode> {
+export type ReconcilerOptions<
+  T,
+  TElement,
+  TNode extends ReconcileNode,
+> = ReconcileHooks<T, TNode> & {
   parentElement: TElement;
   parentRef?: ElementRef<TElement>;
   nextSibling?: TNode;
-}
+};
 
 /**
- * Reconciler interface - manages reconciliation state internally
+ * Reconciler type - manages reconciliation state internally
  */
-export interface Reconciler<T, TNode extends ReconcileNode> {
+export type Reconciler<T, TNode extends ReconcileNode> = {
   /**
    * Reconcile items with the current state
    */
@@ -80,7 +83,7 @@ export interface Reconciler<T, TNode extends ReconcileNode> {
    * Calls onRemove hook for each item still tracked
    */
   dispose: () => void;
-}
+};
 
 /**
  * Binary search for LIS algorithm
@@ -279,11 +282,11 @@ export function createReconciler<
 /**
  * State container for positional reconciliation (stored in closure)
  */
-export interface ReconcileState<TElement, TNode extends ReconcileNode> {
+export type ReconcileState<TElement, TNode extends ReconcileNode> = {
   // Parent element reference
   parentElement: TElement;
   // Parent element ref (needed for fragment attach)
   parentRef?: ElementRef<TElement>;
   // Next sibling boundary marker
   nextSibling?: TNode;
-}
+};

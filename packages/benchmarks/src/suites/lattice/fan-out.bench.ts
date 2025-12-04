@@ -35,10 +35,10 @@ const {
   effect: latticeEffect,
 } = latticeAPI;
 
-interface BenchState {
+type BenchState = {
   get(name: 'sources'): number;
   get(name: string): unknown;
-}
+};
 
 group('Fan-out Scaling - Single Source to Many', () => {
   summary(() => {

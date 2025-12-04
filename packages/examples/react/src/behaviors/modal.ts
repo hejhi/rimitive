@@ -1,13 +1,13 @@
 import type { SignalsApi, Signal } from './types';
 
-export interface ModalState {
+export type ModalState = {
   isOpen: Signal<boolean>;
 
   // Actions
   open: () => void;
   close: () => void;
   toggle: () => void;
-}
+};
 
 export const modal = (api: SignalsApi) => (): ModalState => {
   const { signal } = api;

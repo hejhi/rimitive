@@ -5,14 +5,14 @@ import {
   ServiceDefinition,
 } from './types';
 
-interface ContextState {
+type ContextState = {
   disposed: boolean;
   disposers: Set<() => void>;
-}
+};
 
-export interface CreateContextOptions {
+export type CreateContextOptions = {
   instrumentation?: InstrumentationContext;
-}
+};
 
 export function compose<
   TServices extends readonly ServiceDefinition<string, unknown>[],

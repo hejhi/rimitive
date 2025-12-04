@@ -6,16 +6,16 @@
  */
 import type { SignalsApi, Signal, Computed } from './types';
 
-export interface DialogOptions {
+export type DialogOptions = {
   /** Whether the dialog starts open */
   initialOpen?: boolean;
   /** Called when dialog opens */
   onOpen?: () => void;
   /** Called when dialog closes */
   onClose?: () => void;
-}
+};
 
-export interface DialogState {
+export type DialogState = {
   /** Whether the dialog is currently open */
   isOpen: Signal<boolean>;
   /** Open the dialog */
@@ -47,7 +47,7 @@ export interface DialogState {
     'aria-label': string;
     onclick: () => void;
   };
-}
+};
 
 /**
  * Creates a headless dialog behavior

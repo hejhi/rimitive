@@ -9,9 +9,9 @@ import type { ShapeData } from '../behaviors/useShapeEditor';
 
 const { circle, match } = canvas;
 
-interface SelectionIndicatorProps {
+type SelectionIndicatorProps = {
   selectedShape: () => ShapeData | null;
-}
+};
 
 /**
  * SelectionIndicator component

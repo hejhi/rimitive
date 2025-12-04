@@ -71,10 +71,12 @@ function calculateExecutionLevel(event: LatticeEvent): number {
   if (event.type.includes('_END') || event.type.includes('_COMPLETE')) {
     executionDepth = Math.max(0, executionDepth - 1);
     const id = extractNodeId(event.data);
-    if (id && depthTracker.has(id)) {
+    if (id) {
       const depth = depthTracker.get(id);
-      depthTracker.delete(id);
-      return depth;
+      if (depth !== undefined) {
+        depthTracker.delete(id);
+        return depth;
+      }
     }
     return executionDepth;
   }

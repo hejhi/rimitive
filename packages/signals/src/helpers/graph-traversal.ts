@@ -14,18 +14,18 @@ const { CLEAN, DIRTY, PENDING, STATE_MASK, TYPE_MASK, PRODUCER } = CONSTANTS;
 // Re-export types for proper type inference
 export type { Dependency, ConsumerNode, DerivedNode } from '../types';
 
-interface Stack<T> {
+type Stack<T> = {
   value: T;
   prev: Stack<T> | undefined;
-}
+};
 
 type Visit = (dep: Dependency) => void;
 
-export interface GraphTraversal {
+export type GraphTraversal = {
   /** Traverse computed subscribers graph, marking nodes as invalidated */
   propagate: (consumers: Dependency) => void;
   withVisitor: (visit: Visit | null) => (consumers: Dependency) => void;
-}
+};
 
 /**
  * Create a graph traversal helper.

@@ -19,14 +19,14 @@ import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 /**
  * Options for creating an SSR app
  */
-export interface SSRAppOptions<TContext> {
+export type SSRAppOptions<TContext> = {
   /** Request URL */
   url: URL;
   /** Context builder from URL */
   buildContext: (url: URL) => TContext;
   /** Route tree to mount */
   routes: RouteTree<DOMAdapterConfig>;
-}
+};
 
 /**
  * Create an SSR app with routing

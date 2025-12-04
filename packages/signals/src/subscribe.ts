@@ -31,12 +31,12 @@ export type SubscribeOpts = {
   dispose: Scheduler['dispose'];
 };
 
-export interface SubscribeFunction {
+export type SubscribeFunction = {
   <T = unknown>(
     source: () => T,
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction;
-}
+};
 
 export type SubscribeProps = {
   instrument?: (

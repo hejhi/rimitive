@@ -2,17 +2,17 @@ import { devtoolsState } from './devtoolsCtx';
 import { updateContextFromEvent } from './contextManager';
 import { processLogEntry } from './logProcessor';
 
-export interface DevToolsMessage {
+export type DevToolsMessage = {
   type: string;
   data?: unknown;
-}
+};
 
-export interface LatticeEvent {
+export type LatticeEvent = {
   type: string;
   contextId: string;
   timestamp?: number;
   data?: unknown;
-}
+};
 
 export function handleDevToolsMessage(message: DevToolsMessage) {
   switch (message.type) {

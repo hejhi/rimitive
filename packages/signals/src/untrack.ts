@@ -10,9 +10,9 @@
 
 import type { Consumer } from './helpers/graph-edges';
 
-export interface UntrackedOpts {
+export type UntrackedOpts = {
   consumer: Consumer;
-}
+};
 
 /**
  * Create an untracked helper

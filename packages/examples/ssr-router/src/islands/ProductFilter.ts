@@ -7,16 +7,16 @@
 import { island } from '../service.js';
 import type { Reactive } from '@lattice/view/types';
 
-interface Product {
+type Product = {
   id: number;
   name: string;
   category: string;
   price: number;
-}
+};
 
-interface ProductFilterProps {
+type ProductFilterProps = {
   products: Product[];
-}
+};
 
 const useFilters = (
   computed: <T>(fn: () => T) => Reactive<T>,

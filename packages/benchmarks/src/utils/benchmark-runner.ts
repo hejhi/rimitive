@@ -5,11 +5,11 @@
 import { run as mitataRun } from 'mitata';
 
 // Type for mitata run options
-interface MitataOptions {
+type MitataOptions = {
   format?: 'mitata' | 'json' | { json: { debug?: boolean; samples?: boolean } };
   print?: (s: string) => void;
   [key: string]: unknown; // Allow other options
-}
+};
 
 export async function runBenchmark(options?: MitataOptions): Promise<unknown> {
   // Always use the default mitata format for display

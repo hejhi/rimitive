@@ -3,11 +3,11 @@ import type { Todo } from './todoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export interface FilterState {
+export type FilterState = {
   currentFilter: Signal<FilterType>;
   setFilter: (filter: FilterType) => void;
   filterTodos: (todos: Todo[]) => Todo[];
-}
+};
 
 export const filter = (api: SignalsApi) => (): FilterState => {
   const { signal } = api;

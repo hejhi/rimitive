@@ -55,7 +55,7 @@ export type IslandsClientService = SignalsApi &
 /**
  * Client app options - accepts primitives as dependencies
  */
-export interface ClientOptions<TContext> {
+export type ClientOptions<TContext> = {
   /**
    * Signals API instance
    * Create with: createSignalsApi()
@@ -79,7 +79,7 @@ export interface ClientOptions<TContext> {
    * Called on init and navigation (popstate), reactive via signal
    */
   context?: GetContext<TContext>;
-}
+};
 
 /**
  * Island component type for hydrate()
@@ -90,7 +90,7 @@ export type IslandComponent = { [ISLAND_META]?: unknown };
 /**
  * Client app - for hydration and SPA
  */
-export interface ClientApp {
+export type ClientApp = {
   /** Full service (signals + views) - use with router and components */
   service: IslandsClientService;
   /** Signals API (for advanced use cases) */
@@ -126,7 +126,7 @@ export interface ClientApp {
       fn: () => void
     ) => unknown;
   };
-}
+};
 
 // ============================================================================
 // Implementation

@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { ContextInfo, LogEntry } from '../store/types';
 import { devtoolsState } from '../store/devtoolsCtx';
 
-interface ImportData {
+type ImportData = {
   version: string;
   exportDate: string;
   state: {
@@ -17,7 +17,7 @@ interface ImportData {
     selectedTransaction?: string | null;
     selectedTab?: string;
   };
-}
+};
 
 export function useDataExport() {
   const handleExport = useCallback(() => {

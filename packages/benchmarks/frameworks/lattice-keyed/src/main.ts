@@ -102,10 +102,10 @@ function _random(max: number): number {
   return Math.round(Math.random() * 1000) % max;
 }
 
-interface RowData {
+type RowData = {
   id: number;
   label: ReturnType<typeof signal<string>>;
-}
+};
 
 function buildData(count: number): RowData[] {
   const data: RowData[] = new Array<RowData>(count);

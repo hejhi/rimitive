@@ -16,11 +16,11 @@ import { modal } from '../behaviors/modal';
 // Create React hook from portable behavior (once at module level)
 const useModal = createHook(modal);
 
-export interface ModalProps {
+export type ModalProps = {
   title: string;
   children: ReactNode;
   trigger?: ReactNode;
-}
+};
 
 export function Modal({ title, children, trigger }: ModalProps) {
   const modal = useModal();

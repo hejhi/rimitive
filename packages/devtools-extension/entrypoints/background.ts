@@ -1,8 +1,8 @@
-interface DevToolsMessage {
+type DevToolsMessage = {
   type: string;
   tabId?: number;
   payload?: unknown;
-}
+};
 
 export default defineBackground(() => {
   // Store connections from devtools panels

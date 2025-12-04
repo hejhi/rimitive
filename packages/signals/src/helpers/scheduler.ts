@@ -21,7 +21,7 @@ const SCHEDULED_DISPOSED = CONSUMER | SCHEDULED | DISPOSED;
 // Re-export types for proper type inference
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
-export interface Scheduler {
+export type Scheduler = {
   /** Propagate updates through subscriber graph (includes both computeds and effects) */
   withPropagate: (
     visitorFn: (
@@ -39,7 +39,7 @@ export interface Scheduler {
   endBatch: () => number;
   /** Manual flush - rarely needed */
   flush: () => void;
-}
+};
 
 export function createScheduler({
   detachAll,

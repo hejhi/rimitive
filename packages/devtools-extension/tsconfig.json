@@ -6,8 +6,7 @@
     "types": ["chrome"],
     "baseUrl": ".",
     "skipLibCheck": true,
-    "strict": false,
-    "noImplicitAny": false,
+    "strict": true,
     "paths": {
       "@/*": ["./src/*"]
     }

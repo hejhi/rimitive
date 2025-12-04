@@ -37,11 +37,11 @@ export type EffectFactory = ServiceDefinition<
   (fn: () => void | (() => void)) => () => void
 >;
 
-// Effect node interface
-interface EffectNode extends ScheduledNode {
+// Effect node type
+type EffectNode = ScheduledNode & {
   __type: 'effect';
   cleanup?: void | (() => void);
-}
+};
 
 export const Effect = defineService(
   ({ dispose: disposeNode, track }: EffectOpts) =>

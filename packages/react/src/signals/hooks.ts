@@ -1,36 +1,12 @@
 import { useMemo, useRef, useSyncExternalStore, useCallback } from 'react';
 import { useSignalAPI } from './context';
-import type { SignalFunction } from '@lattice/signals/signal';
-import type { ComputedFunction } from '@lattice/signals/computed';
 import type { SignalSetter } from './types';
+import type { Reactive, Readable, Writable } from '@lattice/signals/types';
 
-/**
- * Portable signal type - a readable/writable signal with overloaded call signatures.
- * This matches the common pattern used by headless UI libraries.
- */
-export type PortableSignal<T> = {
-  (): T;
-  (value: T): void;
-};
+export type { Readable, Writable };
 
-/**
- * Subscribe to a signal, computed, or selected value and return its current value.
- * The component will re-render when the signal value changes.
- *
- * Accepts any readable signal-like value (anything callable that returns T).
- * This enables interoperability with portable headless components that define
- * their own signal types (e.g., `{ (): T; (value: T): void }`).
- */
-// Overload for Lattice SignalFunction
-export function useSubscribe<T>(signal: SignalFunction<T>): T;
-// Overload for Lattice ComputedFunction
-export function useSubscribe<T>(signal: ComputedFunction<T>): T;
-// Overload for portable signal type (headless components)
-export function useSubscribe<T>(signal: PortableSignal<T>): T;
-// Overload for simple readable
-export function useSubscribe<T>(signal: () => T): T;
 // Implementation
-export function useSubscribe<T>(signal: () => T): T {
+export function useSubscribe<T>(signal: Reactive<T>): T {
   const api = useSignalAPI();
 
   // Create stable subscription using effect
@@ -68,7 +44,7 @@ export function useSignal<T>(
   const api = useSignalAPI();
 
   // Use ref to store the signal instance - created only once
-  const signalRef = useRef<SignalFunction<T> | null>(null);
+  const signalRef = useRef<Reactive<T> | null>(null);
 
   if (signalRef.current === null) {
     // Initialize on first render only
@@ -103,7 +79,7 @@ export function useSignal<T>(
  * Only re-renders when the selected value changes.
  */
 export function useSelector<T, R>(
-  signal: SignalFunction<T>,
+  signal: Reactive<T>,
   selector: (value: T) => R
 ): R {
   const api = useSignalAPI();
@@ -115,7 +91,7 @@ export function useSelector<T, R>(
 
   // Create a computed value that applies the selector
   // We use a ref to maintain the same computed instance across renders
-  const computedRef = useRef<ComputedFunction<R> | null>(null);
+  const computedRef = useRef<Reactive<R> | null>(null);
 
   // Only create the computed once, but use selectorRef.current
   // to ensure it always uses the latest selector
@@ -127,28 +103,14 @@ export function useSelector<T, R>(
 }
 
 /**
- * Portable readable signal type - can be read by calling with no args.
- */
-export interface Readable<T> {
-  (): T;
-}
-
-/**
- * Portable writable signal type - can be read or written.
- */
-export interface Writable<T> extends Readable<T> {
-  (value: T): void;
-}
-
-/**
- * Reactive adapter interface for portable headless components.
+ * Reactive adapter type for portable headless components.
  * This is compatible with Lattice's SignalAPI and other reactive systems.
  */
-export interface ReactiveAdapter {
+export type ReactiveAdapter = {
   signal: <T>(initialValue: T) => Writable<T>;
   computed: <T>(fn: () => T) => Readable<T>;
   effect: (fn: () => void | (() => void)) => () => void;
-}
+};
 
 /**
  * Create a React hook from a double-function behavior pattern.

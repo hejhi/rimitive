@@ -100,15 +100,15 @@ export class MockComment {
 /**
  * Mock event for testing event handling
  */
-export interface MockEvent {
+export type MockEvent = {
   type: string;
   target: MockElement | null;
-}
+};
 
 /**
  * Mock element props - common DOM-like properties for testing
  */
-export interface MockElementProps {
+export type MockElementProps = {
   className?: string;
   title?: string;
   value?: string;
@@ -121,19 +121,19 @@ export interface MockElementProps {
   name?: string;
   onclick?: (event: MouseEvent) => unknown;
   [key: string]: unknown;
-}
+};
 
 /**
  * Mock text props - just the value property
  */
-export interface MockTextProps {
+export type MockTextProps = {
   value?: string;
-}
+};
 
 /**
  * Mock adapter configuration - maps tag names to MockElement and events to MockEvent
  */
-export interface MockAdapterConfig extends AdapterConfig {
+export type MockAdapterConfig = AdapterConfig & {
   props: {
     div: MockElementProps;
     span: MockElementProps;
@@ -198,7 +198,7 @@ export interface MockAdapterConfig extends AdapterConfig {
     [key: string]: MockEvent;
   };
   baseElement: MockElement | MockText;
-}
+};
 
 /**
  * Creates a mock adapter for testing

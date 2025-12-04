@@ -5,9 +5,9 @@
  */
 import { el } from '../service';
 
-interface BatchedUpdateHandlers {
+type BatchedUpdateHandlers = {
   onBatchedUpdate: () => void;
-}
+};
 
 export const BatchedUpdates = ({ onBatchedUpdate }: BatchedUpdateHandlers) => {
   const batchBtn = el('button').props({ onclick: onBatchedUpdate })(

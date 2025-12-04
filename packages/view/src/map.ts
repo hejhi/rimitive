@@ -75,22 +75,22 @@ export type MapFactory<TBaseElement> = ServiceDefinition<
   }
 >;
 
-export interface MapOpts<TConfig extends AdapterConfig> {
+export type MapOpts<TConfig extends AdapterConfig> = {
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   computed: <T>(fn: () => T) => Reactive<T>;
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   adapter: Adapter<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
-}
+};
 
-export interface MapProps<TBaseElement> {
+export type MapProps<TBaseElement> = {
   instrument?: (
     impl: MapFactory<TBaseElement>['impl'],
     instrumentation: InstrumentationContext,
     context: ServiceContext
   ) => MapFactory<TBaseElement>['impl'];
-}
+};
 
 // RecNode stores the item signal (not the item value) for reactive updates
 type ItemSignal<T> = Reactive<T> & ((value: T) => void);

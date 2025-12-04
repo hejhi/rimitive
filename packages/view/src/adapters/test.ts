@@ -16,36 +16,46 @@ import type { Adapter, AdapterConfig } from '../adapter';
 /**
  * A mock node in the test tree
  */
-export interface TestNode {
+export type TestNode = {
   type: string;
   props: Record<string, unknown>;
   children: TestNode[];
   parent: TestNode | null;
-}
+};
 
 /**
  * Adapter config for test adapter
  */
-export interface TestAdapterConfig extends AdapterConfig {
+export type TestAdapterConfig = AdapterConfig & {
   elements: Record<string, TestNode> & { text: TestNode };
   events: Record<string, Event>;
   baseElement: TestNode;
-}
+};
 
 /**
  * Operation types for logging
  */
 export type TestAdapterOperation =
-  | { type: 'createNode'; nodeType: string; props?: Record<string, unknown>; node: TestNode }
+  | {
+      type: 'createNode';
+      nodeType: string;
+      props?: Record<string, unknown>;
+      node: TestNode;
+    }
   | { type: 'setProperty'; node: TestNode; key: string; value: unknown }
   | { type: 'appendChild'; parent: TestNode; child: TestNode }
   | { type: 'removeChild'; parent: TestNode; child: TestNode }
-  | { type: 'insertBefore'; parent: TestNode; child: TestNode; reference: TestNode | null };
+  | {
+      type: 'insertBefore';
+      parent: TestNode;
+      child: TestNode;
+      reference: TestNode | null;
+    };
 
 /**
  * Test adapter instance with additional utilities
  */
-export interface TestAdapter extends Adapter<TestAdapterConfig> {
+export type TestAdapter = Adapter<TestAdapterConfig> & {
   /** All operations performed, in order */
   operations: TestAdapterOperation[];
 
@@ -63,7 +73,7 @@ export interface TestAdapter extends Adapter<TestAdapterConfig> {
 
   /** Get text content of a node (concatenates all text children) */
   getTextContent(node: TestNode): string;
-}
+};
 
 /**
  * Create a test node
@@ -167,7 +177,9 @@ export function createTestAdapter(): TestAdapter {
         .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
         .join(' ');
 
-      const opening = propsStr ? `<${node.type} ${propsStr}>` : `<${node.type}>`;
+      const opening = propsStr
+        ? `<${node.type} ${propsStr}>`
+        : `<${node.type}>`;
 
       if (node.children.length === 0) {
         return `${pad}${opening}</${node.type}>`;

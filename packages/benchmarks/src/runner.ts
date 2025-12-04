@@ -9,21 +9,21 @@ import * as path from 'path';
 import * as os from 'os';
 import { parseArgs } from 'util';
 
-interface BenchmarkResult {
+type BenchmarkResult = {
   name: string;
   timestamp: string;
   duration_ms: number;
   formattedOutput?: string; // Formatted output from benchmark
   error?: string;
-}
+};
 
-interface SystemInfo {
+type SystemInfo = {
   node: string;
   platform: string;
   arch: string;
   cpus: number;
   memory_gb: number;
-}
+};
 
 class BenchmarkRunner {
   private readonly suitesDir: string;

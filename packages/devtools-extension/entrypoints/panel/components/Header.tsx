@@ -9,11 +9,11 @@ import {
   DropdownMenuTrigger,
 } from '../../../src/components/ui/dropdown-menu';
 
-interface HeaderProps {
+type HeaderProps = {
   contextCount: number;
   onExport: () => void;
   onImport: () => void;
-}
+};
 
 export function Header({ contextCount, onExport, onImport }: HeaderProps) {
   return (

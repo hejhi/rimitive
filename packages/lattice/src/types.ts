@@ -1,4 +1,4 @@
-export interface Service<TResult, TContext> {
+export type Service<TResult, TContext> = {
   /**
    * Create an instance with the provided context
    *
@@ -6,12 +6,12 @@ export interface Service<TResult, TContext> {
    * @returns The instantiated result
    */
   create(context: TContext): TResult;
-}
+};
 
 /**
- * Base interface for all lattice services
+ * Base type for all lattice services
  */
-export interface ServiceDefinition<TName extends string, TImpl> {
+export type ServiceDefinition<TName extends string, TImpl> = {
   /**
    * Unique name for this service (becomes the impl name on context)
    */
@@ -45,19 +45,19 @@ export interface ServiceDefinition<TName extends string, TImpl> {
    * Called when the context is disposed
    */
   destroy?(context: ServiceContext): void;
-}
+};
 
 /**
  * @fileoverview Lattice context system
  *
- * Provides a unified interface for all lattice functionality through services and context.
+ * Provides a unified type for all lattice functionality through services and context.
  * This allows optimal tree-shaking and easy extensibility.
  */
 
 /**
  * Context provided to services for lifecycle management
  */
-export interface ServiceContext {
+export type ServiceContext = {
   /**
    * Register a cleanup function to be called when context is disposed
    */
@@ -67,12 +67,12 @@ export interface ServiceContext {
    * Check if the context has been disposed
    */
   readonly isDestroyed: boolean;
-}
+};
 
 /**
  * Instrumentation context provided to services
  */
-export interface InstrumentationContext {
+export type InstrumentationContext = {
   /**
    * Unique ID for this context instance
    */
@@ -100,7 +100,7 @@ export interface InstrumentationContext {
     type: string,
     name?: string
   ): { id: string; resource: T };
-}
+};
 
 /**
  * Helper type to extract the impl type from an service

@@ -1,5 +1,5 @@
 // Log entry for any instrumentation event
-export interface LogEntry {
+export type LogEntry = {
   id: string;
   timestamp: number;
   eventType: string; // The event type from instrumentation
@@ -12,16 +12,16 @@ export interface LogEntry {
   category: string; // Inferred from event type
   summary?: string; // Human-readable summary
   rawData?: unknown; // For TransactionDetail component
-}
+};
 
 // Context info
-export interface ContextInfo {
+export type ContextInfo = {
   id: string;
   name: string;
   created?: number;
-}
+};
 
-export interface DevToolsState {
+export type DevToolsState = {
   connected: boolean;
   contexts: ContextInfo[];
   selectedContext: string | null;
@@ -33,4 +33,4 @@ export interface DevToolsState {
     hideInternal: boolean;
   };
   logEntries: LogEntry[];
-}
+};

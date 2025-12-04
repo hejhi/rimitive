@@ -15,11 +15,11 @@ import { SelectionIndicator } from './SelectionIndicator';
 
 const { group, map } = canvas;
 
-interface ShapeEditorProps {
+type ShapeEditorProps = {
   canvasWidth?: number;
   canvasHeight?: number;
   initialShapes?: Array<{ type: ShapeType }>;
-}
+};
 
 /**
  * ShapeEditor component
@@ -80,7 +80,11 @@ export const ShapeEditor = (props: ShapeEditorProps = {}) => {
     handlePointerMove,
     handlePointerUp,
     shapes: group(
-      map(shapes, (shape) => shape.id, (shapeSignal) => Shape(shapeSignal())),
+      map(
+        shapes,
+        (shape) => shape.id,
+        (shapeSignal) => Shape(shapeSignal())
+      ),
       SelectionIndicator({ selectedShape })
     ),
   };

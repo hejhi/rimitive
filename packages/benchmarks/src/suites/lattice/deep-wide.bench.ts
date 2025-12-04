@@ -38,10 +38,10 @@ const ITERATIONS = 1000;
 const latticeAPI = createApi();
 const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-interface BenchState {
+type BenchState = {
   get(name: 'size'): string;
   get(name: string): unknown;
-}
+};
 
 // Size configurations: [width, depth]
 const SIZES: Record<string, [number, number]> = {

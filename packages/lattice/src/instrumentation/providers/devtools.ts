@@ -1,8 +1,8 @@
 import type { InstrumentationProvider, InstrumentationEvent } from '../types';
 
-export interface DevtoolsProviderOptions {
+export type DevtoolsProviderOptions = {
   debug?: boolean;
-}
+};
 
 export function devtoolsProvider(
   options: DevtoolsProviderOptions = {}

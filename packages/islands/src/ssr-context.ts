@@ -17,13 +17,13 @@ const ssrContextStore = new AsyncLocalStorage<SSRContext>();
 /**
  * Options for creating SSR context
  */
-export interface SSRContextOptions<TContext = unknown> {
+export type SSRContextOptions<TContext = unknown> = {
   /**
    * Context getter for islands
    * Called by islands to get user-defined context
    */
   getContext?: GetContext<TContext>;
-}
+};
 
 /**
  * Create a new SSR context

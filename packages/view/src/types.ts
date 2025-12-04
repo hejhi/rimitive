@@ -2,8 +2,6 @@
  * Core types for @lattice/view
  */
 
-import type { Service } from '@lattice/lattice';
-
 // Re-export adapter types so they're available from @lattice/view/types
 export type { Adapter, AdapterConfig } from './adapter';
 export type { ReactiveAdapter } from './reactive-adapter';
@@ -20,12 +18,12 @@ export type { WhenFactory } from './when';
  *
  * Note: adapter uses 'unknown' for variance - any Adapter<T> is assignable
  */
-export interface ParentContext<TElement> {
+export type ParentContext<TElement> = {
   /** The parent's adapter - enables cross-adapter composition */
   adapter: unknown;
   /** The parent element (already created when children are processed) */
   element: TElement;
-}
+};
 
 /**
  * Status bits for node ref type discrimination
@@ -42,9 +40,9 @@ export const STATUS_COMMENT = 16; // 10000
 export const STATUS_NODE_MASK = STATUS_ELEMENT | STATUS_FRAGMENT; // 0011 (3)
 export const STATUS_SPEC_MASK = STATUS_REF_SPEC; // 0100 (4)
 
-export interface BaseRef {
+export type BaseRef = {
   status: number;
-}
+};
 
 /**
  * Linked nodes - nodes that form doubly-linked lists
@@ -59,7 +57,7 @@ export type LinkedNode<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
  * Links to parent for tree traversal
  * Tracks child NodeRefs for tree walking (needed for SSR fragment detection)
  */
-export interface ElementRef<TElement> extends BaseRef {
+export type ElementRef<TElement> = BaseRef & {
   status: typeof STATUS_ELEMENT;
   element: TElement;
   parent: ElementRef<TElement> | null; // Parent element in tree
@@ -69,13 +67,13 @@ export interface ElementRef<TElement> extends BaseRef {
   // Child list (nodes within this element) - using LinkedNode for fragments
   firstChild: LinkedNode<TElement> | null;
   lastChild: LinkedNode<TElement> | null;
-}
+};
 
 /**
  * Fragment ref node - logical container in the tree (no DOM element)
  * Fragments participate in parent's doubly-linked list and own their own child list
  */
-export interface FragmentRef<TElement> extends BaseRef {
+export type FragmentRef<TElement> = BaseRef & {
   status: typeof STATUS_FRAGMENT;
   element: null;
 
@@ -100,7 +98,7 @@ export interface FragmentRef<TElement> extends BaseRef {
     nextSibling: NodeRef<TElement> | null,
     api?: unknown
   ): void | (() => void);
-}
+};
 
 /**
  * Ref node - union of element/fragment tracking nodes
@@ -111,7 +109,7 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  * Extends Service to provide uniform context injection pattern
  */
-export interface RefSpec<TElement> extends Service<NodeRef<TElement>, unknown> {
+export type RefSpec<TElement> = {
   status: typeof STATUS_REF_SPEC;
   // Instantiate blueprint → creates DOM element with optional extensions
   // api parameter is optional - only needed for components created with create()
@@ -121,33 +119,13 @@ export interface RefSpec<TElement> extends Service<NodeRef<TElement>, unknown> {
     extensions?: TExt,
     parentContext?: ParentContext<unknown>
   ): NodeRef<TElement> & TExt;
-}
+};
 
+import type { Reactive } from '@lattice/signals/types';
 /**
  * Portable signal types - re-exported from @lattice/signals
  */
-import type {
-  Readable as ReadableType,
-  Writable as WritableType,
-  Reactive as ReactiveType,
-} from '@lattice/signals/types';
-
-export type Readable<T> = ReadableType<T>;
-export type Writable<T> = WritableType<T>;
-export type Reactive<T> = ReactiveType<T>;
-
-/**
- * Helper type to extract the return type of a zero-arg callable.
- * Works correctly with both simple getters and signal-like accessors.
- *
- * For signals with both getter and setter signatures, this extracts
- * the getter's return type (not void from the setter).
- */
-export type ReadValue<F> = F extends { (): infer R; (value: unknown): void }
-  ? R
-  : F extends { (): infer R }
-    ? R
-    : never;
+export type { Readable, Writable, Reactive } from '@lattice/signals/types';
 
 /**
  * Lifecycle callback for element connection/disconnection
@@ -175,7 +153,7 @@ export type ElRefSpecChild =
   | Reactive<unknown>
   | FragmentRef<unknown>;
 
-export interface RenderScope<TElement> {
+export type RenderScope<TElement> = {
   // Type marker
   __type: string;
 
@@ -191,13 +169,13 @@ export interface RenderScope<TElement> {
 
   // Element binding (view-specific)
   element: TElement;
-}
+};
 
 /**
  * Linked list node for tracking dispose functions
  * Used by RenderScope to track cleanup functions
  */
-export interface DisposableNode {
+export type DisposableNode = {
   dispose: () => void;
   next: DisposableNode | undefined;
-}
+};

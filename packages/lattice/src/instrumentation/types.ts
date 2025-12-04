@@ -1,11 +1,11 @@
-export interface InstrumentationEvent {
+export type InstrumentationEvent = {
   type: string;
   timestamp: number;
   data: Record<string, unknown>;
   contextId?: string;
-}
+};
 
-export interface InstrumentationProvider {
+export type InstrumentationProvider = {
   name: string;
   init(contextId: string, contextName: string): void;
   emit(event: InstrumentationEvent): void;
@@ -15,9 +15,9 @@ export interface InstrumentationProvider {
     name?: string
   ): { id: string; resource: T };
   dispose?(): void;
-}
+};
 
-export interface InstrumentationConfig {
+export type InstrumentationConfig = {
   providers: InstrumentationProvider[];
   enabled?: boolean | (() => boolean);
-}
+};

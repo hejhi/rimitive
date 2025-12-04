@@ -37,9 +37,9 @@ import type { GetContext } from '../types';
 
 export type { DOMServerAdapterConfig } from '../adapters/dom-server';
 
-export interface IslandsServerOptions<TContext = unknown> {
+export type IslandsServerOptions<TContext = unknown> = {
   context?: GetContext<TContext>;
-}
+};
 
 const createViewSvc = (
   helpers: ReturnType<typeof defaultHelpers<DOMServerAdapterConfig>>
@@ -85,7 +85,7 @@ export type SSRApp = IslandsServerApp;
 export type SSRSvc = IslandsServerApp;
 
 /**
- * Island API type - the service interface available to island components
+ * Island API type - the service type available to island components
  * Use this with createIsland<IslandAPI>() for typed islands
  */
 export type IslandAPI = ReturnType<typeof createSignalsApi> &

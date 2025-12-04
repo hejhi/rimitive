@@ -10,7 +10,7 @@ import {
 import type { ContextInfo } from '../store/types';
 import { availableEventTypes } from '../store/eventTypeManager';
 
-interface FilterBarProps {
+type FilterBarProps = {
   contexts: ContextInfo[];
   selectedContext: string | null;
   filterType: string;
@@ -18,7 +18,7 @@ interface FilterBarProps {
   onContextChange: (value: string | null) => void;
   onFilterTypeChange: (value: string) => void;
   onSearchChange: (value: string) => void;
-}
+};
 
 export function FilterBar({
   contexts,

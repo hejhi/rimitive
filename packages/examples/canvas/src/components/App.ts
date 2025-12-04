@@ -15,10 +15,10 @@ import { Toolbar } from './Toolbar';
 const { on, canvas: root } = canvas;
 const { div, p, strong, code, h1 } = dom;
 
-interface AppProps {
+type AppProps = {
   canvasWidth: number;
   canvasHeight: number;
-}
+};
 
 export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
   // Get the scene content (the group with shapes)

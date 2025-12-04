@@ -3,10 +3,10 @@ import { X } from 'lucide-react';
 import type { LogEntry } from './store/types';
 import { getCategoryColors } from './store/eventTypeManager';
 
-interface TransactionDetailProps {
+type TransactionDetailProps = {
   transaction: LogEntry;
   onClose?: () => void;
-}
+};
 
 export function TransactionDetail({
   transaction,

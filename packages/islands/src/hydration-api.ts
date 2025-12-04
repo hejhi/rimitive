@@ -11,16 +11,16 @@
 /**
  * API with effect/scopedEffect methods that need interception
  */
-export interface EffectAPI {
+export type EffectAPI = {
   effect?: (fn: () => void | (() => void)) => () => void;
   scopedEffect?: (fn: () => void | (() => void)) => () => void;
   [key: string]: unknown;
-}
+};
 
 /**
  * Result of creating hydrating API wrapper
  */
-export interface HydrationAPIResult<T extends EffectAPI> {
+export type HydrationAPIResult<T extends EffectAPI> = {
   /**
    * API with effects intercepted - use this during hydration
    */
@@ -31,7 +31,7 @@ export interface HydrationAPIResult<T extends EffectAPI> {
    * @param apiForEffects - Optional API to use when creating effects (e.g., with regular renderer instead of hydrating renderer)
    */
   activate: (apiForEffects?: T) => void;
-}
+};
 
 /**
  * Create a hydrating API wrapper

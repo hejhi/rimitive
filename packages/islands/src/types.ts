@@ -40,7 +40,7 @@ export type GetContext<TContext = unknown> = () => TContext | undefined;
  * Uses AsyncLocalStorage for implicit context during render.
  * Each request gets its own isolated context.
  */
-export interface SSRContext<TContext = unknown> {
+export type SSRContext<TContext = unknown> = {
   /**
    * Islands discovered during rendering
    * Collected as components are rendered on the server
@@ -58,7 +58,7 @@ export interface SSRContext<TContext = unknown> {
    * Set by the request handler, available to islands
    */
   getContext?: GetContext<TContext>;
-}
+};
 
 /**
  * Island metadata - describes a single island instance
@@ -69,7 +69,7 @@ export interface SSRContext<TContext = unknown> {
  *   <script type="application/json" data-island="counter-0"></script>
  * </div>
  */
-export interface IslandMetadata {
+export type IslandMetadata = {
   /**
    * Unique instance ID for this island
    * Format: "{type}-{counter}" e.g., "counter-0", "form-1"
@@ -93,7 +93,7 @@ export interface IslandMetadata {
    * Used by hydrator to determine container selection
    */
   status: number;
-}
+};
 
 /**
  * Island component - function that receives props and returns a spec
@@ -101,20 +101,24 @@ export interface IslandMetadata {
  * Islands are created with: island('counter', Component)
  * Components must accept JSON-serializable props only
  *
- * Note: This is a callable interface. The actual functions will satisfy this.
+ * Note: This is a callable type. The actual functions will satisfy this.
  * The metadata symbol is added by the island() wrapper function.
  */
-export interface IslandComponent<TProps = unknown> {
+export type IslandComponent<TProps = unknown> = {
   (props: TProps): RefSpec<unknown>;
   [ISLAND_META]?: IslandMetaData<TProps>;
-}
+};
 
 /**
  * Island hydration strategy
  *
  * Customizes behavior when hydration fails (e.g., preserve form inputs, track analytics)
  */
-export interface IslandStrategy<TProps = unknown, TApi = unknown, TContext = unknown> {
+export type IslandStrategy<
+  TProps = unknown,
+  TApi = unknown,
+  TContext = unknown,
+> = {
   /**
    * Called when hydration fails
    *
@@ -130,10 +134,13 @@ export interface IslandStrategy<TProps = unknown, TApi = unknown, TContext = unk
     error: HydrationMismatch,
     containerEl: HTMLElement,
     props: TProps,
-    Component: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>,
+    Component: (
+      api: TApi,
+      getContext: GetContext<TContext>
+    ) => (props: TProps) => RefSpec<unknown>,
     mount: (spec: RefSpec<unknown>) => { element: unknown }
   ) => boolean | void;
-}
+};
 
 /**
  * Symbol for storing island metadata on component functions
@@ -145,21 +152,35 @@ export const ISLAND_META = Symbol.for('lattice.island');
  * Island metadata stored on component functions (temporary, only for registry construction)
  * @internal
  */
-export interface IslandMetaData<TProps = unknown, TApi = unknown, TContext = unknown> {
+export type IslandMetaData<
+  TProps = unknown,
+  TApi = unknown,
+  TContext = unknown,
+> = {
   id: string;
   strategy?: IslandStrategy<TProps, TApi, TContext>;
-  component: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>;
-}
+  component: (
+    api: TApi,
+    getContext: GetContext<TContext>
+  ) => (props: TProps) => RefSpec<unknown>;
+};
 
 /**
  * Island registry entry - stores component and metadata together
  * @internal
  */
-export interface IslandRegistryEntry<TProps = unknown, TApi = unknown, TContext = unknown> {
-  component: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>;
+export type IslandRegistryEntry<
+  TProps = unknown,
+  TApi = unknown,
+  TContext = unknown,
+> = {
+  component: (
+    api: TApi,
+    getContext: GetContext<TContext>
+  ) => (props: TProps) => RefSpec<unknown>;
   id: string;
   strategy?: IslandStrategy<TProps, TApi, TContext>;
-}
+};
 
 /**
  * Island node metadata for lazy registration during decoration
@@ -168,19 +189,19 @@ export interface IslandRegistryEntry<TProps = unknown, TApi = unknown, TContext 
  * This ensures only actually-rendered islands are registered.
  * @internal
  */
-export interface IslandNodeMeta {
+export type IslandNodeMeta = {
   /** Island type - matches the ID passed to island() */
   type: string;
   /** Props passed to island component (must be JSON-serializable) */
   props: unknown;
-}
+};
 
 // ============================================================================
 // Service Adapter Types
 // ============================================================================
 
 /**
- * Minimal interface for service factory results
+ * Minimal type for service factory results
  *
  * Service factories return an object with at least `svc` containing
  * the composed service (signals + views + extensions).
@@ -188,6 +209,6 @@ export interface IslandNodeMeta {
  * Similar to ReactiveAdapter in @lattice/view, this defines the protocol
  * without coupling to specific implementations.
  */
-export interface ServiceResult<TSvc = Record<string, unknown>> {
+export type ServiceResult<TSvc = Record<string, unknown>> = {
   svc: TSvc;
-}
+};

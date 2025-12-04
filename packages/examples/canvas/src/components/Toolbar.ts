@@ -9,10 +9,10 @@ import type { ShapeType } from '../behaviors/useShapeEditor';
 
 const { div, button } = dom;
 
-interface ToolbarProps {
+type ToolbarProps = {
   onAddShape: (type: ShapeType) => void;
   onClearAll: () => void;
-}
+};
 
 export const Toolbar = (props: ToolbarProps) => {
   const { onAddShape, onClearAll } = props;

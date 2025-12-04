@@ -24,10 +24,10 @@
  *
  * Contains state needed for server-side rendering of the router.
  */
-export interface RouterSSRContext {
+export type RouterSSRContext = {
   /** Initial path to use for server-side rendering */
   initialPath: string;
-}
+};
 
 /**
  * Type for AsyncLocalStorage compatible store

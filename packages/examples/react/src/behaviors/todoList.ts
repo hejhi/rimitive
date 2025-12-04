@@ -1,16 +1,16 @@
 import type { SignalsApi, Signal, Computed } from './types';
 
-export interface Todo {
+export type Todo = {
   id: number;
   text: string;
   completed: boolean;
-}
+};
 
-export interface TodoListOptions {
+export type TodoListOptions = {
   initialTodos?: Todo[];
-}
+};
 
-export interface TodoListState {
+export type TodoListState = {
   todos: Signal<Todo[]>;
   allCompleted: Computed<boolean>;
   activeCount: Computed<number>;
@@ -19,7 +19,7 @@ export interface TodoListState {
   addTodo: (text: string) => void;
   toggleTodo: (id: number) => void;
   toggleAll: () => void;
-}
+};
 
 export const todoList =
   (api: SignalsApi) =>

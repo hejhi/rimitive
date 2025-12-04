@@ -28,13 +28,13 @@
  */
 import type { SignalsApi, Signal, Computed } from './types';
 
-export interface SelectOption<T = string> {
+export type SelectOption<T = string> = {
   value: T;
   label: string;
   disabled?: boolean;
-}
+};
 
-export interface SelectOptions<T = string> {
+export type SelectOptions<T = string> = {
   /** Available options */
   options: SelectOption<T>[];
   /** Initially selected value */
@@ -43,9 +43,9 @@ export interface SelectOptions<T = string> {
   placeholder?: string;
   /** Called when selection changes */
   onChange?: (value: T | undefined) => void;
-}
+};
 
-export interface SelectState<T = string> {
+export type SelectState<T = string> = {
   /** Whether the dropdown is open */
   isOpen: Signal<boolean>;
   /** Currently selected value */
@@ -94,7 +94,7 @@ export interface SelectState<T = string> {
     onclick: () => void;
     onmouseenter: () => void;
   };
-}
+};
 
 // Generate unique IDs for options
 let selectIdCounter = 0;

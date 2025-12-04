@@ -15,12 +15,12 @@ import { defineService } from '@lattice/lattice';
 import { GraphEdges, Consumer } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
 
-// Single function interface for both read and peek
+// Single function type for both read and peek
 // The function also implements ProducerNode and ConsumerNode to expose graph properties
-export interface ComputedFunction<T = unknown> {
+export type ComputedFunction<T = unknown> = {
   (): T;
   peek(): T;
-}
+};
 
 export type ComputedOpts = {
   consumer: Consumer;
@@ -44,10 +44,10 @@ export type { GraphEdges } from './helpers/graph-edges';
 export type { PullPropagator } from './helpers/pull-propagator';
 
 // Internal computed state that gets bound to the function
-interface ComputedNode<T> extends DerivedNode<T> {
+type ComputedNode<T> = DerivedNode<T> & {
   __type: 'computed';
   value: T;
-}
+};
 
 const { PENDING, DIRTY, PRODUCER, CONSUMER, CLEAN } = CONSTANTS;
 

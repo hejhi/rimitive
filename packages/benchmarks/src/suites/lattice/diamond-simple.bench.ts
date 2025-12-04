@@ -28,10 +28,10 @@ const ITERATIONS = 50000;
 const latticeAPI = createApi();
 const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
-interface BenchState {
+type BenchState = {
   get(name: 'diamonds'): number;
   get(name: string): unknown;
-}
+};
 
 group('Diamond Scaling', () => {
   summary(() => {

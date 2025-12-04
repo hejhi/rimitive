@@ -10,14 +10,14 @@ import { signal, computed } from '../service';
 
 export type ShapeType = 'circle' | 'rect';
 
-export interface ShapeData {
+export type ShapeData = {
   id: number;
   type: ShapeType;
   x: ReturnType<typeof signal<number>>;
   y: ReturnType<typeof signal<number>>;
   color: string;
   size: number;
-}
+};
 
 const COLORS = [
   '#e94560',
@@ -32,10 +32,10 @@ function randomColor(): string {
   return COLORS[Math.floor(Math.random() * COLORS.length)]!;
 }
 
-export interface UseShapeEditorOptions {
+export type UseShapeEditorOptions = {
   canvasWidth?: number;
   canvasHeight?: number;
-}
+};
 
 export const useShapeEditor = (options: UseShapeEditorOptions = {}) => {
   const { canvasWidth = 600, canvasHeight = 400 } = options;

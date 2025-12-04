@@ -116,13 +116,13 @@ const { el, map, on } = viewApi;
 All events follow this structure:
 
 ```typescript
-interface InstrumentationEvent {
+type InstrumentationEvent = {
   type: string; // Event type (e.g., 'EL_STATIC_CREATED')
   timestamp: number; // Event timestamp
   data: {
     [key: string]: unknown; // Event-specific data
   };
-}
+};
 ```
 
 ## Integration with Signal Instrumentation

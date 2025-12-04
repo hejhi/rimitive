@@ -231,7 +231,10 @@ export const createRouteFactory = defineService(
             };
 
             // Create component with fresh api
-            if ('create' in component && typeof component.create === 'function') {
+            if (
+              'create' in component &&
+              typeof component.create === 'function'
+            ) {
               // Component has create method - wrap it in a RefSpec
               const refSpec: RefSpec<TConfig['baseElement']> = {
                 status: STATUS_REF_SPEC,

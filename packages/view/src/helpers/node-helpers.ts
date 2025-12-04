@@ -11,11 +11,11 @@ import type { Adapter, AdapterConfig } from '../adapter';
 import type { CreateScopes } from './scope';
 import { linkBefore, unlink } from './linked-list';
 
-export interface NodeHelperOpts<TConfig extends AdapterConfig> {
+export type NodeHelperOpts<TConfig extends AdapterConfig> = {
   adapter: Adapter<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
-}
+};
 
 export function createNodeHelpers<TConfig extends AdapterConfig>(
   opts: NodeHelperOpts<TConfig>
@@ -103,11 +103,11 @@ export function createNodeHelpers<TConfig extends AdapterConfig>(
   }
 
   // Linked list stack frame for iterative fragment removal
-  interface StackFrame {
+  type StackFrame = {
     childCursor: LinkedNode<TElement> | null;
     lastChild: LinkedNode<TElement> | null;
     prev: StackFrame | undefined;
-  }
+  };
 
   /**
    * Remove a node from the DOM and dispose its scope.

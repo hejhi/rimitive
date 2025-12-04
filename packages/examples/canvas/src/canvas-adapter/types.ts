@@ -12,20 +12,20 @@ import type { AdapterConfig } from '@lattice/view/types';
 // Runtime types (used internally by adapter)
 // ============================================================================
 
-export interface CanvasNode {
+export type CanvasNode = {
   type: string;
   props: Record<string, unknown>;
   children: CanvasNode[];
   parent: CanvasNode | null;
   bounds?: { x: number; y: number; width: number; height: number };
   dirty: boolean;
-}
+};
 
 /**
  * Extended HTMLCanvasElement that holds a reference to its scene graph root
  * Used as the bridge between DOM and canvas rendering
  */
-export interface CanvasBridgeElement extends HTMLCanvasElement {
+export type CanvasBridgeElement = HTMLCanvasElement & {
   /** The root node of this canvas's scene graph */
   __sceneRoot: CanvasNode;
   /** The 2D rendering context */
@@ -41,7 +41,7 @@ export interface CanvasBridgeElement extends HTMLCanvasElement {
   __paint: () => void;
   /** Mark dirty and schedule repaint */
   __markDirty: () => void;
-}
+};
 
 /**
  * Union type for canvas adapter nodes - either a scene graph node or a bridge element
@@ -57,7 +57,7 @@ export type CanvasElement = CanvasNode | CanvasBridgeElement;
 /**
  * Common transform and style props shared by all canvas elements
  */
-export interface CanvasBaseProps {
+export type CanvasBaseProps = {
   /** X position (translation) */
   x?: number;
   /** Y position (translation) */
@@ -80,7 +80,7 @@ export interface CanvasBaseProps {
   lineCap?: CanvasLineCap;
   /** Line join style */
   lineJoin?: CanvasLineJoin;
-}
+};
 
 /**
  * Writable HTML attributes from HTMLCanvasElement
@@ -112,14 +112,14 @@ type HTMLCanvasAttributes = Partial<
  * Extends HTMLCanvasElement attributes with canvas-specific rendering options.
  * All props are forwarded to the underlying canvas element.
  */
-export interface CanvasProps extends HTMLCanvasAttributes {
+export type CanvasProps = HTMLCanvasAttributes & {
   /** Whether to clear before each paint (default: true) */
   autoClear?: boolean;
   /** Background color when clearing */
   clearColor?: string;
   /** Additional attributes are forwarded to HTMLCanvasElement */
   [key: string]: unknown;
-}
+};
 
 /**
  * Props for group element
@@ -129,31 +129,31 @@ export type GroupProps = CanvasBaseProps;
 /**
  * Props for rectangle element
  */
-export interface RectProps extends CanvasBaseProps {
+export type RectProps = CanvasBaseProps & {
   /** Rectangle width */
   width?: number;
   /** Rectangle height */
   height?: number;
   /** Corner radius for rounded rectangles */
   cornerRadius?: number;
-}
+};
 
 /**
  * Props for circle/ellipse element
  */
-export interface CircleProps extends CanvasBaseProps {
+export type CircleProps = CanvasBaseProps & {
   /** Circle radius (or default for ellipse) */
   radius?: number;
   /** Horizontal radius for ellipse */
   radiusX?: number;
   /** Vertical radius for ellipse */
   radiusY?: number;
-}
+};
 
 /**
  * Props for line element
  */
-export interface LineProps extends CanvasBaseProps {
+export type LineProps = CanvasBaseProps & {
   /** Start X coordinate */
   x1?: number;
   /** Start Y coordinate */
@@ -162,20 +162,20 @@ export interface LineProps extends CanvasBaseProps {
   x2?: number;
   /** End Y coordinate */
   y2?: number;
-}
+};
 
 /**
  * Props for path element
  */
-export interface PathProps extends CanvasBaseProps {
+export type PathProps = CanvasBaseProps & {
   /** SVG path data string */
   d?: string;
-}
+};
 
 /**
  * Props for text element
  */
-export interface TextProps extends CanvasBaseProps {
+export type TextProps = CanvasBaseProps & {
   /** Text content */
   text?: string;
   /** Alternative text content prop */
@@ -188,19 +188,19 @@ export interface TextProps extends CanvasBaseProps {
   textAlign?: CanvasTextAlign;
   /** Text baseline */
   textBaseline?: CanvasTextBaseline;
-}
+};
 
 /**
  * Props for image element
  */
-export interface ImageProps extends CanvasBaseProps {
+export type ImageProps = CanvasBaseProps & {
   /** Image source URL */
   src?: string;
   /** Image width (defaults to natural width) */
   width?: number;
   /** Image height (defaults to natural height) */
   height?: number;
-}
+};
 
 // ============================================================================
 // Element types for RendererConfig
@@ -210,43 +210,43 @@ export interface ImageProps extends CanvasBaseProps {
 /**
  * Group element - CanvasNode with group props
  */
-export interface GroupElement extends CanvasNode, GroupProps {}
+export type GroupElement = CanvasNode & GroupProps;
 
 /**
  * Rect element - CanvasNode with rect props
  */
-export interface RectElement extends CanvasNode, RectProps {}
+export type RectElement = CanvasNode & RectProps;
 
 /**
  * Circle element - CanvasNode with circle props
  */
-export interface CircleElement extends CanvasNode, CircleProps {}
+export type CircleElement = CanvasNode & CircleProps;
 
 /**
  * Line element - CanvasNode with line props
  */
-export interface LineElement extends CanvasNode, LineProps {}
+export type LineElement = CanvasNode & LineProps;
 
 /**
  * Path element - CanvasNode with path props
  */
-export interface PathElement extends CanvasNode, PathProps {}
+export type PathElement = CanvasNode & PathProps;
 
 /**
  * Text element - CanvasNode with text props
  */
-export interface TextElement extends CanvasNode, TextProps {}
+export type TextElement = CanvasNode & TextProps;
 
 /**
  * Image element - CanvasNode with image props
  */
-export interface ImageElement extends CanvasNode, ImageProps {}
+export type ImageElement = CanvasNode & ImageProps;
 
 // ============================================================================
 // Adapter config
 // ============================================================================
 
-export interface CanvasAdapterConfig extends AdapterConfig {
+export type CanvasAdapterConfig = AdapterConfig & {
   props: {
     canvas: CanvasProps;
     group: GroupProps;
@@ -274,11 +274,11 @@ export interface CanvasAdapterConfig extends AdapterConfig {
     pointerup: CanvasPointerEvent;
   };
   baseElement: CanvasElement;
-}
+};
 
-export interface CanvasPointerEvent<T extends CanvasNode = CanvasNode> {
+export type CanvasPointerEvent<T extends CanvasNode = CanvasNode> = {
   x: number;
   y: number;
   target: T | null;
   nativeEvent: PointerEvent;
-}
+};

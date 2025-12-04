@@ -23,40 +23,40 @@ export type ConnectedComponent<TConfig extends AdapterConfig> = (
 /**
  * A single route node in the tree
  */
-export interface RouteNode<TConfig extends AdapterConfig> {
+export type RouteNode<TConfig extends AdapterConfig> = {
   /** The path pattern for this route (relative) */
   path: string;
   /** The component to render when this route matches */
   component: ConnectedComponent<TConfig>;
   /** Child routes */
   children: RouteNode<TConfig>[];
-}
+};
 
 /**
  * The complete route tree returned by defineRoutes().create()
  */
-export interface RouteTree<TConfig extends AdapterConfig> {
+export type RouteTree<TConfig extends AdapterConfig> = {
   /** Root path (typically '/') */
   rootPath: string;
   /** Root layout component */
   rootComponent: ConnectedComponent<TConfig>;
   /** Child routes */
   children: RouteNode<TConfig>[];
-}
+};
 
 /**
  * A route builder - returned by route() before children are applied
  */
-export interface RouteBuilder<TConfig extends AdapterConfig> {
+export type RouteBuilder<TConfig extends AdapterConfig> = {
   (...children: RouteBuilder<TConfig>[]): RouteBuilder<TConfig>;
   /** Internal: get the node data */
   _node: RouteNode<TConfig>;
-}
+};
 
 /**
  * Context returned by defineRoutes() - mirrors router.root() API
  */
-export interface DefineRoutesContext<TConfig extends AdapterConfig> {
+export type DefineRoutesContext<TConfig extends AdapterConfig> = {
   /**
    * Create the route tree with child routes
    */
@@ -69,7 +69,7 @@ export interface DefineRoutesContext<TConfig extends AdapterConfig> {
     path: string,
     component: ConnectedComponent<TConfig>
   ) => (...children: RouteBuilder<TConfig>[]) => RouteBuilder<TConfig>;
-}
+};
 
 /**
  * Define routes without requiring a router instance

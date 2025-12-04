@@ -15,16 +15,16 @@ export type { ProducerNode, ConsumerNode, Dependency } from '../types';
 /**
  * Consumer tracking state - tracks the currently active consumer during reactive reads
  */
-export interface Consumer {
+export type Consumer = {
   active: ConsumerNode | null;
-}
+};
 
-export interface GraphEdges {
+export type GraphEdges = {
   consumer: Consumer;
   trackDependency: (producer: ProducerNode, consumer: ConsumerNode) => void;
   detachAll: (dependency: Dependency) => void;
   track: <T>(node: ConsumerNode, fn: () => T) => T;
-}
+};
 
 // Unlink a dependency from producer's consumer list
 const unlinkFromProducer = (

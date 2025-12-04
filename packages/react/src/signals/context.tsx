@@ -3,22 +3,22 @@ import type { ComputedFunction } from '@lattice/signals/computed';
 import { SignalFunction } from '@lattice/signals/signal';
 
 // Minimal API shape used by React bindings
-export interface SignalAPI {
+export type SignalAPI = {
   signal: <T>(value: T) => SignalFunction<T>;
   computed: <T>(compute: () => T) => ComputedFunction<T>;
   effect: (fn: () => void | (() => void)) => () => void;
   batch: <T>(fn: () => T) => T;
   dispose: () => void;
-}
+};
 
 // Create the React Context
 const SignalContext = createContext<SignalAPI | null>(null);
 
 // Provider component
-export interface SignalProviderProps {
+export type SignalProviderProps = {
   svc: SignalAPI;
   children: ReactNode;
-}
+};
 
 export function SignalProvider({ svc, children }: SignalProviderProps) {
   // Dispose the API when the provider unmounts

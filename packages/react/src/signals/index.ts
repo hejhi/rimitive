@@ -6,9 +6,4 @@ export type { SignalValue, SignalSetter } from './types';
 
 export type { SignalProviderProps } from './context';
 
-export type {
-  PortableSignal,
-  Readable,
-  Writable,
-  ReactiveAdapter,
-} from './hooks';
+export type { Readable, Writable, ReactiveAdapter } from './hooks';
