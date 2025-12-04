@@ -2,17 +2,19 @@
  * Router API - separate app-level API for routing
  */
 
-import type { AdapterConfig, RefSpec } from '@lattice/view/types';
 import type {
-  ElMethod,
-  SignalFunction,
-  ComputedFunction,
-} from '@lattice/view/component';
+  AdapterConfig,
+  Readable,
+  RefSpec,
+  Writable,
+} from '@lattice/view/types';
+import type { ElMethod } from '@lattice/view/component';
 import type { MatchFactory } from '@lattice/view/match';
 import type { RouteParams, RouteSpec, RouteMatch } from './types';
 import { STATUS_ROUTE_SPEC } from './types';
 import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
 import type { RouteTree, RouteNode } from './defineRoutes';
+import { ComputedFunction } from '@lattice/signals/computed';
 
 /**
  * Standalone connect function - doesn't require a router instance
@@ -55,7 +57,7 @@ export function connect<
 export type ViewApi<TConfig extends AdapterConfig> = {
   el: ElMethod<TConfig>;
   match: MatchFactory<TConfig['baseElement']>['impl'];
-  signal: <T>(value: T) => SignalFunction<T>;
+  signal: <T>(value: T) => Writable<T>;
   computed: <T>(fn: () => T) => ComputedFunction<T>;
 };
 
@@ -75,7 +77,7 @@ export type RouterConfig = {
  */
 export type RouteApi = {
   navigate: (path: string) => void;
-  currentPath: ComputedFunction<string>;
+  currentPath: Readable<string>;
 };
 
 /**
@@ -96,7 +98,7 @@ export type ConnectedApi<TConfig extends AdapterConfig> = ViewApi<TConfig> &
  */
 export type RouteContext<TConfig extends AdapterConfig> = {
   children: RefSpec<TConfig['baseElement']>[] | null;
-  params: ComputedFunction<RouteParams>;
+  params: Readable<RouteParams>;
 };
 
 /**
@@ -190,7 +192,7 @@ export type Router<TConfig extends AdapterConfig> = {
   /**
    * Reactive signal for the current path
    */
-  currentPath: ComputedFunction<string>;
+  currentPath: Readable<string>;
 
   /**
    * Get a reactive current path signal that works in both SSR and client contexts
@@ -203,7 +205,7 @@ export type Router<TConfig extends AdapterConfig> = {
    *
    * This abstracts away environment detection from user code.
    */
-  useCurrentPath: (initialPath: string) => ComputedFunction<string>;
+  useCurrentPath: (initialPath: string) => Readable<string>;
 
   /**
    * Mount a route tree defined with defineRoutes()
@@ -326,11 +328,17 @@ export function createRouter<TConfig extends AdapterConfig>(
 
   // Shared state for tracking route groups
   // Routes created in the same synchronous tick are considered siblings
-  let activeRouteGroup: Array<{
+  type RouteGroupEntry = {
     id: string;
     pathPattern: string;
-    matchedPath: ComputedFunction<RouteMatch | null>;
-  }> | null = null;
+    hasChildren: boolean;
+    matchedPath: Readable<RouteMatch | null>;
+  };
+  type RouteGroup = {
+    routes: RouteGroupEntry[];
+    activeRouteId: Readable<string | null>;
+  };
+  let activeRouteGroup: RouteGroup | null = null;
   let groupCreationDepth = 0;
 
   /**
@@ -386,8 +394,37 @@ export function createRouter<TConfig extends AdapterConfig>(
       const isFirstInGroup = activeRouteGroup === null;
 
       if (isFirstInGroup) {
-        // Create a new group
-        activeRouteGroup = [];
+        // Create a new group with routes array
+        // activeRouteId will be created lazily to reference all routes
+        const routes: RouteGroupEntry[] = [];
+
+        // Create activeRouteId computed that determines which route should render
+        // This reads currentPath and does matching directly - no peeking needed
+        const activeRouteId = viewApi.computed(() => {
+          const current = currentPath();
+
+          // Check normal routes first (non-wildcard)
+          for (const r of routes) {
+            if (r.pathPattern !== '*') {
+              const match = r.hasChildren
+                ? matchPathPrefix(r.pathPattern, current)
+                : matchPath(r.pathPattern, current);
+              if (match) return r.id;
+            }
+          }
+
+          // Then check wildcard routes
+          for (const r of routes) {
+            if (r.pathPattern === '*') {
+              // Wildcard always matches
+              return r.id;
+            }
+          }
+
+          return null;
+        });
+
+        activeRouteGroup = { routes, activeRouteId };
         groupCreationDepth = 0;
       }
 
@@ -396,11 +433,7 @@ export function createRouter<TConfig extends AdapterConfig>(
       const routeId = `route-${routeIndex}`;
 
       // Keep a reference to the current group (guaranteed non-null here)
-      const myRoutes = activeRouteGroup as Array<{
-        id: string;
-        pathPattern: string;
-        matchedPath: ComputedFunction<RouteMatch | null>;
-      }>;
+      const myGroup = activeRouteGroup as RouteGroup;
 
       // Compute whether this route matches
       // Use prefix matching if route has children, exact matching otherwise
@@ -412,54 +445,18 @@ export function createRouter<TConfig extends AdapterConfig>(
       });
 
       // Register this route in the group
-      myRoutes.push({
+      myGroup.routes.push({
         id: routeId,
         pathPattern: path,
+        hasChildren,
         matchedPath,
       });
 
       // Compute whether this route should render
-      // Only renders if it's the first matching route in its group
-      // Wildcards are always checked last
+      // Simply check if this is the active route and return the match
       const shouldRender = viewApi.computed(() => {
-        // Trigger reactivity on path changes
-        currentPath();
-
-        // Separate routes into wildcard and non-wildcard
-        const wildcardRoutes: typeof myRoutes = [];
-        const normalRoutes: typeof myRoutes = [];
-
-        for (const r of myRoutes) {
-          if (r.pathPattern === '*') {
-            wildcardRoutes.push(r);
-          } else {
-            normalRoutes.push(r);
-          }
-        }
-
-        // Check if any normal route matches
-        let normalRouteMatched = false;
-        for (const r of normalRoutes) {
-          const match = r.matchedPath.peek();
-          if (match !== null) {
-            normalRouteMatched = true;
-            // Only render if this is THE matching route
-            return r.id === routeId ? match : null;
-          }
-        }
-
-        // Only check wildcard routes if no normal route matched
-        if (!normalRouteMatched) {
-          for (const r of wildcardRoutes) {
-            const match = r.matchedPath.peek();
-            if (match !== null) {
-              // Only render if this is THE matching wildcard route
-              return r.id === routeId ? match : null;
-            }
-          }
-        }
-
-        return null;
+        if (myGroup.activeRouteId() !== routeId) return null;
+        return matchedPath();
       });
 
       // Use match() to control component rendering based on route match
@@ -614,7 +611,9 @@ export function createRouter<TConfig extends AdapterConfig>(
    * Binds pure route data to this router instance, creating all reactive
    * bindings for route matching, navigation, and rendering.
    */
-  function mount(routeTree: RouteTree<TConfig>): RefSpec<TConfig['baseElement']> {
+  function mount(
+    routeTree: RouteTree<TConfig>
+  ): RefSpec<TConfig['baseElement']> {
     /**
      * Process a group of sibling routes - creates reactive matching logic
      */
@@ -622,12 +621,45 @@ export function createRouter<TConfig extends AdapterConfig>(
       parentPath: string,
       nodes: RouteNode<TConfig>[]
     ): RefSpec<TConfig['baseElement']>[] {
-      // Route group state - sibling routes compete for matching
-      const routeGroup: Array<{
+      // Build route entries first so activeRouteId can reference them
+      type LocalRouteEntry = {
         id: string;
         pathPattern: string;
-        matchedPath: ComputedFunction<RouteMatch | null>;
-      }> = [];
+        hasChildren: boolean;
+        matchedPath: Readable<RouteMatch | null>;
+      };
+      const routes: LocalRouteEntry[] = [];
+
+      // Helper to check if a pattern is a wildcard
+      const isWildcard = (pattern: string) =>
+        pattern === '*' || pattern.endsWith('/*');
+
+      // Create activeRouteId computed that determines which route should render
+      const activeRouteId = viewApi.computed(() => {
+        const current = currentPath();
+
+        // Check normal routes first (non-wildcard)
+        for (const r of routes) {
+          if (!isWildcard(r.pathPattern)) {
+            const match = r.hasChildren
+              ? matchPathPrefix(r.pathPattern, current)
+              : matchPath(r.pathPattern, current);
+            if (match) return r.id;
+          }
+        }
+
+        // Then check wildcard routes
+        for (const r of routes) {
+          if (isWildcard(r.pathPattern)) {
+            const match = r.hasChildren
+              ? matchPathPrefix(r.pathPattern, current)
+              : matchPath(r.pathPattern, current);
+            if (match) return r.id;
+          }
+        }
+
+        return null;
+      });
 
       return nodes.map((node, index) => {
         const fullPath = composePath(parentPath, node.path);
@@ -643,54 +675,18 @@ export function createRouter<TConfig extends AdapterConfig>(
         });
 
         // Register in route group
-        routeGroup.push({
+        routes.push({
           id: routeId,
           pathPattern: fullPath,
+          hasChildren,
           matchedPath,
         });
 
-        // Capture current group state for this route's shouldRender
-        const myRoutes = routeGroup;
-        const myRouteId = routeId;
-
-        // Compute whether this route should render (first match wins, wildcards last)
+        // Compute whether this route should render
+        // Simply check if this is the active route and return the match
         const shouldRender = viewApi.computed(() => {
-          // Trigger reactivity
-          currentPath();
-
-          // Separate wildcard and normal routes
-          const wildcardRoutes: typeof myRoutes = [];
-          const normalRoutes: typeof myRoutes = [];
-
-          for (const r of myRoutes) {
-            if (r.pathPattern === '*' || r.pathPattern.endsWith('/*')) {
-              wildcardRoutes.push(r);
-            } else {
-              normalRoutes.push(r);
-            }
-          }
-
-          // Check normal routes first
-          let normalRouteMatched = false;
-          for (const r of normalRoutes) {
-            const match = r.matchedPath.peek();
-            if (match !== null) {
-              normalRouteMatched = true;
-              return r.id === myRouteId ? match : null;
-            }
-          }
-
-          // Only check wildcards if no normal route matched
-          if (!normalRouteMatched) {
-            for (const r of wildcardRoutes) {
-              const match = r.matchedPath.peek();
-              if (match !== null) {
-                return r.id === myRouteId ? match : null;
-              }
-            }
-          }
-
-          return null;
+          if (activeRouteId() !== routeId) return null;
+          return matchedPath();
         });
 
         // Process children recursively

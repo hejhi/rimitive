@@ -10,23 +10,6 @@ import type { ElementProps as ElElementProps } from './el';
 import type { AdapterConfig } from './adapter';
 
 /**
- * Signal function with both getter and setter
- */
-export type SignalFunction<T> = {
-  (): T; // Read operation
-  (value: T): void; // Write operation
-  peek(): T; // Non-tracking read
-};
-
-/**
- * Computed function (read-only)
- */
-export type ComputedFunction<T> = {
-  (): T; // Read operation
-  peek(): T; // Non-tracking read
-};
-
-/**
  * Tag factory - returned from el(tag)
  * Callable with children to create RefSpec, or use .props() to add properties
  */

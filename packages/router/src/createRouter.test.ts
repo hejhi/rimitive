@@ -4,11 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createRouter } from './createRouter';
-import type {
-  ViewApi,
-  RouteContext,
-  ConnectedComponent,
-} from './createRouter';
+import type { ViewApi, RouteContext, ConnectedComponent } from './createRouter';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { RefSpec, STATUS_REF_SPEC } from '@lattice/view/types';
 
@@ -42,7 +38,6 @@ describe('createRouter', () => {
         }
         return current;
       }) as ReturnType<ViewApi<DOMAdapterConfig>['signal']>;
-      fn.peek = () => current;
       return fn;
     };
 
@@ -172,23 +167,28 @@ describe('createRouter', () => {
   describe('route method', () => {
     beforeEach(() => {
       // Mock match() to call the reactive and pass its result to the matcher
-      mockViewApi.match = (<T>(reactive: () => T, matcher: (value: T) => unknown) => {
+      mockViewApi.match = (<T>(
+        reactive: () => T,
+        matcher: (value: T) => unknown
+      ) => {
         // Call the reactive to get the actual match result (with real params)
         const matchResult = reactive();
         const result = matcher(matchResult);
         // Return a RefSpec wrapper around the result
-        return result ?? {
-          status: STATUS_REF_SPEC,
-          create: () => ({
-            status: 1,
-            element: null,
-            parent: null,
-            prev: null,
-            next: null,
-            firstChild: null,
-            lastChild: null,
-          }),
-        };
+        return (
+          result ?? {
+            status: STATUS_REF_SPEC,
+            create: () => ({
+              status: 1,
+              element: null,
+              parent: null,
+              prev: null,
+              next: null,
+              firstChild: null,
+              lastChild: null,
+            }),
+          }
+        );
       }) as unknown as ViewApi<DOMAdapterConfig>['match'];
     });
 
@@ -484,15 +484,14 @@ describe('createRouter', () => {
   });
 
   describe('currentPath as computed', () => {
-    it('should expose currentPath as a computed (read-only)', () => {
+    it('should expose currentPath as a readable (read-only)', () => {
       const router = createRouter(mockViewApi, { initialPath: '/test' });
 
       expect(router.currentPath()).toBe('/test');
-      expect(typeof router.currentPath.peek).toBe('function');
-      expect(router.currentPath.peek()).toBe('/test');
+      expect(typeof router.currentPath).toBe('function');
     });
 
-    it('should update currentPath computed when navigating', () => {
+    it('should update currentPath when navigating', () => {
       const router = createRouter(mockViewApi, { initialPath: '/initial' });
 
       expect(router.currentPath()).toBe('/initial');
@@ -500,7 +499,6 @@ describe('createRouter', () => {
       router.navigate('/updated');
 
       expect(router.currentPath()).toBe('/updated');
-      expect(router.currentPath.peek()).toBe('/updated');
     });
   });
 
