@@ -1,184 +1,251 @@
 # Lattice
 
-[![CI](https://github.com/henryivry/lattice/actions/workflows/ci.yml/badge.svg)](https://github.com/henryivry/lattice/actions)
+A toolkit of fine-grained reactive libraries for building UI applications.
 
-Fast, portable reactive primitives for JavaScript. Run anywhere.
+Choose the pieces you need—signals, view primitives, routing, SSR—and compose them however you want. Lattice separates **reactivity** from **rendering**, so the same behavior and UI attributes work across React, native DOM, Canvas, or any adapter you write.
+
+Use presets to get started, or wire up primitives yourself for full control. Each library is independent and tree-shakeable.
+
+## Core Concepts
+
+### Signals Are Just Functions
 
 ```typescript
-import { signal, computed, effect } from '@lattice/signals';
+import { createSignalsApi } from '@lattice/signals/presets/core';
 
-const name = signal('World');
-const greeting = computed(() => `Hello, ${name.value}!`);
+const { signal, computed, effect } = createSignalsApi();
 
-effect(() => console.log(greeting.value)); // Hello, World!
-name.value = 'Lattice'; // Hello, Lattice!
+const count = signal(0);
+
+count(); // read → 0
+count(1); // write
+count(); // read → 1
+count.peek(); // read without tracking
 ```
 
-## Why Lattice?
+### Derived Values Are Lazy
 
-Modern frameworks bundle state management with rendering. This creates lock-in and limits portability. Your business logic doesn't always care whether it runs in React, Vue, or a Node.js server.
+Computeds only recompute when read AND when dependencies changed:
 
-Lattice provides reactive primitives that work everywhere:
+```typescript
+const doubled = computed(() => count() * 2);
 
-- **Performant** - Meets or exceeds Preact signal performance in benchmark
-- **Framework agnostic** - Use the same reactive core across React, Vue, Solid, or vanilla JS
-- **Truly portable** - Share stateful logic between frontend, backend, and edge workers
-- **Minimal overhead** - tiny packages, no virtual DOM, direct property access
-- **Concurrent and SSR-safe** - React 18+ concurrent-ready and cross-framework SSR
-- **100% Typesafe** - Built from the ground up with typescript
-- **Nothing new** - Selects patterns from the best of the best, with no novel concepts
+doubled(); // computes: 2
+doubled(); // cached: 2
+count(5); // marks doubled as stale (doesn't recompute yet)
+doubled(); // recomputes: 10
+```
+
+### Effects Run Automatically
+
+```typescript
+effect(() => {
+  console.log(`Count is ${count()}`);
+});
+
+count(1); // logs: "Count is 1"
+count(2); // logs: "Count is 2"
+```
+
+### Batching Prevents Redundant Work
+
+```typescript
+const { signal, effect, batch } = createSignalsApi();
+
+const count = signal(0);
+effect(() => console.log(count()));
+
+batch(() => {
+  count(1);
+  count(2);
+  count(3);
+}); // effect runs once with final value: 3
+```
+
+## View Primitives
+
+Lattice includes declarative DOM primitives that integrate with signals:
+
+```typescript
+import { createDOMSvc } from '@lattice/view/presets/dom';
+
+const { el, signal, computed, mount } = createDOMSvc();
+
+const count = signal(0);
+
+const label = computed(() => `Count: ${count()}`);
+
+const Counter = () =>
+  el('div')(
+    el('p').props({ textContent: label }),
+    el('button').props({ onclick: () => count(count() + 1) })('Increment')
+  );
+
+mount(Counter(), document.body);
+```
+
+### Reactive Props
+
+Pass signals or computeds to make props reactive:
+
+```typescript
+const isActive = signal(false);
+const className = computed(() => (isActive() ? 'active' : 'inactive'));
+
+el('div').props({ className });
+```
+
+> **Note:** Any function passed where a reactive is expected will be treated as a reactive closure—it will be called inside an effect and re-run when its dependencies change. Prefer explicit `signal` or `computed` for clarity and performance.
+
+### List Rendering
+
+```typescript
+const { el, map, signal } = createDOMSvc();
+
+const items = signal([{ id: 1, name: 'Item 1' }]);
+
+map(
+  items,
+  (item) => item.id,
+  (item) => el('li')(item().name)
+);
+```
+
+### Conditional Rendering
+
+```typescript
+const { el, match, signal } = createDOMSvc();
+
+const currentTab = signal<'home' | 'settings'>('home');
+
+// Reactively switch between elements
+match(currentTab, (tab) =>
+  tab === 'home' ? el('div')('Home content') : el('div')('Settings content')
+);
+```
 
 ## Packages
 
-### [@lattice/signals](/packages/signals)
-
-Core reactive primitives - context-aware signals, computed values, effects.
-
-```typescript
-const count = signal(0);
-const doubled = computed(() => count.value * 2);
-```
-
-### [@lattice/lattice](/packages/lattice)
-
-Generic extension composition framework for building extensible libraries.
-
-```typescript
-import { compose } from '@lattice/lattice';
-import { signalExtension } from '@lattice/signals';
-
-const context = compose(signalExtension);
-const count = context.signal(0);
-```
-
-### State Management with Lattice
-
-Combine signals with the extension framework for state management:
-
-```typescript
-import { compose } from '@lattice/lattice';
-import { coreExtensions } from '@lattice/signals';
-
-const context = compose(...coreExtensions);
-
-// fully typed!
-const todos = context.signal([]);
-const filter = context.signal('all');
-```
+| Package            | Description                                                      |
+| ------------------ | ---------------------------------------------------------------- |
+| `@lattice/lattice` | Service composition layer                                        |
+| `@lattice/signals` | Reactive primitives (signal, computed, effect, batch, subscribe) |
+| `@lattice/view`    | Declarative view primitives with adapter system                  |
+| `@lattice/router`  | Client-side routing                                              |
+| `@lattice/islands` | SSR and hydration support                                        |
+| `@lattice/react`   | React bindings (useSignal, useSubscribe, useComponent)           |
 
 ## Installation
 
 ```bash
-# Core primitives only
-npm install @lattice/signals
-
-# For building extensible libraries
-npm install @lattice/lattice
+pnpm add @lattice/signals @lattice/view
 ```
 
-## The Gap Lattice Fills
+For React integration:
 
-**Current landscape:**
+```bash
+pnpm add @lattice/react
+```
 
-- **React**: Hooks couple state to components and re-renders
-- **MobX**: Class-based, decorators, larger bundle size
-- **Zustand**: React-specific, no computed values
-- **Valtio**: Proxy-based, magic that can surprise
-- **Jotai/Recoil**: Atom-based, React-only
+## Headless Components
 
-**What's missing:** Simple, portable reactivity that works like you expect - just values that update when they should.
-
-## Design Principles
-
-1. **No magic** - Direct property access, no proxies or transforms
-2. **Explicit dependencies** - Tracked automatically but predictably
-3. **Synchronous by default** - No async complexity unless you add it
-4. **Tree-shakeable** - Import only what you use
-
-## Quick Examples
-
-### Cross-Framework Store
+Write portable logic that works across frameworks:
 
 ```typescript
-// store.ts - works anywhere
-export function createTodoStore() {
-  const store = createStore({
-    todos: [],
-    filter: 'all'
-  });
+// behaviors/createCounter.ts - framework agnostic
+interface SignalAPI {
+  signal: <T>(value: T) => { (): T; (v: T): void };
+  computed: <T>(fn: () => T) => () => T;
+}
+
+export const createCounter = (api: SignalAPI, initialCount = 0) => {
+  const count = api.signal(initialCount);
+  const doubled = api.computed(() => count() * 2);
 
   return {
-    store,
-    addTodo: (text) => {
-      const todo = { id: Date.now(), text, done: false };
-      store.state.todos.value = [...store.state.todos.value, todo];
-    }
+    count,
+    doubled,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
   };
-}
-
-// react-app.tsx
-function App() {
-  const todos = useLattice(createTodoStore);
-  return <TodoList todos={todos} />;
-}
-
-// vue-app.vue
-const todos = createTodoStore();
-watchEffect(() => console.log(todos.store.state.todos.value));
-
-// server.ts
-const todos = createTodoStore();
-todos.addTodo('Server-side todo');
-```
-
-### Derived State
-
-```typescript
-const items = signal([
-  { name: 'Apple', price: 1.5, quantity: 3 },
-  { name: 'Banana', price: 0.75, quantity: 5 },
-]);
-
-const subtotal = computed(() =>
-  items.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
-);
-
-const tax = computed(() => subtotal.value * 0.08);
-const total = computed(() => subtotal.value + tax.value);
-
-effect(() => {
-  console.log(`Total: $${total.value.toFixed(2)}`);
-});
-```
-
-### Selective Reactivity
-
-```typescript
-const state = signal({ user: { name: 'Alice', prefs: { theme: 'dark' } } });
-
-// Only react to theme changes using computed
-const theme = computed(() => state.value.user.prefs.theme);
-theme.subscribe(() => updateTheme());
-
-// Update nested data immutably
-state.value = {
-  ...state.value,
-  user: { ...state.value.user, name: 'Bob' },
 };
 ```
 
-## Performance
+Use in React:
 
-Lattice uses several techniques for lightning performance (see our [benchmarks](/packages/benchmarks)):
+```typescript
+import { useComponent, useSubscribe } from '@lattice/react';
+import { createCounter } from './behaviors/createCounter';
 
-- **Lazy evaluation** - Computed values only run when accessed
-- **Minimal allocations** - Reuses dependency tracking nodes
-- **No diffing** - Direct value comparison, no virtual DOM
-- **Batched updates** - Multiple changes trigger one update
+function Counter() {
+  const counter = useComponent(createCounter, 10); // api injected automatically
+  const count = useSubscribe(counter.count);
 
-## Contributing
+  return <button onClick={counter.increment}>Count: {count}</button>;
+}
+```
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+Use in Lattice view:
+
+```typescript
+const { signal, computed, el, t } = createDOMSvc();
+const counter = createCounter({ signal, computed }, 10);
+
+el('button').props({ onclick: counter.increment })(t`Count: ${counter.count}`);
+```
+
+## Architecture
+
+### Push-Pull Reactivity
+
+Lattice uses a **push-pull algorithm**:
+
+- **Push**: When a signal changes, dependents are marked stale (not recomputed)
+- **Pull**: Computeds recompute lazily when read
+
+This prevents cascading recomputes and ensures minimal work.
+
+### Composable by Design
+
+Each package is independent. Use signals alone, add view primitives, bring your own renderer:
+
+```
+@lattice/signals ─── standalone reactivity
+       │
+       ├── @lattice/view ─── view primitives + adapters
+       │        │
+       │        ├── DOM adapter
+       │        ├── Canvas adapter
+       │        ├── SSR adapter
+       │        └── your own adapter
+       │
+       ├── @lattice/react ─── React bindings
+       │
+       ├── @lattice/router ─── routing
+       │
+       └── @lattice/islands ─── SSR + hydration
+```
+
+Use `@lattice/lattice` to compose these pieces (or anything else) into your own service API.
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build all packages
+pnpm build
+
+# Run tests
+pnpm test
+
+# Type check
+pnpm typecheck
+
+# Full check (typecheck + test + lint)
+pnpm check
+```
 
 ## License
 
