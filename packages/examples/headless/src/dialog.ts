@@ -6,7 +6,7 @@
  */
 import type { SignalsApi, Signal, Computed } from './types';
 
-export interface UseDialogOptions {
+export interface DialogOptions {
   /** Whether the dialog starts open */
   initialOpen?: boolean;
   /** Called when dialog opens */
@@ -57,7 +57,7 @@ export interface DialogState {
  */
 export const dialog =
   (api: SignalsApi) =>
-  (options: UseDialogOptions = {}): DialogState => {
+  (options: DialogOptions = {}): DialogState => {
     const { signal, computed, effect } = api;
     const { initialOpen = false, onOpen, onClose } = options;
 

@@ -20,16 +20,6 @@ export type PortableSignal<T> = {
  * Accepts any readable signal-like value (anything callable that returns T).
  * This enables interoperability with portable headless components that define
  * their own signal types (e.g., `{ (): T; (value: T): void }`).
- *
- * @example
- * ```tsx
- * const count = signal(0);
- *
- * function Counter() {
- *   const value = useSubscribe(count);
- *   return <div>{value}</div>;
- * }
- * ```
  */
 // Overload for Lattice SignalFunction
 export function useSubscribe<T>(signal: SignalFunction<T>): T;
@@ -71,18 +61,6 @@ export function useSubscribe<T>(signal: () => T): T {
 /**
  * Create a signal that is scoped to the component lifecycle.
  * Returns a tuple of [value, setter] similar to useState.
- *
- * @example
- * ```tsx
- * function Counter() {
- *   const [count, setCount] = useSignal(0);
- *   return (
- *     <button onClick={() => setCount(c => c + 1)}>
- *       Count: {count}
- *     </button>
- *   );
- * }
- * ```
  */
 export function useSignal<T>(
   initialValue: T | (() => T)
@@ -123,14 +101,6 @@ export function useSignal<T>(
 /**
  * Subscribe to a signal value using a selector function.
  * Only re-renders when the selected value changes.
- *
- * @example
- * ```tsx
- * function UserName({ userSignal }: { userSignal: Signal<User> }) {
- *   const name = useSelector(userSignal, user => user.name);
- *   return <div>{name}</div>;
- * }
- * ```
  */
 export function useSelector<T, R>(
   signal: SignalFunction<T>,
@@ -187,44 +157,6 @@ export interface ReactiveAdapter {
  * `(api) => (...args) => Result`
  *
  * The returned hook handles SignalAPI injection automatically and creates
- *
- * @example
- * ```tsx
- * // Import a portable headless behavior
- * import { useDialog } from '@my-design-system/headless';
- *
- * // Create a React hook from it (typically at module level)
- * const useDialogHook = createHook(useDialog);
- *
- * // Use in React components - clean, familiar API
- * function MyModal() {
- *   const dialog = useDialogHook({ initialOpen: false });
- *   const isOpen = useSubscribe(dialog.isOpen);
- *
- *   return (
- *     <>
- *       <button onClick={dialog.open}>Open</button>
- *       {isOpen && <div>Modal content</div>}
- *     </>
- *   );
- * }
- * ```
- *
- * @example
- * ```tsx
- * // Works with behaviors that take no arguments
- * const useCounterHook = createHook(useCounter);
- * const counter = useCounterHook(); // No args required!
- *
- * // Works with optional arguments
- * const useDialogHook = createHook(useDialog);
- * const dialog = useDialogHook(); // Optional args
- * const dialog2 = useDialogHook({ initialOpen: true });
- *
- * // Works with required arguments
- * const useSelectHook = createHook(useSelect);
- * const select = useSelectHook({ options: myOptions }); // Required args
- * ```
  *
  * Note: Arguments are captured once when the component mounts (like useRef's
  * initial value). If you need reactive options, pass signals as option values

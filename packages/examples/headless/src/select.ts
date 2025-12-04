@@ -34,7 +34,7 @@ export interface SelectOption<T = string> {
   disabled?: boolean;
 }
 
-export interface UseSelectOptions<T = string> {
+export interface SelectOptions<T = string> {
   /** Available options */
   options: SelectOption<T>[];
   /** Initially selected value */
@@ -107,7 +107,7 @@ let selectIdCounter = 0;
  */
 export const select =
   <T = string>(api: SignalsApi) =>
-  (options: UseSelectOptions<T>): SelectState<T> => {
+  (options: SelectOptions<T>): SelectState<T> => {
     const { signal, computed, effect } = api;
     const {
       options: selectOptions,
