@@ -23,9 +23,10 @@ export type {
   IslandComponent,
   IslandStrategy,
   GetContext,
+  IslandMetaData,
 } from './types';
 
-export { HydrationMismatch } from './types';
+export { HydrationMismatch, ISLAND_META } from './types';
 
 // Island factory for typed islands
 export { createIsland, type IslandFactory } from './factory';

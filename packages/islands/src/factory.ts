@@ -6,8 +6,18 @@
  */
 
 import { island as baseIsland } from './island';
-import type { IslandComponent, IslandStrategy, GetContext } from './types';
+import type {
+  IslandComponent,
+  IslandStrategy,
+  GetContext,
+  IslandMetaData,
+} from './types';
+import { ISLAND_META } from './types';
 import type { RefSpec } from '@lattice/view/types';
+
+// Re-export types that IslandComponent references so consumers can name them
+export type { IslandComponent, IslandMetaData };
+export { ISLAND_META };
 
 /**
  * Extract the service type from an islands app
