@@ -119,3 +119,12 @@ aside {
   border-radius: 9999px;
   font-weight: 600;
 }
+
+/* Smaller badges in sidebar */
+nav .sl-badge,
+.sidebar .sl-badge,
+[data-pagefind-ignore] .sl-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  font-weight: 500;
+}

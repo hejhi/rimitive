@@ -17,7 +17,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "test": "lerna run test",
     "api-extract": "lerna run api-extract",
-    "api-document": "api-documenter markdown -i temp -o docs/api",
+    "api-collect": "mkdir -p temp && cp packages/*/temp/*.api.json temp/",
+    "api-document": "pnpm api-collect && api-documenter markdown -i temp -o packages/docs/src/content/docs/api && node scripts/add-api-frontmatter.mjs",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish"

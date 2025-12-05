@@ -21,6 +21,11 @@ export default defineConfig({
 					label: 'Advanced',
 					items: [],
 				},
+				{
+					label: 'API Reference',
+					collapsed: true,
+					autogenerate: { directory: 'api' },
+				},
 			],
 			customCss: [
 				'./src/styles/custom.css',
