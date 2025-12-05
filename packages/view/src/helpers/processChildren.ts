@@ -17,10 +17,25 @@ import type {
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Adapter, AdapterConfig } from '../adapter';
 
+export type ProcessChildren<TElement> = {
+  processChildren: (
+    parent: ElementRef<TElement>,
+    children: ElRefSpecChild[],
+    svc?: unknown,
+    parentContext?: ParentContext<TElement>
+  ) => void;
+  handleChild: (
+    parentRef: ElementRef<TElement>,
+    child: ElRefSpecChild,
+    svc?: unknown,
+    parentContext?: ParentContext<TElement>
+  ) => NodeRef<TElement> | null;
+};
+
 export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   adapter: Adapter<TConfig>;
-}) {
+}): ProcessChildren<TConfig['baseElement']> {
   type TNode = TConfig['baseElement'];
   type ViewChild = RefSpec<TNode> | FragmentRef<TNode>;
 
