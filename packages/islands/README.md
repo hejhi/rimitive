@@ -30,12 +30,11 @@ Islands let you ship less JavaScript. Static content stays as HTML—no hydratio
 
 ```typescript
 // islands/Counter.ts
-import { island } from '@lattice/islands/island';
-import type { IslandSvc } from '@lattice/islands/server';
+import { island } from '@lattice/islands/server';
 
-export const Counter = island<{ initialCount: number }, IslandSvc>(
+export const Counter = island(
   'counter',
-  (svc) => ({ initialCount }) => {
+  (svc) => ({ initialCount }: { initialCount: number }) => {
     const { el, signal, computed } = svc;
     const count = signal(initialCount);
 
@@ -120,14 +119,14 @@ On mismatch, falls back to client-side render automatically.
 
 ### `island(id, factory)`
 
-Mark a component as an island.
+Mark a component as an island. The pre-configured `island` factory is exported from both `@lattice/islands/server` and `@lattice/islands/client`.
 
 ```typescript
-import { island } from '@lattice/islands/island';
+import { island } from '@lattice/islands/server';
 
-export const MyIsland = island<Props, Svc>(
+export const MyIsland = island(
   'my-island',           // Unique ID for registry lookup
-  (svc) => (props) => {  // Factory receives svc, returns component
+  (svc) => (props: Props) => {  // Factory receives svc, returns component
     const { el, signal } = svc;
     // ... component logic
     return el('div')(...);
@@ -142,7 +141,9 @@ Props must be JSON-serializable (no functions, signals, or DOM nodes).
 Island with custom hydration strategy.
 
 ```typescript
-export const Form = island<FormProps, Svc>(
+import { island } from '@lattice/islands/server';
+
+export const Form = island(
   'form',
   {
     onMismatch(error, container, props, Component, mount) {
@@ -162,25 +163,31 @@ export const Form = island<FormProps, Svc>(
       return false; // Skip default fallback
     }
   },
-  (svc) => (props) => { /* ... */ }
+  (svc) => (props: FormProps) => { /* ... */ }
 );
 ```
 
 ### `createIsland<Svc, Context>()`
 
-Create a typed island factory with service and context types baked in.
+For custom context or service types, create a typed island factory.
 
 ```typescript
 import { createIsland } from '@lattice/islands/factory';
 import type { IslandSvc } from '@lattice/islands/server';
 
-const island = createIsland<IslandSvc>();
+// Custom context type
+type AppContext = { user: User; locale: string };
 
-// Props are inferred from the factory function
-export const Counter = island('counter', (svc) => ({ initialCount }: { initialCount: number }) => {
-  // svc is typed as IslandSvc
-  return svc.el('div')(...);
-});
+const island = createIsland<IslandSvc, AppContext>();
+
+// Props are inferred, context is typed
+export const UserGreeting = island(
+  'user-greeting',
+  (svc, getContext) => (props: { greeting: string }) => {
+    const ctx = getContext(); // AppContext | undefined
+    return svc.el('div')(`${props.greeting}, ${ctx?.user.name}!`);
+  }
+);
 ```
 
 ### Server Preset
@@ -264,9 +271,11 @@ type IslandStrategy<TProps, TSvc, TContext> = {
 Islands can return fragments (multiple root elements):
 
 ```typescript
-const TableRows = island<{ items: Item[] }, Svc>(
+import { island } from '@lattice/islands/server';
+
+const TableRows = island(
   'table-rows',
-  (svc) => ({ items }) => {
+  (svc) => ({ items }: { items: Item[] }) => {
     const { map, el } = svc;
     return map(items, (item) => item.id, (item) =>
       el('tr')(

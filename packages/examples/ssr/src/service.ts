@@ -1,12 +1,7 @@
 /**
  * Island Factory
  *
- * Provides typed island factory for defining interactive components.
+ * Re-exports the pre-configured island factory from @lattice/islands/server.
+ * For custom context, use createIsland<IslandSvc, MyContext>() instead.
  */
-import { createIsland } from '@lattice/islands/factory';
-import type { IslandSvc } from '@lattice/islands/presets/islands.server';
-
-/**
- * Typed island factory
- */
-export const island = createIsland<IslandSvc>();
+export { island } from '@lattice/islands/server';

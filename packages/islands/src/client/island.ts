@@ -1,0 +1,35 @@
+/**
+ * Pre-configured Island Factory (Client)
+ *
+ * For the common case where no custom context is needed.
+ * Simply import and use:
+ *
+ * ```ts
+ * import { island } from '@lattice/islands/client';
+ *
+ * export const Counter = island('counter', (svc) => ({ count }: Props) => {
+ *   // svc is typed as IslandSvc
+ *   return svc.el('div')(...);
+ * });
+ * ```
+ *
+ * For custom context, use createIsland from '@lattice/islands/factory':
+ *
+ * ```ts
+ * import { createIsland } from '@lattice/islands/factory';
+ * import type { IslandSvc } from '@lattice/islands/client';
+ *
+ * type MyContext = { user: User };
+ * const island = createIsland<IslandSvc, MyContext>();
+ * ```
+ */
+
+import { createIsland } from '../factory';
+import type { IslandSvc } from '../presets/islands.client';
+
+/**
+ * Pre-configured island factory with IslandSvc types baked in.
+ *
+ * Props are inferred from the factory function's parameter annotation.
+ */
+export const island = createIsland<IslandSvc>();

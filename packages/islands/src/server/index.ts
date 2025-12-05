@@ -28,6 +28,10 @@ export {
 
 export { renderToString } from '../helpers/renderToString';
 
+// Pre-configured island factory for the simple case (no custom context)
+// For custom context, use: createIsland<IslandSvc, MyContext>() from '@lattice/islands/factory'
+export { island } from './island';
+
 // Advanced: composable preset for custom wiring (e.g., routing integration)
 export {
   createIslandsApp,

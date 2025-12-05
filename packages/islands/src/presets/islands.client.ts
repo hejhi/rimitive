@@ -88,3 +88,9 @@ export function createIslandsClientApp(): IslandsClientApp {
 
   return { ...svc, mount, hydrate };
 }
+
+/**
+ * Island Svc type - the service type available to island components
+ * Same as server's IslandSvc - islands work identically on both sides
+ */
+export type IslandSvc = SignalsSvc & ViewSvc;
