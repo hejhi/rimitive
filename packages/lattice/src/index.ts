@@ -10,18 +10,11 @@ export type {
   ServiceImpl,
   DefinedService,
 } from './types';
-export {
-  withInstrumentation,
-  createInstrumentation,
-  composeProviders,
-} from './instrumentation';
+export { createInstrumentation } from './instrumentation';
 export type {
   InstrumentationEvent,
   InstrumentationProvider,
   InstrumentationConfig,
 } from './instrumentation';
-export {
-  devtoolsProvider,
-  isDevtoolsAvailable,
-} from './instrumentation/providers';
+export { devtoolsProvider } from './instrumentation/providers';
 export type { DevtoolsProviderOptions } from './instrumentation/providers';

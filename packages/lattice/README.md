@@ -1,0 +1,227 @@
+# @lattice/lattice
+
+Service composition layer for Lattice. Wire independent packages together into unified contexts with lifecycle management and optional instrumentation.
+
+## Overview
+
+Lattice packages (`@lattice/signals`, `@lattice/view`, etc.) expose service definitions—objects that describe an implementation plus optional lifecycle hooks. This package composes those definitions into a single context object where each service is accessible by name.
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { signalsService } from '@lattice/signals';
+import { viewService } from '@lattice/view';
+
+const ctx = compose(signalsService, viewService);
+
+// Services available by name
+ctx.signal(0);
+ctx.computed(() => /* ... */);
+ctx.el('div');
+
+// Cleanup when done
+ctx.dispose();
+```
+
+## Core Concepts
+
+### Service Definitions
+
+A service definition is a plain object with a name, implementation, and optional lifecycle hooks:
+
+```typescript
+import { ServiceDefinition } from '@lattice/lattice';
+
+const counterService: ServiceDefinition<'counter', { count: () => number; increment: () => void }> = {
+  name: 'counter',
+  impl: {
+    count: () => value,
+    increment: () => value++,
+  },
+  init(ctx) {
+    // Called when added to a context
+  },
+  destroy(ctx) {
+    // Called when context is disposed
+  },
+};
+```
+
+### Composition
+
+`compose` merges service definitions into a typed context:
+
+```typescript
+const ctx = compose(serviceA, serviceB, serviceC);
+
+// Type-safe access to each service's impl
+ctx.serviceA.doSomething();
+ctx.serviceB.doSomethingElse();
+```
+
+Duplicate service names throw at composition time.
+
+### Lifecycle Management
+
+Services can register cleanup functions and check disposal state:
+
+```typescript
+const resourceService: ServiceDefinition<'resource', () => Resource> = {
+  name: 'resource',
+  impl: () => createResource(),
+  adapt(impl, ctx) {
+    return () => {
+      if (ctx.isDestroyed) {
+        throw new Error('Context disposed');
+      }
+      const resource = impl();
+      ctx.destroy(() => resource.cleanup());
+      return resource;
+    };
+  },
+};
+```
+
+The `adapt` hook wraps the implementation with context-aware behavior—disposal checks, tracking, etc.
+
+### Instrumentation
+
+Add debugging and profiling without changing service implementations:
+
+```typescript
+import { createInstrumentation, devtoolsProvider, composeFrom } from '@lattice/lattice';
+
+const instrumentation = createInstrumentation({
+  enabled: import.meta.env.DEV,
+  providers: [devtoolsProvider()],
+});
+
+const ctx = composeFrom(services, deps, { instrumentation });
+```
+
+Services that support instrumentation define an `instrument` hook:
+
+```typescript
+const myService: ServiceDefinition<'my', MyImpl> = {
+  name: 'my',
+  impl: myImplementation,
+  instrument(impl, instrumentation, ctx) {
+    // Wrap impl to emit events
+    return {
+      ...impl,
+      doThing() {
+        instrumentation.emit({
+          type: 'my:doThing',
+          timestamp: Date.now(),
+          data: {},
+        });
+        return impl.doThing();
+      },
+    };
+  },
+};
+```
+
+## API
+
+### `compose(...services)`
+
+Create a context from service definitions.
+
+```typescript
+const ctx = compose(serviceA, serviceB);
+ctx.dispose(); // Cleanup all services
+```
+
+### `composeFrom(services, deps, options?)`
+
+Create a context from instantiable services that share dependencies.
+
+```typescript
+const ctx = composeFrom(
+  { signals: signalsInstantiable, view: viewInstantiable },
+  { scheduler: myScheduler }
+);
+```
+
+### `defineService(factory)`
+
+Helper for creating portable, instantiable services:
+
+```typescript
+const myService = defineService((deps) => (initialValue) => ({
+  name: 'my',
+  impl: createImpl(deps, initialValue),
+}));
+
+// Usage
+const service = myService(42);
+const ctx = compose(service.create(dependencies));
+```
+
+### `createInstrumentation(config)`
+
+Create an instrumentation context for debugging and profiling:
+
+```typescript
+const instrumentation = createInstrumentation({
+  enabled: true,
+  providers: [devtoolsProvider()],
+});
+
+const ctx = composeFrom(services, deps, { instrumentation });
+```
+
+### `devtoolsProvider(options?)`
+
+Built-in instrumentation provider for Lattice DevTools:
+
+```typescript
+const instrumentation = createInstrumentation({
+  providers: [devtoolsProvider({ debug: true })],
+});
+```
+
+## Types
+
+```typescript
+// Service definition shape
+type ServiceDefinition<TName extends string, TImpl> = {
+  name: TName;
+  impl: TImpl;
+  adapt?(impl: TImpl, ctx: ServiceContext): TImpl;
+  instrument?(impl: TImpl, instrumentation: InstrumentationContext, ctx: ServiceContext): TImpl;
+  init?(ctx: ServiceContext): void;
+  destroy?(ctx: ServiceContext): void;
+};
+
+// Context provided to services
+type ServiceContext = {
+  destroy(cleanup: () => void): void;
+  readonly isDestroyed: boolean;
+};
+
+// Instrumentation context
+type InstrumentationContext = {
+  contextId: string;
+  contextName: string;
+  emit(event: InstrumentationEvent): void;
+  register<T>(resource: T, type: string, name?: string): { id: string; resource: T };
+};
+
+// Resulting context type
+type LatticeContext<TServices> = {
+  [K in ServiceName<TServices[number]>]: ServiceImpl<TServices[number]>;
+} & {
+  dispose(): void;
+};
+```
+
+## Installation
+
+```bash
+pnpm add @lattice/lattice
+```
+
+## License
+
+MIT
