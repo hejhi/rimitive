@@ -27,8 +27,8 @@ import {
   createInstrumentation,
   devtoolsProvider,
 } from '@lattice/lattice';
-import { defaultHelpers } from '@lattice/signals/presets/core';
-import { defaultHelpers as defaultViewHelpers } from '@lattice/view/presets/core';
+import { createHelpers } from '@lattice/signals/presets/core';
+import { createScopes } from '@lattice/view/helpers/scope';
 import { RefSpec } from '@lattice/view/types';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 
@@ -37,6 +37,9 @@ const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
   enabled: true,
 });
+
+// Create signal helpers
+const signalHelpers = createHelpers();
 
 // Create instrumented signals
 const signalsSvc = composeFrom(
@@ -47,27 +50,36 @@ const signalsSvc = composeFrom(
     batch: Batch({ instrument: instrumentBatch }),
     subscribe: Subscribe({ instrument: instrumentSubscribe }),
   },
-  defaultHelpers(),
+  signalHelpers,
   { instrumentation }
 );
 
-// Create instrumented view
+// Create view helpers
 const adapter = createDOMAdapter();
-const viewHelpers = defaultViewHelpers(adapter, signalsSvc);
+const scopes = createScopes({ baseEffect: signalsSvc.effect });
+
+// Create instrumented view
 const viewSvc = composeFrom(
   {
     el: El<DOMAdapterConfig>({ instrument: instrumentEl }),
     map: Map<DOMAdapterConfig>({ instrument: instrumentMap }),
     match: Match<DOMAdapterConfig>(),
   },
-  viewHelpers
+  {
+    adapter,
+    ...scopes,
+    signal: signalsSvc.signal,
+    computed: signalsSvc.computed,
+    effect: signalsSvc.effect,
+    batch: signalsSvc.batch,
+  }
 );
 
 // Combined service
 const svc = {
   ...signalsSvc,
   ...viewSvc,
-  on: createAddEventListener(viewHelpers.batch),
+  on: createAddEventListener(signalsSvc.batch),
 };
 
 // Export primitives for direct import

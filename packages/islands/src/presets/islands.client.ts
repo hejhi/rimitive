@@ -16,9 +16,9 @@
  * ```
  */
 
-import { composeFrom } from '@lattice/lattice';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
+import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
+import { createViewSvc } from '@lattice/view/presets/core';
+import { createScopes, type CreateScopes } from '@lattice/view/helpers/scope';
 import {
   createDOMAdapter,
   type DOMAdapterConfig,
@@ -32,21 +32,29 @@ export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 type IslandComponent = { [ISLAND_META]?: unknown };
 
+type ViewSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
+
+/**
+ * Islands client app type
+ */
+export type IslandsClientApp = SignalsSvc &
+  ViewSvc & {
+    on: ReturnType<typeof createAddEventListener>;
+    mount: <TElement>(spec: RefSpec<TElement>) => ReturnType<RefSpec<TElement>['create']>;
+    hydrate: (...islands: IslandComponent[]) => void;
+  };
+
 /**
  * Create a fully-configured islands client app
  *
  * Batteries-included preset that creates signals, view, and hydration.
  */
-export const createIslandsClientApp = () => {
+export function createIslandsClientApp(): IslandsClientApp {
   const signalsSvc = createSignalsSvc();
 
   // Create DOM adapter for post-hydration rendering
   const domAdapter = createDOMAdapter();
-  const viewHelpers = defaultHelpers(domAdapter, signalsSvc);
-  const viewSvc = composeFrom(
-    defaultExtensions<DOMAdapterConfig>(),
-    viewHelpers
-  );
+  const viewSvc = createViewSvc(domAdapter, signalsSvc);
 
   const on = createAddEventListener(signalsSvc.batch);
 
@@ -57,20 +65,17 @@ export const createIslandsClientApp = () => {
   // API factory for hydrator - receives adapter created by hydrator per-island
   const createSvc = (
     islandAdapter: Adapter<DOMAdapterConfig>,
-    islandSignals: ReturnType<typeof createSignalsSvc>
-  ) => {
-    const helpers = defaultHelpers(islandAdapter, islandSignals);
-    const islandViews = composeFrom(
-      defaultExtensions<DOMAdapterConfig>(),
-      helpers
-    );
+    islandSignals: SignalsSvc
+  ): { svc: SignalsSvc & ViewSvc & { on: ReturnType<typeof createAddEventListener> }; createElementScope: CreateScopes['createElementScope'] } => {
+    const scopes = createScopes({ baseEffect: islandSignals.effect });
+    const islandViews = createViewSvc(islandAdapter, islandSignals);
     return {
       svc: {
         ...islandSignals,
         ...islandViews,
         on: createAddEventListener(islandSignals.batch),
       },
-      createElementScope: helpers.createElementScope,
+      createElementScope: scopes.createElementScope,
     };
   };
 
@@ -78,10 +83,8 @@ export const createIslandsClientApp = () => {
     element: mount(spec),
   }));
 
-  const hydrate = (...islands: IslandComponent[]) =>
+  const hydrate = (...islands: IslandComponent[]): void =>
     hydrator.hydrate(...islands);
 
   return { ...svc, mount, hydrate };
-};
-
-export type IslandsClientApp = ReturnType<typeof createIslandsClientApp>;
+}

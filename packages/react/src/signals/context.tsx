@@ -19,7 +19,7 @@ export type SignalProviderProps = {
   children: ReactNode;
 };
 
-export function SignalProvider({ svc, children }: SignalProviderProps) {
+export function SignalProvider({ svc, children }: SignalProviderProps): ReactNode {
   // Dispose the service when the provider unmounts
   useEffect(() => {
     return () => svc.dispose();

@@ -13,7 +13,7 @@ import {
   defaultExtensions as defaultViewExtensions,
   createViewSvc,
 } from '@lattice/view/presets/core';
-import { createSpec } from '@lattice/view/helpers';
+import { createScopes } from '@lattice/view/helpers/scope';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { composeFrom } from '@lattice/lattice';
 import type { RefSpec, Adapter, NodeRef } from '@lattice/view/types';
@@ -166,11 +166,18 @@ export function createIslandsApp<TContext = unknown>(
   const createSvc = (
     islandAdapter: Adapter<DOMAdapterConfig>,
     islandSignals: SignalsSvc
-  ) => {
-    const islandViewHelpers = createSpec(islandAdapter, islandSignals);
+  ): { svc: IslandsClientService; createElementScope: <TElement extends object>(element: TElement, fn: () => void) => unknown } => {
+    const scopes = createScopes({ baseEffect: islandSignals.effect });
     const islandViews = composeFrom(
       defaultViewExtensions<DOMAdapterConfig>(),
-      islandViewHelpers
+      {
+        adapter: islandAdapter,
+        ...scopes,
+        signal: islandSignals.signal,
+        computed: islandSignals.computed,
+        effect: islandSignals.effect,
+        batch: islandSignals.batch,
+      }
     );
     const svc: IslandsClientService = {
       ...islandSignals,
@@ -179,7 +186,7 @@ export function createIslandsApp<TContext = unknown>(
     } as IslandsClientService;
     return {
       svc,
-      createElementScope: islandViewHelpers.createElementScope,
+      createElementScope: scopes.createElementScope,
     };
   };
 
@@ -189,7 +196,7 @@ export function createIslandsApp<TContext = unknown>(
   }));
 
   // Update context (call after navigation)
-  const updateContext = () => {
+  const updateContext = (): void => {
     if (getContext && contextSignal) {
       contextSignal(getContext());
     }

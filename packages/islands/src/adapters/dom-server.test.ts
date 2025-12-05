@@ -11,11 +11,8 @@ import { describe, it, expect } from 'vitest';
 import { createDOMServerAdapter } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
-import { createSpec } from '@lattice/view/helpers';
-import { composeFrom } from '@lattice/lattice';
+import { createViewSvc } from '@lattice/view/presets/core';
 import { renderToString } from '../helpers/renderToString';
 import { createSSRContext, runWithSSRContext } from '../ssr-context';
 import type { IslandNodeMeta } from '../types';
@@ -26,9 +23,7 @@ import type { IslandNodeMeta } from '../types';
  */
 function createTestSSRService(signals = createSignalsSvc()) {
   const renderer = createDOMServerAdapter();
-  const viewHelpers = createSpec(renderer, signals);
-  const baseExtensions = defaultViewExtensions<DOMAdapterConfig>();
-  const views = composeFrom(baseExtensions, viewHelpers);
+  const views = createViewSvc(renderer, signals);
 
   const svc = {
     ...signals,

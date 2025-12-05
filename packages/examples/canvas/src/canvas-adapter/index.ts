@@ -17,9 +17,8 @@
  * libraries like Konva or PixiJS.
  */
 
-import { composeFrom } from '@lattice/lattice';
-import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
-import type { RefSpec, Adapter, Readable, Writable } from '@lattice/view/types';
+import { createViewSvc } from '@lattice/view/presets/core';
+import type { RefSpec, Readable, Writable } from '@lattice/view/types';
 import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
 import type { CanvasAdapterConfig } from './types';
@@ -76,14 +75,7 @@ export const createCanvasViewSvc = <
   options: CanvasAdapterOptions = {}
 ) => {
   const adapter = createCanvasAdapter(options);
-  const viewHelpers = defaultHelpers(
-    adapter as Adapter<CanvasAdapterConfig>,
-    signals
-  );
-  const viewSvc = composeFrom(
-    defaultExtensions<CanvasAdapterConfig>(),
-    viewHelpers
-  );
+  const viewSvc = createViewSvc<CanvasAdapterConfig, TSignals>(adapter, signals);
 
   const svc = {
     ...viewSvc,

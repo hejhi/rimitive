@@ -11,7 +11,7 @@ import {
   createInstrumentation,
   devtoolsProvider,
 } from '@lattice/lattice';
-import { defaultHelpers } from '@lattice/signals/presets/core';
+import { createHelpers } from '@lattice/signals/presets/core';
 
 // Create instrumented signals service
 const instrumentation = createInstrumentation({
@@ -26,7 +26,7 @@ export const service = composeFrom(
     effect: Effect({ instrument: instrumentEffect }),
     batch: Batch({ instrument: instrumentBatch }),
   },
-  defaultHelpers(),
+  createHelpers(),
   { instrumentation }
 );
 

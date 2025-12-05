@@ -19,9 +19,8 @@
  * ```
  */
 
-import { composeFrom } from '@lattice/lattice';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
+import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
+import { createViewSvc } from '@lattice/view/presets/core';
 import type { RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { createDOMServerAdapter } from '../adapters/dom-server';
@@ -37,30 +36,34 @@ export type IslandsServerOptions<TContext = unknown> = {
   context?: GetContext<TContext>;
 };
 
-type SignalsSvc = ReturnType<typeof createSignalsSvc>;
+type ViewSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
 
-const createViewSvc = (
-  helpers: ReturnType<typeof defaultHelpers<DOMAdapterConfig, SignalsSvc>>
-) => composeFrom(defaultExtensions<DOMAdapterConfig>(), helpers);
+/**
+ * Islands server app type
+ */
+export type IslandsServerApp = SignalsSvc &
+  ViewSvc & {
+    mount: <TElement>(spec: RefSpec<TElement>) => ReturnType<RefSpec<TElement>['create']>;
+    render: <TElement>(spec: RefSpec<TElement>) => { html: string; scripts: string };
+  };
 
 /**
  * Create a fully-configured islands server app
  *
  * Batteries-included preset that creates signals, view, and SSR rendering.
  */
-export const createIslandsServerApp = <TContext = unknown>(
+export function createIslandsServerApp<TContext = unknown>(
   options: IslandsServerOptions<TContext> = {}
-) => {
+): IslandsServerApp {
   const signalsSvc = createSignalsSvc();
   const adapter = createDOMServerAdapter();
-  const viewHelpers = defaultHelpers(adapter, signalsSvc);
-  const viewSvc = createViewSvc(viewHelpers);
+  const viewSvc = createViewSvc(adapter, signalsSvc);
 
   const svc = { ...signalsSvc, ...viewSvc };
 
   const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 
-  const render = <TElement>(spec: RefSpec<TElement>) => {
+  const render = <TElement>(spec: RefSpec<TElement>): { html: string; scripts: string } => {
     const ctx = createSSRContext({ getContext: options.context });
     const html = runWithSSRContext(ctx, () => renderToString(mount(spec)));
     const scripts = getIslandScripts(ctx);
@@ -68,13 +71,10 @@ export const createIslandsServerApp = <TContext = unknown>(
   };
 
   return { ...svc, mount, render };
-};
-
-export type IslandsServerApp = ReturnType<typeof createIslandsServerApp>;
+}
 
 /**
  * Island Svc type - the service type available to island components
  * Use this with createIsland<IslandSvc>() for typed islands
  */
-export type IslandSvc = ReturnType<typeof createSignalsSvc> &
-  ReturnType<typeof createViewSvc>;
+export type IslandSvc = SignalsSvc & ViewSvc;
