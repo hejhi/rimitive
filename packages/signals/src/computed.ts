@@ -1,9 +1,3 @@
-/**
- * ALGORITHM: Lazy Computed Values with Push-Pull Reactivity
- *
- * Computed values are the heart of the reactive system.
- */
-
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
 import type {
@@ -15,8 +9,24 @@ import { defineService } from '@lattice/lattice';
 import { GraphEdges, Consumer } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
 
-// Single function type for both read and peek
-// The function also implements ProducerNode and ConsumerNode to expose graph properties
+/**
+ * Computed function type - a callable that derives values from other reactives.
+ *
+ * Computeds are lazy: they only recompute when read and their dependencies have changed.
+ * Use `.peek()` to read without tracking dependencies.
+ *
+ * @example
+ * ```ts
+ * const count = signal(5);
+ * const doubled: ComputedFunction<number> = computed(() => count() * 2);
+ *
+ * doubled();     // computes: 10
+ * doubled();     // cached: 10
+ * count(10);     // marks doubled as stale
+ * doubled();     // recomputes: 20
+ * doubled.peek(); // read without tracking: 20
+ * ```
+ */
 export type ComputedFunction<T = unknown> = {
   (): T;
   peek(): T;
@@ -24,7 +34,8 @@ export type ComputedFunction<T = unknown> = {
 
 /**
  * Dependencies required by the Computed factory.
- * These are wired automatically by presets - only needed for custom compositions.
+ * Wired automatically by presets - only needed for custom compositions.
+ * @internal
  */
 export type ComputedDeps = {
   consumer: Consumer;
@@ -36,9 +47,22 @@ export type ComputedDeps = {
 
 /**
  * Options for customizing Computed behavior.
- * Pass to Computed() when creating a custom service composition.
+ *
+ * @example Adding instrumentation
+ * ```ts
+ * const computedService = Computed({
+ *   instrument(impl, instr, ctx) {
+ *     return (compute) => {
+ *       const c = impl(compute);
+ *       instr.register(c, 'computed');
+ *       return c;
+ *     };
+ *   },
+ * });
+ * ```
  */
 export type ComputedOptions = {
+  /** Custom instrumentation wrapper for debugging/profiling */
   instrument?: (
     impl: <T>(compute: () => T) => ComputedFunction<T>,
     instrumentation: InstrumentationContext,
@@ -76,7 +100,6 @@ export type ComputedFactory = ServiceDefinition<
 /**
  * The instantiable service returned by Computed().
  *
- * Use this type when building custom service compositions:
  * @example
  * ```ts
  * import { Computed, type ComputedService } from '@lattice/signals/computed';
@@ -87,6 +110,59 @@ export type ComputedFactory = ServiceDefinition<
  */
 export type ComputedService = ReturnType<typeof Computed>;
 
+/**
+ * Create a Computed service factory.
+ *
+ * Computeds are derived values that automatically track their dependencies
+ * and recompute lazily when those dependencies change.
+ *
+ * **Most users should use the preset instead:**
+ * ```ts
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * const { computed } = createSignalsSvc();
+ * ```
+ *
+ * @example Basic derived value
+ * ```ts
+ * const { signal, computed } = createSignalsSvc();
+ *
+ * const firstName = signal('Alice');
+ * const lastName = signal('Smith');
+ * const fullName = computed(() => `${firstName()} ${lastName()}`);
+ *
+ * fullName(); // 'Alice Smith'
+ * lastName('Jones');
+ * fullName(); // 'Alice Jones' (recomputed)
+ * fullName(); // 'Alice Jones' (cached)
+ * ```
+ *
+ * @example Diamond dependencies
+ * ```ts
+ * //      A
+ * //     / \
+ * //    B   C
+ * //     \ /
+ * //      D
+ * const a = signal(1);
+ * const b = computed(() => a() * 2);
+ * const c = computed(() => a() * 3);
+ * const d = computed(() => b() + c());
+ *
+ * d(); // 5 (each node computed once)
+ * ```
+ *
+ * @example Dynamic dependencies
+ * ```ts
+ * const showDetails = signal(false);
+ * const summary = signal('Short');
+ * const details = signal('Long description...');
+ *
+ * // Dependencies change based on condition
+ * const display = computed(() =>
+ *   showDetails() ? details() : summary()
+ * );
+ * ```
+ */
 export const Computed = defineService(
   ({
     consumer,

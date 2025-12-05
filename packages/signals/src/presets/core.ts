@@ -1,7 +1,42 @@
 /**
  * Core Signals Preset
+ *
  * Pre-configured bundle of signal primitives with all necessary helpers wired up.
- * This eliminates the boilerplate of manually creating and wiring helpers.
+ * This is the recommended way to use Lattice signals - it eliminates the boilerplate
+ * of manually creating and wiring the reactive graph infrastructure.
+ *
+ * @example Quick start
+ * ```ts
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ *
+ * const { signal, computed, effect, batch } = createSignalsSvc();
+ *
+ * const count = signal(0);
+ * const doubled = computed(() => count() * 2);
+ *
+ * effect(() => {
+ *   console.log(`Count: ${count()}, Doubled: ${doubled()}`);
+ * });
+ *
+ * count(5); // logs: "Count: 5, Doubled: 10"
+ * ```
+ *
+ * @example With batching
+ * ```ts
+ * const { signal, effect, batch } = createSignalsSvc();
+ *
+ * const a = signal(0);
+ * const b = signal(0);
+ *
+ * effect(() => console.log(a() + b()));
+ *
+ * batch(() => {
+ *   a(1);
+ *   b(2);
+ * }); // Effect runs once, logs: 3
+ * ```
+ *
+ * @module
  */
 
 import { Signal } from '../signal';
@@ -24,7 +59,12 @@ import { compose, type DefinedService, type Svc } from '@lattice/lattice';
 import type { Dependency } from '../types';
 
 /**
- * Combined helpers type - all reactive graph operations
+ * Combined helpers type - all reactive graph operations.
+ *
+ * This is the dependency type required by signal primitives.
+ * Created by `createHelpers()` and passed to `compose()`.
+ *
+ * @internal Typically you don't need to use this directly - use `createSignalsSvc()`.
  */
 export type Helpers = {
   untrack: <T>(fn: () => T) => T;
@@ -100,6 +140,35 @@ export type DefaultExtensions = {
   subscribe: SubscribeService;
 };
 
+/**
+ * Create the default set of signal service factories.
+ *
+ * Returns service factories for all core primitives: signal, computed,
+ * effect, batch, and subscribe. Pass to `compose()` with helpers to
+ * create a working signals service.
+ *
+ * @example Basic usage (internal)
+ * ```ts
+ * import { defaultExtensions, createHelpers } from '@lattice/signals/presets/core';
+ * import { compose } from '@lattice/lattice';
+ *
+ * const svc = compose(defaultExtensions(), createHelpers());
+ * ```
+ *
+ * @example Extending with custom services
+ * ```ts
+ * import { defaultExtensions, createHelpers, type DefaultExtensions } from '@lattice/signals/presets/core';
+ * import { compose } from '@lattice/lattice';
+ *
+ * const customService = defineService(...);
+ *
+ * const svc = compose(
+ *   defaultExtensions({ custom: customService() }),
+ *   createHelpers()
+ * );
+ * // svc.signal, svc.computed, ... plus svc.custom
+ * ```
+ */
 export function defaultExtensions<T extends Record<string, DefinedService>>(
   extensions?: T
 ): DefaultExtensions & T {
@@ -113,6 +182,27 @@ export function defaultExtensions<T extends Record<string, DefinedService>>(
   } as DefaultExtensions & T;
 }
 
+/**
+ * Create the reactive graph infrastructure (helpers).
+ *
+ * This wires together all the low-level machinery: dependency tracking,
+ * graph traversal, pull-based updates, and effect scheduling.
+ *
+ * Most users should use `createSignalsSvc()` instead, which calls this internally.
+ *
+ * @example Manual composition (advanced)
+ * ```ts
+ * import { defaultExtensions, createHelpers } from '@lattice/signals/presets/core';
+ * import { compose } from '@lattice/lattice';
+ *
+ * const helpers = createHelpers();
+ * const svc = compose(defaultExtensions(), helpers);
+ *
+ * // Now svc.signal, svc.computed, etc. are available
+ * ```
+ *
+ * @returns The helpers object containing all graph operations
+ */
 export function createHelpers(): Helpers {
   const edges = createGraphEdges();
   const untrack = createUntracked({ consumer: edges.consumer });
@@ -133,12 +223,80 @@ export function createHelpers(): Helpers {
 }
 
 /**
- * Type of the signals service returned by createSignalsSvc
+ * The type of the signals service returned by `createSignalsSvc()`.
  *
- * Uses Svc<> to automatically extract impl types from the extensions object.
+ * Contains all signal primitives: `signal`, `computed`, `effect`, `batch`, `subscribe`,
+ * plus a `dispose()` method for cleanup.
+ *
+ * @example Type annotation
+ * ```ts
+ * import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
+ *
+ * function initApp(svc: SignalsSvc) {
+ *   const count = svc.signal(0);
+ *   // ...
+ * }
+ *
+ * const svc = createSignalsSvc();
+ * initApp(svc);
+ * ```
  */
 export type SignalsSvc = Svc<DefaultExtensions>;
 
+/**
+ * Create a fully-configured signals service.
+ *
+ * This is the main entry point for using Lattice signals. Returns a service
+ * with all primitives wired up and ready to use.
+ *
+ * @example Basic usage
+ * ```ts
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ *
+ * const { signal, computed, effect, batch, subscribe } = createSignalsSvc();
+ *
+ * // Create reactive state
+ * const count = signal(0);
+ * const doubled = computed(() => count() * 2);
+ *
+ * // React to changes
+ * effect(() => {
+ *   console.log(`Count: ${count()}, Doubled: ${doubled()}`);
+ * });
+ *
+ * // Update state
+ * count(5); // Effect runs, logs: "Count: 5, Doubled: 10"
+ * ```
+ *
+ * @example With cleanup
+ * ```ts
+ * const svc = createSignalsSvc();
+ *
+ * // ... use signals ...
+ *
+ * // Clean up when done (e.g., in tests or when unmounting)
+ * svc.dispose();
+ * ```
+ *
+ * @example Subscribing to changes
+ * ```ts
+ * const { signal, subscribe } = createSignalsSvc();
+ *
+ * const name = signal('Alice');
+ *
+ * // Subscribe only re-runs when the tracked value changes
+ * const unsubscribe = subscribe(
+ *   () => name(),
+ *   (value) => console.log(`Name changed to: ${value}`)
+ * );
+ *
+ * name('Bob');   // logs: "Name changed to: Bob"
+ * name('Bob');   // no log (value unchanged)
+ * unsubscribe(); // stop listening
+ * ```
+ *
+ * @returns A signals service with all primitives and a dispose method
+ */
 export function createSignalsSvc(): SignalsSvc {
   return compose(defaultExtensions(), createHelpers());
 }

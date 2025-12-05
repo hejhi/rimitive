@@ -1,17 +1,3 @@
-/**
- * Subscribe Extension - Scheduled callback-based reactive updates
- *
- * Like effects, subscriptions are scheduled and batched, but they only
- * track dependencies from the source function, not from the callback.
- * This provides efficient updates when you want to react to specific
- * signals without tracking all dependencies used in the callback.
- *
- * Use cases:
- * - UI updates that depend on a specific signal
- * - Derived computations that should only update on specific triggers
- * - Selective dependency tracking for performance
- */
-
 import type { ScheduledNode } from './types';
 import type {
   ServiceContext,
@@ -27,7 +13,8 @@ const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
 /**
  * Dependencies required by the Subscribe factory.
- * These are wired automatically by presets - only needed for custom compositions.
+ * Wired automatically by presets - only needed for custom compositions.
+ * @internal
  */
 export type SubscribeDeps = {
   track: GraphEdges['track'];
@@ -35,6 +22,17 @@ export type SubscribeDeps = {
   dispose: Scheduler['dispose'];
 };
 
+/**
+ * Subscribe function type - tracks source dependencies, calls callback on change.
+ *
+ * @example
+ * ```ts
+ * const unsubscribe: UnsubscribeFunction = subscribe(
+ *   () => count(),           // source: tracked
+ *   (value) => log(value)    // callback: NOT tracked
+ * );
+ * ```
+ */
 export type SubscribeFunction = {
   <T = unknown>(
     source: () => T,
@@ -44,9 +42,22 @@ export type SubscribeFunction = {
 
 /**
  * Options for customizing Subscribe behavior.
- * Pass to Subscribe() when creating a custom service composition.
+ *
+ * @example Adding instrumentation
+ * ```ts
+ * const subscribeService = Subscribe({
+ *   instrument(impl, instr, ctx) {
+ *     return (source, callback) => {
+ *       const unsub = impl(source, callback);
+ *       instr.emit({ type: 'subscribe:create', timestamp: Date.now(), data: {} });
+ *       return unsub;
+ *     };
+ *   },
+ * });
+ * ```
  */
 export type SubscribeOptions = {
+  /** Custom instrumentation wrapper for debugging/profiling */
   instrument?: (
     impl: SubscribeFunction,
     instrumentation: InstrumentationContext,
@@ -54,7 +65,10 @@ export type SubscribeOptions = {
   ) => SubscribeFunction;
 };
 
+/** Callback invoked when the source value changes */
 export type SubscribeCallback<T> = (value: T) => void;
+
+/** Function to stop the subscription */
 export type UnsubscribeFunction = () => void;
 
 /**
@@ -69,7 +83,6 @@ export type SubscribeFactory = ServiceDefinition<
 /**
  * The instantiable service returned by Subscribe().
  *
- * Use this type when building custom service compositions:
  * @example
  * ```ts
  * import { Subscribe, type SubscribeService } from '@lattice/signals/subscribe';
@@ -84,6 +97,67 @@ export type SubscribeService = ReturnType<typeof Subscribe>;
 export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 
+/**
+ * Create a Subscribe service factory.
+ *
+ * Subscribe tracks dependencies only from the source function, not the callback.
+ * This is useful when you want to react to specific signals without tracking
+ * all dependencies used in the callback.
+ *
+ * **Most users should use the preset instead:**
+ * ```ts
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * const { subscribe } = createSignalsSvc();
+ * ```
+ *
+ * @example Basic subscription
+ * ```ts
+ * const { signal, subscribe } = createSignalsSvc();
+ *
+ * const count = signal(0);
+ *
+ * const unsubscribe = subscribe(
+ *   () => count(),
+ *   (value) => console.log(`Count: ${value}`)
+ * );
+ * // logs: "Count: 0"
+ *
+ * count(1); // logs: "Count: 1"
+ * unsubscribe();
+ * count(2); // no log
+ * ```
+ *
+ * @example Selective tracking
+ * ```ts
+ * const count = signal(0);
+ * const multiplier = signal(2);
+ *
+ * // Only re-runs when count changes, NOT when multiplier changes
+ * subscribe(
+ *   () => count(),
+ *   (value) => console.log(value * multiplier())
+ * );
+ *
+ * count(5);       // logs: 10
+ * multiplier(3);  // no log (multiplier not in source)
+ * count(5);       // no log (value unchanged)
+ * count(6);       // logs: 18
+ * ```
+ *
+ * @example vs Effect
+ * ```ts
+ * // Effect: tracks ALL dependencies
+ * effect(() => {
+ *   console.log(a() + b()); // re-runs when a OR b changes
+ * });
+ *
+ * // Subscribe: tracks only source dependencies
+ * subscribe(
+ *   () => a(),              // only tracks a
+ *   (val) => log(val + b()) // b is NOT tracked
+ * );
+ * ```
+ */
 export const Subscribe = defineService(
   ({ track, detachAll, dispose: disposeNode }: SubscribeDeps) =>
     ({ instrument }: SubscribeOptions = {}): SubscribeFactory => {

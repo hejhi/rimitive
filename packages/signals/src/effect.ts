@@ -16,7 +16,8 @@ const EFFECT_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
 /**
  * Dependencies required by the Effect factory.
- * These are wired automatically by presets - only needed for custom compositions.
+ * Wired automatically by presets - only needed for custom compositions.
+ * @internal
  */
 export type EffectDeps = {
   track: GraphEdges['track'];
@@ -25,9 +26,22 @@ export type EffectDeps = {
 
 /**
  * Options for customizing Effect behavior.
- * Pass to Effect() when creating a custom service composition.
+ *
+ * @example Adding instrumentation
+ * ```ts
+ * const effectService = Effect({
+ *   instrument(impl, instr, ctx) {
+ *     return (fn) => {
+ *       const dispose = impl(fn);
+ *       instr.emit({ type: 'effect:create', timestamp: Date.now(), data: {} });
+ *       return dispose;
+ *     };
+ *   },
+ * });
+ * ```
  */
 export type EffectOptions = {
+  /** Custom instrumentation wrapper for debugging/profiling */
   instrument?: (
     impl: (fn: () => void | (() => void)) => () => void,
     instrumentation: InstrumentationContext,
@@ -51,7 +65,6 @@ export type EffectFactory = ServiceDefinition<
 /**
  * The instantiable service returned by Effect().
  *
- * Use this type when building custom service compositions:
  * @example
  * ```ts
  * import { Effect, type EffectService } from '@lattice/signals/effect';
@@ -68,6 +81,60 @@ type EffectNode = ScheduledNode & {
   cleanup?: void | (() => void);
 };
 
+/**
+ * Create an Effect service factory.
+ *
+ * Effects are side effects that run when their dependencies change.
+ * They run immediately on creation and re-run whenever any dependency changes.
+ *
+ * **Most users should use the preset instead:**
+ * ```ts
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * const { effect } = createSignalsSvc();
+ * ```
+ *
+ * @example Basic effect
+ * ```ts
+ * const { signal, effect } = createSignalsSvc();
+ *
+ * const count = signal(0);
+ *
+ * const dispose = effect(() => {
+ *   console.log(`Count is ${count()}`);
+ * });
+ * // logs: "Count is 0"
+ *
+ * count(1); // logs: "Count is 1"
+ * count(2); // logs: "Count is 2"
+ *
+ * dispose(); // stops tracking
+ * count(3);  // no log
+ * ```
+ *
+ * @example With cleanup
+ * ```ts
+ * const dispose = effect(() => {
+ *   const id = setInterval(() => console.log('tick'), 1000);
+ *
+ *   // Return cleanup function
+ *   return () => clearInterval(id);
+ * });
+ *
+ * // Cleanup runs before each re-execution and on dispose
+ * dispose();
+ * ```
+ *
+ * @example DOM updates
+ * ```ts
+ * const title = signal('Hello');
+ *
+ * effect(() => {
+ *   document.title = title();
+ * });
+ *
+ * title('World'); // Document title updates automatically
+ * ```
+ */
 export const Effect = defineService(
   ({ dispose: disposeNode, track }: EffectDeps) =>
     ({ instrument }: EffectOptions = {}): EffectFactory => {
