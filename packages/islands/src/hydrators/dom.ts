@@ -19,8 +19,8 @@ import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import { HydrationMismatch, ISLAND_META } from '../types';
 import { createIslandsAdapter } from '../adapters/islands';
 import { createDOMHydrationAdapter } from '../adapters/dom-hydration';
-import { createHydrationApi } from '../hydration-api';
-import type { EffectAPI } from '../hydration-api';
+import { createHydrationSvc } from '../hydration-svc';
+import type { EffectSvc } from '../hydration-svc';
 import { getClientContext } from '../client-context.browser';
 
 /**
@@ -60,7 +60,7 @@ export type MountFn = (spec: RefSpec<unknown>) => { element: unknown };
  * Result type from createAPI - includes both the API and scope helper
  */
 export type CreateAPIResult = {
-  api: EffectAPI & Record<string, unknown>;
+  svc: EffectSvc & Record<string, unknown>;
   createElementScope: <TElement extends object>(
     element: TElement,
     fn: () => void
@@ -75,7 +75,7 @@ export type CreateAPIResult = {
  * @param mount - Mount function for fallback client-side rendering
  * @returns Hydrator instance
  */
-export function createDOMHydrator<TSignals extends EffectAPI>(
+export function createDOMHydrator<TSignals extends EffectSvc>(
   createAPI: (
     adapter: ReturnType<typeof createIslandsAdapter>,
     signals: TSignals
@@ -170,15 +170,15 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
           );
 
           // Create API with hydrating adapter - includes scope helper
-          const { api, createElementScope } = createAPI(adapter, signals);
-          const { hydratingApi, activate } = createHydrationApi(api);
+          const { svc, createElementScope } = createAPI(adapter, signals);
+          const { hydratingSvc, activate } = createHydrationSvc(svc);
 
           // Get the context getter
           const getContext = getContextGetter();
 
           // Create component with the hydrating API and context getter
-          const componentFn = Component(hydratingApi, getContext);
-          const nodeRef = componentFn(props).create(hydratingApi);
+          const componentFn = Component(hydratingSvc, getContext);
+          const nodeRef = componentFn(props).create(hydratingSvc);
 
           // For fragment islands, call attach() and activate while in hydrating mode
           // attach() is where map() creates the reconciler and binds event handlers
@@ -201,7 +201,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
               lastChild: null,
             };
 
-            nodeRef.attach(fragmentParentRef, null, hydratingApi);
+            nodeRef.attach(fragmentParentRef, null, hydratingSvc);
 
             // Activate effects within element scope for proper cleanup
             // For fragments, use the first child element if available, otherwise the container
@@ -274,7 +274,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             // - For fragment islands: clear the container div and mount fresh
             // Create a regular API for client-side rendering
             const fallbackAdapter = createDOMAdapter();
-            const { api: fallbackApi } = createAPI(
+            const { svc: fallbackSvc } = createAPI(
               createIslandsAdapter(fallbackAdapter, fallbackAdapter),
               signals
             );
@@ -285,7 +285,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
             if (isFragment) {
               container.innerHTML = '';
               const fallbackComponentFn = Component(
-                fallbackApi,
+                fallbackSvc,
                 fallbackGetContext
               );
               const instance = mount(fallbackComponentFn(props));
@@ -297,7 +297,7 @@ export function createDOMHydrator<TSignals extends EffectAPI>(
               if (islandElement) islandElement.remove();
               script.remove();
               const fallbackComponentFn = Component(
-                fallbackApi,
+                fallbackSvc,
                 fallbackGetContext
               );
               const instance = mount(fallbackComponentFn(props));

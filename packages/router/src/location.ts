@@ -3,7 +3,7 @@
  */
 
 import { defineService } from '@lattice/lattice';
-import type { LocationOpts, LocationFactory, LocationAPI } from './types';
+import type { LocationOpts, LocationFactory, LocationSvc } from './types';
 
 /**
  * Parse query string into object
@@ -65,7 +65,7 @@ function parseURL(url: string): {
 export const createLocationFactory = defineService(
   ({ computed, currentPath }: LocationOpts) => {
     return () => {
-      function location(): LocationAPI {
+      function location(): LocationSvc {
         // Create computed values for each part of the URL
         const pathname = computed(() => {
           const path = currentPath();

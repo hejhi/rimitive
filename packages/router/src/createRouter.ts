@@ -53,7 +53,7 @@ export function connect<
 /**
  * View API that the router depends on
  */
-export type ViewApi<TConfig extends AdapterConfig> = {
+export type ViewSvc<TConfig extends AdapterConfig> = {
   el: ElMethod<TConfig>;
   match: MatchFactory<TConfig['baseElement']>['impl'];
   signal: <T>(value: T) => Writable<T>;
@@ -72,9 +72,9 @@ export type RouterConfig = {
 };
 
 /**
- * Route API - navigation and path signals
+ * Route - navigation and path signals
  */
-export type RouteApi = {
+export type RouteSvc = {
   navigate: (path: string) => void;
   currentPath: Readable<string>;
 };
@@ -86,14 +86,14 @@ export type RouteApi = {
  * whatever adapter is provided (hydrating or regular) rather than
  * pulling from a singleton.
  */
-export type ConnectedApi<TConfig extends AdapterConfig> = ViewApi<TConfig> &
-  RouteApi;
+export type ConnectedSvc<TConfig extends AdapterConfig> = ViewSvc<TConfig> &
+  RouteSvc;
 
 /**
  * Route context passed to connect wrapper
  *
  * Contains route-specific data (children, params) for routing.
- * Service injection is handled separately via the api() middleware pattern.
+ * Service injection is handled separately via the svc() middleware pattern.
  */
 export type RouteContext<TConfig extends AdapterConfig> = {
   children: RefSpec<TConfig['baseElement']>[] | null;
@@ -281,14 +281,14 @@ function getInitialPath(config: RouterConfig): string {
  * It manages navigation state and provides routing primitives.
  */
 export function createRouter<TConfig extends AdapterConfig>(
-  viewApi: ViewApi<TConfig>,
+  viewSvc: ViewSvc<TConfig>,
   config: RouterConfig = {}
 ): Router<TConfig> {
   // Internal signal for current path (writable)
-  const currentPathSignal = viewApi.signal<string>(getInitialPath(config));
+  const currentPathSignal = viewSvc.signal<string>(getInitialPath(config));
 
   // Public computed for current path (read-only)
-  const currentPath = viewApi.computed(() => currentPathSignal());
+  const currentPath = viewSvc.computed(() => currentPathSignal());
 
   /**
    * Navigate to a new path
@@ -319,8 +319,8 @@ export function createRouter<TConfig extends AdapterConfig>(
 
   // Merged API (view + route) passed to connected components
   // This enables hydration - components use whatever API is provided
-  const connectedApi: ConnectedApi<TConfig> = {
-    ...viewApi,
+  const connectedSvc: ConnectedSvc<TConfig> = {
+    ...viewSvc,
     navigate,
     currentPath,
   };
@@ -399,7 +399,7 @@ export function createRouter<TConfig extends AdapterConfig>(
 
         // Create activeRouteId computed that determines which route should render
         // This reads currentPath and does matching directly - no peeking needed
-        const activeRouteId = viewApi.computed(() => {
+        const activeRouteId = viewSvc.computed(() => {
           const current = currentPath();
 
           // Check normal routes first (non-wildcard)
@@ -436,7 +436,7 @@ export function createRouter<TConfig extends AdapterConfig>(
 
       // Compute whether this route matches
       // Use prefix matching if route has children, exact matching otherwise
-      const matchedPath = viewApi.computed(() => {
+      const matchedPath = viewSvc.computed(() => {
         const current = currentPath();
         return hasChildren
           ? matchPathPrefix(path, current)
@@ -453,20 +453,20 @@ export function createRouter<TConfig extends AdapterConfig>(
 
       // Compute whether this route should render
       // Simply check if this is the active route and return the match
-      const shouldRender = viewApi.computed(() => {
+      const shouldRender = viewSvc.computed(() => {
         if (myGroup.activeRouteId() !== routeId) return null;
         return matchedPath();
       });
 
       // Use match() to control component rendering based on route match
       // match() recreates the component on every param change
-      const baseRefSpec = viewApi.match(shouldRender, (matchResult) => {
+      const baseRefSpec = viewSvc.match(shouldRender, (matchResult) => {
         if (!matchResult) return null;
 
         // Build RouteContext fresh for each match
         const routeContext: RouteContext<TConfig> = {
           children: processedChildren.length > 0 ? processedChildren : null,
-          params: viewApi.computed(() => matchResult.params),
+          params: viewSvc.computed(() => matchResult.params),
         };
 
         // Instantiate the connected component with route context
@@ -488,10 +488,10 @@ export function createRouter<TConfig extends AdapterConfig>(
         unwrap: () => baseRefSpec,
         // Delegate create method to base spec
         create: <TExt = Record<string, unknown>>(
-          api?: unknown,
+          svc?: unknown,
           extensions?: TExt
         ) => {
-          return baseRefSpec.create(api, extensions);
+          return baseRefSpec.create(svc, extensions);
         },
       };
 
@@ -533,7 +533,7 @@ export function createRouter<TConfig extends AdapterConfig>(
    * @returns A computed signal containing the current path
    */
   function useCurrentPath(initialPath: string): Readable<string> {
-    return viewApi.computed(() =>
+    return viewSvc.computed(() =>
       typeof window === 'undefined' ? initialPath : currentPath()
     );
   }
@@ -591,7 +591,7 @@ export function createRouter<TConfig extends AdapterConfig>(
       // Root always matches, so params are empty
       const routeContext: RouteContext<TConfig> = {
         children: processedChildren.length > 0 ? processedChildren : null,
-        params: viewApi.computed(() => ({})),
+        params: viewSvc.computed(() => ({})),
       };
 
       // Return the component RefSpec directly (not wrapped in match())
@@ -634,7 +634,7 @@ export function createRouter<TConfig extends AdapterConfig>(
         pattern === '*' || pattern.endsWith('/*');
 
       // Create activeRouteId computed that determines which route should render
-      const activeRouteId = viewApi.computed(() => {
+      const activeRouteId = viewSvc.computed(() => {
         const current = currentPath();
 
         // Check normal routes first (non-wildcard)
@@ -666,7 +666,7 @@ export function createRouter<TConfig extends AdapterConfig>(
         const hasChildren = node.children.length > 0;
 
         // Compute whether this route matches
-        const matchedPath = viewApi.computed(() => {
+        const matchedPath = viewSvc.computed(() => {
           const current = currentPath();
           return hasChildren
             ? matchPathPrefix(fullPath, current)
@@ -683,7 +683,7 @@ export function createRouter<TConfig extends AdapterConfig>(
 
         // Compute whether this route should render
         // Simply check if this is the active route and return the match
-        const shouldRender = viewApi.computed(() => {
+        const shouldRender = viewSvc.computed(() => {
           if (activeRouteId() !== routeId) return null;
           return matchedPath();
         });
@@ -694,13 +694,13 @@ export function createRouter<TConfig extends AdapterConfig>(
           : [];
 
         // Use match() for conditional rendering - recreates component on param change
-        return viewApi.match(shouldRender, (matchResult) => {
+        return viewSvc.match(shouldRender, (matchResult) => {
           if (!matchResult) return null;
 
           // Build route context fresh for each match
           const routeContext: RouteContext<TConfig> = {
             children: childRefSpecs.length > 0 ? childRefSpecs : null,
-            params: viewApi.computed(() => matchResult.params),
+            params: viewSvc.computed(() => matchResult.params),
           };
 
           // Create the component RefSpec
@@ -718,7 +718,7 @@ export function createRouter<TConfig extends AdapterConfig>(
     // Build root context
     const rootContext: RouteContext<TConfig> = {
       children: childRefSpecs.length > 0 ? childRefSpecs : null,
-      params: viewApi.computed(() => ({})),
+      params: viewSvc.computed(() => ({})),
     };
 
     // Return the root component (not wrapped in match - always visible)
@@ -728,13 +728,13 @@ export function createRouter<TConfig extends AdapterConfig>(
   /**
    * Render a RefSpec with the router's connected API
    *
-   * Passes connectedApi (which includes navigate) to spec.create(),
+   * Passes connectedSvc (which includes navigate) to spec.create(),
    * ensuring Link components can intercept clicks for SPA navigation.
    */
   function renderApp<TElement extends TConfig['baseElement']>(
     spec: RefSpec<TElement>
   ): ReturnType<RefSpec<TElement>['create']> {
-    return spec.create(connectedApi);
+    return spec.create(connectedSvc);
   }
 
   // Return the router object

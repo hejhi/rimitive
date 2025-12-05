@@ -53,7 +53,7 @@ export type RouteSpec<TElement> = {
   // Unwrap method to get the inner RefSpec for adapter
   unwrap(): RefSpec<TElement>;
   create<TExt = Record<string, unknown>>(
-    api?: unknown,
+    svc?: unknown,
     extensions?: TExt
   ): import('@lattice/view/types').NodeRef<TElement> & TExt;
 };
@@ -93,9 +93,9 @@ export type LinkFactory = ServiceDefinition<
 >;
 
 /**
- * Location API - reactive access to URL components
+ * Location - reactive access to URL components
  */
-export type LocationAPI = {
+export type LocationSvc = {
   pathname: Readable<string>;
   search: Readable<string>;
   hash: Readable<string>;
@@ -117,6 +117,6 @@ export type LocationOpts = {
 export type LocationFactory = ServiceDefinition<
   'location',
   {
-    (): LocationAPI;
+    (): LocationSvc;
   }
 >;

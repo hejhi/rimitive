@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createRouter } from './createRouter';
-import type { ViewApi, RouteContext, ConnectedComponent } from './createRouter';
+import type { ViewSvc, RouteContext, ConnectedComponent } from './createRouter';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { RefSpec, STATUS_REF_SPEC } from '@lattice/view/types';
 
@@ -16,7 +16,7 @@ const createMockComputed = <T>(fn: () => T) => {
 };
 
 describe('createRouter', () => {
-  let mockViewApi: ViewApi<DOMAdapterConfig>;
+  let mockViewSvc: ViewSvc<DOMAdapterConfig>;
   let originalWindow: typeof globalThis.window;
   let originalLocation: Location;
   let originalHistory: History;
@@ -30,31 +30,31 @@ describe('createRouter', () => {
     // Create mock signal and computed with proper typing
     const mockSignal = <T>(
       value: T
-    ): ReturnType<ViewApi<DOMAdapterConfig>['signal']> => {
+    ): ReturnType<ViewSvc<DOMAdapterConfig>['signal']> => {
       let current = value;
       const fn = ((newValue?: T) => {
         if (newValue !== undefined) {
           current = newValue;
         }
         return current;
-      }) as ReturnType<ViewApi<DOMAdapterConfig>['signal']>;
+      }) as ReturnType<ViewSvc<DOMAdapterConfig>['signal']>;
       return fn;
     };
 
     const mockComputed = <T>(
       fn: () => T
-    ): ReturnType<ViewApi<DOMAdapterConfig>['computed']> => {
+    ): ReturnType<ViewSvc<DOMAdapterConfig>['computed']> => {
       const computedFn = (() => fn()) as ReturnType<
-        ViewApi<DOMAdapterConfig>['computed']
+        ViewSvc<DOMAdapterConfig>['computed']
       >;
       return computedFn;
     };
 
-    mockViewApi = {
-      signal: mockSignal as ViewApi<DOMAdapterConfig>['signal'],
-      computed: mockComputed as ViewApi<DOMAdapterConfig>['computed'],
-      el: (() => {}) as unknown as ViewApi<DOMAdapterConfig>['el'],
-      match: (() => {}) as unknown as ViewApi<DOMAdapterConfig>['match'],
+    mockViewSvc = {
+      signal: mockSignal as ViewSvc<DOMAdapterConfig>['signal'],
+      computed: mockComputed as ViewSvc<DOMAdapterConfig>['computed'],
+      el: (() => {}) as unknown as ViewSvc<DOMAdapterConfig>['el'],
+      match: (() => {}) as unknown as ViewSvc<DOMAdapterConfig>['match'],
     };
   });
 
@@ -67,12 +67,12 @@ describe('createRouter', () => {
 
   describe('initialization', () => {
     it('should create router with default path when no config provided', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
       expect(router.currentPath()).toBe('/');
     });
 
     it('should use initialPath from config', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/test' });
+      const router = createRouter(mockViewSvc, { initialPath: '/test' });
       expect(router.currentPath()).toBe('/test');
     });
 
@@ -92,7 +92,7 @@ describe('createRouter', () => {
         configurable: true,
       });
 
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
       expect(router.currentPath()).toBe('/browser?query=1#section');
     });
 
@@ -112,14 +112,14 @@ describe('createRouter', () => {
         configurable: true,
       });
 
-      const router = createRouter(mockViewApi, { initialPath: '/override' });
+      const router = createRouter(mockViewSvc, { initialPath: '/override' });
       expect(router.currentPath()).toBe('/override');
     });
   });
 
   describe('navigate', () => {
     it('should update currentPath signal', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/' });
+      const router = createRouter(mockViewSvc, { initialPath: '/' });
       router.navigate('/new-path');
       expect(router.currentPath()).toBe('/new-path');
     });
@@ -142,7 +142,7 @@ describe('createRouter', () => {
         configurable: true,
       });
 
-      const router = createRouter(mockViewApi, { initialPath: '/' });
+      const router = createRouter(mockViewSvc, { initialPath: '/' });
       router.navigate('/test');
 
       expect(pushStateCalls).toHaveLength(1);
@@ -157,7 +157,7 @@ describe('createRouter', () => {
         configurable: true,
       });
 
-      const router = createRouter(mockViewApi, { initialPath: '/' });
+      const router = createRouter(mockViewSvc, { initialPath: '/' });
       expect(() => router.navigate('/test')).not.toThrow();
       expect(router.currentPath()).toBe('/test');
     });
@@ -166,7 +166,7 @@ describe('createRouter', () => {
   describe('route method', () => {
     beforeEach(() => {
       // Mock match() to call the reactive and pass its result to the matcher
-      mockViewApi.match = (<T>(
+      mockViewSvc.match = (<T>(
         reactive: () => T,
         matcher: (value: T) => unknown
       ) => {
@@ -188,11 +188,11 @@ describe('createRouter', () => {
             }),
           }
         );
-      }) as unknown as ViewApi<DOMAdapterConfig>['match'];
+      }) as unknown as ViewSvc<DOMAdapterConfig>['match'];
     });
 
     it('should accept a path and connected component', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/' });
+      const router = createRouter(mockViewSvc, { initialPath: '/' });
 
       const mockConnected: ConnectedComponent<DOMAdapterConfig> = () =>
         ({
@@ -217,7 +217,7 @@ describe('createRouter', () => {
     });
 
     it('should extract params from path patterns', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/users/123' });
+      const router = createRouter(mockViewSvc, { initialPath: '/users/123' });
 
       let capturedParams: Record<string, string> = {};
 
@@ -244,7 +244,7 @@ describe('createRouter', () => {
     });
 
     it('should pass null children when route has no children', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/' });
+      const router = createRouter(mockViewSvc, { initialPath: '/' });
 
       let capturedChildren: unknown = undefined;
 
@@ -273,7 +273,7 @@ describe('createRouter', () => {
     });
 
     it('should compose nested route paths', () => {
-      const router = createRouter(mockViewApi, {
+      const router = createRouter(mockViewSvc, {
         initialPath: '/products/123',
       });
 
@@ -340,7 +340,7 @@ describe('createRouter', () => {
       }) as RefSpec<HTMLElement>;
 
     it('should return a function that accepts user props', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
 
       const wrapper = (): ((_userProps: {
         theme: string;
@@ -353,7 +353,7 @@ describe('createRouter', () => {
     });
 
     it('should return a ConnectedComponent when called with user props', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
 
       const wrapper = (): ((_userProps: {
         theme: string;
@@ -368,7 +368,7 @@ describe('createRouter', () => {
     });
 
     it('should provide route context to wrapper function', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
       let capturedRouteContext: RouteContext<DOMAdapterConfig> | null = null;
 
       const wrapper = (
@@ -399,7 +399,7 @@ describe('createRouter', () => {
     });
 
     it('should pass user props to component factory', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
       let capturedUserProps: Record<string, unknown> | null = null;
 
       const wrapper = (): ((
@@ -421,7 +421,7 @@ describe('createRouter', () => {
     });
 
     it('should return RefSpec from instantiate', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
 
       const mockRefSpec = createMockRefSpec();
 
@@ -438,7 +438,7 @@ describe('createRouter', () => {
     });
 
     it('should work with create() pattern integration', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
 
       // Simulate the create() pattern from the requirements
       const wrapper = (
@@ -484,14 +484,14 @@ describe('createRouter', () => {
 
   describe('currentPath as computed', () => {
     it('should expose currentPath as a readable (read-only)', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/test' });
+      const router = createRouter(mockViewSvc, { initialPath: '/test' });
 
       expect(router.currentPath()).toBe('/test');
       expect(typeof router.currentPath).toBe('function');
     });
 
     it('should update currentPath when navigating', () => {
-      const router = createRouter(mockViewApi, { initialPath: '/initial' });
+      const router = createRouter(mockViewSvc, { initialPath: '/initial' });
 
       expect(router.currentPath()).toBe('/initial');
 
@@ -503,7 +503,7 @@ describe('createRouter', () => {
 
   describe('type exports', () => {
     it('should export router instance with correct shape', () => {
-      const router = createRouter(mockViewApi);
+      const router = createRouter(mockViewSvc);
       expect(router).toHaveProperty('route');
       expect(router).toHaveProperty('connect');
       expect(router).toHaveProperty('navigate');

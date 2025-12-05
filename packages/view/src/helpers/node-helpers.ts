@@ -31,10 +31,10 @@ export function createNodeHelpers<TConfig extends AdapterConfig>(
    * @param node - Node to insert (element or fragment)
    * @param nextSiblingNode - Next sibling node (can be element, fragment, or undefined)
    * @param boundaryNextSibling - Boundary marker for fragments (e.g., from parent fragment)
-   * @param api - API context for fragment attachment
+   * @param svc - API context for fragment attachment
    */
   function insertNodeBefore(
-    api: unknown,
+    svc: unknown,
     parentElement: TElement,
     node: NodeRef<TElement>,
     nextSiblingNode?: NodeRef<TElement> | null,
@@ -94,7 +94,7 @@ export function createNodeHelpers<TConfig extends AdapterConfig>(
       adapter.beforeAttach?.(node, parentElement, nextSibEl);
 
       // Attach fragment (sets up children) and store cleanup function
-      const cleanup = node.attach(parentRef, nextSib, api);
+      const cleanup = node.attach(parentRef, nextSib, svc);
       if (cleanup) node.cleanup = cleanup;
 
       // Lifecycle hook: onAttach for fragments (e.g., SSR adds markers)

@@ -3,30 +3,9 @@
  *
  * A framework-agnostic, accessible select (dropdown) behavior.
  * Provides state management, ARIA attributes, keyboard navigation, and typeahead.
- *
- * WAI-ARIA: https://www.w3.org/WAI/ARIA/apg/patterns/combobox/
- *
- * @example
- * ```ts
- * // With Lattice signals
- * import { useSelect } from '@lattice/headless/useSelect';
- * import { signal, computed, effect } from './my-signals';
- *
- * const select = useSelect({ signal, computed, effect })({
- *   options: [
- *     { value: 'apple', label: 'Apple' },
- *     { value: 'banana', label: 'Banana' },
- *   ],
- * });
- *
- * // Use in your UI framework:
- * // <button {...select.triggerProps}>{select.selectedLabel()}</button>
- * // <ul {...select.listboxProps}>
- * //   {options.map(opt => <li {...select.getOptionProps(opt)} />)}
- * // </ul>
- * ```
  */
-import type { SignalsApi, Signal, Computed } from './types';
+import type { ReactiveSvc } from './types';
+import { Writable, Readable } from '@lattice/signals/types';
 
 export type SelectOption<T = string> = {
   value: T;
@@ -47,13 +26,13 @@ export type SelectOptions<T = string> = {
 
 export type SelectState<T = string> = {
   /** Whether the dropdown is open */
-  isOpen: Signal<boolean>;
+  isOpen: Writable<boolean>;
   /** Currently selected value */
-  selectedValue: Signal<T | undefined>;
+  selectedValue: Writable<T | undefined>;
   /** Label of the selected option (or placeholder) */
-  selectedLabel: Computed<string>;
+  selectedLabel: Readable<string>;
   /** Index of the currently highlighted option (for keyboard nav) */
-  highlightedIndex: Signal<number>;
+  highlightedIndex: Writable<number>;
 
   /** Open the dropdown */
   open: () => void;
@@ -68,8 +47,8 @@ export type SelectState<T = string> = {
   triggerProps: {
     role: 'combobox';
     'aria-haspopup': 'listbox';
-    'aria-expanded': Computed<boolean>;
-    'aria-activedescendant': Computed<string | undefined>;
+    'aria-expanded': Readable<boolean>;
+    'aria-activedescendant': Readable<string | undefined>;
     'data-select-id': string;
     onclick: () => void;
     onkeydown: (e: KeyboardEvent) => void;
@@ -78,7 +57,7 @@ export type SelectState<T = string> = {
   /** Props to spread on the listbox (dropdown container) */
   listboxProps: {
     role: 'listbox';
-    'aria-hidden': Computed<boolean>;
+    'aria-hidden': Readable<boolean>;
     'data-select-id': string;
   };
 
@@ -89,7 +68,7 @@ export type SelectState<T = string> = {
   ) => {
     role: 'option';
     id: string;
-    'aria-selected': Computed<boolean>;
+    'aria-selected': Readable<boolean>;
     'aria-disabled': boolean | undefined;
     onclick: () => void;
     onmouseenter: () => void;
@@ -99,16 +78,10 @@ export type SelectState<T = string> = {
 // Generate unique IDs for options
 let selectIdCounter = 0;
 
-/**
- * Creates a headless select behavior
- *
- * @param api - Signals API (signal, computed, effect)
- * @returns Factory function that creates select state
- */
 export const select =
-  <T = string>(api: SignalsApi) =>
+  <T = string>(svc: ReactiveSvc) =>
   (options: SelectOptions<T>): SelectState<T> => {
-    const { signal, computed, effect } = api;
+    const { signal, computed, effect } = svc;
     const {
       options: selectOptions,
       initialValue,

@@ -29,13 +29,13 @@ const views = composeFrom(
   viewHelpers
 );
 
-const api = {
+const svc = {
   ...signals,
   ...views,
   addEventListener: createAddEventListener(viewHelpers.batch),
 };
 
-const { el, map, addEventListener, signal, computed } = api;
+const { el, map, addEventListener, signal, computed } = svc;
 
 // ============================================================================
 // Benchmark Data
@@ -239,7 +239,7 @@ const App = () => {
 const appElement = document.getElementById('main');
 if (appElement) {
   const app = App();
-  const mounted = app.create(api);
+  const mounted = app.create(svc);
   if (mounted.element) {
     appElement.appendChild(mounted.element as HTMLElement);
   }

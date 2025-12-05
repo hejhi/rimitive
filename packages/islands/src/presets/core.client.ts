@@ -8,10 +8,10 @@
  *
  */
 
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 import {
   defaultExtensions as defaultViewExtensions,
-  createViewApi,
+  createViewSvc,
 } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
@@ -30,12 +30,12 @@ import { createDOMHydrator } from '../hydrators/dom';
 /**
  * Signals API type
  */
-type SignalsApi = ReturnType<typeof createSignalsApi>;
+type SignalsSvc = ReturnType<typeof createSignalsSvc>;
 
 /**
  * View API type for DOM adapter
  */
-type ViewsApi = ReturnType<typeof createViewApi<DOMAdapterConfig>>;
+type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
 
 /**
  * Hybrid adapter type (from createIslandsAdapter)
@@ -47,8 +47,8 @@ type HybridAdapter = Adapter<DOMAdapterConfig> & {
 /**
  * Full service type - signals + views + addEventListener
  */
-export type IslandsClientService = SignalsApi &
-  ViewsApi & {
+export type IslandsClientService = SignalsSvc &
+  ViewsSvc & {
     addEventListener: ReturnType<typeof createAddEventListener>;
   };
 
@@ -58,9 +58,9 @@ export type IslandsClientService = SignalsApi &
 export type ClientOptions<TContext> = {
   /**
    * Signals API instance
-   * Create with: createSignalsApi()
+   * Create with: createSignalsSvc()
    */
-  signals: SignalsApi;
+  signals: SignalsSvc;
 
   /**
    * Hybrid adapter (hydration → fallback)
@@ -70,9 +70,8 @@ export type ClientOptions<TContext> = {
 
   /**
    * View API instance
-   * Create with: createViewApi(adapter, signals)
    */
-  view: ViewsApi;
+  view: ViewsSvc;
 
   /**
    * Context getter for islands
@@ -94,7 +93,7 @@ export type ClientApp = {
   /** Full service (signals + views) - use with router and components */
   service: IslandsClientService;
   /** Signals API (for advanced use cases) */
-  signals: SignalsApi;
+  signals: SignalsSvc;
   /**
    * Mount a component spec
    * @param spec - Component spec with create() method
@@ -116,11 +115,11 @@ export type ClientApp = {
   /**
    * API factory for island hydrator (advanced use)
    */
-  createApi: (
+  createSvc: (
     adapter: Adapter<DOMAdapterConfig>,
-    signals: SignalsApi
+    signals: SignalsSvc
   ) => {
-    api: IslandsClientService;
+    svc: IslandsClientService;
     createElementScope: <TElement extends object>(
       element: TElement,
       fn: () => void
@@ -184,28 +183,28 @@ export function createIslandsApp<TContext = unknown>(
   };
 
   // API factory for island hydrator
-  const createApi = (
+  const createSvc = (
     islandAdapter: Adapter<DOMAdapterConfig>,
-    islandSignals: SignalsApi
+    islandSignals: SignalsSvc
   ) => {
     const islandViewHelpers = createSpec(islandAdapter, islandSignals);
     const islandViews = composeFrom(
       defaultViewExtensions<DOMAdapterConfig>(),
       islandViewHelpers
     );
-    const api: IslandsClientService = {
+    const svc: IslandsClientService = {
       ...islandSignals,
       ...islandViews,
       addEventListener: createAddEventListener(islandSignals.batch),
     } as IslandsClientService;
     return {
-      api,
+      svc,
       createElementScope: islandViewHelpers.createElementScope,
     };
   };
 
   // Create hydrator
-  const hydrator = createDOMHydrator(createApi, signals, (spec) => ({
+  const hydrator = createDOMHydrator(createSvc, signals, (spec) => ({
     element: spec.create(service),
   }));
 
@@ -222,7 +221,7 @@ export function createIslandsApp<TContext = unknown>(
     mount,
     hydrate: hydrator.hydrate,
     updateContext,
-    createApi,
+    createSvc,
   };
 }
 

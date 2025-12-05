@@ -45,7 +45,7 @@ export function createTestInstance() {
   const subscribeExt = Subscribe().create(opts);
 
   // Create API with all core factories
-  const api = createLattice(
+  const svc = createLattice(
     signalExt,
     computedExt,
     effectExt,
@@ -61,11 +61,11 @@ export function createTestInstance() {
 
   return {
     // Core API
-    signal: api.signal,
-    computed: api.computed,
-    effect: api.effect,
-    batch: api.batch,
-    subscribe: api.subscribe,
+    signal: svc.signal,
+    computed: svc.computed,
+    effect: svc.effect,
+    batch: svc.batch,
+    subscribe: svc.subscribe,
 
     // Context access for testing
     setCurrentConsumer: (consumerNode: ConsumerNode | null) => {

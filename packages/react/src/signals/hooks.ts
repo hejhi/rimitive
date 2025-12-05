@@ -3,18 +3,16 @@ import { useSignalAPI } from './context';
 import type { SignalSetter } from './types';
 import type { Reactive, Readable, Writable } from '@lattice/signals/types';
 
-export type { Readable, Writable };
-
 // Implementation
 export function useSubscribe<T>(signal: Reactive<T>): T {
-  const api = useSignalAPI();
+  const svc = useSignalAPI();
 
   // Create stable subscription using effect
   const subscribeCallback = useMemo(
     () => (onStoreChange: () => void) => {
       let isFirstRun = true;
       // Subscribe using an effect that reads the signal
-      const dispose = api.effect(() => {
+      const dispose = svc.effect(() => {
         signal(); // Read the signal to track it
         // Don't notify on the initial effect run
         if (!isFirstRun) {
@@ -24,7 +22,7 @@ export function useSubscribe<T>(signal: Reactive<T>): T {
       });
       return dispose;
     },
-    [signal, api]
+    [signal, svc]
   );
 
   return useSyncExternalStore(
@@ -41,7 +39,7 @@ export function useSubscribe<T>(signal: Reactive<T>): T {
 export function useSignal<T>(
   initialValue: T | (() => T)
 ): [T, SignalSetter<T>] {
-  const api = useSignalAPI();
+  const svc = useSignalAPI();
 
   // Use ref to store the signal instance - created only once
   const signalRef = useRef<Reactive<T> | null>(null);
@@ -53,7 +51,7 @@ export function useSignal<T>(
         ? (initialValue as () => T)()
         : initialValue;
 
-    signalRef.current = api.signal(value);
+    signalRef.current = svc.signal(value);
   }
 
   const sig = signalRef.current; // Created on first render
@@ -82,7 +80,7 @@ export function useSelector<T, R>(
   signal: Reactive<T>,
   selector: (value: T) => R
 ): R {
-  const api = useSignalAPI();
+  const svc = useSignalAPI();
 
   // We need to update the selector ref on each render to ensure
   // the computed always uses the latest selector function
@@ -96,17 +94,17 @@ export function useSelector<T, R>(
   // Only create the computed once, but use selectorRef.current
   // to ensure it always uses the latest selector
   if (computedRef.current === null) {
-    computedRef.current = api.computed(() => selectorRef.current(signal()));
+    computedRef.current = svc.computed(() => selectorRef.current(signal()));
   }
 
   return useSubscribe(computedRef.current);
 }
 
 /**
- * Reactive adapter type for portable headless components.
- * This is compatible with Lattice's SignalAPI and other reactive systems.
+ * Minimal constraint for reactive services used with createHook.
+ * Behaviors can require more specific APIs - this is just the floor.
  */
-export type ReactiveAdapter = {
+type ReactiveSvc = {
   signal: <T>(initialValue: T) => Writable<T>;
   computed: <T>(fn: () => T) => Readable<T>;
   effect: (fn: () => void | (() => void)) => () => void;
@@ -116,30 +114,30 @@ export type ReactiveAdapter = {
  * Create a React hook from a double-function behavior pattern.
  *
  * This is designed for portable headless components that follow the pattern:
- * `(api) => (...args) => Result`
+ * `(svc) => (...args) => Result`
  *
  * The returned hook handles SignalAPI injection automatically and creates
+ * a memoized behavior instance.
  *
  * Note: Arguments are captured once when the component mounts (like useRef's
  * initial value). If you need reactive options, pass signals as option values
  * and read them inside the behavior.
  */
 export function createHook<
-  Api extends ReactiveAdapter,
+  TSvc extends ReactiveSvc,
   Args extends unknown[],
   Result,
 >(
-  behavior: (api: Api) => (...args: Args) => Result
+  behavior: (svc: TSvc) => (...args: Args) => Result
 ): (...args: Args) => Result {
   return function useHook(...args: Args): Result {
-    const api = useSignalAPI();
+    const svc = useSignalAPI();
 
     // Create behavior instance once on mount
     const instanceRef = useRef<Result | null>(null);
 
     if (instanceRef.current === null) {
-      // Cast is safe because SignalAPI satisfies ReactiveAdapter
-      instanceRef.current = behavior(api as unknown as Api)(...args);
+      instanceRef.current = behavior(svc as unknown as TSvc)(...args);
     }
 
     return instanceRef.current;

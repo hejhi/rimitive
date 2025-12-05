@@ -4,7 +4,8 @@
  * Example of framework-agnostic, accessible dialog (modal) behaviors.
  * Provides state management, ARIA attributes, keyboard handling, and focus management.
  */
-import type { SignalsApi, Signal, Computed } from './types';
+import { Writable, Readable } from '@lattice/signals/types';
+import type { ReactiveSvc } from './types';
 
 export type DialogOptions = {
   /** Whether the dialog starts open */
@@ -17,7 +18,7 @@ export type DialogOptions = {
 
 export type DialogState = {
   /** Whether the dialog is currently open */
-  isOpen: Signal<boolean>;
+  isOpen: Writable<boolean>;
   /** Open the dialog */
   open: () => void;
   /** Close the dialog */
@@ -28,7 +29,7 @@ export type DialogState = {
   /** Props to spread on the trigger element (button that opens dialog) */
   triggerProps: {
     'aria-haspopup': 'dialog';
-    'aria-expanded': Computed<boolean>;
+    'aria-expanded': Readable<boolean>;
     onclick: () => void;
   };
 
@@ -36,7 +37,7 @@ export type DialogState = {
   dialogProps: {
     role: 'dialog';
     'aria-modal': true;
-    'aria-hidden': Computed<boolean>;
+    'aria-hidden': Readable<boolean>;
     onkeydown: (e: KeyboardEvent) => void;
     /** Ref callback to track dialog element for focus trapping */
     ref: (el: HTMLElement | null) => void;
@@ -49,16 +50,10 @@ export type DialogState = {
   };
 };
 
-/**
- * Creates a headless dialog behavior
- *
- * @param api - Signals API (signal, computed, effect)
- * @returns Factory function that creates dialog state
- */
 export const dialog =
-  (api: SignalsApi) =>
+  (svc: ReactiveSvc) =>
   (options: DialogOptions = {}): DialogState => {
-    const { signal, computed, effect } = api;
+    const { signal, computed, effect } = svc;
     const { initialOpen = false, onOpen, onClose } = options;
 
     // Core state

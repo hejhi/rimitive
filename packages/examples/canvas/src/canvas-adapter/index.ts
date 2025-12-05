@@ -19,7 +19,7 @@
 
 import { composeFrom } from '@lattice/lattice';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
-import type { ReactiveAdapter, RefSpec, Adapter } from '@lattice/view/types';
+import type { RefSpec, Adapter, Readable, Writable } from '@lattice/view/types';
 import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
 import type { CanvasAdapterConfig } from './types';
@@ -52,11 +52,11 @@ export type {
  *
  * @example
  * ```ts
- * import { createSignalsApi } from '@lattice/signals/presets/core';
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
  * import { createDOMViewSvc } from '@lattice/view/presets/dom';
  * import { createCanvasViewSvc } from './canvas-adapter';
  *
- * const signals = createSignalsApi();
+ * const signals = createSignalsSvc();
  * const dom = createDOMViewSvc(signals);
  * const canvas = createCanvasViewSvc(signals, { clearColor: '#16213e' });
  *
@@ -64,12 +64,19 @@ export type {
  * export { dom, canvas };
  * ```
  */
-export const createCanvasViewSvc = (
-  signals: ReactiveAdapter,
+export const createCanvasViewSvc = <
+  TSignals extends {
+    signal: <T>(initialValue: T) => Writable<T>;
+    computed: <T>(fn: () => T) => Readable<T>;
+    effect: (fn: () => void | (() => void)) => () => void;
+    batch: <T>(fn: () => T) => T;
+  },
+>(
+  signals: TSignals,
   options: CanvasAdapterOptions = {}
 ) => {
   const adapter = createCanvasAdapter(options);
-  const viewHelpers = defaultHelpers<CanvasAdapterConfig>(
+  const viewHelpers = defaultHelpers(
     adapter as Adapter<CanvasAdapterConfig>,
     signals
   );

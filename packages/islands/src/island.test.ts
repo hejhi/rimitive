@@ -4,19 +4,20 @@ import { createSSRContext, runWithSSRContext } from './ssr-context';
 import { ISLAND_META } from './types';
 import type { RefSpec } from '@lattice/view/types';
 
-// Mock component factory - now returns factory function (api) => (props) => RefSpec
+// Mock component factory - now returns factory function (svc) => (props) => RefSpec
 function mockComponent<TProps>() {
-  return () => (props: TProps): RefSpec<unknown> => {
-    const nodeRef = {
-      status: 8, // STATUS_SEALED_SPEC
-      element: { tag: 'div', props },
-    };
+  return () =>
+    (props: TProps): RefSpec<unknown> => {
+      const nodeRef = {
+        status: 8, // STATUS_SEALED_SPEC
+        element: { tag: 'div', props },
+      };
 
-    return {
-      status: 4,
-      create: () => nodeRef,
-    } as RefSpec<unknown>;
-  };
+      return {
+        status: 4,
+        create: () => nodeRef,
+      } as RefSpec<unknown>;
+    };
 }
 
 describe('Island Wrapper', () => {
@@ -130,9 +131,18 @@ describe('Island Wrapper', () => {
       });
 
       // Each ref has metadata for lazy registration
-      expect(ref1.__islandMeta).toEqual({ type: 'counter', props: { count: 1 } });
-      expect(ref2.__islandMeta).toEqual({ type: 'counter', props: { count: 2 } });
-      expect(ref3.__islandMeta).toEqual({ type: 'form', props: { fields: [] } });
+      expect(ref1.__islandMeta).toEqual({
+        type: 'counter',
+        props: { count: 1 },
+      });
+      expect(ref2.__islandMeta).toEqual({
+        type: 'counter',
+        props: { count: 2 },
+      });
+      expect(ref3.__islandMeta).toEqual({
+        type: 'form',
+        props: { fields: [] },
+      });
     });
 
     it('should not throw outside SSR context', () => {
@@ -167,19 +177,20 @@ describe('Island Wrapper', () => {
       expect(receivedProps).toEqual({ value: 42 });
     });
 
-    it('should call factory with api during create', () => {
-      let receivedApi: unknown;
-      const componentFactory = (api: unknown) => {
-        receivedApi = api;
-        return (props: { value: number }) => mockComponent<{ value: number }>()()(props);
+    it('should call factory with svc during create', () => {
+      let receivedSvc: unknown;
+      const componentFactory = (svc: unknown) => {
+        receivedSvc = svc;
+        return (props: { value: number }) =>
+          mockComponent<{ value: number }>()()(props);
       };
 
-      const mockApi = { el: 'mock' };
+      const mockSvc = { el: 'mock' };
       const Island = island('test', componentFactory);
       const spec = Island({ value: 1 });
-      spec.create(mockApi);
+      spec.create(mockSvc);
 
-      expect(receivedApi).toBe(mockApi);
+      expect(receivedSvc).toBe(mockSvc);
     });
   });
 
@@ -198,9 +209,18 @@ describe('Island Wrapper', () => {
         const ref3 = spec3.create();
 
         // Each instance has its own metadata for lazy registration
-        expect(ref1.__islandMeta).toEqual({ type: 'counter', props: { count: 1 } });
-        expect(ref2.__islandMeta).toEqual({ type: 'counter', props: { count: 2 } });
-        expect(ref3.__islandMeta).toEqual({ type: 'counter', props: { count: 3 } });
+        expect(ref1.__islandMeta).toEqual({
+          type: 'counter',
+          props: { count: 1 },
+        });
+        expect(ref2.__islandMeta).toEqual({
+          type: 'counter',
+          props: { count: 2 },
+        });
+        expect(ref3.__islandMeta).toEqual({
+          type: 'counter',
+          props: { count: 3 },
+        });
 
         // All refs have metadata
         expect(ref1.__islandMeta).toBeDefined();

@@ -122,13 +122,13 @@ export const Match = defineService(
        * Helper to create a RefSpec for fragments
        */
       const createMatchSpec = <TElement>(
-        createFragmentFn: (api?: unknown) => TFragRef
+        createFragmentFn: (svc?: unknown) => TFragRef
       ): RefSpec<TElement> => {
         const refSpec = (() => refSpec) as unknown as RefSpec<TElement>;
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const fragRef = createFragmentFn(api);
+        refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
+          const fragRef = createFragmentFn(svc);
           if (!extensions || Object.keys(extensions).length === 0)
             return fragRef as FragmentRef<TElement> & TExt;
 
@@ -155,7 +155,7 @@ export const Match = defineService(
         reactive: Writable<T> | (() => T),
         matcher: (value: T) => RefSpec<TElement> | null
       ): RefSpec<TElement> {
-        return createMatchSpec<TElement>((api) => {
+        return createMatchSpec<TElement>((svc) => {
           const fragment: FragmentRef<TBaseElement> = {
             status: STATUS_FRAGMENT,
             element: null,
@@ -191,13 +191,13 @@ export const Match = defineService(
                 }
 
                 // Create the element/fragment from the spec
-                const nodeRef = refSpec.create(api);
+                const nodeRef = refSpec.create(svc);
                 setFragmentChild(fragment, nodeRef);
                 currentNode = nodeRef;
 
                 // Insert into DOM
                 insertNodeBefore(
-                  api,
+                  svc,
                   parent.element,
                   nodeRef,
                   undefined,

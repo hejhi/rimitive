@@ -124,13 +124,13 @@ export const Map = defineService(
        * Helper to create a RefSpec for fragments
        */
       const createRefSpec = (
-        createFragmentRef: (api?: unknown) => TFragRef
+        createFragmentRef: (svc?: unknown) => TFragRef
       ): RefSpec<TBaseElement> => {
         const refSpec = (() => refSpec) as unknown as RefSpec<TBaseElement>;
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const fragRef = createFragmentRef(api);
+        refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
+          const fragRef = createFragmentRef(svc);
           if (!extensions || Object.keys(extensions).length === 0)
             return fragRef;
 
@@ -180,7 +180,7 @@ export const Map = defineService(
 
         type TRecNode = RecNode<T, TBaseElement>;
 
-        return createRefSpec((api) => {
+        return createRefSpec((svc) => {
           const fragment: FragmentRef<TBaseElement> = {
             status: STATUS_FRAGMENT,
             element: null,
@@ -229,11 +229,11 @@ export const Map = defineService(
                   // caught in the parent effect.
                   const isolate = scopedEffect(() => {
                     // Pass read-only computed to render
-                    elRef = render(readOnlyItem).create<TRecNode>(api);
+                    elRef = render(readOnlyItem).create<TRecNode>(svc);
 
                     // Insert into DOM
                     insertNodeBefore(
-                      api,
+                      svc,
                       parent.element,
                       elRef,
                       undefined,
@@ -275,7 +275,7 @@ export const Map = defineService(
                 onMove(node, nextSiblingNode) {
                   if (node.status !== STATUS_ELEMENT) return;
                   insertNodeBefore(
-                    api,
+                    svc,
                     parent.element,
                     node,
                     nextSiblingNode,

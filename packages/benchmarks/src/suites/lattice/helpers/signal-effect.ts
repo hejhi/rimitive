@@ -5,7 +5,7 @@ import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { compose as createLatticeContext } from '@lattice/lattice';
 
-export const createApi = () => {
+export const createSvc = () => {
   const { withVisitor } = createGraphTraversal();
   const { detachAll, trackDependency, track, consumer } = createGraphEdges();
   const { dispose, withPropagate } = createScheduler({ detachAll });

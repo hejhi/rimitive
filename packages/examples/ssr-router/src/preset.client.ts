@@ -9,10 +9,10 @@ import {
   createDOMHydrationAdapter,
   createIslandsAdapter,
 } from '@lattice/islands/client';
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createViewApi } from '@lattice/view/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createViewSvc } from '@lattice/view/presets/core';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createRouter, type ViewApi, type RouteTree } from '@lattice/router';
+import { createRouter, type ViewSvc, type RouteTree } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 /**
@@ -37,12 +37,15 @@ export function createClientApp<TContext>(options: ClientAppOptions<TContext>) {
   const { container, buildContext, routes } = options;
 
   // Create primitives
-  const signals = createSignalsApi();
+  const signals = createSignalsSvc();
   const adapter = createIslandsAdapter(
     createDOMHydrationAdapter(container),
     createDOMAdapter()
   );
-  const view = createViewApi<DOMAdapterConfig>(adapter, signals);
+  const view = createViewSvc<DOMAdapterConfig, typeof signals>(
+    adapter,
+    signals
+  );
 
   // Wire for islands
   const app = createIslandsApp<TContext>({
@@ -54,7 +57,7 @@ export function createClientApp<TContext>(options: ClientAppOptions<TContext>) {
 
   // Add router
   const router = createRouter<DOMAdapterConfig>(
-    app.service as ViewApi<DOMAdapterConfig>,
+    app.service as ViewSvc<DOMAdapterConfig>,
     { initialPath: location.pathname + location.search + location.hash }
   );
 

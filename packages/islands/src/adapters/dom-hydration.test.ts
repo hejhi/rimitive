@@ -798,9 +798,8 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
 // Integration Tests: Full View API with Hydration
 // ============================================================================
 
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createViewApi } from '@lattice/view/presets/core';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createViewSvc } from '@lattice/view/presets/core';
 import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types'; // Separate import for integration tests
 
 describe('Integration: match() hydration with full view API', () => {
@@ -824,25 +823,26 @@ describe('Integration: match() hydration with full view API', () => {
     );
 
     const renderer = createDOMHydrationAdapter(container);
-    const signals = createSignalsApi();
-    const views = createViewApi<DOMAdapterConfig>(renderer, signals);
+    const signals = createSignalsSvc();
+    const views = createViewSvc(renderer, signals);
 
     // Combine signals and views to get full API
-    const api = { ...signals, ...views };
-    const { el, match, computed } = api;
+    const svc = { ...signals, ...views };
+    const { el, match, computed } = svc;
 
     // Create the component spec matching the SSR output
     const pageSpec = el('div').props({ className: 'products-page' })(
       el('h2')('Products'),
       el('section').props({ className: 'intro' })('intro'),
-      match(computed(() => true), (visible) =>
-        visible ? el('h1')('hello') : null
+      match(
+        computed(() => true),
+        (visible) => (visible ? el('h1')('hello') : null)
       ),
       el('section').props({ className: 'filter' })('filter')
     );
 
     // Hydrate
-    const nodeRef = pageSpec.create(api);
+    const nodeRef = pageSpec.create(svc);
 
     // Verify hydration succeeded
     expect(nodeRef.status).toBe(STATUS_ELEMENT);
@@ -883,20 +883,21 @@ describe('Integration: match() hydration with full view API', () => {
     );
 
     const renderer = createDOMHydrationAdapter(container);
-    const signals = createSignalsApi();
-    const views = createViewApi<DOMAdapterConfig>(renderer, signals);
+    const signals = createSignalsSvc();
+    const views = createViewSvc(renderer, signals);
 
     // Combine signals and views to get full API
-    const api = { ...signals, ...views };
-    const { el, computed, match } = api;
+    const svc = { ...signals, ...views };
+    const { el, computed, match } = svc;
 
     // Build the Products page component
     const ProductsPage = () =>
       el('div').props({ className: 'products-page' })(
         el('h2')('Products'),
         el('section').props({ className: 'intro' })('intro'),
-        match(computed(() => true), (visible) =>
-          visible ? el('h1')('hello') : null
+        match(
+          computed(() => true),
+          (visible) => (visible ? el('h1')('hello') : null)
         ),
         el('section').props({ className: 'filter' })('filter')
       );
@@ -906,14 +907,15 @@ describe('Integration: match() hydration with full view API', () => {
     const appSpec = el('div').props({ className: 'app' })(
       el('nav')('nav'),
       el('main')(
-        match(computed(() => 'products'), (value) =>
-          value === 'products' ? ProductsPage() : null
+        match(
+          computed(() => 'products'),
+          (value) => (value === 'products' ? ProductsPage() : null)
         )
       )
     );
 
     // Hydrate
-    const nodeRef = appSpec.create(api);
+    const nodeRef = appSpec.create(svc);
 
     // Verify hydration succeeded
     expect(nodeRef.status).toBe(STATUS_ELEMENT);

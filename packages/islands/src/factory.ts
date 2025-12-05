@@ -36,7 +36,7 @@ export type IslandFactory<TService, TContext> = {
   <TProps>(
     id: string,
     factory: (
-      api: TService,
+      svc: TService,
       getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>
   ): IslandComponent<TProps>;
@@ -48,7 +48,7 @@ export type IslandFactory<TService, TContext> = {
     id: string,
     strategy: IslandStrategy<TProps, TService, TContext>,
     factory: (
-      api: TService,
+      svc: TService,
       getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>
   ): IslandComponent<TProps>;
@@ -77,11 +77,11 @@ export function createIsland<
     strategyOrFactory:
       | IslandStrategy<TProps, TService, TContext>
       | ((
-          api: TService,
+          svc: TService,
           getContext: GetContext<TContext>
         ) => (props: TProps) => RefSpec<unknown>),
     maybeFactory?: (
-      api: TService,
+      svc: TService,
       getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>
   ): IslandComponent<TProps> {
@@ -97,7 +97,7 @@ export function createIsland<
     return baseIsland<TProps, TService, TContext>(
       id,
       strategyOrFactory as (
-        api: TService,
+        svc: TService,
         getContext: GetContext<TContext>
       ) => (props: TProps) => RefSpec<unknown>
     );

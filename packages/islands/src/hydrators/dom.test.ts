@@ -23,7 +23,7 @@ import { ISLAND_META } from '../types';
  * Create a minimal mock island with metadata
  */
 function createMockIsland(id: string) {
-  // Factory function: (api) => (props) => RefSpec
+  // Factory function: (svc) => (props) => RefSpec
   const component = vi.fn(() =>
     vi.fn(() => ({
       create: vi.fn(() => ({
@@ -53,7 +53,7 @@ function createMockIsland(id: string) {
 function createMocks() {
   return {
     createAPI: vi.fn(() => ({
-      api: { effect: vi.fn() },
+      svc: { effect: vi.fn() },
       createElementScope: vi.fn((_element, fn) => fn()),
     })),
     signals: { effect: vi.fn() },

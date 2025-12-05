@@ -160,7 +160,7 @@ export const El = defineService(
        */
       const createRefSpec = <El>(
         createElement: (
-          api?: unknown,
+          svc?: unknown,
           parentContext?: ParentContext<unknown>
         ) => ElementRef<El>
       ): RefSpec<El> => {
@@ -168,11 +168,11 @@ export const El = defineService(
 
         refSpec.status = STATUS_REF_SPEC;
         refSpec.create = <TExt>(
-          api?: unknown,
+          svc?: unknown,
           extensions?: TExt,
           parentContext?: ParentContext<unknown>
         ) => {
-          const elRef = createElement(api, parentContext);
+          const elRef = createElement(svc, parentContext);
           // If no extensions, return the ref directly to preserve mutability
           // This is critical for FragmentRef which gets firstChild set after creation
           if (!extensions || Object.keys(extensions).length === 0) return elRef;
@@ -198,7 +198,7 @@ export const El = defineService(
       ): TagFactory<TConfig, Tag> {
         // The callable part - applies children and returns RefSpec
         const factory = (...children: ElRefSpecChild[]) => {
-          return createRefSpec((api, parentContext) => {
+          return createRefSpec((svc, parentContext) => {
             // Pass initial props to createNode - needed for renderers that require
             // props at creation time (e.g., canvas renderer needs width/height)
             const element = createNode(
@@ -236,7 +236,7 @@ export const El = defineService(
                   setProperty(element, key, (val as () => unknown)())
                 );
               }
-              processChildren(elRef, children, api, childContext);
+              processChildren(elRef, children, svc, childContext);
 
               // Execute lifecycle callbacks within scope
               for (const callback of accumulatedCallbacks) {
@@ -281,11 +281,7 @@ export const El = defineService(
       function el<Tag extends string & TElementKeys>(
         tag: Tag
       ): TagFactory<TConfig, Tag> {
-        return createTagFactory(
-          tag,
-          {} as ElementProps<TConfig, Tag>,
-          []
-        );
+        return createTagFactory(tag, {} as ElementProps<TConfig, Tag>, []);
       }
 
       const extension: ElFactory<TConfig> = {

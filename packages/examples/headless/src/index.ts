@@ -24,5 +24,3 @@ export type { DialogOptions, DialogState } from './dialog';
 
 export { select } from './select';
 export type { SelectOptions, SelectOption, SelectState } from './select';
-
-export type { SignalsApi, Signal, Computed } from './types';

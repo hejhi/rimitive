@@ -25,10 +25,10 @@ import {
   computed as alienComputed,
   effect as alienEffect,
 } from 'alien-signals';
-import { createApi } from './helpers/signal-computed-effect';
+import { createSvc } from './helpers/signal-computed-effect';
 
 const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
-const latticeAPI = createApi();
+const latticeAPI = createSvc();
 const {
   signal: latticeSignal,
   computed: latticeComputed,

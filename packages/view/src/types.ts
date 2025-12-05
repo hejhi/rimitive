@@ -4,7 +4,6 @@
 
 // Re-export adapter types so they're available from @lattice/view/types
 export type { Adapter, AdapterConfig } from './adapter';
-export type { ReactiveAdapter } from './reactive-adapter';
 
 // Re-export factory types for public API
 export type { PortalFactory, PortalTarget, PortalOpts } from './portal';
@@ -96,7 +95,7 @@ export type FragmentRef<TElement> = BaseRef & {
   attach(
     parent: ElementRef<TElement>,
     nextSibling: NodeRef<TElement> | null,
-    api?: unknown
+    svc?: unknown
   ): void | (() => void);
 };
 
@@ -112,10 +111,10 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 export type RefSpec<TElement> = {
   status: typeof STATUS_REF_SPEC;
   // Instantiate blueprint → creates DOM element with optional extensions
-  // api parameter is optional - only needed for components created with create()
+  // svc parameter is optional - only needed for components created with create()
   // parentContext enables cross-renderer composition (e.g., canvas inside DOM)
   create<TExt = Record<string, unknown>>(
-    api?: unknown,
+    svc?: unknown,
     extensions?: TExt,
     parentContext?: ParentContext<unknown>
   ): NodeRef<TElement> & TExt;

@@ -24,11 +24,11 @@ import {
   startBatch as alienStartBatch,
   endBatch as alienEndBatch,
 } from 'alien-signals';
-import { createApi } from './helpers/signal-computed-batch';
+import { createSvc } from './helpers/signal-computed-batch';
 import { Readable } from '@lattice/signals/types';
 
 const ITERATIONS = 10000;
-const latticeAPI = createApi();
+const latticeAPI = createSvc();
 const {
   signal: latticeSignal,
   computed: latticeComputed,

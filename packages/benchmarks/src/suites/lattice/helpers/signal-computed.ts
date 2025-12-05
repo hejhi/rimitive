@@ -5,7 +5,7 @@ import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { compose as createLatticeContext } from '@lattice/lattice';
 
-export const createApi = () => {
+export const createSvc = () => {
   const { trackDependency, track, consumer } = createGraphEdges();
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
   const { propagate } = createGraphTraversal();

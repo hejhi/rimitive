@@ -7,7 +7,7 @@ import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createScheduler } from '@lattice/signals/helpers/scheduler';
 import { compose as createLatticeContext } from '@lattice/lattice';
 
-export const createApi = () => {
+export const createSvc = () => {
   const { trackDependency, track, detachAll, consumer } = createGraphEdges();
   const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
   const { withVisitor } = createGraphTraversal();

@@ -35,7 +35,7 @@ export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
   const handleChild = (
     parentRef: ElementRef<TNode>,
     child: ElRefSpecChild,
-    api?: unknown,
+    svc?: unknown,
     parentContext?: ParentContext<TNode>
   ): NodeRef<TNode> | null => {
     const element = parentRef.element;
@@ -65,7 +65,7 @@ export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
         // Pass parentContext to child's create() for renderer composition
         const refSpec = spec as RefSpec<TNode>;
         const childRef = refSpec.create(
-          api,
+          svc,
           {} as Record<string, never>,
           parentContext
         );
@@ -96,7 +96,7 @@ export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
   const processChildren = (
     parent: ElementRef<TNode>,
     children: ElRefSpecChild[],
-    api?: unknown,
+    svc?: unknown,
     parentContext?: ParentContext<TNode>
   ): void => {
     let firstChildRef: NodeRef<TNode> | null = null;
@@ -104,7 +104,7 @@ export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
 
     // Forward pass: create refs and build doubly-linked list (including fragments)
     for (const child of children) {
-      const refNode = handleChild(parent, child, api, parentContext);
+      const refNode = handleChild(parent, child, svc, parentContext);
 
       if (!refNode) continue;
 
@@ -142,7 +142,7 @@ export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
         // Lifecycle hook: beforeAttach for fragments (e.g., hydration seeks to position)
         adapter.beforeAttach?.(lastChildRef, parent.element, nextElement);
 
-        lastChildRef.attach(parent, lastChildRef.next, api);
+        lastChildRef.attach(parent, lastChildRef.next, svc);
 
         // Lifecycle hook: onAttach for fragments (e.g., SSR adds markers)
         adapter.onAttach?.(lastChildRef, parent.element);

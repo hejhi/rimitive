@@ -1,4 +1,4 @@
-import type { SignalsApi, Signal } from './types';
+import type { SignalsSvc, Signal } from './types';
 import type { Todo } from './todoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
@@ -9,21 +9,21 @@ export type FilterState = {
   filterTodos: (todos: Todo[]) => Todo[];
 };
 
-export const filter = (api: SignalsApi) => (): FilterState => {
-  const { signal } = api;
+export const filter =
+  ({ signal }: SignalsSvc) =>
+  () => {
+    const currentFilter = signal<FilterType>('all');
 
-  const currentFilter = signal<FilterType>('all');
+    return {
+      currentFilter,
 
-  return {
-    currentFilter,
+      setFilter: (filter: FilterType) => currentFilter(filter),
 
-    setFilter: (filter: FilterType) => currentFilter(filter),
-
-    filterTodos: (todos: Todo[]): Todo[] => {
-      const filter = currentFilter();
-      if (filter === 'active') return todos.filter((t) => !t.completed);
-      if (filter === 'completed') return todos.filter((t) => t.completed);
-      return todos;
-    },
+      filterTodos: (todos: Todo[]): Todo[] => {
+        const filter = currentFilter();
+        if (filter === 'active') return todos.filter((t) => !t.completed);
+        if (filter === 'completed') return todos.filter((t) => t.completed);
+        return todos;
+      },
+    };
   };
-};

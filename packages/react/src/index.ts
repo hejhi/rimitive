@@ -17,7 +17,6 @@ export type {
   SignalProviderProps,
   Readable,
   Writable,
-  ReactiveAdapter,
 } from './signals';
 
 export type { ServiceDefinition, LatticeContext } from '@lattice/lattice';

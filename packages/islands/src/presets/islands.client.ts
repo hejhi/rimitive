@@ -17,7 +17,7 @@
  */
 
 import { composeFrom } from '@lattice/lattice';
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
 import {
   createDOMAdapter,
@@ -39,7 +39,7 @@ type IslandComponent = { [ISLAND_META]?: unknown };
  * For custom composition, use `@lattice/islands/presets/core.client` instead.
  */
 export const createIslandsClientApp = () => {
-  const signalsSvc = createSignalsApi();
+  const signalsSvc = createSignalsSvc();
 
   // Create DOM adapter for post-hydration rendering
   const domAdapter = createDOMAdapter();
@@ -56,9 +56,9 @@ export const createIslandsClientApp = () => {
   const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 
   // API factory for hydrator - receives adapter created by hydrator per-island
-  const createApi = (
+  const createSvc = (
     islandAdapter: Adapter<DOMAdapterConfig>,
-    islandSignals: ReturnType<typeof createSignalsApi>
+    islandSignals: ReturnType<typeof createSignalsSvc>
   ) => {
     const helpers = defaultHelpers(islandAdapter, islandSignals);
     const islandViews = composeFrom(
@@ -66,7 +66,7 @@ export const createIslandsClientApp = () => {
       helpers
     );
     return {
-      api: {
+      svc: {
         ...islandSignals,
         ...islandViews,
         on: createAddEventListener(islandSignals.batch),
@@ -75,7 +75,7 @@ export const createIslandsClientApp = () => {
     };
   };
 
-  const hydrator = createDOMHydrator(createApi, signalsSvc, (spec) => ({
+  const hydrator = createDOMHydrator(createSvc, signalsSvc, (spec) => ({
     element: mount(spec),
   }));
 

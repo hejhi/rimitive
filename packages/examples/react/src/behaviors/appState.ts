@@ -1,4 +1,4 @@
-import type { SignalsApi, Signal } from './types';
+import type { SignalsSvc, Signal } from './types';
 
 export type AppStateState = {
   userName: Signal<string>;
@@ -13,23 +13,23 @@ export type AppStateState = {
   incrementClicks: () => void;
 };
 
-export const appState = (api: SignalsApi) => (): AppStateState => {
-  const { signal } = api;
+export const appState =
+  ({ signal }: SignalsSvc) =>
+  (): AppStateState => {
+    const userName = signal('Alice');
+    const userEmail = signal('alice@example.com');
+    const theme = signal<'light' | 'dark'>('light');
+    const clickCount = signal(0);
 
-  const userName = signal('Alice');
-  const userEmail = signal('alice@example.com');
-  const theme = signal<'light' | 'dark'>('light');
-  const clickCount = signal(0);
+    return {
+      userName,
+      userEmail,
+      theme,
+      clickCount,
 
-  return {
-    userName,
-    userEmail,
-    theme,
-    clickCount,
-
-    setUserName: (name: string) => userName(name),
-    setUserEmail: (email: string) => userEmail(email),
-    toggleTheme: () => theme(theme() === 'light' ? 'dark' : 'light'),
-    incrementClicks: () => clickCount(clickCount() + 1),
+      setUserName: (name: string) => userName(name),
+      setUserEmail: (email: string) => userEmail(email),
+      toggleTheme: () => theme(theme() === 'light' ? 'dark' : 'light'),
+      incrementClicks: () => clickCount(clickCount() + 1),
+    };
   };
-};

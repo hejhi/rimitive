@@ -76,9 +76,9 @@ export function instrumentMap<TBaseElement>(
 
     const instrumentedRefSpec: RefSpec<TBaseElement> = {
       status: STATUS_REF_SPEC,
-      create: (api, extensions) => {
+      create: (svc, extensions) => {
         const fragmentRef = originalCreate(
-          api,
+          svc,
           extensions
         ) as FragmentRef<TBaseElement>;
 

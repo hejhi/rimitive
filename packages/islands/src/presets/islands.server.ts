@@ -20,7 +20,7 @@
  */
 
 import { composeFrom } from '@lattice/lattice';
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { defaultExtensions, defaultHelpers } from '@lattice/view/presets/core';
 import type { RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
@@ -37,8 +37,10 @@ export type IslandsServerOptions<TContext = unknown> = {
   context?: GetContext<TContext>;
 };
 
+type SignalsSvc = ReturnType<typeof createSignalsSvc>;
+
 const createViewSvc = (
-  helpers: ReturnType<typeof defaultHelpers<DOMAdapterConfig>>
+  helpers: ReturnType<typeof defaultHelpers<DOMAdapterConfig, SignalsSvc>>
 ) => composeFrom(defaultExtensions<DOMAdapterConfig>(), helpers);
 
 /**
@@ -50,7 +52,7 @@ const createViewSvc = (
 export const createIslandsServerApp = <TContext = unknown>(
   options: IslandsServerOptions<TContext> = {}
 ) => {
-  const signalsSvc = createSignalsApi();
+  const signalsSvc = createSignalsSvc();
   const adapter = createDOMServerAdapter();
   const viewHelpers = defaultHelpers(adapter, signalsSvc);
   const viewSvc = createViewSvc(viewHelpers);
@@ -75,5 +77,5 @@ export type IslandsServerApp = ReturnType<typeof createIslandsServerApp>;
  * Island API type - the service type available to island components
  * Use this with createIsland<IslandAPI>() for typed islands
  */
-export type IslandAPI = ReturnType<typeof createSignalsApi> &
+export type IslandAPI = ReturnType<typeof createSignalsSvc> &
   ReturnType<typeof createViewSvc>;

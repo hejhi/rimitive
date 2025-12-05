@@ -18,33 +18,8 @@ export type ReactiveNode = {
  */
 
 export type Readable<T> = { (): T };
-
 export type Writable<T> = Readable<T> & { (value: T): void };
-
 export type Reactive<T> = Readable<T> | Writable<T>;
-
-/**
- * Minimal reactive system type for portable behaviors.
- *
- * Any reactive system (Lattice, Solid, Preact Signals, etc.) can satisfy
- * this type. Use this to type the `api` parameter in portable behaviors.
- *
- * @example
- * ```ts
- * import type { ReactiveAdapter } from '@lattice/signals/types';
- *
- * export const counter = (api: ReactiveAdapter) => (initial = 0) => {
- *   const count = api.signal(initial);
- *   return { count, increment: () => count(count() + 1) };
- * };
- * ```
- */
-export type ReactiveAdapter = {
-  signal: <T>(initialValue: T) => Writable<T>;
-  computed: <T>(fn: () => T) => Readable<T>;
-  effect: (fn: () => void | (() => void)) => () => void;
-  batch: <T>(fn: () => T) => T;
-};
 
 // ALGORITHM: Producer-Consumer Pattern
 // The core of the reactivity system uses a bipartite graph with two node types:

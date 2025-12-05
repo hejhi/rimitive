@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createText } from './text';
 
 describe('createText', () => {
   it('should create reactive text from template literal', () => {
-    const { signal, computed } = createSignalsApi();
+    const { signal, computed } = createSignalsSvc();
     const t = createText(computed);
 
     const count = signal(0);
@@ -17,7 +17,7 @@ describe('createText', () => {
   });
 
   it('should handle multiple interpolations', () => {
-    const { signal, computed } = createSignalsApi();
+    const { signal, computed } = createSignalsSvc();
     const t = createText(computed);
 
     const name = signal('World');
@@ -32,7 +32,7 @@ describe('createText', () => {
   });
 
   it('should handle computeds as interpolations', () => {
-    const { signal, computed } = createSignalsApi();
+    const { signal, computed } = createSignalsSvc();
     const t = createText(computed);
 
     const count = signal(5);
@@ -46,7 +46,7 @@ describe('createText', () => {
   });
 
   it('should handle static values', () => {
-    const { signal, computed } = createSignalsApi();
+    const { signal, computed } = createSignalsSvc();
     const t = createText(computed);
 
     const name = signal('World');
@@ -59,7 +59,7 @@ describe('createText', () => {
   });
 
   it('should handle null and undefined values', () => {
-    const { signal, computed } = createSignalsApi();
+    const { signal, computed } = createSignalsSvc();
     const t = createText(computed);
 
     const value = signal<string | null>(null);
@@ -75,7 +75,7 @@ describe('createText', () => {
   });
 
   it('should handle numbers and booleans', () => {
-    const { signal, computed } = createSignalsApi();
+    const { signal, computed } = createSignalsSvc();
     const t = createText(computed);
 
     const num = signal(42);
@@ -90,7 +90,7 @@ describe('createText', () => {
   });
 
   it('should handle empty template', () => {
-    const { computed } = createSignalsApi();
+    const { computed } = createSignalsSvc();
     const t = createText(computed);
 
     const text = t``;
@@ -98,7 +98,7 @@ describe('createText', () => {
   });
 
   it('should handle template with no interpolations', () => {
-    const { computed } = createSignalsApi();
+    const { computed } = createSignalsSvc();
     const t = createText(computed);
 
     const text = t`Hello World`;

@@ -23,13 +23,14 @@
  */
 
 import { composeFrom } from '@lattice/lattice';
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import { createAddEventListener } from '../helpers/addEventListener';
 import { createText } from '../helpers/text';
 import { createUse } from '../helpers/use';
 import { defaultExtensions, defaultHelpers } from './core';
-import type { RefSpec, ReactiveAdapter } from '../types';
+import type { Readable, Writable } from '@lattice/signals/types';
+import type { RefSpec } from '../types';
 
 export type { DOMAdapterConfig } from '../adapters/dom';
 
@@ -41,10 +42,10 @@ export type { DOMAdapterConfig } from '../adapters/dom';
  *
  * @example
  * ```ts
- * import { createSignalsApi } from '@lattice/signals/presets/core';
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
  * import { createDOMViewSvc } from '@lattice/view/presets/dom';
  *
- * const signals = createSignalsApi();
+ * const signals = createSignalsSvc();
  * const dom = createDOMViewSvc(signals);
  * const canvas = createCanvasViewSvc(signals);
  *
@@ -52,7 +53,16 @@ export type { DOMAdapterConfig } from '../adapters/dom';
  * export { dom, canvas };
  * ```
  */
-export const createDOMViewSvc = (signals: ReactiveAdapter) => {
+export const createDOMViewSvc = <
+  TSignals extends {
+    signal: <T>(initialValue: T) => Writable<T>;
+    computed: <T>(fn: () => T) => Readable<T>;
+    effect: (fn: () => void | (() => void)) => () => void;
+    batch: <T>(fn: () => T) => T;
+  },
+>(
+  signals: TSignals
+) => {
   const adapter = createDOMAdapter();
   const viewHelpers = defaultHelpers(adapter, signals);
   const viewSvc = composeFrom(
@@ -88,7 +98,7 @@ export const createDOMViewSvc = (signals: ReactiveAdapter) => {
  * ```
  */
 export const createDOMSvc = () => {
-  const signals = createSignalsApi();
+  const signals = createSignalsSvc();
   const dom = createDOMViewSvc(signals);
   const svc = {
     ...signals,
@@ -106,4 +116,4 @@ export const createDOMSvc = () => {
  */
 export type DOMSvc = ReturnType<typeof createDOMSvc>;
 export type DOMViewSvc = ReturnType<typeof createDOMViewSvc>;
-export type DOMSignals = ReturnType<typeof createSignalsApi>;
+export type DOMSignals = ReturnType<typeof createSignalsSvc>;

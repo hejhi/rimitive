@@ -1,4 +1,4 @@
-import type { SignalsApi, Signal, Computed } from './types';
+import type { SignalsSvc, Signal, Computed } from './types';
 
 export type Todo = {
   id: number;
@@ -22,11 +22,8 @@ export type TodoListState = {
 };
 
 export const todoList =
-  (api: SignalsApi) =>
-  (options: TodoListOptions = {}): TodoListState => {
-    const { signal, computed } = api;
-    const { initialTodos = [] } = options;
-
+  ({ signal, computed }: SignalsSvc) =>
+  ({ initialTodos = [] }: TodoListOptions = {}): TodoListState => {
     const todos = signal<Todo[]>(initialTodos);
 
     const allCompleted = computed(() => {

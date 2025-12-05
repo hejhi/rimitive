@@ -17,9 +17,9 @@ Each package is independent. Use presets for convenience, or wire primitives man
 ### Signals Are Just Functions
 
 ```typescript
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 
-const { signal, computed, effect } = createSignalsApi();
+const { signal, computed, effect } = createSignalsSvc();
 
 const count = signal(0);
 
@@ -56,7 +56,7 @@ count(2); // logs: "Count is 2"
 ### Batching
 
 ```typescript
-const { signal, effect, batch } = createSignalsApi();
+const { signal, effect, batch } = createSignalsSvc();
 
 const count = signal(0);
 effect(() => console.log(count()));
@@ -155,17 +155,14 @@ pnpm add @lattice/react
 
 ## Portable Behaviors
 
-Behaviors are curried functions: `(api) => (...args) => Result`
+Behaviors are curried functions: `(svc) => (...args) => Result`
 
 ```typescript
-// behaviors/counter.ts
-import type { ReactiveAdapter } from '@lattice/signals/types';
-
 export const counter =
-  (api: ReactiveAdapter) =>
+  (svc: ReactiveSvc) =>
   (initialCount = 0) => {
-    const count = api.signal(initialCount);
-    const doubled = api.computed(() => count() * 2);
+    const count = svc.signal(initialCount);
+    const doubled = svc.computed(() => count() * 2);
 
     return {
       count,

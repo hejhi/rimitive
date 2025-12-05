@@ -12,7 +12,7 @@ import { createDOMServerAdapter } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { defaultExtensions as defaultViewExtensions } from '@lattice/view/presets/core';
 import { createSpec } from '@lattice/view/helpers';
 import { composeFrom } from '@lattice/lattice';
@@ -24,7 +24,7 @@ import type { IslandNodeMeta } from '../types';
  * Create SSR service for tests - matches the old preset pattern
  * Uses explicit composition to preserve full type inference
  */
-function createTestSSRService(signals = createSignalsApi()) {
+function createTestSSRService(signals = createSignalsSvc()) {
   const renderer = createDOMServerAdapter();
   const viewHelpers = createSpec(renderer, signals);
   const baseExtensions = defaultViewExtensions<DOMAdapterConfig>();
@@ -548,14 +548,16 @@ describe('SSR-Specific Behaviors', () => {
 describe('Full SSR Integration', () => {
   it('should render all items in map() during SSR', () => {
     // Create SSR API
-    const signals = createSignalsApi();
+    const signals = createSignalsSvc();
     const { mount, svc } = createTestSSRService(signals);
     const { el, map, signal } = svc;
 
     // Create component with map() that renders 6 items
     const items = signal([1, 2, 3, 4, 5, 6]);
     const App = el('div').props({ className: 'container' })(
-      map(items, (itemSignal) => el('div').props({ className: 'item' })(`Item ${itemSignal()}`))
+      map(items, (itemSignal) =>
+        el('div').props({ className: 'item' })(`Item ${itemSignal()}`)
+      )
     );
 
     // Render to string
@@ -576,14 +578,16 @@ describe('Full SSR Integration', () => {
   });
 
   it('should render all items when map() uses computed', () => {
-    const signals = createSignalsApi();
+    const signals = createSignalsSvc();
     const { mount, svc } = createTestSSRService(signals);
     const { el, map, computed } = svc;
 
     // Use computed() like ProductFilter does
     const items = computed(() => [1, 2, 3, 4, 5, 6]);
     const App = el('div').props({ className: 'container' })(
-      map(items, (itemSignal) => el('div').props({ className: 'item' })(`Item ${itemSignal()}`))
+      map(items, (itemSignal) =>
+        el('div').props({ className: 'item' })(`Item ${itemSignal()}`)
+      )
     );
 
     const rendered = mount(App);

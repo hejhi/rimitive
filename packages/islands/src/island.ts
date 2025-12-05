@@ -44,13 +44,17 @@ function getContextGetter(): GetContext<unknown> {
  * On the client, islands hydrate from server-rendered HTML.
  *
  * Island components receive two arguments:
- * 1. api - The user-defined service API (el, signal, computed, etc.)
+ * 1. svc - The user-defined service API (el, signal, computed, etc.)
  * 2. getContext - Getter function that returns user-defined context (or undefined)
  */
-export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
+export function island<
+  TProps,
+  TSvc = Record<string, unknown>,
+  TContext = unknown,
+>(
   id: string,
   factory: (
-    api: TApi,
+    svc: TSvc,
     getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
@@ -58,25 +62,33 @@ export function island<TProps, TApi = Record<string, unknown>, TContext = unknow
 /**
  * Mark a component as an island with custom hydration strategy
  */
-export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
+export function island<
+  TProps,
+  TSvc = Record<string, unknown>,
+  TContext = unknown,
+>(
   id: string,
-  strategy: IslandStrategy<TProps, TApi, TContext>,
+  strategy: IslandStrategy<TProps, TSvc, TContext>,
   factory: (
-    api: TApi,
+    svc: TSvc,
     getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
-export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
+export function island<
+  TProps,
+  TSvc = Record<string, unknown>,
+  TContext = unknown,
+>(
   id: string,
   strategyOrFactory:
-    | IslandStrategy<TProps, TApi, TContext>
+    | IslandStrategy<TProps, TSvc, TContext>
     | ((
-        api: TApi,
+        svc: TSvc,
         getContext: GetContext<TContext>
       ) => (props: TProps) => RefSpec<unknown>),
   maybeFactory?: (
-    api: TApi,
+    svc: TSvc,
     getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
@@ -84,7 +96,7 @@ export function island<TProps, TApi = Record<string, unknown>, TContext = unknow
   const factory =
     maybeFactory ||
     (strategyOrFactory as (
-      api: TApi,
+      svc: TSvc,
       getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>);
 
@@ -92,18 +104,18 @@ export function island<TProps, TApi = Record<string, unknown>, TContext = unknow
 
   // Create wrapper function
   const wrapper = (props: TProps) => {
-    // Create a deferred RefSpec that delays factory execution until create(api) is called
+    // Create a deferred RefSpec that delays factory execution until create(svc) is called
     const deferredSpec: RefSpec<unknown> = {
       status: STATUS_REF_SPEC,
-      create(api: TApi) {
+      create(svc: TSvc) {
         // Get the context getter
         const getContext = getContextGetter() as GetContext<TContext>;
 
-        const component = factory(api, getContext); // Pass API and context getter
+        const component = factory(svc, getContext); // Pass API and context getter
         const spec = component(props); // Call component with props to get the actual RefSpec
 
         // Create the nodeRef
-        const nodeRef = spec.create(api);
+        const nodeRef = spec.create(svc);
 
         // Tag nodeRef with island metadata for lazy registration (SSR only)
         // Registration happens atomically during decoration, ensuring only

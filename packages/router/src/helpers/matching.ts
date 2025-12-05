@@ -30,10 +30,6 @@ export const composePath = (parentPath: string, childPath: string): string => {
  * Matches a URL path against a route pattern (exact match)
  *
  * Supports exact string matching, path parameters using :paramName syntax, and wildcard '*' for catch-all
- *
- * @param pattern - Route pattern (e.g., '/', '/about', '/products/:id', '*')
- * @param path - URL path to match against
- * @returns RouteMatch if matched, null otherwise
  */
 export const matchPath = (pattern: string, path: string): RouteMatch | null => {
   // Wildcard matches any path
@@ -92,10 +88,6 @@ export const matchPath = (pattern: string, path: string): RouteMatch | null => {
  * Matches a URL path against a route pattern (prefix match for parent routes)
  *
  * Used for routes with children - matches if the path starts with the pattern
- *
- * @param pattern - Route pattern (e.g., '/', '/products', '/users/:id', '*')
- * @param path - URL path to match against
- * @returns RouteMatch if matched, null otherwise
  */
 export const matchPathPrefix = (
   pattern: string,

@@ -2,36 +2,27 @@
  * Behavior binding helper
  *
  * Binds a portable behavior to a reactive API.
- * Behaviors are curried functions: (api) => (...args) => Result
+ * Behaviors are curried functions: (svc) => (...args) => Result
  */
 
-import type { ReactiveAdapter } from '@lattice/signals/types';
+import type { Readable, Writable } from '@lattice/signals/types';
 
 /**
  * Creates a `use` helper bound to a specific reactive API.
- *
- * @param api - The reactive API (signal, computed, effect, batch)
- * @returns A function that binds behaviors to this API
- *
- * @example
- * ```ts
- * const { use } = createDOMSvc();
- *
- * // Define a portable behavior
- * const counter = (api: ReactiveAdapter) => (initial = 0) => {
- *   const count = api.signal(initial);
- *   return { count, increment: () => count(count() + 1) };
- * };
- *
- * // Bind to this service
- * const useCounter = use(counter);
- * const c = useCounter(10);
- * ```
  */
-export const createUse = (api: ReactiveAdapter) => {
+export const createUse = <
+  TSvc extends {
+    signal: <T>(initialValue: T) => Writable<T>;
+    computed: <T>(fn: () => T) => Readable<T>;
+    effect: (fn: () => void | (() => void)) => () => void;
+    batch: <T>(fn: () => T) => T;
+  },
+>(
+  svc: TSvc
+) => {
   return <Args extends unknown[], Result>(
-    behavior: (api: ReactiveAdapter) => (...args: Args) => Result
+    behavior: (svc: TSvc) => (...args: Args) => Result
   ): ((...args: Args) => Result) => {
-    return behavior(api);
+    return behavior(svc);
   };
 };

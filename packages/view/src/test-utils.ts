@@ -322,7 +322,7 @@ export function createRefSpec<TElement>(element: TElement): RefSpec<TElement> {
     status: STATUS_REF_SPEC,
     // Factory method - for tests, return element wrapped in NodeRef with extensions
     create: <TExt>(
-      _api?: unknown,
+      _svc?: unknown,
       extensions?: TExt
     ): NodeRef<TElement> & TExt => {
       return {

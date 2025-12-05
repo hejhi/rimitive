@@ -8,8 +8,8 @@
  *
  */
 
-import { createSignalsApi } from '@lattice/signals/presets/core';
-import { createViewApi } from '@lattice/view/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createViewSvc } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import type { RefSpec } from '@lattice/view/types';
 import type { GetContext } from '../types';
@@ -28,18 +28,18 @@ import { renderToString } from '../helpers/renderToString';
 /**
  * Signals API type
  */
-type SignalsApi = ReturnType<typeof createSignalsApi>;
+type SignalsSvc = ReturnType<typeof createSignalsSvc>;
 
 /**
  * View API type for server adapter
  */
-type ViewsApi = ReturnType<typeof createViewApi<DOMAdapterConfig>>;
+type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
 
 /**
  * Full service type - signals + views + addEventListener
  */
-export type IslandsServerService = SignalsApi &
-  ViewsApi & {
+export type IslandsServerService = SignalsSvc &
+  ViewsSvc & {
     addEventListener: ReturnType<typeof createAddEventListener>;
   };
 
@@ -53,15 +53,15 @@ export type IslandsServerService = SignalsApi &
 export type ServerOptions<TContext> = {
   /**
    * Signals API instance
-   * Create with: createSignalsApi()
+   * Create with: createSignalsSvc()
    */
-  signals: SignalsApi;
+  signals: SignalsSvc;
 
   /**
    * View API instance
-   * Create with: createViewApi(adapter, signals)
+   * Create with: createViewSvc(adapter, signals)
    */
-  view: ViewsApi;
+  view: ViewsSvc;
 
   /**
    * Context getter for islands
@@ -77,7 +77,7 @@ export type ServerApp = {
   /** Full service (signals + views) - use with router and components */
   service: IslandsServerService;
   /** Signals API */
-  signals: SignalsApi;
+  signals: SignalsSvc;
   /**
    * Render a component spec to HTML
    * @param spec - Component spec with create() method

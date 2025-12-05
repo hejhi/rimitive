@@ -12,7 +12,7 @@ export type Signal<T> = {
 
 export type Computed<T> = () => T;
 
-export type SignalsApi = {
+export type SignalsSvc = {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(fn: () => T) => Computed<T>;
   effect: (fn: () => void | (() => void)) => () => void;

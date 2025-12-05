@@ -1,4 +1,4 @@
-import type { SignalsApi, Signal, Computed } from './types';
+import type { SignalsSvc, Signal, Computed } from './types';
 
 export type CounterOptions = {
   initialCount?: number;
@@ -16,11 +16,8 @@ export type CounterState = {
 };
 
 export const counter =
-  (api: SignalsApi) =>
-  (options: CounterOptions = {}): CounterState => {
-    const { signal, computed } = api;
-    const { initialCount = 0 } = options;
-
+  ({ signal, computed }: SignalsSvc) =>
+  ({ initialCount = 0 }: CounterOptions = {}): CounterState => {
     const count = signal(initialCount);
     const doubled = computed(() => count() * 2);
     const isEven = computed(() => count() % 2 === 0);

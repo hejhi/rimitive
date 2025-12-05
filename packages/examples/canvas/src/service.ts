@@ -5,12 +5,12 @@
  * This example shows mixing DOM and Canvas rendering in a single tree,
  * both sharing the same signals service for reactive state.
  */
-import { createSignalsApi } from '@lattice/signals/presets/core';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMViewSvc } from '@lattice/view/presets/dom';
 import { createCanvasViewSvc } from './canvas-adapter';
 
 // Shared signals service
-const signals = createSignalsApi();
+const signals = createSignalsSvc();
 
 // DOM view (for toolbar/UI)
 const domSvc = createDOMViewSvc(signals);

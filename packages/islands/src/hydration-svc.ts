@@ -11,26 +11,25 @@
 /**
  * API with effect/scopedEffect methods that need interception
  */
-export type EffectAPI = {
+export type EffectSvc = {
   effect?: (fn: () => void | (() => void)) => () => void;
   scopedEffect?: (fn: () => void | (() => void)) => () => void;
   [key: string]: unknown;
 };
 
 /**
- * Result of creating hydrating API wrapper
+ * Result of creating hydrating service wrapper
  */
-export type HydrationAPIResult<T extends EffectAPI> = {
+export type HydrationSvcResult<T extends EffectSvc> = {
   /**
    * API with effects intercepted - use this during hydration
    */
-  hydratingApi: T;
+  hydratingSvc: T;
 
   /**
    * Activate all queued effects after successful hydration
-   * @param apiForEffects - Optional API to use when creating effects (e.g., with regular renderer instead of hydrating renderer)
    */
-  activate: (apiForEffects?: T) => void;
+  activate: (effectsSvc?: T) => void;
 };
 
 /**
@@ -38,27 +37,10 @@ export type HydrationAPIResult<T extends EffectAPI> = {
  *
  * Wraps an API to queue effects during hydration instead of running them.
  * After successful hydration, call activate() to run all queued effects.
- *
- * @param baseApi - Original API with effect/scopedEffect methods
- * @returns Wrapped API and activate function
- *
- * @example
- * ```ts
- * const signals = createSignalsApi();
- * const views = createViewHelpers(hydratingRenderer, signals);
- *
- * const { hydratingApi, activate } = createHydrationApi({ ...signals, ...views });
- *
- * // Use hydratingApi during hydration - effects are queued
- * const nodeRef = Counter(props).create(hydratingApi);
- *
- * // After successful hydration, run all effects
- * activate();
- * ```
  */
-export function createHydrationApi<T extends EffectAPI>(
-  baseApi: T
-): HydrationAPIResult<T> {
+export function createHydrationSvc<T extends EffectSvc>(
+  baseSvc: T
+): HydrationSvcResult<T> {
   // Store effect functions and their types
   const pendingEffects: Array<{
     type: 'effect' | 'scopedEffect';
@@ -66,11 +48,11 @@ export function createHydrationApi<T extends EffectAPI>(
   }> = [];
 
   // Create wrapped API
-  const hydratingApi: T = { ...baseApi };
+  const hydratingSvc: T = { ...baseSvc };
 
   // Intercept effect if it exists
-  if (baseApi.effect) {
-    hydratingApi.effect = (fn: () => void | (() => void)) => {
+  if (baseSvc.effect) {
+    hydratingSvc.effect = (fn: () => void | (() => void)) => {
       // Queue effect function for later
       pendingEffects.push({ type: 'effect', fn });
       // Return no-op cleanup
@@ -79,8 +61,8 @@ export function createHydrationApi<T extends EffectAPI>(
   }
 
   // Intercept scopedEffect if it exists
-  if (baseApi.scopedEffect) {
-    hydratingApi.scopedEffect = (fn: () => void | (() => void)) => {
+  if (baseSvc.scopedEffect) {
+    hydratingSvc.scopedEffect = (fn: () => void | (() => void)) => {
       // Queue scoped effect function for later
       pendingEffects.push({ type: 'scopedEffect', fn });
       // Return no-op cleanup
@@ -90,19 +72,19 @@ export function createHydrationApi<T extends EffectAPI>(
 
   // Activate function runs all queued effects
   // Can optionally use a different API (e.g., with regular renderer instead of hydrating renderer)
-  const activate = (apiForEffects?: T) => {
-    const api = apiForEffects || baseApi;
+  const activate = (svc?: T) => {
+    const _svc = svc || baseSvc;
 
     pendingEffects.forEach(({ type, fn }) => {
-      if (type === 'effect' && api.effect) {
-        api.effect(fn);
-      } else if (type === 'scopedEffect' && api.scopedEffect) {
-        api.scopedEffect(fn);
+      if (type === 'effect' && _svc.effect) {
+        _svc.effect(fn);
+      } else if (type === 'scopedEffect' && _svc.scopedEffect) {
+        _svc.scopedEffect(fn);
       }
     });
 
     pendingEffects.length = 0;
   };
 
-  return { hydratingApi, activate };
+  return { hydratingSvc, activate };
 }

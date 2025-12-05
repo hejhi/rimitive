@@ -1,4 +1,4 @@
-import type { SignalsApi, Signal } from './types';
+import type { SignalsSvc, Signal } from './types';
 
 export type ModalState = {
   isOpen: Signal<boolean>;
@@ -9,16 +9,16 @@ export type ModalState = {
   toggle: () => void;
 };
 
-export const modal = (api: SignalsApi) => (): ModalState => {
-  const { signal } = api;
+export const modal =
+  ({ signal }: SignalsSvc) =>
+  () => {
+    const isOpen = signal(false);
 
-  const isOpen = signal(false);
+    return {
+      isOpen,
 
-  return {
-    isOpen,
-
-    open: () => isOpen(true),
-    close: () => isOpen(false),
-    toggle: () => isOpen(!isOpen()),
+      open: () => isOpen(true),
+      close: () => isOpen(false),
+      toggle: () => isOpen(!isOpen()),
+    };
   };
-};

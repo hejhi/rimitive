@@ -6,4 +6,5 @@ export type { SignalValue, SignalSetter } from './types';
 
 export type { SignalProviderProps } from './context';
 
-export type { Readable, Writable, ReactiveAdapter } from './hooks';
+// Re-export primitives from signals package
+export type { Readable, Writable } from '@lattice/signals/types';

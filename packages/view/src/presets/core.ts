@@ -5,7 +5,7 @@ import { When } from '../when';
 import { Portal } from '../portal';
 import { createSpec } from '../helpers';
 import type { Adapter, AdapterConfig } from '../adapter';
-import type { RefSpec, NodeRef, ReactiveAdapter } from '../types';
+import type { RefSpec, NodeRef, Readable, Writable } from '../types';
 import { composeFrom } from '@lattice/lattice';
 
 export type { ElementProps, TagFactory } from '../el';
@@ -28,16 +28,24 @@ export const defaultExtensions = <TConfig extends AdapterConfig>() => ({
  * Supports both RefSpec (elements) and NodeRef (fragments) returns
  * Preserves element type inference through TElement generic
  */
-export type ComponentFactory<TApi> = <TArgs extends unknown[], TElement>(
+export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
   factory: (
-    api: TApi
+    svc: TSvc
   ) => (...args: TArgs) => RefSpec<TElement> | NodeRef<TElement>
 ) => (...args: TArgs) => RefSpec<TElement>;
 
 export const defaultHelpers = createSpec;
 
-export const createViewApi = <TConfig extends AdapterConfig>(
+export const createViewSvc = <
+  TConfig extends AdapterConfig,
+  TSignals extends {
+    signal: <T>(initialValue: T) => Writable<T>;
+    computed: <T>(fn: () => T) => Readable<T>;
+    effect: (fn: () => void | (() => void)) => () => void;
+    batch: <T>(fn: () => T) => T;
+  },
+>(
   adapter: Adapter<TConfig>,
-  signals: ReactiveAdapter
+  signals: TSignals
 ) =>
   composeFrom(defaultExtensions<TConfig>(), defaultHelpers(adapter, signals));

@@ -108,7 +108,7 @@ export type IslandComponent<TProps = unknown> = {
  */
 export type IslandStrategy<
   TProps = unknown,
-  TApi = unknown,
+  TSvc = unknown,
   TContext = unknown,
 > = {
   /**
@@ -119,7 +119,7 @@ export type IslandStrategy<
     containerEl: HTMLElement,
     props: TProps,
     Component: (
-      api: TApi,
+      svc: TSvc,
       getContext: GetContext<TContext>
     ) => (props: TProps) => RefSpec<unknown>,
     mount: (spec: RefSpec<unknown>) => { element: unknown }
@@ -138,13 +138,13 @@ export const ISLAND_META = Symbol.for('lattice.island');
  */
 export type IslandMetaData<
   TProps = unknown,
-  TApi = unknown,
+  TSvc = unknown,
   TContext = unknown,
 > = {
   id: string;
-  strategy?: IslandStrategy<TProps, TApi, TContext>;
+  strategy?: IslandStrategy<TProps, TSvc, TContext>;
   component: (
-    api: TApi,
+    svc: TSvc,
     getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>;
 };
@@ -155,15 +155,15 @@ export type IslandMetaData<
  */
 export type IslandRegistryEntry<
   TProps = unknown,
-  TApi = unknown,
+  TSvc = unknown,
   TContext = unknown,
 > = {
   component: (
-    api: TApi,
+    svc: TSvc,
     getContext: GetContext<TContext>
   ) => (props: TProps) => RefSpec<unknown>;
   id: string;
-  strategy?: IslandStrategy<TProps, TApi, TContext>;
+  strategy?: IslandStrategy<TProps, TSvc, TContext>;
 };
 
 /**
@@ -189,9 +189,6 @@ export type IslandNodeMeta = {
  *
  * Service factories return an object with at least `svc` containing
  * the composed service (signals + views + extensions).
- *
- * Similar to ReactiveAdapter in @lattice/view, this defines the protocol
- * without coupling to specific implementations.
  */
 export type ServiceResult<TSvc = Record<string, unknown>> = {
   svc: TSvc;

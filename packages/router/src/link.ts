@@ -36,14 +36,14 @@ export function Link(
     };
 
     refSpec.status = STATUS_REF_SPEC;
-    refSpec.create = (api: { el: ElMethod<DOMAdapterConfig> }) => {
-      const { el } = api;
+    refSpec.create = (svc: { el: ElMethod<DOMAdapterConfig> }) => {
+      const { el } = svc;
       const { href, onclick: userOnClick, ...restProps } = props;
 
       // Get navigate from API if available
       const navigate: ((path: string) => void) | null =
-        'navigate' in api
-          ? (api as { navigate: (path: string) => void }).navigate
+        'navigate' in svc
+          ? (svc as { navigate: (path: string) => void }).navigate
           : null;
 
       const ssrContext = getActiveRouterContext();
@@ -54,7 +54,7 @@ export function Link(
           href,
           onclick: userOnClick,
         })(...children);
-        return anchorSpec.create(api);
+        return anchorSpec.create(svc);
       }
 
       // CLIENT: Check if we have navigate function
@@ -65,7 +65,7 @@ export function Link(
           href,
           onclick: userOnClick,
         })(...children);
-        return anchorSpec.create(api);
+        return anchorSpec.create(svc);
       }
 
       // CLIENT: Add navigation handler
@@ -118,7 +118,7 @@ export function Link(
         onclick: handleClick,
       })(...children);
 
-      return anchorSpec.create(api);
+      return anchorSpec.create(svc);
     };
 
     return refSpec;

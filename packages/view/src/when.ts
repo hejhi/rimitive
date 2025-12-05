@@ -107,13 +107,13 @@ export const When = defineService(
        * Helper to create a RefSpec for fragments
        */
       const createWhenSpec = <TElement>(
-        createFragmentFn: (api?: unknown) => TFragRef
+        createFragmentFn: (svc?: unknown) => TFragRef
       ): RefSpec<TElement> => {
         const refSpec = (() => refSpec) as unknown as RefSpec<TElement>;
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const fragRef = createFragmentFn(api);
+        refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
+          const fragRef = createFragmentFn(svc);
           if (!extensions || Object.keys(extensions).length === 0)
             return fragRef as FragmentRef<TElement> & TExt;
 
@@ -130,88 +130,88 @@ export const When = defineService(
         condition: { (): unknown },
         ...childSpecs: RefSpec<TElement>[]
       ): RefSpec<TElement> {
-        return createWhenSpec<TElement>((api) => {
-            const fragment: FragmentRef<TBaseElement> = {
-              status: STATUS_FRAGMENT,
-              element: null,
-              parent: null,
-              prev: null,
-              next: null,
-              firstChild: null,
-              lastChild: null,
-              attach(parent, nextSibling) {
-                // Track created child nodes for cleanup
-                let childNodes: NodeRef<TElement>[] = [];
-                let isShowing = false;
+        return createWhenSpec<TElement>((svc) => {
+          const fragment: FragmentRef<TBaseElement> = {
+            status: STATUS_FRAGMENT,
+            element: null,
+            parent: null,
+            prev: null,
+            next: null,
+            firstChild: null,
+            lastChild: null,
+            attach(parent, nextSibling) {
+              // Track created child nodes for cleanup
+              let childNodes: NodeRef<TElement>[] = [];
+              let isShowing = false;
 
-                // Create all children and insert them
-                const createChildren = () => {
-                  for (const spec of childSpecs) {
-                    const nodeRef = spec.create(api);
+              // Create all children and insert them
+              const createChildren = () => {
+                for (const spec of childSpecs) {
+                  const nodeRef = spec.create(svc);
 
-                    // Track in our list
-                    childNodes.push(nodeRef);
+                  // Track in our list
+                  childNodes.push(nodeRef);
 
-                    // Update fragment boundaries
-                    if (!fragment.firstChild) {
-                      fragment.firstChild = nodeRef;
-                    }
-                    fragment.lastChild = nodeRef;
-
-                    // Link into fragment's child list
-                    const prevNode = childNodes[childNodes.length - 2];
-                    if (prevNode) {
-                      prevNode.next = nodeRef;
-                      nodeRef.prev = prevNode;
-                    } else {
-                      nodeRef.prev = null;
-                    }
-                    nodeRef.next = null;
-
-                    // Insert into DOM
-                    insertNodeBefore(
-                      api,
-                      parent.element,
-                      nodeRef,
-                      undefined,
-                      nextSibling
-                    );
+                  // Update fragment boundaries
+                  if (!fragment.firstChild) {
+                    fragment.firstChild = nodeRef;
                   }
-                };
+                  fragment.lastChild = nodeRef;
 
-                // Remove all children
-                const removeChildren = () => {
-                  for (const nodeRef of childNodes) {
-                    removeNode(parent.element, nodeRef);
-                  }
-                  childNodes = [];
-                  fragment.firstChild = null;
-                  fragment.lastChild = null;
-                };
-
-                // Effect that reacts to condition changes
-                return scopedEffect(() => {
-                  const shouldShow = !!condition(); // Coerce to boolean
-
-                  if (shouldShow === isShowing) return;
-
-                  if (shouldShow) {
-                    // Create and insert children
-                    const isolate = scopedEffect(() => {
-                      createChildren();
-                    });
-                    isolate(); // Dispose immediately - children have their own scopes
+                  // Link into fragment's child list
+                  const prevNode = childNodes[childNodes.length - 2];
+                  if (prevNode) {
+                    prevNode.next = nodeRef;
+                    nodeRef.prev = prevNode;
                   } else {
-                    // Remove all children
-                    removeChildren();
+                    nodeRef.prev = null;
                   }
+                  nodeRef.next = null;
 
-                  isShowing = shouldShow;
-                });
-              },
-            };
-            return fragment;
-          });
+                  // Insert into DOM
+                  insertNodeBefore(
+                    svc,
+                    parent.element,
+                    nodeRef,
+                    undefined,
+                    nextSibling
+                  );
+                }
+              };
+
+              // Remove all children
+              const removeChildren = () => {
+                for (const nodeRef of childNodes) {
+                  removeNode(parent.element, nodeRef);
+                }
+                childNodes = [];
+                fragment.firstChild = null;
+                fragment.lastChild = null;
+              };
+
+              // Effect that reacts to condition changes
+              return scopedEffect(() => {
+                const shouldShow = !!condition(); // Coerce to boolean
+
+                if (shouldShow === isShowing) return;
+
+                if (shouldShow) {
+                  // Create and insert children
+                  const isolate = scopedEffect(() => {
+                    createChildren();
+                  });
+                  isolate(); // Dispose immediately - children have their own scopes
+                } else {
+                  // Remove all children
+                  removeChildren();
+                }
+
+                isShowing = shouldShow;
+              });
+            },
+          };
+          return fragment;
+        });
       }
 
       const extension: WhenFactory<TBaseElement> = {

@@ -151,13 +151,13 @@ export const Portal = defineService(
        * Helper to create a RefSpec for portal fragments
        */
       const createPortalSpec = <TElement>(
-        createFragmentFn: (api?: unknown) => TFragRef
+        createFragmentFn: (svc?: unknown) => TFragRef
       ): RefSpec<TElement> => {
         const refSpec = (() => refSpec) as unknown as RefSpec<TElement>;
 
         refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
-          const fragRef = createFragmentFn(api);
+        refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
+          const fragRef = createFragmentFn(svc);
           if (!extensions || Object.keys(extensions).length === 0)
             return fragRef as FragmentRef<TElement> & TExt;
 
@@ -178,7 +178,7 @@ export const Portal = defineService(
           target === undefined || typeof target !== 'function';
 
         return (child: RefSpec<TElement>) => {
-          return createPortalSpec<TElement>((api) => {
+          return createPortalSpec<TElement>((svc) => {
             const fragment: FragmentRef<TBaseElement> = {
               status: STATUS_FRAGMENT,
               element: null,
@@ -193,10 +193,10 @@ export const Portal = defineService(
                   const targetElement = resolveTarget(target);
                   if (!targetElement) return;
 
-                  const childRef = child.create(api);
+                  const childRef = child.create(svc);
                   setFragmentChild(fragment, childRef);
                   insertNodeBefore(
-                    api,
+                    svc,
                     targetElement,
                     childRef,
                     undefined,
@@ -222,10 +222,10 @@ export const Portal = defineService(
                   }
 
                   // Create and insert child
-                  const childRef = child.create(api);
+                  const childRef = child.create(svc);
                   setFragmentChild(fragment, childRef);
                   insertNodeBefore(
-                    api,
+                    svc,
                     targetElement,
                     childRef,
                     undefined,

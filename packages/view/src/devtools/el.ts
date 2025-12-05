@@ -51,7 +51,7 @@ export function instrumentEl<TConfig extends AdapterConfig>(
 
       // Wrap the create method to emit mount/unmount events
       const originalCreate = refSpec.create.bind(refSpec);
-      refSpec.create = <TExt>(api?: unknown, extensions?: TExt) => {
+      refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
         instrumentation.emit({
           type: 'EL_STATIC_MOUNTED',
           timestamp: Date.now(),
@@ -61,7 +61,7 @@ export function instrumentEl<TConfig extends AdapterConfig>(
           },
         });
 
-        const elementRef = originalCreate(api, extensions);
+        const elementRef = originalCreate(svc, extensions);
 
         // Track lifecycle callbacks count
         instrumentation.emit({
@@ -84,7 +84,10 @@ export function instrumentEl<TConfig extends AdapterConfig>(
         | ElementProps<TConfig, Tag>
         | ((current: ElementProps<TConfig, Tag>) => ElementProps<TConfig, Tag>)
     ): TagFactory<TConfig, Tag> => {
-      const props = typeof propsOrFn === 'function' ? propsOrFn({} as ElementProps<TConfig, Tag>) : propsOrFn;
+      const props =
+        typeof propsOrFn === 'function'
+          ? propsOrFn({} as ElementProps<TConfig, Tag>)
+          : propsOrFn;
 
       instrumentation.emit({
         type: 'EL_STATIC_CREATED',

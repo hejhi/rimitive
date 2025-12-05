@@ -53,21 +53,21 @@ export default defineConfig({
         'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
         'ssr-context.browser': resolve(__dirname, 'src/ssr-context.browser.ts'),
         'client-context': resolve(__dirname, 'src/client-context.ts'),
-        'client-context.browser': resolve(__dirname, 'src/client-context.browser.ts'),
+        'client-context.browser': resolve(
+          __dirname,
+          'src/client-context.browser.ts'
+        ),
         island: resolve(__dirname, 'src/island.ts'),
         'island.browser': resolve(__dirname, 'src/island.browser.ts'),
         factory: resolve(__dirname, 'src/factory.ts'),
         'factory.browser': resolve(__dirname, 'src/factory.browser.ts'),
-        'hydration-api': resolve(__dirname, 'src/hydration-api.ts'),
+        'hydration-svc': resolve(__dirname, 'src/hydration-svc.ts'),
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
         'helpers/renderToString': resolve(
           __dirname,
           'src/helpers/renderToString.ts'
         ),
-        'adapters/dom-server': resolve(
-          __dirname,
-          'src/adapters/dom-server.ts'
-        ),
+        'adapters/dom-server': resolve(__dirname, 'src/adapters/dom-server.ts'),
         'adapters/dom-hydration': resolve(
           __dirname,
           'src/adapters/dom-hydration.ts'
@@ -75,8 +75,14 @@ export default defineConfig({
         'adapters/islands': resolve(__dirname, 'src/adapters/islands.ts'),
         'presets/core.client': resolve(__dirname, 'src/presets/core.client.ts'),
         'presets/core.server': resolve(__dirname, 'src/presets/core.server.ts'),
-        'presets/islands.client': resolve(__dirname, 'src/presets/islands.client.ts'),
-        'presets/islands.server': resolve(__dirname, 'src/presets/islands.server.ts'),
+        'presets/islands.client': resolve(
+          __dirname,
+          'src/presets/islands.client.ts'
+        ),
+        'presets/islands.server': resolve(
+          __dirname,
+          'src/presets/islands.server.ts'
+        ),
       },
       formats: ['es'],
     },

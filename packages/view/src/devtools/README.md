@@ -90,7 +90,7 @@ const instrumentation = createInstrumentation({
 });
 
 // Create view extensions with instrumentation
-const viewApi = {
+const viewSvc = {
   el: El().create({
     /* ctx, renderer, etc. */
     instrument: instrumentEl,
@@ -108,7 +108,7 @@ const viewApi = {
 };
 
 // Use with instrumentation enabled
-const { el, map, on } = viewApi;
+const { el, map, on } = viewSvc;
 ```
 
 ## Event Data Structure

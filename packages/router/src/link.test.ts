@@ -27,17 +27,17 @@ describe('Link component - basic rendering', () => {
       window.history.pushState({}, '', path);
     };
 
-    const api = {
+    const svc = {
       el: el.impl,
       navigate,
     };
 
-    return { ...env, el, Link, navigate, currentPath, api };
+    return { ...env, el, Link, navigate, currentPath, svc };
   }
 
   const mountElement = (
     spec: unknown,
-    api: { el: unknown; navigate?: (path: string) => void },
+    svc: { el: unknown; navigate?: (path: string) => void },
     adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
     const parent = adapter.createNode('div') as MockElement;
@@ -52,8 +52,8 @@ describe('Link component - basic rendering', () => {
     };
 
     const nodeRef = (
-      spec as { create: (api: unknown) => ElementRef<MockElement> }
-    ).create(api);
+      spec as { create: (svc: unknown) => ElementRef<MockElement> }
+    ).create(svc);
     nodeRef.parent = parentRef;
     nodeRef.next = null;
     parent.children.push(nodeRef.element);
@@ -62,10 +62,10 @@ describe('Link component - basic rendering', () => {
   };
 
   it('renders anchor element with href', () => {
-    const { Link, adapter, api } = setup();
+    const { Link, adapter, svc } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
 
     expect(parent.children.length).toBe(1);
     const anchor = parent.children[0] as MockElement;
@@ -75,7 +75,7 @@ describe('Link component - basic rendering', () => {
   });
 
   it('accepts standard anchor attributes', () => {
-    const { Link, adapter, api } = setup();
+    const { Link, adapter, svc } = setup();
 
     const linkSpec = Link({
       href: '/products',
@@ -84,7 +84,7 @@ describe('Link component - basic rendering', () => {
       title: 'View Products',
     })('Products');
 
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     expect(anchor?.props.className).toBe('nav-link');
@@ -93,14 +93,14 @@ describe('Link component - basic rendering', () => {
   });
 
   it('accepts multiple children', () => {
-    const { Link, el, adapter, api } = setup();
+    const { Link, el, adapter, svc } = setup();
 
     const linkSpec = Link({ href: '/home' })(
       el.impl('span')('Go to '),
       el.impl('strong')('Home')
     );
 
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     expect(getTextContent(parent)).toContain('Go to');
     expect(getTextContent(parent)).toContain('Home');
   });
@@ -124,17 +124,17 @@ describe('Link component - click handling', () => {
       window.history.pushState({}, '', path);
     };
 
-    const api = {
+    const svc = {
       el: el.impl,
       navigate,
     };
 
-    return { ...env, el, Link, navigate, currentPath, navigateCalls, api };
+    return { ...env, el, Link, navigate, currentPath, navigateCalls, svc };
   }
 
   const mountElement = (
     spec: unknown,
-    api: { el: unknown; navigate?: (path: string) => void },
+    svc: { el: unknown; navigate?: (path: string) => void },
     adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
     const parent = adapter.createNode('div') as MockElement;
@@ -149,8 +149,8 @@ describe('Link component - click handling', () => {
     };
 
     const nodeRef = (
-      spec as { create: (api: unknown) => ElementRef<MockElement> }
-    ).create(api);
+      spec as { create: (svc: unknown) => ElementRef<MockElement> }
+    ).create(svc);
     nodeRef.parent = parentRef;
     nodeRef.next = null;
     parent.children.push(nodeRef.element);
@@ -159,10 +159,10 @@ describe('Link component - click handling', () => {
   };
 
   it('intercepts click on internal link', () => {
-    const { Link, adapter, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, svc } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -184,10 +184,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept click with metaKey (cmd+click)', () => {
-    const { Link, adapter, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, svc } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -209,10 +209,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept click with ctrlKey', () => {
-    const { Link, adapter, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, svc } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -234,10 +234,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept right-click', () => {
-    const { Link, adapter, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, svc } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -259,10 +259,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept external http link', () => {
-    const { Link, adapter, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, svc } = setup();
 
     const linkSpec = Link({ href: 'http://example.com' })('External');
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -284,10 +284,10 @@ describe('Link component - click handling', () => {
   });
 
   it('does not intercept external https link', () => {
-    const { Link, adapter, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, svc } = setup();
 
     const linkSpec = Link({ href: 'https://example.com' })('External');
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -309,7 +309,7 @@ describe('Link component - click handling', () => {
   });
 
   it('merges user onclick with navigation handler', () => {
-    const { Link, adapter, navigateCalls, api } = setup();
+    const { Link, adapter, navigateCalls, svc } = setup();
 
     const userClicks: string[] = [];
     const linkSpec = Link({
@@ -319,7 +319,7 @@ describe('Link component - click handling', () => {
       },
     })('About');
 
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     const anchor = parent.children[0] as MockElement;
 
     const event = {
@@ -357,17 +357,17 @@ describe('Link component - lifecycle callbacks', () => {
       window.history.pushState({}, '', path);
     };
 
-    const api = {
+    const svc = {
       el: el.impl,
       navigate,
     };
 
-    return { ...env, el, Link, navigate, currentPath, api };
+    return { ...env, el, Link, navigate, currentPath, svc };
   }
 
   const mountElement = (
     spec: unknown,
-    api: { el: unknown; navigate?: (path: string) => void },
+    svc: { el: unknown; navigate?: (path: string) => void },
     adapter: { createNode: (tag: string) => MockElement | MockText }
   ): MockElement => {
     const parent = adapter.createNode('div') as MockElement;
@@ -382,8 +382,8 @@ describe('Link component - lifecycle callbacks', () => {
     };
 
     const nodeRef = (
-      spec as { create: (api: unknown) => ElementRef<MockElement> }
-    ).create(api);
+      spec as { create: (svc: unknown) => ElementRef<MockElement> }
+    ).create(svc);
     nodeRef.parent = parentRef;
     nodeRef.next = null;
     parent.children.push(nodeRef.element);
@@ -392,11 +392,11 @@ describe('Link component - lifecycle callbacks', () => {
   };
 
   it('renders correctly as a sealed spec', () => {
-    const { Link, adapter, api } = setup();
+    const { Link, adapter, svc } = setup();
 
     const linkSpec = Link({ href: '/about' })('About');
 
-    const parent = mountElement(linkSpec, api, adapter);
+    const parent = mountElement(linkSpec, svc, adapter);
     expect(parent.children.length).toBe(1);
     const anchor = parent.children[0] as MockElement;
     expect(anchor?.tag).toBe('a');

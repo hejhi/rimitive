@@ -21,10 +21,10 @@ import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
-import { createApi } from './helpers/signal-computed';
+import { createSvc } from './helpers/signal-computed';
 
 const ITERATIONS = 50000;
-const latticeAPI = createApi();
+const latticeAPI = createSvc();
 const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
 
 type BenchState = {

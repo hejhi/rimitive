@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react';
-import { Readable, Writable } from './hooks';
+import type { Readable, Writable } from '@lattice/signals/types';
 
 // Minimal API shape used by React bindings
 export type SignalAPI = {
@@ -32,12 +32,12 @@ export function SignalProvider({ svc, children }: SignalProviderProps) {
 
 // Hook to access the signal API
 export function useSignalAPI(): SignalAPI {
-  const api = useContext(SignalContext);
-  if (!api) {
+  const svc = useContext(SignalContext);
+  if (!svc) {
     throw new Error(
       'useSignalAPI must be used within a SignalProvider. ' +
-        'Make sure to wrap your app or component tree with <SignalProvider api={...}>.'
+        'Make sure to wrap your app or component tree with <SignalProvider svc={...}>.'
     );
   }
-  return api;
+  return svc;
 }

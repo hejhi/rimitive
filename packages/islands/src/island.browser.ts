@@ -21,44 +21,71 @@ function getContextGetter(): GetContext<unknown> {
   return getClientContext() ?? (() => undefined);
 }
 
-export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
+export function island<
+  TProps,
+  TSvc = Record<string, unknown>,
+  TContext = unknown,
+>(
   id: string,
-  factory: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>
+  factory: (
+    svc: TSvc,
+    getContext: GetContext<TContext>
+  ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
-export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
+export function island<
+  TProps,
+  TSvc = Record<string, unknown>,
+  TContext = unknown,
+>(
   id: string,
-  strategy: IslandStrategy<TProps, TApi, TContext>,
-  factory: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>
+  strategy: IslandStrategy<TProps, TSvc, TContext>,
+  factory: (
+    svc: TSvc,
+    getContext: GetContext<TContext>
+  ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps>;
 
-export function island<TProps, TApi = Record<string, unknown>, TContext = unknown>(
+export function island<
+  TProps,
+  TSvc = Record<string, unknown>,
+  TContext = unknown,
+>(
   id: string,
   strategyOrFactory:
-    | IslandStrategy<TProps, TApi, TContext>
-    | ((api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>),
-  maybeFactory?: (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>
+    | IslandStrategy<TProps, TSvc, TContext>
+    | ((
+        svc: TSvc,
+        getContext: GetContext<TContext>
+      ) => (props: TProps) => RefSpec<unknown>),
+  maybeFactory?: (
+    svc: TSvc,
+    getContext: GetContext<TContext>
+  ) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
   // Determine if second arg is strategy or factory
   const factory =
     maybeFactory ||
-    (strategyOrFactory as (api: TApi, getContext: GetContext<TContext>) => (props: TProps) => RefSpec<unknown>);
+    (strategyOrFactory as (
+      svc: TSvc,
+      getContext: GetContext<TContext>
+    ) => (props: TProps) => RefSpec<unknown>);
 
   const strategy = maybeFactory ? strategyOrFactory : undefined;
 
   // Create wrapper function
   const wrapper = (props: TProps) => {
-    // Create a deferred RefSpec that delays factory execution until create(api) is called
+    // Create a deferred RefSpec that delays factory execution until create(svc) is called
     const deferredSpec: RefSpec<unknown> = {
       status: STATUS_REF_SPEC,
-      create(api: TApi) {
+      create(svc: TSvc) {
         // Get the context getter
         const getContext = getContextGetter() as GetContext<TContext>;
 
-        const component = factory(api, getContext); // Pass API and context getter
+        const component = factory(svc, getContext); // Pass API and context getter
         const spec = component(props); // Call component with props to get the actual RefSpec
 
-        return spec.create(api);
+        return spec.create(svc);
       },
     };
 
