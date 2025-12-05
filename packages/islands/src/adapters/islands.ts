@@ -33,13 +33,15 @@ export function createIslandsAdapter(
     removeChild: (parent, child) => getAdapter().removeChild(parent, child),
     insertBefore: (parent, newNode, refNode) =>
       getAdapter().insertBefore(parent, newNode, refNode),
-    // Forward lifecycle hooks (new unified API)
     beforeCreate: (type: string, props?: Record<string, unknown>) =>
       getAdapter().beforeCreate?.(type, props),
     onCreate: (ref: NodeRef<Node>, parent: Node) =>
       getAdapter().onCreate?.(ref, parent),
-    beforeAttach: (ref: NodeRef<Node>, parent: Node, nextSibling: Node | null) =>
-      getAdapter().beforeAttach?.(ref, parent, nextSibling),
+    beforeAttach: (
+      ref: NodeRef<Node>,
+      parent: Node,
+      nextSibling: Node | null
+    ) => getAdapter().beforeAttach?.(ref, parent, nextSibling),
     onAttach: (ref: NodeRef<Node>, parent: Node) =>
       getAdapter().onAttach?.(ref, parent),
     beforeDestroy: (ref: NodeRef<Node>, parent: Node) =>

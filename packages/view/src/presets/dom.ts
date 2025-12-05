@@ -85,17 +85,8 @@ export const createDOMViewSvc = <
 /**
  * Create a fully-configured DOM app service
  *
- * Returns a flat API with all signals and view primitives,
+ * Returns a flat service with all signals and view primitives,
  * plus DOM-specific helpers (on, t) and a mount function.
- *
- * @example
- * ```ts
- * // Simple usage - destructure what you need
- * const { el, signal, on, mount } = createDOMSvc();
- *
- * // Or export everything for component files
- * export const { signal, computed, effect, batch, el, map, match, on, t, mount } = createDOMSvc();
- * ```
  */
 export const createDOMSvc = () => {
   const signals = createSignalsSvc();

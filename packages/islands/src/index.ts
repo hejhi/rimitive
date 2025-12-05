@@ -5,7 +5,7 @@
  * Only interactive components ("islands") ship JavaScript to the client.
  *
  * This main entry point contains browser-safe exports only.
- * Server-only APIs are available from '@lattice/islands/server'.
+ * Server-only services are available from '@lattice/islands/server'.
  */
 
 // Core types (browser-safe)

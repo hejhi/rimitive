@@ -14,14 +14,14 @@ const createSignals = () => composeFrom(defaultExtensions(), defaultHelpers());
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
-  // Create a fresh signal API for each test
+  // Create a fresh signal service for each test
   return render(
     createElement(SignalProvider, { svc: createSignals(), children: ui })
   );
 }
 
 // Also export svc creation for tests that need direct access
-export function createTestSignalAPI() {
+export function createTestSignalSvc() {
   return createSignals();
 }
 

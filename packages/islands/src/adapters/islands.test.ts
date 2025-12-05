@@ -54,7 +54,7 @@ describe('createHydratingAdapter', () => {
     expect(textNode.nodeType).toBe(3); // TEXT_NODE
   });
 
-  it('should maintain the same adapter API across mode switch', () => {
+  it('should maintain the same adapter service across mode switch', () => {
     const container = document.createElement('div');
     const adapter = createIslandsAdapter(
       createDOMHydrationAdapter(container),
@@ -68,7 +68,7 @@ describe('createHydratingAdapter', () => {
     // Switch mode
     adapter.switchToFallback();
 
-    // Should still be the same method references (stable API)
+    // Should still be the same method references (stable service)
     expect(adapter.createNode).toBe(createNodeRef);
     expect(adapter.setProperty).toBe(setPropertyRef);
   });

@@ -25,8 +25,8 @@ import {
 import { createSvc } from './helpers/signal-computed';
 
 const ITERATIONS = 10000;
-const latticeAPI = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
+const latticeSvc = createSvc();
+const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
 
 type BenchState = {
   get(name: 'depth'): number;

@@ -25,19 +25,9 @@ import { renderToString } from '../helpers/renderToString';
 // Types
 // ============================================================================
 
-/**
- * Signals API type
- */
 type SignalsSvc = ReturnType<typeof createSignalsSvc>;
-
-/**
- * View API type for server adapter
- */
 type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
 
-/**
- * Full service type - signals + views + addEventListener
- */
 export type IslandsServerService = SignalsSvc &
   ViewsSvc & {
     addEventListener: ReturnType<typeof createAddEventListener>;
@@ -51,22 +41,8 @@ export type IslandsServerService = SignalsSvc &
  * the adapter.
  */
 export type ServerOptions<TContext> = {
-  /**
-   * Signals API instance
-   * Create with: createSignalsSvc()
-   */
   signals: SignalsSvc;
-
-  /**
-   * View API instance
-   * Create with: createViewSvc(adapter, signals)
-   */
   view: ViewsSvc;
-
-  /**
-   * Context getter for islands
-   * Called once per render, passed to islands
-   */
   context?: GetContext<TContext>;
 };
 
@@ -74,15 +50,8 @@ export type ServerOptions<TContext> = {
  * Server app - for SSR
  */
 export type ServerApp = {
-  /** Full service (signals + views) - use with router and components */
   service: IslandsServerService;
-  /** Signals API */
   signals: SignalsSvc;
-  /**
-   * Render a component spec to HTML
-   * @param spec - Component spec with create() method
-   * @returns HTML string and island hydration scripts
-   */
   render: <TElement>(spec: RefSpec<TElement>) => {
     html: string;
     scripts: string;

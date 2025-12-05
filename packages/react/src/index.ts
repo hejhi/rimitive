@@ -5,7 +5,7 @@ export {
   useSelector,
   createHook,
   SignalProvider,
-  useSignalAPI,
+  useSignalSvc,
 } from './signals';
 
 export { useLatticeContext } from './lattice';

@@ -44,7 +44,7 @@ function getContextGetter(): GetContext<unknown> {
  * On the client, islands hydrate from server-rendered HTML.
  *
  * Island components receive two arguments:
- * 1. svc - The user-defined service API (el, signal, computed, etc.)
+ * 1. svc - The user-defined service svc (el, signal, computed, etc.)
  * 2. getContext - Getter function that returns user-defined context (or undefined)
  */
 export function island<
@@ -111,7 +111,7 @@ export function island<
         // Get the context getter
         const getContext = getContextGetter() as GetContext<TContext>;
 
-        const component = factory(svc, getContext); // Pass API and context getter
+        const component = factory(svc, getContext); // Pass svc and context getter
         const spec = component(props); // Call component with props to get the actual RefSpec
 
         // Create the nodeRef

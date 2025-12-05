@@ -1,8 +1,8 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import type { Readable, Writable } from '@lattice/signals/types';
 
-// Minimal API shape used by React bindings
-export type SignalAPI = {
+// Minimal service used by React bindings
+export type SignalSvc = {
   signal: <T>(value: T) => Writable<T>;
   computed: <T>(compute: () => T) => Readable<T>;
   effect: (fn: () => void | (() => void)) => () => void;
@@ -11,16 +11,16 @@ export type SignalAPI = {
 };
 
 // Create the React Context
-const SignalContext = createContext<SignalAPI | null>(null);
+const SignalContext = createContext<SignalSvc | null>(null);
 
 // Provider component
 export type SignalProviderProps = {
-  svc: SignalAPI;
+  svc: SignalSvc;
   children: ReactNode;
 };
 
 export function SignalProvider({ svc, children }: SignalProviderProps) {
-  // Dispose the API when the provider unmounts
+  // Dispose the service when the provider unmounts
   useEffect(() => {
     return () => svc.dispose();
   }, [svc]);
@@ -30,12 +30,12 @@ export function SignalProvider({ svc, children }: SignalProviderProps) {
   );
 }
 
-// Hook to access the signal API
-export function useSignalAPI(): SignalAPI {
+// Hook to access the signal service
+export function useSignalSvc(): SignalSvc {
   const svc = useContext(SignalContext);
   if (!svc) {
     throw new Error(
-      'useSignalAPI must be used within a SignalProvider. ' +
+      'useSignalSvc must be used within a SignalProvider. ' +
         'Make sure to wrap your app or component tree with <SignalProvider svc={...}>.'
     );
   }

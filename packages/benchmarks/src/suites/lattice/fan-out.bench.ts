@@ -28,12 +28,12 @@ import {
 import { createSvc } from './helpers/signal-computed-effect';
 
 const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
-const latticeAPI = createSvc();
+const latticeSvc = createSvc();
 const {
   signal: latticeSignal,
   computed: latticeComputed,
   effect: latticeEffect,
-} = latticeAPI;
+} = latticeSvc;
 
 type BenchState = {
   get(name: 'sources'): number;

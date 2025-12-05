@@ -10,7 +10,6 @@
  */
 import { island } from '../service.js';
 
-// Product data - in a real app this would come from a store/API
 const products = [
   { id: 1, name: 'Laptop', price: 999 },
   { id: 2, name: 'Desk Chair', price: 299 },
@@ -59,7 +58,6 @@ export const AddToCart = island(
 
       const handleAdd = () => {
         const product = currentProduct();
-        // In a real app, this would call an API
         console.log(
           `Added ${quantity()} x ${product.name} (ID: ${product.id}) to cart`
         );

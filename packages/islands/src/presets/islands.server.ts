@@ -74,8 +74,8 @@ export const createIslandsServerApp = <TContext = unknown>(
 export type IslandsServerApp = ReturnType<typeof createIslandsServerApp>;
 
 /**
- * Island API type - the service type available to island components
- * Use this with createIsland<IslandAPI>() for typed islands
+ * Island Svc type - the service type available to island components
+ * Use this with createIsland<IslandSvc>() for typed islands
  */
-export type IslandAPI = ReturnType<typeof createSignalsSvc> &
+export type IslandSvc = ReturnType<typeof createSignalsSvc> &
   ReturnType<typeof createViewSvc>;

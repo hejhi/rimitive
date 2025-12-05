@@ -44,7 +44,6 @@ export function createTestInstance() {
   const batchExt = Batch().create({ ...opts, startBatch, endBatch });
   const subscribeExt = Subscribe().create(opts);
 
-  // Create API with all core factories
   const svc = createLattice(
     signalExt,
     computedExt,
@@ -60,7 +59,6 @@ export function createTestInstance() {
   };
 
   return {
-    // Core API
     signal: svc.signal,
     computed: svc.computed,
     effect: svc.effect,

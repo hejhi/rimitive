@@ -5,9 +5,6 @@
  * - Does the DOM reflect the correct content?
  * - Does the DOM update correctly when data changes?
  * - Are elements preserved when they should be?
- *
- * Tests use the real API (el + map) as users would.
- * No testing of internal implementation details.
  */
 
 import { describe, it, expect } from 'vitest';

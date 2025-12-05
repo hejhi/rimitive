@@ -1,15 +1,3 @@
-/**
- * Route Definition API
- *
- * Provides pure data structures for defining routes without requiring a router instance.
- * Routes defined with defineRoutes() can be bound to a router via router.mount().
- *
- * This separation enables:
- * - Universal route definitions (same code for client and server)
- * - No singleton router needed at module load time
- * - Clean SSR without proxy patterns
- */
-
 import type { AdapterConfig, RefSpec } from '@lattice/view/types';
 import type { RouteContext } from './createRouter';
 
@@ -53,9 +41,6 @@ export type RouteBuilder<TConfig extends AdapterConfig> = {
   _node: RouteNode<TConfig>;
 };
 
-/**
- * Context returned by defineRoutes() - mirrors router.root() API
- */
 export type DefineRoutesContext<TConfig extends AdapterConfig> = {
   /**
    * Create the route tree with child routes
@@ -73,9 +58,6 @@ export type DefineRoutesContext<TConfig extends AdapterConfig> = {
 
 /**
  * Define routes without requiring a router instance
- *
- * Returns the same API shape as router.root() but produces pure data
- * that can be bound to a router later via router.mount().
  */
 export function defineRoutes<TConfig extends AdapterConfig>(
   rootPath: string,

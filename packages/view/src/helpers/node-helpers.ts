@@ -31,7 +31,7 @@ export function createNodeHelpers<TConfig extends AdapterConfig>(
    * @param node - Node to insert (element or fragment)
    * @param nextSiblingNode - Next sibling node (can be element, fragment, or undefined)
    * @param boundaryNextSibling - Boundary marker for fragments (e.g., from parent fragment)
-   * @param svc - API context for fragment attachment
+   * @param svc - svc context for fragment attachment
    */
   function insertNodeBefore(
     svc: unknown,

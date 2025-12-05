@@ -7,9 +7,9 @@
  *    - Fragment islands: script's parent is the wrapper div container
  * 2. For element islands: use the island's parent as the container
  * 3. Creating hydrating adapter targeting the container
- * 4. Running component with hydrating API (queued effects)
+ * 4. Running component with hydrating service (queued effects)
  * 5. On success: activate effects, remove script tag, unwrap fragment containers
- * 6. On failure: fallback to client-side render with regular API
+ * 6. On failure: fallback to client-side render with regular service
  */
 
 import type { IslandMetaData, IslandRegistryEntry, GetContext } from '../types';
@@ -57,9 +57,9 @@ export type IslandHydrator = {
 export type MountFn = (spec: RefSpec<unknown>) => { element: unknown };
 
 /**
- * Result type from createAPI - includes both the API and scope helper
+ * Result type from createSvc - includes both the svc and scope helper
  */
-export type CreateAPIResult = {
+export type CreateSvcResult = {
   svc: EffectSvc & Record<string, unknown>;
   createElementScope: <TElement extends object>(
     element: TElement,
@@ -67,19 +67,11 @@ export type CreateAPIResult = {
   ) => unknown;
 };
 
-/**
- * Create a DOM island hydrator
- *
- * @param createAPI - Function to create API helpers (el, map, etc.) and scope helpers
- * @param signals - Signals API (for both hydrating and regular modes)
- * @param mount - Mount function for fallback client-side rendering
- * @returns Hydrator instance
- */
 export function createDOMHydrator<TSignals extends EffectSvc>(
-  createAPI: (
+  createSvc: (
     adapter: ReturnType<typeof createIslandsAdapter>,
     signals: TSignals
-  ) => CreateAPIResult,
+  ) => CreateSvcResult,
   signals: TSignals,
   mount: MountFn
 ): IslandHydrator {
@@ -169,14 +161,12 @@ export function createDOMHydrator<TSignals extends EffectSvc>(
             createDOMAdapter()
           );
 
-          // Create API with hydrating adapter - includes scope helper
-          const { svc, createElementScope } = createAPI(adapter, signals);
+          const { svc, createElementScope } = createSvc(adapter, signals);
           const { hydratingSvc, activate } = createHydrationSvc(svc);
 
           // Get the context getter
           const getContext = getContextGetter();
 
-          // Create component with the hydrating API and context getter
           const componentFn = Component(hydratingSvc, getContext);
           const nodeRef = componentFn(props).create(hydratingSvc);
 
@@ -272,9 +262,8 @@ export function createDOMHydrator<TSignals extends EffectSvc>(
             // Clear and remount:
             // - For element islands: remove island and script, mount fresh
             // - For fragment islands: clear the container div and mount fresh
-            // Create a regular API for client-side rendering
             const fallbackAdapter = createDOMAdapter();
-            const { svc: fallbackSvc } = createAPI(
+            const { svc: fallbackSvc } = createSvc(
               createIslandsAdapter(fallbackAdapter, fallbackAdapter),
               signals
             );

@@ -3,18 +3,18 @@ import { act, renderHook } from '@testing-library/react';
 import React, { ReactNode } from 'react';
 import { useSubscribe, useSignal, useSelector } from './hooks';
 import { SignalProvider } from './context';
-import { createTestSignalAPI } from '../test-setup';
+import { createTestSignalSvc } from '../test-setup';
 
 describe('Signal Hooks', () => {
   // Create a wrapper that provides the signal context
-  const createWrapper = (svc: ReturnType<typeof createTestSignalAPI>) => {
+  const createWrapper = (svc: ReturnType<typeof createTestSignalSvc>) => {
     return ({ children }: { children: ReactNode }) =>
       React.createElement(SignalProvider, { svc, children });
   };
 
   describe('useSubscribe', () => {
     it('should return current signal value', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const count = svc.signal(0);
 
       const { result } = renderHook(() => useSubscribe(count), {
@@ -25,7 +25,7 @@ describe('Signal Hooks', () => {
     });
 
     it('should re-render when signal changes', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const count = svc.signal(0);
 
       const { result } = renderHook(() => useSubscribe(count), {
@@ -42,7 +42,7 @@ describe('Signal Hooks', () => {
     });
 
     it('should work with computed values', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const count = svc.signal(5);
       const doubled = svc.computed(() => count() * 2);
 
@@ -60,7 +60,7 @@ describe('Signal Hooks', () => {
     });
 
     it('should work with computed values derived from signals', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const user = svc.signal({ name: 'John', age: 30 });
       const name = svc.computed(() => user().name);
 
@@ -80,7 +80,7 @@ describe('Signal Hooks', () => {
 
   describe('useSignal', () => {
     it('should create a local signal with initial value', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
 
       const { result } = renderHook(() => useSignal(42), {
         wrapper: createWrapper(svc),
@@ -91,7 +91,7 @@ describe('Signal Hooks', () => {
     });
 
     it('should update value with setter', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
 
       const { result } = renderHook(() => useSignal(0), {
         wrapper: createWrapper(svc),
@@ -107,7 +107,7 @@ describe('Signal Hooks', () => {
     });
 
     it('should support function updates', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
 
       const { result } = renderHook(() => useSignal(5), {
         wrapper: createWrapper(svc),
@@ -121,7 +121,7 @@ describe('Signal Hooks', () => {
     });
 
     it('should support lazy initialization', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const init = vi.fn(() => 42);
 
       const { result } = renderHook(() => useSignal(init), {
@@ -135,7 +135,7 @@ describe('Signal Hooks', () => {
 
   describe('useSelector', () => {
     it('should select specific values from signal', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const user = svc.signal({
         name: 'John',
         age: 30,
@@ -155,7 +155,7 @@ describe('Signal Hooks', () => {
     });
 
     it('computed should update when signal changes', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const user = svc.signal({ name: 'John', age: 30 });
       const nameComputed = svc.computed(() => user().name);
 
@@ -167,7 +167,7 @@ describe('Signal Hooks', () => {
     });
 
     it('should only re-render when selected value changes', () => {
-      const svc = createTestSignalAPI();
+      const svc = createTestSignalSvc();
       const user = svc.signal({ name: 'John', age: 30 });
       const renderCount = { current: 0 };
 

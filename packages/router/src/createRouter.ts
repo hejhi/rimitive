@@ -1,7 +1,3 @@
-/**
- * Router API - separate app-level API for routing
- */
-
 import type {
   AdapterConfig,
   Readable,
@@ -20,16 +16,6 @@ import type { RouteTree, RouteNode } from './defineRoutes';
  *
  * Creates a connected component that receives route context (children, params)
  * when mounted via router.mount(). Works identically on server and client.
- *
- * @example
- * ```ts
- * import { connect } from '@lattice/router';
- * import { el } from './service';
- *
- * export const Home = connect(({ params }) => () =>
- *   el('div')(`Product: ${params().id}`)
- * );
- * ```
  */
 export function connect<
   TConfig extends AdapterConfig,
@@ -51,7 +37,7 @@ export function connect<
 }
 
 /**
- * View API that the router depends on
+ * View service that the router depends on
  */
 export type ViewSvc<TConfig extends AdapterConfig> = {
   el: ElMethod<TConfig>;
@@ -80,9 +66,9 @@ export type RouteSvc = {
 };
 
 /**
- * Connected API - merged view API + route API
+ * Connected service - merged view service + route service
  *
- * This is the API passed to connected components, enabling them to use
+ * This is the service passed to connected components, enabling them to use
  * whatever adapter is provided (hydrating or regular) rather than
  * pulling from a singleton.
  */
@@ -226,7 +212,7 @@ export type Router<TConfig extends AdapterConfig> = {
   mount: (routeTree: RouteTree<TConfig>) => RefSpec<TConfig['baseElement']>;
 
   /**
-   * Render a RefSpec with the router's connected API
+   * Render a RefSpec with the router's connected service
    *
    * Use this instead of the view service's mount() to ensure Link components
    * receive the navigate function and can intercept clicks.
@@ -277,7 +263,7 @@ function getInitialPath(config: RouterConfig): string {
 /**
  * Create a router instance
  *
- * The router is a separate app-level API that takes a view API as input.
+ * The router is a separate app-level service that takes a view service as input.
  * It manages navigation state and provides routing primitives.
  */
 export function createRouter<TConfig extends AdapterConfig>(
@@ -317,8 +303,8 @@ export function createRouter<TConfig extends AdapterConfig>(
     });
   }
 
-  // Merged API (view + route) passed to connected components
-  // This enables hydration - components use whatever API is provided
+  // Merged service (view + route) passed to connected components
+  // This enables hydration - components use whatever service is provided
   const connectedSvc: ConnectedSvc<TConfig> = {
     ...viewSvc,
     navigate,
@@ -726,7 +712,7 @@ export function createRouter<TConfig extends AdapterConfig>(
   }
 
   /**
-   * Render a RefSpec with the router's connected API
+   * Render a RefSpec with the router's connected service
    *
    * Passes connectedSvc (which includes navigate) to spec.create(),
    * ensuring Link components can intercept clicks for SPA navigation.

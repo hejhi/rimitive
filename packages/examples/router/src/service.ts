@@ -1,6 +1,3 @@
-/**
- * App-level API for router example
- */
 import { createDOMSvc } from '@lattice/view/presets/dom';
 import { createRouter } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/presets/dom';
@@ -10,9 +7,7 @@ const svc = createDOMSvc();
 export const router = createRouter<DOMAdapterConfig>(svc, {
   initialPath:
     typeof window !== 'undefined'
-      ? window.location.pathname +
-        window.location.search +
-        window.location.hash
+      ? window.location.pathname + window.location.search + window.location.hash
       : '/',
 });
 

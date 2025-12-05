@@ -9,7 +9,7 @@
 /**
  * Creates an addEventListener helper that automatically batches signal updates
  *
- * @param batch - Batch function from signals API
+ * @param batch - Batch function from signals service
  * @returns addEventListener helper function
  */
 export const createAddEventListener = (batch: <T>(fn: () => T) => T) => {

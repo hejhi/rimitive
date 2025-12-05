@@ -5,7 +5,7 @@
 // Re-export adapter types so they're available from @lattice/view/types
 export type { Adapter, AdapterConfig } from './adapter';
 
-// Re-export factory types for public API
+// Re-export factory types for public service
 export type { PortalFactory, PortalTarget, PortalOpts } from './portal';
 export type { MapFactory } from './map';
 export type { MatchFactory } from './match';

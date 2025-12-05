@@ -35,8 +35,8 @@ import { createSvc } from './helpers/signal-computed';
 import { ComputedFunction } from '@lattice/signals/computed';
 
 const ITERATIONS = 1000;
-const latticeAPI = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeAPI;
+const latticeSvc = createSvc();
+const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
 
 type BenchState = {
   get(name: 'size'): string;

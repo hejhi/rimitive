@@ -6,9 +6,6 @@
  * - Script tag finding and container detection
  * - Error handling for missing islands/components
  * - Queue processing
- *
- * Note: Full hydration integration (with real renderers and APIs) is tested in E2E tests.
- * These unit tests focus on testable behavior without requiring complete renderer mocks.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -52,7 +49,7 @@ function createMockIsland(id: string) {
  */
 function createMocks() {
   return {
-    createAPI: vi.fn(() => ({
+    createSvc: vi.fn(() => ({
       svc: { effect: vi.fn() },
       createElementScope: vi.fn((_element, fn) => fn()),
     })),
@@ -94,8 +91,8 @@ describe('Island Registry Building', () => {
     const todo = createMockIsland('todo');
     const cart = createMockIsland('cart');
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
 
     // Should not throw when building registry
     expect(() => hydrator.hydrate(counter, todo, cart)).not.toThrow();
@@ -109,8 +106,8 @@ describe('Island Registry Building', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
     hydrator.hydrate(validIsland, invalidIsland);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -122,8 +119,8 @@ describe('Island Registry Building', () => {
   });
 
   it('should not throw when hydrating with empty island list', () => {
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
 
     expect(() => hydrator.hydrate()).not.toThrow();
   });
@@ -150,8 +147,8 @@ describe('Script Tag Finding', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
     hydrator.hydrate(island);
 
     // Trigger hydration for non-existent island
@@ -175,8 +172,8 @@ describe('Script Tag Finding', () => {
     const { script } = setupIslandDOM('test-island');
     const island = createMockIsland('counter');
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
     hydrator.hydrate(island);
 
     // Script should exist in DOM
@@ -208,8 +205,8 @@ describe('Component Registry Lookup', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
     hydrator.hydrate(island);
 
     // Trigger hydration for unregistered type
@@ -237,8 +234,8 @@ describe('Component Registry Lookup', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
     hydrator.hydrate(island);
 
     // This will still fail due to missing renderer mocks, but shouldn't warn about registry
@@ -289,8 +286,8 @@ describe('Queue Processing', () => {
       props: { initialCount: 5 },
     });
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
 
     // Hydrate should process queued islands
     hydrator.hydrate(island);
@@ -304,8 +301,8 @@ describe('Queue Processing', () => {
 
     delete (window as { __islands?: unknown[] }).__islands; // No queue
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
 
     // Should not throw when queue is missing
     expect(() => hydrator.hydrate(island)).not.toThrow();
@@ -324,8 +321,8 @@ describe('Queue Processing', () => {
       { id: 'todo-1', type: 'todo', props: {} }
     );
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
 
     // Should process all queued islands
     expect(() => hydrator.hydrate(counterIsland, todoIsland)).not.toThrow();
@@ -350,8 +347,8 @@ describe('Global __hydrate Function', () => {
   it('should set global __hydrate function on hydrate() call', () => {
     const island = createMockIsland('counter');
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
 
     // Before hydrate
     expect((window as { __hydrate?: unknown }).__hydrate).toBeUndefined();
@@ -368,8 +365,8 @@ describe('Global __hydrate Function', () => {
     setupIslandDOM('test-island');
     const island = createMockIsland('counter');
 
-    const { createAPI, signals, mount } = createMocks();
-    const hydrator = createDOMHydrator(createAPI, signals, mount);
+    const { createSvc, signals, mount } = createMocks();
+    const hydrator = createDOMHydrator(createSvc, signals, mount);
     hydrator.hydrate(island);
 
     const hydrateFn = (

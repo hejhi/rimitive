@@ -547,7 +547,7 @@ describe('SSR-Specific Behaviors', () => {
 
 describe('Full SSR Integration', () => {
   it('should render all items in map() during SSR', () => {
-    // Create SSR API
+    // Create SSR service
     const signals = createSignalsSvc();
     const { mount, svc } = createTestSSRService(signals);
     const { el, map, signal } = svc;

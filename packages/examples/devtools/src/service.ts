@@ -1,8 +1,8 @@
 /**
- * App-level API with instrumentation
+ * App-level service with instrumentation
  *
  * Demonstrates how to configure instrumentation at the service level.
- * All components using this API are automatically instrumented for devtools.
+ * All components using this service are automatically instrumented for devtools.
  */
 import {
   createDOMAdapter,

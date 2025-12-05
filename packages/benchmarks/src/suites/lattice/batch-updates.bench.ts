@@ -28,12 +28,12 @@ import { createSvc } from './helpers/signal-computed-batch';
 import { Readable } from '@lattice/signals/types';
 
 const ITERATIONS = 10000;
-const latticeAPI = createSvc();
+const latticeSvc = createSvc();
 const {
   signal: latticeSignal,
   computed: latticeComputed,
   batch: latticeBatch,
-} = latticeAPI;
+} = latticeSvc;
 
 type BenchState = {
   get(name: 'signals'): number;

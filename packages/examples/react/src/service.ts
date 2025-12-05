@@ -1,9 +1,3 @@
-/**
- * App-level API with instrumentation
- *
- * Creates an instrumented signals service for React.
- * All behaviors using this service are automatically instrumented for devtools.
- */
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
 import { Effect } from '@lattice/signals/effect';

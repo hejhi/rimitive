@@ -24,7 +24,7 @@ export const defaultExtensions = <TConfig extends AdapterConfig>() => ({
 });
 
 /**
- * Component factory type - dynamically typed based on actual API
+ * Component factory type - dynamically typed based on actual service
  * Supports both RefSpec (elements) and NodeRef (fragments) returns
  * Preserves element type inference through TElement generic
  */

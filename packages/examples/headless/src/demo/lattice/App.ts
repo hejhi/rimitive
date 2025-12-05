@@ -8,10 +8,6 @@ import { createDOMSvc } from '@lattice/view/presets/dom';
 import { dialog } from '../../dialog';
 import { select, type SelectOption } from '../../select';
 
-// ============================================================================
-// Create Lattice API
-// ============================================================================
-
 const {
   el,
   computed,
@@ -25,10 +21,6 @@ const {
 // Bind behaviors to this service
 const useDialog = use(dialog);
 const useSelect = use(select<string>);
-
-// ============================================================================
-// Demo Data
-// ============================================================================
 
 const selectOptions: SelectOption[] = [
   { value: 'apple', label: 'Apple' },

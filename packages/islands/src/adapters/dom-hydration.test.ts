@@ -795,14 +795,14 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
 });
 
 // ============================================================================
-// Integration Tests: Full View API with Hydration
+// Integration Tests: Full View service with Hydration
 // ============================================================================
 
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc } from '@lattice/view/presets/core';
 import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types'; // Separate import for integration tests
 
-describe('Integration: match() hydration with full view API', () => {
+describe('Integration: match() hydration with full view service', () => {
   const setupIntegrationHTML = (html: string): HTMLElement => {
     const div = document.createElement('div');
     div.innerHTML = html;
@@ -810,7 +810,7 @@ describe('Integration: match() hydration with full view API', () => {
     return div.firstElementChild as HTMLElement;
   };
 
-  it('should hydrate match() fragment correctly with real view API', () => {
+  it('should hydrate match() fragment correctly with real view service', () => {
     // This replicates the Products page scenario:
     // <div class="products-page">
     //   <h2>Products</h2>
@@ -826,7 +826,7 @@ describe('Integration: match() hydration with full view API', () => {
     const signals = createSignalsSvc();
     const views = createViewSvc(renderer, signals);
 
-    // Combine signals and views to get full API
+    // Combine signals and views to get full service
     const svc = { ...signals, ...views };
     const { el, match, computed } = svc;
 
@@ -886,7 +886,7 @@ describe('Integration: match() hydration with full view API', () => {
     const signals = createSignalsSvc();
     const views = createViewSvc(renderer, signals);
 
-    // Combine signals and views to get full API
+    // Combine signals and views to get full service
     const svc = { ...signals, ...views };
     const { el, computed, match } = svc;
 

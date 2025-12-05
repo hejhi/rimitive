@@ -1,7 +1,7 @@
 /**
  * TodoStats Behavior - Framework Agnostic
  *
- * Demonstrates dependency injection - this behavior depends on a TodoListAPI.
+ * Demonstrates dependency injection.
  * It doesn't create its own todo list, it works with any existing one.
  *
  * This shows composition through dependencies rather than creating everything internally.

@@ -82,7 +82,7 @@ export function island<
         // Get the context getter
         const getContext = getContextGetter() as GetContext<TContext>;
 
-        const component = factory(svc, getContext); // Pass API and context getter
+        const component = factory(svc, getContext); // Pass service and context getter
         const spec = component(props); // Call component with props to get the actual RefSpec
 
         return spec.create(svc);

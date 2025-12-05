@@ -24,13 +24,17 @@ import type { CanvasAdapterInstance } from './adapter';
 /**
  * Canvas event types that support hit testing
  */
-export type CanvasEventType = 'pointerdown' | 'pointermove' | 'pointerup' | 'click';
+export type CanvasEventType =
+  | 'pointerdown'
+  | 'pointermove'
+  | 'pointerup'
+  | 'click';
 
 /**
  * Creates a canvas addEventListener helper with hit testing
  *
  * @param adapter - Canvas adapter instance (for hit testing)
- * @param batch - Batch function from signals API for automatic batching
+ * @param batch - Batch function from signals service for automatic batching
  * @returns addEventListener helper function
  */
 export const createCanvasAddEventListener = (
@@ -46,7 +50,9 @@ export const createCanvasAddEventListener = (
   ): (element: CanvasBridgeElement) => () => void {
     return (bridge: CanvasBridgeElement) => {
       // Helper to convert native event to canvas coordinates
-      const getCanvasCoordinates = (e: PointerEvent | MouseEvent): { x: number; y: number } => {
+      const getCanvasCoordinates = (
+        e: PointerEvent | MouseEvent
+      ): { x: number; y: number } => {
         const rect = bridge.getBoundingClientRect();
         const scaleX = bridge.width / rect.width;
         const scaleY = bridge.height / rect.height;
@@ -57,7 +63,9 @@ export const createCanvasAddEventListener = (
       };
 
       // Helper to create CanvasPointerEvent with hit testing
-      const createCanvasEvent = (e: PointerEvent | MouseEvent): CanvasPointerEvent => {
+      const createCanvasEvent = (
+        e: PointerEvent | MouseEvent
+      ): CanvasPointerEvent => {
         const coords = getCanvasCoordinates(e);
         return {
           x: coords.x,
@@ -77,7 +85,11 @@ export const createCanvasAddEventListener = (
       const nativeEvent = event === 'click' ? 'click' : event;
 
       bridge.addEventListener(nativeEvent, wrappedHandler as EventListener);
-      return () => bridge.removeEventListener(nativeEvent, wrappedHandler as EventListener);
+      return () =>
+        bridge.removeEventListener(
+          nativeEvent,
+          wrappedHandler as EventListener
+        );
     };
   };
 };

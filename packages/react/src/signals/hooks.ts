@@ -1,11 +1,11 @@
 import { useMemo, useRef, useSyncExternalStore, useCallback } from 'react';
-import { useSignalAPI } from './context';
+import { useSignalSvc } from './context';
 import type { SignalSetter } from './types';
 import type { Reactive, Readable, Writable } from '@lattice/signals/types';
 
 // Implementation
 export function useSubscribe<T>(signal: Reactive<T>): T {
-  const svc = useSignalAPI();
+  const svc = useSignalSvc();
 
   // Create stable subscription using effect
   const subscribeCallback = useMemo(
@@ -39,7 +39,7 @@ export function useSubscribe<T>(signal: Reactive<T>): T {
 export function useSignal<T>(
   initialValue: T | (() => T)
 ): [T, SignalSetter<T>] {
-  const svc = useSignalAPI();
+  const svc = useSignalSvc();
 
   // Use ref to store the signal instance - created only once
   const signalRef = useRef<Reactive<T> | null>(null);
@@ -80,7 +80,7 @@ export function useSelector<T, R>(
   signal: Reactive<T>,
   selector: (value: T) => R
 ): R {
-  const svc = useSignalAPI();
+  const svc = useSignalSvc();
 
   // We need to update the selector ref on each render to ensure
   // the computed always uses the latest selector function
@@ -102,7 +102,7 @@ export function useSelector<T, R>(
 
 /**
  * Minimal constraint for reactive services used with createHook.
- * Behaviors can require more specific APIs - this is just the floor.
+ * Behaviors can require more specific services - this is just the floor.
  */
 type ReactiveSvc = {
   signal: <T>(initialValue: T) => Writable<T>;
@@ -116,8 +116,7 @@ type ReactiveSvc = {
  * This is designed for portable headless components that follow the pattern:
  * `(svc) => (...args) => Result`
  *
- * The returned hook handles SignalAPI injection automatically and creates
- * a memoized behavior instance.
+ * The returned hook handles svc injection automatically and creates a memoized behavior instance.
  *
  * Note: Arguments are captured once when the component mounts (like useRef's
  * initial value). If you need reactive options, pass signals as option values
@@ -131,7 +130,7 @@ export function createHook<
   behavior: (svc: TSvc) => (...args: Args) => Result
 ): (...args: Args) => Result {
   return function useHook(...args: Args): Result {
-    const svc = useSignalAPI();
+    const svc = useSignalSvc();
 
     // Create behavior instance once on mount
     const instanceRef = useRef<Result | null>(null);

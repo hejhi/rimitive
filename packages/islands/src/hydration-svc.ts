@@ -1,5 +1,5 @@
 /**
- * Hydrating API Wrapper
+ * Hydrating Service Wrapper
  *
  * Intercepts effect creation during hydration to prevent side effects.
  * Effects are queued and run after successful hydration completes.
@@ -9,7 +9,7 @@
  */
 
 /**
- * API with effect/scopedEffect methods that need interception
+ * Service with effect/scopedEffect methods that need interception
  */
 export type EffectSvc = {
   effect?: (fn: () => void | (() => void)) => () => void;
@@ -22,7 +22,7 @@ export type EffectSvc = {
  */
 export type HydrationSvcResult<T extends EffectSvc> = {
   /**
-   * API with effects intercepted - use this during hydration
+   * Service with effects intercepted - use this during hydration
    */
   hydratingSvc: T;
 
@@ -33,9 +33,9 @@ export type HydrationSvcResult<T extends EffectSvc> = {
 };
 
 /**
- * Create a hydrating API wrapper
+ * Create a hydrating service wrapper
  *
- * Wraps an API to queue effects during hydration instead of running them.
+ * Wraps a service to queue effects during hydration instead of running them.
  * After successful hydration, call activate() to run all queued effects.
  */
 export function createHydrationSvc<T extends EffectSvc>(
@@ -47,7 +47,6 @@ export function createHydrationSvc<T extends EffectSvc>(
     fn: () => void | (() => void);
   }> = [];
 
-  // Create wrapped API
   const hydratingSvc: T = { ...baseSvc };
 
   // Intercept effect if it exists
@@ -71,7 +70,6 @@ export function createHydrationSvc<T extends EffectSvc>(
   }
 
   // Activate function runs all queued effects
-  // Can optionally use a different API (e.g., with regular renderer instead of hydrating renderer)
   const activate = (svc?: T) => {
     const _svc = svc || baseSvc;
 

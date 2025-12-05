@@ -1,10 +1,3 @@
-/**
- * Lazy component pattern for @lattice/view
- *
- * Components defined with create() receive the API at instantiation time,
- * eliminating the need to pass API as a parameter through every component.
- */
-
 import { type RefSpec, type Reactive, type ElRefSpecChild } from './types';
 import type { ElementProps as ElElementProps } from './el';
 import type { AdapterConfig } from './adapter';

@@ -1,14 +1,14 @@
 /**
  * Behavior binding helper
  *
- * Binds a portable behavior to a reactive API.
+ * Binds a portable behavior to a reactive service.
  * Behaviors are curried functions: (svc) => (...args) => Result
  */
 
 import type { Readable, Writable } from '@lattice/signals/types';
 
 /**
- * Creates a `use` helper bound to a specific reactive API.
+ * Creates a `use` helper bound to a specific reactive service.
  */
 export const createUse = <
   TSvc extends {

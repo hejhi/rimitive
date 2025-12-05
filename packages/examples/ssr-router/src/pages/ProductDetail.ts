@@ -9,7 +9,6 @@ import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { withSvc } from '../service.js';
 import { AddToCart } from '../islands/AddToCart.js';
 
-// Same product data as Products page - in a real app this would come from an API
 const products = [
   {
     id: 1,

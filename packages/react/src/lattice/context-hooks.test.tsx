@@ -1,18 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useLatticeContext } from './context-hooks';
-import { createTestSignalAPI } from '../test-setup';
+import { createTestSignalSvc } from '../test-setup';
 
 describe('Lattice Context Hooks', () => {
   describe('useLatticeContext', () => {
     it('should create and manage context lifecycle', () => {
-      // For testing, we'll create a mock extension set using the test API
-      const testAPI = createTestSignalAPI();
+      const testSvc = createTestSignalSvc();
       const mockExtensions = [
-        { name: 'signal' as const, impl: testAPI.signal },
-        { name: 'computed' as const, impl: testAPI.computed },
-        { name: 'effect' as const, impl: testAPI.effect },
-        { name: 'batch' as const, impl: testAPI.batch },
+        { name: 'signal' as const, impl: testSvc.signal },
+        { name: 'computed' as const, impl: testSvc.computed },
+        { name: 'effect' as const, impl: testSvc.effect },
+        { name: 'batch' as const, impl: testSvc.batch },
       ];
 
       const { result, unmount } = renderHook(() =>
@@ -44,13 +43,12 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should only create context once per component instance', () => {
-      // For testing, we'll create a mock extension set using the test API
-      const testAPI = createTestSignalAPI();
+      const testSvc = createTestSignalSvc();
       const mockExtensions = [
-        { name: 'signal' as const, impl: testAPI.signal },
-        { name: 'computed' as const, impl: testAPI.computed },
-        { name: 'effect' as const, impl: testAPI.effect },
-        { name: 'batch' as const, impl: testAPI.batch },
+        { name: 'signal' as const, impl: testSvc.signal },
+        { name: 'computed' as const, impl: testSvc.computed },
+        { name: 'effect' as const, impl: testSvc.effect },
+        { name: 'batch' as const, impl: testSvc.batch },
       ];
 
       const { result, rerender } = renderHook(() =>
@@ -67,13 +65,12 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should allow signal creation and updates', () => {
-      // For testing, we'll create a mock extension set using the test API
-      const testAPI = createTestSignalAPI();
+      const testSvc = createTestSignalSvc();
       const mockExtensions = [
-        { name: 'signal' as const, impl: testAPI.signal },
-        { name: 'computed' as const, impl: testAPI.computed },
-        { name: 'effect' as const, impl: testAPI.effect },
-        { name: 'batch' as const, impl: testAPI.batch },
+        { name: 'signal' as const, impl: testSvc.signal },
+        { name: 'computed' as const, impl: testSvc.computed },
+        { name: 'effect' as const, impl: testSvc.effect },
+        { name: 'batch' as const, impl: testSvc.batch },
       ];
 
       const { result } = renderHook(() => useLatticeContext(...mockExtensions));
@@ -93,13 +90,12 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should support batch updates', () => {
-      // For testing, we'll create a mock extension set using the test API
-      const testAPI = createTestSignalAPI();
+      const testSvc = createTestSignalSvc();
       const mockExtensions = [
-        { name: 'signal' as const, impl: testAPI.signal },
-        { name: 'computed' as const, impl: testAPI.computed },
-        { name: 'effect' as const, impl: testAPI.effect },
-        { name: 'batch' as const, impl: testAPI.batch },
+        { name: 'signal' as const, impl: testSvc.signal },
+        { name: 'computed' as const, impl: testSvc.computed },
+        { name: 'effect' as const, impl: testSvc.effect },
+        { name: 'batch' as const, impl: testSvc.batch },
       ];
 
       const { result } = renderHook(() => useLatticeContext(...mockExtensions));

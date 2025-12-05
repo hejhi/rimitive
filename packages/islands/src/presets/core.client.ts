@@ -27,14 +27,7 @@ import { createDOMHydrator } from '../hydrators/dom';
 // Types
 // ============================================================================
 
-/**
- * Signals API type
- */
 type SignalsSvc = ReturnType<typeof createSignalsSvc>;
-
-/**
- * View API type for DOM adapter
- */
 type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
 
 /**
@@ -56,27 +49,9 @@ export type IslandsClientService = SignalsSvc &
  * Client app options - accepts primitives as dependencies
  */
 export type ClientOptions<TContext> = {
-  /**
-   * Signals API instance
-   * Create with: createSignalsSvc()
-   */
   signals: SignalsSvc;
-
-  /**
-   * Hybrid adapter (hydration → fallback)
-   * Create with: createIslandsAdapter(hydrationAdapter, fallbackAdapter)
-   */
   adapter: HybridAdapter;
-
-  /**
-   * View API instance
-   */
   view: ViewsSvc;
-
-  /**
-   * Context getter for islands
-   * Called on init and navigation (popstate), reactive via signal
-   */
   context?: GetContext<TContext>;
 };
 
@@ -90,9 +65,7 @@ export type IslandComponent = { [ISLAND_META]?: unknown };
  * Client app - for hydration and SPA
  */
 export type ClientApp = {
-  /** Full service (signals + views) - use with router and components */
   service: IslandsClientService;
-  /** Signals API (for advanced use cases) */
   signals: SignalsSvc;
   /**
    * Mount a component spec
@@ -113,7 +86,7 @@ export type ClientApp = {
    */
   updateContext: () => void;
   /**
-   * API factory for island hydrator (advanced use)
+   * Service factory for island hydrator (advanced use)
    */
   createSvc: (
     adapter: Adapter<DOMAdapterConfig>,
@@ -182,7 +155,7 @@ export function createIslandsApp<TContext = unknown>(
     return result;
   };
 
-  // API factory for island hydrator
+  // Service factory for island hydrator
   const createSvc = (
     islandAdapter: Adapter<DOMAdapterConfig>,
     islandSignals: SignalsSvc
