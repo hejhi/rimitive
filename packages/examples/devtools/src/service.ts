@@ -23,7 +23,7 @@ import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import { instrumentSubscribe } from '@lattice/signals/devtools/subscribe';
 import { instrumentEl, instrumentMap } from '@lattice/view/devtools';
 import {
-  composeFrom,
+  compose,
   createInstrumentation,
   devtoolsProvider,
 } from '@lattice/lattice';
@@ -42,7 +42,7 @@ const instrumentation = createInstrumentation({
 const signalHelpers = createHelpers();
 
 // Create instrumented signals
-const signalsSvc = composeFrom(
+const signalsSvc = compose(
   {
     signal: Signal({ instrument: instrumentSignal }),
     computed: Computed({ instrument: instrumentComputed }),
@@ -59,7 +59,7 @@ const adapter = createDOMAdapter();
 const scopes = createScopes({ baseEffect: signalsSvc.effect });
 
 // Create instrumented view
-const viewSvc = composeFrom(
+const viewSvc = compose(
   {
     el: El<DOMAdapterConfig>({ instrument: instrumentEl }),
     map: Map<DOMAdapterConfig>({ instrument: instrumentMap }),

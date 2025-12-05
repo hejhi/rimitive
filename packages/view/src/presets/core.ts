@@ -5,7 +5,7 @@ import { Portal, type PortalService } from '../portal';
 import { createScopes } from '../helpers/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef, Readable, Writable } from '../types';
-import { composeFrom, type Svc } from '@lattice/lattice';
+import { compose, type Svc } from '@lattice/lattice';
 
 // Re-export user-facing types for convenience
 export type { ElementProps, TagFactory, ElFactory, ElService } from '../el';
@@ -16,7 +16,7 @@ export type { PortalFactory, PortalService } from '../portal';
 /**
  * The set of instantiable services created by defaultExtensions().
  *
- * Each property is a service that can be composed with composeFrom().
+ * Each property is a service that can be composed with compose().
  * Use this type when extending the default view primitives.
  *
  * @example
@@ -69,7 +69,7 @@ export const createViewSvc = <
   adapter: Adapter<TConfig>,
   signals: TSignals
 ): ViewSvc<TConfig> =>
-  composeFrom(defaultExtensions<TConfig>(), {
+  compose(defaultExtensions<TConfig>(), {
     adapter,
     ...createScopes({ baseEffect: signals.effect }),
     signal: signals.signal,

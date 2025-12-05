@@ -88,14 +88,14 @@ The `adapt` hook wraps the implementation with context-aware behavior—disposal
 Add debugging and profiling without changing service implementations:
 
 ```typescript
-import { createInstrumentation, devtoolsProvider, composeFrom } from '@lattice/lattice';
+import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
 
 const instrumentation = createInstrumentation({
   enabled: import.meta.env.DEV,
   providers: [devtoolsProvider()],
 });
 
-const ctx = composeFrom(services, deps, { instrumentation });
+const ctx = compose(services, deps, { instrumentation });
 ```
 
 Services that support instrumentation define an `instrument` hook:
@@ -123,24 +123,25 @@ const myService: ServiceDefinition<'my', MyImpl> = {
 
 ## API
 
+### `compose(factories, deps, options?)`
+
+Create a context from service factories with shared dependencies:
+
+```typescript
+const ctx = compose(
+  { signals: Signal(), computed: Computed() },
+  { scheduler: myScheduler },
+  { instrumentation }
+);
+```
+
 ### `compose(...services)`
 
-Create a context from service definitions.
+Create a context from pre-instantiated service definitions:
 
 ```typescript
 const ctx = compose(serviceA, serviceB);
 ctx.dispose(); // Cleanup all services
-```
-
-### `composeFrom(services, deps, options?)`
-
-Create a context from instantiable services that share dependencies.
-
-```typescript
-const ctx = composeFrom(
-  { signals: signalsInstantiable, view: viewInstantiable },
-  { scheduler: myScheduler }
-);
 ```
 
 ### `defineService(factory)`
@@ -168,7 +169,7 @@ const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
 });
 
-const ctx = composeFrom(services, deps, { instrumentation });
+const ctx = compose(services, deps, { instrumentation });
 ```
 
 ### `devtoolsProvider(options?)`

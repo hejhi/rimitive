@@ -9,12 +9,12 @@ import {
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import { createDOMAdapter, DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
-import { composeFrom } from '@lattice/lattice';
+import { compose } from '@lattice/lattice';
 
 // Wire up view layer
 
 const adapter = createDOMAdapter();
-const signals = composeFrom(
+const signals = compose(
   defaultSignalsExtensions(),
   defaultSignalsHelpers()
 );
@@ -24,7 +24,7 @@ const viewHelpers = defaultViewHelpers(adapter, signals);
  * DOM-specific API for this app
  * Types are automatically inferred from the adapter
  */
-const views = composeFrom(
+const views = compose(
   defaultViewExtensions<DOMAdapterConfig>(),
   viewHelpers
 );

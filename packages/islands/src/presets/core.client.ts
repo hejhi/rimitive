@@ -15,7 +15,7 @@ import {
 } from '@lattice/view/presets/core';
 import { createScopes } from '@lattice/view/helpers/scope';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { composeFrom } from '@lattice/lattice';
+import { compose } from '@lattice/lattice';
 import type { RefSpec, Adapter, NodeRef } from '@lattice/view/types';
 import type { GetContext } from '../types';
 import { ISLAND_META } from '../types';
@@ -168,7 +168,7 @@ export function createIslandsApp<TContext = unknown>(
     islandSignals: SignalsSvc
   ): { svc: IslandsClientService; createElementScope: <TElement extends object>(element: TElement, fn: () => void) => unknown } => {
     const scopes = createScopes({ baseEffect: islandSignals.effect });
-    const islandViews = composeFrom(
+    const islandViews = compose(
       defaultViewExtensions<DOMAdapterConfig>(),
       {
         adapter: islandAdapter,

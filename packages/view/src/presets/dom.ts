@@ -22,7 +22,7 @@
  * ```
  */
 
-import { composeFrom, type LatticeContext } from '@lattice/lattice';
+import { compose, type LatticeContext } from '@lattice/lattice';
 import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import {
@@ -106,7 +106,7 @@ export const createDOMViewSvc = <
     effect: signals.effect,
     batch: signals.batch,
   };
-  const viewSvc = composeFrom(
+  const viewSvc = compose(
     defaultExtensions<DOMAdapterConfig>(),
     viewHelpers
   );

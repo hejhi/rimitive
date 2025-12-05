@@ -20,7 +20,7 @@ import {
 } from '../helpers/pull-propagator';
 import { createScheduler, type Scheduler } from '../helpers/scheduler';
 import { createUntracked } from '../untrack';
-import { composeFrom, type DefinedService, type Svc } from '@lattice/lattice';
+import { compose, type DefinedService, type Svc } from '@lattice/lattice';
 import type { Dependency } from '../types';
 
 /**
@@ -81,7 +81,7 @@ import type { SubscribeService } from '../subscribe';
 /**
  * The set of instantiable services created by defaultExtensions().
  *
- * Each property is a service that can be composed with composeFrom().
+ * Each property is a service that can be composed with compose().
  * Use this type when extending the default signal primitives:
  *
  * @example
@@ -140,5 +140,5 @@ export function createHelpers(): Helpers {
 export type SignalsSvc = Svc<DefaultExtensions>;
 
 export function createSignalsSvc(): SignalsSvc {
-  return composeFrom(defaultExtensions(), createHelpers());
+  return compose(defaultExtensions(), createHelpers());
 }

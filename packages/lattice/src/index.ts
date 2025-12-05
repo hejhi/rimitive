@@ -1,5 +1,4 @@
 export { compose, type CreateContextOptions } from './compose';
-export { composeFrom } from './composeFrom';
 export { defineService } from './defineService';
 export type {
   Service,

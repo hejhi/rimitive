@@ -1,8 +1,11 @@
 import {
+  DefinedService,
+  ExtractDeps,
   InstrumentationContext,
   LatticeContext,
   ServiceContext,
   ServiceDefinition,
+  Svc,
 } from './types';
 
 type ContextState = {
@@ -14,37 +17,113 @@ export type CreateContextOptions = {
   instrumentation?: InstrumentationContext;
 };
 
+/**
+ * Check if a value is a DefinedService (factory with .create method)
+ */
+function isDefinedService(value: unknown): value is DefinedService {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'create' in value &&
+    typeof (value as DefinedService).create === 'function'
+  );
+}
+
+/**
+ * Check if a value is a factories object (Record<string, DefinedService>)
+ */
+function isFactoriesObject(
+  value: unknown
+): value is Record<string, DefinedService> {
+  if (value === null || typeof value !== 'object') return false;
+  // Must have at least one key and all values must be DefinedService
+  const entries = Object.entries(value);
+  return entries.length > 0 && entries.every(([, v]) => isDefinedService(v));
+}
+
+// ============================================================================
+// Overload 1: Factory object + deps pattern
+// compose({ signal: Signal(), computed: Computed() }, deps)
+// ============================================================================
+export function compose<
+  T extends Record<string, DefinedService>,
+  TDeps extends ExtractDeps<T>,
+>(factories: T, deps: TDeps, options?: CreateContextOptions): Svc<T>;
+
+// ============================================================================
+// Overload 2: ServiceDefinitions (variadic)
+// compose(signalService, computedService)
+// ============================================================================
 export function compose<
   TServices extends readonly ServiceDefinition<string, unknown>[],
 >(...services: TServices): LatticeContext<TServices>;
+
+// ============================================================================
+// Overload 3: Options + ServiceDefinitions
+// compose({ instrumentation }, signalService, computedService)
+// ============================================================================
 export function compose<
   TServices extends readonly ServiceDefinition<string, unknown>[],
 >(
   options: CreateContextOptions,
   ...services: TServices
 ): LatticeContext<TServices>;
-export function compose<
-  TServices extends readonly ServiceDefinition<string, unknown>[],
->(
-  ...args: [CreateContextOptions, ...TServices] | TServices
-): LatticeContext<TServices> {
-  let rawServices: TServices;
+
+// ============================================================================
+// Implementation
+// ============================================================================
+export function compose(
+  ...args: unknown[]
+): Record<string, unknown> & { dispose(): void } {
+  // Detect which overload was called
+  const firstArg = args[0];
+
+  // Pattern 1: Factory object + deps
+  // compose({ signal: Signal(), computed: Computed() }, deps, options?)
+  if (isFactoriesObject(firstArg)) {
+    const factories = firstArg;
+    const deps = args[1];
+    const options = args[2] as CreateContextOptions | undefined;
+
+    // Map factories to service definitions
+    const mappedServices = Object.values(factories).map((factory) =>
+      factory.create(deps)
+    );
+
+    return composeServices(mappedServices, options);
+  }
+
+  // Pattern 2 & 3: ServiceDefinitions (with optional leading options)
+  let services: ServiceDefinition<string, unknown>[];
   let options: CreateContextOptions | undefined;
 
   if (
-    args.length > 0 &&
-    args[0] &&
-    typeof args[0] === 'object' &&
-    'instrumentation' in args[0]
+    firstArg &&
+    typeof firstArg === 'object' &&
+    'instrumentation' in firstArg
   ) {
-    options = args[0];
-    rawServices = args.slice(1) as unknown as TServices;
+    // Pattern 3: Options object first
+    options = firstArg as CreateContextOptions;
+    services = args.slice(1) as ServiceDefinition<string, unknown>[];
   } else {
-    rawServices = args as TServices;
+    // Pattern 2: Just services
+    services = args as ServiceDefinition<string, unknown>[];
   }
 
-  const services = rawServices.flat(1) as unknown as TServices;
+  // Flatten in case of arrays
+  const flatServices = services.flat(1) as ServiceDefinition<string, unknown>[];
 
+  return composeServices(flatServices, options);
+}
+
+/**
+ * Core composition logic - takes instantiated ServiceDefinitions and creates context
+ */
+function composeServices(
+  services: ServiceDefinition<string, unknown>[],
+  options?: CreateContextOptions
+): Record<string, unknown> & { dispose(): void } {
+  // Validate no duplicate names
   const names = new Set<string>();
   for (const service of services) {
     if (names.has(service.name)) {
@@ -69,7 +148,7 @@ export function compose<
   };
 
   // Build the context object
-  const context = {
+  const context: Record<string, unknown> & { dispose(): void } = {
     dispose(): void {
       if (state.disposed) return;
       state.disposed = true;
@@ -83,7 +162,7 @@ export function compose<
       }
       state.disposers.clear();
     },
-  } as LatticeContext<TServices>;
+  };
 
   // Add each service's impl to the context
   for (const service of services) {
@@ -96,7 +175,7 @@ export function compose<
 
     if (service.adapt) impl = service.adapt(impl, serviceCtx);
 
-    (context as Record<string, unknown>)[service.name] = impl;
+    context[service.name] = impl;
   }
 
   return context;

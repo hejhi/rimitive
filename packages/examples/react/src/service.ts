@@ -7,7 +7,7 @@ import { instrumentComputed } from '@lattice/signals/devtools/computed';
 import { instrumentEffect } from '@lattice/signals/devtools/effect';
 import { instrumentBatch } from '@lattice/signals/devtools/batch';
 import {
-  composeFrom,
+  compose,
   createInstrumentation,
   devtoolsProvider,
 } from '@lattice/lattice';
@@ -19,7 +19,7 @@ const instrumentation = createInstrumentation({
   enabled: true,
 });
 
-export const service = composeFrom(
+export const service = compose(
   {
     signal: Signal({ instrument: instrumentSignal }),
     computed: Computed({ instrument: instrumentComputed }),
