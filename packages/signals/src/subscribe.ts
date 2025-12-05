@@ -25,7 +25,12 @@ import { Scheduler } from './helpers/scheduler';
 
 const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
-export type SubscribeOpts = {
+/**
+ * Internal dependencies required by the Subscribe factory.
+ * These are wired automatically by presets - users don't need to provide them.
+ * @internal
+ */
+type SubscribeDeps = {
   track: GraphEdges['track'];
   detachAll: GraphEdges['detachAll'];
   dispose: Scheduler['dispose'];
@@ -38,7 +43,11 @@ export type SubscribeFunction = {
   ): UnsubscribeFunction;
 };
 
-export type SubscribeProps = {
+/**
+ * Options for customizing Subscribe behavior.
+ * Pass to Subscribe() when creating a custom service composition.
+ */
+export type SubscribeOptions = {
   instrument?: (
     impl: SubscribeFunction,
     instrumentation: InstrumentationContext,
@@ -59,9 +68,8 @@ export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 
 export const Subscribe = defineService(
-  ({ track, detachAll, dispose: disposeNode }: SubscribeOpts) =>
-    (props?: SubscribeProps): SubscribeFactory => {
-      const { instrument } = props ?? {};
+  ({ track, detachAll, dispose: disposeNode }: SubscribeDeps) =>
+    ({ instrument }: SubscribeOptions = {}): SubscribeFactory => {
       const detachDeps = (node: ScheduledNode) => {
         const deps = node.dependencies;
 

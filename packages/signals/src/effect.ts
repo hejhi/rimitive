@@ -14,12 +14,21 @@ const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 // Predefined status combinations for effect nodes
 const EFFECT_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
-export type EffectOpts = {
+/**
+ * Internal dependencies required by the Effect factory.
+ * These are wired automatically by presets - users don't need to provide them.
+ * @internal
+ */
+type EffectDeps = {
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
 };
 
-export type EffectProps = {
+/**
+ * Options for customizing Effect behavior.
+ * Pass to Effect() when creating a custom service composition.
+ */
+export type EffectOptions = {
   instrument?: (
     impl: (fn: () => void | (() => void)) => () => void,
     instrumentation: InstrumentationContext,
@@ -44,10 +53,8 @@ type EffectNode = ScheduledNode & {
 };
 
 export const Effect = defineService(
-  ({ dispose: disposeNode, track }: EffectOpts) =>
-    (props?: EffectProps): EffectFactory => {
-      const { instrument } = props ?? {};
-
+  ({ dispose: disposeNode, track }: EffectDeps) =>
+    ({ instrument }: EffectOptions = {}): EffectFactory => {
       function createEffect(run: () => void | (() => void)): () => void {
         const node: EffectNode = {
           __type: 'effect' as const,

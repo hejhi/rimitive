@@ -22,7 +22,12 @@ export type ComputedFunction<T = unknown> = {
   peek(): T;
 };
 
-export type ComputedOpts = {
+/**
+ * Internal dependencies required by the Computed factory.
+ * These are wired automatically by presets - users don't need to provide them.
+ * @internal
+ */
+type ComputedDeps = {
   consumer: Consumer;
   trackDependency: GraphEdges['trackDependency'];
   pullUpdates: PullPropagator['pullUpdates'];
@@ -30,7 +35,11 @@ export type ComputedOpts = {
   shallowPropagate: (sub: Dependency) => void;
 };
 
-export type ComputedProps = {
+/**
+ * Options for customizing Computed behavior.
+ * Pass to Computed() when creating a custom service composition.
+ */
+export type ComputedOptions = {
   instrument?: (
     impl: <T>(compute: () => T) => ComputedFunction<T>,
     instrumentation: InstrumentationContext,
@@ -69,10 +78,8 @@ export const Computed = defineService(
     pullUpdates,
     track,
     shallowPropagate,
-  }: ComputedOpts) =>
-    (props?: ComputedProps): ComputedFactory => {
-      const { instrument } = props ?? {};
-
+  }: ComputedDeps) =>
+    ({ instrument }: ComputedOptions = {}): ComputedFactory => {
       // Shared computed function - uses `this` binding
       function computedImpl<T>(this: ComputedNode<T>): T {
         const status = this.status;

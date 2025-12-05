@@ -34,27 +34,26 @@ export type Helpers = {
   PullPropagator &
   Omit<Scheduler, 'withPropagate'>;
 
-// Re-export types so they're part of the public API
+// Re-export user-facing types
+// Note: Internal dependency types (*Deps) are intentionally not exported.
+// They are wired automatically by presets and helpers.
 export type {
   SubscribeFactory,
-  SubscribeOpts,
-  SubscribeProps,
+  SubscribeOptions,
   SubscribeFunction,
 } from '../subscribe';
 export type {
   SignalFactory,
-  SignalOpts,
-  SignalProps,
+  SignalOptions,
   SignalFunction,
 } from '../signal';
 export type {
   ComputedFactory,
-  ComputedOpts,
-  ComputedProps,
+  ComputedOptions,
   ComputedFunction,
 } from '../computed';
-export type { EffectFactory, EffectOpts, EffectProps } from '../effect';
-export type { BatchFactory, BatchOpts, BatchProps } from '../batch';
+export type { EffectFactory, EffectOptions } from '../effect';
+export type { BatchFactory, BatchOptions } from '../batch';
 export type { DefinedService } from '@lattice/lattice';
 
 export type DefaultExtensions = {

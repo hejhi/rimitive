@@ -8,12 +8,21 @@ import { Scheduler } from './helpers/scheduler';
 
 export type BatchFactory = ServiceDefinition<'batch', <T>(fn: () => T) => T>;
 
-export type BatchOpts = {
+/**
+ * Internal dependencies required by the Batch factory.
+ * These are wired automatically by presets - users don't need to provide them.
+ * @internal
+ */
+type BatchDeps = {
   startBatch: Scheduler['startBatch'];
   endBatch: Scheduler['endBatch'];
 };
 
-export type BatchProps = {
+/**
+ * Options for customizing Batch behavior.
+ * Pass to Batch() when creating a custom service composition.
+ */
+export type BatchOptions = {
   instrument?: (
     impl: <T>(fn: () => T) => T,
     instrumentation: InstrumentationContext,
@@ -21,12 +30,9 @@ export type BatchProps = {
   ) => <T>(fn: () => T) => T;
 };
 
-// BatchFactory uses SignalContext which includes all helpers
 export const Batch = defineService(
-  ({ startBatch, endBatch }: BatchOpts) =>
-    (props?: BatchProps): BatchFactory => {
-      const { instrument } = props ?? {};
-
+  ({ startBatch, endBatch }: BatchDeps) =>
+    ({ instrument }: BatchOptions = {}): BatchFactory => {
       // Signal writes propagate immediately during batch.
       // We only defer effect execution to batch end.
       const batch = function batch<T>(fn: () => T): T {

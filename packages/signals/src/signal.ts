@@ -37,13 +37,22 @@ const SIGNAL_DIRTY = PRODUCER | DIRTY;
  */
 export type SignalFunction<T> = Writable<T> & { peek(): T };
 
-export type SignalOpts = {
+/**
+ * Internal dependencies required by the Signal factory.
+ * These are wired automatically by presets - users don't need to provide them.
+ * @internal
+ */
+type SignalDeps = {
   consumer: Consumer;
   trackDependency: GraphEdges['trackDependency'];
   propagate: (subscribers: Dependency) => void;
 };
 
-export type SignalProps = {
+/**
+ * Options for customizing Signal behavior.
+ * Pass to Signal() when creating a custom service composition.
+ */
+export type SignalOptions = {
   instrument?: (
     impl: <T>(value: T) => SignalFunction<T>,
     instrumentation: InstrumentationContext,
@@ -67,10 +76,8 @@ export type SignalFactory = ServiceDefinition<
 >;
 
 export const Signal = defineService(
-  ({ trackDependency, propagate, consumer }: SignalOpts) =>
-    (props?: SignalProps): SignalFactory => {
-      const { instrument } = props ?? {};
-
+  ({ trackDependency, propagate, consumer }: SignalDeps) =>
+    ({ instrument }: SignalOptions = {}): SignalFactory => {
       function createSignal<T>(initialValue: T): SignalFunction<T> {
         const node: SignalNode<T> = {
           __type: 'signal',
