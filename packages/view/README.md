@@ -7,7 +7,7 @@ Declarative view primitives for Lattice. Build reactive UIs with an adapter syst
 ```typescript
 import { createDOMSvc } from '@lattice/view/presets/dom';
 
-const { el, signal, computed, map, match, when, on, t, mount } = createDOMSvc();
+const { el, signal, computed, map, match, on, mount } = createDOMSvc();
 
 const count = signal(0);
 
@@ -94,21 +94,6 @@ match(currentTab, (tab) =>
 
 When the value changes, match disposes the current element and creates a new one from the matcher function.
 
-### `when(condition, ...children)`
-
-Conditional rendering—show children when truthy, hide when falsy.
-
-```typescript
-const showDetails = signal(false);
-
-when(showDetails,
-  el('div')('Details content'),
-  el('div')('More details')
-)
-```
-
-More efficient than `match` for simple show/hide since it doesn't recreate parents.
-
 ### `portal(target)(child)`
 
 Render content outside the normal DOM hierarchy.
@@ -143,18 +128,6 @@ el('button').ref(on('click', (e) => {
 }))('Click')
 ```
 
-### `t` (template literal)
-
-Reactive text interpolation.
-
-```typescript
-const name = signal('World');
-const count = signal(0);
-
-el('p')(t`Hello ${name}! Count: ${count}`)
-// Updates automatically when name or count change
-```
-
 ### `use(behavior)`
 
 Bind portable behaviors to the view service.
@@ -170,11 +143,14 @@ const counter = (svc) => (initial = 0) => {
 };
 
 // Use in view
-const { use, el, t } = createDOMSvc();
+const { use, el, computed } = createDOMSvc();
 const useCounter = use(counter);
 
 const c = useCounter(10);
-el('button').ref(on('click', c.increment))(t`Count: ${c.count}`)
+el('button').props({
+  textContent: computed(() => `Count: ${c.count()}`),
+  onclick: c.increment
+})()
 ```
 
 ## Adapter System
@@ -296,7 +272,6 @@ Each primitive is available as a separate export:
 import { El } from '@lattice/view/el';
 import { Map } from '@lattice/view/map';
 import { Match } from '@lattice/view/match';
-import { When } from '@lattice/view/when';
 import { Portal } from '@lattice/view/portal';
 ```
 

@@ -8,12 +8,12 @@
  * ```ts
  * import { createDOMSvc } from '@lattice/view/presets/dom';
  *
- * const { el, signal, computed, on, t, mount } = createDOMSvc();
+ * const { el, signal, computed, on, mount } = createDOMSvc();
  *
  * const App = () => {
  *   const count = signal(0);
  *   return el('div')(
- *     t`Count: ${count}`,
+ *     el('p').props({ textContent: computed(() => `Count: ${count()}`) }),
  *     el('button').ref(on('click', () => count(c => c + 1)))('+')
  *   );
  * };
@@ -26,7 +26,6 @@ import { composeFrom } from '@lattice/lattice';
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import { createAddEventListener } from '../helpers/addEventListener';
-import { createText } from '../helpers/text';
 import { createUse } from '../helpers/use';
 import { defaultExtensions, defaultHelpers } from './core';
 import type { Readable, Writable } from '@lattice/signals/types';
@@ -73,7 +72,6 @@ export const createDOMViewSvc = <
   const svc = {
     ...viewSvc,
     on: createAddEventListener(viewHelpers.batch),
-    t: createText(signals.computed),
   };
 
   return {

@@ -22,29 +22,9 @@
       "import": "./dist/match.js",
       "types": "./dist/match.d.ts"
     },
-    "./when": {
-      "import": "./dist/when.js",
-      "types": "./dist/when.d.ts"
-    },
-    "./show": {
-      "import": "./dist/show.js",
-      "types": "./dist/show.d.ts"
-    },
-    "./component": {
-      "import": "./dist/component.js",
-      "types": "./dist/component.d.ts"
-    },
-    "./create": {
-      "import": "./dist/create.js",
-      "types": "./dist/create.d.ts"
-    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
-    },
-    "./reactive-adapter": {
-      "import": "./dist/reactive-adapter.js",
-      "types": "./dist/reactive-adapter.d.ts"
     },
     "./helpers/scope": {
       "import": "./dist/helpers/scope.js",
@@ -57,10 +37,6 @@
     "./helpers/addEventListener": {
       "import": "./dist/helpers/addEventListener.js",
       "types": "./dist/helpers/addEventListener.d.ts"
-    },
-    "./helpers/text": {
-      "import": "./dist/helpers/text.js",
-      "types": "./dist/helpers/text.d.ts"
     },
     "./helpers/use": {
       "import": "./dist/helpers/use.js",
@@ -77,10 +53,6 @@
     "./portal": {
       "import": "./dist/portal.js",
       "types": "./dist/portal.d.ts"
-    },
-    "./on": {
-      "import": "./dist/on.js",
-      "types": "./dist/on.d.ts"
     },
     "./presets/core": {
       "import": "./dist/presets/core.js",

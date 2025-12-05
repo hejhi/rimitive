@@ -179,11 +179,14 @@ Use in Lattice view with `use`:
 import { createDOMSvc } from '@lattice/view/presets/dom';
 import { counter } from './behaviors/counter';
 
-const { use, el, t } = createDOMSvc();
+const { use, el, computed } = createDOMSvc();
 const useCounter = use(counter);
 
 const c = useCounter(10);
-el('button').props({ onclick: c.increment })(t`Count: ${c.count}`);
+el('button').props({
+  textContent: computed(() => `Count: ${c.count()}`),
+  onclick: c.increment
+})();
 ```
 
 Use in React with `createHook`:

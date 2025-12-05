@@ -4,12 +4,14 @@ import type {
   RefSpec,
   Writable,
 } from '@lattice/view/types';
-import type { ElMethod } from '@lattice/view/component';
+import type { ElFactory } from '@lattice/view/el';
 import type { MatchFactory } from '@lattice/view/match';
 import type { RouteParams, RouteSpec, RouteMatch } from './types';
 import { STATUS_ROUTE_SPEC } from './types';
 import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
 import type { RouteTree, RouteNode } from './defineRoutes';
+
+type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
 
 /**
  * Standalone connect function - doesn't require a router instance

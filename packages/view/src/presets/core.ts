@@ -1,7 +1,6 @@
 import { El } from '../el';
 import { Map } from '../map';
 import { Match } from '../match';
-import { When } from '../when';
 import { Portal } from '../portal';
 import { createSpec } from '../helpers';
 import type { Adapter, AdapterConfig } from '../adapter';
@@ -12,14 +11,12 @@ export type { ElementProps, TagFactory } from '../el';
 export type { ElFactory } from '../el';
 export type { MapFactory } from '../map';
 export type { MatchFactory } from '../match';
-export type { WhenFactory } from '../when';
 export type { PortalFactory } from '../portal';
 
 export const defaultExtensions = <TConfig extends AdapterConfig>() => ({
   el: El<TConfig>(),
   map: Map<TConfig>(),
   match: Match<TConfig>(),
-  when: When<TConfig>(),
   portal: Portal<TConfig>(),
 });
 

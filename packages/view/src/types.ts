@@ -9,7 +9,6 @@ export type { Adapter, AdapterConfig } from './adapter';
 export type { PortalFactory, PortalTarget, PortalOpts } from './portal';
 export type { MapFactory } from './map';
 export type { MatchFactory } from './match';
-export type { WhenFactory } from './when';
 
 /**
  * Parent context passed to RefSpec.create() for adapter composition

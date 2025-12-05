@@ -9,12 +9,14 @@ import type {
   ElRefSpecChild,
   RefSpec,
   LifecycleCallback,
+  AdapterConfig,
 } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import type { ElementProps } from '@lattice/view/el';
-import type { ElMethod } from '@lattice/view/component';
+import type { ElementProps, ElFactory } from '@lattice/view/el';
 import { getActiveRouterContext } from './ssr-context';
+
+type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
 
 /**
  * Link builder function

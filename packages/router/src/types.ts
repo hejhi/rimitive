@@ -8,8 +8,9 @@ import type {
 } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import type { ServiceDefinition } from '@lattice/lattice';
-import type { ElementProps } from '@lattice/view/el';
-import type { ElMethod } from '@lattice/view/component';
+import type { ElementProps, ElFactory } from '@lattice/view/el';
+
+type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
 
 /**
  * Route parameter map extracted from path patterns

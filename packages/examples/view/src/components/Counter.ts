@@ -1,4 +1,4 @@
-import { el, t } from '../service';
+import { el, computed } from '../service';
 import { useCounter } from '../behaviors/useCounter';
 
 export const Counter = (initialCount: number = 0) => {
@@ -9,7 +9,7 @@ export const Counter = (initialCount: number = 0) => {
     el('h2')('Counter Example'),
     el('p')('Demonstrates reactive text updates and event handlers.'),
     el('div').props({ className: 'counter-display' })(
-      t`Count: ${count} (doubled: ${doubled})`
+      computed(() => `Count: ${count()} (doubled: ${doubled()})`)
     ),
     el('div')(
       el('button').props({ onclick: decrement })('- Decrement'),
