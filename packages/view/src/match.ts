@@ -72,6 +72,22 @@ export type MatchFactory<TBaseElement> = ServiceDefinition<
 >;
 
 /**
+ * The instantiable service returned by Match().
+ *
+ * Use this type when building custom view service compositions:
+ * @example
+ * ```ts
+ * import { Match, type MatchService } from '@lattice/view/match';
+ *
+ * const matchService: MatchService<DOMAdapterConfig> = Match<DOMAdapterConfig>();
+ * const factory = matchService.create(opts); // MatchFactory<HTMLElement>
+ * ```
+ */
+export type MatchService<TConfig extends AdapterConfig> = ReturnType<
+  typeof Match<TConfig>
+>;
+
+/**
  * Match primitive - switches between different elements based on reactive value
  *
  * Takes a Reactive<T> (signal, computed, or any () => T) and rebuilds children

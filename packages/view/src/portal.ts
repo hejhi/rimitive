@@ -94,6 +94,22 @@ export type PortalFactory<TBaseElement> = ServiceDefinition<
 >;
 
 /**
+ * The instantiable service returned by Portal().
+ *
+ * Use this type when building custom view service compositions:
+ * @example
+ * ```ts
+ * import { Portal, type PortalService } from '@lattice/view/portal';
+ *
+ * const portalService: PortalService<DOMAdapterConfig> = Portal<DOMAdapterConfig>();
+ * const factory = portalService.create(opts); // PortalFactory<HTMLElement>
+ * ```
+ */
+export type PortalService<TConfig extends AdapterConfig> = ReturnType<
+  typeof Portal<TConfig>
+>;
+
+/**
  * Portal primitive - renders content into a different DOM location
  *
  * Creates a fragment in the logical tree that attaches its children

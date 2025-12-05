@@ -115,6 +115,10 @@ export type TagFactory<
  * Generic over:
  * - TConfig: The renderer configuration
  */
+/**
+ * ServiceDefinition for the el primitive.
+ * This is what gets composed into a service context.
+ */
 export type ElFactory<TConfig extends AdapterConfig> = ServiceDefinition<
   'el',
   {
@@ -123,6 +127,22 @@ export type ElFactory<TConfig extends AdapterConfig> = ServiceDefinition<
       tag: Tag
     ): TagFactory<TConfig, Tag>;
   }
+>;
+
+/**
+ * The instantiable service returned by El().
+ *
+ * Use this type when building custom view service compositions:
+ * @example
+ * ```ts
+ * import { El, type ElService } from '@lattice/view/el';
+ *
+ * const elService: ElService<DOMAdapterConfig> = El<DOMAdapterConfig>();
+ * const factory = elService.create(opts); // ElFactory<DOMAdapterConfig>
+ * ```
+ */
+export type ElService<TConfig extends AdapterConfig> = ReturnType<
+  typeof El<TConfig>
 >;
 
 /**

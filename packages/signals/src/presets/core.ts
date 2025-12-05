@@ -37,31 +37,67 @@ export type Helpers = {
 // Re-export user-facing types
 // Note: Internal dependency types (*Deps) are intentionally not exported.
 // They are wired automatically by presets and helpers.
-export type {
-  SubscribeFactory,
-  SubscribeOptions,
-  SubscribeFunction,
-} from '../subscribe';
+
+// Signal types
 export type {
   SignalFactory,
+  SignalService,
   SignalOptions,
   SignalFunction,
 } from '../signal';
+
+// Computed types
 export type {
   ComputedFactory,
+  ComputedService,
   ComputedOptions,
   ComputedFunction,
 } from '../computed';
-export type { EffectFactory, EffectOptions } from '../effect';
-export type { BatchFactory, BatchOptions } from '../batch';
+
+// Effect types
+export type { EffectFactory, EffectService, EffectOptions } from '../effect';
+
+// Batch types
+export type { BatchFactory, BatchService, BatchOptions } from '../batch';
+
+// Subscribe types
+export type {
+  SubscribeFactory,
+  SubscribeService,
+  SubscribeOptions,
+  SubscribeFunction,
+} from '../subscribe';
+
+// Lattice composition types
 export type { DefinedService } from '@lattice/lattice';
 
+// Import service types for DefaultExtensions
+import type { SignalService } from '../signal';
+import type { ComputedService } from '../computed';
+import type { EffectService } from '../effect';
+import type { BatchService } from '../batch';
+import type { SubscribeService } from '../subscribe';
+
+/**
+ * The set of instantiable services created by defaultExtensions().
+ *
+ * Each property is a service that can be composed with composeFrom().
+ * Use this type when extending the default signal primitives:
+ *
+ * @example
+ * ```ts
+ * import { defaultExtensions, type DefaultExtensions } from '@lattice/signals/presets/core';
+ *
+ * const extensions: DefaultExtensions = defaultExtensions();
+ * // extensions.signal, extensions.computed, etc. are all services
+ * ```
+ */
 export type DefaultExtensions = {
-  signal: ReturnType<typeof Signal>;
-  computed: ReturnType<typeof Computed>;
-  effect: ReturnType<typeof Effect>;
-  batch: ReturnType<typeof Batch>;
-  subscribe: ReturnType<typeof Subscribe>;
+  signal: SignalService;
+  computed: ComputedService;
+  effect: EffectService;
+  batch: BatchService;
+  subscribe: SubscribeService;
 };
 
 export function defaultExtensions<T extends Record<string, DefinedService>>(

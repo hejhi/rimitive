@@ -97,6 +97,22 @@ type ItemSignal<T> = Reactive<T> & ((value: T) => void);
 type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<ItemSignal<T>>;
 
 /**
+ * The instantiable service returned by Map().
+ *
+ * Use this type when building custom view service compositions:
+ * @example
+ * ```ts
+ * import { Map, type MapService } from '@lattice/view/map';
+ *
+ * const mapService: MapService<DOMAdapterConfig> = Map<DOMAdapterConfig>();
+ * const factory = mapService.create(opts); // MapFactory<HTMLElement>
+ * ```
+ */
+export type MapService<TConfig extends AdapterConfig> = ReturnType<
+  typeof Map<TConfig>
+>;
+
+/**
  * Map primitive - instantiatable extension using the create pattern
  * Similar to Signal() in signals preset
  */

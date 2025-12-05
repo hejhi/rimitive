@@ -40,11 +40,28 @@ export type EffectOptions = {
 export type { GraphEdges } from './helpers/graph-edges';
 export type { Scheduler } from './helpers/scheduler';
 
-// Export the factory return type for better type inference
+/**
+ * ServiceDefinition for the effect primitive.
+ * This is what gets composed into a service context.
+ */
 export type EffectFactory = ServiceDefinition<
   'effect',
   (fn: () => void | (() => void)) => () => void
 >;
+
+/**
+ * The instantiable service returned by Effect().
+ *
+ * Use this type when building custom service compositions:
+ * @example
+ * ```ts
+ * import { Effect, type EffectService } from '@lattice/signals/effect';
+ *
+ * const effectService: EffectService = Effect();
+ * const factory = effectService.create(deps); // EffectFactory
+ * ```
+ */
+export type EffectService = ReturnType<typeof Effect>;
 
 // Effect node type
 type EffectNode = ScheduledNode & {

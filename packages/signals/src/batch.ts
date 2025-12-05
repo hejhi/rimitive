@@ -6,7 +6,25 @@ import type {
 import { defineService } from '@lattice/lattice';
 import { Scheduler } from './helpers/scheduler';
 
+/**
+ * ServiceDefinition for the batch primitive.
+ * This is what gets composed into a service context.
+ */
 export type BatchFactory = ServiceDefinition<'batch', <T>(fn: () => T) => T>;
+
+/**
+ * The instantiable service returned by Batch().
+ *
+ * Use this type when building custom service compositions:
+ * @example
+ * ```ts
+ * import { Batch, type BatchService } from '@lattice/signals/batch';
+ *
+ * const batchService: BatchService = Batch();
+ * const factory = batchService.create(deps); // BatchFactory
+ * ```
+ */
+export type BatchService = ReturnType<typeof Batch>;
 
 /**
  * Internal dependencies required by the Batch factory.

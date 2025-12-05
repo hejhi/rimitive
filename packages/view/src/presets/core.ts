@@ -1,23 +1,37 @@
-import { El, type ElFactory, type ElOpts } from '../el';
-import { Map, type MapFactory, type MapOpts } from '../map';
-import { Match, type MatchFactory, type MatchOpts } from '../match';
-import { Portal, type PortalFactory, type PortalOpts } from '../portal';
+import { El, type ElService } from '../el';
+import { Map, type MapService } from '../map';
+import { Match, type MatchService } from '../match';
+import { Portal, type PortalService } from '../portal';
 import { createScopes } from '../helpers/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef, Readable, Writable } from '../types';
-import { composeFrom, type Service, type Svc } from '@lattice/lattice';
+import { composeFrom, type Svc } from '@lattice/lattice';
 
-export type { ElementProps, TagFactory } from '../el';
-export type { ElFactory } from '../el';
-export type { MapFactory } from '../map';
-export type { MatchFactory } from '../match';
-export type { PortalFactory } from '../portal';
+// Re-export user-facing types for convenience
+export type { ElementProps, TagFactory, ElFactory, ElService } from '../el';
+export type { MapFactory, MapService } from '../map';
+export type { MatchFactory, MatchService } from '../match';
+export type { PortalFactory, PortalService } from '../portal';
 
+/**
+ * The set of instantiable services created by defaultExtensions().
+ *
+ * Each property is a service that can be composed with composeFrom().
+ * Use this type when extending the default view primitives.
+ *
+ * @example
+ * ```ts
+ * import { defaultExtensions, type DefaultExtensions } from '@lattice/view/presets/core';
+ *
+ * const extensions: DefaultExtensions<DOMAdapterConfig> = defaultExtensions();
+ * // extensions.el, extensions.map, etc. are all services
+ * ```
+ */
 export type DefaultExtensions<TConfig extends AdapterConfig> = {
-  el: Service<ElFactory<TConfig>, ElOpts<TConfig>>;
-  map: Service<MapFactory<TConfig['baseElement']>, MapOpts<TConfig>>;
-  match: Service<MatchFactory<TConfig['baseElement']>, MatchOpts<TConfig>>;
-  portal: Service<PortalFactory<TConfig['baseElement']>, PortalOpts<TConfig>>;
+  el: ElService<TConfig>;
+  map: MapService<TConfig>;
+  match: MatchService<TConfig>;
+  portal: PortalService<TConfig>;
 };
 
 export const defaultExtensions = <TConfig extends AdapterConfig>(): DefaultExtensions<TConfig> => ({

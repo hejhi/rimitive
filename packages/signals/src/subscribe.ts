@@ -58,10 +58,28 @@ export type SubscribeOptions = {
 export type SubscribeCallback<T> = (value: T) => void;
 export type UnsubscribeFunction = () => void;
 
+/**
+ * ServiceDefinition for the subscribe primitive.
+ * This is what gets composed into a service context.
+ */
 export type SubscribeFactory = ServiceDefinition<
   'subscribe',
   SubscribeFunction
 >;
+
+/**
+ * The instantiable service returned by Subscribe().
+ *
+ * Use this type when building custom service compositions:
+ * @example
+ * ```ts
+ * import { Subscribe, type SubscribeService } from '@lattice/signals/subscribe';
+ *
+ * const subscribeService: SubscribeService = Subscribe();
+ * const factory = subscribeService.create(deps); // SubscribeFactory
+ * ```
+ */
+export type SubscribeService = ReturnType<typeof Subscribe>;
 
 // Re-export types needed for type inference
 export type { GraphEdges } from './helpers/graph-edges';

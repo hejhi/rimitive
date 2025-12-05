@@ -65,11 +65,28 @@ const COMPUTED = PRODUCER | CONSUMER;
 const COMPUTED_CLEAN = COMPUTED | CLEAN;
 const COMPUTED_DIRTY = COMPUTED | DIRTY;
 
-// Export the factory return type for better type inference
+/**
+ * ServiceDefinition for the computed primitive.
+ * This is what gets composed into a service context.
+ */
 export type ComputedFactory = ServiceDefinition<
   'computed',
   <T>(compute: () => T) => ComputedFunction<T>
 >;
+
+/**
+ * The instantiable service returned by Computed().
+ *
+ * Use this type when building custom service compositions:
+ * @example
+ * ```ts
+ * import { Computed, type ComputedService } from '@lattice/signals/computed';
+ *
+ * const computedService: ComputedService = Computed();
+ * const factory = computedService.create(deps); // ComputedFactory
+ * ```
+ */
+export type ComputedService = ReturnType<typeof Computed>;
 
 export const Computed = defineService(
   ({

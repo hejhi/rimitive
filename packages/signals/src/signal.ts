@@ -69,11 +69,28 @@ type SignalNode<T> = ProducerNode & {
   value: T;
 };
 
-// Export the factory return type for better type inference
+/**
+ * ServiceDefinition for the signal primitive.
+ * This is what gets composed into a service context.
+ */
 export type SignalFactory = ServiceDefinition<
   'signal',
   <T>(value: T) => SignalFunction<T>
 >;
+
+/**
+ * The instantiable service returned by Signal().
+ *
+ * Use this type when building custom service compositions:
+ * @example
+ * ```ts
+ * import { Signal, type SignalService } from '@lattice/signals/signal';
+ *
+ * const signalService: SignalService = Signal();
+ * const factory = signalService.create(deps); // SignalFactory
+ * ```
+ */
+export type SignalService = ReturnType<typeof Signal>;
 
 export const Signal = defineService(
   ({ trackDependency, propagate, consumer }: SignalDeps) =>
