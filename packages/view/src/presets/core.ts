@@ -5,7 +5,7 @@ import { Portal, type PortalFactory, type PortalOpts } from '../portal';
 import { createScopes } from '../helpers/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef, Readable, Writable } from '../types';
-import { composeFrom, type Service } from '@lattice/lattice';
+import { composeFrom, type Service, type Svc } from '@lattice/lattice';
 
 export type { ElementProps, TagFactory } from '../el';
 export type { ElFactory } from '../el';
@@ -38,6 +38,11 @@ export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
   ) => (...args: TArgs) => RefSpec<TElement> | NodeRef<TElement>
 ) => (...args: TArgs) => RefSpec<TElement>;
 
+/**
+ * View service type for a given adapter config
+ */
+export type ViewSvc<TConfig extends AdapterConfig> = Svc<DefaultExtensions<TConfig>>;
+
 export const createViewSvc = <
   TConfig extends AdapterConfig,
   TSignals extends {
@@ -49,7 +54,7 @@ export const createViewSvc = <
 >(
   adapter: Adapter<TConfig>,
   signals: TSignals
-): ReturnType<typeof composeFrom<DefaultExtensions<TConfig>, ElOpts<TConfig> & MapOpts<TConfig> & MatchOpts<TConfig> & PortalOpts<TConfig>>> =>
+): ViewSvc<TConfig> =>
   composeFrom(defaultExtensions<TConfig>(), {
     adapter,
     ...createScopes({ baseEffect: signals.effect }),

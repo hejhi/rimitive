@@ -4,11 +4,11 @@
  * This eliminates the boilerplate of manually creating and wiring helpers.
  */
 
-import { Signal, type SignalFactory } from '../signal';
-import { Computed, type ComputedFactory } from '../computed';
-import { Effect, type EffectFactory } from '../effect';
-import { Batch, type BatchFactory } from '../batch';
-import { Subscribe, type SubscribeFactory } from '../subscribe';
+import { Signal } from '../signal';
+import { Computed } from '../computed';
+import { Effect } from '../effect';
+import { Batch } from '../batch';
+import { Subscribe } from '../subscribe';
 import { createGraphEdges, type GraphEdges } from '../helpers/graph-edges';
 import {
   createGraphTraversal,
@@ -20,11 +20,7 @@ import {
 } from '../helpers/pull-propagator';
 import { createScheduler, type Scheduler } from '../helpers/scheduler';
 import { createUntracked } from '../untrack';
-import {
-  composeFrom,
-  type DefinedService,
-  type LatticeContext,
-} from '@lattice/lattice';
+import { composeFrom, type DefinedService, type Svc } from '@lattice/lattice';
 import type { Dependency } from '../types';
 
 /**
@@ -101,22 +97,13 @@ export function createHelpers(): Helpers {
   };
 }
 
-type SignalsSvcDefinitions = [
-  SignalFactory,
-  ComputedFactory,
-  EffectFactory,
-  BatchFactory,
-  SubscribeFactory,
-];
-
 /**
  * Type of the signals service returned by createSignalsSvc
+ *
+ * Uses Svc<> to automatically extract impl types from the extensions object.
  */
-export type SignalsSvc = LatticeContext<SignalsSvcDefinitions>;
+export type SignalsSvc = Svc<DefaultExtensions>;
 
 export function createSignalsSvc(): SignalsSvc {
-  return composeFrom(
-    defaultExtensions(),
-    createHelpers()
-  ) as LatticeContext<SignalsSvcDefinitions>;
+  return composeFrom(defaultExtensions(), createHelpers());
 }

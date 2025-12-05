@@ -140,3 +140,19 @@ export type UnionToIntersection<U> = (
 
 export type ExtractDeps<T extends Record<string, DefinedService>> =
   UnionToIntersection<T[keyof T] extends Service<unknown, infer C> ? C : never>;
+
+/**
+ * Extract impl types from an extensions object, preserving key names
+ *
+ * Given: { signal: Service<SignalDef>, computed: Service<ComputedDef> }
+ * Returns: { signal: SignalImpl, computed: ComputedImpl, dispose(): void }
+ *
+ * This is simpler than LatticeContext for object-based composition.
+ */
+export type Svc<T extends Record<string, DefinedService>> = {
+  [K in keyof T]: T[K] extends Service<ServiceDefinition<string, infer TImpl>, unknown>
+    ? TImpl
+    : never;
+} & {
+  dispose(): void;
+};

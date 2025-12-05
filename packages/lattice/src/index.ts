@@ -9,6 +9,7 @@ export type {
   LatticeContext,
   ServiceImpl,
   DefinedService,
+  Svc,
 } from './types';
 export { createInstrumentation } from './instrumentation';
 export type {
