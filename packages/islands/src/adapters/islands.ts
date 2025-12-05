@@ -13,6 +13,20 @@ import type { DOMAdapterConfig } from './dom-hydration';
 
 /**
  * Create a hydrating adapter that switches to a fallback after hydration is complete
+ *
+ * @example
+ * ```typescript
+ * import { createIslandsAdapter } from '@lattice/islands/adapters/islands';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
+ *
+ * const domAdapter = createDOMAdapter();
+ * const hydrateAdapter = createDOMHydrationAdapter(document.body);
+ * const adapter = createIslandsAdapter(hydrateAdapter, domAdapter);
+ *
+ * // After hydration completes
+ * adapter.switchToFallback();
+ * ```
  */
 export function createIslandsAdapter(
   hydrateAdapter: Adapter<DOMAdapterConfig>,

@@ -10,6 +10,16 @@ import type { RouteMatch } from '../types';
  * @param parentPath - Parent route path (e.g., '/', '/products')
  * @param childPath - Child route path (e.g., 'about', ':id', '*')
  * @returns Combined path (e.g., '/about', '/products/:id', '*')
+ *
+ * @example
+ * ```typescript
+ * import { composePath } from '@lattice/router';
+ *
+ * composePath('/', 'about');          // '/about'
+ * composePath('/products', ':id');    // '/products/:id'
+ * composePath('/api', 'users');       // '/api/users'
+ * composePath('/any', '*');           // '*' (wildcard stays as wildcard)
+ * ```
  */
 export const composePath = (parentPath: string, childPath: string): string => {
   // Wildcard stays as wildcard, regardless of parent
@@ -30,6 +40,31 @@ export const composePath = (parentPath: string, childPath: string): string => {
  * Matches a URL path against a route pattern (exact match)
  *
  * Supports exact string matching, path parameters using :paramName syntax, and wildcard '*' for catch-all
+ *
+ * @example
+ * ```typescript
+ * import { matchPath } from '@lattice/router';
+ *
+ * // Exact match
+ * matchPath('/about', '/about');
+ * // { path: '/about', params: {} }
+ *
+ * // Path parameters
+ * matchPath('/products/:id', '/products/123');
+ * // { path: '/products/123', params: { id: '123' } }
+ *
+ * // Multiple parameters
+ * matchPath('/blog/:year/:slug', '/blog/2024/hello-world');
+ * // { path: '/blog/2024/hello-world', params: { year: '2024', slug: 'hello-world' } }
+ *
+ * // Wildcard
+ * matchPath('*', '/any/path');
+ * // { path: '/any/path', params: {} }
+ *
+ * // No match
+ * matchPath('/about', '/contact');
+ * // null
+ * ```
  */
 export const matchPath = (pattern: string, path: string): RouteMatch | null => {
   // Wildcard matches any path
@@ -88,6 +123,31 @@ export const matchPath = (pattern: string, path: string): RouteMatch | null => {
  * Matches a URL path against a route pattern (prefix match for parent routes)
  *
  * Used for routes with children - matches if the path starts with the pattern
+ *
+ * @example
+ * ```typescript
+ * import { matchPathPrefix } from '@lattice/router';
+ *
+ * // Prefix match for parent routes
+ * matchPathPrefix('/products', '/products/123');
+ * // { path: '/products/123', params: {} }
+ *
+ * // With parameters
+ * matchPathPrefix('/blog/:year', '/blog/2024/hello-world');
+ * // { path: '/blog/2024/hello-world', params: { year: '2024' } }
+ *
+ * // Root matches everything
+ * matchPathPrefix('/', '/any/path');
+ * // { path: '/any/path', params: {} }
+ *
+ * // Exact match still works
+ * matchPathPrefix('/about', '/about');
+ * // { path: '/about', params: {} }
+ *
+ * // No match when path is shorter
+ * matchPathPrefix('/products/category', '/products');
+ * // null
+ * ```
  */
 export const matchPathPrefix = (
   pattern: string,

@@ -46,6 +46,20 @@ function getContextGetter(): GetContext<unknown> {
  * Island components receive two arguments:
  * 1. svc - The user-defined service svc (el, signal, computed, etc.)
  * 2. getContext - Getter function that returns user-defined context (or undefined)
+ *
+ * @example
+ * ```typescript
+ * import { island } from '@lattice/islands';
+ * import type { IslandSvc } from '@lattice/islands';
+ *
+ * export const Counter = island<{ initialCount: number }, IslandSvc>(
+ *   'counter',
+ *   (svc) => ({ initialCount }) => {
+ *     const count = svc.signal(initialCount);
+ *     return svc.el('button').props({ onclick: () => count(count() + 1) })(count);
+ *   }
+ * );
+ * ```
  */
 export function island<
   TProps,
@@ -61,6 +75,25 @@ export function island<
 
 /**
  * Mark a component as an island with custom hydration strategy
+ *
+ * @example
+ * ```typescript
+ * import { island, type IslandStrategy } from '@lattice/islands';
+ * import type { IslandSvc } from '@lattice/islands';
+ *
+ * const strategy: IslandStrategy<{ value: string }, IslandSvc> = {
+ *   onMismatch: (error, container, props, Component, mount) => {
+ *     console.warn('Hydration mismatch, preserving form input', error);
+ *     return true; // Preserve existing content
+ *   }
+ * };
+ *
+ * export const Form = island(
+ *   'form',
+ *   strategy,
+ *   (svc) => ({ value }) => svc.el('input').props({ value })()
+ * );
+ * ```
  */
 export function island<
   TProps,

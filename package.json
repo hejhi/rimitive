@@ -16,6 +16,8 @@
     "check": "lerna run check",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "test": "lerna run test",
+    "api-extract": "lerna run api-extract",
+    "api-document": "api-documenter markdown -i temp -o docs/api",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish"
@@ -23,6 +25,8 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@eslint/js": "^9.25.0",
+    "@microsoft/api-documenter": "^7.28.1",
+    "@microsoft/api-extractor": "^7.55.1",
     "@typescript-eslint/eslint-plugin": "^8.30.1",
     "@typescript-eslint/parser": "^8.30.1",
     "eslint": "^9.25.0",

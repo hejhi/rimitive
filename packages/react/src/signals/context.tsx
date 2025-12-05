@@ -1,7 +1,17 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import type { Readable, Writable } from '@lattice/signals/types';
 
-// Minimal service used by React bindings
+/**
+ * Minimal service interface used by React bindings.
+ * Contains the core methods for creating and managing signals.
+ *
+ * @example
+ * ```tsx
+ * import { compose, coreExtensions } from '@lattice/signals';
+ *
+ * const svc: SignalSvc = compose(...coreExtensions);
+ * ```
+ */
 export type SignalSvc = {
   signal: <T>(value: T) => Writable<T>;
   computed: <T>(compute: () => T) => Readable<T>;
@@ -13,12 +23,44 @@ export type SignalSvc = {
 // Create the React Context
 const SignalContext = createContext<SignalSvc | null>(null);
 
-// Provider component
+/**
+ * Props for the SignalProvider component.
+ *
+ * @example
+ * ```tsx
+ * import { compose, coreExtensions } from '@lattice/signals';
+ *
+ * const props: SignalProviderProps = {
+ *   svc: compose(...coreExtensions),
+ *   children: <App />
+ * };
+ * ```
+ */
 export type SignalProviderProps = {
   svc: SignalSvc;
   children: ReactNode;
 };
 
+/**
+ * Provides a signal service to all descendant components.
+ * Automatically disposes the service when the provider unmounts.
+ *
+ * @example
+ * ```tsx
+ * import { SignalProvider } from '@lattice/react';
+ * import { compose, coreExtensions } from '@lattice/signals';
+ *
+ * const svc = compose(...coreExtensions);
+ *
+ * function App() {
+ *   return (
+ *     <SignalProvider svc={svc}>
+ *       <MyApp />
+ *     </SignalProvider>
+ *   );
+ * }
+ * ```
+ */
 export function SignalProvider({ svc, children }: SignalProviderProps): ReactNode {
   // Dispose the service when the provider unmounts
   useEffect(() => {
@@ -30,7 +72,26 @@ export function SignalProvider({ svc, children }: SignalProviderProps): ReactNod
   );
 }
 
-// Hook to access the signal service
+/**
+ * Access the signal service from the nearest SignalProvider.
+ * Throws an error if used outside a SignalProvider.
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const svc = useSignalSvc();
+ *   const count = useRef(svc.signal(0));
+ *
+ *   useEffect(() => {
+ *     return svc.effect(() => {
+ *       console.log('Count changed:', count.current());
+ *     });
+ *   }, [svc]);
+ *
+ *   return <div>...</div>;
+ * }
+ * ```
+ */
 export function useSignalSvc(): SignalSvc {
   const svc = useContext(SignalContext);
   if (!svc) {

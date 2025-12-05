@@ -48,6 +48,14 @@ export type { DOMAdapterConfig } from '../adapters/dom';
 
 /**
  * View service type - composed from defaultExtensions
+ *
+ * @example
+ * ```typescript
+ * import type { ViewSvc } from '@lattice/view/presets/dom';
+ *
+ * const viewContext: ViewSvc = compose(defaultExtensions(), helpers);
+ * const { el, map, match, portal } = viewContext;
+ * ```
  */
 export type ViewSvc = LatticeContext<
   [
@@ -60,6 +68,16 @@ export type ViewSvc = LatticeContext<
 
 /**
  * DOM View service type - view primitives + on + mount
+ *
+ * @example
+ * ```typescript
+ * import { createDOMViewSvc, type DOMViewSvc } from '@lattice/view/presets/dom';
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ *
+ * const signals = createSignalsSvc();
+ * const view: DOMViewSvc = createDOMViewSvc(signals);
+ * const { el, map, on, mount } = view;
+ * ```
  */
 export type DOMViewSvc = ViewSvc & {
   on: AddEventListener;
@@ -68,6 +86,14 @@ export type DOMViewSvc = ViewSvc & {
 
 /**
  * Full DOM service type - signals + view + use
+ *
+ * @example
+ * ```typescript
+ * import { createDOMSvc, type DOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const svc: DOMSvc = createDOMSvc();
+ * const { signal, computed, el, map, match, on, mount } = svc;
+ * ```
  */
 export type DOMSvc = SignalsSvc &
   DOMViewSvc & { use: Use<SignalsSvc & DOMViewSvc> };
@@ -131,6 +157,24 @@ export const createDOMViewSvc = <
  *
  * Returns a flat service with all signals and view primitives,
  * plus DOM-specific helpers (on, t) and a mount function.
+ *
+ * @example
+ * ```typescript
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const { el, signal, computed, map, on, mount } = createDOMSvc();
+ *
+ * const App = () => {
+ *   const count = signal(0);
+ *   return el('div')(
+ *     el('h1')('Counter'),
+ *     el('p')(computed(() => `Count: ${count()}`)),
+ *     el('button').ref(on('click', () => count(c => c + 1)))('Increment')
+ *   );
+ * };
+ *
+ * document.body.appendChild(mount(App()));
+ * ```
  */
 export const createDOMSvc = (): DOMSvc => {
   const signals = createSignalsSvc();

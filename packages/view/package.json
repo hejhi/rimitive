@@ -87,7 +87,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm test && pnpm lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*"

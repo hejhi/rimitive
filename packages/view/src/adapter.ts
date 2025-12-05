@@ -13,6 +13,17 @@ import type { NodeRef, ParentContext } from './types';
 /**
  * Generic node type - platform-agnostic
  * Adapters can extend this with their own node types
+ *
+ * @example
+ * ```typescript
+ * import type { Node } from '@lattice/view/adapter';
+ *
+ * // DOM adapter uses HTMLElement as Node
+ * type DOMNode = HTMLElement & Node;
+ *
+ * // Canvas adapter might use a custom node type
+ * type CanvasNode = { type: 'rect' | 'circle'; x: number; y: number } & Node;
+ * ```
  */
 export type Node = object;
 
@@ -27,6 +38,28 @@ export type Node = object;
  * without exposing internal node properties (like canvas's bounds, dirty, etc).
  *
  * Note: Text is just another node type created via createNode('text', { value: '...' })
+ *
+ * @example
+ * ```typescript
+ * import type { AdapterConfig } from '@lattice/view/adapter';
+ *
+ * // DOM adapter config
+ * type DOMAdapterConfig = AdapterConfig & {
+ *   props: {
+ *     div: { className?: string; id?: string };
+ *     button: { disabled?: boolean; textContent?: string };
+ *   };
+ *   elements: {
+ *     div: HTMLDivElement;
+ *     button: HTMLButtonElement;
+ *   };
+ *   events: {
+ *     click: MouseEvent;
+ *     input: InputEvent;
+ *   };
+ *   baseElement: HTMLElement;
+ * };
+ * ```
  */
 export type AdapterConfig = {
   props: object;
@@ -59,6 +92,25 @@ export type AdapterConfig = {
  *
  * For hydration-specific position tracking, use the HydrationAdapter extension
  * which adds `seekToPosition` and `skipContent` methods.
+ *
+ * @example
+ * ```typescript
+ * import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
+ *
+ * const domAdapter: Adapter<DOMAdapterConfig> = {
+ *   createNode: (type, props) => {
+ *     if (type === 'text') return document.createTextNode(props?.value as string || '');
+ *     return document.createElement(type);
+ *   },
+ *   setProperty: (node, key, value) => {
+ *     if (key === 'textContent') node.textContent = value as string;
+ *     else (node as HTMLElement).setAttribute(key, String(value));
+ *   },
+ *   appendChild: (parent, child) => parent.appendChild(child),
+ *   removeChild: (parent, child) => parent.removeChild(child),
+ *   insertBefore: (parent, child, ref) => parent.insertBefore(child, ref),
+ * };
+ * ```
  */
 export type Adapter<TConfig extends AdapterConfig> = {
   // ============================================================================

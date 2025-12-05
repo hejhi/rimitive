@@ -121,6 +121,25 @@ export type ClientApp = {
  * ```ts
  * import { createIslandsApp } from '@lattice/islands/server';
  * ```
+ *
+ * @example
+ * ```typescript
+ * import { createIslandsApp } from '@lattice/islands/presets/core.client';
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createIslandsAdapter } from '@lattice/islands/adapters/islands';
+ * import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
+ *
+ * const signals = createSignalsSvc();
+ * const domAdapter = createDOMAdapter();
+ * const hydrateAdapter = createDOMHydrationAdapter(document.body);
+ * const adapter = createIslandsAdapter(hydrateAdapter, domAdapter);
+ * const view = createViewSvc(adapter, signals);
+ *
+ * const app = createIslandsApp({ signals, adapter, view });
+ * app.hydrate(Counter, TodoList);
+ * ```
  */
 export function createIslandsApp<TContext = unknown>(
   options: ClientOptions<TContext>

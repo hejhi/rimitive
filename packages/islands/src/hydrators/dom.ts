@@ -67,6 +67,32 @@ export type CreateSvcResult = {
   ) => unknown;
 };
 
+/**
+ * Create a DOM hydrator for islands
+ *
+ * @example
+ * ```typescript
+ * import { createDOMHydrator } from '@lattice/islands/hydrators/dom';
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createIslandsAdapter } from '@lattice/islands/adapters/islands';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
+ *
+ * const signals = createSignalsSvc();
+ * const domAdapter = createDOMAdapter();
+ * const hydrateAdapter = createDOMHydrationAdapter(document.body);
+ * const adapter = createIslandsAdapter(hydrateAdapter, domAdapter);
+ *
+ * const createSvc = (adapter, signals) => ({
+ *   svc: { ...signals, ...createViewSvc(adapter, signals) },
+ *   createElementScope: (el, fn) => fn()
+ * });
+ *
+ * const hydrator = createDOMHydrator(createSvc, signals, (spec) => ({ element: spec.create({}) }));
+ * hydrator.hydrate(Counter, TodoList);
+ * ```
+ */
 export function createDOMHydrator<TSignals extends EffectSvc>(
   createSvc: (
     adapter: ReturnType<typeof createIslandsAdapter>,

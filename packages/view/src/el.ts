@@ -19,6 +19,17 @@ import { createProcessChildren } from './helpers/processChildren';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
+ *
+ * @example
+ * ```typescript
+ * import type { ReactiveProps } from '@lattice/view/el';
+ *
+ * type ButtonProps = ReactiveProps<{ disabled: boolean; textContent: string }>;
+ * const props: ButtonProps = {
+ *   disabled: computed(() => count() > 10),
+ *   textContent: 'Click me'
+ * };
+ * ```
  */
 type ReactiveProps<T> = {
   [K in keyof T]?: T[K] | Reactive<T[K]>;
@@ -35,6 +46,18 @@ type ReactiveProps<T> = {
  * Generic over:
  * - TConfig: The renderer configuration
  * - Tag: The element tag name (must be a key in TConfig['props'])
+ *
+ * @example
+ * ```typescript
+ * import type { ElementProps } from '@lattice/view/el';
+ * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+ *
+ * const buttonProps: ElementProps<DOMAdapterConfig, 'button'> = {
+ *   disabled: computed(() => loading()),
+ *   textContent: 'Submit',
+ *   'data-testid': 'submit-btn'
+ * };
+ * ```
  */
 export type ElementProps<
   TConfig extends AdapterConfig,
@@ -74,6 +97,28 @@ export type ElProps<TConfig extends AdapterConfig> = {
  * Generic over:
  * - TConfig: The renderer configuration
  * - Tag: The element tag name (must exist in both props and elements)
+ *
+ * @example
+ * ```typescript
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const { el, signal, on } = createDOMSvc();
+ * const count = signal(0);
+ *
+ * // Basic usage - just children
+ * const title = el('h1')('My App');
+ *
+ * // With props
+ * const button = el('button')
+ *   .props({ disabled: false })
+ *   ('Click me');
+ *
+ * // With ref callbacks
+ * const input = el('input')
+ *   .ref((elem) => elem.focus())
+ *   .ref(on('input', (e) => console.log(e.target.value)))
+ *   ();
+ * ```
  */
 export type TagFactory<
   TConfig extends AdapterConfig,
@@ -114,6 +159,21 @@ export type TagFactory<
  *
  * Generic over:
  * - TConfig: The renderer configuration
+ *
+ * @example
+ * ```typescript
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const { el, signal, computed, on } = createDOMSvc();
+ * const count = signal(0);
+ *
+ * const counter = el('div').props({ className: 'counter' })(
+ *   el('h2')('Counter'),
+ *   el('p')(computed(() => `Count: ${count()}`)),
+ *   el('button').ref(on('click', () => count(c => c + 1)))('Increment'),
+ *   el('button').ref(on('click', () => count(c => c - 1)))('Decrement')
+ * );
+ * ```
  */
 /**
  * ServiceDefinition for the el primitive.
@@ -153,6 +213,20 @@ export type ElService<TConfig extends AdapterConfig> = ReturnType<
  * - TConfig: The renderer configuration (inferred from renderer)
  * - TElement: Base element type
  * - TText: Text node type
+ *
+ * @example
+ * ```typescript
+ * import { El } from '@lattice/view/el';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+ *
+ * const elService = El<DOMAdapterConfig>();
+ * const elFactory = elService.create({ adapter, scopedEffect, createElementScope, onCleanup });
+ *
+ * const button = elFactory('button')
+ *   .props({ textContent: 'Click me' })
+ *   ();
+ * ```
  */
 export const El = defineService(
   <TConfig extends AdapterConfig>({

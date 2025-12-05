@@ -29,6 +29,19 @@ export type SSRContextOptions<TContext = unknown> = {
  * Create a new SSR context
  *
  * @param options - Optional configuration including context getter
+ *
+ * @example
+ * ```typescript
+ * import { createSSRContext, runWithSSRContext } from '@lattice/islands/ssr-context';
+ *
+ * type AppContext = { userId: string };
+ *
+ * const ctx = createSSRContext<AppContext>({
+ *   getContext: () => ({ userId: 'user-123' })
+ * });
+ *
+ * const html = runWithSSRContext(ctx, () => renderToString(app));
+ * ```
  */
 export function createSSRContext<TContext = unknown>(
   options?: SSRContextOptions<TContext>
@@ -45,6 +58,15 @@ export function createSSRContext<TContext = unknown>(
  *
  * Provides isolated context for the duration of the function execution.
  * Context is automatically cleaned up after the function completes.
+ *
+ * @example
+ * ```typescript
+ * import { createSSRContext, runWithSSRContext } from '@lattice/islands/ssr-context';
+ * import { renderToString } from '@lattice/islands/helpers/renderToString';
+ *
+ * const ctx = createSSRContext();
+ * const html = runWithSSRContext(ctx, () => renderToString(appElement));
+ * ```
  */
 export function runWithSSRContext<T, TContext = unknown>(
   ctx: SSRContext<TContext>,
@@ -68,6 +90,18 @@ export function getActiveSSRContext(): SSRContext | undefined {
  *
  * Includes the bootstrap script (sets up queue) followed by
  * individual island hydration calls. Returns empty string if no islands.
+ *
+ * @example
+ * ```typescript
+ * import { createSSRContext, runWithSSRContext, getIslandScripts } from '@lattice/islands/ssr-context';
+ *
+ * const ctx = createSSRContext();
+ * const html = runWithSSRContext(ctx, () => renderToString(app));
+ * const scripts = getIslandScripts(ctx);
+ *
+ * // Inject scripts into HTML
+ * const fullHtml = `${html}${scripts}`;
+ * ```
  */
 export function getIslandScripts(ctx: SSRContext): string {
   if (ctx.islands.length === 0) return '';
@@ -100,6 +134,13 @@ window.__hydrate = (id, type, props, status) => __islands.push({ id, type, props
  * @param type - Island type identifier
  * @param props - Props passed to the island component
  * @param status - Node status (STATUS_ELEMENT=1, STATUS_FRAGMENT=2)
+ *
+ * @example
+ * ```typescript
+ * // Internal usage - called automatically by island wrapper
+ * const instanceId = registerIsland('counter', { initialCount: 0 }, STATUS_ELEMENT);
+ * // Returns: "counter-0"
+ * ```
  */
 export function registerIsland(
   type: string,

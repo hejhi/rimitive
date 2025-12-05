@@ -48,6 +48,17 @@ export type IslandsClientApp = SignalsSvc &
  * Create a fully-configured islands client app
  *
  * Batteries-included preset that creates signals, view, and hydration.
+ *
+ * @example
+ * ```typescript
+ * import { createIslandsClientApp } from '@lattice/islands/presets/islands.client';
+ * import { Counter } from './islands/Counter';
+ * import { TodoList } from './islands/TodoList';
+ *
+ * const { hydrate } = createIslandsClientApp();
+ *
+ * hydrate(Counter, TodoList);
+ * ```
  */
 export function createIslandsClientApp(): IslandsClientApp {
   const signalsSvc = createSignalsSvc();

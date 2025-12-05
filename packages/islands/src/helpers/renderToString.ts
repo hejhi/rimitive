@@ -14,6 +14,16 @@ import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
  *
  * @param nodeRef - The rendered node reference from mount() or create()
  * @returns HTML string with island markers already in place
+ *
+ * @example
+ * ```typescript
+ * import { createIslandsServerApp } from '@lattice/islands/server';
+ * import { renderToString } from '@lattice/islands/helpers/renderToString';
+ *
+ * const { el, mount } = createIslandsServerApp();
+ * const app = el('div')(el('h1')('Hello World'));
+ * const html = renderToString(mount(app));
+ * ```
  */
 export function renderToString(nodeRef: NodeRef<unknown>): string {
   if (nodeRef.status === STATUS_ELEMENT) return renderElementToString(nodeRef);

@@ -15,6 +15,7 @@ export type {
   SignalValue,
   SignalSetter,
   SignalProviderProps,
+  SignalSvc,
   Readable,
   Writable,
 } from './signals';

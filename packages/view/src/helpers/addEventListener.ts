@@ -8,6 +8,21 @@
 
 /**
  * Type of the addEventListener helper returned by createAddEventListener
+ *
+ * @example
+ * ```typescript
+ * import type { AddEventListener } from '@lattice/view/helpers/addEventListener';
+ *
+ * const on: AddEventListener = createAddEventListener(batch);
+ *
+ * el('button').ref(
+ *   on('click', (e) => {
+ *     count(c => c + 1);
+ *     loading(true);
+ *     // Both updates batched into a single render
+ *   })
+ * )('Click me');
+ * ```
  */
 export type AddEventListener = <K extends keyof HTMLElementEventMap>(
   event: K,
@@ -20,6 +35,26 @@ export type AddEventListener = <K extends keyof HTMLElementEventMap>(
  *
  * @param batch - Batch function from signals service
  * @returns addEventListener helper function
+ *
+ * @example
+ * ```typescript
+ * import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const { batch, el, signal } = createDOMSvc();
+ * const on = createAddEventListener(batch);
+ *
+ * const count = signal(0);
+ * const loading = signal(false);
+ *
+ * el('button').ref(
+ *   on('click', () => {
+ *     count(c => c + 1);
+ *     loading(true);
+ *     // Both updates batched automatically
+ *   })
+ * )('Increment');
+ * ```
  */
 export const createAddEventListener = (
   batch: <T>(fn: () => T) => T

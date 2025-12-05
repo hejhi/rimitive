@@ -58,6 +58,23 @@ export type DefineRoutesContext<TConfig extends AdapterConfig> = {
 
 /**
  * Define routes without requiring a router instance
+ *
+ * @example
+ * ```typescript
+ * import { defineRoutes } from '@lattice/router';
+ * import { Layout, HomePage, AboutPage, ProductPage } from './components';
+ *
+ * const appRoutes = defineRoutes('/', Layout).create(
+ *   defineRoutes.route('/', HomePage)(),
+ *   defineRoutes.route('/about', AboutPage)(),
+ *   defineRoutes.route('/products', ProductsLayout)(
+ *     defineRoutes.route(':id', ProductPage)()
+ *   )
+ * );
+ *
+ * // Mount to router later
+ * const App = router.mount(appRoutes);
+ * ```
  */
 export function defineRoutes<TConfig extends AdapterConfig>(
   rootPath: string,

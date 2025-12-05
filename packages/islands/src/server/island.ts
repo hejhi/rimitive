@@ -31,5 +31,15 @@ import type { IslandSvc } from '../presets/islands.server';
  * Pre-configured island factory with IslandSvc types baked in.
  *
  * Props are inferred from the factory function's parameter annotation.
+ *
+ * @example
+ * ```typescript
+ * import { island } from '@lattice/islands/server';
+ *
+ * export const Counter = island('counter', (svc) => ({ count }: { count: number }) => {
+ *   const value = svc.signal(count);
+ *   return svc.el('button').props({ onclick: () => value(value() + 1) })(value);
+ * });
+ * ```
  */
 export const island = createIsland<IslandSvc>();

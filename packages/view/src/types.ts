@@ -15,6 +15,19 @@ export type { MatchFactory } from './match';
  * Allows child RefSpecs to know their parent's adapter and element
  *
  * Note: adapter uses 'unknown' for variance - any Adapter<T> is assignable
+ *
+ * @example
+ * ```typescript
+ * import type { ParentContext } from '@lattice/view/types';
+ *
+ * const context: ParentContext<HTMLElement> = {
+ *   adapter: domAdapter,
+ *   element: parentElement
+ * };
+ *
+ * // Used internally when creating child elements
+ * const childRef = childSpec.create(svc, {}, context);
+ * ```
  */
 export type ParentContext<TElement> = {
   /** The parent's adapter - enables cross-adapter composition */
@@ -106,6 +119,21 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
 /**
  * Ref spec - a specification/blueprint for a ref that can be instantiated multiple times
  * Extends Service to provide uniform context injection pattern
+ *
+ * @example
+ * ```typescript
+ * import type { RefSpec } from '@lattice/view/types';
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const { el, mount } = createDOMSvc();
+ *
+ * // el() returns a RefSpec
+ * const buttonSpec: RefSpec<HTMLButtonElement> = el('button')('Click me');
+ *
+ * // RefSpecs can be instantiated multiple times
+ * const button1 = mount(buttonSpec);
+ * const button2 = mount(buttonSpec);
+ * ```
  */
 export type RefSpec<TElement> = {
   status: typeof STATUS_REF_SPEC;
@@ -127,6 +155,28 @@ export type { Readable, Writable, Reactive } from '@lattice/signals/types';
 
 /**
  * Lifecycle callback for element connection/disconnection
+ *
+ * @example
+ * ```typescript
+ * import type { LifecycleCallback } from '@lattice/view/types';
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const { el } = createDOMSvc();
+ *
+ * // Simple callback
+ * const autofocus: LifecycleCallback<HTMLInputElement> = (elem) => {
+ *   elem.focus();
+ * };
+ *
+ * // Callback with cleanup
+ * const trackResize: LifecycleCallback<HTMLElement> = (elem) => {
+ *   const observer = new ResizeObserver(() => console.log('resized'));
+ *   observer.observe(elem);
+ *   return () => observer.disconnect();
+ * };
+ *
+ * el('input').ref(autofocus, trackResize)();
+ * ```
  */
 export type LifecycleCallback<TElement> = (
   element: TElement
@@ -141,6 +191,27 @@ export type LifecycleCallback<TElement> = (
  * The TElement parameter is kept for API consistency, but child RefSpecs/FragmentRefs
  * use `unknown` since any element can be a child of any other element at runtime. Using `unknown`
  * (the top type) allows proper variance - any RefSpec<T> is assignable to RefSpec<unknown>.
+ *
+ * @example
+ * ```typescript
+ * import type { ElRefSpecChild } from '@lattice/view/types';
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
+ *
+ * const { el, signal, computed } = createDOMSvc();
+ * const name = signal('World');
+ *
+ * // All valid children types
+ * const children: ElRefSpecChild[] = [
+ *   'Hello',                              // string
+ *   42,                                    // number
+ *   true,                                  // boolean
+ *   null,                                  // null (renders nothing)
+ *   el('span')('text'),                    // RefSpec
+ *   computed(() => `Hello, ${name()}!`),   // Reactive
+ * ];
+ *
+ * el('div')(...children);
+ * ```
  */
 export type ElRefSpecChild =
   | string

@@ -23,6 +23,23 @@ export { HydrationMismatch };
  * On client: reactive, called on init and navigation (popstate)
  *
  * If no context is configured, the getter returns undefined.
+ *
+ * @example
+ * ```typescript
+ * import { island } from '@lattice/islands';
+ * import type { IslandSvc } from '@lattice/islands';
+ *
+ * type AppContext = { userId: string };
+ *
+ * const UserProfile = island<{ showEmail: boolean }, IslandSvc, AppContext>(
+ *   'profile',
+ *   (svc, getContext) => ({ showEmail }) => {
+ *     const context = getContext();
+ *     const userId = context?.userId ?? 'guest';
+ *     return svc.el('div')(userId);
+ *   }
+ * );
+ * ```
  */
 export type GetContext<TContext = unknown> = () => TContext | undefined;
 
@@ -31,6 +48,14 @@ export type GetContext<TContext = unknown> = () => TContext | undefined;
  *
  * Uses AsyncLocalStorage for implicit context during render.
  * Each request gets its own isolated context.
+ *
+ * @example
+ * ```typescript
+ * import { createSSRContext, runWithSSRContext } from '@lattice/islands/ssr-context';
+ *
+ * const ctx = createSSRContext({ getContext: () => ({ userId: 'user-123' }) });
+ * const html = runWithSSRContext(ctx, () => renderToString(app));
+ * ```
  */
 export type SSRContext<TContext = unknown> = {
   /**
@@ -109,6 +134,24 @@ export type IslandComponent<TProps = unknown> = {
  * Island hydration strategy
  *
  * Customizes behavior when hydration fails (e.g., preserve form inputs, track analytics)
+ *
+ * @example
+ * ```typescript
+ * import { island, type IslandStrategy } from '@lattice/islands';
+ * import type { IslandSvc } from '@lattice/islands';
+ *
+ * const formStrategy: IslandStrategy<{ value: string }, IslandSvc> = {
+ *   onMismatch: (error, container, props, Component, mount) => {
+ *     console.warn('Form hydration mismatch:', error.message);
+ *     // Preserve user input instead of replacing
+ *     return true;
+ *   }
+ * };
+ *
+ * const FormInput = island('form-input', formStrategy, (svc) => ({ value }) => {
+ *   return svc.el('input').props({ value })();
+ * });
+ * ```
  */
 export type IslandStrategy<
   TProps = unknown,

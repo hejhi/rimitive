@@ -61,6 +61,25 @@ function parseURL(url: string): {
 
 /**
  * Create location factory that provides reactive access to URL state
+ *
+ * @example
+ * ```typescript
+ * import { createLocationFactory } from '@lattice/router';
+ *
+ * const locationFactory = createLocationFactory({
+ *   computed,
+ *   currentPath: router.currentPath
+ * });
+ *
+ * const location = locationFactory();
+ *
+ * // Access URL components reactively
+ * effect(() => {
+ *   console.log('Pathname:', location.pathname());
+ *   console.log('Query params:', location.query());
+ *   console.log('Hash:', location.hash());
+ * });
+ * ```
  */
 export const createLocationFactory = defineService(
   ({ computed, currentPath }: LocationOpts) => {

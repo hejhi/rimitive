@@ -51,6 +51,20 @@ export type IslandsServerApp = SignalsSvc &
  * Create a fully-configured islands server app
  *
  * Batteries-included preset that creates signals, view, and SSR rendering.
+ *
+ * @example
+ * ```typescript
+ * import { createIslandsServerApp } from '@lattice/islands/presets/islands.server';
+ *
+ * const { el, signal, render } = createIslandsServerApp();
+ *
+ * const App = () => el('div')(
+ *   el('h1')('Hello SSR'),
+ *   Counter({ initialCount: 0 })
+ * );
+ *
+ * const { html, scripts } = render(App());
+ * ```
  */
 export function createIslandsServerApp<TContext = unknown>(
   options: IslandsServerOptions<TContext> = {}

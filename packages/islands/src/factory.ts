@@ -69,6 +69,19 @@ export type IslandFactory<TService, TContext> = {
  *
  * Returns an `island` function with Service and Context types baked in.
  * Props are inferred from the factory function's parameter annotation.
+ *
+ * @example
+ * ```typescript
+ * import { createIsland } from '@lattice/islands';
+ * import type { IslandSvc } from '@lattice/islands';
+ *
+ * const island = createIsland<IslandSvc>();
+ *
+ * export const Counter = island('counter', (svc) => ({ initialCount }: { initialCount: number }) => {
+ *   const count = svc.signal(initialCount);
+ *   return svc.el('button').props({ onclick: () => count(count() + 1) })(count);
+ * });
+ * ```
  */
 export function createIsland<
   TServiceOrApp,

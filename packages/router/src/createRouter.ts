@@ -18,6 +18,17 @@ type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
  *
  * Creates a connected component that receives route context (children, params)
  * when mounted via router.mount(). Works identically on server and client.
+ *
+ * @example
+ * ```typescript
+ * const Layout = connect(({ children, params }) => (props) => {
+ *   return el('div')
+ *     .class('layout')(
+ *       el('h1')()('My App'),
+ *       ...children ?? []
+ *     );
+ * });
+ * ```
  */
 export function connect<
   TConfig extends AdapterConfig,
@@ -158,26 +169,89 @@ export type Router<TConfig extends AdapterConfig> = {
   /**
    * Define the root layout that's always rendered
    * Unlike route(), root() doesn't wrap in match() since the root is always visible
+   *
+   * @example
+   * ```typescript
+   * const App = router.root('/', Layout).create(
+   *   router.route('/', HomePage)(),
+   *   router.route('/about', AboutPage)()
+   * );
+   * ```
    */
   root: RootMethod<TConfig>;
 
   /**
    * Define a route
+   *
+   * @example
+   * ```typescript
+   * // Simple route
+   * router.route('/', HomePage)()
+   *
+   * // Route with path parameters
+   * router.route('/products/:id', ProductPage)()
+   *
+   * // Route with children
+   * router.route('/blog', BlogLayout)(
+   *   router.route(':slug', BlogPost)()
+   * )
+   *
+   * // Wildcard route
+   * router.route('*', NotFoundPage)()
+   * ```
    */
   route: RouteMethod<TConfig>;
 
   /**
    * Connect a component to the router
+   *
+   * @example
+   * ```typescript
+   * const ProductPage = router.connect(({ children, params }) => (props) => {
+   *   const productId = computed(() => params().id);
+   *
+   *   return el('div')(
+   *     el('h1')(computed(() => `Product ${productId()}`)),
+   *     ...children ?? []
+   *   );
+   * });
+   * ```
    */
   connect: ConnectMethod<TConfig>;
 
   /**
    * Navigate to a new path
+   *
+   * @example
+   * ```typescript
+   * // Navigate to a static path
+   * router.navigate('/about');
+   *
+   * // Navigate with path parameters
+   * router.navigate(`/products/${productId}`);
+   *
+   * // Navigate with query string
+   * router.navigate('/search?q=lattice');
+   *
+   * // Navigate with hash
+   * router.navigate('/docs#getting-started');
+   * ```
    */
   navigate: (path: string) => void;
 
   /**
    * Reactive signal for the current path
+   *
+   * @example
+   * ```typescript
+   * // React to path changes
+   * effect(() => {
+   *   console.log('Current path:', router.currentPath());
+   * });
+   *
+   * // Use in computed values
+   * const isHomePage = computed(() => router.currentPath() === '/');
+   * ```
    */
   currentPath: Readable<string>;
 
@@ -191,6 +265,21 @@ export type Router<TConfig extends AdapterConfig> = {
    * On server: Returns a computed wrapping the initialPath
    *
    * This abstracts away environment detection from user code.
+   *
+   * @example
+   * ```typescript
+   * const Layout = router.connect(({ children, params }) => (props) => {
+   *   // Works in both SSR and client
+   *   const path = router.useCurrentPath(props.initialPath ?? '/');
+   *
+   *   return el('div')(
+   *     el('nav')(
+   *       el('span')(computed(() => `Current: ${path()}`))
+   *     ),
+   *     ...children ?? []
+   *   );
+   * });
+   * ```
    */
   useCurrentPath: (initialPath: string) => Readable<string>;
 
@@ -267,6 +356,26 @@ function getInitialPath(config: RouterConfig): string {
  *
  * The router is a separate app-level service that takes a view service as input.
  * It manages navigation state and provides routing primitives.
+ *
+ * @example
+ * ```typescript
+ * import { createView } from '@lattice/view';
+ * import { createRouter } from '@lattice/router';
+ *
+ * const view = createView();
+ * const router = createRouter(view, { initialPath: '/' });
+ *
+ * // Define routes
+ * const App = router.root('/', Layout).create(
+ *   router.route('/', HomePage)(),
+ *   router.route('/about', AboutPage)(),
+ *   router.route('/products/:id', ProductPage)()
+ * );
+ *
+ * // Render the app
+ * const appRef = router.renderApp(App);
+ * document.body.appendChild(appRef.element);
+ * ```
  */
 export function createRouter<TConfig extends AdapterConfig>(
   viewSvc: ViewSvc<TConfig>,

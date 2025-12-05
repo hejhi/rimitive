@@ -23,6 +23,27 @@ type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
  *
  * Link is inherently DOM-coupled (uses window.history, MouseEvent, href, onclick).
  * Routers are web browser concepts - no need for adapter abstraction here.
+ *
+ * @example
+ * ```typescript
+ * import { Link } from '@lattice/router';
+ *
+ * // Basic link
+ * const navLink = Link({ href: '/about' })('About Us');
+ *
+ * // Link with props
+ * const styledLink = Link({
+ *   href: '/products',
+ *   class: 'nav-link',
+ *   onclick: (e) => console.log('clicked')
+ * })('Products');
+ *
+ * // Dynamic navigation
+ * const productId = signal('123');
+ * const dynamicLink = Link({
+ *   href: computed(() => `/products/${productId()}`)
+ * })('View Product');
+ * ```
  */
 export function Link(
   props: ElementProps<DOMAdapterConfig, 'a'> & { href: string }

@@ -8,6 +8,23 @@ const RENDER_SCOPE_CLEAN = CLEAN;
 
 /**
  * Public scope API for managing element lifecycles and cleanup.
+ *
+ * @example
+ * ```typescript
+ * import { createScopes, type CreateScopes } from '@lattice/view/helpers/scope';
+ *
+ * const scopes: CreateScopes = createScopes({ baseEffect: effect });
+ *
+ * // Use in element creation
+ * const scope = scopes.createElementScope(element, () => {
+ *   scopes.scopedEffect(() => {
+ *     console.log('Reactive effect');
+ *   });
+ *   scopes.onCleanup(() => {
+ *     console.log('Cleanup when element is removed');
+ *   });
+ * });
+ * ```
  */
 export type CreateScopes = {
   /**
@@ -46,6 +63,32 @@ export type CreateScopes = {
   ) => RenderScope<TElement> | undefined;
 };
 
+/**
+ * Creates scope management utilities for element lifecycles and cleanup
+ *
+ * @example
+ * ```typescript
+ * import { createScopes } from '@lattice/view/helpers/scope';
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ *
+ * const { effect } = createSignalsSvc();
+ * const { createElementScope, scopedEffect, onCleanup, disposeScope } = createScopes({
+ *   baseEffect: effect
+ * });
+ *
+ * // Create a scope for an element
+ * const element = document.createElement('div');
+ * const scope = createElementScope(element, () => {
+ *   scopedEffect(() => {
+ *     console.log('This runs reactively');
+ *     onCleanup(() => console.log('Cleanup on scope disposal'));
+ *   });
+ * });
+ *
+ * // Later, dispose the scope
+ * if (scope) disposeScope(scope);
+ * ```
+ */
 export function createScopes({
   baseEffect,
 }: {

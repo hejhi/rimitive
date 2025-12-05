@@ -55,6 +55,19 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
 /**
  * Create an island-aware linkedom adapter that decorates island fragments
  * with script tags for hydration
+ *
+ * @example
+ * ```typescript
+ * import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
+ * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ *
+ * const signals = createSignalsSvc();
+ * const adapter = createDOMServerAdapter();
+ * const view = createViewSvc(adapter, signals);
+ *
+ * const app = view.el('div')(view.el('h1')('Hello SSR'));
+ * ```
  */
 export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
   // Create a document context for element creation

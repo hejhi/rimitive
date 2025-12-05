@@ -3,7 +3,18 @@ import { useSignalSvc } from './context';
 import type { SignalSetter } from './types';
 import type { Reactive, Readable, Writable } from '@lattice/signals/types';
 
-// Implementation
+/**
+ * Subscribe to a signal value in React.
+ * Re-renders the component when the signal changes.
+ *
+ * @example
+ * ```tsx
+ * function Counter({ count }: { count: Readable<number> }) {
+ *   const value = useSubscribe(count);
+ *   return <span>{value}</span>;
+ * }
+ * ```
+ */
 export function useSubscribe<T>(signal: Reactive<T>): T {
   const svc = useSignalSvc();
 
@@ -35,6 +46,31 @@ export function useSubscribe<T>(signal: Reactive<T>): T {
 /**
  * Create a signal that is scoped to the component lifecycle.
  * Returns a tuple of [value, setter] similar to useState.
+ *
+ * @example
+ * ```tsx
+ * function Counter() {
+ *   const [count, setCount] = useSignal(0);
+ *   return (
+ *     <button onClick={() => setCount(count + 1)}>
+ *       Count: {count}
+ *     </button>
+ *   );
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // With updater function
+ * function Counter() {
+ *   const [count, setCount] = useSignal(0);
+ *   return (
+ *     <button onClick={() => setCount(prev => prev + 1)}>
+ *       Count: {count}
+ *     </button>
+ *   );
+ * }
+ * ```
  */
 export function useSignal<T>(
   initialValue: T | (() => T)
@@ -75,6 +111,23 @@ export function useSignal<T>(
 /**
  * Subscribe to a signal value using a selector function.
  * Only re-renders when the selected value changes.
+ *
+ * @example
+ * ```tsx
+ * function UserName({ user }: { user: Readable<User> }) {
+ *   const name = useSelector(user, u => u.name);
+ *   return <span>{name}</span>;
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // Avoid unnecessary re-renders when deeply nested properties change
+ * function TodoCount({ todos }: { todos: Readable<Todo[]> }) {
+ *   const count = useSelector(todos, list => list.length);
+ *   return <div>Total: {count}</div>;
+ * }
+ * ```
  */
 export function useSelector<T, R>(
   signal: Reactive<T>,
@@ -121,6 +174,38 @@ type ReactiveSvc = {
  * Note: Arguments are captured once when the component mounts (like useRef's
  * initial value). If you need reactive options, pass signals as option values
  * and read them inside the behavior.
+ *
+ * @example
+ * ```tsx
+ * // Define a portable behavior
+ * const useCounter = createHook((svc) => (initialValue: number) => {
+ *   const count = svc.signal(initialValue);
+ *   const increment = () => count(count() + 1);
+ *   return { count, increment };
+ * });
+ *
+ * // Use it in a component
+ * function Counter() {
+ *   const { count, increment } = useCounter(0);
+ *   const value = useSubscribe(count);
+ *   return <button onClick={increment}>Count: {value}</button>;
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // With reactive options via signals
+ * const useTimer = createHook((svc) => (interval: Readable<number>) => {
+ *   const elapsed = svc.signal(0);
+ *   svc.effect(() => {
+ *     const timer = setInterval(() => {
+ *       elapsed(elapsed() + 1);
+ *     }, interval());
+ *     return () => clearInterval(timer);
+ *   });
+ *   return elapsed;
+ * });
+ * ```
  */
 export function createHook<
   TSvc extends ReactiveSvc,
