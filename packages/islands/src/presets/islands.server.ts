@@ -47,7 +47,6 @@ const createViewSvc = (
  * Create a fully-configured islands server app
  *
  * Batteries-included preset that creates signals, view, and SSR rendering.
- * For custom composition, use `@lattice/islands/presets/core.server` instead.
  */
 export const createIslandsServerApp = <TContext = unknown>(
   options: IslandsServerOptions<TContext> = {}

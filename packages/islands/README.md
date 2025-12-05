@@ -31,7 +31,7 @@ Islands let you ship less JavaScript. Static content stays as HTML—no hydratio
 ```typescript
 // islands/Counter.ts
 import { island } from '@lattice/islands/island';
-import type { IslandSvc } from '@lattice/islands/presets/islands.server';
+import type { IslandSvc } from '@lattice/islands/server';
 
 export const Counter = island<{ initialCount: number }, IslandSvc>(
   'counter',
@@ -52,7 +52,7 @@ export const Counter = island<{ initialCount: number }, IslandSvc>(
 
 ```typescript
 // server.ts
-import { createIslandsServerApp } from '@lattice/islands/presets/islands.server';
+import { createIslandsServerApp } from '@lattice/islands/server';
 import { Counter } from './islands/Counter';
 
 const { el, render } = createIslandsServerApp();
@@ -78,7 +78,7 @@ const { html, scripts } = render(App());
 
 ```typescript
 // client.ts
-import { createIslandsClientApp } from '@lattice/islands/presets/islands.client';
+import { createIslandsClientApp } from '@lattice/islands/client';
 import { Counter } from './islands/Counter';
 
 const { hydrate } = createIslandsClientApp();
@@ -113,7 +113,6 @@ hydrate(Counter);
 2. **Match**: Look up component in registry by type
 3. **Hydrate**: Walk existing DOM, attach event handlers
 4. **Activate**: Enable reactive updates
-5. **Cleanup**: Remove markers, unwrap fragment containers
 
 On mismatch, falls back to client-side render automatically.
 
@@ -167,29 +166,57 @@ export const Form = island<FormProps, Svc>(
 );
 ```
 
+### `createIsland<Svc, Context>()`
+
+Create a typed island factory with service and context types baked in.
+
+```typescript
+import { createIsland } from '@lattice/islands/factory';
+import type { IslandSvc } from '@lattice/islands/server';
+
+const island = createIsland<IslandSvc>();
+
+// Props are inferred from the factory function
+export const Counter = island('counter', (svc) => ({ initialCount }: { initialCount: number }) => {
+  // svc is typed as IslandSvc
+  return svc.el('div')(...);
+});
+```
+
 ### Server Preset
 
 ```typescript
-import { createIslandsServerApp } from '@lattice/islands/presets/islands.server';
+import { createIslandsServerApp } from '@lattice/islands/server';
 
 const app = createIslandsServerApp();
 
 // Full signals + view service
-const { el, signal, computed, effect, map, match, when } = app;
+const { el, signal, computed, effect, map, match } = app;
 
 // Render to HTML with hydration scripts
 const { html, scripts } = app.render(App());
 ```
 
+With context:
+
+```typescript
+const app = createIslandsServerApp({
+  context: () => ({
+    user: req.user,
+    locale: req.locale,
+  })
+});
+```
+
 ### Client Preset
 
 ```typescript
-import { createIslandsClientApp } from '@lattice/islands/presets/islands.client';
+import { createIslandsClientApp } from '@lattice/islands/client';
 
 const app = createIslandsClientApp();
 
 // Full signals + view service
-const { el, signal, computed, effect, map, match, when, on } = app;
+const { el, signal, computed, effect, map, match, on } = app;
 
 // Hydrate islands from server HTML
 app.hydrate(Counter, TodoList, Comments);
@@ -198,89 +225,15 @@ app.hydrate(Counter, TodoList, Comments);
 app.mount(NewComponent());
 ```
 
-### SSR Context
+### `renderToString(nodeRef)`
 
-For per-request context (auth, locale, etc.):
-
-```typescript
-import {
-  createSSRContext,
-  runWithSSRContext,
-  getIslandScripts
-} from '@lattice/islands/ssr-context';
-
-// Server handler
-app.get('/', (req, res) => {
-  const ctx = createSSRContext({
-    getContext: () => ({
-      user: req.user,
-      locale: req.locale,
-    })
-  });
-
-  const html = runWithSSRContext(ctx, () => {
-    return renderToString(mount(App()));
-  });
-
-  const scripts = getIslandScripts(ctx);
-  res.send(`${html}${scripts}`);
-});
-
-// Island receives context
-const UserGreeting = island<{}, Svc, { user: User }>(
-  'greeting',
-  (svc, getContext) => () => {
-    const { el } = svc;
-    const ctx = getContext();
-    return el('span')(`Hello, ${ctx?.user?.name ?? 'Guest'}`);
-  }
-);
-```
-
-### Client Context
-
-For client-side context (routing, auth state):
+Convert a rendered node tree to HTML string.
 
 ```typescript
-import { setClientContext } from '@lattice/islands/client-context';
+import { renderToString } from '@lattice/islands/server';
 
-// Set before hydration
-setClientContext(() => ({
-  route: window.location.pathname,
-  user: getCurrentUser(),
-}));
-
-// Islands receive same getContext signature
-```
-
-## Adapters
-
-### Server Adapter (linkedom)
-
-```typescript
-import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
-
-const adapter = createDOMServerAdapter();
-// Renders to linkedom DOM, decorates islands with script markers
-```
-
-### Hydration Adapter
-
-```typescript
-import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
-
-const adapter = createDOMHydrationAdapter(containerElement);
-// Walks existing DOM instead of creating new nodes
-// Throws HydrationMismatch on structure differences
-```
-
-### Islands Adapter (hybrid)
-
-```typescript
-import { createIslandsAdapter } from '@lattice/islands/adapters/islands';
-
-const adapter = createIslandsAdapter(hydrationAdapter, fallbackAdapter);
-// Starts in hydration mode, switches to fallback for dynamic content
+const nodeRef = App().create(svc);
+const html = renderToString(nodeRef);
 ```
 
 ## Types
@@ -293,21 +246,6 @@ type IslandComponent<TProps> = {
 
 // Context getter (same signature on server and client)
 type GetContext<TContext> = () => TContext | undefined;
-
-// Island metadata (collected during SSR)
-type IslandMetadata = {
-  id: string;      // Instance ID: "counter-0"
-  type: string;    // Component type: "counter"
-  props: unknown;  // JSON-serializable props
-  status: number;  // STATUS_ELEMENT or STATUS_FRAGMENT
-};
-
-// SSR context
-type SSRContext<TContext> = {
-  islands: IslandMetadata[];
-  islandCounter: number;
-  getContext?: GetContext<TContext>;
-};
 
 // Hydration strategy
 type IslandStrategy<TProps, TSvc, TContext> = {

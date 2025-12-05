@@ -4,15 +4,19 @@
  * Pre-configured factory for client-side hydration with routing.
  * Creates all primitives once at startup and wires them together.
  */
-import { createIslandsApp } from '@lattice/islands';
 import {
+  createIslandsApp,
   createDOMHydrationAdapter,
   createIslandsAdapter,
 } from '@lattice/islands/client';
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc } from '@lattice/view/presets/core';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createRouter, type ViewSvc, type RouteTree } from '@lattice/router';
+import {
+  createRouter,
+  type ViewSvc,
+  type RouteTree,
+} from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 /**
@@ -92,6 +96,11 @@ export function createClientApp<TContext>(options: ClientAppOptions<TContext>) {
 }
 
 /**
+ * Client app type - inferred from factory return
+ */
+export type ClientAppResult = ReturnType<typeof createClientApp>;
+
+/**
  * Client service type - derived from the factory
  */
-export type ClientService = ReturnType<typeof createClientApp>['service'];
+export type ClientService = ClientAppResult['service'];

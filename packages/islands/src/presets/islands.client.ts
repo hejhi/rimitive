@@ -36,7 +36,6 @@ type IslandComponent = { [ISLAND_META]?: unknown };
  * Create a fully-configured islands client app
  *
  * Batteries-included preset that creates signals, view, and hydration.
- * For custom composition, use `@lattice/islands/presets/core.client` instead.
  */
 export const createIslandsClientApp = () => {
   const signalsSvc = createSignalsSvc();

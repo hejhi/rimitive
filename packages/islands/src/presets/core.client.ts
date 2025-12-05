@@ -27,13 +27,20 @@ import { createDOMHydrator } from '../hydrators/dom';
 // Types
 // ============================================================================
 
-type SignalsSvc = ReturnType<typeof createSignalsSvc>;
-type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
+/**
+ * Signals service type
+ */
+export type SignalsSvc = ReturnType<typeof createSignalsSvc>;
+
+/**
+ * View service type
+ */
+export type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
 
 /**
  * Hybrid adapter type (from createIslandsAdapter)
  */
-type HybridAdapter = Adapter<DOMAdapterConfig> & {
+export type HybridAdapter = Adapter<DOMAdapterConfig> & {
   switchToFallback: () => void;
 };
 

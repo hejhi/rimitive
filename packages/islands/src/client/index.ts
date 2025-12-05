@@ -1,13 +1,37 @@
 /**
  * Client Module
  *
- * Re-exports client-side primitives for island hydration.
+ * Client-side hydration preset for islands architecture.
+ *
+ * @example
+ * ```ts
+ * import { createIslandsClientApp } from '@lattice/islands/client';
+ * import { Counter } from './islands/Counter';
+ *
+ * const { hydrate } = createIslandsClientApp();
+ *
+ * hydrate(Counter);
+ * ```
  */
 
-export { createDOMHydrator } from '../hydrators/dom';
-export type { IslandHydrator, MountFn } from '../hydrators/dom';
+// Batteries-included preset
+export {
+  createIslandsClientApp,
+  type IslandsClientApp,
+} from '../presets/islands.client';
 
-// Client adapters
+// Advanced: composable preset for custom wiring (e.g., routing integration)
+export {
+  createIslandsApp,
+  type ClientApp,
+  type ClientOptions,
+  type IslandsClientService,
+  type IslandComponent,
+  type SignalsSvc,
+  type ViewsSvc,
+  type HybridAdapter,
+} from '../presets/core.client';
+
+// Advanced: adapters for custom composition
 export { createDOMHydrationAdapter } from '../adapters/dom-hydration';
-export type { DOMAdapterConfig } from '../adapters/dom-hydration';
 export { createIslandsAdapter } from '../adapters/islands';

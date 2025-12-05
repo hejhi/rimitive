@@ -1,25 +1,40 @@
 /**
  * Server Module
  *
- * Re-exports SSR primitives for server-side rendering with islands.
+ * Server-side rendering preset for islands architecture.
+ *
+ * @example
+ * ```ts
+ * import { createIslandsServerApp } from '@lattice/islands/server';
+ *
+ * const { el, signal, render } = createIslandsServerApp();
+ *
+ * const App = () => el('div')(
+ *   el('h1')('Hello SSR'),
+ *   Counter({ initialCount: 0 })
+ * );
+ *
+ * const { html, scripts } = render(App());
+ * ```
  */
 
+// Batteries-included preset
 export {
-  createSSRContext,
-  runWithSSRContext,
-  getIslandScripts,
-} from '../ssr-context';
-export type { SSRContext } from '../types';
+  createIslandsServerApp,
+  type IslandsServerApp,
+  type IslandsServerOptions,
+  type IslandSvc,
+} from '../presets/islands.server';
 
 export { renderToString } from '../helpers/renderToString';
 
-// Server adapter
-export { createDOMServerAdapter } from '../adapters/dom-server';
-
-// Unified islands app preset (server version)
+// Advanced: composable preset for custom wiring (e.g., routing integration)
 export {
   createIslandsApp,
   type ServerApp,
   type ServerOptions,
   type IslandsServerService,
 } from '../presets/core.server';
+
+// Advanced: server adapter for custom composition
+export { createDOMServerAdapter } from '../adapters/dom-server';

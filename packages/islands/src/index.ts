@@ -4,47 +4,36 @@
  * Provides fine-grained hydration for Lattice applications.
  * Only interactive components ("islands") ship JavaScript to the client.
  *
- * This main entry point contains browser-safe exports only.
- * Server-only services are available from '@lattice/islands/server'.
+ * ## Quick Start
+ *
+ * ```ts
+ * // Define islands with island() from '@lattice/islands/island'
+ * import { island } from '@lattice/islands/island';
+ *
+ * // Server: import from '@lattice/islands/server'
+ * import { createIslandsServerApp } from '@lattice/islands/server';
+ *
+ * // Client: import from '@lattice/islands/client'
+ * import { createIslandsClientApp } from '@lattice/islands/client';
+ * ```
  */
 
-// Core types (browser-safe)
+// Core types
 export type {
-  SSRContext,
-  IslandMetadata,
   IslandComponent,
   IslandStrategy,
-  IslandMetaData,
   GetContext,
 } from './types';
 
-export { HydrationMismatch, ISLAND_META } from './types';
+export { HydrationMismatch } from './types';
 
-// Note: `island` is NOT exported here - import from '@lattice/islands/island'
-// This ensures proper browser/server conditional exports are used
+// Island factory for typed islands
+export { createIsland, type IslandFactory } from './factory';
 
-// Client-side hydrator
-export { createDOMHydrator } from './hydrators/dom';
-export type { IslandHydrator, MountFn } from './hydrators/dom';
-
-// Island-aware client adapters (hydration)
-export {
-  createDOMHydrationAdapter,
-  type DOMAdapterConfig,
-} from './adapters/dom-hydration';
-export { createIslandsAdapter } from './adapters/islands';
-
-// Service adapter type
-export type { ServiceResult } from './types';
-
-// Unified islands app preset (client version)
-// For server-side, import from '@lattice/islands/server'
+// Advanced: composable preset (client version) for custom wiring
 export {
   createIslandsApp,
   type ClientApp,
   type ClientOptions,
   type IslandsClientService,
 } from './presets/core.client';
-
-// Island factory for typed islands
-export { createIsland, type IslandFactory } from './factory';

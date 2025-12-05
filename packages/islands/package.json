@@ -22,22 +22,6 @@
       "import": "./dist/client/index.js",
       "types": "./dist/client/index.d.ts"
     },
-    "./ssr-context": {
-      "browser": {
-        "import": "./dist/ssr-context.browser.js",
-        "types": "./dist/ssr-context.browser.d.ts"
-      },
-      "import": "./dist/ssr-context.js",
-      "types": "./dist/ssr-context.d.ts"
-    },
-    "./client-context": {
-      "browser": {
-        "import": "./dist/client-context.browser.js",
-        "types": "./dist/client-context.browser.d.ts"
-      },
-      "import": "./dist/client-context.js",
-      "types": "./dist/client-context.d.ts"
-    },
     "./island": {
       "browser": {
         "import": "./dist/island.browser.js",
@@ -46,33 +30,13 @@
       "import": "./dist/island.js",
       "types": "./dist/island.d.ts"
     },
-    "./hydrators/dom": {
-      "import": "./dist/hydrators/dom.js",
-      "types": "./dist/hydrators/dom.d.ts"
-    },
-    "./helpers/renderToString": {
-      "import": "./dist/helpers/renderToString.js",
-      "types": "./dist/helpers/renderToString.d.ts"
-    },
-    "./adapters/dom-server": {
-      "import": "./dist/adapters/dom-server.js",
-      "types": "./dist/adapters/dom-server.d.ts"
-    },
-    "./adapters/dom-hydration": {
-      "import": "./dist/adapters/dom-hydration.js",
-      "types": "./dist/adapters/dom-hydration.d.ts"
-    },
-    "./adapters/islands": {
-      "import": "./dist/adapters/islands.js",
-      "types": "./dist/adapters/islands.d.ts"
-    },
-    "./presets/core.client": {
-      "import": "./dist/presets/core.client.js",
-      "types": "./dist/presets/core.client.d.ts"
-    },
-    "./presets/core.server": {
-      "import": "./dist/presets/core.server.js",
-      "types": "./dist/presets/core.server.d.ts"
+    "./factory": {
+      "browser": {
+        "import": "./dist/factory.browser.js",
+        "types": "./dist/factory.browser.d.ts"
+      },
+      "import": "./dist/factory.js",
+      "types": "./dist/factory.d.ts"
     },
     "./presets/islands.client": {
       "import": "./dist/presets/islands.client.js",
@@ -81,18 +45,6 @@
     "./presets/islands.server": {
       "import": "./dist/presets/islands.server.js",
       "types": "./dist/presets/islands.server.d.ts"
-    },
-    "./types": {
-      "import": "./dist/types.js",
-      "types": "./dist/types.d.ts"
-    },
-    "./factory": {
-      "browser": {
-        "import": "./dist/factory.browser.js",
-        "types": "./dist/factory.browser.d.ts"
-      },
-      "import": "./dist/factory.js",
-      "types": "./dist/factory.d.ts"
     }
   },
   "files": [
