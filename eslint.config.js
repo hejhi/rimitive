@@ -36,6 +36,9 @@ export default tseslint.config(
         project: true,
       },
     },
+    rules: {
+      '@typescript-eslint/explicit-module-boundary-types': 'error',
+    },
   },
   // React-specific configuration
   {

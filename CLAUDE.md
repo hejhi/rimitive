@@ -62,6 +62,20 @@ Tests are co-located with source files:
 - Memory leak tests in `detached-memory.test.ts`
 - Performance regression prevention via benchmarks
 
+## Type Export Guidelines
+
+### Portable Types Rule (TS2742)
+
+When exporting types from a package, ensure all types referenced by public types are also exported. TypeScript error TS2742 ("The inferred type cannot be named without a reference to...") occurs when:
+
+1. A public type `T` references an internal type `U` (via symbol property, generic parameter, etc.)
+2. `U` is not exported from the package's public API
+3. Consumer code infers `T` but TypeScript can't express it without referencing internal paths
+
+**Solution**: Export all constituent types alongside the public type. For example, if `IslandComponent` has a `[ISLAND_META]` property typed as `IslandMetaData`, both `ISLAND_META` and `IslandMetaData` must be exported from the same entry point as `IslandComponent`.
+
+**Why this matters for Lattice**: Type inference and composition are core to the Lattice DX. Users should never need explicit return type annotations to avoid portability errors. The library must export complete type information so inferred types are always expressible.
+
 ## Git Workflow
 
 Follow conventional commits:

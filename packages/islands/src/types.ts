@@ -95,6 +95,10 @@ export type IslandMetadata = {
  *
  * Note: This is a callable type. The actual functions will satisfy this.
  * The metadata symbol is added by the island() wrapper function.
+ *
+ * IMPORTANT: ISLAND_META and IslandMetaData must be exported from the same
+ * entry points as IslandComponent to satisfy TypeScript's portable types
+ * requirement (TS2742). See CLAUDE.md "Portable Types Rule" for details.
  */
 export type IslandComponent<TProps = unknown> = {
   (props: TProps): RefSpec<unknown>;
