@@ -27,11 +27,10 @@ export type BatchFactory = ServiceDefinition<'batch', <T>(fn: () => T) => T>;
 export type BatchService = ReturnType<typeof Batch>;
 
 /**
- * Internal dependencies required by the Batch factory.
- * These are wired automatically by presets - users don't need to provide them.
- * @internal
+ * Dependencies required by the Batch factory.
+ * These are wired automatically by presets - only needed for custom compositions.
  */
-type BatchDeps = {
+export type BatchDeps = {
   startBatch: Scheduler['startBatch'];
   endBatch: Scheduler['endBatch'];
 };

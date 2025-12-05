@@ -23,11 +23,10 @@ export type ComputedFunction<T = unknown> = {
 };
 
 /**
- * Internal dependencies required by the Computed factory.
- * These are wired automatically by presets - users don't need to provide them.
- * @internal
+ * Dependencies required by the Computed factory.
+ * These are wired automatically by presets - only needed for custom compositions.
  */
-type ComputedDeps = {
+export type ComputedDeps = {
   consumer: Consumer;
   trackDependency: GraphEdges['trackDependency'];
   pullUpdates: PullPropagator['pullUpdates'];

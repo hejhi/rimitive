@@ -45,6 +45,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        extend: resolve(__dirname, 'src/extend.ts'),
         el: resolve(__dirname, 'src/el.ts'),
         match: resolve(__dirname, 'src/match.ts'),
         portal: resolve(__dirname, 'src/portal.ts'),

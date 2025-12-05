@@ -4,21 +4,50 @@
  * Provides fine-grained hydration for Lattice applications.
  * Only interactive components ("islands") ship JavaScript to the client.
  *
+ * ## Import Guide
+ *
+ * | Use Case | Import |
+ * |----------|--------|
+ * | Define islands | `import { island } from '@lattice/islands'` |
+ * | Server rendering | `import { createIslandsServerApp } from '@lattice/islands/server'` |
+ * | Client hydration | `import { createIslandsClientApp } from '@lattice/islands/client'` |
+ * | Typed islands | `import { createIsland, type IslandSvc } from '@lattice/islands'` |
+ *
  * ## Quick Start
  *
  * ```ts
- * // Define islands with island() from '@lattice/islands/island'
- * import { island } from '@lattice/islands/island';
+ * // 1. Define an island
+ * import { island } from '@lattice/islands';
  *
- * // Server: import from '@lattice/islands/server'
+ * export const Counter = island('counter', (svc) => ({ count }) => {
+ *   const { el, signal } = svc;
+ *   const value = signal(count);
+ *   return el('button').props({ onclick: () => value(value() + 1) })(value);
+ * });
+ *
+ * // 2. Server: render to HTML
  * import { createIslandsServerApp } from '@lattice/islands/server';
+ * const { el, render } = createIslandsServerApp();
+ * const { html, scripts } = render(el('div')(Counter({ count: 0 })));
  *
- * // Client: import from '@lattice/islands/client'
+ * // 3. Client: hydrate
  * import { createIslandsClientApp } from '@lattice/islands/client';
+ * const { hydrate } = createIslandsClientApp();
+ * hydrate(Counter);
  * ```
  */
 
-// Core types
+// =============================================================================
+// Primary API - Island Definition
+// =============================================================================
+
+export { island } from './island';
+export { createIsland, type IslandFactory } from './factory';
+
+// =============================================================================
+// Core Types
+// =============================================================================
+
 export type {
   IslandComponent,
   IslandStrategy,
@@ -28,10 +57,13 @@ export type {
 
 export { HydrationMismatch, ISLAND_META } from './types';
 
-// Island factory for typed islands
-export { createIsland, type IslandFactory } from './factory';
+// Re-export IslandSvc for convenience (the type islands receive)
+export type { IslandSvc } from './presets/islands.server';
 
-// Advanced: composable preset (client version) for custom wiring
+// =============================================================================
+// Advanced: Composable Presets
+// =============================================================================
+
 export {
   createIslandsApp,
   type ClientApp,

@@ -34,7 +34,9 @@ export type DefaultExtensions<TConfig extends AdapterConfig> = {
   portal: PortalService<TConfig>;
 };
 
-export const defaultExtensions = <TConfig extends AdapterConfig>(): DefaultExtensions<TConfig> => ({
+export const defaultExtensions = <
+  TConfig extends AdapterConfig,
+>(): DefaultExtensions<TConfig> => ({
   el: El<TConfig>(),
   map: Map<TConfig>(),
   match: Match<TConfig>(),
@@ -55,7 +57,9 @@ export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
 /**
  * View service type for a given adapter config
  */
-export type ViewSvc<TConfig extends AdapterConfig> = Svc<DefaultExtensions<TConfig>>;
+export type ViewSvc<TConfig extends AdapterConfig> = Svc<
+  DefaultExtensions<TConfig>
+>;
 
 export const createViewSvc = <
   TConfig extends AdapterConfig,
@@ -67,13 +71,13 @@ export const createViewSvc = <
   },
 >(
   adapter: Adapter<TConfig>,
-  signals: TSignals
+  { effect, signal, computed, batch }: TSignals
 ): ViewSvc<TConfig> =>
   compose(defaultExtensions<TConfig>(), {
     adapter,
-    ...createScopes({ baseEffect: signals.effect }),
-    signal: signals.signal,
-    computed: signals.computed,
-    effect: signals.effect,
-    batch: signals.batch,
+    ...createScopes({ baseEffect: effect }),
+    signal,
+    computed,
+    effect,
+    batch,
   });

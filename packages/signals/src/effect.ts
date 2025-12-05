@@ -15,11 +15,10 @@ const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 const EFFECT_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
 /**
- * Internal dependencies required by the Effect factory.
- * These are wired automatically by presets - users don't need to provide them.
- * @internal
+ * Dependencies required by the Effect factory.
+ * These are wired automatically by presets - only needed for custom compositions.
  */
-type EffectDeps = {
+export type EffectDeps = {
   track: GraphEdges['track'];
   dispose: Scheduler['dispose'];
 };

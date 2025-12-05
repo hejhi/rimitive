@@ -23,7 +23,10 @@
  */
 
 import { compose, type LatticeContext } from '@lattice/lattice';
-import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
+import {
+  createSignalsSvc,
+  type SignalsSvc,
+} from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import {
   createAddEventListener,
@@ -66,7 +69,8 @@ export type DOMViewSvc = ViewSvc & {
 /**
  * Full DOM service type - signals + view + use
  */
-export type DOMSvc = SignalsSvc & DOMViewSvc & { use: Use<SignalsSvc & DOMViewSvc> };
+export type DOMSvc = SignalsSvc &
+  DOMViewSvc & { use: Use<SignalsSvc & DOMViewSvc> };
 
 /**
  * Create DOM view service (view primitives only, no signals)
@@ -94,22 +98,22 @@ export const createDOMViewSvc = <
     effect: (fn: () => void | (() => void)) => () => void;
     batch: <T>(fn: () => T) => T;
   },
->(
-  signals: TSignals
-): DOMViewSvc => {
+>({
+  signal,
+  computed,
+  effect,
+  batch,
+}: TSignals): DOMViewSvc => {
   const adapter = createDOMAdapter();
   const viewHelpers = {
     adapter,
-    ...createScopes({ baseEffect: signals.effect }),
-    signal: signals.signal,
-    computed: signals.computed,
-    effect: signals.effect,
-    batch: signals.batch,
+    ...createScopes({ baseEffect: effect }),
+    signal,
+    computed,
+    effect,
+    batch,
   };
-  const viewSvc = compose(
-    defaultExtensions<DOMAdapterConfig>(),
-    viewHelpers
-  );
+  const viewSvc = compose(defaultExtensions<DOMAdapterConfig>(), viewHelpers);
 
   const svc = {
     ...viewSvc,

@@ -1,0 +1,56 @@
+/**
+ * @lattice/view - Declarative view primitives for Lattice
+ *
+ * ## Quick Start
+ * ```typescript
+ * import { createDOMSvc } from '@lattice/view';
+ *
+ * const { el, map, match, signal, computed, mount } = createDOMSvc();
+ * ```
+ *
+ * ## Import Guide
+ *
+ * | Use Case | Import |
+ * |----------|--------|
+ * | DOM apps | `import { createDOMSvc } from '@lattice/view'` |
+ * | Custom adapter | `import { createViewSvc } from '@lattice/view'` |
+ * | Extend/customize | `import { El, Map, Match } from '@lattice/view/extend'` |
+ * | Types only | `import type { RefSpec, NodeRef } from '@lattice/view'` |
+ *
+ * ### Without a bundler
+ *
+ * The `/extend` path re-exports from individual modules for discoverability.
+ * Bundlers tree-shake unused exports, but without a bundler each import
+ * triggers a separate network request. For bundler-free usage, import directly:
+ *
+ * ```typescript
+ * import { El } from '@lattice/view/el';
+ * import { Map } from '@lattice/view/map';
+ * ```
+ */
+
+// =============================================================================
+// Primary API - What most users need
+// =============================================================================
+
+export { createDOMSvc, createDOMViewSvc } from './presets/dom';
+export { createViewSvc } from './presets/core';
+export type { DOMSvc, DOMViewSvc, ViewSvc } from './presets/dom';
+
+// =============================================================================
+// Core Types - For typing components and behaviors
+// =============================================================================
+
+export type {
+  RefSpec,
+  NodeRef,
+  ElementRef,
+  FragmentRef,
+  ElRefSpecChild,
+  LifecycleCallback,
+  Readable,
+  Writable,
+  Reactive,
+} from './types';
+
+export type { Adapter, AdapterConfig } from './adapter';

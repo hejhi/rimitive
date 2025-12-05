@@ -26,11 +26,10 @@ import { Scheduler } from './helpers/scheduler';
 const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
 /**
- * Internal dependencies required by the Subscribe factory.
- * These are wired automatically by presets - users don't need to provide them.
- * @internal
+ * Dependencies required by the Subscribe factory.
+ * These are wired automatically by presets - only needed for custom compositions.
  */
-type SubscribeDeps = {
+export type SubscribeDeps = {
   track: GraphEdges['track'];
   detachAll: GraphEdges['detachAll'];
   dispose: Scheduler['dispose'];

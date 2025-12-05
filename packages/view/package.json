@@ -6,6 +6,14 @@
   "license": "MIT",
   "type": "module",
   "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./extend": {
+      "import": "./dist/extend.js",
+      "types": "./dist/extend.d.ts"
+    },
     "./adapters/dom": {
       "import": "./dist/adapters/dom.js",
       "types": "./dist/adapters/dom.d.ts"

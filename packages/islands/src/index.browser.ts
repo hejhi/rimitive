@@ -2,21 +2,33 @@
  * @lattice/islands - Browser entry point
  *
  * Browser-safe version that imports from browser-specific modules.
+ * See main index.ts for full documentation and import guide.
  */
 
-// Core types
+// =============================================================================
+// Primary API - Island Definition
+// =============================================================================
+
+export { island } from './island.browser';
+export { createIsland, type IslandFactory } from './factory.browser';
+
+// =============================================================================
+// Core Types
+// =============================================================================
+
 export type {
   IslandComponent,
   IslandStrategy,
   GetContext,
+  IslandMetaData,
 } from './types';
 
-export { HydrationMismatch } from './types';
+export { HydrationMismatch, ISLAND_META } from './types';
 
-// Island factory for typed islands - browser version
-export { createIsland, type IslandFactory } from './factory.browser';
+// =============================================================================
+// Advanced: Composable Presets
+// =============================================================================
 
-// Advanced: composable preset (client version) for custom wiring
 export {
   createIslandsApp,
   type ClientApp,

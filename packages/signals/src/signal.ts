@@ -38,11 +38,10 @@ const SIGNAL_DIRTY = PRODUCER | DIRTY;
 export type SignalFunction<T> = Writable<T> & { peek(): T };
 
 /**
- * Internal dependencies required by the Signal factory.
- * These are wired automatically by presets - users don't need to provide them.
- * @internal
+ * Dependencies required by the Signal factory.
+ * These are wired automatically by presets - only needed for custom compositions.
  */
-type SignalDeps = {
+export type SignalDeps = {
   consumer: Consumer;
   trackDependency: GraphEdges['trackDependency'];
   propagate: (subscribers: Dependency) => void;
