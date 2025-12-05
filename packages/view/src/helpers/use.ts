@@ -8,6 +8,13 @@
 import type { Readable, Writable } from '@lattice/signals/types';
 
 /**
+ * Type of the use helper returned by createUse
+ */
+export type Use<TSvc> = <Args extends unknown[], Result>(
+  behavior: (svc: TSvc) => (...args: Args) => Result
+) => (...args: Args) => Result;
+
+/**
  * Creates a `use` helper bound to a specific reactive service.
  */
 export const createUse = <
@@ -19,7 +26,7 @@ export const createUse = <
   },
 >(
   svc: TSvc
-) => {
+): Use<TSvc> => {
   return <Args extends unknown[], Result>(
     behavior: (svc: TSvc) => (...args: Args) => Result
   ): ((...args: Args) => Result) => {

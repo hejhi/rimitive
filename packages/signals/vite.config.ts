@@ -74,7 +74,6 @@ export default defineConfig({
         'devtools/effect': resolve(__dirname, 'src/devtools/effect.ts'),
         'devtools/batch': resolve(__dirname, 'src/devtools/batch.ts'),
         'devtools/subscribe': resolve(__dirname, 'src/devtools/subscribe.ts'),
-        helpers: resolve(__dirname, 'src/helpers/index.ts'),
         'helpers/scheduler': resolve(__dirname, 'src/helpers/scheduler.ts'),
         'helpers/graph-edges': resolve(__dirname, 'src/helpers/graph-edges.ts'),
         'helpers/graph-traversal': resolve(

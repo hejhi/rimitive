@@ -7,12 +7,23 @@
  */
 
 /**
+ * Type of the addEventListener helper returned by createAddEventListener
+ */
+export type AddEventListener = <K extends keyof HTMLElementEventMap>(
+  event: K,
+  handler: (event: HTMLElementEventMap[K]) => void,
+  options?: boolean | AddEventListenerOptions
+) => (element: HTMLElement) => () => void;
+
+/**
  * Creates an addEventListener helper that automatically batches signal updates
  *
  * @param batch - Batch function from signals service
  * @returns addEventListener helper function
  */
-export const createAddEventListener = (batch: <T>(fn: () => T) => T) => {
+export const createAddEventListener = (
+  batch: <T>(fn: () => T) => T
+): AddEventListener => {
   /**
    * Curried event listener attachment with automatic batching
    *

@@ -22,17 +22,51 @@
  * ```
  */
 
-import { composeFrom } from '@lattice/lattice';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { composeFrom, type LatticeContext } from '@lattice/lattice';
+import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
-import { createAddEventListener } from '../helpers/addEventListener';
+import {
+  createAddEventListener,
+  type AddEventListener,
+} from '../helpers/addEventListener';
 import { createScopes } from '../helpers/scope';
-import { createUse } from '../helpers/use';
+import { createUse, type Use } from '../helpers/use';
 import { defaultExtensions } from './core';
 import type { Readable, Writable } from '@lattice/signals/types';
-import type { RefSpec } from '../types';
+import type { NodeRef, RefSpec } from '../types';
+import type {
+  ElFactory,
+  MapFactory,
+  MatchFactory,
+  PortalFactory,
+} from './core';
 
 export type { DOMAdapterConfig } from '../adapters/dom';
+
+/**
+ * View service type - composed from defaultExtensions
+ */
+export type ViewSvc = LatticeContext<
+  [
+    ElFactory<DOMAdapterConfig>,
+    MapFactory<HTMLElement>,
+    MatchFactory<HTMLElement>,
+    PortalFactory<HTMLElement>,
+  ]
+>;
+
+/**
+ * DOM View service type - view primitives + on + mount
+ */
+export type DOMViewSvc = ViewSvc & {
+  on: AddEventListener;
+  mount: <TElement>(spec: RefSpec<TElement>) => NodeRef<TElement>;
+};
+
+/**
+ * Full DOM service type - signals + view + use
+ */
+export type DOMSvc = SignalsSvc & DOMViewSvc & { use: Use<SignalsSvc & DOMViewSvc> };
 
 /**
  * Create DOM view service (view primitives only, no signals)
@@ -62,7 +96,7 @@ export const createDOMViewSvc = <
   },
 >(
   signals: TSignals
-) => {
+): DOMViewSvc => {
   const adapter = createDOMAdapter();
   const viewHelpers = {
     adapter,
@@ -94,7 +128,7 @@ export const createDOMViewSvc = <
  * Returns a flat service with all signals and view primitives,
  * plus DOM-specific helpers (on, t) and a mount function.
  */
-export const createDOMSvc = () => {
+export const createDOMSvc = (): DOMSvc => {
   const signals = createSignalsSvc();
   const dom = createDOMViewSvc(signals);
   const svc = {
@@ -108,9 +142,5 @@ export const createDOMSvc = () => {
   };
 };
 
-/**
- * Type of the service returned by createDOMSvc
- */
-export type DOMSvc = ReturnType<typeof createDOMSvc>;
-export type DOMViewSvc = ReturnType<typeof createDOMViewSvc>;
-export type DOMSignals = ReturnType<typeof createSignalsSvc>;
+// Re-export SignalsSvc as DOMSignals for convenience
+export type DOMSignals = SignalsSvc;

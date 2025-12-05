@@ -109,7 +109,12 @@ type SignalsSvcDefinitions = [
   SubscribeFactory,
 ];
 
-export function createSignalsSvc(): LatticeContext<SignalsSvcDefinitions> {
+/**
+ * Type of the signals service returned by createSignalsSvc
+ */
+export type SignalsSvc = LatticeContext<SignalsSvcDefinitions>;
+
+export function createSignalsSvc(): SignalsSvc {
   return composeFrom(
     defaultExtensions(),
     createHelpers()
