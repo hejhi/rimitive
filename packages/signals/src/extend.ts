@@ -5,19 +5,6 @@
  * - Create custom signal presets with different helpers
  * - Wire signals with custom schedulers or graph implementations
  * - Build instrumented/debuggable signal variants
- *
- * ## Example: Custom Preset
- * ```typescript
- * import { Signal, Computed, Effect, createHelpers } from '@lattice/signals/extend';
- * import { composeFrom } from '@lattice/lattice';
- *
- * const helpers = createHelpers();
- * const svc = composeFrom({
- *   signal: Signal(),
- *   computed: Computed(),
- *   effect: Effect(),
- * }, helpers);
- * ```
  */
 
 // =============================================================================
@@ -46,10 +33,18 @@ export { createUntracked } from './untrack';
 // =============================================================================
 
 export type { SignalFactory, SignalDeps, SignalOptions } from './signal';
-export type { ComputedFactory, ComputedDeps, ComputedOptions } from './computed';
+export type {
+  ComputedFactory,
+  ComputedDeps,
+  ComputedOptions,
+} from './computed';
 export type { EffectFactory, EffectDeps, EffectOptions } from './effect';
 export type { BatchFactory, BatchDeps, BatchOptions } from './batch';
-export type { SubscribeFactory, SubscribeDeps, SubscribeOptions } from './subscribe';
+export type {
+  SubscribeFactory,
+  SubscribeDeps,
+  SubscribeOptions,
+} from './subscribe';
 
 // =============================================================================
 // Helper Types - For custom helper implementations

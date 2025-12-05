@@ -2,47 +2,123 @@
 
 A collection of extensible, lightweight, and portable reactive libraries for building UI applications.
 
-The signals implementation uses a push-pull algorithm similar to:
+The signals implementation uses a push-pull algorithm similar to [Vue 3.4](https://github.com/vuejs/core), [Preact Signals](https://preactjs.com/blog/signal-boosting/), and [alien-signals](https://github.com/stackblitz/alien-signals). The view layer separates reactivity from rendering through an adapter system—the same component logic can target DOM, Canvas, SSR, or custom renderers.
 
-- [Vue 3.4's reactivity system](https://github.com/vuejs/core)
-- [Preact Signals' double-linked-list approach](https://preactjs.com/blog/signal-boosting/)
-- [alien-signals](https://github.com/nickmccurdy/alien-signals)
+## Quick Start
 
-The view layer separates reactivity from rendering through an adapter system—the same component logic can target DOM, Canvas, SSR, or custom renderers.
-
-Each package is independent. Use presets for convenience, or wire primitives manually.
-
-## Core Concepts
-
-### Signals Are Just Functions
+Most users only need presets—preconfigured bundles that wire everything together:
 
 ```typescript
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 
-const { signal, computed, effect } = createSignalsSvc();
+const { el, signal, computed, effect, mount } = createDOMSvc();
 
 const count = signal(0);
 
-count(); // read → 0
-count(1); // write
-count(); // read → 1
+const App = () =>
+  el('div')(
+    el('p').props({ textContent: computed(() => `Count: ${count()}`) }),
+    el('button').props({ onclick: () => count(count() + 1) })('Increment')
+  );
+
+mount(App(), document.body);
+```
+
+That's it. No configuration, no wiring, no ceremony.
+
+## Concepts
+
+Lattice is designed around **progressive disclosure of complexity**. Start simple, go deeper only when you need to.
+
+### Layer 1: Presets (Most Users)
+
+Presets are ready-to-use service bundles. Import, call, build:
+
+| Preset | What you get |
+|--------|--------------|
+| `createSignalsSvc()` | Signals only: `signal`, `computed`, `effect`, `batch`, `subscribe` |
+| `createDOMSvc()` | Signals + DOM views: everything above plus `el`, `map`, `match`, `on`, `mount` |
+| `createIslandsServerApp()` | SSR with islands architecture |
+| `createIslandsClientApp()` | Client hydration for islands |
+
+```typescript
+// Signals only
+import { createSignalsSvc } from '@lattice/signals/presets/core';
+const { signal, computed, effect } = createSignalsSvc();
+
+// Full DOM app
+import { createDOMSvc } from '@lattice/view/presets/dom';
+const { el, signal, computed, effect, mount } = createDOMSvc();
+```
+
+**When to stay here**: Building apps with standard DOM rendering. This covers most use cases.
+
+### Layer 2: Composition (Power Users)
+
+Under presets, Lattice uses a service composition pattern. Each primitive (`Signal`, `Computed`, `Effect`, etc.) is a factory that requires shared helpers to function. `compose` wires them together:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
+
+// Create shared helpers (dependency graph, scheduler, etc.)
+const helpers = createHelpers();
+
+// Compose only the primitives you need
+const svc = compose(
+  { signal: Signal(), computed: Computed(), effect: Effect() },
+  helpers
+);
+```
+
+**When to go here**: You need to share signals across multiple render targets (DOM + Canvas), add instrumentation, or exclude unused primitives for smaller bundles.
+
+### Layer 3: Custom Services (Library Authors)
+
+Create your own primitives using `defineService`. This is the pattern Lattice's own primitives use:
+
+```typescript
+import { defineService } from '@lattice/lattice';
+
+// Define a service that requires specific helpers
+export const MyPrimitive = defineService(
+  (deps: { signal: SignalFactory; effect: EffectFactory }) =>
+    (options?: MyOptions) => ({
+      name: 'myPrimitive',
+      impl: createMyPrimitive(deps, options),
+    })
+);
+```
+
+**When to go here**: Building reusable libraries, creating custom reactive primitives, or extending Lattice with new capabilities.
+
+---
+
+## Signals
+
+Signals are callable functions that hold reactive values:
+
+```typescript
+const count = signal(0);
+
+count();      // read → 0
+count(1);     // write
+count();      // read → 1
 count.peek(); // read without tracking
 ```
 
-### Computeds
-
-Lazy evaluation—only recompute when read and dependencies changed:
+**Computeds** are lazy—they only recompute when read and when dependencies have changed:
 
 ```typescript
 const doubled = computed(() => count() * 2);
 
 doubled(); // computes: 2
 doubled(); // cached: 2
-count(5); // marks doubled as stale (doesn't recompute yet)
+count(5);  // marks doubled as stale (doesn't recompute yet)
 doubled(); // recomputes: 10
 ```
 
-### Effects
+**Effects** run side effects when dependencies change:
 
 ```typescript
 effect(() => {
@@ -53,41 +129,40 @@ count(1); // logs: "Count is 1"
 count(2); // logs: "Count is 2"
 ```
 
-### Batching
+**Batching** groups multiple updates into a single effect run:
 
 ```typescript
-const { signal, effect, batch } = createSignalsSvc();
-
-const count = signal(0);
-effect(() => console.log(count()));
-
 batch(() => {
   count(1);
   count(2);
   count(3);
-}); // effect runs once, logs: 3
+}); // effect runs once with final value: 3
 ```
 
-## View Primitives
+## Views
 
-DOM primitives that work with signals:
+### Element Builder
+
+The `el` function creates elements with a fluent API:
 
 ```typescript
-import { createDOMSvc } from '@lattice/view/presets/dom';
+el('div')(
+  el('h1')('Hello'),
+  el('p')('World')
+)
 
-const { el, signal, computed, mount } = createDOMSvc();
+// With props (static or reactive)
+el('input').props({
+  type: 'text',
+  value: computed(() => name()),  // reactive
+  placeholder: 'Enter name',      // static
+})()
 
-const count = signal(0);
-
-const label = computed(() => `Count: ${count()}`);
-
-const Counter = () =>
-  el('div')(
-    el('p').props({ textContent: label }),
-    el('button').props({ onclick: () => count(count() + 1) })('Increment')
-  );
-
-mount(Counter(), document.body);
+// With lifecycle
+el('canvas').ref((canvas) => {
+  const ctx = canvas.getContext('2d');
+  return () => { /* cleanup */ };
+})()
 ```
 
 ### Reactive Props
@@ -101,13 +176,9 @@ const className = computed(() => (isActive() ? 'active' : 'inactive'));
 el('div').props({ className });
 ```
 
-> **Note:** Any function passed where a reactive is expected will be treated as a reactive closure—it will be called inside an effect and re-run when its dependencies change. Prefer explicit `signal` or `computed` for clarity and performance.
-
 ### List Rendering
 
 ```typescript
-const { el, map, signal } = createDOMSvc();
-
 const items = signal([{ id: 1, name: 'Item 1' }]);
 
 map(
@@ -120,11 +191,8 @@ map(
 ### Conditional Rendering
 
 ```typescript
-const { el, match, signal } = createDOMSvc();
-
 const currentTab = signal<'home' | 'settings'>('home');
 
-// Reactively switch between elements
 match(currentTab, (tab) =>
   tab === 'home' ? el('div')('Home content') : el('div')('Settings content')
 );
@@ -212,28 +280,40 @@ function Counter() {
 - **Push**: When a signal changes, dependents are marked stale (not recomputed)
 - **Pull**: Computeds recompute lazily when read
 
-This avoids cascading recomputes.
+This avoids cascading recomputes in diamond dependency graphs.
 
 ### Package Structure
 
 ```
+@lattice/lattice ─── composition layer (wires everything together)
+       │
 @lattice/signals ─── standalone reactivity
        │
        ├── @lattice/view ─── view primitives + adapters
        │        │
-       │        ├── DOM adapter
-       │        ├── Canvas adapter
-       │        ├── SSR adapter
+       │        ├── DOM adapter (browser)
+       │        ├── SSR adapter (server)
        │        └── custom adapters
        │
        ├── @lattice/react ─── React bindings
        │
-       ├── @lattice/router ─── routing
+       ├── @lattice/router ─── client-side routing
        │
        └── @lattice/islands ─── SSR + hydration
 ```
 
-`@lattice/lattice` provides a composition layer for wiring these together.
+### Import Paths
+
+Each package offers multiple import paths:
+
+| Path | Use Case |
+|------|----------|
+| `@lattice/signals/presets/core` | Most users—bundled service |
+| `@lattice/signals` | Individual primitives for custom composition |
+| `@lattice/view/presets/dom` | Most users—bundled DOM service |
+| `@lattice/view` | Individual primitives for custom composition |
+
+Presets are the happy path. Direct imports are for power users who need fine-grained control.
 
 ## Development
 

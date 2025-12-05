@@ -20,7 +20,21 @@ function isEnabled(config: InstrumentationConfig): boolean {
 }
 
 /**
- * Compose multiple instrumentation providers into a single context
+ * Compose multiple instrumentation providers into a single context.
+ *
+ * Events are fanned out to all providers. If a provider throws, the error
+ * is logged but other providers still receive the event.
+ *
+ * @example
+ * ```ts
+ * import { composeProviders, devtoolsProvider } from '@lattice/lattice';
+ *
+ * const customProvider = { name: 'custom', ... };
+ * const ctx = composeProviders([devtoolsProvider(), customProvider]);
+ *
+ * ctx.emit({ type: 'test', timestamp: Date.now(), data: {} });
+ * // Both providers receive the event
+ * ```
  */
 export function composeProviders(
   providers: InstrumentationProvider[]
@@ -91,12 +105,55 @@ export function composeProviders(
 }
 
 /**
- * Create an instrumentation context from configuration
+ * Create an instrumentation context from configuration.
  *
- * Type overloads provide precise return types based on config:
- * - When enabled is false → undefined
- * - When enabled is true and providers non-empty → InstrumentationContext
- * - Otherwise → InstrumentationContext | undefined
+ * This is the main entry point for setting up instrumentation.
+ * Returns `undefined` if instrumentation is disabled, allowing
+ * safe optional chaining in production.
+ *
+ * Type overloads provide precise return types:
+ * - `enabled: false` → always returns `undefined`
+ * - `enabled: true` with providers → always returns `InstrumentationContext`
+ * - Otherwise → `InstrumentationContext | undefined`
+ *
+ * @example Basic usage
+ * ```ts
+ * import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+ *
+ * const instrumentation = createInstrumentation({
+ *   enabled: import.meta.env.DEV,
+ *   providers: [devtoolsProvider()],
+ * });
+ *
+ * // Use with compose
+ * const ctx = compose(
+ *   { signal: Signal(), computed: Computed() },
+ *   helpers,
+ *   { instrumentation }
+ * );
+ * ```
+ *
+ * @example Production-safe pattern
+ * ```ts
+ * // Returns undefined in production (enabled: false)
+ * const instrumentation = createInstrumentation({
+ *   enabled: false,
+ *   providers: [],
+ * });
+ *
+ * // Type is `undefined`, no runtime overhead
+ * ```
+ *
+ * @example Multiple providers
+ * ```ts
+ * const instrumentation = createInstrumentation({
+ *   providers: [
+ *     devtoolsProvider(),
+ *     analyticsProvider(),
+ *     loggingProvider({ verbose: true }),
+ *   ],
+ * });
+ * ```
  */
 
 // Overload: enabled is explicitly false → always returns undefined

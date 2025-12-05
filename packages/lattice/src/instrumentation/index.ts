@@ -8,5 +8,4 @@ export type {
   InstrumentationConfig,
 } from './types';
 
-export { withInstrumentation } from './with-instrumentation';
 export { composeProviders, createInstrumentation } from './compose';

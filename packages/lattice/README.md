@@ -2,21 +2,35 @@
 
 Service composition layer for Lattice. Wire independent packages together into unified contexts with lifecycle management and optional instrumentation.
 
+> **Note**: Most users don't need this package directly. Use presets from `@lattice/signals` or `@lattice/view` instead. This package is for power users who need custom composition, instrumentation, or are building reusable libraries.
+
+## When to Use This Package
+
+| Use Case | What to Use |
+|----------|-------------|
+| Building a typical app | `createDOMSvc()` from `@lattice/view/presets/dom` |
+| Sharing signals across adapters | `compose()` from this package |
+| Adding instrumentation | `createInstrumentation()` from this package |
+| Creating custom primitives | `defineService()` from this package |
+
 ## Overview
 
-Lattice packages (`@lattice/signals`, `@lattice/view`, etc.) expose service definitions—objects that describe an implementation plus optional lifecycle hooks. This package composes those definitions into a single context object where each service is accessible by name.
+Lattice packages (`@lattice/signals`, `@lattice/view`, etc.) expose service factories—functions that create service definitions. This package composes those definitions into a single context object where each service is accessible by name.
 
 ```typescript
 import { compose } from '@lattice/lattice';
-import { signalsService } from '@lattice/signals';
-import { viewService } from '@lattice/view';
+import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
 
-const ctx = compose(signalsService, viewService);
+const helpers = createHelpers();
+
+const ctx = compose(
+  { signal: Signal(), computed: Computed(), effect: Effect() },
+  helpers
+);
 
 // Services available by name
 ctx.signal(0);
 ctx.computed(() => /* ... */);
-ctx.el('div');
 
 // Cleanup when done
 ctx.dispose();
@@ -128,16 +142,21 @@ const myService: ServiceDefinition<'my', MyImpl> = {
 Create a context from service factories with shared dependencies:
 
 ```typescript
+import { compose } from '@lattice/lattice';
+import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
+
+const helpers = createHelpers();
+
 const ctx = compose(
-  { signals: Signal(), computed: Computed() },
-  { scheduler: myScheduler },
-  { instrumentation }
+  { signal: Signal(), computed: Computed(), effect: Effect() },
+  helpers,
+  { instrumentation } // optional
 );
 ```
 
 ### `compose(...services)`
 
-Create a context from pre-instantiated service definitions:
+Alternatively, create a context from pre-instantiated service definitions:
 
 ```typescript
 const ctx = compose(serviceA, serviceB);
@@ -146,17 +165,20 @@ ctx.dispose(); // Cleanup all services
 
 ### `defineService(factory)`
 
-Helper for creating portable, instantiable services:
+Helper for creating portable, instantiable services. This is the pattern Lattice primitives use:
 
 ```typescript
-const myService = defineService((deps) => (initialValue) => ({
-  name: 'my',
-  impl: createImpl(deps, initialValue),
-}));
+// Define a service that requires dependencies
+const MyPrimitive = defineService(
+  (deps: { signal: SignalFactory }) =>
+    (options?: MyOptions) => ({
+      name: 'myPrimitive',
+      impl: createImpl(deps, options),
+    })
+);
 
-// Usage
-const service = myService(42);
-const ctx = compose(service.create(dependencies));
+// Usage: factory returns a Service with .create() method
+const svc = compose({ myPrimitive: MyPrimitive() }, helpers);
 ```
 
 ### `createInstrumentation(config)`
@@ -165,11 +187,11 @@ Create an instrumentation context for debugging and profiling:
 
 ```typescript
 const instrumentation = createInstrumentation({
-  enabled: true,
+  enabled: import.meta.env.DEV,
   providers: [devtoolsProvider()],
 });
 
-const ctx = compose(services, deps, { instrumentation });
+const ctx = compose(factories, helpers, { instrumentation });
 ```
 
 ### `devtoolsProvider(options?)`

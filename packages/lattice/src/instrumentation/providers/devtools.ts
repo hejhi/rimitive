@@ -1,9 +1,46 @@
 import type { InstrumentationProvider, InstrumentationEvent } from '../types';
 
+/**
+ * Options for the DevTools instrumentation provider.
+ */
 export type DevtoolsProviderOptions = {
+  /** Log events to console for debugging */
   debug?: boolean;
 };
 
+/**
+ * Create a DevTools instrumentation provider.
+ *
+ * Sends instrumentation events to the Lattice DevTools browser extension
+ * via `window.postMessage`. In debug mode, also logs to the console.
+ *
+ * @example Basic usage
+ * ```ts
+ * import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+ *
+ * const instrumentation = createInstrumentation({
+ *   providers: [devtoolsProvider()],
+ * });
+ * ```
+ *
+ * @example With debug logging
+ * ```ts
+ * const instrumentation = createInstrumentation({
+ *   providers: [devtoolsProvider({ debug: true })],
+ * });
+ *
+ * // Events are logged to console:
+ * // [Lattice DevTools] Event: signal:create { id: 'abc-123' }
+ * ```
+ *
+ * @example Conditional for development only
+ * ```ts
+ * const instrumentation = createInstrumentation({
+ *   enabled: import.meta.env.DEV,
+ *   providers: [devtoolsProvider({ debug: import.meta.env.DEV })],
+ * });
+ * ```
+ */
 export function devtoolsProvider(
   options: DevtoolsProviderOptions = {}
 ): InstrumentationProvider {
@@ -77,7 +114,18 @@ export function devtoolsProvider(
 }
 
 /**
- * Check if DevTools is available in the current environment
+ * Check if Lattice DevTools extension is available in the current environment.
+ *
+ * @example
+ * ```ts
+ * import { isDevtoolsAvailable, devtoolsProvider, createInstrumentation } from '@lattice/lattice';
+ *
+ * // Only enable instrumentation if DevTools is installed
+ * const instrumentation = createInstrumentation({
+ *   enabled: isDevtoolsAvailable(),
+ *   providers: [devtoolsProvider()],
+ * });
+ * ```
  */
 export function isDevtoolsAvailable(): boolean {
   return typeof window !== 'undefined' && '__LATTICE_DEVTOOLS__' in window;

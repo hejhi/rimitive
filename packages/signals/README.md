@@ -184,36 +184,67 @@ The dependency graph uses a doubly-linked list structure for O(1) edge operation
 
 Version tracking enables efficient dependency pruning when a computed's dependencies change dynamically.
 
-## Modular Imports
+## Usage Patterns
 
-Each primitive is available as a separate export for tree-shaking:
+### Most Users: Presets
 
-```typescript
-import { Signal } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Effect } from '@lattice/signals/effect';
-import { Batch } from '@lattice/signals/batch';
-import { Subscribe } from '@lattice/signals/subscribe';
-```
-
-These are service factories that require wiring with helpers. For most cases, use the preset:
-
-```typescript
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-```
-
-## Integration with @lattice/lattice
-
-Signals primitives are service definitions that compose with other Lattice packages:
+For most applications, use the preset—it bundles everything and handles wiring:
 
 ```typescript
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 
-const ctx = createSignalsSvc();
-
-const count = ctx.signal(0);
-const doubled = ctx.computed(() => count() * 2);
+const { signal, computed, effect, batch, subscribe } = createSignalsSvc();
 ```
+
+This is the recommended path. No configuration needed.
+
+### Power Users: Custom Composition
+
+If you need fine-grained control (custom helpers, shared signals across adapters, instrumentation), import primitives directly and compose:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
+
+// Create shared helpers (dependency graph, scheduler, etc.)
+const helpers = createHelpers();
+
+// Compose only what you need
+const svc = compose(
+  { signal: Signal(), computed: Computed(), effect: Effect() },
+  helpers
+);
+```
+
+**When to use this pattern:**
+- Sharing signals between multiple render targets (DOM + Canvas)
+- Adding instrumentation/debugging
+- Excluding unused primitives for smaller bundles
+- Creating custom reactive primitives
+
+### Library Authors: defineService
+
+Create new primitives using the same pattern Lattice uses internally:
+
+```typescript
+import { defineService } from '@lattice/lattice';
+
+export const MyPrimitive = defineService(
+  (deps: { signal: SignalFactory }) =>
+    (options?: MyOptions) => ({
+      name: 'myPrimitive',
+      impl: createImpl(deps, options),
+    })
+);
+```
+
+## Import Paths
+
+| Path | What You Get | Use Case |
+|------|--------------|----------|
+| `@lattice/signals/presets/core` | `createSignalsSvc()` | Most users |
+| `@lattice/signals` | `Signal`, `Computed`, etc. | Custom composition |
+| `@lattice/signals/signal` | `Signal` only | Maximum tree-shaking |
 
 ## Types
 

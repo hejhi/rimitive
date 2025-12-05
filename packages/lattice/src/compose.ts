@@ -13,7 +13,27 @@ type ContextState = {
   disposers: Set<() => void>;
 };
 
+/**
+ * Options for creating a composed context
+ *
+ * @example
+ * ```ts
+ * import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+ *
+ * const instrumentation = createInstrumentation({
+ *   enabled: true,
+ *   providers: [devtoolsProvider()],
+ * });
+ *
+ * const ctx = compose(
+ *   { instrumentation },
+ *   signalService,
+ *   computedService
+ * );
+ * ```
+ */
 export type CreateContextOptions = {
+  /** Optional instrumentation context for debugging/profiling */
   instrumentation?: InstrumentationContext;
 };
 
@@ -41,27 +61,67 @@ function isFactoriesObject(
   return entries.length > 0 && entries.every(([, v]) => isDefinedService(v));
 }
 
-// ============================================================================
+/**
+ * Compose service factories into a unified context with shared dependencies.
+ *
+ * This is the primary way to create a Lattice context. It supports three patterns:
+ *
+ * **Pattern 1: Factory object + deps** (recommended for most cases)
+ * Pass an object of service factories and shared dependencies.
+ *
+ * @example
+ * ```ts
+ * import { compose } from '@lattice/lattice';
+ * import { Signal, Computed, Effect } from '@lattice/signals';
+ * import { createHelpers } from '@lattice/signals/presets/core';
+ *
+ * const helpers = createHelpers();
+ * const ctx = compose(
+ *   { signal: Signal(), computed: Computed(), effect: Effect() },
+ *   helpers
+ * );
+ *
+ * const count = ctx.signal(0);
+ * const doubled = ctx.computed(() => count() * 2);
+ * ```
+ *
+ * **Pattern 2: Pre-created ServiceDefinitions**
+ * Pass already-instantiated service definitions.
+ *
+ * @example
+ * ```ts
+ * const signalService = Signal().create(helpers);
+ * const computedService = Computed().create(helpers);
+ *
+ * const ctx = compose(signalService, computedService);
+ * ```
+ *
+ * **Pattern 3: With instrumentation**
+ * Add debugging/profiling to any composition pattern.
+ *
+ * @example
+ * ```ts
+ * const ctx = compose(
+ *   { signal: Signal(), computed: Computed() },
+ *   helpers,
+ *   { instrumentation }
+ * );
+ * ```
+ *
+ * @returns A context object with all service implementations + `dispose()` method
+ */
 // Overload 1: Factory object + deps pattern
-// compose({ signal: Signal(), computed: Computed() }, deps)
-// ============================================================================
 export function compose<
   T extends Record<string, DefinedService>,
   TDeps extends ExtractDeps<T>,
 >(factories: T, deps: TDeps, options?: CreateContextOptions): Svc<T>;
 
-// ============================================================================
 // Overload 2: ServiceDefinitions (variadic)
-// compose(signalService, computedService)
-// ============================================================================
 export function compose<
   TServices extends readonly ServiceDefinition<string, unknown>[],
 >(...services: TServices): LatticeContext<TServices>;
 
-// ============================================================================
 // Overload 3: Options + ServiceDefinitions
-// compose({ instrumentation }, signalService, computedService)
-// ============================================================================
 export function compose<
   TServices extends readonly ServiceDefinition<string, unknown>[],
 >(
@@ -69,9 +129,7 @@ export function compose<
   ...services: TServices
 ): LatticeContext<TServices>;
 
-// ============================================================================
 // Implementation
-// ============================================================================
 export function compose(
   ...args: unknown[]
 ): Record<string, unknown> & { dispose(): void } {

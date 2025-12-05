@@ -264,22 +264,67 @@ el('div').ref((element) => {
 })()
 ```
 
-## Modular Imports
+## Usage Patterns
 
-Each primitive is available as a separate export:
+### Most Users: Presets
 
-```typescript
-import { El } from '@lattice/view/el';
-import { Map } from '@lattice/view/map';
-import { Match } from '@lattice/view/match';
-import { Portal } from '@lattice/view/portal';
-```
-
-These are service factories. For most cases, use the preset:
+For most applications, use the preset—it bundles signals, views, and DOM helpers:
 
 ```typescript
 import { createDOMSvc } from '@lattice/view/presets/dom';
+
+const { el, signal, computed, effect, map, match, on, mount } = createDOMSvc();
 ```
+
+This is the recommended path. Signals and views are wired together automatically.
+
+### Power Users: Shared Signals
+
+If you need to share signals across multiple render targets (e.g., DOM + Canvas), create signals separately:
+
+```typescript
+import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createDOMViewSvc } from '@lattice/view/presets/dom';
+
+// Shared signals
+const signals = createSignalsSvc();
+
+// DOM-specific views using shared signals
+const dom = createDOMViewSvc(signals);
+
+// Canvas views could use the same signals instance
+const canvas = createCanvasViewSvc(signals);
+
+// Changes propagate to both
+const position = signals.signal({ x: 0, y: 0 });
+```
+
+### Power Users: Custom Adapters
+
+Create views for non-DOM targets by implementing the `Adapter` interface:
+
+```typescript
+import { createViewSvc } from '@lattice/view/presets/core';
+import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
+
+const myAdapter: Adapter<MyConfig> = {
+  createNode(type, props) { /* ... */ },
+  setProperty(node, key, value) { /* ... */ },
+  appendChild(parent, child) { /* ... */ },
+  removeChild(parent, child) { /* ... */ },
+  insertBefore(parent, child, ref) { /* ... */ },
+};
+
+const svc = createViewSvc(myAdapter, signals);
+```
+
+## Import Paths
+
+| Path | What You Get | Use Case |
+|------|--------------|----------|
+| `@lattice/view/presets/dom` | `createDOMSvc()` | Most users |
+| `@lattice/view/presets/core` | `createViewSvc()` | Custom adapters |
+| `@lattice/view` | `El`, `Map`, etc. | Maximum control |
 
 ## Types
 
