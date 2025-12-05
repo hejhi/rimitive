@@ -34,10 +34,6 @@
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
     },
-    "./constants": {
-      "import": "./dist/constants.js",
-      "types": "./dist/constants.d.ts"
-    },
     "./helpers": {
       "import": "./dist/helpers.js",
       "types": "./dist/helpers.d.ts"
@@ -53,10 +49,6 @@
     "./helpers/graph-traversal": {
       "import": "./dist/helpers/graph-traversal.js",
       "types": "./dist/helpers/graph-traversal.d.ts"
-    },
-    "./helpers/node-state": {
-      "import": "./dist/helpers/node-state.js",
-      "types": "./dist/helpers/node-state.d.ts"
     },
     "./helpers/pull-propagator": {
       "import": "./dist/helpers/pull-propagator.js",
