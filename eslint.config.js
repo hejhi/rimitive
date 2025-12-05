@@ -40,6 +40,20 @@ export default tseslint.config(
       '@typescript-eslint/explicit-module-boundary-types': 'error',
     },
   },
+  // Test files and utilities don't need explicit return types
+  {
+    files: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/test-setup.ts',
+      '**/test-utils.ts',
+      '**/test-helpers.ts',
+      '**/__tests__/**',
+    ],
+    rules: {
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+    },
+  },
   // React-specific configuration
   {
     files: ['**/*.tsx'],
@@ -100,6 +114,13 @@ export default tseslint.config(
     ],
     rules: {
       '@typescript-eslint/no-unsafe-call': 'off',
+    },
+  },
+  // Test files don't need explicit return types
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
     },
   }
 );

@@ -202,40 +202,14 @@ These are service factories that require wiring with helpers. For most cases, us
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 ```
 
-## Helpers
-
-Low-level utilities for building custom reactive systems:
-
-```typescript
-import { createPushPullSchedule } from '@lattice/signals/helpers';
-
-// Get all wired helpers
-const helpers = createPushPullSchedule();
-// { consumer, trackDependency, track, propagate, pullUpdates, ... }
-```
-
-Available helper bundles:
-- `createPush()` - Signals only
-- `createPushPull()` - Signals + computeds
-- `createPushSchedule()` - Signals + effects
-- `createPushPullSchedule()` - Full system
-
 ## Integration with @lattice/lattice
 
 Signals primitives are service definitions that compose with other Lattice packages:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { Signal, Computed, Effect } from '@lattice/signals';
-import { createPushPullSchedule } from '@lattice/signals/helpers';
+import { createSignalsSvc } from '@lattice/signals/presets/core';
 
-const helpers = createPushPullSchedule();
-
-const ctx = compose(
-  Signal().create(helpers),
-  Computed().create(helpers),
-  Effect().create(helpers)
-);
+const ctx = createSignalsSvc();
 
 const count = ctx.signal(0);
 const doubled = ctx.computed(() => count() * 2);

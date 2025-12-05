@@ -34,10 +34,6 @@
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
     },
-    "./helpers": {
-      "import": "./dist/helpers.js",
-      "types": "./dist/helpers.d.ts"
-    },
     "./helpers/scheduler": {
       "import": "./dist/helpers/scheduler.js",
       "types": "./dist/helpers/scheduler.d.ts"
