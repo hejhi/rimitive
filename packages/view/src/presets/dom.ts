@@ -26,8 +26,9 @@ import { composeFrom } from '@lattice/lattice';
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import { createAddEventListener } from '../helpers/addEventListener';
+import { createScopes } from '../helpers/scope';
 import { createUse } from '../helpers/use';
-import { defaultExtensions, defaultHelpers } from './core';
+import { defaultExtensions } from './core';
 import type { Readable, Writable } from '@lattice/signals/types';
 import type { RefSpec } from '../types';
 
@@ -63,7 +64,14 @@ export const createDOMViewSvc = <
   signals: TSignals
 ) => {
   const adapter = createDOMAdapter();
-  const viewHelpers = defaultHelpers(adapter, signals);
+  const viewHelpers = {
+    adapter,
+    ...createScopes({ baseEffect: signals.effect }),
+    signal: signals.signal,
+    computed: signals.computed,
+    effect: signals.effect,
+    batch: signals.batch,
+  };
   const viewSvc = composeFrom(
     defaultExtensions<DOMAdapterConfig>(),
     viewHelpers

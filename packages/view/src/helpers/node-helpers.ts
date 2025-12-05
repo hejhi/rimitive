@@ -17,9 +17,20 @@ export type NodeHelperOpts<TConfig extends AdapterConfig> = {
   getElementScope: CreateScopes['getElementScope'];
 };
 
+export type NodeHelpers<TElement> = {
+  insertNodeBefore: (
+    svc: unknown,
+    parentElement: TElement,
+    node: NodeRef<TElement>,
+    nextSiblingNode?: NodeRef<TElement> | null,
+    boundaryNextSibling?: NodeRef<TElement> | null
+  ) => void;
+  removeNode: (parentElement: TElement, node: NodeRef<TElement>) => void;
+};
+
 export function createNodeHelpers<TConfig extends AdapterConfig>(
   opts: NodeHelperOpts<TConfig>
-) {
+): NodeHelpers<TConfig['baseElement']> {
   type TElement = TConfig['baseElement'];
   const { adapter, disposeScope, getElementScope } = opts;
 

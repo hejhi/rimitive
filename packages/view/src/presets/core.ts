@@ -2,7 +2,7 @@ import { El } from '../el';
 import { Map } from '../map';
 import { Match } from '../match';
 import { Portal } from '../portal';
-import { createSpec } from '../helpers';
+import { createScopes } from '../helpers/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef, Readable, Writable } from '../types';
 import { composeFrom } from '@lattice/lattice';
@@ -31,8 +31,6 @@ export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
   ) => (...args: TArgs) => RefSpec<TElement> | NodeRef<TElement>
 ) => (...args: TArgs) => RefSpec<TElement>;
 
-export const defaultHelpers = createSpec;
-
 export const createViewSvc = <
   TConfig extends AdapterConfig,
   TSignals extends {
@@ -45,4 +43,11 @@ export const createViewSvc = <
   adapter: Adapter<TConfig>,
   signals: TSignals
 ) =>
-  composeFrom(defaultExtensions<TConfig>(), defaultHelpers(adapter, signals));
+  composeFrom(defaultExtensions<TConfig>(), {
+    adapter,
+    ...createScopes({ baseEffect: signals.effect }),
+    signal: signals.signal,
+    computed: signals.computed,
+    effect: signals.effect,
+    batch: signals.batch,
+  });
