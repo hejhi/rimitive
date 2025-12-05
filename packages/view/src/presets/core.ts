@@ -1,11 +1,11 @@
-import { El } from '../el';
-import { Map } from '../map';
-import { Match } from '../match';
-import { Portal } from '../portal';
+import { El, type ElFactory, type ElOpts } from '../el';
+import { Map, type MapFactory, type MapOpts } from '../map';
+import { Match, type MatchFactory, type MatchOpts } from '../match';
+import { Portal, type PortalFactory, type PortalOpts } from '../portal';
 import { createScopes } from '../helpers/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef, Readable, Writable } from '../types';
-import { composeFrom } from '@lattice/lattice';
+import { composeFrom, type Service } from '@lattice/lattice';
 
 export type { ElementProps, TagFactory } from '../el';
 export type { ElFactory } from '../el';
@@ -13,7 +13,14 @@ export type { MapFactory } from '../map';
 export type { MatchFactory } from '../match';
 export type { PortalFactory } from '../portal';
 
-export const defaultExtensions = <TConfig extends AdapterConfig>() => ({
+export type DefaultExtensions<TConfig extends AdapterConfig> = {
+  el: Service<ElFactory<TConfig>, ElOpts<TConfig>>;
+  map: Service<MapFactory<TConfig['baseElement']>, MapOpts<TConfig>>;
+  match: Service<MatchFactory<TConfig['baseElement']>, MatchOpts<TConfig>>;
+  portal: Service<PortalFactory<TConfig['baseElement']>, PortalOpts<TConfig>>;
+};
+
+export const defaultExtensions = <TConfig extends AdapterConfig>(): DefaultExtensions<TConfig> => ({
   el: El<TConfig>(),
   map: Map<TConfig>(),
   match: Match<TConfig>(),
@@ -42,7 +49,7 @@ export const createViewSvc = <
 >(
   adapter: Adapter<TConfig>,
   signals: TSignals
-) =>
+): ReturnType<typeof composeFrom<DefaultExtensions<TConfig>, ElOpts<TConfig> & MapOpts<TConfig> & MatchOpts<TConfig> & PortalOpts<TConfig>>> =>
   composeFrom(defaultExtensions<TConfig>(), {
     adapter,
     ...createScopes({ baseEffect: signals.effect }),
