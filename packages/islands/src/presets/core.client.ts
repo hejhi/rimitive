@@ -117,7 +117,7 @@ export type ClientApp = {
  * Accepts signals, adapter, and view as dependencies - does not create them internally.
  * This allows maximum composability and custom extensions.
  *
- * For server-side rendering, import from '@lattice/islands/server':
+ * For server-side rendering, import from '\@lattice/islands/server':
  * ```ts
  * import { createIslandsApp } from '@lattice/islands/server';
  * ```

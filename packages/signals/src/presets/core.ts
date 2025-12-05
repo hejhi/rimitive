@@ -106,6 +106,8 @@ export type {
   SubscribeService,
   SubscribeOptions,
   SubscribeFunction,
+  SubscribeCallback,
+  UnsubscribeFunction,
 } from '../subscribe';
 
 // Lattice composition types

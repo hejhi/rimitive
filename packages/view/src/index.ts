@@ -34,8 +34,24 @@
 // =============================================================================
 
 export { createDOMSvc, createDOMViewSvc } from './presets/dom';
-export { createViewSvc } from './presets/core';
-export type { DOMSvc, DOMViewSvc, ViewSvc } from './presets/dom';
+export { createViewSvc, defaultExtensions } from './presets/core';
+export type { DOMSvc, DOMViewSvc, DOMAdapterConfig } from './presets/dom';
+export type {
+  ViewSvc,
+  DefaultExtensions,
+  ComponentFactory,
+  // Service types
+  ElFactory,
+  ElService,
+  MapFactory,
+  MapService,
+  MatchFactory,
+  MatchService,
+  PortalFactory,
+  PortalService,
+  ElementProps,
+  TagFactory,
+} from './presets/core';
 
 // =============================================================================
 // Core Types - For typing components and behaviors
@@ -51,6 +67,22 @@ export type {
   Readable,
   Writable,
   Reactive,
+  ParentContext,
+  BaseRef,
+  LinkedNode,
+  RenderScope,
+  DisposableNode,
+  PortalTarget,
+  PortalOpts,
+} from './types';
+
+export {
+  STATUS_ELEMENT,
+  STATUS_FRAGMENT,
+  STATUS_REF_SPEC,
+  STATUS_COMMENT,
+  STATUS_NODE_MASK,
+  STATUS_SPEC_MASK,
 } from './types';
 
 export type { Adapter, AdapterConfig } from './adapter';

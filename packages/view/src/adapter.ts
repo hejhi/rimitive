@@ -30,14 +30,14 @@ export type Node = object;
 /**
  * AdapterConfig defines the type-level contract for a tree adapter:
  * - props: Maps tag names to their prop types for el() autocomplete
- * - elements: Maps tag names to their node types for RefSpec<T> (e.g., 'div' -> HTMLDivElement)
- * - events: Maps event names to their event object types (e.g., 'click' -> MouseEvent)
+ * - elements: Maps tag names to their node types for RefSpec\<T\> (e.g., 'div' -\> HTMLDivElement)
+ * - events: Maps event names to their event object types (e.g., 'click' -\> MouseEvent)
  * - baseElement: Base node type for this adapter (e.g., Node for DOM)
  *
  * Separating `props` from `elements` allows adapters to have clean prop autocomplete
  * without exposing internal node properties (like canvas's bounds, dirty, etc).
  *
- * Note: Text is just another node type created via createNode('text', { value: '...' })
+ * Note: Text is just another node type created via createNode('text', \{ value: '...' \})
  *
  * @example
  * ```typescript
@@ -123,7 +123,7 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * For DOM: type is tag name ('div', 'span', 'text')
    *
    * Text nodes are created with type 'text' and initial value in props:
-   *   createNode('text', { value: 'hello' })
+   *   createNode('text', \{ value: 'hello' \})
    *
    * For cross-renderer composition, parentContext provides the parent's renderer
    * and element, enabling renderers to make boundary decisions (e.g., canvas

@@ -12,12 +12,17 @@ export { defineRoutes } from './defineRoutes';
 export type {
   RouteParams,
   RouteMatch,
+  RouteSpec,
+  RouteMetadata,
   LinkOpts,
   LinkFactory,
   LocationSvc,
   LocationOpts,
   LocationFactory,
+  MatchFunction,
 } from './types';
+
+export { STATUS_ROUTE_SPEC } from './types';
 export type {
   ViewSvc,
   RouterConfig,

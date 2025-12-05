@@ -32,7 +32,7 @@ export type MatchProps<TBaseElement> = {
 /**
  * Match factory type - reactive element switching based on a reactive value
  *
- * Takes a signal, computed, or () => T and a matcher function.
+ * Takes a signal, computed, or () =\> T and a matcher function.
  * When the reactive value changes, the current element is disposed and
  * replaced with a new one from the matcher.
  *
@@ -90,7 +90,7 @@ export type MatchService<TConfig extends AdapterConfig> = ReturnType<
 /**
  * Match primitive - switches between different elements based on reactive value
  *
- * Takes a Reactive<T> (signal, computed, or any () => T) and rebuilds children
+ * Takes a Reactive<T> (signal, computed, or any () =\> T) and rebuilds children
  * when the value changes. Use for polymorphic rendering where the value
  * determines WHAT to render.
  *

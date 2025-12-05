@@ -7,8 +7,11 @@ export type {
   InstrumentationContext,
   LatticeContext,
   ServiceImpl,
+  ServiceName,
   DefinedService,
   Svc,
+  ExtractDeps,
+  UnionToIntersection,
 } from './types';
 export { createInstrumentation } from './instrumentation';
 export type {

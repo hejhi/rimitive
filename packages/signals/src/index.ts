@@ -33,7 +33,30 @@
 // =============================================================================
 
 export { createSignalsSvc, createHelpers, defaultExtensions } from './presets/core';
-export type { SignalsSvc, Helpers } from './presets/core';
+export type {
+  SignalsSvc,
+  Helpers,
+  DefaultExtensions,
+  // Service types
+  SignalService,
+  SignalFactory,
+  SignalOptions,
+  ComputedService,
+  ComputedFactory,
+  ComputedOptions,
+  EffectService,
+  EffectFactory,
+  EffectOptions,
+  BatchService,
+  BatchFactory,
+  BatchOptions,
+  SubscribeService,
+  SubscribeFactory,
+  SubscribeOptions,
+  SubscribeFunction,
+  SubscribeCallback,
+  UnsubscribeFunction,
+} from './presets/core';
 
 // =============================================================================
 // Core Types - For typing behaviors and components

@@ -43,7 +43,7 @@ import { setFragmentChild } from './helpers/fragment-boundaries';
  * Portal target - where content should be rendered
  * - undefined: use default (document.body)
  * - Element: use directly
- * - () => Element | null: getter/signal (called to resolve target)
+ * - () =\> Element | null: getter/signal (called to resolve target)
  */
 export type PortalTarget<TElement> =
   | TElement
