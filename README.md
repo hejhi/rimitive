@@ -3,26 +3,51 @@
 > **DISCLAIMER:**
 > This is alpha software—it's heavily tested and benchmarked, but the usual disclaimers apply.
 
-## What is Lattice?
+## The Core Idea
 
-Lattice explores the idea of defining reactivity, components, and UIs as **specifications** and **services**, with a functional api.
+Lattice is built on two core concepts: **primitives** and **services**.
 
-- **spec**: a portable specification or definition—it describes _what_ something is (a behavior, a UI, a component) without being tied to any particular runtime, renderer, or framework
-- **service**: a composed set of primitives (signals, effects, element builders) that can "hydrate" a spec into a reactive instance
+```typescript
+import { compose } from '@lattice/lattice';
 
+const service = compose(
+  { signal: Signal(), computed: Computed() },
+  dependencies
+);
+
+service.signal(0);         // use the primitives
+service.computed(() => …); // through the service
 ```
-spec + service = reactive instance
-```
 
-Traditional UI frameworks marry these together. A React component is both the definition and the runtime. A Solid component assumes Solid's reactivity. Lattice experiments with pulling them apart into functional specs that _define_ behavior and _receive_ strongly defined services, which are composed of primitives.
+- A **primitive** is a factory function—a building block
+- A **service** is a composed set of primitives
 
-The result is a set of tree-shakeable toolkits, primitives, and patterns that enable defining and composing them, along with bindings and adapters for other frameworks. Aside from the dom adapter (which—obviously—uses the DOM) and the SSR DOM adapter (which uses linkedom under the hood), there's no DOM or external dependencies.
+At it's core, that's it. `compose()` is the backbone of Lattice: a simple, type-safe way to wire primitives together with their dependencies.
 
 ---
 
-## Quick Example
+## What Does That Unlock?
 
-Here's a simple counter. `App` is a spec of a UI component—it returns a `RefSpec` describing the UI. `mount` hydrates it into the DOM.
+Lattice provides (but is not limited to!) pre-built primitives for **reactivity** and **UI**:
+
+| Package            | Primitives                                  | What they produce        |
+| ------------------ | ------------------------------------------- | ------------------------ |
+| `@lattice/signals` | `signal`, `computed`, `effect`, `subscribe` | Reactive state & effects |
+| `@lattice/view`    | `el`, `map`, `match`, `portal`              | UI specs                 |
+
+These primitives produce different outputs:
+
+- `signal(0)` → reactive state (live, tracks dependencies)
+- `computed(() => ...)` → derived reactive value (live, lazy)
+- `effect(() => ...)` → side effect (runs when dependencies change)
+- `el('div')(...)` → spec (inert blueprint, needs hydration)
+- `map(items, ...)` → fragment spec (inert, needs hydration)
+
+---
+
+## Using the Primitives
+
+Most users won't need to call `compose()` directly. Lattice provides **presets**—pre-composed services, with their dependencies, ready to use:
 
 ```typescript
 import { createDOMSvc } from '@lattice/view/presets/dom';
@@ -41,56 +66,54 @@ const App = () => {
 mount(App(), document.body);
 ```
 
-The preset (`createDOMSvc`) bundles:
+`createDOMSvc()` bundles signal primitives, view primitives, and a DOM adapter into one service. But it's just a convenience—under the hood, it's using `compose()`. If you want to replace any of them, you totally can. In fact, you can re-use our primitives and replace their underlying dependencies if you want to change their behavior. You have control down to the very base reactive, UI model, and renderer itself.
 
-- `signals` (reactive primitives)
-- `view` (reactive UIs)
-- DOM adapter
+---
 
-But you can also compose services yourself:
+## Going Deeper: Compose Services Yourself
+
+Need to share signals across multiple renderers? Compose services yourself:
 
 ```typescript
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMViewSvc } from '@lattice/view/presets/dom';
 
-const signals = createSignalsSvc(); // Shared signals service
-const dom = createDOMViewSvc(signals); // View services that use the same signals
+// Shared signals
+const signals = createSignalsSvc();
+
+// Multiple view services using the same signals
+const dom = createDOMViewSvc(signals);
 const canvas = createCanvasViewSvc(signals); // your custom adapter
-const position = signals.signal({ x: 0, y: 0 }); // Same signal, multiple rendering targets
+
+// Same signal, multiple rendering targets
+const position = signals.signal({ x: 0, y: 0 });
 ```
 
-Or go lower and compose individual primitives, or even swap out the entire underlying reactive system, if you want, by replacing the `helpers` yourself:
+That's essentially how Lattice does ssr in the `island` package (swapping out the renderer dependency for the `view` primitives). Or go lower and compose individual primitives:
 
 ```typescript
 import { compose } from '@lattice/lattice';
-import { Signal, Computed, createHelpers } from '@lattice/signals';
+import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
 
-const helpers = createHelpers();
-const svc = compose({ signal: Signal(), computed: Computed() }, helpers);
+const dependencies = createHelpers();
+const svc = compose(
+  { signal: Signal(), computed: Computed(), effect: Effect() },
+  dependencies
+);
 ```
 
-Same idea at different levels: specs receive services, services are composed from primitives.
+Or write your own primitives, and hook directly into the underlying reactive model provided via our dependencies. You control the composition. Use presets for convenience, or compose only what you need. A natural benefit is that everything is fully tree-shakeable. Just need the signals in the vanilla DOM? Compose only that, with its base dependencies, and drop everything else.
 
 ---
 
-## Portable Behavior Specs
+## Patterns: Behaviors
 
-The impetus for this library was exploring the idea of defining strongly typed reactive behavior ahead of time, while decoupling it from a UI component. Inspired by libraries like:
-
-- [downshift](https://www.downshift-js.com/use-select/):
-  > You have a custom select dropdown in your application and you want it to perform exactly the same as the native HTML select in terms of accessibility and functionality. For consistency reasons, you want it to follow the ARIA design pattern for a select. You also want this solution to be simple to use and flexible so you can tailor it to your needs.
-- [jotai atoms](https://jotai.org/docs/core/atom):
-  > The atom function is to create an atom config. We call it "atom config" as it's just a definition and it doesn't yet hold a value. We may also call it just "atom" if the context is clear.
-- The extensibility and determinism of [ProseMirror](https://prosemirror.net)
-- The reactive FRP-ish algorithmic beauty and ergonomics of [alien-signals](https://github.com/stackblitz/alien-signals) and [Reactively](https://github.com/milomg/reactively), both of which Lattice signals is (**strongly**) modeled after (hybrid push/pull and graph coloring).
-
-Lattice enables the creation of headless "behaviors" (a reactive behavioral spec, if you will)—simple functions that encapsulate reactive behavior, receive a service, and return a reactive api. This spec defines _what_ the behavior is; the service provides _how_ it becomes reactive.
-
-Define a spec:
+Once you have primitives and services, patterns emerge. One such pattern is the **behavior**—a portable function that receives a service and returns a reactive API:
 
 ```typescript
+// behaviors/counter.ts
 export const counter =
-  ({ signal, computed }: ReactiveSvc) =>
+  ({ signal, computed }: SignalsSvc) =>
   (initial = 0) => {
     const count = signal(initial);
     const doubled = computed(() => count() * 2);
@@ -103,48 +126,12 @@ export const counter =
   };
 ```
 
-Use in Lattice views:
-
-```typescript
-const { use, el, computed } = createDOMSvc();
-
-function Counter() {
-  // `use` provides the spec with the current service
-  const c = use(counter);
-  return el('button').props({ onclick: c.increment })(
-    computed(() => `Count: ${c.count()}`)
-  );
-}
-```
-
-Or in React:
-
-```tsx
-import { createHook, useSubscribe } from '@lattice/react';
-
-// createHook provides the spec and hooks it into React's reactive model, but at the end of the day,
-// `counter` is receiving a reactive service
-const useCounter = createHook(counter);
-
-function Counter() {
-  const c = useCounter(10);
-  const count = useSubscribe(c.count);
-  return <button onClick={c.increment}>Count: {count}</button>;
-}
-```
-
-One **very important distinction**: in Lattice, behavioral functions or components that return specs are **not** reactive closures that "re-render", like in most frameworks. Instead, reactive primitives are used to define reactive behavior and boundaries.
-
----
-
-## Composing Specs
-
-Specs can of course compose other specs as well. Consider open/close state—the same logic applies to accordions, dropdowns, modals, tooltips, and collapsible sections. We can capture that pattern once:
+The behavior defines _what_ the logic is. The service provides the primitives. And behaviors can compose other behaviors. Consider open/close state—the same logic applies to accordions, dropdowns, modals, tooltips. Capture it once:
 
 ```typescript
 // behaviors/disclosure.ts
 export const disclosure =
-  ({ signal, computed }: ReactiveSvc) =>
+  ({ signal, computed }: SignalsSvc) =>
   (initialOpen = false) => {
     const isOpen = signal(initialOpen);
 
@@ -159,42 +146,103 @@ export const disclosure =
   };
 ```
 
-Now a `dropdown` spec can compose this with keyboard handling:
+Now a `dropdown` behavior can compose this with keyboard handling:
+
+> NOTE: The below example names the behavior `useDisclosure`, but it's NOT a React hook and the "rules of hooks" do not apply, either in naming or usage. There's no magic here going on, it's just returning the api object above. I just think React nailed a naming convention. Name it whatever you want!
 
 ```typescript
 // behaviors/dropdown.ts
-export const dropdown = ({ use }: ReactiveSvc) => {
-  const useDisclosure = use(disclosure); // `use` provides the service to disclosure
-  return (options?: { initialOpen?: boolean }) => {
-    const { close, isOpen, toggle, triggerProps, contentProps } = useDisclosure(
-      options?.initialOpen ?? false
-    );
+export const dropdown = ({ use }: SignalsSvc) => {
+  // `use` is a primitive that makes consuming the above pattern more ergonomic.
+  // Don't like it? Roll your own and create your own patterns! The source (like most of Lattice) is tiny, promise.
+  const useDisclosure = use(disclosure);
 
-    // ...
-    return { isOpen, toggle, triggerProps, contentProps /** ... */ };
+  return (options?: { initialOpen?: boolean }) => {
+    const d = useDisclosure(options?.initialOpen ?? false);
+    const handlers = {
+      onKeyDown: (e: KeyboardEvent) => {
+        if (e.key === 'Escape') d.close();
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          d.toggle();
+        }
+      },
+    };
+
+    return { ...d, handlers };
   };
 };
 ```
 
-The same `disclosure` spec could be composed into an accordion, modal, or tooltip—each adding its own semantics on top of the shared open/close logic.
+The same `disclosure` behavior could be composed into an accordion, modal, or tooltip—each adding its own semantics on top.
+
+Because behaviors only depend on the service contract (not a specific framework), they're portable. The same behavior works in Lattice views, React (via `@lattice/react`), or any other integration that provides the service.
 
 ---
 
-## Specs Everywhere
+## Specs and Hydration
 
-This pattern also extends to views. When you write `el('div')(...)`, you're not _creating_ a DOM element—you're creating a `RefSpec`, a blueprint _of_ a dom element. The spec becomes a real element only once hydrated with an adapter.
+UI primitives like `el` and `map` produce **specs**—inert data structures that _describe_ UI:
+
+> NOTE: Again, this is NOT React! Functions shown here are **not** reactive closures that "re-render" like in other frameworks. There's no implicit re-execution. Reactivity lives in the **primitives** (`signal`, `computed`), not in component (or behavior) functions.
 
 ```typescript
-// This returns a RefSpec, not a DOM element
+// This returns a spec, not a DOM element
 const Button = (label: string) =>
-  el('button').props({ className: 'btn' })(label);
+  el('button')(
+    // provide the children as arguments
+    label
+  );
 
-// The spec can be used multiple times
+// Specs can be stored and reused
 const save = Button('Save');
 const cancel = Button('Cancel');
 
-// mount() turns the specs into real DOM
+// mount() hydrates specs into real DOM
 mount(el('div')(save, cancel), document.body);
 ```
 
-The same spec can be provided with different services or composed as larger specs.
+Specs don't become real elements until hydrated with an adapter. The same spec can be hydrated with different adapters (DOM, SSR, test, etc) or composed into larger specs before hydration. A happy side-effect of this design is that it makes SSR much simpler.
+
+---
+
+## Extensibility
+
+You own the composition layer. Want to:
+
+- **Create custom primitives?** Use `defineService()` with the same patterns Lattice uses internally
+- **Swap out our signals?** Replace `createHelpers()` with your own reactive system (or someone elses)
+- **Build a custom adapter/renderer?** Implement the `Adapter` interface for Canvas, WebGL, or anything tree-based
+- **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in lattice
+
+Lattice provides primitives for reactivity and UI out of the box, but they're not special—they're built with the same tools you have access to. In fact, Lattice at it's core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just Reactive frameworks.
+
+---
+
+## Packages
+
+| Package            | Purpose                                        |
+| ------------------ | ---------------------------------------------- |
+| `@lattice/lattice` | Core composition (`compose`, `defineService`)  |
+| `@lattice/signals` | Reactive primitives (signal, computed, effect) |
+| `@lattice/view`    | UI primitives with adapter system              |
+| `@lattice/router`  | Routing with nested layouts                    |
+| `@lattice/islands` | SSR and partial hydration                      |
+| `@lattice/react`   | React bindings                                 |
+
+---
+
+## Inspirations
+
+Lattice draws from libraries that shaped how I think about reactivity and composition:
+
+- [alien-signals](https://github.com/stackblitz/alien-signals) and [Reactively](https://github.com/milomg/reactively) — push-pull reactivity, graph coloring
+- [downshift](https://www.downshift-js.com/use-select/) — headless, portable UI behavior
+- [jotai](https://jotai.org/docs/core/atom) — atoms as configs, not values
+- [ProseMirror](https://prosemirror.net) — extensibility and determinism
+
+---
+
+## Status
+
+Alpha. Heavily tested and benchmarked, but not battle-tested in production. If you're interested in composable reactivity and portable patterns, take a look around and hit me up!
