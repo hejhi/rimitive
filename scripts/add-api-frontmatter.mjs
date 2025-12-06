@@ -4,6 +4,7 @@
  * 1. Organize files into package subfolders
  * 2. Add Starlight-compatible frontmatter with badges for API kind
  * 3. Fix internal links to work with new structure
+ * 4. Group overloads into sub-accordions
  */
 
 import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
@@ -54,6 +55,7 @@ const KIND_BADGES = {
   method: { text: 'method', variant: 'tip' },
   constructor: { text: 'new', variant: 'caution' },
   package: { text: 'pkg', variant: 'success' },
+  overloads: { text: 'fn', variant: 'tip' },
 };
 
 // Sort order for kinds within a package (lower = higher)
@@ -73,6 +75,55 @@ function getPackageFromFilename(filename) {
     return match[1];
   }
   return null;
+}
+
+/**
+ * Parse overload info from filename
+ * e.g., "compose_1.md" -> { baseName: "compose", overloadNum: 1 }
+ * e.g., "compose.md" -> { baseName: "compose", overloadNum: 0 }
+ */
+function parseOverloadInfo(filename) {
+  // Match patterns like "name_1.md", "name_2.md"
+  const overloadMatch = filename.match(/^(.+)_(\d+)\.md$/);
+  if (overloadMatch) {
+    return { baseName: overloadMatch[1], overloadNum: parseInt(overloadMatch[2], 10) };
+  }
+  // Regular file without overload suffix
+  const baseMatch = filename.match(/^(.+)\.md$/);
+  if (baseMatch) {
+    return { baseName: baseMatch[1], overloadNum: 0 };
+  }
+  return { baseName: filename, overloadNum: 0 };
+}
+
+/**
+ * Detect which files have overloads by scanning all files
+ */
+function detectOverloads(files) {
+  const overloadGroups = new Map();
+
+  for (const file of files) {
+    const pkg = getPackageFromFilename(file);
+    if (!pkg) continue;
+
+    const nameWithoutPkg = file.replace(`${pkg}.`, '');
+    const { baseName } = parseOverloadInfo(nameWithoutPkg);
+    const key = `${pkg}.${baseName}`;
+
+    if (!overloadGroups.has(key)) {
+      overloadGroups.set(key, []);
+    }
+    overloadGroups.get(key).push(file);
+  }
+
+  // Return set of base names that have multiple overloads
+  const hasOverloads = new Set();
+  for (const [key, files] of overloadGroups) {
+    if (files.length > 1) {
+      hasOverloads.add(key);
+    }
+  }
+  return hasOverloads;
 }
 
 function extractTitleAndKind(content) {
@@ -100,34 +151,47 @@ function extractTitleAndKind(content) {
   return { title: fullTitle, kind: null, cleanTitle: fullTitle };
 }
 
-function fixLinks(content, currentPackage, currentFilename) {
+function fixLinks(content, currentPackage, currentFilename, overloadGroups) {
   let result = content;
 
-  // Fix Home link: ./index.md -> ../
-  result = result.replace(/\(\.\/index\.md\)/g, '(../)');
+  // Fix Home link: ./index.md -> ../../ (up from package/item to api root)
+  result = result.replace(/\(\.\/index\.md\)/g, '(../../)');
 
-  // Fix package index links: ./lattice.md -> ./  (when in that package)
-  // or ./signals.md -> ../signals/ (when in different package)
+  // Fix package index links: ./lattice.md -> ../  (when in that package)
+  // or ./signals.md -> ../../signals/ (when in different package)
   result = result.replace(/\(\.\/([a-z]+)\.md\)/g, (match, pkg) => {
     if (pkg === currentPackage) {
-      return '(./)';
+      return '(../)';
     } else {
-      return `(../${pkg}/)`;
+      return `(../../${pkg}/)`;
     }
   });
 
-  // Fix item links: ./signals.computed.md -> ./computed/ (same package)
-  // or ./view.el.md -> ../view/el/ (different package)
+  // Fix item links: ./signals.computed.md -> ../computed/ (same package)
+  // or ./view.el.md -> ../../view/el/ (different package)
   // If it's a self-link (same file), remove the link entirely
   result = result.replace(/\[([^\]]+)\]\(\.\/([a-z]+)\.([^)]+)\.md\)/g, (match, text, pkg, rest) => {
     const targetFile = `${rest}.md`;
     if (targetFile === currentFilename) {
       // Self-link: just return the text without a link
       return text;
-    } else if (pkg === currentPackage) {
-      return `[${text}](./${rest}/)`;
+    }
+
+    // Check if target has overloads - if so, link to the folder
+    const { baseName } = parseOverloadInfo(targetFile);
+    const targetKey = `${pkg}.${baseName}`;
+    const targetHasOverloads = overloadGroups.has(targetKey);
+
+    if (pkg === currentPackage) {
+      if (targetHasOverloads) {
+        return `[${text}](../${baseName}/)`;
+      }
+      return `[${text}](../${rest}/)`;
     } else {
-      return `[${text}](../${pkg}/${rest}/)`;
+      if (targetHasOverloads) {
+        return `[${text}](../../${pkg}/${baseName}/)`;
+      }
+      return `[${text}](../../${pkg}/${rest}/)`;
     }
   });
 
@@ -135,11 +199,15 @@ function fixLinks(content, currentPackage, currentFilename) {
 }
 
 function generateFrontmatter(title, options = {}) {
-  const { kind, order, label } = options;
+  const { kind, order, label, hidden } = options;
 
   let frontmatter = `---\ntitle: "${title.replace(/"/g, '\\"')}"`;
 
   const sidebarOpts = [];
+
+  if (hidden) {
+    sidebarOpts.push(`  hidden: true`);
+  }
 
   if (label) {
     sidebarOpts.push(`  label: "${label}"`);
@@ -164,15 +232,21 @@ function generateFrontmatter(title, options = {}) {
   return frontmatter;
 }
 
-async function processFile(filePath, filename) {
+async function processFile(filePath, filename, overloadGroups) {
   const content = await readFile(filePath, 'utf-8');
   const pkg = getPackageFromFilename(filename);
 
   if (!pkg) {
-    // Root index.md
+    // Root index.md - hide from sidebar since it duplicates the section header
     if (filename === 'index.md') {
       const fixedContent = content.replace(/\(\.\/([a-z]+)\.md\)/g, '(./$1/)');
-      const frontmatter = generateFrontmatter('API Reference');
+      const frontmatter = `---
+title: "API Reference"
+sidebar:
+  hidden: true
+---
+
+`;
       return { content: frontmatter + fixedContent, destDir: API_DIR, destName: 'index.md' };
     }
 
@@ -180,7 +254,7 @@ async function processFile(filePath, filename) {
     const pkgMatch = filename.match(/^([a-z]+)\.md$/);
     if (pkgMatch && PACKAGE_MAP[pkgMatch[1]]) {
       const pkgName = pkgMatch[1];
-      const fixedContent = fixLinks(content, pkgName, 'index.md');
+      const fixedContent = fixLinks(content, pkgName, 'index.md', overloadGroups);
       const frontmatter = generateFrontmatter(PACKAGE_LABELS[pkgName], {
         order: PACKAGE_ORDER[pkgName],
         kind: 'package',
@@ -196,13 +270,60 @@ async function processFile(filePath, filename) {
   }
 
   // Regular API file like "signals.computed.md" -> signals/computed.md
+  const nameWithoutPkg = filename.replace(`${pkg}.`, '');
+  const { baseName, overloadNum } = parseOverloadInfo(nameWithoutPkg);
+  const overloadKey = `${pkg}.${baseName}`;
+  const hasOverloads = overloadGroups.has(overloadKey);
+
   const { title, kind, cleanTitle } = extractTitleAndKind(content);
-  const newFilename = filename.replace(`${pkg}.`, '');
-  const fixedContent = fixLinks(content, pkg, newFilename);
+  const fixedContent = fixLinks(content, pkg, nameWithoutPkg, overloadGroups);
 
-  // Calculate sort order based on kind
-  const kindOrder = kind && KIND_ORDER[kind] ? KIND_ORDER[kind] * 100 : 500;
+  if (hasOverloads) {
+    // This file is part of an overload group - put it in a subfolder
+    // First overload (overloadNum === 0) becomes the index page
+    if (overloadNum === 0) {
+      const frontmatter = generateFrontmatter(title, {
+        kind,
+        label: cleanTitle,
+        order: 0,
+      });
 
+      return {
+        content: frontmatter + fixedContent,
+        destDir: join(API_DIR, pkg, baseName),
+        destName: 'index.md',
+        isOverload: true,
+        overloadKey,
+        overloadNum,
+        baseName,
+        cleanTitle,
+        kind,
+        isFirstOverload: true,
+      };
+    }
+
+    // Subsequent overloads get numbered labels
+    const overloadLabel = `Overload ${overloadNum + 1}`;
+    const frontmatter = generateFrontmatter(title, {
+      kind,
+      label: overloadLabel,
+      order: overloadNum,
+    });
+
+    return {
+      content: frontmatter + fixedContent,
+      destDir: join(API_DIR, pkg, baseName),
+      destName: `${baseName}_${overloadNum}.md`,
+      isOverload: true,
+      overloadKey,
+      overloadNum,
+      baseName,
+      cleanTitle,
+      kind,
+    };
+  }
+
+  // Regular file without overloads
   const frontmatter = generateFrontmatter(title, {
     kind,
     label: cleanTitle,
@@ -211,15 +332,20 @@ async function processFile(filePath, filename) {
   return {
     content: frontmatter + fixedContent,
     destDir: join(API_DIR, pkg),
-    destName: newFilename,
+    destName: nameWithoutPkg,
   };
 }
+
 
 async function main() {
   const files = await readdir(API_DIR);
   const mdFiles = files.filter(f => f.endsWith('.md'));
 
   console.log(`Processing ${mdFiles.length} files...`);
+
+  // Detect overloads first
+  const overloadGroups = detectOverloads(mdFiles);
+  console.log(`Found ${overloadGroups.size} functions with overloads`);
 
   // Create package subdirectories
   for (const pkg of Object.values(PACKAGE_MAP)) {
@@ -230,7 +356,7 @@ async function main() {
   const results = await Promise.all(
     mdFiles.map(async (file) => {
       const filePath = join(API_DIR, file);
-      const result = await processFile(filePath, file);
+      const result = await processFile(filePath, file, overloadGroups);
 
       if (result) {
         await mkdir(result.destDir, { recursive: true });
