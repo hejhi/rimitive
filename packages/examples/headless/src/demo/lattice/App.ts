@@ -8,15 +8,8 @@ import { createDOMSvc } from '@lattice/view/presets/dom';
 import { dialog } from '../../dialog';
 import { select, type SelectOption } from '../../select';
 
-const {
-  el,
-  computed,
-  effect,
-  match,
-  portal,
-  mount: mountSpec,
-  use,
-} = createDOMSvc();
+const use = createDOMSvc();
+const { el, computed, effect, match, portal, mount: mountSpec } = use();
 
 // Bind behaviors to this service
 const useDialog = use(dialog);

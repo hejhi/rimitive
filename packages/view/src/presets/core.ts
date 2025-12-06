@@ -132,4 +132,4 @@ export const createViewSvc = <
     computed,
     effect,
     batch,
-  });
+  })();

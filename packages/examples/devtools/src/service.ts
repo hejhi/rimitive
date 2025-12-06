@@ -52,7 +52,7 @@ const signalsSvc = compose(
   },
   signalHelpers,
   { instrumentation }
-);
+)();
 
 // Create view helpers
 const adapter = createDOMAdapter();
@@ -73,7 +73,7 @@ const viewSvc = compose(
     effect: signalsSvc.effect,
     batch: signalsSvc.batch,
   }
-);
+)();
 
 // Combined service
 const svc = {

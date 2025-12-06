@@ -22,7 +22,7 @@
  * ```
  */
 
-import { compose, type LatticeContext } from '@lattice/lattice';
+import { compose, type LatticeContext, type Use } from '@lattice/lattice';
 import {
   createSignalsSvc,
   type SignalsSvc,
@@ -33,7 +33,6 @@ import {
   type AddEventListener,
 } from '../helpers/addEventListener';
 import { createScopes } from '../helpers/scope';
-import { createUse, type Use } from '../helpers/use';
 import { defaultExtensions } from './core';
 import type { Readable, Writable } from '@lattice/signals/types';
 import type { NodeRef, RefSpec } from '../types';
@@ -85,18 +84,17 @@ export type DOMViewSvc = ViewSvc & {
 };
 
 /**
- * Full DOM service type - signals + view + use
+ * Full DOM service type - signals + view + on + mount
  *
  * @example
  * ```typescript
  * import { createDOMSvc, type DOMSvc } from '@lattice/view/presets/dom';
  *
- * const svc: DOMSvc = createDOMSvc();
- * const { signal, computed, el, map, match, on, mount } = svc;
+ * const use = createDOMSvc();
+ * const { signal, computed, el, map, match, on, mount } = use();
  * ```
  */
-export type DOMSvc = SignalsSvc &
-  DOMViewSvc & { use: Use<SignalsSvc & DOMViewSvc> };
+export type DOMSvc = SignalsSvc & DOMViewSvc;
 
 /**
  * Create DOM view service (view primitives only, no signals)
@@ -139,7 +137,10 @@ export const createDOMViewSvc = <
     effect,
     batch,
   };
-  const viewSvc = compose(defaultExtensions<DOMAdapterConfig>(), viewHelpers);
+  const viewSvc = compose(
+    defaultExtensions<DOMAdapterConfig>(),
+    viewHelpers
+  )();
 
   const svc = {
     ...viewSvc,
@@ -155,14 +156,15 @@ export const createDOMViewSvc = <
 /**
  * Create a fully-configured DOM app service
  *
- * Returns a flat service with all signals and view primitives,
- * plus DOM-specific helpers (on, t) and a mount function.
+ * Returns a `use()` function that provides access to all signals and view primitives,
+ * plus DOM-specific helpers (on) and a mount function.
  *
  * @example
  * ```typescript
  * import { createDOMSvc } from '@lattice/view/presets/dom';
  *
- * const { el, signal, computed, map, on, mount } = createDOMSvc();
+ * const use = createDOMSvc();
+ * const { el, signal, computed, map, on, mount } = use();
  *
  * const App = () => {
  *   const count = signal(0);
@@ -175,19 +177,39 @@ export const createDOMViewSvc = <
  *
  * document.body.appendChild(mount(App()));
  * ```
+ *
+ * @example Using with callback pattern
+ * ```typescript
+ * const use = createDOMSvc();
+ *
+ * // Wrap a component with service access
+ * const Counter = use(({ signal, el, on }) => () => {
+ *   const count = signal(0);
+ *   return el('button').ref(on('click', () => count(c => c + 1)))(
+ *     computed(() => `Count: ${count()}`)
+ *   );
+ * });
+ * ```
  */
-export const createDOMSvc = (): DOMSvc => {
+export const createDOMSvc = (): Use<DOMSvc> => {
   const signals = createSignalsSvc();
   const dom = createDOMViewSvc(signals);
-  const svc = {
+  const svc: DOMSvc = {
     ...signals,
     ...dom,
   };
 
-  return {
-    ...svc,
-    use: createUse(svc),
-  };
+  // Return a use() function
+  function use(): DOMSvc;
+  function use<TResult>(callback: (svc: DOMSvc) => TResult): TResult;
+  function use<TResult>(callback?: (svc: DOMSvc) => TResult): DOMSvc | TResult {
+    if (callback === undefined) {
+      return svc;
+    }
+    return callback(svc);
+  }
+
+  return use;
 };
 
 // Re-export SignalsSvc as DOMSignals for convenience

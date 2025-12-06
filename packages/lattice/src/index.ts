@@ -10,6 +10,7 @@ export type {
   ServiceName,
   DefinedService,
   Svc,
+  Use,
   ExtractDeps,
   UnionToIntersection,
 } from './types';

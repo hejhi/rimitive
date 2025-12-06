@@ -19,5 +19,5 @@ export const createSvc = () => {
     shallowPropagate,
   };
 
-  return createLatticeContext(Signal().create(opts), Computed().create(opts));
+  return createLatticeContext(Signal().create(opts), Computed().create(opts))();
 };

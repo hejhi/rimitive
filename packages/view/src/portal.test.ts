@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDOMSvc } from './presets/dom';
+import { createDOMSvc, type DOMSvc } from './presets/dom';
 
 describe('portal', () => {
-  let svc: ReturnType<typeof createDOMSvc>;
+  let svc: DOMSvc;
   let testContainer: HTMLElement;
 
   beforeEach(() => {
-    svc = createDOMSvc();
+    svc = createDOMSvc()();
     // Create a test container for mounting
     testContainer = document.createElement('div');
     testContainer.id = 'test-container';

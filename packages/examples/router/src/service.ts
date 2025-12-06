@@ -2,7 +2,8 @@ import { createDOMSvc } from '@lattice/view/presets/dom';
 import { createRouter } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/presets/dom';
 
-const svc = createDOMSvc();
+export const use = createDOMSvc();
+const svc = use();
 
 export const router = createRouter<DOMAdapterConfig>(svc, {
   initialPath:

@@ -27,5 +27,5 @@ export const createSvc = () => {
     Signal().create(opts),
     Computed().create(opts),
     Effect().create(opts)
-  );
+  )();
 };

@@ -17,7 +17,7 @@ const adapter = createDOMAdapter();
 const signals = compose(
   defaultSignalsExtensions(),
   defaultSignalsHelpers()
-);
+)();
 const viewHelpers = defaultViewHelpers(adapter, signals);
 
 /**
@@ -27,7 +27,7 @@ const viewHelpers = defaultViewHelpers(adapter, signals);
 const views = compose(
   defaultViewExtensions<DOMAdapterConfig>(),
   viewHelpers
-);
+)();
 
 const svc = {
   ...signals,

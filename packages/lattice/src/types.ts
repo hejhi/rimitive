@@ -312,7 +312,6 @@ export type ExtractDeps<T extends Record<string, DefinedService>> =
  * The composed context type for object-based composition.
  *
  * Extracts impl types from service factories, preserving key names.
- * This is the return type of `compose({ signal: Signal(), ... }, deps)`.
  *
  * @example
  * ```ts
@@ -331,4 +330,32 @@ export type Svc<T extends Record<string, DefinedService>> = {
     : never;
 } & {
   dispose(): void;
+};
+
+/**
+ * A callable returned by `compose()` that provides access to the service context.
+ *
+ * Can be called in two ways:
+ * - `use()` - Returns the service context directly
+ * - `use(callback)` - Passes the context to callback and returns its result
+ *
+ * @example
+ * ```ts
+ * const use = compose({ signal: Signal() }, helpers);
+ *
+ * // Get the service directly
+ * const { signal, computed } = use();
+ *
+ * // Wrap a component with service access
+ * const Counter = use(({ signal, computed }) => () => {
+ *   const count = signal(0);
+ *   return el('div')(computed(() => count()));
+ * });
+ * ```
+ */
+export type Use<TSvc> = {
+  /** Returns the service context directly */
+  (): TSvc;
+  /** Passes the context to callback and returns its result */
+  <TResult>(callback: (svc: TSvc) => TResult): TResult;
 };

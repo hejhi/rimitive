@@ -44,13 +44,14 @@ export function createTestInstance() {
   const batchExt = Batch().create({ ...opts, startBatch, endBatch });
   const subscribeExt = Subscribe().create(opts);
 
-  const svc = createLattice(
+  const use = createLattice(
     signalExt,
     computedExt,
     effectExt,
     batchExt,
     subscribeExt
   );
+  const svc = use();
 
   // Reset function for test cleanup
   const resetGlobalState = () => {

@@ -28,7 +28,7 @@ export const service = compose(
   },
   createHelpers(),
   { instrumentation }
-);
+)();
 
 // Export the service type for behaviors
 export type Service = typeof service;

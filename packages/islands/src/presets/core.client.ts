@@ -197,7 +197,7 @@ export function createIslandsApp<TContext = unknown>(
         effect: islandSignals.effect,
         batch: islandSignals.batch,
       }
-    );
+    )();
     const svc: IslandsClientService = {
       ...islandSignals,
       ...islandViews,

@@ -6,6 +6,7 @@ import {
   ServiceContext,
   ServiceDefinition,
   Svc,
+  Use,
 } from './types';
 
 type ContextState = {
@@ -64,6 +65,10 @@ function isFactoriesObject(
 /**
  * Compose service factories into a unified context with shared dependencies.
  *
+ * Returns a `use()` function that provides access to the composed context:
+ * - `use()` - Returns the service context directly
+ * - `use(callback)` - Passes the context to callback and returns its result
+ *
  * This is the primary way to create a Lattice context. It supports three patterns:
  *
  * **Pattern 1: Factory object + deps** (recommended for most cases)
@@ -76,13 +81,19 @@ function isFactoriesObject(
  * import { createHelpers } from '@lattice/signals/presets/core';
  *
  * const helpers = createHelpers();
- * const ctx = compose(
+ * const use = compose(
  *   { signal: Signal(), computed: Computed(), effect: Effect() },
  *   helpers
  * );
  *
- * const count = ctx.signal(0);
- * const doubled = ctx.computed(() => count() * 2);
+ * // Get the service directly
+ * const { signal, computed } = use();
+ *
+ * // Or wrap a component
+ * const Counter = use(({ signal }) => () => {
+ *   const count = signal(0);
+ *   return count;
+ * });
  * ```
  *
  * **Pattern 2: Pre-created ServiceDefinitions**
@@ -93,7 +104,8 @@ function isFactoriesObject(
  * const signalService = Signal().create(helpers);
  * const computedService = Computed().create(helpers);
  *
- * const ctx = compose(signalService, computedService);
+ * const use = compose(signalService, computedService);
+ * const { signal, computed } = use();
  * ```
  *
  * **Pattern 3: With instrumentation**
@@ -101,25 +113,25 @@ function isFactoriesObject(
  *
  * @example
  * ```ts
- * const ctx = compose(
+ * const use = compose(
  *   { signal: Signal(), computed: Computed() },
  *   helpers,
  *   { instrumentation }
  * );
  * ```
  *
- * @returns A context object with all service implementations + `dispose()` method
+ * @returns A `use()` function for accessing the composed service context
  */
 // Overload 1: Factory object + deps pattern
 export function compose<
   T extends Record<string, DefinedService>,
   TDeps extends ExtractDeps<T>,
->(factories: T, deps: TDeps, options?: CreateContextOptions): Svc<T>;
+>(factories: T, deps: TDeps, options?: CreateContextOptions): Use<Svc<T>>;
 
 // Overload 2: ServiceDefinitions (variadic)
 export function compose<
   TServices extends readonly ServiceDefinition<string, unknown>[],
->(...services: TServices): LatticeContext<TServices>;
+>(...services: TServices): Use<LatticeContext<TServices>>;
 
 // Overload 3: Options + ServiceDefinitions
 export function compose<
@@ -127,14 +139,16 @@ export function compose<
 >(
   options: CreateContextOptions,
   ...services: TServices
-): LatticeContext<TServices>;
+): Use<LatticeContext<TServices>>;
 
 // Implementation
 export function compose(
   ...args: unknown[]
-): Record<string, unknown> & { dispose(): void } {
+): Use<Record<string, unknown> & { dispose(): void }> {
   // Detect which overload was called
   const firstArg = args[0];
+
+  let svc: Record<string, unknown> & { dispose(): void };
 
   // Pattern 1: Factory object + deps
   // compose({ signal: Signal(), computed: Computed() }, deps, options?)
@@ -148,30 +162,46 @@ export function compose(
       factory.create(deps)
     );
 
-    return composeServices(mappedServices, options);
-  }
-
-  // Pattern 2 & 3: ServiceDefinitions (with optional leading options)
-  let services: ServiceDefinition<string, unknown>[];
-  let options: CreateContextOptions | undefined;
-
-  if (
-    firstArg &&
-    typeof firstArg === 'object' &&
-    'instrumentation' in firstArg
-  ) {
-    // Pattern 3: Options object first
-    options = firstArg as CreateContextOptions;
-    services = args.slice(1) as ServiceDefinition<string, unknown>[];
+    svc = composeServices(mappedServices, options);
   } else {
-    // Pattern 2: Just services
-    services = args as ServiceDefinition<string, unknown>[];
+    // Pattern 2 & 3: ServiceDefinitions (with optional leading options)
+    let services: ServiceDefinition<string, unknown>[];
+    let options: CreateContextOptions | undefined;
+
+    if (
+      firstArg &&
+      typeof firstArg === 'object' &&
+      'instrumentation' in firstArg
+    ) {
+      // Pattern 3: Options object first
+      options = firstArg as CreateContextOptions;
+      services = args.slice(1) as ServiceDefinition<string, unknown>[];
+    } else {
+      // Pattern 2: Just services
+      services = args as ServiceDefinition<string, unknown>[];
+    }
+
+    // Flatten in case of arrays
+    const flatServices = services.flat(
+      1
+    ) as ServiceDefinition<string, unknown>[];
+
+    svc = composeServices(flatServices, options);
   }
 
-  // Flatten in case of arrays
-  const flatServices = services.flat(1) as ServiceDefinition<string, unknown>[];
+  // Return a use() function
+  type SvcType = typeof svc;
 
-  return composeServices(flatServices, options);
+  const use = <TResult>(
+    callback?: (s: SvcType) => TResult
+  ): SvcType | TResult => {
+    if (callback === undefined) {
+      return svc;
+    }
+    return callback(svc);
+  };
+
+  return use as Use<SvcType>;
 }
 
 /**

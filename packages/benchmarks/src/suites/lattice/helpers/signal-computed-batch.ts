@@ -30,5 +30,5 @@ export const createSvc = () => {
     Signal().create(opts),
     Computed().create(opts),
     Batch().create(opts)
-  );
+  )();
 };

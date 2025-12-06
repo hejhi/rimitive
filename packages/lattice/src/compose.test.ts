@@ -17,7 +17,8 @@ describe('Service Composition System', () => {
         impl: vi.fn(),
       };
 
-    const context = compose(counterExtension, loggerExtension);
+    const use = compose(counterExtension, loggerExtension);
+    const context = use();
 
     // Extensions should be available
     expect('counter' in context).toBe(true);
@@ -46,7 +47,8 @@ describe('Service Composition System', () => {
       destroy,
     };
 
-    const context = compose(lifecycleExtension);
+    const use = compose(lifecycleExtension);
+    const context = use();
     expect(init).toHaveBeenCalledOnce();
     expect(destroy).not.toHaveBeenCalled();
 
@@ -76,7 +78,8 @@ describe('Service Composition System', () => {
       },
     };
 
-    const context = compose(wrappedExtension);
+    const use = compose(wrappedExtension);
+    const context = use();
 
     // Test wrapped behavior
     expect(context.wrapped('hello')).toBe('HELLO!');
@@ -109,7 +112,8 @@ describe('Service Composition System', () => {
       },
     };
 
-    const context = compose(resourceExtension);
+    const use = compose(resourceExtension);
+    const context = use();
 
     const r1 = context.createResource();
     const r2 = context.createResource();
@@ -134,6 +138,24 @@ describe('Service Composition System', () => {
       impl: () => {},
     };
 
-    expect(() => compose(ext1, ext2)).toThrow('Duplicate service name: test');
+    expect(() => compose(ext1, ext2)()).toThrow('Duplicate service name: test');
+  });
+
+  it('should support use() with callback pattern', () => {
+    const counterExtension: ServiceDefinition<'counter', () => number> = {
+      name: 'counter',
+      impl: () => 42,
+    };
+
+    const use = compose(counterExtension);
+
+    // Test callback pattern
+    const result = use(({ counter }) => counter());
+    expect(result).toBe(42);
+
+    // Test that callback receives the full context
+    const contextKeys = use((ctx) => Object.keys(ctx));
+    expect(contextKeys).toContain('counter');
+    expect(contextKeys).toContain('dispose');
   });
 });

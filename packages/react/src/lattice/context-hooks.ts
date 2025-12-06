@@ -49,7 +49,7 @@ export function useLatticeContext<
   // Create context only once, using ref to ensure stability
   const contextRef = useRef<LatticeContext<E> | null>(null);
 
-  if (!contextRef.current) contextRef.current = compose(...extensions);
+  if (!contextRef.current) contextRef.current = compose(...extensions)();
 
   const context = contextRef.current;
 

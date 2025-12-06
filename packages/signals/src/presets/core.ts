@@ -300,5 +300,5 @@ export type SignalsSvc = Svc<DefaultExtensions>;
  * @returns A signals service with all primitives and a dispose method
  */
 export function createSignalsSvc(): SignalsSvc {
-  return compose(defaultExtensions(), createHelpers());
+  return compose(defaultExtensions(), createHelpers())();
 }
