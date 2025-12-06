@@ -824,7 +824,7 @@ describe('Integration: match() hydration with full view service', () => {
 
     const renderer = createDOMHydrationAdapter(container);
     const signals = createSignalsSvc();
-    const views = createViewSvc(renderer, signals);
+    const views = createViewSvc(renderer, signals)();
 
     // Combine signals and views to get full service
     const svc = { ...signals, ...views };
@@ -884,7 +884,7 @@ describe('Integration: match() hydration with full view service', () => {
 
     const renderer = createDOMHydrationAdapter(container);
     const signals = createSignalsSvc();
-    const views = createViewSvc(renderer, signals);
+    const views = createViewSvc(renderer, signals)();
 
     // Combine signals and views to get full service
     const svc = { ...signals, ...views };

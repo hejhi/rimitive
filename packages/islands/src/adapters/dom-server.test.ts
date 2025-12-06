@@ -23,7 +23,7 @@ import type { IslandNodeMeta } from '../types';
  */
 function createTestSSRService(signals = createSignalsSvc()) {
   const renderer = createDOMServerAdapter();
-  const views = createViewSvc(renderer, signals);
+  const views = createViewSvc(renderer, signals)();
 
   const svc = {
     ...signals,

@@ -33,8 +33,8 @@ export {
   type IslandsClientService,
   type IslandComponent,
   type SignalsSvc,
-  type ViewsSvc,
   type HybridAdapter,
+  type DomViewSvc,
 } from '../presets/core.client';
 
 // Advanced: adapters for custom composition

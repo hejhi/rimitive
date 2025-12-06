@@ -16,8 +16,11 @@
  * ```
  */
 
-import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
-import { createViewSvc } from '@lattice/view/presets/core';
+import {
+  createSignalsSvc,
+  type SignalsSvc,
+} from '@lattice/signals/presets/core';
+import { createViewSvc, type ViewSvc } from '@lattice/view/presets/core';
 import { createScopes, type CreateScopes } from '@lattice/view/helpers/scope';
 import {
   createDOMAdapter,
@@ -32,15 +35,17 @@ export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 type IslandComponent = { [ISLAND_META]?: unknown };
 
-type ViewSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
+type DomViewSvc = ViewSvc<DOMAdapterConfig>;
 
 /**
  * Islands client app type
  */
 export type IslandsClientApp = SignalsSvc &
-  ViewSvc & {
+  DomViewSvc & {
     on: ReturnType<typeof createAddEventListener>;
-    mount: <TElement>(spec: RefSpec<TElement>) => ReturnType<RefSpec<TElement>['create']>;
+    mount: <TElement>(
+      spec: RefSpec<TElement>
+    ) => ReturnType<RefSpec<TElement>['create']>;
     hydrate: (...islands: IslandComponent[]) => void;
   };
 
@@ -65,7 +70,7 @@ export function createIslandsClientApp(): IslandsClientApp {
 
   // Create DOM adapter for post-hydration rendering
   const domAdapter = createDOMAdapter();
-  const viewSvc = createViewSvc(domAdapter, signalsSvc);
+  const viewSvc = createViewSvc(domAdapter, signalsSvc)();
 
   const on = createAddEventListener(signalsSvc.batch);
 
@@ -77,9 +82,13 @@ export function createIslandsClientApp(): IslandsClientApp {
   const createSvc = (
     islandAdapter: Adapter<DOMAdapterConfig>,
     islandSignals: SignalsSvc
-  ): { svc: SignalsSvc & ViewSvc & { on: ReturnType<typeof createAddEventListener> }; createElementScope: CreateScopes['createElementScope'] } => {
+  ): {
+    svc: SignalsSvc &
+      DomViewSvc & { on: ReturnType<typeof createAddEventListener> };
+    createElementScope: CreateScopes['createElementScope'];
+  } => {
     const scopes = createScopes({ baseEffect: islandSignals.effect });
-    const islandViews = createViewSvc(islandAdapter, islandSignals);
+    const islandViews = createViewSvc(islandAdapter, islandSignals)();
     return {
       svc: {
         ...islandSignals,
@@ -104,4 +113,4 @@ export function createIslandsClientApp(): IslandsClientApp {
  * Island Svc type - the service type available to island components
  * Same as server's IslandSvc - islands work identically on both sides
  */
-export type IslandSvc = SignalsSvc & ViewSvc;
+export type IslandSvc = SignalsSvc & DomViewSvc;

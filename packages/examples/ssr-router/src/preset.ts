@@ -44,7 +44,7 @@ export function createSSRApp<TContext>(options: SSRAppOptions<TContext>) {
   const view = createViewSvc<DOMAdapterConfig, typeof signals>(
     adapter,
     signals
-  );
+  )();
 
   // Wire for islands
   const app = createIslandsApp({

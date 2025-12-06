@@ -5,7 +5,7 @@ import { Portal, type PortalService } from '../portal';
 import { createScopes } from '../helpers/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef, Readable, Writable } from '../types';
-import { compose, type Svc } from '@lattice/lattice';
+import { compose, type Svc, type Use } from '@lattice/lattice';
 
 // Re-export user-facing types for convenience
 export type { ElementProps, TagFactory, ElFactory, ElService } from '../el';
@@ -124,7 +124,7 @@ export const createViewSvc = <
 >(
   adapter: Adapter<TConfig>,
   { effect, signal, computed, batch }: TSignals
-): ViewSvc<TConfig> =>
+): Use<ViewSvc<TConfig>> =>
   compose(defaultExtensions<TConfig>(), {
     adapter,
     ...createScopes({ baseEffect: effect }),
@@ -132,4 +132,4 @@ export const createViewSvc = <
     computed,
     effect,
     batch,
-  })();
+  });

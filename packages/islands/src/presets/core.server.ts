@@ -9,7 +9,7 @@
  */
 
 import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createViewSvc } from '@lattice/view/presets/core';
+import { type ViewSvc } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import type { RefSpec } from '@lattice/view/types';
 import type { GetContext } from '../types';
@@ -26,10 +26,10 @@ import { renderToString } from '../helpers/renderToString';
 // ============================================================================
 
 type SignalsSvc = ReturnType<typeof createSignalsSvc>;
-type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
+type DomViewSvc = ViewSvc<DOMAdapterConfig>;
 
 export type IslandsServerService = SignalsSvc &
-  ViewsSvc & {
+  DomViewSvc & {
     addEventListener: ReturnType<typeof createAddEventListener>;
   };
 
@@ -42,7 +42,7 @@ export type IslandsServerService = SignalsSvc &
  */
 export type ServerOptions<TContext> = {
   signals: SignalsSvc;
-  view: ViewsSvc;
+  view: DomViewSvc;
   context?: GetContext<TContext>;
 };
 

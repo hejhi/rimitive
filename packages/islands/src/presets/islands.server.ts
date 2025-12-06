@@ -19,8 +19,11 @@
  * ```
  */
 
-import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
-import { createViewSvc } from '@lattice/view/presets/core';
+import {
+  createSignalsSvc,
+  type SignalsSvc,
+} from '@lattice/signals/presets/core';
+import { createViewSvc, ViewSvc } from '@lattice/view/presets/core';
 import type { RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { createDOMServerAdapter } from '../adapters/dom-server';
@@ -36,15 +39,20 @@ export type IslandsServerOptions<TContext = unknown> = {
   context?: GetContext<TContext>;
 };
 
-type ViewSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
+type DomViewSvc = ViewSvc<DOMAdapterConfig>;
 
 /**
  * Islands server app type
  */
 export type IslandsServerApp = SignalsSvc &
-  ViewSvc & {
-    mount: <TElement>(spec: RefSpec<TElement>) => ReturnType<RefSpec<TElement>['create']>;
-    render: <TElement>(spec: RefSpec<TElement>) => { html: string; scripts: string };
+  DomViewSvc & {
+    mount: <TElement>(
+      spec: RefSpec<TElement>
+    ) => ReturnType<RefSpec<TElement>['create']>;
+    render: <TElement>(spec: RefSpec<TElement>) => {
+      html: string;
+      scripts: string;
+    };
   };
 
 /**
@@ -71,13 +79,15 @@ export function createIslandsServerApp<TContext = unknown>(
 ): IslandsServerApp {
   const signalsSvc = createSignalsSvc();
   const adapter = createDOMServerAdapter();
-  const viewSvc = createViewSvc(adapter, signalsSvc);
+  const viewSvc = createViewSvc(adapter, signalsSvc)();
 
   const svc = { ...signalsSvc, ...viewSvc };
 
   const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 
-  const render = <TElement>(spec: RefSpec<TElement>): { html: string; scripts: string } => {
+  const render = <TElement>(
+    spec: RefSpec<TElement>
+  ): { html: string; scripts: string } => {
     const ctx = createSSRContext({ getContext: options.context });
     const html = runWithSSRContext(ctx, () => renderToString(mount(spec)));
     const scripts = getIslandScripts(ctx);
@@ -91,4 +101,4 @@ export function createIslandsServerApp<TContext = unknown>(
  * Island Svc type - the service type available to island components
  * Use this with createIsland<IslandSvc>() for typed islands
  */
-export type IslandSvc = SignalsSvc & ViewSvc;
+export type IslandSvc = SignalsSvc & DomViewSvc;

@@ -11,7 +11,7 @@
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 import {
   defaultExtensions as defaultViewExtensions,
-  createViewSvc,
+  type ViewSvc,
 } from '@lattice/view/presets/core';
 import { createScopes } from '@lattice/view/helpers/scope';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
@@ -35,7 +35,7 @@ export type SignalsSvc = ReturnType<typeof createSignalsSvc>;
 /**
  * View service type
  */
-export type ViewsSvc = ReturnType<typeof createViewSvc<DOMAdapterConfig, SignalsSvc>>;
+export type DomViewSvc = ViewSvc<DOMAdapterConfig>;
 
 /**
  * Hybrid adapter type (from createIslandsAdapter)
@@ -48,7 +48,7 @@ export type HybridAdapter = Adapter<DOMAdapterConfig> & {
  * Full service type - signals + views + addEventListener
  */
 export type IslandsClientService = SignalsSvc &
-  ViewsSvc & {
+  DomViewSvc & {
     addEventListener: ReturnType<typeof createAddEventListener>;
   };
 
@@ -58,7 +58,7 @@ export type IslandsClientService = SignalsSvc &
 export type ClientOptions<TContext> = {
   signals: SignalsSvc;
   adapter: HybridAdapter;
-  view: ViewsSvc;
+  view: DomViewSvc;
   context?: GetContext<TContext>;
 };
 
@@ -185,19 +185,22 @@ export function createIslandsApp<TContext = unknown>(
   const createSvc = (
     islandAdapter: Adapter<DOMAdapterConfig>,
     islandSignals: SignalsSvc
-  ): { svc: IslandsClientService; createElementScope: <TElement extends object>(element: TElement, fn: () => void) => unknown } => {
+  ): {
+    svc: IslandsClientService;
+    createElementScope: <TElement extends object>(
+      element: TElement,
+      fn: () => void
+    ) => unknown;
+  } => {
     const scopes = createScopes({ baseEffect: islandSignals.effect });
-    const islandViews = compose(
-      defaultViewExtensions<DOMAdapterConfig>(),
-      {
-        adapter: islandAdapter,
-        ...scopes,
-        signal: islandSignals.signal,
-        computed: islandSignals.computed,
-        effect: islandSignals.effect,
-        batch: islandSignals.batch,
-      }
-    )();
+    const islandViews = compose(defaultViewExtensions<DOMAdapterConfig>(), {
+      adapter: islandAdapter,
+      ...scopes,
+      signal: islandSignals.signal,
+      computed: islandSignals.computed,
+      effect: islandSignals.effect,
+      batch: islandSignals.batch,
+    })();
     const svc: IslandsClientService = {
       ...islandSignals,
       ...islandViews,

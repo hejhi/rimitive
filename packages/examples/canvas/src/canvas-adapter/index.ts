@@ -75,7 +75,10 @@ export const createCanvasViewSvc = <
   options: CanvasAdapterOptions = {}
 ) => {
   const adapter = createCanvasAdapter(options);
-  const viewSvc = createViewSvc<CanvasAdapterConfig, TSignals>(adapter, signals);
+  const viewSvc = createViewSvc<CanvasAdapterConfig, TSignals>(
+    adapter,
+    signals
+  )();
 
   const svc = {
     ...viewSvc,
