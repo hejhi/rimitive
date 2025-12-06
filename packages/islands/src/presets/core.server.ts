@@ -8,7 +8,7 @@
  *
  */
 
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { type SignalsSvc } from '@lattice/signals/presets/core';
 import { type ViewSvc } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
 import type { RefSpec } from '@lattice/view/types';
@@ -25,7 +25,6 @@ import { renderToString } from '../helpers/renderToString';
 // Types
 // ============================================================================
 
-type SignalsSvc = ReturnType<typeof createSignalsSvc>;
 type DomViewSvc = ViewSvc<DOMAdapterConfig>;
 
 export type IslandsServerService = SignalsSvc &

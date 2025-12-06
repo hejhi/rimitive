@@ -37,7 +37,7 @@ export function createClientApp<TContext>(options: ClientAppOptions<TContext>) {
   const { container, buildContext, routes } = options;
 
   // Create primitives
-  const signals = createSignalsSvc();
+  const signals = createSignalsSvc()();
   const adapter = createIslandsAdapter(
     createDOMHydrationAdapter(container),
     createDOMAdapter()

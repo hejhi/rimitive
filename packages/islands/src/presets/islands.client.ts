@@ -66,7 +66,7 @@ export type IslandsClientApp = SignalsSvc &
  * ```
  */
 export function createIslandsClientApp(): IslandsClientApp {
-  const signalsSvc = createSignalsSvc();
+  const signalsSvc = createSignalsSvc()();
 
   // Create DOM adapter for post-hydration rendering
   const domAdapter = createDOMAdapter();

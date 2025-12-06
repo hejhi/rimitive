@@ -32,7 +32,6 @@ export {
   type ClientOptions,
   type IslandsClientService,
   type IslandComponent,
-  type SignalsSvc,
   type HybridAdapter,
   type DomViewSvc,
 } from '../presets/core.client';

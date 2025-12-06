@@ -21,7 +21,7 @@ import type { IslandNodeMeta } from '../types';
  * Create SSR service for tests - matches the old preset pattern
  * Uses explicit composition to preserve full type inference
  */
-function createTestSSRService(signals = createSignalsSvc()) {
+function createTestSSRService(signals = createSignalsSvc()()) {
   const renderer = createDOMServerAdapter();
   const views = createViewSvc(renderer, signals)();
 
@@ -543,7 +543,7 @@ describe('SSR-Specific Behaviors', () => {
 describe('Full SSR Integration', () => {
   it('should render all items in map() during SSR', () => {
     // Create SSR service
-    const signals = createSignalsSvc();
+    const signals = createSignalsSvc()();
     const { mount, svc } = createTestSSRService(signals);
     const { el, map, signal } = svc;
 
@@ -573,7 +573,7 @@ describe('Full SSR Integration', () => {
   });
 
   it('should render all items when map() uses computed', () => {
-    const signals = createSignalsSvc();
+    const signals = createSignalsSvc()();
     const { mount, svc } = createTestSSRService(signals);
     const { el, map, computed } = svc;
 

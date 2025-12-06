@@ -39,7 +39,7 @@ export function createSSRApp<TContext>(options: SSRAppOptions<TContext>) {
   const path = url.pathname;
 
   // Create primitives
-  const signals = createSignalsSvc();
+  const signals = createSignalsSvc()();
   const adapter = createDOMServerAdapter();
   const view = createViewSvc<DOMAdapterConfig, typeof signals>(
     adapter,

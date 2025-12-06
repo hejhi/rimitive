@@ -77,7 +77,7 @@ export type IslandsServerApp = SignalsSvc &
 export function createIslandsServerApp<TContext = unknown>(
   options: IslandsServerOptions<TContext> = {}
 ): IslandsServerApp {
-  const signalsSvc = createSignalsSvc();
+  const signalsSvc = createSignalsSvc()();
   const adapter = createDOMServerAdapter();
   const viewSvc = createViewSvc(adapter, signalsSvc)();
 

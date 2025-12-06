@@ -4,19 +4,19 @@ import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { SignalProvider } from './signals/context';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createSignalsSvc, SignalsSvc } from '@lattice/signals/presets/core';
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
   // Create a fresh signal service for each test
   return render(
-    createElement(SignalProvider, { svc: createSignalsSvc(), children: ui })
+    createElement(SignalProvider, { svc: createSignalsSvc()(), children: ui })
   );
 }
 
 // Also export svc creation for tests that need direct access
-export function createTestSignalSvc(): ReturnType<typeof createSignalsSvc> {
-  return createSignalsSvc();
+export function createTestSignalSvc(): SignalsSvc {
+  return createSignalsSvc()();
 }
 
 // Clean up after each test to prevent memory leaks

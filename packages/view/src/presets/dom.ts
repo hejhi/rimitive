@@ -137,10 +137,7 @@ export const createDOMViewSvc = <
     effect,
     batch,
   };
-  const viewSvc = compose(
-    defaultExtensions<DOMAdapterConfig>(),
-    viewHelpers
-  )();
+  const viewSvc = compose(defaultExtensions<DOMAdapterConfig>(), viewHelpers)();
 
   const svc = {
     ...viewSvc,
@@ -192,7 +189,7 @@ export const createDOMViewSvc = <
  * ```
  */
 export const createDOMSvc = (): Use<DOMSvc> => {
-  const signals = createSignalsSvc();
+  const signals = createSignalsSvc()();
   const dom = createDOMViewSvc(signals);
   const svc: DOMSvc = {
     ...signals,

@@ -13,7 +13,7 @@ import { select, type SelectOption } from '../../select';
 // Create Lattice Signals Service (singleton for the React tree)
 // ============================================================================
 
-const signalsSvc = createSignalsSvc();
+const signalsSvc = createSignalsSvc()();
 
 // ============================================================================
 // Create React hooks from portable headless behaviors

@@ -8,7 +8,7 @@
  *
  */
 
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { type SignalsSvc } from '@lattice/signals/presets/core';
 import {
   defaultExtensions as defaultViewExtensions,
   type ViewSvc,
@@ -26,11 +26,6 @@ import { createDOMHydrator } from '../hydrators/dom';
 // ============================================================================
 // Types
 // ============================================================================
-
-/**
- * Signals service type
- */
-export type SignalsSvc = ReturnType<typeof createSignalsSvc>;
 
 /**
  * View service type

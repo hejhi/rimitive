@@ -55,7 +55,12 @@ import {
 } from '../helpers/pull-propagator';
 import { createScheduler, type Scheduler } from '../helpers/scheduler';
 import { createUntracked } from '../untrack';
-import { compose, type DefinedService, type Svc } from '@lattice/lattice';
+import {
+  compose,
+  type DefinedService,
+  type Svc,
+  type Use,
+} from '@lattice/lattice';
 import type { Dependency } from '../types';
 
 /**
@@ -299,6 +304,6 @@ export type SignalsSvc = Svc<DefaultExtensions>;
  *
  * @returns A signals service with all primitives and a dispose method
  */
-export function createSignalsSvc(): SignalsSvc {
-  return compose(defaultExtensions(), createHelpers())();
+export function createSignalsSvc(): Use<SignalsSvc> {
+  return compose(defaultExtensions(), createHelpers());
 }
