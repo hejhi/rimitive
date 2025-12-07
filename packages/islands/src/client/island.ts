@@ -24,7 +24,7 @@
  * ```
  */
 
-import { createIsland } from '../factory';
+import { createIsland } from '../factory.browser';
 import type { IslandSvc } from '../presets/islands.client';
 
 /**
