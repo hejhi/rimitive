@@ -51,11 +51,11 @@ export type {
  * @example
  * ```ts
  * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * import { createDOMViewSvc } from '@lattice/view/presets/dom';
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
  * import { createCanvasViewSvc } from './canvas-adapter';
  *
  * const signals = createSignalsSvc();
- * const dom = createDOMViewSvc(signals);
+ * const dom = createDOMSvc(signals);
  * const canvas = createCanvasViewSvc(signals, { clearColor: '#16213e' });
  *
  * export const { signal, computed } = signals;

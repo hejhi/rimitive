@@ -93,13 +93,13 @@ Need to share signals across multiple renderers? Compose services yourself:
 
 ```typescript
 import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMViewSvc } from '@lattice/view/presets/dom';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 
 // Shared signals
 const signals = createSignalsSvc();
 
 // Multiple view services using the same signals
-const dom = createDOMViewSvc(signals);
+const dom = createDOMSvc(signals);
 const canvas = createCanvasViewSvc(signals); // your custom adapter
 
 // Same signal, multiple rendering targets

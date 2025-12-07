@@ -52,7 +52,8 @@ Most users won't need to call `compose()` directly. Lattice provides **presets**
 ```typescript
 import { createDOMSvc } from '@lattice/view/presets/dom';
 
-const { el, signal, computed, mount } = createDOMSvc();
+const useDomService = createDOMSvc();
+const { el, signal, computed, mount } = useDomService();
 
 const App = () => {
   const count = signal(0);
@@ -76,14 +77,14 @@ Need to share signals across multiple renderers? Compose services yourself:
 
 ```typescript
 import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMViewSvc } from '@lattice/view/presets/dom';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 
 // Shared signals
 const signals = createSignalsSvc();
 
-// Multiple view services using the same signals
-const dom = createDOMViewSvc(signals);
-const canvas = createCanvasViewSvc(signals); // your custom adapter
+// Multiple custom view services using the same signals
+const dom = createMyDOMSvc(signals);
+const canvas = createMyCanvasSvc(signals);
 
 // Same signal, multiple rendering targets
 const position = signals.signal({ x: 0, y: 0 });

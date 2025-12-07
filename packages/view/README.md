@@ -28,31 +28,29 @@ Element builder with fluent API for props and lifecycle.
 
 ```typescript
 // Basic element with children
-el('div')(
-  el('h1')('Hello'),
-  el('p')('World')
-)
+el('div')(el('h1')('Hello'), el('p')('World'));
 
 // Props - static or reactive
 el('input').props({
   type: 'text',
-  value: computed(() => name()),           // reactive
-  placeholder: 'Enter name',               // static
-  oninput: (e) => name(e.target.value),   // event handler
-})()
+  value: computed(() => name()), // reactive
+  placeholder: 'Enter name', // static
+  oninput: (e) => name(e.target.value), // event handler
+})();
 
 // Lifecycle callbacks with .ref()
 el('canvas').ref((canvas) => {
   const ctx = canvas.getContext('2d');
   // ... setup
-  return () => { /* cleanup */ };
-})()
+  return () => {
+    /* cleanup */
+  };
+})();
 
 // Chaining
-el('button')
-  .props({ className: 'primary' })
-  .ref(on('click', handleClick))
-  ('Submit')
+el('button').props({ className: 'primary' }).ref(on('click', handleClick))(
+  'Submit'
+);
 ```
 
 ### `map(items, keyFn, render)`
@@ -69,7 +67,7 @@ map(
   todos,
   (todo) => todo.id,
   (todo) => el('li')(todo().text)
-)
+);
 ```
 
 The render callback receives a reactive `todo` signal—call `todo()` to read the current value. When items update, map pushes new values into existing signals rather than recreating elements.
@@ -77,7 +75,7 @@ The render callback receives a reactive `todo` signal—call `todo()` to read th
 For primitives (strings, numbers), omit the key function:
 
 ```typescript
-map(['a', 'b', 'c'], (item) => el('li')(item()))
+map(['a', 'b', 'c'], (item) => el('li')(item()));
 ```
 
 ### `match(reactive, matcher)`
@@ -87,9 +85,7 @@ Switch between different elements based on a reactive value.
 ```typescript
 const currentTab = signal<'home' | 'settings'>('home');
 
-match(currentTab, (tab) =>
-  tab === 'home' ? HomePage() : SettingsPage()
-)
+match(currentTab, (tab) => (tab === 'home' ? HomePage() : SettingsPage()));
 ```
 
 When the value changes, match disposes the current element and creates a new one from the matcher function.
@@ -100,16 +96,14 @@ Render content outside the normal DOM hierarchy.
 
 ```typescript
 // Default: renders to document.body
-portal()(
-  el('div').props({ className: 'modal' })('Modal content')
-)
+portal()(el('div').props({ className: 'modal' })('Modal content'));
 
 // Custom target
 const modalRoot = signal<HTMLElement | null>(null);
-portal(modalRoot)(tooltipContent)
+portal(modalRoot)(tooltipContent);
 
 // Getter target
-portal(() => document.getElementById('modal-root'))(content)
+portal(() => document.getElementById('modal-root'))(content);
 ```
 
 The portal's lifecycle is tied to its logical parent—cleanup happens automatically.
@@ -121,11 +115,13 @@ The portal's lifecycle is tied to its logical parent—cleanup happens automatic
 Event listener with automatic batching and cleanup.
 
 ```typescript
-el('button').ref(on('click', (e) => {
-  count(count() + 1);
-  name('clicked');
-  // Both updates batched into single render
-}))('Click')
+el('button').ref(
+  on('click', (e) => {
+    count(count() + 1);
+    name('clicked');
+    // Both updates batched into single render
+  })
+)('Click');
 ```
 
 ### `use(behavior)`
@@ -134,13 +130,15 @@ Bind portable behaviors to the view service.
 
 ```typescript
 // Define a portable behavior
-const counter = (svc) => (initial = 0) => {
-  const count = svc.signal(initial);
-  return {
-    count,
-    increment: () => count(count() + 1),
+const counter =
+  (svc) =>
+  (initial = 0) => {
+    const count = svc.signal(initial);
+    return {
+      count,
+      increment: () => count(count() + 1),
+    };
   };
-};
 
 // Use in view
 const { use, el, computed } = createDOMSvc();
@@ -149,8 +147,8 @@ const useCounter = use(counter);
 const c = useCounter(10);
 el('button').props({
   textContent: computed(() => `Count: ${c.count()}`),
-  onclick: c.increment
-})()
+  onclick: c.increment,
+})();
 ```
 
 ## Adapter System
@@ -160,6 +158,7 @@ The view layer separates reactivity from rendering through adapters. The same pr
 ### Built-in Adapters
 
 **DOM Adapter** (browser):
+
 ```typescript
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
 
@@ -167,6 +166,7 @@ const adapter = createDOMAdapter();
 ```
 
 **Test Adapter** (testing/SSR):
+
 ```typescript
 import { createTestAdapter } from '@lattice/view/adapters/test';
 
@@ -188,19 +188,41 @@ type CanvasConfig = AdapterConfig & {
 };
 
 const canvasAdapter: Adapter<CanvasConfig> = {
-  createNode(type, props) { /* ... */ },
-  setProperty(node, key, value) { /* ... */ },
-  appendChild(parent, child) { /* ... */ },
-  removeChild(parent, child) { /* ... */ },
-  insertBefore(parent, child, ref) { /* ... */ },
+  createNode(type, props) {
+    /* ... */
+  },
+  setProperty(node, key, value) {
+    /* ... */
+  },
+  appendChild(parent, child) {
+    /* ... */
+  },
+  removeChild(parent, child) {
+    /* ... */
+  },
+  insertBefore(parent, child, ref) {
+    /* ... */
+  },
 
   // Optional lifecycle hooks
-  beforeCreate(type, props) { /* ... */ },
-  onCreate(ref, parent) { /* ... */ },
-  beforeAttach(ref, parent, nextSibling) { /* ... */ },
-  onAttach(ref, parent) { /* ... */ },
-  beforeDestroy(ref, parent) { /* ... */ },
-  onDestroy(ref, parent) { /* ... */ },
+  beforeCreate(type, props) {
+    /* ... */
+  },
+  onCreate(ref, parent) {
+    /* ... */
+  },
+  beforeAttach(ref, parent, nextSibling) {
+    /* ... */
+  },
+  onAttach(ref, parent) {
+    /* ... */
+  },
+  beforeDestroy(ref, parent) {
+    /* ... */
+  },
+  onDestroy(ref, parent) {
+    /* ... */
+  },
 };
 ```
 
@@ -210,11 +232,11 @@ For apps with multiple render targets (DOM + Canvas):
 
 ```typescript
 import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMViewSvc } from '@lattice/view/presets/dom';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 
 // Share signals between adapters
 const signals = createSignalsSvc();
-const dom = createDOMViewSvc(signals);
+const dom = createDOMSvc(signals);
 const canvas = createCanvasViewSvc(signals);
 
 // Same signal works everywhere
@@ -243,7 +265,11 @@ const btn2 = Button('Cancel').create();
 
 ```typescript
 // Fragment owns its children's lifecycle
-const list = map(items, (i) => i.id, (item) => el('li')(item().name));
+const list = map(
+  items,
+  (i) => i.id,
+  (item) => el('li')(item().name)
+);
 
 // When list disposes, all children clean up automatically
 ```
@@ -261,7 +287,7 @@ el('div').ref((element) => {
 
   // Cleanup runs when element is removed
   return dispose;
-})()
+})();
 ```
 
 ## Usage Patterns
@@ -284,13 +310,13 @@ If you need to share signals across multiple render targets (e.g., DOM + Canvas)
 
 ```typescript
 import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMViewSvc } from '@lattice/view/presets/dom';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 
 // Shared signals
 const signals = createSignalsSvc();
 
 // DOM-specific views using shared signals
-const dom = createDOMViewSvc(signals);
+const dom = createDOMSvc(signals);
 
 // Canvas views could use the same signals instance
 const canvas = createCanvasViewSvc(signals);
@@ -308,11 +334,21 @@ import { createViewSvc } from '@lattice/view/presets/core';
 import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
 
 const myAdapter: Adapter<MyConfig> = {
-  createNode(type, props) { /* ... */ },
-  setProperty(node, key, value) { /* ... */ },
-  appendChild(parent, child) { /* ... */ },
-  removeChild(parent, child) { /* ... */ },
-  insertBefore(parent, child, ref) { /* ... */ },
+  createNode(type, props) {
+    /* ... */
+  },
+  setProperty(node, key, value) {
+    /* ... */
+  },
+  appendChild(parent, child) {
+    /* ... */
+  },
+  removeChild(parent, child) {
+    /* ... */
+  },
+  insertBefore(parent, child, ref) {
+    /* ... */
+  },
 };
 
 const svc = createViewSvc(myAdapter, signals);
@@ -320,11 +356,11 @@ const svc = createViewSvc(myAdapter, signals);
 
 ## Import Paths
 
-| Path | What You Get | Use Case |
-|------|--------------|----------|
-| `@lattice/view/presets/dom` | `createDOMSvc()` | Most users |
+| Path                         | What You Get      | Use Case        |
+| ---------------------------- | ----------------- | --------------- |
+| `@lattice/view/presets/dom`  | `createDOMSvc()`  | Most users      |
 | `@lattice/view/presets/core` | `createViewSvc()` | Custom adapters |
-| `@lattice/view` | `El`, `Map`, etc. | Maximum control |
+| `@lattice/view`              | `El`, `Map`, etc. | Maximum control |
 
 ## Types
 
@@ -351,7 +387,10 @@ type LifecycleCallback<TElement> = (element: TElement) => void | (() => void);
 
 // Valid children for el()
 type ElRefSpecChild =
-  | string | number | boolean | null
+  | string
+  | number
+  | boolean
+  | null
   | RefSpec<unknown>
   | Reactive<unknown>
   | FragmentRef<unknown>;
