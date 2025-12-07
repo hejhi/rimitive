@@ -30,7 +30,7 @@ export { Portal } from './portal';
 // View Service Factories
 // =============================================================================
 
-export { createViewSvc, defaultExtensions } from './presets/core';
+export { createViewSvc } from './presets/core';
 export { createDOMSvc } from './presets/dom';
 
 // =============================================================================
