@@ -6,8 +6,8 @@ import type {
   ServiceContext,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import { GraphEdges, Consumer } from './helpers/graph-edges';
-import { PullPropagator } from './helpers/pull-propagator';
+import { GraphEdges, Consumer } from './deps/graph-edges';
+import { PullPropagator } from './deps/pull-propagator';
 
 /**
  * Computed function type - a callable that derives values from other reactives.
@@ -71,9 +71,9 @@ export type ComputedOptions = {
 };
 
 // Re-export types for proper type inference
-export type { Consumer } from './helpers/graph-edges';
-export type { GraphEdges } from './helpers/graph-edges';
-export type { PullPropagator } from './helpers/pull-propagator';
+export type { Consumer } from './deps/graph-edges';
+export type { GraphEdges } from './deps/graph-edges';
+export type { PullPropagator } from './deps/pull-propagator';
 
 // Internal computed state that gets bound to the function
 type ComputedNode<T> = DerivedNode<T> & {

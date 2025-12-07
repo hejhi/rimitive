@@ -7,9 +7,9 @@ import { defineService } from '@lattice/lattice';
 import type { RefSpec, Writable, FragmentRef, ElementRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
-import type { CreateScopes } from './helpers/scope';
-import { createNodeHelpers } from './helpers/node-helpers';
-import { setFragmentChild } from './helpers/fragment-boundaries';
+import type { CreateScopes } from './deps/scope';
+import { createNodeHelpers } from './deps/node-deps';
+import { setFragmentChild } from './deps/fragment-boundaries';
 
 /**
  * Options passed to Match factory

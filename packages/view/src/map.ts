@@ -17,10 +17,10 @@ import type {
 } from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
-import type { CreateScopes } from './helpers/scope';
-import { createReconciler, ReconcileNode } from './helpers/reconcile';
-import { createNodeHelpers } from './helpers/node-helpers';
-import { removeFromFragment } from './helpers/fragment-boundaries';
+import type { CreateScopes } from './deps/scope';
+import { createReconciler, ReconcileNode } from './deps/reconcile';
+import { createNodeHelpers } from './deps/node-deps';
+import { removeFromFragment } from './deps/fragment-boundaries';
 
 /**
  * Map factory type

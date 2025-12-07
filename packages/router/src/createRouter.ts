@@ -8,7 +8,7 @@ import type { ElFactory } from '@lattice/view/el';
 import type { MatchFactory } from '@lattice/view/match';
 import type { RouteParams, RouteSpec, RouteMatch } from './types';
 import { STATUS_ROUTE_SPEC } from './types';
-import { composePath, matchPath, matchPathPrefix } from './helpers/matching';
+import { composePath, matchPath, matchPathPrefix } from './deps/matching';
 import type { RouteTree, RouteNode } from './defineRoutes';
 
 type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];

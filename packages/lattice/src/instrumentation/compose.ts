@@ -128,7 +128,7 @@ export function composeProviders(
  * // Use with compose
  * const ctx = compose(
  *   { signal: Signal(), computed: Computed() },
- *   helpers,
+ *   deps,
  *   { instrumentation }
  * );
  * ```

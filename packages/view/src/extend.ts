@@ -45,9 +45,9 @@ export type { DOMAdapterConfig } from './adapters/dom';
 // Helpers - For building custom presets
 // =============================================================================
 
-export { createScopes } from './helpers/scope';
-export { createAddEventListener } from './helpers/addEventListener';
-export { createUse } from './helpers/use';
+export { createScopes } from './deps/scope';
+export { createAddEventListener } from './deps/addEventListener';
+export { createUse } from './deps/use';
 
 // =============================================================================
 // Factory Types - For typing custom services
@@ -68,9 +68,9 @@ export type { PortalFactory, PortalOpts, PortalTarget } from './portal';
 // Helper Types
 // =============================================================================
 
-export type { CreateScopes } from './helpers/scope';
-export type { AddEventListener } from './helpers/addEventListener';
-export type { Use } from './helpers/use';
+export type { CreateScopes } from './deps/scope';
+export type { AddEventListener } from './deps/addEventListener';
+export type { Use } from './deps/use';
 
 // =============================================================================
 // Core Types

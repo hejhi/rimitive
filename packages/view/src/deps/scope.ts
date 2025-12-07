@@ -11,7 +11,7 @@ const RENDER_SCOPE_CLEAN = CLEAN;
  *
  * @example
  * ```typescript
- * import { createScopes, type CreateScopes } from '@lattice/view/helpers/scope';
+ * import { createScopes, type CreateScopes } from '@lattice/view/deps/scope';
  *
  * const scopes: CreateScopes = createScopes({ baseEffect: effect });
  *
@@ -68,7 +68,7 @@ export type CreateScopes = {
  *
  * @example
  * ```typescript
- * import { createScopes } from '@lattice/view/helpers/scope';
+ * import { createScopes } from '@lattice/view/deps/scope';
  * import { createSignalsSvc } from '@lattice/signals/presets/core';
  *
  * const { effect } = createSignalsSvc();

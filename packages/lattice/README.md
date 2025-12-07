@@ -6,12 +6,12 @@ Service composition layer for Lattice. Wire independent packages together into u
 
 ## When to Use This Package
 
-| Use Case | What to Use |
-|----------|-------------|
-| Building a typical app | `createDOMSvc()` from `@lattice/view/presets/dom` |
-| Sharing signals across adapters | `compose()` from this package |
-| Adding instrumentation | `createInstrumentation()` from this package |
-| Creating custom primitives | `defineService()` from this package |
+| Use Case                        | What to Use                                       |
+| ------------------------------- | ------------------------------------------------- |
+| Building a typical app          | `createDOMSvc()` from `@lattice/view/presets/dom` |
+| Sharing signals across adapters | `compose()` from this package                     |
+| Adding instrumentation          | `createInstrumentation()` from this package       |
+| Creating custom primitives      | `defineService()` from this package               |
 
 ## Overview
 
@@ -19,13 +19,11 @@ Lattice packages (`@lattice/signals`, `@lattice/view`, etc.) expose service fact
 
 ```typescript
 import { compose } from '@lattice/lattice';
-import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
-
-const helpers = createHelpers();
+import { Signal, Computed, Effect, deps } from '@lattice/signals';
 
 const ctx = compose(
   { signal: Signal(), computed: Computed(), effect: Effect() },
-  helpers
+  deps()
 );
 
 // Services available by name
@@ -45,7 +43,10 @@ A service definition is a plain object with a name, implementation, and optional
 ```typescript
 import { ServiceDefinition } from '@lattice/lattice';
 
-const counterService: ServiceDefinition<'counter', { count: () => number; increment: () => void }> = {
+const counterService: ServiceDefinition<
+  'counter',
+  { count: () => number; increment: () => void }
+> = {
   name: 'counter',
   impl: {
     count: () => value,
@@ -102,7 +103,11 @@ The `adapt` hook wraps the implementation with context-aware behavior—disposal
 Add debugging and profiling without changing service implementations:
 
 ```typescript
-import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+import {
+  compose,
+  createInstrumentation,
+  devtoolsProvider,
+} from '@lattice/lattice';
 
 const instrumentation = createInstrumentation({
   enabled: import.meta.env.DEV,
@@ -143,13 +148,11 @@ Create a context from service factories with shared dependencies:
 
 ```typescript
 import { compose } from '@lattice/lattice';
-import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
-
-const helpers = createHelpers();
+import { Signal, Computed, Effect, deps } from '@lattice/signals';
 
 const ctx = compose(
   { signal: Signal(), computed: Computed(), effect: Effect() },
-  helpers,
+  deps(),
   { instrumentation } // optional
 );
 ```
@@ -170,15 +173,14 @@ Helper for creating portable, instantiable services. This is the pattern Lattice
 ```typescript
 // Define a service that requires dependencies
 const MyPrimitive = defineService(
-  (deps: { signal: SignalFactory }) =>
-    (options?: MyOptions) => ({
-      name: 'myPrimitive',
-      impl: createImpl(deps, options),
-    })
+  (deps: { signal: SignalFactory }) => (options?: MyOptions) => ({
+    name: 'myPrimitive',
+    impl: createImpl(deps, options),
+  })
 );
 
 // Usage: factory returns a Service with .create() method
-const svc = compose({ myPrimitive: MyPrimitive() }, helpers);
+const svc = compose({ myPrimitive: MyPrimitive() }, deps);
 ```
 
 ### `createInstrumentation(config)`
@@ -191,7 +193,7 @@ const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
 });
 
-const ctx = compose(factories, helpers, { instrumentation });
+const ctx = compose(factories, deps, { instrumentation });
 ```
 
 ### `devtoolsProvider(options?)`
@@ -212,7 +214,11 @@ type ServiceDefinition<TName extends string, TImpl> = {
   name: TName;
   impl: TImpl;
   adapt?(impl: TImpl, ctx: ServiceContext): TImpl;
-  instrument?(impl: TImpl, instrumentation: InstrumentationContext, ctx: ServiceContext): TImpl;
+  instrument?(
+    impl: TImpl,
+    instrumentation: InstrumentationContext,
+    ctx: ServiceContext
+  ): TImpl;
   init?(ctx: ServiceContext): void;
   destroy?(ctx: ServiceContext): void;
 };
@@ -228,7 +234,11 @@ type InstrumentationContext = {
   contextId: string;
   contextName: string;
   emit(event: InstrumentationEvent): void;
-  register<T>(resource: T, type: string, name?: string): { id: string; resource: T };
+  register<T>(
+    resource: T,
+    type: string,
+    name?: string
+  ): { id: string; resource: T };
 };
 
 // Resulting context type

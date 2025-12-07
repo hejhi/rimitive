@@ -2,7 +2,7 @@
  * Untracked execution - temporarily disable reactive tracking
  */
 
-import type { Consumer } from './helpers/graph-edges';
+import type { Consumer } from './deps/graph-edges';
 
 /**
  * Options for creating the untrack helper.
@@ -22,7 +22,7 @@ export type UntrackedOpts = {
  * @example Basic usage
  * ```ts
  * const { signal, effect } = createSignalsSvc();
- * const { untrack } = createHelpers();
+ * const { untrack } = deps();
  *
  * const a = signal(1);
  * const b = signal(2);

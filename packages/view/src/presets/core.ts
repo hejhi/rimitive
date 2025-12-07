@@ -2,7 +2,7 @@ import { El, type ElService } from '../el';
 import { Map, type MapService } from '../map';
 import { Match, type MatchService } from '../match';
 import { Portal, type PortalService } from '../portal';
-import { createScopes } from '../helpers/scope';
+import { createScopes } from '../deps/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef } from '../types';
 import { compose, type Svc, type Use, extend } from '@lattice/lattice';

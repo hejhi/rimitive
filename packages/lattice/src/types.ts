@@ -12,7 +12,7 @@
  * const signalService = Signal();
  *
  * // .create() wires dependencies and returns ServiceDefinition
- * const signalDef = signalService.create(helpers);
+ * const signalDef = signalService.create(deps);
  * ```
  */
 export type Service<TResult, TContext> = {
@@ -325,7 +325,10 @@ export type ExtractDeps<T extends Record<string, DefinedService>> =
  * ```
  */
 export type Svc<T extends Record<string, DefinedService>> = {
-  [K in keyof T]: T[K] extends Service<ServiceDefinition<string, infer TImpl>, unknown>
+  [K in keyof T]: T[K] extends Service<
+    ServiceDefinition<string, infer TImpl>,
+    unknown
+  >
     ? TImpl
     : never;
 } & {
@@ -341,7 +344,7 @@ export type Svc<T extends Record<string, DefinedService>> = {
  *
  * @example
  * ```ts
- * const use = compose({ signal: Signal() }, helpers);
+ * const use = compose({ signal: Signal() }, deps);
  *
  * // Get the service directly
  * const { signal, computed } = use();

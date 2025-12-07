@@ -27,19 +27,16 @@ import {
   createInstrumentation,
   devtoolsProvider,
 } from '@lattice/lattice';
-import { createHelpers } from '@lattice/signals/presets/core';
-import { createScopes } from '@lattice/view/helpers/scope';
+import { deps } from '@lattice/signals/presets/core';
+import { createScopes } from '@lattice/view/deps/scope';
 import { RefSpec } from '@lattice/view/types';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createAddEventListener } from '@lattice/view/deps/addEventListener';
 
 // Create instrumentation
 const instrumentation = createInstrumentation({
   providers: [devtoolsProvider()],
   enabled: true,
 });
-
-// Create signal helpers
-const signalHelpers = createHelpers();
 
 // Create instrumented signals
 const signalsSvc = compose(
@@ -50,11 +47,11 @@ const signalsSvc = compose(
     batch: Batch({ instrument: instrumentBatch }),
     subscribe: Subscribe({ instrument: instrumentSubscribe }),
   },
-  signalHelpers,
+  deps(),
   { instrumentation }
 )();
 
-// Create view helpers
+// Create view deps
 const adapter = createDOMAdapter();
 const scopes = createScopes({ baseEffect: signalsSvc.effect });
 

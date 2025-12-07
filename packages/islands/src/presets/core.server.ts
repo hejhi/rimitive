@@ -10,7 +10,7 @@
 
 import { type SignalsSvc } from '@lattice/signals/presets/core';
 import { type ViewSvc } from '@lattice/view/presets/core';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createAddEventListener } from '@lattice/view/deps/addEventListener';
 import type { RefSpec } from '@lattice/view/types';
 import type { GetContext } from '../types';
 import {
@@ -19,7 +19,7 @@ import {
   getIslandScripts,
 } from '../ssr-context';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { renderToString } from '../helpers/renderToString';
+import { renderToString } from '../deps/renderToString';
 
 // ============================================================================
 // Types

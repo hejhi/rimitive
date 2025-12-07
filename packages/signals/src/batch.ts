@@ -4,7 +4,7 @@ import type {
   ServiceDefinition,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import { Scheduler } from './helpers/scheduler';
+import { Scheduler } from './deps/scheduler';
 
 /**
  * ServiceDefinition for the batch primitive.

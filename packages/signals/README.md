@@ -11,24 +11,24 @@ const { signal, computed, effect, batch, subscribe } = createSignalsSvc();
 
 // Signals are callable functions
 const count = signal(0);
-count();     // read → 0
-count(1);    // write
-count();     // read → 1
+count(); // read → 0
+count(1); // write
+count(); // read → 1
 count.peek(); // read without tracking
 
 // Computeds are lazy - only recompute when read and stale
 const doubled = computed(() => count() * 2);
-doubled();   // computes: 2
-doubled();   // cached: 2
-count(5);    // marks doubled stale (doesn't recompute)
-doubled();   // recomputes: 10
+doubled(); // computes: 2
+doubled(); // cached: 2
+count(5); // marks doubled stale (doesn't recompute)
+doubled(); // recomputes: 10
 
 // Effects run immediately and re-run when dependencies change
 const dispose = effect(() => {
   console.log(`Count is ${count()}`);
 });
-count(1);    // logs: "Count is 1"
-dispose();   // cleanup
+count(1); // logs: "Count is 1"
+dispose(); // cleanup
 
 // Batch multiple updates into one effect run
 batch(() => {
@@ -47,9 +47,9 @@ Reactive container for a value. Reading tracks dependencies; writing notifies su
 ```typescript
 const name = signal('Alice');
 
-name();        // read: 'Alice'
-name('Bob');   // write, notifies subscribers
-name.peek();   // read without tracking: 'Bob'
+name(); // read: 'Alice'
+name('Bob'); // write, notifies subscribers
+name.peek(); // read without tracking: 'Bob'
 ```
 
 ### `computed<T>(fn: () => T)`
@@ -69,6 +69,7 @@ fullName(); // 'Alice Jones' (cached)
 ```
 
 Computeds support both:
+
 - **Diamond dependencies**: Multiple paths to the same source
 - **Dynamic dependencies**: Dependencies that change based on conditions
 
@@ -87,7 +88,7 @@ const dispose = effect(() => {
   return () => console.log(`Cleaning up ${value}`);
 });
 
-count(1);  // logs: "Cleaning up 0", "Count: 1"
+count(1); // logs: "Cleaning up 0", "Count: 1"
 dispose(); // logs: "Cleaning up 1", stops tracking
 ```
 
@@ -121,10 +122,10 @@ const unsubscribe = subscribe(
   (value) => console.log(value * multiplier())
 );
 
-count(5);       // logs: 10
-multiplier(3);  // no log (multiplier not tracked)
-count(5);       // no log (value unchanged)
-count(6);       // logs: 18
+count(5); // logs: 10
+multiplier(3); // no log (multiplier not tracked)
+count(5); // no log (value unchanged)
+count(6); // logs: 18
 unsubscribe();
 ```
 
@@ -137,7 +138,7 @@ const a = signal(1);
 const b = signal(2);
 
 effect(() => {
-  const aVal = a();              // tracked
+  const aVal = a(); // tracked
   const bVal = untrack(() => b()); // not tracked
   console.log(aVal + bVal);
 });
@@ -153,11 +154,13 @@ b(20); // does not re-run effect
 The implementation uses a two-phase update model:
 
 **Push Phase** (on signal write):
+
 1. Mark all dependent computeds as "possibly stale" (PENDING)
 2. Schedule effects for execution
 3. No recomputation happens yet
 
 **Pull Phase** (on computed read):
+
 1. Check if any upstream dependencies actually changed
 2. Recompute only if necessary
 3. Cache the result
@@ -200,23 +203,24 @@ This is the recommended path. No configuration needed.
 
 ### Power Users: Custom Composition
 
-If you need fine-grained control (custom helpers, shared signals across adapters, instrumentation), import primitives directly and compose:
+If you need fine-grained control (custom deps, shared signals across adapters, instrumentation), import primitives directly and compose:
 
 ```typescript
 import { compose } from '@lattice/lattice';
-import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
+import { Signal, Computed, Effect, deps } from '@lattice/signals';
 
-// Create shared helpers (dependency graph, scheduler, etc.)
-const helpers = createHelpers();
+// Create shared deps (dependency graph, scheduler, etc.)
+const deps = deps();
 
 // Compose only what you need
 const svc = compose(
   { signal: Signal(), computed: Computed(), effect: Effect() },
-  helpers
+  deps
 );
 ```
 
 **When to use this pattern:**
+
 - Sharing signals between multiple render targets (DOM + Canvas)
 - Adding instrumentation/debugging
 - Excluding unused primitives for smaller bundles
@@ -230,21 +234,20 @@ Create new primitives using the same pattern Lattice uses internally:
 import { defineService } from '@lattice/lattice';
 
 export const MyPrimitive = defineService(
-  (deps: { signal: SignalFactory }) =>
-    (options?: MyOptions) => ({
-      name: 'myPrimitive',
-      impl: createImpl(deps, options),
-    })
+  (deps: { signal: SignalFactory }) => (options?: MyOptions) => ({
+    name: 'myPrimitive',
+    impl: createImpl(deps, options),
+  })
 );
 ```
 
 ## Import Paths
 
-| Path | What You Get | Use Case |
-|------|--------------|----------|
-| `@lattice/signals/presets/core` | `createSignalsSvc()` | Most users |
-| `@lattice/signals` | `Signal`, `Computed`, etc. | Custom composition |
-| `@lattice/signals/signal` | `Signal` only | Maximum tree-shaking |
+| Path                            | What You Get               | Use Case             |
+| ------------------------------- | -------------------------- | -------------------- |
+| `@lattice/signals/presets/core` | `createSignalsSvc()`       | Most users           |
+| `@lattice/signals`              | `Signal`, `Computed`, etc. | Custom composition   |
+| `@lattice/signals/signal`       | `Signal` only              | Maximum tree-shaking |
 
 ## Types
 

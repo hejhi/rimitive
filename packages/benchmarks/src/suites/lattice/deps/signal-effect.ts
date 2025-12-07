@@ -1,8 +1,8 @@
 import { Signal } from '@lattice/signals/signal';
 import { Effect } from '@lattice/signals/effect';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createScheduler } from '@lattice/signals/deps/scheduler';
+import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
+import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
 import { compose as createLatticeContext } from '@lattice/lattice';
 
 export const createSvc = () => {

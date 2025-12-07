@@ -54,16 +54,16 @@ export default defineConfig({
         map: resolve(__dirname, 'src/map.ts'),
         'adapters/dom': resolve(__dirname, 'src/adapters/dom.ts'),
         'adapters/test': resolve(__dirname, 'src/adapters/test.ts'),
-        'helpers/scope': resolve(__dirname, 'src/helpers/scope.ts'),
-        'helpers/processChildren': resolve(
+        'deps/scope': resolve(__dirname, 'src/deps/scope.ts'),
+        'deps/processChildren': resolve(
           __dirname,
-          'src/helpers/processChildren.ts'
+          'src/deps/processChildren.ts'
         ),
-        'helpers/addEventListener': resolve(
+        'deps/addEventListener': resolve(
           __dirname,
-          'src/helpers/addEventListener.ts'
+          'src/deps/addEventListener.ts'
         ),
-        'helpers/use': resolve(__dirname, 'src/helpers/use.ts'),
+        'deps/use': resolve(__dirname, 'src/deps/use.ts'),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
         'presets/dom': resolve(__dirname, 'src/presets/dom.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),

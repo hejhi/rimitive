@@ -2,7 +2,7 @@
  * Islands Server Preset
  *
  * Pre-configured bundle for server-side rendering with islands.
- * Combines signals, view primitives, and SSR-specific helpers.
+ * Combines signals, view primitives, and SSR-specific deps.
  *
  * @example
  * ```ts
@@ -29,7 +29,7 @@ import {
   runWithSSRContext,
   getIslandScripts,
 } from '../ssr-context';
-import { renderToString } from '../helpers/renderToString';
+import { renderToString } from '../deps/renderToString';
 import type { GetContext } from '../types';
 
 export type IslandsServerOptions<TContext = unknown> = {

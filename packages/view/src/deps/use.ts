@@ -12,7 +12,7 @@ import type { Readable, Writable } from '@lattice/signals/types';
  *
  * @example
  * ```typescript
- * import type { Use } from '@lattice/view/helpers/use';
+ * import type { Use } from '@lattice/view/deps/use';
  * import type { DOMSvc } from '@lattice/view/presets/dom';
  *
  * const useHelper: Use<DOMSvc> = createUse(svc);
@@ -36,7 +36,7 @@ export type Use<TSvc> = <Args extends unknown[], Result>(
  *
  * @example
  * ```typescript
- * import { createUse } from '@lattice/view/helpers/use';
+ * import { createUse } from '@lattice/view/deps/use';
  * import { createDOMSvc } from '@lattice/view/presets/dom';
  *
  * const svc = createDOMSvc();

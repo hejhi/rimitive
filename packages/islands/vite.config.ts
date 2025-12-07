@@ -65,10 +65,7 @@ export default defineConfig({
         'factory.browser': resolve(__dirname, 'src/factory.browser.ts'),
         'hydration-svc': resolve(__dirname, 'src/hydration-svc.ts'),
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
-        'helpers/renderToString': resolve(
-          __dirname,
-          'src/helpers/renderToString.ts'
-        ),
+        'deps/renderToString': resolve(__dirname, 'src/deps/renderToString.ts'),
         'adapters/dom-server': resolve(__dirname, 'src/adapters/dom-server.ts'),
         'adapters/dom-hydration': resolve(
           __dirname,

@@ -6,7 +6,7 @@
 
 export { Link } from './link';
 export { createLocationFactory } from './location';
-export { matchPath } from './helpers/matching';
+export { matchPath } from './deps/matching';
 export { createRouter, connect } from './createRouter';
 export { defineRoutes } from './defineRoutes';
 export type {

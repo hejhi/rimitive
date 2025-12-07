@@ -1,8 +1,8 @@
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
+import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
+import { createPullPropagator } from '@lattice/signals/deps/pull-propagator';
 import { compose as createLatticeContext } from '@lattice/lattice';
 
 export const createSvc = () => {

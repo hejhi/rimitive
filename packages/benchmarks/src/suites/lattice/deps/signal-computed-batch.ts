@@ -1,10 +1,10 @@
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
 import { Batch } from '@lattice/signals/batch';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
+import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
+import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
+import { createPullPropagator } from '@lattice/signals/deps/pull-propagator';
+import { createScheduler } from '@lattice/signals/deps/scheduler';
 import { compose as createLatticeContext } from '@lattice/lattice';
 
 export const createSvc = () => {

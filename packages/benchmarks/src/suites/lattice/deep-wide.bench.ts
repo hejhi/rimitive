@@ -31,7 +31,7 @@ import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
-import { createSvc } from './helpers/signal-computed';
+import { createSvc } from './deps/signal-computed';
 import { ComputedFunction } from '@lattice/signals/computed';
 
 const ITERATIONS = 1000;

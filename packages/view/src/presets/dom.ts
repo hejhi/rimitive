@@ -2,7 +2,7 @@
  * DOM App Preset
  *
  * Pre-configured bundle for building DOM-based apps.
- * Combines signals, view primitives, and DOM-specific helpers.
+ * Combines signals, view primitives, and DOM-specific deps.
  *
  * @example
  * ```ts
@@ -28,7 +28,7 @@ import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import {
   createAddEventListener,
   type AddEventListener,
-} from '../helpers/addEventListener';
+} from '../deps/addEventListener';
 import { createViewSvc } from './core';
 import type { NodeRef, RefSpec } from '../types';
 import type {

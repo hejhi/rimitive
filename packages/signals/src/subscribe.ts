@@ -5,9 +5,9 @@ import type {
   ServiceDefinition,
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
-import { GraphEdges } from './helpers/graph-edges';
+import { GraphEdges } from './deps/graph-edges';
 import { CONSTANTS } from './constants';
-import { Scheduler } from './helpers/scheduler';
+import { Scheduler } from './deps/scheduler';
 
 const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
@@ -94,8 +94,8 @@ export type SubscribeFactory = ServiceDefinition<
 export type SubscribeService = ReturnType<typeof Subscribe>;
 
 // Re-export types needed for type inference
-export type { GraphEdges } from './helpers/graph-edges';
-export type { Scheduler } from './helpers/scheduler';
+export type { GraphEdges } from './deps/graph-edges';
+export type { Scheduler } from './deps/scheduler';
 
 /**
  * Create a Subscribe service factory.

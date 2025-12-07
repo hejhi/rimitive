@@ -26,7 +26,7 @@ export {
   type IslandSvc,
 } from '../presets/islands.server';
 
-export { renderToString } from '../helpers/renderToString';
+export { renderToString } from '../deps/renderToString';
 
 // Pre-configured island factory for the simple case (no custom context)
 // For custom context, use: createIsland<IslandSvc, MyContext>() from '@lattice/islands/factory'

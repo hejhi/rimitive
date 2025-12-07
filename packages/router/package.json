@@ -26,9 +26,9 @@
       "import": "./dist/ssr-context.js",
       "types": "./dist/ssr-context.d.ts"
     },
-    "./helpers/currentPath": {
-      "import": "./dist/helpers/currentPath.js",
-      "types": "./dist/helpers/currentPath.d.ts"
+    "./deps/currentPath": {
+      "import": "./dist/deps/currentPath.js",
+      "types": "./dist/deps/currentPath.d.ts"
     }
   },
   "files": [

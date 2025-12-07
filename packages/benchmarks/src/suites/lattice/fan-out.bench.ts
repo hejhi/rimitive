@@ -25,7 +25,7 @@ import {
   computed as alienComputed,
   effect as alienEffect,
 } from 'alien-signals';
-import { createSvc } from './helpers/signal-computed-effect';
+import { createSvc } from './deps/signal-computed-effect';
 
 const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
 const latticeSvc = createSvc();

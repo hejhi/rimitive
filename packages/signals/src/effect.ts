@@ -5,9 +5,9 @@ import type {
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
 import type { ScheduledNode } from './types';
-import { GraphEdges } from './helpers/graph-edges';
+import { GraphEdges } from './deps/graph-edges';
 import { CONSTANTS } from './constants';
-import { Scheduler } from './helpers/scheduler';
+import { Scheduler } from './deps/scheduler';
 
 const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
@@ -50,8 +50,8 @@ export type EffectOptions = {
 };
 
 // Re-export types for proper type inference
-export type { GraphEdges } from './helpers/graph-edges';
-export type { Scheduler } from './helpers/scheduler';
+export type { GraphEdges } from './deps/graph-edges';
+export type { Scheduler } from './deps/scheduler';
 
 /**
  * ServiceDefinition for the effect primitive.

@@ -13,7 +13,7 @@
  * | Use Case | Import |
  * |----------|--------|
  * | Quick start | `import { createSignalsSvc } from '@lattice/signals'` |
- * | Custom composition | `import { Signal, Computed, createHelpers } from '@lattice/signals/extend'` |
+ * | Custom composition | `import { Signal, Computed, deps } from '@lattice/signals/extend'` |
  * | Types only | `import type { Readable, SignalFunction } from '@lattice/signals'` |
  *
  * ### Without a bundler
@@ -32,7 +32,7 @@
 // Primary API - What most users need
 // =============================================================================
 
-export { createSignalsSvc, createHelpers } from './presets/core';
+export { createSignalsSvc, deps } from './presets/core';
 export type {
   SignalsSvc,
   Helpers,

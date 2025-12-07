@@ -2,7 +2,7 @@
  * @lattice/signals/extend - Extension API for custom composition
  *
  * Use this module when you need to:
- * - Create custom signal presets with different helpers
+ * - Create custom signal presets with different deps
  * - Wire signals with custom schedulers or graph implementations
  * - Build instrumented/debuggable signal variants
  */
@@ -21,11 +21,11 @@ export { Subscribe } from './subscribe';
 // Helper Factories - For custom wiring
 // =============================================================================
 
-export { createHelpers } from './presets/core';
-export { createGraphEdges } from './helpers/graph-edges';
-export { createGraphTraversal } from './helpers/graph-traversal';
-export { createPullPropagator } from './helpers/pull-propagator';
-export { createScheduler } from './helpers/scheduler';
+export { deps } from './presets/core';
+export { createGraphEdges } from './deps/graph-edges';
+export { createGraphTraversal } from './deps/graph-traversal';
+export { createPullPropagator } from './deps/pull-propagator';
+export { createScheduler } from './deps/scheduler';
 export { createUntracked } from './untrack';
 
 // =============================================================================
@@ -51,10 +51,10 @@ export type {
 // =============================================================================
 
 export type { Helpers } from './presets/core';
-export type { GraphEdges, Consumer } from './helpers/graph-edges';
-export type { GraphTraversal } from './helpers/graph-traversal';
-export type { PullPropagator } from './helpers/pull-propagator';
-export type { Scheduler } from './helpers/scheduler';
+export type { GraphEdges, Consumer } from './deps/graph-edges';
+export type { GraphTraversal } from './deps/graph-traversal';
+export type { PullPropagator } from './deps/pull-propagator';
+export type { Scheduler } from './deps/scheduler';
 
 // =============================================================================
 // Graph Types - For advanced reactive graph manipulation

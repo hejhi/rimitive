@@ -1,11 +1,11 @@
 /**
- * Shared test helpers for creating scopes with mock dependencies
+ * Shared test deps for creating scopes with mock dependencies
  *
- * These helpers provide a clean public API for tests without exposing internals.
+ * These deps provide a clean public API for tests without exposing internals.
  */
 
 import { vi } from 'vitest';
-import { createScopes } from './helpers/scope';
+import { createScopes } from './deps/scope';
 import type { LinkedNode } from './types';
 
 // Mock element for testing

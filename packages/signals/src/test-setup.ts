@@ -11,12 +11,12 @@ import { Computed } from './computed';
 import { Effect } from './effect';
 import { Batch } from './batch';
 import { compose as createLattice } from '@lattice/lattice';
-import { createGraphEdges } from './helpers/graph-edges';
-import { createPullPropagator } from './helpers/pull-propagator';
-import { createScheduler } from './helpers/scheduler';
-import { createGraphTraversal } from './helpers/graph-traversal';
+import { createGraphEdges } from './deps/graph-edges';
+import { createPullPropagator } from './deps/pull-propagator';
+import { createScheduler } from './deps/scheduler';
+import { createGraphTraversal } from './deps/graph-traversal';
 
-// Create a complete context with all helpers
+// Create a complete context with all deps
 export function createDefaultContext() {
   const graphEdges = createGraphEdges();
   const { withVisitor } = createGraphTraversal();

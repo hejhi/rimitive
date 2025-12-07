@@ -78,12 +78,12 @@ function isFactoriesObject(
  * ```ts
  * import { compose } from '@lattice/lattice';
  * import { Signal, Computed, Effect } from '@lattice/signals';
- * import { createHelpers } from '@lattice/signals/presets/core';
+ * import { deps } from '@lattice/signals/presets/core';
  *
- * const helpers = createHelpers();
+ * const deps = deps();
  * const use = compose(
  *   { signal: Signal(), computed: Computed(), effect: Effect() },
- *   helpers
+ *   deps
  * );
  *
  * // Get the service directly
@@ -101,8 +101,8 @@ function isFactoriesObject(
  *
  * @example
  * ```ts
- * const signalService = Signal().create(helpers);
- * const computedService = Computed().create(helpers);
+ * const signalService = Signal().create(deps);
+ * const computedService = Computed().create(deps);
  *
  * const use = compose(signalService, computedService);
  * const { signal, computed } = use();
@@ -115,7 +115,7 @@ function isFactoriesObject(
  * ```ts
  * const use = compose(
  *   { signal: Signal(), computed: Computed() },
- *   helpers,
+ *   deps,
  *   { instrumentation }
  * );
  * ```
@@ -182,9 +182,10 @@ export function compose(
     }
 
     // Flatten in case of arrays
-    const flatServices = services.flat(
-      1
-    ) as ServiceDefinition<string, unknown>[];
+    const flatServices = services.flat(1) as ServiceDefinition<
+      string,
+      unknown
+    >[];
 
     svc = composeServices(flatServices, options);
   }
@@ -280,7 +281,7 @@ function composeServices(
  * ```ts
  * import { compose, extend } from '@lattice/lattice';
  *
- * const base = compose({ signal: Signal() }, helpers);
+ * const base = compose({ signal: Signal() }, deps);
  *
  * const extended = extend(base, (svc) => ({
  *   ...svc,

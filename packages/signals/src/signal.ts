@@ -6,7 +6,7 @@ import type {
 } from '@lattice/lattice';
 import { defineService } from '@lattice/lattice';
 import { CONSTANTS } from './constants';
-import { GraphEdges, Consumer } from './helpers/graph-edges';
+import { GraphEdges, Consumer } from './deps/graph-edges';
 
 const { CLEAN, PRODUCER, DIRTY } = CONSTANTS;
 
@@ -69,8 +69,8 @@ export type SignalOptions = {
 };
 
 // Re-export types needed for type inference
-export type { Consumer } from './helpers/graph-edges';
-export type { GraphEdges } from './helpers/graph-edges';
+export type { Consumer } from './deps/graph-edges';
+export type { GraphEdges } from './deps/graph-edges';
 
 type SignalNode<T> = ProducerNode & {
   __type: 'signal';

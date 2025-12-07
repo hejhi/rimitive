@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findLIS } from './helpers/reconcile';
+import { findLIS } from './deps/reconcile';
 
 describe('findLIS (Longest Increasing Subsequence)', () => {
   it('handles empty array', () => {

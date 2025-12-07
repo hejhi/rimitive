@@ -18,7 +18,7 @@ import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
  * @example
  * ```typescript
  * import { createIslandsServerApp } from '@lattice/islands/server';
- * import { renderToString } from '@lattice/islands/helpers/renderToString';
+ * import { renderToString } from '@lattice/islands/deps/renderToString';
  *
  * const { el, mount } = createIslandsServerApp();
  * const app = el('div')(el('h1')('Hello World'));

@@ -76,15 +76,15 @@ export default defineConfig({
         'devtools/effect': resolve(__dirname, 'src/devtools/effect.ts'),
         'devtools/batch': resolve(__dirname, 'src/devtools/batch.ts'),
         'devtools/subscribe': resolve(__dirname, 'src/devtools/subscribe.ts'),
-        'helpers/scheduler': resolve(__dirname, 'src/helpers/scheduler.ts'),
-        'helpers/graph-edges': resolve(__dirname, 'src/helpers/graph-edges.ts'),
-        'helpers/graph-traversal': resolve(
+        'deps/scheduler': resolve(__dirname, 'src/deps/scheduler.ts'),
+        'deps/graph-edges': resolve(__dirname, 'src/deps/graph-edges.ts'),
+        'deps/graph-traversal': resolve(
           __dirname,
-          'src/helpers/graph-traversal.ts'
+          'src/deps/graph-traversal.ts'
         ),
-        'helpers/pull-propagator': resolve(
+        'deps/pull-propagator': resolve(
           __dirname,
-          'src/helpers/pull-propagator.ts'
+          'src/deps/pull-propagator.ts'
         ),
         'presets/core': resolve(__dirname, 'src/presets/core.ts'),
       },

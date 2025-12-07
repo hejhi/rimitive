@@ -11,7 +11,7 @@
  *
  * @example
  * ```typescript
- * import type { AddEventListener } from '@lattice/view/helpers/addEventListener';
+ * import type { AddEventListener } from '@lattice/view/deps/addEventListener';
  *
  * const on: AddEventListener = createAddEventListener(batch);
  *
@@ -38,7 +38,7 @@ export type AddEventListener = <K extends keyof HTMLElementEventMap>(
  *
  * @example
  * ```typescript
- * import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+ * import { createAddEventListener } from '@lattice/view/deps/addEventListener';
  * import { createDOMSvc } from '@lattice/view/presets/dom';
  *
  * const { batch, el, signal } = createDOMSvc();

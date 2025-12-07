@@ -28,7 +28,7 @@ import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
-import { createSvc } from './helpers/signal-computed';
+import { createSvc } from './deps/signal-computed';
 
 const ITERATIONS = 25000;
 const latticeSvc = createSvc();

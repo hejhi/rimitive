@@ -93,12 +93,11 @@ That's essentially how Lattice does ssr in the `island` package (swapping out th
 
 ```typescript
 import { compose } from '@lattice/lattice';
-import { Signal, Computed, Effect, createHelpers } from '@lattice/signals';
+import { Signal, Computed, Effect, deps } from '@lattice/signals';
 
-const dependencies = createHelpers();
 const svc = compose(
   { signal: Signal(), computed: Computed(), effect: Effect() },
-  dependencies
+  deps()
 );
 ```
 
@@ -211,7 +210,7 @@ Specs don't become real elements until hydrated with an adapter. The same spec c
 You own the composition layer. Want to:
 
 - **Create custom primitives?** Use `defineService()` with the same patterns Lattice uses internally
-- **Swap out our signals?** Replace `createHelpers()` with your own reactive system (or someone elses)
+- **Swap out our signals?** Replace `deps()` with your own reactive system (or someone elses)
 - **Build a custom adapter/renderer?** Implement the `Adapter` interface for Canvas, WebGL, or anything tree-based
 - **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in lattice
 

@@ -1,7 +1,7 @@
 /**
  * Core Signals Preset
  *
- * Pre-configured bundle of signal primitives with all necessary helpers wired up.
+ * Pre-configured bundle of signal primitives with all necessary deps wired up.
  * This is the recommended way to use Lattice signals - it eliminates the boilerplate
  * of manually creating and wiring the reactive graph infrastructure.
  *
@@ -44,25 +44,25 @@ import { Computed } from '../computed';
 import { Effect } from '../effect';
 import { Batch } from '../batch';
 import { Subscribe } from '../subscribe';
-import { createGraphEdges, type GraphEdges } from '../helpers/graph-edges';
+import { createGraphEdges, type GraphEdges } from '../deps/graph-edges';
 import {
   createGraphTraversal,
   type GraphTraversal,
-} from '../helpers/graph-traversal';
+} from '../deps/graph-traversal';
 import {
   createPullPropagator,
   type PullPropagator,
-} from '../helpers/pull-propagator';
-import { createScheduler, type Scheduler } from '../helpers/scheduler';
+} from '../deps/pull-propagator';
+import { createScheduler, type Scheduler } from '../deps/scheduler';
 import { createUntracked } from '../untrack';
 import { compose, type Svc, type Use } from '@lattice/lattice';
 import type { Dependency } from '../types';
 
 /**
- * Combined helpers type - all reactive graph operations.
+ * Combined deps type - all reactive graph operations.
  *
  * This is the dependency type required by signal primitives.
- * Created by `createHelpers()` and passed to `compose()`.
+ * Created by `deps()` and passed to `compose()`.
  *
  * @internal Typically you don't need to use this directly - use `createSignalsSvc()`.
  */
@@ -76,7 +76,7 @@ export type Helpers = {
 
 // Re-export user-facing types
 // Note: Internal dependency types (*Deps) are intentionally not exported.
-// They are wired automatically by presets and helpers.
+// They are wired automatically by presets and deps.
 
 // Signal types
 export type {
@@ -119,7 +119,7 @@ import type { EffectService } from '../effect';
 import type { BatchService } from '../batch';
 import type { SubscribeService } from '../subscribe';
 
-export function createHelpers(): Helpers {
+export function deps(): Helpers {
   const edges = createGraphEdges();
   const untrack = createUntracked({ consumer: edges.consumer });
   const traversal = createGraphTraversal();
@@ -228,6 +228,6 @@ export function createSignalsSvc(): Use<SignalsSvc> {
       batch: Batch(),
       subscribe: Subscribe(),
     },
-    createHelpers()
+    deps()
   );
 }

@@ -2,14 +2,14 @@ import { vi } from 'vitest';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { Reactive, RefSpec, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
-import { createScopes } from './helpers/scope';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createScheduler } from '@lattice/signals/helpers/scheduler';
-import { createGraphTraversal } from '@lattice/signals/helpers/graph-traversal';
+import { createScopes } from './deps/scope';
+import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
+import { createScheduler } from '@lattice/signals/deps/scheduler';
+import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
 import { Signal } from '@lattice/signals/signal';
 import { Computed } from '@lattice/signals/computed';
 import { Effect } from '@lattice/signals/effect';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createPullPropagator } from '@lattice/signals/deps/pull-propagator';
 
 // Re-export types for convenience
 export type { Reactive };

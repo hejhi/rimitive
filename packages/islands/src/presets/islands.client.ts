@@ -2,7 +2,7 @@
  * Islands Client Preset
  *
  * Pre-configured bundle for client-side hydration of islands.
- * Combines signals, view primitives, and hydration helpers.
+ * Combines signals, view primitives, and hydration deps.
  *
  * @example
  * ```ts
@@ -18,12 +18,12 @@
 
 import { type SignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc, type ViewSvc } from '@lattice/view/presets/core';
-import { createScopes, type CreateScopes } from '@lattice/view/helpers/scope';
+import { createScopes, type CreateScopes } from '@lattice/view/deps/scope';
 import {
   createDOMAdapter,
   type DOMAdapterConfig,
 } from '@lattice/view/adapters/dom';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createAddEventListener } from '@lattice/view/deps/addEventListener';
 import type { RefSpec, Adapter } from '@lattice/view/types';
 import { createDOMHydrator } from '../hydrators/dom';
 import { ISLAND_META } from '../types';

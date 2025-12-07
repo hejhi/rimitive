@@ -42,21 +42,21 @@
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
     },
-    "./helpers/scheduler": {
-      "import": "./dist/helpers/scheduler.js",
-      "types": "./dist/helpers/scheduler.d.ts"
+    "./deps/scheduler": {
+      "import": "./dist/deps/scheduler.js",
+      "types": "./dist/deps/scheduler.d.ts"
     },
-    "./helpers/graph-edges": {
-      "import": "./dist/helpers/graph-edges.js",
-      "types": "./dist/helpers/graph-edges.d.ts"
+    "./deps/graph-edges": {
+      "import": "./dist/deps/graph-edges.js",
+      "types": "./dist/deps/graph-edges.d.ts"
     },
-    "./helpers/graph-traversal": {
-      "import": "./dist/helpers/graph-traversal.js",
-      "types": "./dist/helpers/graph-traversal.d.ts"
+    "./deps/graph-traversal": {
+      "import": "./dist/deps/graph-traversal.js",
+      "types": "./dist/deps/graph-traversal.d.ts"
     },
-    "./helpers/pull-propagator": {
-      "import": "./dist/helpers/pull-propagator.js",
-      "types": "./dist/helpers/pull-propagator.d.ts"
+    "./deps/pull-propagator": {
+      "import": "./dist/deps/pull-propagator.js",
+      "types": "./dist/deps/pull-propagator.d.ts"
     },
     "./devtools/signal": {
       "import": "./dist/devtools/signal.js",

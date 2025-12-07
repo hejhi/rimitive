@@ -62,7 +62,7 @@ export function createSSRContext<TContext = unknown>(
  * @example
  * ```typescript
  * import { createSSRContext, runWithSSRContext } from '@lattice/islands/ssr-context';
- * import { renderToString } from '@lattice/islands/helpers/renderToString';
+ * import { renderToString } from '@lattice/islands/deps/renderToString';
  *
  * const ctx = createSSRContext();
  * const html = runWithSSRContext(ctx, () => renderToString(appElement));

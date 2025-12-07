@@ -14,8 +14,8 @@ import type {
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
-import type { CreateScopes } from './helpers/scope';
-import { createProcessChildren } from './helpers/processChildren';
+import type { CreateScopes } from './deps/scope';
+import { createProcessChildren } from './deps/processChildren';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>

@@ -34,25 +34,25 @@
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
     },
-    "./helpers/scope": {
-      "import": "./dist/helpers/scope.js",
-      "types": "./dist/helpers/scope.d.ts"
+    "./deps/scope": {
+      "import": "./dist/deps/scope.js",
+      "types": "./dist/deps/scope.d.ts"
     },
-    "./helpers/processChildren": {
-      "import": "./dist/helpers/processChildren.js",
-      "types": "./dist/helpers/processChildren.d.ts"
+    "./deps/processChildren": {
+      "import": "./dist/deps/processChildren.js",
+      "types": "./dist/deps/processChildren.d.ts"
     },
-    "./helpers/addEventListener": {
-      "import": "./dist/helpers/addEventListener.js",
-      "types": "./dist/helpers/addEventListener.d.ts"
+    "./deps/addEventListener": {
+      "import": "./dist/deps/addEventListener.js",
+      "types": "./dist/deps/addEventListener.d.ts"
     },
-    "./helpers/use": {
-      "import": "./dist/helpers/use.js",
-      "types": "./dist/helpers/use.d.ts"
+    "./deps/use": {
+      "import": "./dist/deps/use.js",
+      "types": "./dist/deps/use.d.ts"
     },
-    "./helpers": {
-      "import": "./dist/helpers/index.js",
-      "types": "./dist/helpers/index.d.ts"
+    "./deps": {
+      "import": "./dist/deps/index.js",
+      "types": "./dist/deps/index.d.ts"
     },
     "./map": {
       "import": "./dist/map.js",

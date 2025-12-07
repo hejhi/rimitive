@@ -12,7 +12,7 @@ import { createDOMServerAdapter } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
 import { createViewSvc } from '@lattice/view/presets/core';
-import { renderToString } from '../helpers/renderToString';
+import { renderToString } from '../deps/renderToString';
 import { createSSRContext, runWithSSRContext } from '../ssr-context';
 import type { IslandNodeMeta } from '../types';
 

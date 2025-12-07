@@ -23,7 +23,7 @@ import {
   enterFragmentRange,
   getCurrentPath,
   positionFromPath,
-} from '../helpers/hydrate-dom';
+} from '../deps/hydrate-dom';
 
 // Re-export DOMAdapterConfig for consumers that import from here
 export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';

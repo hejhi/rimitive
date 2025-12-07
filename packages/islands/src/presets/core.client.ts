@@ -10,8 +10,8 @@
 
 import { type SignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc, type ViewSvc } from '@lattice/view/presets/core';
-import { createScopes } from '@lattice/view/helpers/scope';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createScopes } from '@lattice/view/deps/scope';
+import { createAddEventListener } from '@lattice/view/deps/addEventListener';
 import type { RefSpec, Adapter, NodeRef } from '@lattice/view/types';
 import type { GetContext } from '../types';
 import { ISLAND_META } from '../types';

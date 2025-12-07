@@ -26,7 +26,7 @@ function Counter() {
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={() => setCount(c => c + 1)}>Increment</button>
+      <button onClick={() => setCount((c) => c + 1)}>Increment</button>
     </div>
   );
 }
@@ -62,14 +62,8 @@ function Form() {
 
   return (
     <form>
-      <input
-        value={name}
-        onChange={e => setName(e.target.value)}
-      />
-      <input
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-      />
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <input value={email} onChange={(e) => setEmail(e.target.value)} />
     </form>
   );
 }
@@ -78,8 +72,8 @@ function Form() {
 The setter accepts either a value or an updater function:
 
 ```tsx
-setCount(5);              // Set to 5
-setCount(prev => prev + 1); // Increment
+setCount(5); // Set to 5
+setCount((prev) => prev + 1); // Increment
 ```
 
 ### `useSelector(signal, selector)`
@@ -91,12 +85,12 @@ import { useSelector } from '@lattice/react';
 
 function TodoCount({ todos }: { todos: Readable<Todo[]> }) {
   // Only re-renders when count changes, not when todo content changes
-  const count = useSelector(todos, t => t.length);
+  const count = useSelector(todos, (t) => t.length);
   return <span>{count} items</span>;
 }
 
 function FirstTodo({ todos }: { todos: Readable<Todo[]> }) {
-  const first = useSelector(todos, t => t[0]?.title ?? 'None');
+  const first = useSelector(todos, (t) => t[0]?.title ?? 'None');
   return <span>First: {first}</span>;
 }
 ```
@@ -109,17 +103,19 @@ Create a React hook from a portable behavior. Behaviors are framework-agnostic l
 import { createHook, useSubscribe } from '@lattice/react';
 
 // Define a portable behavior
-const counter = (svc) => (initialCount = 0) => {
-  const count = svc.signal(initialCount);
-  const doubled = svc.computed(() => count() * 2);
+const counter =
+  (svc) =>
+  (initialCount = 0) => {
+    const count = svc.signal(initialCount);
+    const doubled = svc.computed(() => count() * 2);
 
-  return {
-    count,
-    doubled,
-    increment: () => count(count() + 1),
-    decrement: () => count(count() - 1),
+    return {
+      count,
+      doubled,
+      increment: () => count(count() + 1),
+      decrement: () => count(count() - 1),
+    };
   };
-};
 
 // Create React hook
 const useCounter = createHook(counter);
@@ -143,17 +139,19 @@ function Counter() {
 Arguments are captured once on mount. For reactive options, pass signals:
 
 ```tsx
-const timer = (svc) => ({ interval }: { interval: Readable<number> }) => {
-  const elapsed = svc.signal(0);
+const timer =
+  (svc) =>
+  ({ interval }: { interval: Readable<number> }) => {
+    const elapsed = svc.signal(0);
 
-  svc.effect(() => {
-    const ms = interval(); // Reactive - effect re-runs when interval changes
-    const id = setInterval(() => elapsed(e => e + 1), ms);
-    return () => clearInterval(id);
-  });
+    svc.effect(() => {
+      const ms = interval(); // Reactive - effect re-runs when interval changes
+      const id = setInterval(() => elapsed((e) => e + 1), ms);
+      return () => clearInterval(id);
+    });
 
-  return { elapsed };
-};
+    return { elapsed };
+  };
 ```
 
 ## Context
@@ -213,9 +211,9 @@ import { Signal, Computed, Effect } from '@lattice/signals';
 
 function App() {
   const ctx = useLatticeContext(
-    Signal().create(helpers),
-    Computed().create(helpers),
-    Effect().create(helpers)
+    Signal().create(deps),
+    Computed().create(deps),
+    Effect().create(deps)
   );
 
   // ctx has signal, computed, effect methods
@@ -229,18 +227,20 @@ The main value proposition: write logic once, use everywhere.
 
 ```typescript
 // behaviors/counter.ts
-export const counter = (svc) => (initial = 0) => {
-  const count = svc.signal(initial);
-  const doubled = svc.computed(() => count() * 2);
+export const counter =
+  (svc) =>
+  (initial = 0) => {
+    const count = svc.signal(initial);
+    const doubled = svc.computed(() => count() * 2);
 
-  return {
-    count,
-    doubled,
-    increment: () => count(count() + 1),
-    decrement: () => count(count() - 1),
-    reset: () => count(initial),
+    return {
+      count,
+      doubled,
+      increment: () => count(count() + 1),
+      decrement: () => count(count() - 1),
+      reset: () => count(initial),
+    };
   };
-};
 ```
 
 **In Lattice view:**

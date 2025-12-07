@@ -1,5 +1,5 @@
 import { createViewSvc } from '@lattice/view/presets/core';
-import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
+import { createAddEventListener } from '@lattice/view/deps/addEventListener';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
 
