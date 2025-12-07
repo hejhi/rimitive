@@ -121,9 +121,9 @@ export type ClientApp = {
  * const domAdapter = createDOMAdapter();
  * const hydrateAdapter = createDOMHydrationAdapter(document.body);
  * const adapter = createIslandsAdapter(hydrateAdapter, domAdapter);
- * const view = createView(adapter, signals);
+ * const view = createView({ adapter, signals })();
  *
- * const app = createIslandsApp({ signals, adapter, view });
+ * const app = createIslandsApp({ adapter, view });
  * app.hydrate(Counter, TodoList);
  * ```
  */

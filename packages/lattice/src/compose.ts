@@ -77,13 +77,11 @@ function isFactoriesObject(
  * @example
  * ```ts
  * import { compose } from '@lattice/lattice';
- * import { Signal, Computed, Effect } from '@lattice/signals';
- * import { deps } from '@lattice/signals/presets/core';
+ * import { Signal, Computed, Effect, deps } from '@lattice/signals/extend';
  *
- * const deps = deps();
  * const use = compose(
  *   { signal: Signal(), computed: Computed(), effect: Effect() },
- *   deps
+ *   deps()
  * );
  *
  * // Get the service directly
@@ -101,8 +99,11 @@ function isFactoriesObject(
  *
  * @example
  * ```ts
- * const signalService = Signal().create(deps);
- * const computedService = Computed().create(deps);
+ * import { Signal, Computed, deps } from '@lattice/signals/extend';
+ *
+ * const helpers = deps();
+ * const signalService = Signal().create(helpers);
+ * const computedService = Computed().create(helpers);
  *
  * const use = compose(signalService, computedService);
  * const { signal, computed } = use();
@@ -113,9 +114,16 @@ function isFactoriesObject(
  *
  * @example
  * ```ts
+ * import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+ * import { Signal, Computed, deps } from '@lattice/signals/extend';
+ *
+ * const instrumentation = createInstrumentation({
+ *   providers: [devtoolsProvider()],
+ * });
+ *
  * const use = compose(
  *   { signal: Signal(), computed: Computed() },
- *   deps,
+ *   deps(),
  *   { instrumentation }
  * );
  * ```
@@ -280,8 +288,9 @@ function composeServices(
  * @example
  * ```ts
  * import { compose, extend } from '@lattice/lattice';
+ * import { Signal, deps } from '@lattice/signals/extend';
  *
- * const base = compose({ signal: Signal() }, deps);
+ * const base = compose({ signal: Signal() }, deps());
  *
  * const extended = extend(base, (svc) => ({
  *   ...svc,

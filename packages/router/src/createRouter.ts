@@ -314,8 +314,8 @@ export type Router<TConfig extends AdapterConfig> = {
    * @example
    * ```ts
    * const App = router.root('/', AppLayout).create(
-   *   route('/', Home)(),
-   *   route('*', NotFound)()
+   *   router.route('/', Home)(),
+   *   router.route('*', NotFound)()
    * );
    * const appRef = router.renderApp(App);
    * container.appendChild(appRef.element);

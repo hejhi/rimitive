@@ -64,7 +64,7 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
  *
  * const signals = createSignals();
  * const adapter = createDOMServerAdapter();
- * const view = createView(adapter, signals);
+ * const view = createView({ adapter, signals })();
  *
  * const app = view.el('div')(view.el('h1')('Hello SSR'));
  * ```

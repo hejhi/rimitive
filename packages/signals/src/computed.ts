@@ -119,12 +119,12 @@ export type ComputedService = ReturnType<typeof Computed>;
  * **Most users should use the preset instead:**
  * ```ts
  * import { createSignals } from '@lattice/signals/presets/core';
- * const { computed } = createSignals();
+ * const { computed } = createSignals()();
  * ```
  *
  * @example Basic derived value
  * ```ts
- * const { signal, computed } = createSignals();
+ * const { signal, computed } = createSignals()();
  *
  * const firstName = signal('Alice');
  * const lastName = signal('Smith');

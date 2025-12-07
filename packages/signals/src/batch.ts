@@ -70,12 +70,12 @@ export type BatchOptions = {
  * **Most users should use the preset instead:**
  * ```ts
  * import { createSignals } from '@lattice/signals/presets/core';
- * const { batch } = createSignals();
+ * const { batch } = createSignals()();
  * ```
  *
  * @example Avoiding intermediate updates
  * ```ts
- * const { signal, effect, batch } = createSignals();
+ * const { signal, effect, batch } = createSignals()();
  *
  * const a = signal(0);
  * const b = signal(0);

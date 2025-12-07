@@ -20,5 +20,5 @@ export type {
   InstrumentationProvider,
   InstrumentationConfig,
 } from './instrumentation';
-export { devtoolsProvider } from './instrumentation/providers';
+export { devtoolsProvider, isDevtoolsAvailable } from './instrumentation/providers';
 export type { DevtoolsProviderOptions } from './instrumentation/providers';

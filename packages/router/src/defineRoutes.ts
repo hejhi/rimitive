@@ -62,13 +62,14 @@ export type DefineRoutesContext<TConfig extends AdapterConfig> = {
  * @example
  * ```typescript
  * import { defineRoutes } from '@lattice/router';
- * import { Layout, HomePage, AboutPage, ProductPage } from './components';
+ * import { Layout, HomePage, AboutPage, ProductPage, ProductsLayout } from './components';
  *
- * const appRoutes = defineRoutes('/', Layout).create(
- *   defineRoutes.route('/', HomePage)(),
- *   defineRoutes.route('/about', AboutPage)(),
- *   defineRoutes.route('/products', ProductsLayout)(
- *     defineRoutes.route(':id', ProductPage)()
+ * const routes = defineRoutes('/', Layout);
+ * const appRoutes = routes.create(
+ *   routes.route('/', HomePage)(),
+ *   routes.route('/about', AboutPage)(),
+ *   routes.route('/products', ProductsLayout)(
+ *     routes.route(':id', ProductPage)()
  *   )
  * );
  *

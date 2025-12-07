@@ -79,9 +79,9 @@ export type ServerApp = {
  *
  * const signals = createSignals();
  * const adapter = createDOMServerAdapter();
- * const view = createView(adapter, signals);
+ * const view = createView({ adapter, signals })();
  *
- * const app = createIslandsApp({ signals, view });
+ * const app = createIslandsApp({ view });
  * const { html, scripts } = app.render(appSpec);
  * ```
  */

@@ -5,7 +5,7 @@
  * ```typescript
  * import { createSignals } from '@lattice/signals';
  *
- * const { signal, computed, effect } = createSignals();
+ * const { signal, computed, effect } = createSignals()();
  * ```
  *
  * ## Import Guide

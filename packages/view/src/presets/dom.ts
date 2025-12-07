@@ -6,9 +6,11 @@
  *
  * @example
  * ```ts
+ * import { createSignals } from '@lattice/signals/presets/core';
  * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, signal, computed, on, mount } = createDOMView();
+ * const use = createDOMView({ signals: createSignals() });
+ * const { el, signal, computed, on, mount } = use();
  *
  * const App = () => {
  *   const count = signal(0);
@@ -39,11 +41,11 @@ export type { DOMAdapterConfig } from '../adapters/dom';
  *
  * @example
  * ```typescript
- * import { createDOMView, type DOMViewSvc } from '@lattice/view/presets/dom';
  * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createDOMView, type DOMViewSvc } from '@lattice/view/presets/dom';
  *
  * const signals = createSignals();
- * const view = createDOMView(signals());
+ * const view = createDOMView({ signals });
  * const { el, map, on, mount } = view();
  * ```
  */
@@ -59,19 +61,18 @@ export type DOMViewSvc = ViewSvc<DOMAdapterConfig> &
  * Use this when you need to share signals between multiple adapters
  * (e.g., DOM + Canvas in the same app).
  *
- * @param signals - Optional signals service. If not provided, creates a new one.
+ * @param signals - Signals service to use for reactivity.
  *
  * @example With shared signals
  * ```ts
  * import { createSignals } from '@lattice/signals/presets/core';
  * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const signals = createSignals()();
- * const dom = createDOMView(signals);
- * const canvas = createCanvasViewSvc(signals);
+ * const signals = createSignals();
+ * const dom = createDOMView({ signals });
+ * const canvas = createCanvasView({ signals });
  *
- * export const { signal, computed } = signals;
- * export { dom, canvas };
+ * const { signal, computed } = signals();
  * ```
  */
 export const createDOMView = ({

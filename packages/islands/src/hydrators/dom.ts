@@ -79,17 +79,20 @@ export type CreateSvcResult = {
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  * import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
  *
- * const signals = createSignals();
  * const domAdapter = createDOMAdapter();
  * const hydrateAdapter = createDOMHydrationAdapter(document.body);
  * const adapter = createIslandsAdapter(hydrateAdapter, domAdapter);
  *
- * const createSvc = (adapter, signals) => ({
- *   svc: { ...signals, ...createView(adapter, signals) },
- *   createElementScope: (el, fn) => fn()
- * });
+ * const createSvc = (islandAdapter) => {
+ *   const signals = createSignals();
+ *   const view = createView({ adapter: islandAdapter, signals })();
+ *   return {
+ *     svc: view,
+ *     createElementScope: (el, fn) => fn()
+ *   };
+ * };
  *
- * const hydrator = createDOMHydrator(createSvc, signals, (spec) => ({ element: spec.create({}) }));
+ * const hydrator = createDOMHydrator(createSvc, (spec) => ({ element: spec.create({}) }));
  * hydrator.hydrate(Counter, TodoList);
  * ```
  */

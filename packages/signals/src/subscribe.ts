@@ -107,12 +107,12 @@ export type { Scheduler } from './deps/scheduler';
  * **Most users should use the preset instead:**
  * ```ts
  * import { createSignals } from '@lattice/signals/presets/core';
- * const { subscribe } = createSignals();
+ * const { subscribe } = createSignals()();
  * ```
  *
  * @example Basic subscription
  * ```ts
- * const { signal, subscribe } = createSignals();
+ * const { signal, subscribe } = createSignals()();
  *
  * const count = signal(0);
  *

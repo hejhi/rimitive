@@ -7,9 +7,9 @@ import type { Readable, Writable } from '@lattice/signals/types';
  *
  * @example
  * ```tsx
- * import { compose, coreExtensions } from '@lattice/signals';
+ * import { createSignals } from '@lattice/signals';
  *
- * const svc: SignalSvc = compose(...coreExtensions);
+ * const svc: SignalSvc = createSignals()();
  * ```
  */
 export type SignalSvc = {
@@ -28,10 +28,10 @@ const SignalContext = createContext<SignalSvc | null>(null);
  *
  * @example
  * ```tsx
- * import { compose, coreExtensions } from '@lattice/signals';
+ * import { createSignals } from '@lattice/signals';
  *
  * const props: SignalProviderProps = {
- *   svc: compose(...coreExtensions),
+ *   svc: createSignals()(),
  *   children: <App />
  * };
  * ```
@@ -48,9 +48,9 @@ export type SignalProviderProps = {
  * @example
  * ```tsx
  * import { SignalProvider } from '@lattice/react';
- * import { compose, coreExtensions } from '@lattice/signals';
+ * import { createSignals } from '@lattice/signals';
  *
- * const svc = compose(...coreExtensions);
+ * const svc = createSignals()();
  *
  * function App() {
  *   return (

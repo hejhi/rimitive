@@ -11,14 +11,18 @@ import type { ServiceDefinition, LatticeContext } from '@lattice/lattice';
  *
  * @example
  * ```tsx
- * import { signalExtension, computedExtension } from '@lattice/signals';
+ * import { Signal, Computed, deps } from '@lattice/signals/extend';
  *
  * function App() {
  *   // Create a context with specific extensions
- *   const context = useLatticeContext(signalExtension, computedExtension);
+ *   const helpers = deps();
+ *   const context = useLatticeContext(
+ *     Signal().create(helpers),
+ *     Computed().create(helpers)
+ *   );
  *
  *   const count = useRef(context.signal(0));
- *   const doubled = useRef(context.computed(() => count.current.value * 2));
+ *   const doubled = useRef(context.computed(() => count.current() * 2));
  *
  *   return <div>...</div>;
  * }
@@ -26,14 +30,18 @@ import type { ServiceDefinition, LatticeContext } from '@lattice/lattice';
  *
  * @example
  * ```tsx
- * // For convenience with signals, you can use coreExtensions
- * import { coreExtensions } from '@lattice/signals';
+ * // For most use cases, prefer createSignals() instead of useLatticeContext
+ * import { createSignals } from '@lattice/signals';
  *
  * function TodoApp() {
- *   const context = useLatticeContext(...coreExtensions);
+ *   const svcRef = useRef(createSignals()());
+ *   const { signal } = svcRef.current;
  *
- *   const todos = useRef(context.signal([]));
- *   const filter = useRef(context.signal('all'));
+ *   const todos = useRef(signal([]));
+ *   const filter = useRef(signal('all'));
+ *
+ *   // Dispose on unmount
+ *   useEffect(() => () => svcRef.current.dispose(), []);
  *
  *   return (
  *     <AppContext.Provider value={{ todos: todos.current, filter: filter.current }}>

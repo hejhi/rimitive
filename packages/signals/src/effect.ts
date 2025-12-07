@@ -90,12 +90,12 @@ type EffectNode = ScheduledNode & {
  * **Most users should use the preset instead:**
  * ```ts
  * import { createSignals } from '@lattice/signals/presets/core';
- * const { effect } = createSignals();
+ * const { effect } = createSignals()();
  * ```
  *
  * @example Basic effect
  * ```ts
- * const { signal, effect } = createSignals();
+ * const { signal, effect } = createSignals()();
  *
  * const count = signal(0);
  *

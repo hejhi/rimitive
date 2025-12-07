@@ -50,10 +50,11 @@ These primitives produce different outputs:
 Most users won't need to call `compose()` directly. Lattice provides **presets**—pre-composed services, with their dependencies, ready to use:
 
 ```typescript
+import { createSignals } from '@lattice/signals/presets/core';
 import { createDOMView } from '@lattice/view/presets/dom';
 
-const useDomService = createDOMView();
-const { el, signal, computed, mount } = useDomService();
+const use = createDOMView({ signals: createSignals() });
+const { el, signal, computed, mount } = use();
 
 const App = () => {
   const count = signal(0);
@@ -64,7 +65,7 @@ const App = () => {
   );
 };
 
-mount(App(), document.body);
+document.body.appendChild(mount(App()));
 ```
 
 `createDOMView()` bundles signal primitives, view primitives, and a DOM adapter into one service. But it's just a convenience—under the hood, it's using `compose()`. If you want to replace any of them, you totally can. In fact, you can re-use our primitives and replace their underlying dependencies if you want to change their behavior. You have control down to the very base reactive, UI model, and renderer itself.
@@ -79,16 +80,16 @@ Need to share signals across multiple renderers? Compose services yourself:
 import { createSignals } from '@lattice/signals/presets/core';
 import { createDOMView } from '@lattice/view/presets/dom';
 
-// Shared signals
+// Shared signals - pass the same instance to multiple views
 const signals = createSignals();
 
-// Multiple custom view services using the same signals instance
-const dom = createMyDOMViewSvc({ signals });
-const canvas = createMyCanvasSvc({ signals });
-const signalsSvc = signals();
+// Multiple view services using the same signals instance
+const dom = createDOMView({ signals });
+const canvas = createCanvasView({ signals });
 
 // Same signal, multiple rendering targets
-const position = signalsSvc.signal({ x: 0, y: 0 });
+const { signal } = signals();
+const position = signal({ x: 0, y: 0 });
 ```
 
 That's essentially how Lattice does ssr in the `island` package (swapping out the renderer dependency for the `view` primitives). Or go lower and compose individual primitives:
@@ -153,10 +154,9 @@ Now a `dropdown` behavior can compose this with keyboard handling:
 
 ```typescript
 // behaviors/dropdown.ts
-export const dropdown = ({ use }: SignalsSvc) => {
-  // `use` is a primitive that makes consuming the above pattern more ergonomic.
-  // Don't like it? Roll your own and create your own patterns! The source (like most of Lattice) is tiny, promise.
-  const useDisclosure = use(disclosure);
+export const dropdown = (svc: SignalsSvc) => {
+  // Behaviors can compose other behaviors by passing the service through
+  const useDisclosure = disclosure(svc);
 
   return (options?: { initialOpen?: boolean }) => {
     const d = useDisclosure(options?.initialOpen ?? false);
@@ -173,6 +173,11 @@ export const dropdown = ({ use }: SignalsSvc) => {
     return { ...d, handlers };
   };
 };
+
+// Usage: the `use` function returned by createSignals() injects the service
+const use = createSignals();
+const useDropdown = use(dropdown);
+const dd = useDropdown({ initialOpen: false });
 ```
 
 The same `disclosure` behavior could be composed into an accordion, modal, or tooltip—each adding its own semantics on top.
@@ -199,8 +204,8 @@ const Button = (label: string) =>
 const save = Button('Save');
 const cancel = Button('Cancel');
 
-// mount() hydrates specs into real DOM
-mount(el('div')(save, cancel), document.body);
+// mount() hydrates specs into real DOM elements
+document.body.appendChild(mount(el('div')(save, cancel)));
 ```
 
 Specs don't become real elements until hydrated with an adapter. The same spec can be hydrated with different adapters (DOM, SSR, test, etc) or composed into larger specs before hydration. A happy side-effect of this design is that it makes SSR much simpler.
