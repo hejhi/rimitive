@@ -302,7 +302,7 @@ Provides type-safe props and elements for standard HTML tags plus text nodes.
 </td></tr>
 <tr><td>
 
-[DOMSvc](../domsvc/)
+[DOMViewSvc](../domsvc/)
 
 </td><td>
 

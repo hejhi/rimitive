@@ -83,7 +83,7 @@ import { createDOMView } from '@lattice/view/presets/dom';
 const signals = createSignals();
 
 // Multiple custom view services using the same signals instance
-const dom = createMyDOMSvc({ signals });
+const dom = createMyDOMViewSvc({ signals });
 const canvas = createMyCanvasSvc({ signals });
 const signalsSvc = signals();
 

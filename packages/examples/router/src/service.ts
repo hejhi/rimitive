@@ -4,10 +4,10 @@ import type { DOMAdapterConfig } from '@lattice/view/presets/dom';
 import { createSignals } from '@lattice/signals';
 
 const signals = createSignals();
-export const use = createDOMView({ signals });
-const svc = use();
+export const domView = createDOMView({ signals });
+const domViewSvc = domView();
 
-export const router = createRouter<DOMAdapterConfig>(svc, {
+export const router = createRouter<DOMAdapterConfig>(domViewSvc, {
   initialPath:
     typeof window !== 'undefined'
       ? window.location.pathname + window.location.search + window.location.hash
@@ -15,5 +15,5 @@ export const router = createRouter<DOMAdapterConfig>(svc, {
 });
 
 // Re-export for components that don't need route context
-export const { el, computed, signal, map, match, mount } = svc;
+export const { el, computed, signal, map, match, mount } = domViewSvc;
 export const { navigate, currentPath } = router;

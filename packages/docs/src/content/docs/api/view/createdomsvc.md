@@ -20,12 +20,12 @@ Returns a flat service with all signals and view primitives, plus DOM-specific h
 **Signature:**
 
 ```typescript
-createDOMView: () => DOMSvc;
+createDOMView: () => DOMViewSvc;
 ```
 
 **Returns:**
 
-[DOMSvc](../domsvc/)
+[DOMViewSvc](../domsvc/)
 
 ## Example
 

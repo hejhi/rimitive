@@ -22,32 +22,17 @@
  * ```
  */
 
-import { extend, type LatticeContext, type Use } from '@lattice/lattice';
+import { extend, type Use } from '@lattice/lattice';
 import { type SignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import {
   createAddEventListener,
   type AddEventListener,
 } from '../deps/addEventListener';
-import { createView } from './core';
+import { createView, ViewSvc } from './core';
 import type { NodeRef, RefSpec } from '../types';
-import type {
-  ElFactory,
-  MapFactory,
-  MatchFactory,
-  PortalFactory,
-} from './core';
 
 export type { DOMAdapterConfig } from '../adapters/dom';
-
-export type ViewSvc = LatticeContext<
-  [
-    ElFactory<DOMAdapterConfig>,
-    MapFactory<HTMLElement>,
-    MatchFactory<HTMLElement>,
-    PortalFactory<HTMLElement>,
-  ]
->;
 
 /**
  * DOM View service type - view primitives + on + mount
@@ -62,24 +47,11 @@ export type ViewSvc = LatticeContext<
  * const { el, map, on, mount } = view();
  * ```
  */
-export type DOMViewSvc = ViewSvc &
+export type DOMViewSvc = ViewSvc<DOMAdapterConfig> &
   SignalsSvc & {
     on: AddEventListener;
     mount: <TElement>(spec: RefSpec<TElement>) => NodeRef<TElement>;
   };
-
-/**
- * Full DOM service type - signals + view + on + mount
- *
- * @example
- * ```typescript
- * import { createDOMView, type DOMSvc } from '@lattice/view/presets/dom';
- *
- * const use = createDOMView();
- * const { signal, computed, el, map, match, on, mount } = use();
- * ```
- */
-export type DOMSvc = SignalsSvc & DOMViewSvc;
 
 /**
  * Create DOM view service (view primitives + on + mount)

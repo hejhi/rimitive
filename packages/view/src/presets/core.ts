@@ -22,9 +22,9 @@ export type { PortalFactory, PortalService } from '../portal';
  * @example
  * ```typescript
  * import type { ComponentFactory } from '@lattice/view/presets/core';
- * import type { DOMSvc } from '@lattice/view/presets/dom';
+ * import type { DOMViewSvc } from '@lattice/view/presets/dom';
  *
- * const component: ComponentFactory<DOMSvc> = (svc) => (name: string) => {
+ * const component: ComponentFactory<DOMViewSvc> = (svc) => (name: string) => {
  *   return svc.el('div')(`Hello, ${name}`);
  * };
  * ```

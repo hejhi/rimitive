@@ -35,7 +35,7 @@
 
 export { createDOMView } from './presets/dom';
 export { createView } from './presets/core';
-export type { DOMSvc, DOMViewSvc, DOMAdapterConfig } from './presets/dom';
+export type { DOMViewSvc, DOMAdapterConfig } from './presets/dom';
 export type {
   ViewSvc,
   ComponentFactory,

@@ -13,12 +13,12 @@ import type { Readable, Writable } from '@lattice/signals/types';
  * @example
  * ```typescript
  * import type { Use } from '@lattice/view/deps/use';
- * import type { DOMSvc } from '@lattice/view/presets/dom';
+ * import type { DOMViewSvc } from '@lattice/view/presets/dom';
  *
- * const useHelper: Use<DOMSvc> = createUse(svc);
+ * const useHelper: Use<DOMViewSvc> = createUse(svc);
  *
  * // Define a reusable behavior
- * const clickHandler = (svc: DOMSvc) => (message: string) => {
+ * const clickHandler = (svc: DOMViewSvc) => (message: string) => {
  *   return svc.on('click', () => console.log(message));
  * };
  *

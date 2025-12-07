@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDOMView, type DOMSvc } from './presets/dom';
+import { createDOMView, type DOMViewSvc } from './presets/dom';
 import { createSignals } from '@lattice/signals/presets/core';
 
 describe('portal', () => {
-  let svc: DOMSvc;
+  let svc: DOMViewSvc;
   let testContainer: HTMLElement;
 
   beforeEach(() => {
