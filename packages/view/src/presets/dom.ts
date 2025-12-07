@@ -22,7 +22,7 @@
  * ```
  */
 
-import { compose, extend, type LatticeContext, type Use } from '@lattice/lattice';
+import { extend, type LatticeContext, type Use } from '@lattice/lattice';
 import {
   createSignalsSvc,
   type SignalsSvc,
@@ -32,9 +32,7 @@ import {
   createAddEventListener,
   type AddEventListener,
 } from '../helpers/addEventListener';
-import { createScopes } from '../helpers/scope';
-import { defaultExtensions } from './core';
-import type { Readable, Writable } from '@lattice/signals/types';
+import { createViewSvc } from './core';
 import type { NodeRef, RefSpec } from '../types';
 import type {
   ElFactory,
@@ -78,10 +76,11 @@ export type ViewSvc = LatticeContext<
  * const { el, map, on, mount } = view();
  * ```
  */
-export type DOMViewSvc = ViewSvc & {
-  on: AddEventListener;
-  mount: <TElement>(spec: RefSpec<TElement>) => NodeRef<TElement>;
-};
+export type DOMViewSvc = ViewSvc &
+  SignalsSvc & {
+    on: AddEventListener;
+    mount: <TElement>(spec: RefSpec<TElement>) => NodeRef<TElement>;
+  };
 
 /**
  * Full DOM service type - signals + view + on + mount
@@ -97,60 +96,38 @@ export type DOMViewSvc = ViewSvc & {
 export type DOMSvc = SignalsSvc & DOMViewSvc;
 
 /**
- * Create DOM view service (view primitives only, no signals)
+ * Create DOM view service (view primitives + on + mount)
  *
  * Use this when you need to share signals between multiple adapters
  * (e.g., DOM + Canvas in the same app).
  *
- * @example
+ * @param signals - Optional signals service. If not provided, creates a new one.
+ *
+ * @example With shared signals
  * ```ts
  * import { createSignalsSvc } from '@lattice/signals/presets/core';
  * import { createDOMViewSvc } from '@lattice/view/presets/dom';
  *
- * const signals = createSignalsSvc();
- * const dom = createDOMViewSvc(signals());
- * const canvas = createCanvasViewSvc(signals());
+ * const signals = createSignalsSvc()();
+ * const dom = createDOMViewSvc(signals);
+ * const canvas = createCanvasViewSvc(signals);
  *
- * export const { signal, computed } = signals();
+ * export const { signal, computed } = signals;
  * export { dom, canvas };
  * ```
  */
-export const createDOMViewSvc = <
-  TSignals extends {
-    signal: <T>(initialValue: T) => Writable<T>;
-    computed: <T>(fn: () => T) => Readable<T>;
-    effect: (fn: () => void | (() => void)) => () => void;
-    batch: <T>(fn: () => T) => T;
-  },
->({
-  signal,
-  computed,
-  effect,
-  batch,
-}: TSignals): Use<DOMViewSvc> => {
+export const createDOMViewSvc = (signals?: SignalsSvc): Use<DOMViewSvc> => {
   const adapter = createDOMAdapter();
-  const viewHelpers = {
-    adapter,
-    ...createScopes({ baseEffect: effect }),
-    signal,
-    computed,
-    effect,
-    batch,
-  };
+  const viewSvc = createViewSvc(adapter, signals);
+  const withOn = extend(viewSvc, (svc) => ({
+    ...svc,
+    on: createAddEventListener(svc.batch),
+  }));
 
-  return extend(
-    compose(defaultExtensions<DOMAdapterConfig>(), viewHelpers),
-    (svc) => {
-      const withOn = {
-        ...svc,
-        on: createAddEventListener(viewHelpers.batch),
-      };
-      return {
-        ...withOn,
-        mount: <TElement>(spec: RefSpec<TElement>) => spec.create(withOn),
-      };
-    }
-  );
+  return extend(withOn, (svc) => ({
+    ...svc,
+    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
+  }));
 };
 
 /**
@@ -192,12 +169,8 @@ export const createDOMViewSvc = <
  * ```
  */
 export const createDOMSvc = (): Use<DOMSvc> => {
-  const signals = createSignalsSvc();
-
-  return extend(createDOMViewSvc(signals()), (dom) => ({
-    ...signals(),
-    ...dom,
-  }));
+  const signals = createSignalsSvc()();
+  return createDOMViewSvc(signals);
 };
 
 // Re-export SignalsSvc as DOMSignals for convenience

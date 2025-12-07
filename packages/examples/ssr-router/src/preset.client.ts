@@ -42,10 +42,7 @@ export function createClientApp<TContext>(options: ClientAppOptions<TContext>) {
     createDOMHydrationAdapter(container),
     createDOMAdapter()
   );
-  const view = createViewSvc<DOMAdapterConfig, typeof signals>(
-    adapter,
-    signals
-  )();
+  const view = createViewSvc<DOMAdapterConfig>(adapter, signals)();
 
   // Wire for islands
   const app = createIslandsApp<TContext>({

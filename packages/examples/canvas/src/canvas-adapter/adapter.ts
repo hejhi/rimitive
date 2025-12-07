@@ -346,14 +346,14 @@ export type CanvasAdapterOptions = {
   clearColor?: string;
 };
 
-export type CanvasAdapterInstance = Adapter<CanvasAdapterConfig> & {
-  /** Perform hit testing on a specific canvas at a point */
-  hitTest: (
-    canvas: CanvasBridgeElement,
-    x: number,
-    y: number
-  ) => CanvasNode | null;
-};
+/**
+ * Hit test function type for canvas pointer events
+ */
+export type HitTestFn = (
+  canvas: CanvasBridgeElement,
+  x: number,
+  y: number
+) => CanvasNode | null;
 
 /**
  * Create a canvas node adapter for composable DOM + Canvas rendering
@@ -364,10 +364,15 @@ export type CanvasAdapterInstance = Adapter<CanvasAdapterConfig> & {
  * The 'canvas' element type creates an HTMLCanvasElement that acts as a bridge
  * between DOM and the canvas scene graph. Children of the canvas element are
  * canvas primitives (circle, rect, etc.) that render to the 2D context.
+ *
+ * Returns an object with:
+ * - adapter: The Adapter<CanvasAdapterConfig> for use with createViewSvc
+ * - hitTest: Function for hit testing canvas elements (used by event listeners)
  */
-export function createCanvasAdapter(
-  options: CanvasAdapterOptions = {}
-): CanvasAdapterInstance {
+export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
+  adapter: Adapter<CanvasAdapterConfig>;
+  hitTest: HitTestFn;
+} {
   const { autoClear = true, clearColor } = options;
 
   /**
@@ -535,9 +540,7 @@ export function createCanvasAdapter(
   }
 
   // Store adapter reference for identity checks
-  const adapterInstance: CanvasAdapterInstance = {
-    hitTest,
-
+  const adapter: Adapter<CanvasAdapterConfig> = {
     createNode: (
       type: string,
       props?: Record<string, unknown>,
@@ -551,7 +554,7 @@ export function createCanvasAdapter(
 
       // For non-bridge types, validate that parent renderer is this canvas adapter
       // This catches errors like: dom.el('div')(canvas.el('circle')()) - missing canvas boundary
-      if (parentContext && parentContext.adapter !== adapterInstance) {
+      if (parentContext && parentContext.adapter !== adapter) {
         throw new Error(
           `Canvas primitive '${type}' must be nested inside a canvas element. ` +
             `Use canvas.el('canvas', {...})(...) to create a canvas boundary.`
@@ -706,5 +709,5 @@ export function createCanvasAdapter(
     },
   };
 
-  return adapterInstance;
+  return { adapter, hitTest };
 }

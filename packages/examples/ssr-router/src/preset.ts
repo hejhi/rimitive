@@ -41,10 +41,7 @@ export function createSSRApp<TContext>(options: SSRAppOptions<TContext>) {
   // Create primitives
   const signals = createSignalsSvc()();
   const adapter = createDOMServerAdapter();
-  const view = createViewSvc<DOMAdapterConfig, typeof signals>(
-    adapter,
-    signals
-  )();
+  const view = createViewSvc<DOMAdapterConfig>(adapter, signals)();
 
   // Wire for islands
   const app = createIslandsApp({

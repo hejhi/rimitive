@@ -4,8 +4,9 @@ import { Match, type MatchService } from '../match';
 import { Portal, type PortalService } from '../portal';
 import { createScopes } from '../helpers/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
-import type { RefSpec, NodeRef, Readable, Writable } from '../types';
-import { compose, type Svc, type Use } from '@lattice/lattice';
+import type { RefSpec, NodeRef } from '../types';
+import { compose, type Svc, type Use, extend } from '@lattice/lattice';
+import { createSignalsSvc, SignalsSvc } from '@lattice/signals/presets/core';
 
 // Re-export user-facing types for convenience
 export type { ElementProps, TagFactory, ElFactory, ElService } from '../el';
@@ -90,46 +91,56 @@ export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
  * const { el, map, match, portal } = view;
  * ```
  */
-export type ViewSvc<TConfig extends AdapterConfig> = Svc<
-  DefaultExtensions<TConfig>
->;
+export type ViewSvc<TConfig extends AdapterConfig> = SignalsSvc &
+  Svc<DefaultExtensions<TConfig>>;
 
 /**
- * Create a view service for a given adapter and signal implementation
+ * Create a view service for a given adapter and optional signal implementation
  *
  * Combines the default view primitives (el, map, match, portal) with an adapter
  * and signal system to create a complete view service.
  *
- * @example
+ * @param adapter - The adapter for the target platform (DOM, canvas, etc.)
+ * @param signals - Optional signals service. If not provided, creates a new one.
+ *
+ * @example With auto-created signals
+ * ```typescript
+ * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const adapter = createDOMAdapter();
+ * const view = createViewSvc(adapter);
+ *
+ * const { el, signal, computed } = view();
+ * ```
+ *
+ * @example With shared signals (for islands/SSR)
  * ```typescript
  * import { createViewSvc } from '@lattice/view/presets/core';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  * import { createSignalsSvc } from '@lattice/signals/presets/core';
  *
+ * const signals = createSignalsSvc()();
  * const adapter = createDOMAdapter();
- * const signals = createSignalsSvc();
  * const view = createViewSvc(adapter, signals);
  *
- * const { el, map, match, portal } = view;
+ * const { el, map, match, portal } = view();
  * ```
  */
-export const createViewSvc = <
-  TConfig extends AdapterConfig,
-  TSignals extends {
-    signal: <T>(initialValue: T) => Writable<T>;
-    computed: <T>(fn: () => T) => Readable<T>;
-    effect: (fn: () => void | (() => void)) => () => void;
-    batch: <T>(fn: () => T) => T;
-  },
->(
+export const createViewSvc = <TConfig extends AdapterConfig>(
   adapter: Adapter<TConfig>,
-  { effect, signal, computed, batch }: TSignals
-): Use<ViewSvc<TConfig>> =>
-  compose(defaultExtensions<TConfig>(), {
+  signals?: SignalsSvc
+): Use<ViewSvc<TConfig>> => {
+  const signalsSvc = signals ?? createSignalsSvc()();
+  const defaultViewSvc = compose(defaultExtensions<TConfig>(), {
     adapter,
-    ...createScopes({ baseEffect: effect }),
-    signal,
-    computed,
-    effect,
-    batch,
+    signal: signalsSvc.signal,
+    computed: signalsSvc.computed,
+    ...createScopes({ baseEffect: signalsSvc.effect }),
   });
+
+  return extend(defaultViewSvc, (svc) => ({
+    ...svc,
+    ...signalsSvc,
+  }));
+};

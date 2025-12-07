@@ -21,11 +21,10 @@ import { createViewSvc } from '@lattice/view/presets/core';
 import type { RefSpec, Readable, Writable } from '@lattice/view/types';
 import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
-import type { CanvasAdapterConfig } from './types';
 
 export { createCanvasAdapter } from './adapter';
 export { createCanvasAddEventListener } from './addEventListener';
-export type { CanvasAdapterOptions, CanvasAdapterInstance } from './adapter';
+export type { CanvasAdapterOptions, HitTestFn } from './adapter';
 export type { CanvasEventType } from './addEventListener';
 export type {
   CanvasNode,
@@ -74,16 +73,12 @@ export const createCanvasViewSvc = <
   signals: TSignals,
   options: CanvasAdapterOptions = {}
 ) => {
-  const adapter = createCanvasAdapter(options);
-  const viewSvc = createViewSvc<CanvasAdapterConfig, TSignals>(
-    adapter,
-    signals
-  )();
+  const { adapter, hitTest } = createCanvasAdapter(options);
+  const viewSvc = createViewSvc(adapter)();
 
   const svc = {
     ...viewSvc,
-    adapter,
-    on: createCanvasAddEventListener(adapter, signals.batch),
+    on: createCanvasAddEventListener(hitTest, signals.batch),
   };
 
   return {

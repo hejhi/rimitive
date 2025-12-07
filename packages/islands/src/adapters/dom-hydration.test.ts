@@ -798,7 +798,6 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
 // Integration Tests: Full View service with Hydration
 // ============================================================================
 
-import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc } from '@lattice/view/presets/core';
 import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types'; // Separate import for integration tests
 
@@ -823,12 +822,10 @@ describe('Integration: match() hydration with full view service', () => {
     );
 
     const renderer = createDOMHydrationAdapter(container);
-    const signals = createSignalsSvc()();
-    const views = createViewSvc(renderer, signals)();
+    const viewSvc = createViewSvc(renderer)();
 
     // Combine signals and views to get full service
-    const svc = { ...signals, ...views };
-    const { el, match, computed } = svc;
+    const { el, match, computed } = viewSvc;
 
     // Create the component spec matching the SSR output
     const pageSpec = el('div').props({ className: 'products-page' })(
@@ -842,7 +839,7 @@ describe('Integration: match() hydration with full view service', () => {
     );
 
     // Hydrate
-    const nodeRef = pageSpec.create(svc);
+    const nodeRef = pageSpec.create(viewSvc);
 
     // Verify hydration succeeded
     expect(nodeRef.status).toBe(STATUS_ELEMENT);
@@ -883,12 +880,9 @@ describe('Integration: match() hydration with full view service', () => {
     );
 
     const renderer = createDOMHydrationAdapter(container);
-    const signals = createSignalsSvc()();
-    const views = createViewSvc(renderer, signals)();
+    const viewSvc = createViewSvc(renderer)();
 
-    // Combine signals and views to get full service
-    const svc = { ...signals, ...views };
-    const { el, computed, match } = svc;
+    const { el, computed, match } = viewSvc;
 
     // Build the Products page component
     const ProductsPage = () =>
@@ -915,7 +909,7 @@ describe('Integration: match() hydration with full view service', () => {
     );
 
     // Hydrate
-    const nodeRef = appSpec.create(svc);
+    const nodeRef = appSpec.create(viewSvc);
 
     // Verify hydration succeeded
     expect(nodeRef.status).toBe(STATUS_ELEMENT);

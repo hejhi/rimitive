@@ -13,13 +13,13 @@ import { createCanvasViewSvc } from './canvas-adapter';
 const signals = createSignalsSvc()();
 
 // DOM view (for toolbar/UI)
-const domSvc = createDOMViewSvc(signals);
+const domSvc = createDOMViewSvc()();
 
 // Canvas view (for scene)
 const canvasSvc = createCanvasViewSvc(signals, { clearColor: '#16213e' });
 
 // Export signals
-export const { signal, computed, effect, batch, subscribe } = signals;
+export const { signal, computed, effect, batch, subscribe } = domSvc;
 
 // Export canvas types
 export type {
