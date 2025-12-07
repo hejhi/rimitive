@@ -1,38 +1,16 @@
-import {
-  defaultExtensions as defaultSignalsExtensions,
-  defaultHelpers as defaultSignalsHelpers,
-} from '@lattice/signals/presets/core';
-import {
-  defaultExtensions as defaultViewExtensions,
-  defaultHelpers as defaultViewHelpers,
-} from '@lattice/view/presets/core';
+import { createViewSvc } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { createDOMAdapter, DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
-import { compose } from '@lattice/lattice';
 
 // Wire up view layer
 
 const adapter = createDOMAdapter();
-const signals = compose(
-  defaultSignalsExtensions(),
-  defaultSignalsHelpers()
-)();
-const viewHelpers = defaultViewHelpers(adapter, signals);
-
-/**
- * DOM-specific API for this app
- * Types are automatically inferred from the adapter
- */
-const views = compose(
-  defaultViewExtensions<DOMAdapterConfig>(),
-  viewHelpers
-)();
+const views = createViewSvc(adapter)();
 
 const svc = {
-  ...signals,
   ...views,
-  addEventListener: createAddEventListener(viewHelpers.batch),
+  addEventListener: createAddEventListener(views.batch),
 };
 
 const { el, map, addEventListener, signal, computed } = svc;

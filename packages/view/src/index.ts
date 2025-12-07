@@ -38,7 +38,6 @@ export { createViewSvc } from './presets/core';
 export type { DOMSvc, DOMViewSvc, DOMAdapterConfig } from './presets/dom';
 export type {
   ViewSvc,
-  DefaultExtensions,
   ComponentFactory,
   // Service types
   ElFactory,

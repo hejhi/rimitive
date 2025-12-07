@@ -36,27 +36,6 @@ export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
 ) => (...args: TArgs) => RefSpec<TElement>;
 
 /**
- * The set of instantiable services created by defaultExtensions().
- *
- * Each property is a service that can be composed with compose().
- * Use this type when extending the default view primitives.
- *
- * @example
- * ```ts
- * import { defaultExtensions, type DefaultExtensions } from '@lattice/view/presets/core';
- *
- * const extensions: DefaultExtensions<DOMAdapterConfig> = defaultExtensions();
- * // extensions.el, extensions.map, etc. are all services
- * ```
- */
-export type DefaultExtensions<TConfig extends AdapterConfig> = {
-  el: ElService<TConfig>;
-  map: MapService<TConfig>;
-  match: MatchService<TConfig>;
-  portal: PortalService<TConfig>;
-};
-
-/**
  * View service type for a given adapter config
  *
  * @example
@@ -69,7 +48,12 @@ export type DefaultExtensions<TConfig extends AdapterConfig> = {
  * ```
  */
 export type ViewSvc<TConfig extends AdapterConfig> = SignalsSvc &
-  Svc<DefaultExtensions<TConfig>>;
+  Svc<{
+    el: ElService<TConfig>;
+    map: MapService<TConfig>;
+    match: MatchService<TConfig>;
+    portal: PortalService<TConfig>;
+  }>;
 
 /**
  * Create a view service for a given adapter and optional signal implementation

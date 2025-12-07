@@ -32,11 +32,10 @@
 // Primary API - What most users need
 // =============================================================================
 
-export { createSignalsSvc, createHelpers, defaultExtensions } from './presets/core';
+export { createSignalsSvc, createHelpers } from './presets/core';
 export type {
   SignalsSvc,
   Helpers,
-  DefaultExtensions,
   // Service types
   SignalService,
   SignalFactory,

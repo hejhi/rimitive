@@ -55,12 +55,7 @@ import {
 } from '../helpers/pull-propagator';
 import { createScheduler, type Scheduler } from '../helpers/scheduler';
 import { createUntracked } from '../untrack';
-import {
-  compose,
-  type DefinedService,
-  type Svc,
-  type Use,
-} from '@lattice/lattice';
+import { compose, type Svc, type Use } from '@lattice/lattice';
 import type { Dependency } from '../types';
 
 /**
@@ -118,76 +113,11 @@ export type {
 // Lattice composition types
 export type { DefinedService } from '@lattice/lattice';
 
-// Import service types for DefaultExtensions
 import type { SignalService } from '../signal';
 import type { ComputedService } from '../computed';
 import type { EffectService } from '../effect';
 import type { BatchService } from '../batch';
 import type { SubscribeService } from '../subscribe';
-
-/**
- * The set of instantiable services created by defaultExtensions().
- *
- * Each property is a service that can be composed with compose().
- * Use this type when extending the default signal primitives:
- *
- * @example
- * ```ts
- * import { defaultExtensions, type DefaultExtensions } from '@lattice/signals/presets/core';
- *
- * const extensions: DefaultExtensions = defaultExtensions();
- * // extensions.signal, extensions.computed, etc. are all services
- * ```
- */
-export type DefaultExtensions = {
-  signal: SignalService;
-  computed: ComputedService;
-  effect: EffectService;
-  batch: BatchService;
-  subscribe: SubscribeService;
-};
-
-/**
- * Create the default set of signal service factories.
- *
- * Returns service factories for all core primitives: signal, computed,
- * effect, batch, and subscribe. Pass to `compose()` with helpers to
- * create a working signals service.
- *
- * @example Basic usage (internal)
- * ```ts
- * import { defaultExtensions, createHelpers } from '@lattice/signals/presets/core';
- * import { compose } from '@lattice/lattice';
- *
- * const svc = compose(defaultExtensions(), createHelpers());
- * ```
- *
- * @example Extending with custom services
- * ```ts
- * import { defaultExtensions, createHelpers, type DefaultExtensions } from '@lattice/signals/presets/core';
- * import { compose } from '@lattice/lattice';
- *
- * const customService = defineService(...);
- *
- * const svc = compose(
- *   defaultExtensions({ custom: customService() }),
- *   createHelpers()
- * );
- * // svc.signal, svc.computed, ... plus svc.custom
- * ```
- */
-export function defaultExtensions<T extends Record<string, DefinedService>>(
-  extensions?: T
-): DefaultExtensions & T {
-  return {
-    signal: Signal(),
-    computed: Computed(),
-    effect: Effect(),
-    batch: Batch(),
-    subscribe: Subscribe(),
-    ...extensions,
-  } as DefaultExtensions & T;
-}
 
 /**
  * Create the reactive graph infrastructure (helpers).
@@ -248,7 +178,13 @@ export function createHelpers(): Helpers {
  * initApp(svc);
  * ```
  */
-export type SignalsSvc = Svc<DefaultExtensions>;
+export type SignalsSvc = Svc<{
+  signal: SignalService;
+  computed: ComputedService;
+  effect: EffectService;
+  batch: BatchService;
+  subscribe: SubscribeService;
+}>;
 
 /**
  * Create a fully-configured signals service.
@@ -305,5 +241,14 @@ export type SignalsSvc = Svc<DefaultExtensions>;
  * @returns A signals service with all primitives and a dispose method
  */
 export function createSignalsSvc(): Use<SignalsSvc> {
-  return compose(defaultExtensions(), createHelpers());
+  return compose(
+    {
+      signal: Signal(),
+      computed: Computed(),
+      effect: Effect(),
+      batch: Batch(),
+      subscribe: Subscribe(),
+    },
+    createHelpers()
+  );
 }

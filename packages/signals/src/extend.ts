@@ -21,7 +21,7 @@ export { Subscribe } from './subscribe';
 // Helper Factories - For custom wiring
 // =============================================================================
 
-export { createHelpers, defaultExtensions } from './presets/core';
+export { createHelpers } from './presets/core';
 export { createGraphEdges } from './helpers/graph-edges';
 export { createGraphTraversal } from './helpers/graph-traversal';
 export { createPullPropagator } from './helpers/pull-propagator';
