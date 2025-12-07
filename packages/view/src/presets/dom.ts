@@ -22,7 +22,7 @@
  * ```
  */
 
-import { compose, type LatticeContext, type Use } from '@lattice/lattice';
+import { compose, extend, type LatticeContext, type Use } from '@lattice/lattice';
 import {
   createSignalsSvc,
   type SignalsSvc,
@@ -74,8 +74,8 @@ export type ViewSvc = LatticeContext<
  * import { createSignalsSvc } from '@lattice/signals/presets/core';
  *
  * const signals = createSignalsSvc();
- * const view: DOMViewSvc = createDOMViewSvc(signals);
- * const { el, map, on, mount } = view;
+ * const view = createDOMViewSvc(signals());
+ * const { el, map, on, mount } = view();
  * ```
  */
 export type DOMViewSvc = ViewSvc & {
@@ -108,10 +108,10 @@ export type DOMSvc = SignalsSvc & DOMViewSvc;
  * import { createDOMViewSvc } from '@lattice/view/presets/dom';
  *
  * const signals = createSignalsSvc();
- * const dom = createDOMViewSvc(signals);
- * const canvas = createCanvasViewSvc(signals);
+ * const dom = createDOMViewSvc(signals());
+ * const canvas = createCanvasViewSvc(signals());
  *
- * export const { signal, computed } = signals;
+ * export const { signal, computed } = signals();
  * export { dom, canvas };
  * ```
  */
@@ -127,7 +127,7 @@ export const createDOMViewSvc = <
   computed,
   effect,
   batch,
-}: TSignals): DOMViewSvc => {
+}: TSignals): Use<DOMViewSvc> => {
   const adapter = createDOMAdapter();
   const viewHelpers = {
     adapter,
@@ -137,17 +137,20 @@ export const createDOMViewSvc = <
     effect,
     batch,
   };
-  const viewSvc = compose(defaultExtensions<DOMAdapterConfig>(), viewHelpers)();
 
-  const svc = {
-    ...viewSvc,
-    on: createAddEventListener(viewHelpers.batch),
-  };
-
-  return {
-    ...svc,
-    mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
-  };
+  return extend(
+    compose(defaultExtensions<DOMAdapterConfig>(), viewHelpers),
+    (svc) => {
+      const withOn = {
+        ...svc,
+        on: createAddEventListener(viewHelpers.batch),
+      };
+      return {
+        ...withOn,
+        mount: <TElement>(spec: RefSpec<TElement>) => spec.create(withOn),
+      };
+    }
+  );
 };
 
 /**
@@ -189,24 +192,12 @@ export const createDOMViewSvc = <
  * ```
  */
 export const createDOMSvc = (): Use<DOMSvc> => {
-  const signals = createSignalsSvc()();
-  const dom = createDOMViewSvc(signals);
-  const svc: DOMSvc = {
-    ...signals,
+  const signals = createSignalsSvc();
+
+  return extend(createDOMViewSvc(signals()), (dom) => ({
+    ...signals(),
     ...dom,
-  };
-
-  // Return a use() function
-  function use(): DOMSvc;
-  function use<TResult>(callback: (svc: DOMSvc) => TResult): TResult;
-  function use<TResult>(callback?: (svc: DOMSvc) => TResult): DOMSvc | TResult {
-    if (callback === undefined) {
-      return svc;
-    }
-    return callback(svc);
-  }
-
-  return use;
+  }));
 };
 
 // Re-export SignalsSvc as DOMSignals for convenience

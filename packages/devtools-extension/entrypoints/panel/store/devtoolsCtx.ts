@@ -3,7 +3,7 @@ import type { ContextInfo, LogEntry } from './types';
 import { createSignalsSvc } from '@lattice/signals/presets/core';
 
 // Create a Lattice context for the devtools panel itself
-export const devtoolsContext = createSignalsSvc();
+export const devtoolsContext = createSignalsSvc()();
 
 export const devtoolsState = {
   connected: devtoolsContext.signal(false),

@@ -1,4 +1,4 @@
-import {
+import type {
   DefinedService,
   ExtractDeps,
   InstrumentationContext,
@@ -267,4 +267,57 @@ function composeServices(
   }
 
   return context;
+}
+
+/**
+ * Extend a composed service with additional functionality.
+ *
+ * Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`.
+ * This preserves the composition pattern through extensions, allowing further
+ * chaining with additional `extend` calls.
+ *
+ * @example
+ * ```ts
+ * import { compose, extend } from '@lattice/lattice';
+ *
+ * const base = compose({ signal: Signal() }, helpers);
+ *
+ * const extended = extend(base, (svc) => ({
+ *   ...svc,
+ *   customMethod: () => console.log('extended!'),
+ * }));
+ *
+ * // Use like any other composed service
+ * const { signal, customMethod } = extended();
+ *
+ * // Or wrap components
+ * const Component = extended(({ signal, customMethod }) => () => {
+ *   // ...
+ * });
+ * ```
+ *
+ * @example Chaining multiple extensions
+ * ```ts
+ * const final = extend(
+ *   extend(base, (svc) => ({ ...svc, foo: 'foo' })),
+ *   (svc) => ({ ...svc, bar: 'bar' })
+ * );
+ * ```
+ */
+export function extend<TSvc, TExtended>(
+  use: Use<TSvc>,
+  extender: (svc: TSvc) => TExtended
+): Use<TExtended> {
+  const extended = extender(use());
+
+  const extendedUse = <TResult>(
+    callback?: (svc: TExtended) => TResult
+  ): TExtended | TResult => {
+    if (callback === undefined) {
+      return extended;
+    }
+    return callback(extended);
+  };
+
+  return extendedUse as Use<TExtended>;
 }
