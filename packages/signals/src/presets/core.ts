@@ -119,27 +119,6 @@ import type { EffectService } from '../effect';
 import type { BatchService } from '../batch';
 import type { SubscribeService } from '../subscribe';
 
-/**
- * Create the reactive graph infrastructure (helpers).
- *
- * This wires together all the low-level machinery: dependency tracking,
- * graph traversal, pull-based updates, and effect scheduling.
- *
- * Most users should use `createSignalsSvc()` instead, which calls this internally.
- *
- * @example Manual composition (advanced)
- * ```ts
- * import { defaultExtensions, createHelpers } from '@lattice/signals/presets/core';
- * import { compose } from '@lattice/lattice';
- *
- * const helpers = createHelpers();
- * const svc = compose(defaultExtensions(), helpers);
- *
- * // Now svc.signal, svc.computed, etc. are available
- * ```
- *
- * @returns The helpers object containing all graph operations
- */
 export function createHelpers(): Helpers {
   const edges = createGraphEdges();
   const untrack = createUntracked({ consumer: edges.consumer });

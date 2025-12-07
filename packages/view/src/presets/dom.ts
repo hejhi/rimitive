@@ -40,17 +40,6 @@ import type {
 
 export type { DOMAdapterConfig } from '../adapters/dom';
 
-/**
- * View service type - composed from defaultExtensions
- *
- * @example
- * ```typescript
- * import type { ViewSvc } from '@lattice/view/presets/dom';
- *
- * const viewContext: ViewSvc = compose(defaultExtensions(), helpers);
- * const { el, map, match, portal } = viewContext;
- * ```
- */
 export type ViewSvc = LatticeContext<
   [
     ElFactory<DOMAdapterConfig>,
