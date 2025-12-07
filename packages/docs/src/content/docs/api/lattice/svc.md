@@ -15,7 +15,7 @@ sidebar:
 
 The composed context type for object-based composition.
 
-Extracts impl types from service factories, preserving key names. This is the return type of `compose({ signal: Signal(), ... }, deps)`<!-- -->.
+Extracts impl types from service factories, preserving key names.
 
 **Signature:**
 

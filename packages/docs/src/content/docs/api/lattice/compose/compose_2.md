@@ -17,7 +17,7 @@ sidebar:
 **Signature:**
 
 ```typescript
-export declare function compose<TServices extends readonly ServiceDefinition<string, unknown>[]>(options: CreateContextOptions, ...services: TServices): LatticeContext<TServices>;
+export declare function compose<TServices extends readonly ServiceDefinition<string, unknown>[]>(options: CreateContextOptions, ...services: TServices): Use<LatticeContext<TServices>>;
 ```
 
 ## Parameters
@@ -70,5 +70,5 @@ TServices
 
 **Returns:**
 
-[LatticeContext](../latticecontext/)<!-- -->&lt;TServices&gt;
+[Use](../use/)<!-- -->&lt;[LatticeContext](../latticecontext/)<!-- -->&lt;TServices&gt;&gt;
 

@@ -32,7 +32,7 @@ export type CreateScopes = {
 
 
 ```typescript
-import { createScopes, type CreateScopes } from '@lattice/view/helpers/scope';
+import { createScopes, type CreateScopes } from '@lattice/view/deps/scope';
 
 const scopes: CreateScopes = createScopes({ baseEffect: effect });
 

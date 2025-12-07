@@ -19,11 +19,10 @@ Client app options - accepts primitives as dependencies
 
 ```typescript
 export type ClientOptions<TContext> = {
-    signals: SignalsSvc;
     adapter: HybridAdapter;
-    view: ViewsSvc;
+    view: DomViewSvc;
     context?: GetContext<TContext>;
 };
 ```
-**References:** [SignalsSvc](../signalssvc_2/)<!-- -->, [HybridAdapter](../hybridadapter/)<!-- -->, [ViewsSvc](../viewssvc/)<!-- -->, [GetContext](../getcontext/)
+**References:** [HybridAdapter](../hybridadapter/)<!-- -->, [DomViewSvc](../domviewsvc/)<!-- -->, [GetContext](../getcontext/)
 

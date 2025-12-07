@@ -18,9 +18,9 @@ Full service type - signals + views + addEventListener
 **Signature:**
 
 ```typescript
-export type IslandsClientService = SignalsSvc & ViewsSvc & {
+export type IslandsClientService = SignalsSvc & DomViewSvc & {
     addEventListener: ReturnType<typeof createAddEventListener>;
 };
 ```
-**References:** [SignalsSvc](../signalssvc_2/)<!-- -->, [ViewsSvc](../viewssvc/)
+**References:** [SignalsSvc](../../signals/signalssvc/)<!-- -->, [DomViewSvc](../domviewsvc/)
 

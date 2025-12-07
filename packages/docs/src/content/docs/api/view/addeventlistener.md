@@ -25,7 +25,7 @@ export type AddEventListener = <K extends keyof HTMLElementEventMap>(event: K, h
 
 
 ```typescript
-import type { AddEventListener } from '@lattice/view/helpers/addEventListener';
+import type { AddEventListener } from '@lattice/view/deps/addEventListener';
 
 const on: AddEventListener = createAddEventListener(batch);
 

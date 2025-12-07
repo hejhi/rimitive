@@ -68,22 +68,7 @@ const { computed } = createSignals();
 </td></tr>
 <tr><td>
 
-[createHelpers()](../createhelpers/)
-
-
-</td><td>
-
-Create the reactive graph infrastructure (helpers).
-
-This wires together all the low-level machinery: dependency tracking, graph traversal, pull-based updates, and effect scheduling.
-
-Most users should use `createSignals()` instead, which calls this internally.
-
-
-</td></tr>
-<tr><td>
-
-[createSignals()](../createsignalssvc/)
+[createSignals()](../createsignals/)
 
 
 </td><td>
@@ -96,14 +81,10 @@ This is the main entry point for using Lattice signals. Returns a service with a
 </td></tr>
 <tr><td>
 
-[defaultExtensions(extensions)](../defaultextensions/)
+[deps()](../deps/)
 
 
 </td><td>
-
-Create the default set of signal service factories.
-
-Returns service factories for all core primitives: signal, computed, effect, batch, and subscribe. Pass to `compose()` with helpers to create a working signals service.
 
 
 </td></tr>
@@ -274,19 +255,6 @@ Consumer tracking state - tracks the currently active consumer during reactive r
 </td></tr>
 <tr><td>
 
-[DefaultExtensions](../defaultextensions/)
-
-
-</td><td>
-
-The set of instantiable services created by defaultExtensions().
-
-Each property is a service that can be composed with compose(). Use this type when extending the default signal primitives:
-
-
-</td></tr>
-<tr><td>
-
 [EffectFactory](../effectfactory/)
 
 
@@ -433,7 +401,7 @@ The instantiable service returned by Signal().
 
 </td><td>
 
-The type of the signals service returned by `createSignals()`<!-- -->.
+The type of the signals service returned by `createSignals()()`<!-- -->.
 
 Contains all signal primitives: `signal`<!-- -->, `computed`<!-- -->, `effect`<!-- -->, `batch`<!-- -->, `subscribe`<!-- -->, plus a `dispose()` method for cleanup.
 

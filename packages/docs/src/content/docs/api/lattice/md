@@ -35,6 +35,8 @@ Description
 
 Compose service factories into a unified context with shared dependencies.
 
+Returns a `use()` function that provides access to the composed context: - `use()` - Returns the service context directly - `use(callback)` - Passes the context to callback and returns its result
+
 This is the primary way to create a Lattice context. It supports three patterns:
 
 \*\*Pattern 1: Factory object + deps\*\* (recommended for most cases) Pass an object of service factories and shared dependencies.
@@ -126,6 +128,19 @@ The returned factory has a `.create(deps)` method that wires dependencies.
 Create a DevTools instrumentation provider.
 
 Sends instrumentation events to the Lattice DevTools browser extension via `window.postMessage`<!-- -->. In debug mode, also logs to the console.
+
+
+</td></tr>
+<tr><td>
+
+[extend(use, extender)](../extend/)
+
+
+</td><td>
+
+Extend a composed service with additional functionality.
+
+Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`<!-- -->. This preserves the composition pattern through extensions, allowing further chaining with additional `extend` calls.
 
 
 </td></tr>
@@ -323,7 +338,7 @@ Extract the name from a ServiceDefinition.
 
 The composed context type for object-based composition.
 
-Extracts impl types from service factories, preserving key names. This is the return type of `compose({ signal: Signal(), ... }, deps)`<!-- -->.
+Extracts impl types from service factories, preserving key names.
 
 
 </td></tr>
@@ -335,6 +350,19 @@ Extracts impl types from service factories, preserving key names. This is the re
 </td><td>
 
 Utility type: Convert a union to an intersection. Used internally to combine dependency requirements.
+
+
+</td></tr>
+<tr><td>
+
+[Use](../use/)
+
+
+</td><td>
+
+A callable returned by `compose()` that provides access to the service context.
+
+Can be called in two ways: - `use()` - Returns the service context directly - `use(callback)` - Passes the context to callback and returns its result
 
 
 </td></tr>

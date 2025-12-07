@@ -149,6 +149,26 @@ Client app options - accepts primitives as dependencies
 </td></tr>
 <tr><td>
 
+[DomViewSvc\_2](../domviewsvc/)
+
+
+</td><td>
+
+View service type
+
+
+</td></tr>
+<tr><td>
+
+[DomViewSvc](../domviewsvc/)
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
 [GetContext](../getcontext/)
 
 
@@ -270,37 +290,6 @@ Island Svc type - the service type available to island components Use this with 
 Extract the service type from an islands app
 
 Works with both ClientApp and ServerApp from createIslandsApp
-
-
-</td></tr>
-<tr><td>
-
-[SignalsSvc\_2](../signalssvc_2/)
-
-
-</td><td>
-
-Signals service type
-
-
-</td></tr>
-<tr><td>
-
-[ViewsSvc](../viewssvc/)
-
-
-</td><td>
-
-View service type
-
-
-</td></tr>
-<tr><td>
-
-[ViewSvc](../viewsvc/)
-
-
-</td><td>
 
 
 </td></tr>

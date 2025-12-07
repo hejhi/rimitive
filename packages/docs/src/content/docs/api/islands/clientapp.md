@@ -20,15 +20,14 @@ Client app - for hydration and SPA
 ```typescript
 export type ClientApp = {
     service: IslandsClientService;
-    signals: SignalsSvc;
     mount: <TElement>(spec: RefSpec<TElement>, svc?: IslandsClientService | Record<string, unknown>) => NodeRef<TElement>;
     hydrate: (...islands: IslandComponent[]) => void;
     updateContext: () => void;
-    createSvc: (adapter: Adapter<DOMAdapterConfig>, signals: SignalsSvc) => {
+    createSvc: (adapter: Adapter<DOMAdapterConfig>) => {
         svc: IslandsClientService;
         createElementScope: <TElement extends object>(element: TElement, fn: () => void) => unknown;
     };
 };
 ```
-**References:** [IslandsClientService](../islandsclientservice/)<!-- -->, [SignalsSvc](../signalssvc_2/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [NodeRef](../../view/noderef/)<!-- -->, [IslandComponent](../islandcomponent/)<!-- -->, [Adapter](../../view/adapter/)<!-- -->, [DOMAdapterConfig](../../view/domadapterconfig/)
+**References:** [IslandsClientService](../islandsclientservice/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [NodeRef](../../view/noderef/)<!-- -->, [IslandComponent](../islandcomponent/)<!-- -->, [Adapter](../../view/adapter/)<!-- -->, [DOMAdapterConfig](../../view/domadapterconfig/)
 

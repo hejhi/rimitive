@@ -14,8 +14,6 @@ sidebar:
 
 ## ViewSvc\_2 type
 
-View service type - composed from defaultExtensions
-
 **Signature:**
 
 ```typescript
@@ -27,14 +25,4 @@ export type ViewSvc = LatticeContext<[
 ]>;
 ```
 **References:** [LatticeContext](../../lattice/latticecontext/)<!-- -->, [ElFactory](../elfactory/)<!-- -->, [DOMAdapterConfig](../domadapterconfig/)<!-- -->, [MapFactory](../mapfactory/)<!-- -->, [MatchFactory](../matchfactory/)<!-- -->, [PortalFactory](../portalfactory/)
-
-## Example
-
-
-```typescript
-import type { ViewSvc } from '@lattice/view/presets/dom';
-
-const viewContext: ViewSvc = compose(defaultExtensions(), helpers);
-const { el, map, match, portal } = viewContext;
-```
 
