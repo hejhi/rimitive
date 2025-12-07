@@ -84,10 +84,7 @@ export type ClientApp = {
   /**
    * Service factory for island hydrator (advanced use)
    */
-  createSvc: (
-    adapter: Adapter<DOMAdapterConfig>,
-    signals: SignalsSvc
-  ) => {
+  createSvc: (adapter: Adapter<DOMAdapterConfig>) => {
     svc: IslandsClientService;
     createElementScope: <TElement extends object>(
       element: TElement,
