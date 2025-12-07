@@ -23,10 +23,7 @@
  */
 
 import { extend, type LatticeContext, type Use } from '@lattice/lattice';
-import {
-  createSignalsSvc,
-  type SignalsSvc,
-} from '@lattice/signals/presets/core';
+import { type SignalsSvc } from '@lattice/signals/presets/core';
 import { createDOMAdapter, type DOMAdapterConfig } from '../adapters/dom';
 import {
   createAddEventListener,
@@ -68,11 +65,11 @@ export type ViewSvc = LatticeContext<
  *
  * @example
  * ```typescript
- * import { createDOMViewSvc, type DOMViewSvc } from '@lattice/view/presets/dom';
+ * import { createDOMSvc, type DOMViewSvc } from '@lattice/view/presets/dom';
  * import { createSignalsSvc } from '@lattice/signals/presets/core';
  *
  * const signals = createSignalsSvc();
- * const view = createDOMViewSvc(signals());
+ * const view = createDOMSvc(signals());
  * const { el, map, on, mount } = view();
  * ```
  */
@@ -106,19 +103,19 @@ export type DOMSvc = SignalsSvc & DOMViewSvc;
  * @example With shared signals
  * ```ts
  * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * import { createDOMViewSvc } from '@lattice/view/presets/dom';
+ * import { createDOMSvc } from '@lattice/view/presets/dom';
  *
  * const signals = createSignalsSvc()();
- * const dom = createDOMViewSvc(signals);
+ * const dom = createDOMSvc(signals);
  * const canvas = createCanvasViewSvc(signals);
  *
  * export const { signal, computed } = signals;
  * export { dom, canvas };
  * ```
  */
-export const createDOMViewSvc = (signals?: SignalsSvc): Use<DOMViewSvc> => {
+export const createDOMSvc = (): Use<DOMViewSvc> => {
   const adapter = createDOMAdapter();
-  const viewSvc = createViewSvc(adapter, signals);
+  const viewSvc = createViewSvc(adapter);
   const withOn = extend(viewSvc, (svc) => ({
     ...svc,
     on: createAddEventListener(svc.batch),
@@ -128,49 +125,6 @@ export const createDOMViewSvc = (signals?: SignalsSvc): Use<DOMViewSvc> => {
     ...svc,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
   }));
-};
-
-/**
- * Create a fully-configured DOM app service
- *
- * Returns a `use()` function that provides access to all signals and view primitives,
- * plus DOM-specific helpers (on) and a mount function.
- *
- * @example
- * ```typescript
- * import { createDOMSvc } from '@lattice/view/presets/dom';
- *
- * const use = createDOMSvc();
- * const { el, signal, computed, map, on, mount } = use();
- *
- * const App = () => {
- *   const count = signal(0);
- *   return el('div')(
- *     el('h1')('Counter'),
- *     el('p')(computed(() => `Count: ${count()}`)),
- *     el('button').ref(on('click', () => count(c => c + 1)))('Increment')
- *   );
- * };
- *
- * document.body.appendChild(mount(App()));
- * ```
- *
- * @example Using with callback pattern
- * ```typescript
- * const use = createDOMSvc();
- *
- * // Wrap a component with service access
- * const Counter = use(({ signal, el, on }) => () => {
- *   const count = signal(0);
- *   return el('button').ref(on('click', () => count(c => c + 1)))(
- *     computed(() => `Count: ${count()}`)
- *   );
- * });
- * ```
- */
-export const createDOMSvc = (): Use<DOMSvc> => {
-  const signals = createSignalsSvc()();
-  return createDOMViewSvc(signals);
 };
 
 // Re-export SignalsSvc as DOMSignals for convenience

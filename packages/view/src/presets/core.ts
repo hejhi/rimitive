@@ -128,10 +128,9 @@ export type ViewSvc<TConfig extends AdapterConfig> = SignalsSvc &
  * ```
  */
 export const createViewSvc = <TConfig extends AdapterConfig>(
-  adapter: Adapter<TConfig>,
-  signals?: SignalsSvc
+  adapter: Adapter<TConfig>
 ): Use<ViewSvc<TConfig>> => {
-  const signalsSvc = signals ?? createSignalsSvc()();
+  const signalsSvc = createSignalsSvc()();
   const defaultViewSvc = compose(defaultExtensions<TConfig>(), {
     adapter,
     signal: signalsSvc.signal,

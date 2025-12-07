@@ -6,14 +6,14 @@
  * both sharing the same signals service for reactive state.
  */
 import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMViewSvc } from '@lattice/view/presets/dom';
+import { createDOMSvc } from '@lattice/view/presets/dom';
 import { createCanvasViewSvc } from './canvas-adapter';
 
 // Shared signals service
 const signals = createSignalsSvc()();
 
 // DOM view (for toolbar/UI)
-const domSvc = createDOMViewSvc()();
+const domSvc = createDOMSvc()();
 
 // Canvas view (for scene)
 const canvasSvc = createCanvasViewSvc(signals, { clearColor: '#16213e' });

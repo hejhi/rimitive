@@ -31,7 +31,7 @@ export { Portal } from './portal';
 // =============================================================================
 
 export { createViewSvc, defaultExtensions } from './presets/core';
-export { createDOMSvc, createDOMViewSvc } from './presets/dom';
+export { createDOMSvc } from './presets/dom';
 
 // =============================================================================
 // Adapters
@@ -53,7 +53,13 @@ export { createUse } from './helpers/use';
 // Factory Types - For typing custom services
 // =============================================================================
 
-export type { ElFactory, ElOpts, ElProps, TagFactory, ElementProps } from './el';
+export type {
+  ElFactory,
+  ElOpts,
+  ElProps,
+  TagFactory,
+  ElementProps,
+} from './el';
 export type { MapFactory, MapOpts } from './map';
 export type { MatchFactory, MatchOpts } from './match';
 export type { PortalFactory, PortalOpts, PortalTarget } from './portal';

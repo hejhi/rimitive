@@ -11,9 +11,8 @@ import {
   createIslandsApp,
   createDOMServerAdapter,
 } from '@lattice/islands/server';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc } from '@lattice/view/presets/core';
-import { createRouter, type ViewSvc, type RouteTree } from '@lattice/router';
+import { createRouter, type RouteTree } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 /**
@@ -39,22 +38,19 @@ export function createSSRApp<TContext>(options: SSRAppOptions<TContext>) {
   const path = url.pathname;
 
   // Create primitives
-  const signals = createSignalsSvc()();
   const adapter = createDOMServerAdapter();
-  const view = createViewSvc<DOMAdapterConfig>(adapter, signals)();
+  const view = createViewSvc<DOMAdapterConfig>(adapter)();
 
   // Wire for islands
   const app = createIslandsApp({
-    signals,
     view,
     context: () => buildContext(url),
   });
 
   // Add router
-  const router = createRouter<DOMAdapterConfig>(
-    app.service as ViewSvc<DOMAdapterConfig>,
-    { initialPath: path }
-  );
+  const router = createRouter<DOMAdapterConfig>(app.service, {
+    initialPath: path,
+  });
 
   // Build full service
   const service = {

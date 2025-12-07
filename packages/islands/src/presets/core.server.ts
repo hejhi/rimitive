@@ -40,7 +40,6 @@ export type IslandsServerService = SignalsSvc &
  * the adapter.
  */
 export type ServerOptions<TContext> = {
-  signals: SignalsSvc;
   view: DomViewSvc;
   context?: GetContext<TContext>;
 };
@@ -50,7 +49,6 @@ export type ServerOptions<TContext> = {
  */
 export type ServerApp = {
   service: IslandsServerService;
-  signals: SignalsSvc;
   render: <TElement>(spec: RefSpec<TElement>) => {
     html: string;
     scripts: string;
@@ -90,13 +88,12 @@ export type ServerApp = {
 export function createIslandsApp<TContext = unknown>(
   options: ServerOptions<TContext>
 ): ServerApp {
-  const { signals, view, context: getContext } = options;
+  const { view, context: getContext } = options;
 
   // Compose service from provided dependencies
   const service: IslandsServerService = {
-    ...signals,
     ...view,
-    addEventListener: createAddEventListener(signals.batch),
+    addEventListener: createAddEventListener(view.batch),
   } as IslandsServerService;
 
   // Create SSR context
@@ -104,7 +101,6 @@ export function createIslandsApp<TContext = unknown>(
 
   return {
     service,
-    signals,
     render: <TElement>(spec: RefSpec<TElement>) => {
       const element = spec.create(service);
       const html = runWithSSRContext(ssrCtx, () => renderToString(element));

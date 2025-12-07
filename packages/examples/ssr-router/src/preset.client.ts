@@ -9,7 +9,6 @@ import {
   createDOMHydrationAdapter,
   createIslandsAdapter,
 } from '@lattice/islands/client';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc } from '@lattice/view/presets/core';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import { createRouter, type ViewSvc, type RouteTree } from '@lattice/router';
@@ -37,16 +36,14 @@ export function createClientApp<TContext>(options: ClientAppOptions<TContext>) {
   const { container, buildContext, routes } = options;
 
   // Create primitives
-  const signals = createSignalsSvc()();
   const adapter = createIslandsAdapter(
     createDOMHydrationAdapter(container),
     createDOMAdapter()
   );
-  const view = createViewSvc<DOMAdapterConfig>(adapter, signals)();
+  const view = createViewSvc<DOMAdapterConfig>(adapter)();
 
   // Wire for islands
   const app = createIslandsApp<TContext>({
-    signals,
     adapter,
     view,
     context: buildContext,

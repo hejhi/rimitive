@@ -9,13 +9,9 @@
  */
 
 import { type SignalsSvc } from '@lattice/signals/presets/core';
-import {
-  defaultExtensions as defaultViewExtensions,
-  type ViewSvc,
-} from '@lattice/view/presets/core';
+import { createViewSvc, type ViewSvc } from '@lattice/view/presets/core';
 import { createScopes } from '@lattice/view/helpers/scope';
 import { createAddEventListener } from '@lattice/view/helpers/addEventListener';
-import { compose } from '@lattice/lattice';
 import type { RefSpec, Adapter, NodeRef } from '@lattice/view/types';
 import type { GetContext } from '../types';
 import { ISLAND_META } from '../types';
@@ -51,7 +47,6 @@ export type IslandsClientService = SignalsSvc &
  * Client app options - accepts primitives as dependencies
  */
 export type ClientOptions<TContext> = {
-  signals: SignalsSvc;
   adapter: HybridAdapter;
   view: DomViewSvc;
   context?: GetContext<TContext>;
@@ -68,7 +63,6 @@ export type IslandComponent = { [ISLAND_META]?: unknown };
  */
 export type ClientApp = {
   service: IslandsClientService;
-  signals: SignalsSvc;
   /**
    * Mount a component spec
    * @param spec - Component spec with create() method
@@ -139,11 +133,11 @@ export type ClientApp = {
 export function createIslandsApp<TContext = unknown>(
   options: ClientOptions<TContext>
 ): ClientApp {
-  const { signals, adapter, view, context: getContext } = options;
+  const { adapter, view, context: getContext } = options;
 
   // Create reactive context signal if getContext is provided
   const contextSignal = getContext
-    ? signals.signal<TContext | undefined>(getContext())
+    ? view.signal<TContext | undefined>(getContext())
     : null;
 
   // Set up the client context getter for islands
@@ -155,9 +149,8 @@ export function createIslandsApp<TContext = unknown>(
 
   // Compose service from provided dependencies
   const service: IslandsClientService = {
-    ...signals,
     ...view,
-    addEventListener: createAddEventListener(signals.batch),
+    addEventListener: createAddEventListener(view.batch),
   } as IslandsClientService;
 
   // Track whether we've switched to fallback adapter
@@ -178,8 +171,7 @@ export function createIslandsApp<TContext = unknown>(
 
   // Service factory for island hydrator
   const createSvc = (
-    islandAdapter: Adapter<DOMAdapterConfig>,
-    islandSignals: SignalsSvc
+    islandAdapter: Adapter<DOMAdapterConfig>
   ): {
     svc: IslandsClientService;
     createElementScope: <TElement extends object>(
@@ -187,19 +179,11 @@ export function createIslandsApp<TContext = unknown>(
       fn: () => void
     ) => unknown;
   } => {
-    const scopes = createScopes({ baseEffect: islandSignals.effect });
-    const islandViews = compose(defaultViewExtensions<DOMAdapterConfig>(), {
-      adapter: islandAdapter,
-      ...scopes,
-      signal: islandSignals.signal,
-      computed: islandSignals.computed,
-      effect: islandSignals.effect,
-      batch: islandSignals.batch,
-    })();
-    const svc: IslandsClientService = {
-      ...islandSignals,
+    const islandViews = createViewSvc(islandAdapter)();
+    const scopes = createScopes({ baseEffect: islandViews.effect });
+    const svc = {
       ...islandViews,
-      addEventListener: createAddEventListener(islandSignals.batch),
+      addEventListener: createAddEventListener(islandViews.batch),
     } as IslandsClientService;
     return {
       svc,
@@ -208,7 +192,7 @@ export function createIslandsApp<TContext = unknown>(
   };
 
   // Create hydrator
-  const hydrator = createDOMHydrator(createSvc, signals, (spec) => ({
+  const hydrator = createDOMHydrator(createSvc, (spec) => ({
     element: spec.create(service),
   }));
 
@@ -221,7 +205,6 @@ export function createIslandsApp<TContext = unknown>(
 
   return {
     service,
-    signals,
     mount,
     hydrate: hydrator.hydrate,
     updateContext,

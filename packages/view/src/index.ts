@@ -33,7 +33,7 @@
 // Primary API - What most users need
 // =============================================================================
 
-export { createDOMSvc, createDOMViewSvc } from './presets/dom';
+export { createDOMSvc } from './presets/dom';
 export { createViewSvc, defaultExtensions } from './presets/core';
 export type { DOMSvc, DOMViewSvc, DOMAdapterConfig } from './presets/dom';
 export type {

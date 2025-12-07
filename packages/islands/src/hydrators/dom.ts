@@ -93,12 +93,10 @@ export type CreateSvcResult = {
  * hydrator.hydrate(Counter, TodoList);
  * ```
  */
-export function createDOMHydrator<TSignals extends EffectSvc>(
+export function createDOMHydrator(
   createSvc: (
-    adapter: ReturnType<typeof createIslandsAdapter>,
-    signals: TSignals
+    adapter: ReturnType<typeof createIslandsAdapter>
   ) => CreateSvcResult,
-  signals: TSignals,
   mount: MountFn
 ): IslandHydrator {
   return {
@@ -187,7 +185,7 @@ export function createDOMHydrator<TSignals extends EffectSvc>(
             createDOMAdapter()
           );
 
-          const { svc, createElementScope } = createSvc(adapter, signals);
+          const { svc, createElementScope } = createSvc(adapter);
           const { hydratingSvc, activate } = createHydrationSvc(svc);
 
           // Get the context getter
@@ -290,8 +288,7 @@ export function createDOMHydrator<TSignals extends EffectSvc>(
             // - For fragment islands: clear the container div and mount fresh
             const fallbackAdapter = createDOMAdapter();
             const { svc: fallbackSvc } = createSvc(
-              createIslandsAdapter(fallbackAdapter, fallbackAdapter),
-              signals
+              createIslandsAdapter(fallbackAdapter, fallbackAdapter)
             );
 
             // Get context getter for fallback rendering

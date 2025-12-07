@@ -16,10 +16,7 @@
  * ```
  */
 
-import {
-  createSignalsSvc,
-  type SignalsSvc,
-} from '@lattice/signals/presets/core';
+import { type SignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc, type ViewSvc } from '@lattice/view/presets/core';
 import { createScopes, type CreateScopes } from '@lattice/view/helpers/scope';
 import {
@@ -66,40 +63,36 @@ export type IslandsClientApp = SignalsSvc &
  * ```
  */
 export function createIslandsClientApp(): IslandsClientApp {
-  const signalsSvc = createSignalsSvc()();
-
   // Create DOM adapter for post-hydration rendering
   const domAdapter = createDOMAdapter();
-  const viewSvc = createViewSvc(domAdapter, signalsSvc)();
+  const viewSvc = createViewSvc(domAdapter)();
 
-  const on = createAddEventListener(signalsSvc.batch);
+  const on = createAddEventListener(viewSvc.batch);
 
-  const svc = { ...signalsSvc, ...viewSvc, on };
+  const svc = { ...viewSvc, on };
 
   const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 
   // API factory for hydrator - receives adapter created by hydrator per-island
   const createSvc = (
-    islandAdapter: Adapter<DOMAdapterConfig>,
-    islandSignals: SignalsSvc
+    islandAdapter: Adapter<DOMAdapterConfig>
   ): {
     svc: SignalsSvc &
       DomViewSvc & { on: ReturnType<typeof createAddEventListener> };
     createElementScope: CreateScopes['createElementScope'];
   } => {
-    const scopes = createScopes({ baseEffect: islandSignals.effect });
-    const islandViews = createViewSvc(islandAdapter, islandSignals)();
+    const islandViews = createViewSvc(islandAdapter)();
+    const scopes = createScopes({ baseEffect: islandViews.effect });
     return {
       svc: {
-        ...islandSignals,
         ...islandViews,
-        on: createAddEventListener(islandSignals.batch),
+        on: createAddEventListener(islandViews.batch),
       },
       createElementScope: scopes.createElementScope,
     };
   };
 
-  const hydrator = createDOMHydrator(createSvc, signalsSvc, (spec) => ({
+  const hydrator = createDOMHydrator(createSvc, (spec) => ({
     element: mount(spec),
   }));
 

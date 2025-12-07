@@ -11,7 +11,6 @@ import { describe, it, expect } from 'vitest';
 import { createDOMServerAdapter } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
 import { createViewSvc } from '@lattice/view/presets/core';
 import { renderToString } from '../helpers/renderToString';
 import { createSSRContext, runWithSSRContext } from '../ssr-context';
@@ -21,14 +20,9 @@ import type { IslandNodeMeta } from '../types';
  * Create SSR service for tests - matches the old preset pattern
  * Uses explicit composition to preserve full type inference
  */
-function createTestSSRService(signals = createSignalsSvc()()) {
+function createTestSSRService() {
   const renderer = createDOMServerAdapter();
-  const views = createViewSvc(renderer, signals)();
-
-  const svc = {
-    ...signals,
-    ...views,
-  };
+  const svc = createViewSvc(renderer)();
 
   return {
     svc,
@@ -543,8 +537,7 @@ describe('SSR-Specific Behaviors', () => {
 describe('Full SSR Integration', () => {
   it('should render all items in map() during SSR', () => {
     // Create SSR service
-    const signals = createSignalsSvc()();
-    const { mount, svc } = createTestSSRService(signals);
+    const { mount, svc } = createTestSSRService();
     const { el, map, signal } = svc;
 
     // Create component with map() that renders 6 items
@@ -573,8 +566,7 @@ describe('Full SSR Integration', () => {
   });
 
   it('should render all items when map() uses computed', () => {
-    const signals = createSignalsSvc()();
-    const { mount, svc } = createTestSSRService(signals);
+    const { mount, svc } = createTestSSRService();
     const { el, map, computed } = svc;
 
     // Use computed() like ProductFilter does
