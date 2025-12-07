@@ -7,7 +7,7 @@
  * ```ts
  * import { island } from '@lattice/islands/client';
  *
- * export const Counter = island('counter', (svc) => ({ count }: Props) => {
+ * export const Counter = island('counter', (svc, getContext) => ({ count }: Props) => {
  *   // svc is typed as IslandSvc
  *   return svc.el('div')(...);
  * });
@@ -36,7 +36,7 @@ import type { IslandSvc } from '../presets/islands.client';
  * ```typescript
  * import { island } from '@lattice/islands/client';
  *
- * export const Counter = island('counter', (svc) => ({ count }: { count: number }) => {
+ * export const Counter = island('counter', (svc, getContext) => ({ count }: { count: number }) => {
  *   const value = svc.signal(count);
  *   return svc.el('button').props({ onclick: () => value(value() + 1) })(value);
  * });

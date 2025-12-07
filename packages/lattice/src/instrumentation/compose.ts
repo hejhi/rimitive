@@ -118,7 +118,8 @@ export function composeProviders(
  *
  * @example Basic usage
  * ```ts
- * import { createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+ * import { createInstrumentation, devtoolsProvider, compose } from '@lattice/lattice';
+ * import { Signal, Computed, deps } from '@lattice/signals/extend';
  *
  * const instrumentation = createInstrumentation({
  *   enabled: import.meta.env.DEV,
@@ -126,9 +127,9 @@ export function composeProviders(
  * });
  *
  * // Use with compose
- * const ctx = compose(
+ * const use = compose(
  *   { signal: Signal(), computed: Computed() },
- *   deps,
+ *   deps(),
  *   { instrumentation }
  * );
  * ```

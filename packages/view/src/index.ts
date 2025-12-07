@@ -3,9 +3,11 @@
  *
  * ## Quick Start
  * ```typescript
+ * import { createSignals } from '@lattice/signals/presets/core';
  * import { createDOMView } from '@lattice/view';
  *
- * const { el, map, match, signal, computed, mount } = createDOMView();
+ * const use = createDOMView({ signals: createSignals() });
+ * const { el, map, match, signal, computed, mount } = use();
  * ```
  *
  * ## Import Guide

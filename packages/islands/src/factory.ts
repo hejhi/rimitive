@@ -77,7 +77,7 @@ export type IslandFactory<TService, TContext> = {
  *
  * const island = createIsland<IslandSvc>();
  *
- * export const Counter = island('counter', (svc) => ({ initialCount }: { initialCount: number }) => {
+ * export const Counter = island('counter', (svc, getContext) => ({ initialCount }: { initialCount: number }) => {
  *   const count = svc.signal(initialCount);
  *   return svc.el('button').props({ onclick: () => count(count() + 1) })(count);
  * });

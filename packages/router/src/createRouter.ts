@@ -22,11 +22,10 @@ type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
  * @example
  * ```typescript
  * const Layout = connect(({ children, params }) => (props) => {
- *   return el('div')
- *     .class('layout')(
- *       el('h1')()('My App'),
- *       ...children ?? []
- *     );
+ *   return el('div').props({ class: 'layout' })(
+ *     el('h1')()('My App'),
+ *     ...children ?? []
+ *   );
  * });
  * ```
  */
@@ -359,11 +358,14 @@ function getInitialPath(config: RouterConfig): string {
  *
  * @example
  * ```typescript
- * import { createView } from '@lattice/view';
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  * import { createRouter } from '@lattice/router';
  *
- * const view = createView();
- * const router = createRouter(view, { initialPath: '/' });
+ * const signals = createSignals();
+ * const view = createDOMView({ signals });
+ * const svc = view();
+ * const router = createRouter(svc, { initialPath: '/' });
  *
  * // Define routes
  * const App = router.root('/', Layout).create(

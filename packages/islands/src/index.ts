@@ -19,7 +19,7 @@
  * // 1. Define an island
  * import { island } from '@lattice/islands';
  *
- * export const Counter = island('counter', (svc) => ({ count }) => {
+ * export const Counter = island('counter', (svc, getContext) => ({ count }) => {
  *   const { el, signal } = svc;
  *   const value = signal(count);
  *   return el('button').props({ onclick: () => value(value() + 1) })(value);

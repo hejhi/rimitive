@@ -19,8 +19,16 @@ export type UntrackedOpts = {
  * reactive dependencies. Any signals or computeds read inside the callback
  * will not be tracked.
  *
+ * **Most users should get untrack from the deps helper:**
+ * ```ts
+ * import { deps } from '@lattice/signals';
+ * const { untrack } = deps();
+ * ```
+ *
  * @example Basic usage
  * ```ts
+ * import { createSignals, deps } from '@lattice/signals';
+ *
  * const { signal, effect } = createSignals()();
  * const { untrack } = deps();
  *
@@ -39,6 +47,11 @@ export type UntrackedOpts = {
  *
  * @example Logging without tracking
  * ```ts
+ * const { signal, effect } = createSignals()();
+ * const { untrack } = deps();
+ * const count = signal(0);
+ * const debugSignal = signal('info');
+ *
  * effect(() => {
  *   const value = count();
  *
@@ -47,12 +60,14 @@ export type UntrackedOpts = {
  *     console.log('Debug:', debugSignal());
  *   });
  *
- *   updateUI(value);
+ *   console.log('Value:', value);
  * });
  * ```
  *
  * @example Initial value sampling
  * ```ts
+ * const { signal, effect } = createSignals()();
+ * const { untrack } = deps();
  * const threshold = signal(10);
  *
  * effect(() => {
@@ -60,6 +75,15 @@ export type UntrackedOpts = {
  *   const initial = untrack(() => threshold());
  *   // ... use initial value
  * });
+ * ```
+ *
+ * @example Custom composition (advanced)
+ * ```ts
+ * import { createUntracked } from '@lattice/signals/extend';
+ * import { createGraphEdges } from '@lattice/signals/extend';
+ *
+ * const edges = createGraphEdges();
+ * const untrack = createUntracked({ consumer: edges.consumer });
  * ```
  */
 export function createUntracked(opts: UntrackedOpts) {

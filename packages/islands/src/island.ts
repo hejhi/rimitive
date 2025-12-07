@@ -54,7 +54,7 @@ function getContextGetter(): GetContext<unknown> {
  *
  * export const Counter = island<{ initialCount: number }, IslandSvc>(
  *   'counter',
- *   (svc) => ({ initialCount }) => {
+ *   (svc, getContext) => ({ initialCount }) => {
  *     const count = svc.signal(initialCount);
  *     return svc.el('button').props({ onclick: () => count(count() + 1) })(count);
  *   }
@@ -91,7 +91,7 @@ export function island<
  * export const Form = island(
  *   'form',
  *   strategy,
- *   (svc) => ({ value }) => svc.el('input').props({ value })()
+ *   (svc, getContext) => ({ value }) => svc.el('input').props({ value })()
  * );
  * ```
  */

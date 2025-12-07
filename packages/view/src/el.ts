@@ -100,9 +100,10 @@ export type ElProps<TConfig extends AdapterConfig> = {
  *
  * @example
  * ```typescript
+ * import { createSignals } from '@lattice/signals/presets/core';
  * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, signal, on } = createDOMView();
+ * const { el, signal, on } = createDOMView({ signals: createSignals() })();
  * const count = signal(0);
  *
  * // Basic usage - just children
@@ -162,9 +163,10 @@ export type TagFactory<
  *
  * @example
  * ```typescript
+ * import { createSignals } from '@lattice/signals/presets/core';
  * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, signal, computed, on } = createDOMView();
+ * const { el, signal, computed, on } = createDOMView({ signals: createSignals() })();
  * const count = signal(0);
  *
  * const counter = el('div').props({ className: 'counter' })(

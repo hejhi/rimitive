@@ -148,7 +148,7 @@ export type IslandComponent<TProps = unknown> = {
  *   }
  * };
  *
- * const FormInput = island('form-input', formStrategy, (svc) => ({ value }) => {
+ * const FormInput = island('form-input', formStrategy, (svc, getContext) => ({ value }) => {
  *   return svc.el('input').props({ value })();
  * });
  * ```

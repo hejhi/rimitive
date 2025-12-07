@@ -6,13 +6,13 @@
  *
  * @example
  * ```ts
- * import { Signal } from '@lattice/signals';
+ * import { Signal, deps } from '@lattice/signals/extend';
  *
  * // Signal() returns a Service
  * const signalService = Signal();
  *
  * // .create() wires dependencies and returns ServiceDefinition
- * const signalDef = signalService.create(deps);
+ * const signalDef = signalService.create(deps());
  * ```
  */
 export type Service<TResult, TContext> = {
@@ -41,8 +41,9 @@ export type Service<TResult, TContext> = {
  *   },
  * };
  *
- * const ctx = compose(counterService);
- * ctx.counter.increment();
+ * const use = compose(counterService);
+ * const { counter } = use();
+ * counter.increment();
  * ```
  *
  * @example With lifecycle hooks
@@ -267,11 +268,15 @@ export type LatticeContext<
  *
  * @example
  * ```ts
+ * import { Signal, deps } from '@lattice/signals/extend';
+ * import { compose } from '@lattice/lattice';
+ *
  * // Signal() returns DefinedService
  * const signalFactory: DefinedService = Signal();
  *
  * // Used with compose
- * const ctx = compose({ signal: signalFactory }, deps);
+ * const use = compose({ signal: signalFactory }, deps());
+ * const { signal } = use();
  * ```
  */
 export type DefinedService<TDeps = unknown> = Service<
@@ -344,7 +349,10 @@ export type Svc<T extends Record<string, DefinedService>> = {
  *
  * @example
  * ```ts
- * const use = compose({ signal: Signal() }, deps);
+ * import { Signal, Computed, deps } from '@lattice/signals/extend';
+ * import { compose } from '@lattice/lattice';
+ *
+ * const use = compose({ signal: Signal(), computed: Computed() }, deps());
  *
  * // Get the service directly
  * const { signal, computed } = use();

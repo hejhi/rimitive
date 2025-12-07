@@ -37,9 +37,9 @@ export type DOMAdapterConfig = AdapterConfig & {
  *
  * const adapter = createDOMAdapter();
  * const signals = createSignals();
- * const view = createView(adapter, signals);
+ * const view = createView({ adapter, signals });
  *
- * const { el } = view;
+ * const { el } = view();
  * const button = el('button')('Click me');
  * ```
  */

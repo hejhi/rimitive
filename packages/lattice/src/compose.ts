@@ -20,16 +20,17 @@ type ContextState = {
  * @example
  * ```ts
  * import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+ * import { Signal, Computed, deps } from '@lattice/signals/extend';
  *
  * const instrumentation = createInstrumentation({
  *   enabled: true,
  *   providers: [devtoolsProvider()],
  * });
  *
- * const ctx = compose(
- *   { instrumentation },
- *   signalService,
- *   computedService
+ * const use = compose(
+ *   { signal: Signal(), computed: Computed() },
+ *   deps(),
+ *   { instrumentation }
  * );
  * ```
  */

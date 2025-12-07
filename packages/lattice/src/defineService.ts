@@ -12,7 +12,7 @@ import { Service } from './types';
  *
  * @example Basic service definition
  * ```ts
- * import { defineService } from '@lattice/lattice';
+ * import { defineService, compose } from '@lattice/lattice';
  *
  * type CounterDeps = { logger: (msg: string) => void };
  *
@@ -31,11 +31,12 @@ import { Service } from './types';
  * );
  *
  * // Usage with compose
- * const ctx = compose(
+ * const use = compose(
  *   { counter: Counter(0) },
  *   { logger: console.log }
  * );
- * ctx.counter.increment(); // logs "Counter: 1"
+ * const { counter } = use();
+ * counter.increment(); // logs "Counter: 1"
  * ```
  *
  * @example Service with lifecycle hooks

@@ -66,18 +66,19 @@ function parseURL(url: string): {
  * ```typescript
  * import { createLocationFactory } from '@lattice/router';
  *
- * const locationFactory = createLocationFactory({
+ * const location = createLocationFactory().create({
+ *   signal,
  *   computed,
  *   currentPath: router.currentPath
  * });
  *
- * const location = locationFactory();
+ * const loc = location.impl();
  *
  * // Access URL components reactively
  * effect(() => {
- *   console.log('Pathname:', location.pathname());
- *   console.log('Query params:', location.query());
- *   console.log('Hash:', location.hash());
+ *   console.log('Pathname:', loc.pathname());
+ *   console.log('Query params:', loc.query());
+ *   console.log('Hash:', loc.hash());
  * });
  * ```
  */
