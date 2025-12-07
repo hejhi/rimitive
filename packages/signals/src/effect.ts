@@ -89,13 +89,13 @@ type EffectNode = ScheduledNode & {
  *
  * **Most users should use the preset instead:**
  * ```ts
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * const { effect } = createSignalsSvc();
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * const { effect } = createSignals();
  * ```
  *
  * @example Basic effect
  * ```ts
- * const { signal, effect } = createSignalsSvc();
+ * const { signal, effect } = createSignals();
  *
  * const count = signal(0);
  *

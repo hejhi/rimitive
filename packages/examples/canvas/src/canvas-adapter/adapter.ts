@@ -366,7 +366,7 @@ export type HitTestFn = (
  * canvas primitives (circle, rect, etc.) that render to the 2D context.
  *
  * Returns an object with:
- * - adapter: The Adapter<CanvasAdapterConfig> for use with createViewSvc
+ * - adapter: The Adapter<CanvasAdapterConfig> for use with createView
  * - hitTest: Function for hit testing canvas elements (used by event listeners)
  */
 export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {

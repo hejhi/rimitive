@@ -69,9 +69,9 @@ export type CreateScopes = {
  * @example
  * ```typescript
  * import { createScopes } from '@lattice/view/deps/scope';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
  *
- * const { effect } = createSignalsSvc();
+ * const { effect } = createSignals();
  * const { createElementScope, scopedEffect, onCleanup, disposeScope } = createScopes({
  *   baseEffect: effect
  * });

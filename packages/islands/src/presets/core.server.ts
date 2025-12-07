@@ -73,13 +73,13 @@ export type ServerApp = {
  * @example
  * ```typescript
  * import { createIslandsApp } from '@lattice/islands/presets/core.server';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createView } from '@lattice/view/presets/core';
  * import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
  *
- * const signals = createSignalsSvc();
+ * const signals = createSignals();
  * const adapter = createDOMServerAdapter();
- * const view = createViewSvc(adapter, signals);
+ * const view = createView(adapter, signals);
  *
  * const app = createIslandsApp({ signals, view });
  * const { html, scripts } = app.render(appSpec);

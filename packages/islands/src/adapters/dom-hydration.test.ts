@@ -798,8 +798,9 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
 // Integration Tests: Full View service with Hydration
 // ============================================================================
 
-import { createViewSvc } from '@lattice/view/presets/core';
+import { createView } from '@lattice/view/presets/core';
 import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types'; // Separate import for integration tests
+import { createSignals } from '@lattice/signals';
 
 describe('Integration: match() hydration with full view service', () => {
   const setupIntegrationHTML = (html: string): HTMLElement => {
@@ -821,8 +822,9 @@ describe('Integration: match() hydration with full view service', () => {
       '<div class="products-page"><h2>Products</h2><section class="intro">intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section class="filter">filter</section></div>'
     );
 
-    const renderer = createDOMHydrationAdapter(container);
-    const viewSvc = createViewSvc(renderer)();
+    const adapter = createDOMHydrationAdapter(container);
+    const signals = createSignals();
+    const viewSvc = createView({ adapter, signals })();
 
     // Combine signals and views to get full service
     const { el, match, computed } = viewSvc;
@@ -879,8 +881,9 @@ describe('Integration: match() hydration with full view service', () => {
       '<div class="app"><nav>nav</nav><main><!--fragment-start--><div class="products-page"><h2>Products</h2><section class="intro">intro</section><!--fragment-start--><h1>hello</h1><!--fragment-end--><section class="filter">filter</section></div><!--fragment-end--></main></div>'
     );
 
-    const renderer = createDOMHydrationAdapter(container);
-    const viewSvc = createViewSvc(renderer)();
+    const adapter = createDOMHydrationAdapter(container);
+    const signals = createSignals();
+    const viewSvc = createView({ adapter, signals })();
 
     const { el, computed, match } = viewSvc;
 

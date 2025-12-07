@@ -1,4 +1,4 @@
-import { createViewSvc } from '@lattice/view/presets/core';
+import { createView } from '@lattice/view/presets/core';
 import { createAddEventListener } from '@lattice/view/deps/addEventListener';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
@@ -6,7 +6,7 @@ import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
 // Wire up view layer
 
 const adapter = createDOMAdapter();
-const views = createViewSvc(adapter)();
+const views = createView(adapter)();
 
 const svc = {
   ...views,

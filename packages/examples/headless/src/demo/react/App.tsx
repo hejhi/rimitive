@@ -5,7 +5,7 @@
  * using @lattice/react's createHook and useSubscribe.
  */
 import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createSignals } from '@lattice/signals/presets/core';
 import { dialog } from '../../dialog';
 import { select, type SelectOption } from '../../select';
 
@@ -13,7 +13,7 @@ import { select, type SelectOption } from '../../select';
 // Create Lattice Signals Service (singleton for the React tree)
 // ============================================================================
 
-const signalsSvc = createSignalsSvc()();
+const signalsSvc = createSignals()();
 
 // ============================================================================
 // Create React hooks from portable headless behaviors

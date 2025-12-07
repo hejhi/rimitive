@@ -59,12 +59,12 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
  * @example
  * ```typescript
  * import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
- * import { createViewSvc } from '@lattice/view/presets/core';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createView } from '@lattice/view/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
  *
- * const signals = createSignalsSvc();
+ * const signals = createSignals();
  * const adapter = createDOMServerAdapter();
- * const view = createViewSvc(adapter, signals);
+ * const view = createView(adapter, signals);
  *
  * const app = view.el('div')(view.el('h1')('Hello SSR'));
  * ```

@@ -40,8 +40,8 @@ Batch groups multiple signal writes into a single update cycle, preventing inter
 \*\*Most users should use the preset instead:\*\*
 
 ```ts
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-const { batch } = createSignalsSvc();
+import { createSignals } from '@lattice/signals/presets/core';
+const { batch } = createSignals();
 ```
 
 
@@ -60,8 +60,8 @@ Computeds are derived values that automatically track their dependencies and rec
 \*\*Most users should use the preset instead:\*\*
 
 ```ts
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-const { computed } = createSignalsSvc();
+import { createSignals } from '@lattice/signals/presets/core';
+const { computed } = createSignals();
 ```
 
 
@@ -77,13 +77,13 @@ Create the reactive graph infrastructure (helpers).
 
 This wires together all the low-level machinery: dependency tracking, graph traversal, pull-based updates, and effect scheduling.
 
-Most users should use `createSignalsSvc()` instead, which calls this internally.
+Most users should use `createSignals()` instead, which calls this internally.
 
 
 </td></tr>
 <tr><td>
 
-[createSignalsSvc()](../createsignalssvc/)
+[createSignals()](../createsignalssvc/)
 
 
 </td><td>
@@ -121,8 +121,8 @@ Effects are side effects that run when their dependencies change. They run immed
 \*\*Most users should use the preset instead:\*\*
 
 ```ts
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-const { effect } = createSignalsSvc();
+import { createSignals } from '@lattice/signals/presets/core';
+const { effect } = createSignals();
 ```
 
 
@@ -141,8 +141,8 @@ Signals are reactive containers that notify subscribers when their value changes
 \*\*Most users should use the preset instead:\*\*
 
 ```ts
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-const { signal } = createSignalsSvc();
+import { createSignals } from '@lattice/signals/presets/core';
+const { signal } = createSignals();
 ```
 
 
@@ -161,8 +161,8 @@ Subscribe tracks dependencies only from the source function, not the callback. T
 \*\*Most users should use the preset instead:\*\*
 
 ```ts
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-const { subscribe } = createSignalsSvc();
+import { createSignals } from '@lattice/signals/presets/core';
+const { subscribe } = createSignals();
 ```
 
 
@@ -433,7 +433,7 @@ The instantiable service returned by Signal().
 
 </td><td>
 
-The type of the signals service returned by `createSignalsSvc()`<!-- -->.
+The type of the signals service returned by `createSignals()`<!-- -->.
 
 Contains all signal primitives: `signal`<!-- -->, `computed`<!-- -->, `effect`<!-- -->, `batch`<!-- -->, `subscribe`<!-- -->, plus a `dispose()` method for cleanup.
 

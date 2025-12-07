@@ -9,10 +9,11 @@ import {
   createDOMHydrationAdapter,
   createIslandsAdapter,
 } from '@lattice/islands/client';
-import { createViewSvc } from '@lattice/view/presets/core';
+import { createView } from '@lattice/view/presets/core';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import { createRouter, type ViewSvc, type RouteTree } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { createSignals } from '@lattice/signals';
 
 /**
  * Options for creating a client app
@@ -40,7 +41,8 @@ export function createClientApp<TContext>(options: ClientAppOptions<TContext>) {
     createDOMHydrationAdapter(container),
     createDOMAdapter()
   );
-  const view = createViewSvc<DOMAdapterConfig>(adapter)();
+  const signals = createSignals();
+  const view = createView<DOMAdapterConfig>({ adapter, signals })();
 
   // Wire for islands
   const app = createIslandsApp<TContext>({

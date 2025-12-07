@@ -29,10 +29,10 @@ export type DOMViewSvc = ViewSvc & {
 ## Example
 
 ```typescript
-import { createDOMSvc, type DOMViewSvc } from '@lattice/view/presets/dom';
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createDOMView, type DOMViewSvc } from '@lattice/view/presets/dom';
+import { createSignals } from '@lattice/signals/presets/core';
 
-const signals = createSignalsSvc();
-const view: DOMViewSvc = createDOMSvc(signals);
+const signals = createSignals();
+const view: DOMViewSvc = createDOMView(signals);
 const { el, map, on, mount } = view;
 ```

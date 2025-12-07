@@ -16,8 +16,8 @@
  * ```
  */
 
-import { type SignalsSvc } from '@lattice/signals/presets/core';
-import { createViewSvc, type ViewSvc } from '@lattice/view/presets/core';
+import { createSignals, type SignalsSvc } from '@lattice/signals/presets/core';
+import { createView, type ViewSvc } from '@lattice/view/presets/core';
 import { createScopes, type CreateScopes } from '@lattice/view/deps/scope';
 import {
   createDOMAdapter,
@@ -65,7 +65,8 @@ export type IslandsClientApp = SignalsSvc &
 export function createIslandsClientApp(): IslandsClientApp {
   // Create DOM adapter for post-hydration rendering
   const domAdapter = createDOMAdapter();
-  const viewSvc = createViewSvc(domAdapter)();
+  const signals = createSignals();
+  const viewSvc = createView({ adapter: domAdapter, signals })();
 
   const on = createAddEventListener(viewSvc.batch);
 
@@ -81,7 +82,8 @@ export function createIslandsClientApp(): IslandsClientApp {
       DomViewSvc & { on: ReturnType<typeof createAddEventListener> };
     createElementScope: CreateScopes['createElementScope'];
   } => {
-    const islandViews = createViewSvc(islandAdapter)();
+    const signals = createSignals();
+    const islandViews = createView({ adapter: islandAdapter, signals })();
     const scopes = createScopes({ baseEffect: islandViews.effect });
     return {
       svc: {

@@ -6,12 +6,12 @@ Service composition layer for Lattice. Wire independent packages together into u
 
 ## When to Use This Package
 
-| Use Case                        | What to Use                                       |
-| ------------------------------- | ------------------------------------------------- |
-| Building a typical app          | `createDOMSvc()` from `@lattice/view/presets/dom` |
-| Sharing signals across adapters | `compose()` from this package                     |
-| Adding instrumentation          | `createInstrumentation()` from this package       |
-| Creating custom primitives      | `defineService()` from this package               |
+| Use Case                        | What to Use                                        |
+| ------------------------------- | -------------------------------------------------- |
+| Building a typical app          | `createDOMView()` from `@lattice/view/presets/dom` |
+| Sharing signals across adapters | `compose()` from this package                      |
+| Adding instrumentation          | `createInstrumentation()` from this package        |
+| Creating custom primitives      | `defineService()` from this package                |
 
 ## Overview
 

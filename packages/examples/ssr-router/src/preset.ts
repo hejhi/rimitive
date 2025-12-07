@@ -11,9 +11,10 @@ import {
   createIslandsApp,
   createDOMServerAdapter,
 } from '@lattice/islands/server';
-import { createViewSvc } from '@lattice/view/presets/core';
+import { createView } from '@lattice/view/presets/core';
 import { createRouter, type RouteTree } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { createSignals } from '@lattice/signals';
 
 /**
  * Options for creating an SSR app
@@ -39,7 +40,8 @@ export function createSSRApp<TContext>(options: SSRAppOptions<TContext>) {
 
   // Create primitives
   const adapter = createDOMServerAdapter();
-  const view = createViewSvc<DOMAdapterConfig>(adapter)();
+  const signals = createSignals();
+  const view = createView<DOMAdapterConfig>({ adapter, signals })();
 
   // Wire for islands
   const app = createIslandsApp({

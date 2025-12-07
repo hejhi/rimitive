@@ -7,9 +7,9 @@
  *
  * @example Quick start
  * ```ts
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
  *
- * const { signal, computed, effect, batch } = createSignalsSvc();
+ * const { signal, computed, effect, batch } = createSignals()();
  *
  * const count = signal(0);
  * const doubled = computed(() => count() * 2);
@@ -23,7 +23,7 @@
  *
  * @example With batching
  * ```ts
- * const { signal, effect, batch } = createSignalsSvc();
+ * const { signal, effect, batch } = createSignals()();
  *
  * const a = signal(0);
  * const b = signal(0);
@@ -64,7 +64,7 @@ import type { Dependency } from '../types';
  * This is the dependency type required by signal primitives.
  * Created by `deps()` and passed to `compose()`.
  *
- * @internal Typically you don't need to use this directly - use `createSignalsSvc()`.
+ * @internal Typically you don't need to use this directly - use `createSignals()()`.
  */
 export type Helpers = {
   untrack: <T>(fn: () => T) => T;
@@ -139,21 +139,21 @@ export function deps(): Helpers {
 }
 
 /**
- * The type of the signals service returned by `createSignalsSvc()`.
+ * The type of the signals service returned by `createSignals()()`.
  *
  * Contains all signal primitives: `signal`, `computed`, `effect`, `batch`, `subscribe`,
  * plus a `dispose()` method for cleanup.
  *
  * @example Type annotation
  * ```ts
- * import { createSignalsSvc, type SignalsSvc } from '@lattice/signals/presets/core';
+ * import { createSignals, type SignalsSvc } from '@lattice/signals/presets/core';
  *
  * function initApp(svc: SignalsSvc) {
  *   const count = svc.signal(0);
  *   // ...
  * }
  *
- * const svc = createSignalsSvc();
+ * const svc = createSignals()();
  * initApp(svc);
  * ```
  */
@@ -173,9 +173,9 @@ export type SignalsSvc = Svc<{
  *
  * @example Basic usage
  * ```ts
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
  *
- * const { signal, computed, effect, batch, subscribe } = createSignalsSvc();
+ * const { signal, computed, effect, batch, subscribe } = createSignals()();
  *
  * // Create reactive state
  * const count = signal(0);
@@ -192,7 +192,7 @@ export type SignalsSvc = Svc<{
  *
  * @example With cleanup
  * ```ts
- * const svc = createSignalsSvc();
+ * const svc = createSignals()();
  *
  * // ... use signals ...
  *
@@ -202,7 +202,7 @@ export type SignalsSvc = Svc<{
  *
  * @example Subscribing to changes
  * ```ts
- * const { signal, subscribe } = createSignalsSvc();
+ * const { signal, subscribe } = createSignals()();
  *
  * const name = signal('Alice');
  *
@@ -219,7 +219,7 @@ export type SignalsSvc = Svc<{
  *
  * @returns A signals service with all primitives and a dispose method
  */
-export function createSignalsSvc(): Use<SignalsSvc> {
+export function createSignals(): Use<SignalsSvc> {
   return compose(
     {
       signal: Signal(),

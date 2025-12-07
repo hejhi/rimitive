@@ -6,7 +6,7 @@ import { createScopes } from '../deps/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef } from '../types';
 import { compose, type Svc, type Use, extend } from '@lattice/lattice';
-import { createSignalsSvc, SignalsSvc } from '@lattice/signals/presets/core';
+import { SignalsSvc } from '@lattice/signals/presets/core';
 
 // Re-export user-facing types for convenience
 export type { ElementProps, TagFactory, ElFactory, ElService } from '../el';
@@ -43,7 +43,7 @@ export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
  * import type { ViewSvc } from '@lattice/view/presets/core';
  * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
  *
- * const view: ViewSvc<DOMAdapterConfig> = createViewSvc(adapter, signals);
+ * const view: ViewSvc<DOMAdapterConfig> = createView(adapter, signals);
  * const { el, map, match, portal } = view;
  * ```
  */
@@ -66,32 +66,36 @@ export type ViewSvc<TConfig extends AdapterConfig> = SignalsSvc &
  *
  * @example With auto-created signals
  * ```typescript
- * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createView } from '@lattice/view/presets/core';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();
- * const view = createViewSvc(adapter);
+ * const view = createView(adapter);
  *
  * const { el, signal, computed } = view();
  * ```
  *
  * @example With shared signals (for islands/SSR)
  * ```typescript
- * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createView } from '@lattice/view/presets/core';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
  *
- * const signals = createSignalsSvc()();
+ * const signals = createSignals()();
  * const adapter = createDOMAdapter();
- * const view = createViewSvc(adapter, signals);
+ * const view = createView(adapter, signals);
  *
  * const { el, map, match, portal } = view();
  * ```
  */
-export const createViewSvc = <TConfig extends AdapterConfig>(
-  adapter: Adapter<TConfig>
-): Use<ViewSvc<TConfig>> => {
-  const signalsSvc = createSignalsSvc()();
+export const createView = <TConfig extends AdapterConfig>({
+  adapter,
+  signals,
+}: {
+  adapter: Adapter<TConfig>;
+  signals: Use<SignalsSvc>;
+}): Use<ViewSvc<TConfig>> => {
+  const signalsSvc = signals();
   const defaultViewSvc = compose(
     {
       el: El<TConfig>(),

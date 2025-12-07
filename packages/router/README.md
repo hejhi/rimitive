@@ -5,10 +5,10 @@ Minimal universal routing for Lattice. Reactive path matching with nested layout
 ## Quick Start
 
 ```typescript
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createDOMView } from '@lattice/view/presets/dom';
 import { createRouter, connect, Link } from '@lattice/router';
 
-const svc = createDOMSvc();
+const svc = createDOMView();
 const router = createRouter(svc);
 const { route, root } = router;
 

@@ -1,8 +1,10 @@
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createDOMView } from '@lattice/view/presets/dom';
 import { createRouter } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/presets/dom';
+import { createSignals } from '@lattice/signals';
 
-export const use = createDOMSvc();
+const signals = createSignals();
+export const use = createDOMView({ signals });
 const svc = use();
 
 export const router = createRouter<DOMAdapterConfig>(svc, {

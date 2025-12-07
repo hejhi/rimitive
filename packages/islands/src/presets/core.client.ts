@@ -8,8 +8,8 @@
  *
  */
 
-import { type SignalsSvc } from '@lattice/signals/presets/core';
-import { createViewSvc, type ViewSvc } from '@lattice/view/presets/core';
+import { createSignals, type SignalsSvc } from '@lattice/signals/presets/core';
+import { createView, type ViewSvc } from '@lattice/view/presets/core';
 import { createScopes } from '@lattice/view/deps/scope';
 import { createAddEventListener } from '@lattice/view/deps/addEventListener';
 import type { RefSpec, Adapter, NodeRef } from '@lattice/view/types';
@@ -111,17 +111,17 @@ export type ClientApp = {
  * @example
  * ```typescript
  * import { createIslandsApp } from '@lattice/islands/presets/core.client';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createView } from '@lattice/view/presets/core';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  * import { createIslandsAdapter } from '@lattice/islands/adapters/islands';
  * import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
  *
- * const signals = createSignalsSvc();
+ * const signals = createSignals();
  * const domAdapter = createDOMAdapter();
  * const hydrateAdapter = createDOMHydrationAdapter(document.body);
  * const adapter = createIslandsAdapter(hydrateAdapter, domAdapter);
- * const view = createViewSvc(adapter, signals);
+ * const view = createView(adapter, signals);
  *
  * const app = createIslandsApp({ signals, adapter, view });
  * app.hydrate(Counter, TodoList);
@@ -176,7 +176,8 @@ export function createIslandsApp<TContext = unknown>(
       fn: () => void
     ) => unknown;
   } => {
-    const islandViews = createViewSvc(islandAdapter)();
+    const signals = createSignals();
+    const islandViews = createView({ adapter: islandAdapter, signals })();
     const scopes = createScopes({ baseEffect: islandViews.effect });
     const svc = {
       ...islandViews,

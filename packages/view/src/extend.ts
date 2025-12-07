@@ -8,12 +8,12 @@
  *
  * ## Example: Custom Adapter
  * ```typescript
- * import { El, Map, Match, createViewSvc } from '@lattice/view/extend';
- * import { createSignalsSvc } from '@lattice/signals';
+ * import { El, Map, Match, createView } from '@lattice/view/extend';
+ * import { createSignals } from '@lattice/signals';
  * import { myCustomAdapter } from './my-adapter';
  *
- * const signals = createSignalsSvc();
- * const svc = createViewSvc(myCustomAdapter, signals);
+ * const signals = createSignals();
+ * const svc = createView(myCustomAdapter, signals);
  * ```
  */
 
@@ -30,8 +30,8 @@ export { Portal } from './portal';
 // View Service Factories
 // =============================================================================
 
-export { createViewSvc } from './presets/core';
-export { createDOMSvc } from './presets/dom';
+export { createView } from './presets/core';
+export { createDOMView } from './presets/dom';
 
 // =============================================================================
 // Adapters

@@ -123,9 +123,9 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
  * @example
  * ```typescript
  * import type { RefSpec } from '@lattice/view/types';
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, mount } = createDOMSvc();
+ * const { el, mount } = createDOMView();
  *
  * // el() returns a RefSpec
  * const buttonSpec: RefSpec<HTMLButtonElement> = el('button')('Click me');
@@ -159,9 +159,9 @@ export type { Readable, Writable, Reactive } from '@lattice/signals/types';
  * @example
  * ```typescript
  * import type { LifecycleCallback } from '@lattice/view/types';
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el } = createDOMSvc();
+ * const { el } = createDOMView();
  *
  * // Simple callback
  * const autofocus: LifecycleCallback<HTMLInputElement> = (elem) => {
@@ -195,9 +195,9 @@ export type LifecycleCallback<TElement> = (
  * @example
  * ```typescript
  * import type { ElRefSpecChild } from '@lattice/view/types';
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, signal, computed } = createDOMSvc();
+ * const { el, signal, computed } = createDOMView();
  * const name = signal('World');
  *
  * // All valid children types

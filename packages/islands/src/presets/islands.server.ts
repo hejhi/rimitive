@@ -19,8 +19,8 @@
  * ```
  */
 
-import { type SignalsSvc } from '@lattice/signals/presets/core';
-import { createViewSvc, ViewSvc } from '@lattice/view/presets/core';
+import { createSignals, type SignalsSvc } from '@lattice/signals/presets/core';
+import { createView, ViewSvc } from '@lattice/view/presets/core';
 import type { RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { createDOMServerAdapter } from '../adapters/dom-server';
@@ -75,7 +75,8 @@ export function createIslandsServerApp<TContext = unknown>(
   options: IslandsServerOptions<TContext> = {}
 ): IslandsServerApp {
   const adapter = createDOMServerAdapter();
-  const svc = createViewSvc(adapter)();
+  const signals = createSignals();
+  const svc = createView({ adapter, signals })();
   const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
 
   const render = <TElement>(

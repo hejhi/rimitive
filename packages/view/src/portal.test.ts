@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDOMSvc, type DOMSvc } from './presets/dom';
+import { createDOMView, type DOMSvc } from './presets/dom';
+import { createSignals } from '@lattice/signals/presets/core';
 
 describe('portal', () => {
   let svc: DOMSvc;
   let testContainer: HTMLElement;
 
   beforeEach(() => {
-    svc = createDOMSvc()();
+    const signals = createSignals();
+    svc = createDOMView({ signals })();
     // Create a test container for mounting
     testContainer = document.createElement('div');
     testContainer.id = 'test-container';
@@ -55,7 +57,9 @@ describe('portal', () => {
 
       const spec = match(show, (s) =>
         s
-          ? portal()(el('div').props({ className: 'portal-content' })('Portaled'))
+          ? portal()(
+              el('div').props({ className: 'portal-content' })('Portaled')
+            )
           : null
       );
 
@@ -417,10 +421,10 @@ describe('portal', () => {
                 .ref(() => () => {
                   outerCleanedUp = true;
                 })(
-                  el('span').ref(() => () => {
-                    innerCleanedUp = true;
-                  })('Nested cleanup')
-                )
+                el('span').ref(() => () => {
+                  innerCleanedUp = true;
+                })('Nested cleanup')
+              )
             )
           : null
       );

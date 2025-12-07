@@ -4,11 +4,13 @@
  * Demonstrates how the same headless behaviors work with Lattice's
  * native signals and view system.
  */
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createDOMView } from '@lattice/view/presets/dom';
 import { dialog } from '../../dialog';
 import { select, type SelectOption } from '../../select';
+import { createSignals } from '@lattice/signals';
 
-const use = createDOMSvc();
+const signals = createSignals();
+const use = createDOMView({ signals });
 const { el, computed, effect, match, portal, mount: mountSpec } = use();
 
 // Bind behaviors to this service

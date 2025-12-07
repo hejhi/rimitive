@@ -39,9 +39,9 @@ export type AddEventListener = <K extends keyof HTMLElementEventMap>(
  * @example
  * ```typescript
  * import { createAddEventListener } from '@lattice/view/deps/addEventListener';
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { batch, el, signal } = createDOMSvc();
+ * const { batch, el, signal } = createDOMView();
  * const on = createAddEventListener(batch);
  *
  * const count = signal(0);

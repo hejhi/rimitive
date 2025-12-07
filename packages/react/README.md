@@ -5,11 +5,11 @@ React bindings for Lattice signals. Use reactive primitives in React components 
 ## Quick Start
 
 ```tsx
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createSignals } from '@lattice/signals/presets/core';
 import { SignalProvider, useSignal, useSubscribe } from '@lattice/react';
 
 // Create signals service (once, at app root)
-const svc = createSignalsSvc();
+const svc = createSignals();
 
 function App() {
   return (
@@ -161,10 +161,10 @@ const timer =
 Provides the signals service to descendant components.
 
 ```tsx
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createSignals } from '@lattice/signals/presets/core';
 import { SignalProvider } from '@lattice/react';
 
-const svc = createSignalsSvc();
+const svc = createSignals();
 
 function App() {
   return (
@@ -246,10 +246,10 @@ export const counter =
 **In Lattice view:**
 
 ```typescript
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createDOMView } from '@lattice/view/presets/dom';
 import { counter } from './behaviors/counter';
 
-const { use, el, t } = createDOMSvc();
+const { use, el, t } = createDOMView();
 const useCounter = use(counter);
 
 const Counter = () => {

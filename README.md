@@ -50,9 +50,9 @@ These primitives produce different outputs:
 Most users won't need to call `compose()` directly. Lattice provides **presets**—pre-composed services, with their dependencies, ready to use:
 
 ```typescript
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createDOMView } from '@lattice/view/presets/dom';
 
-const useDomService = createDOMSvc();
+const useDomService = createDOMView();
 const { el, signal, computed, mount } = useDomService();
 
 const App = () => {
@@ -67,7 +67,7 @@ const App = () => {
 mount(App(), document.body);
 ```
 
-`createDOMSvc()` bundles signal primitives, view primitives, and a DOM adapter into one service. But it's just a convenience—under the hood, it's using `compose()`. If you want to replace any of them, you totally can. In fact, you can re-use our primitives and replace their underlying dependencies if you want to change their behavior. You have control down to the very base reactive, UI model, and renderer itself.
+`createDOMView()` bundles signal primitives, view primitives, and a DOM adapter into one service. But it's just a convenience—under the hood, it's using `compose()`. If you want to replace any of them, you totally can. In fact, you can re-use our primitives and replace their underlying dependencies if you want to change their behavior. You have control down to the very base reactive, UI model, and renderer itself.
 
 ---
 
@@ -76,18 +76,19 @@ mount(App(), document.body);
 Need to share signals across multiple renderers? Compose services yourself:
 
 ```typescript
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createSignals } from '@lattice/signals/presets/core';
+import { createDOMView } from '@lattice/view/presets/dom';
 
 // Shared signals
-const signals = createSignalsSvc();
+const signals = createSignals();
 
-// Multiple custom view services using the same signals
-const dom = createMyDOMSvc(signals);
-const canvas = createMyCanvasSvc(signals);
+// Multiple custom view services using the same signals instance
+const dom = createMyDOMSvc({ signals });
+const canvas = createMyCanvasSvc({ signals });
+const signalsSvc = signals();
 
 // Same signal, multiple rendering targets
-const position = signals.signal({ x: 0, y: 0 });
+const position = signalsSvc.signal({ x: 0, y: 0 });
 ```
 
 That's essentially how Lattice does ssr in the `island` package (swapping out the renderer dependency for the `view` primitives). Or go lower and compose individual primitives:

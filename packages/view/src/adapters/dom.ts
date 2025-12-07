@@ -32,12 +32,12 @@ export type DOMAdapterConfig = AdapterConfig & {
  * @example
  * ```typescript
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createViewSvc } from '@lattice/view/presets/core';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createView } from '@lattice/view/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
  *
  * const adapter = createDOMAdapter();
- * const signals = createSignalsSvc();
- * const view = createViewSvc(adapter, signals);
+ * const signals = createSignals();
+ * const view = createView(adapter, signals);
  *
  * const { el } = view;
  * const button = el('button')('Click me');

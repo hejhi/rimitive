@@ -73,19 +73,19 @@ export type CreateSvcResult = {
  * @example
  * ```typescript
  * import { createDOMHydrator } from '@lattice/islands/hydrators/dom';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * import { createViewSvc } from '@lattice/view/presets/core';
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createView } from '@lattice/view/presets/core';
  * import { createIslandsAdapter } from '@lattice/islands/adapters/islands';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  * import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
  *
- * const signals = createSignalsSvc();
+ * const signals = createSignals();
  * const domAdapter = createDOMAdapter();
  * const hydrateAdapter = createDOMHydrationAdapter(document.body);
  * const adapter = createIslandsAdapter(hydrateAdapter, domAdapter);
  *
  * const createSvc = (adapter, signals) => ({
- *   svc: { ...signals, ...createViewSvc(adapter, signals) },
+ *   svc: { ...signals, ...createView(adapter, signals) },
  *   createElementScope: (el, fn) => fn()
  * });
  *

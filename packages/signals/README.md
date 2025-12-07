@@ -5,9 +5,9 @@ Reactive primitives for Lattice. A push-pull signal implementation inspired by [
 ## Quick Start
 
 ```typescript
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createSignals } from '@lattice/signals/presets/core';
 
-const { signal, computed, effect, batch, subscribe } = createSignalsSvc();
+const { signal, computed, effect, batch, subscribe } = createSignals();
 
 // Signals are callable functions
 const count = signal(0);
@@ -194,9 +194,9 @@ Version tracking enables efficient dependency pruning when a computed's dependen
 For most applications, use the preset—it bundles everything and handles wiring:
 
 ```typescript
-import { createSignalsSvc } from '@lattice/signals/presets/core';
+import { createSignals } from '@lattice/signals/presets/core';
 
-const { signal, computed, effect, batch, subscribe } = createSignalsSvc();
+const { signal, computed, effect, batch, subscribe } = createSignals();
 ```
 
 This is the recommended path. No configuration needed.
@@ -245,7 +245,7 @@ export const MyPrimitive = defineService(
 
 | Path                            | What You Get               | Use Case             |
 | ------------------------------- | -------------------------- | -------------------- |
-| `@lattice/signals/presets/core` | `createSignalsSvc()`       | Most users           |
+| `@lattice/signals/presets/core` | `createSignals()`          | Most users           |
 | `@lattice/signals`              | `Signal`, `Computed`, etc. | Custom composition   |
 | `@lattice/signals/signal`       | `Signal` only              | Maximum tree-shaking |
 

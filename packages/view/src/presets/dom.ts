@@ -6,9 +6,9 @@
  *
  * @example
  * ```ts
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, signal, computed, on, mount } = createDOMSvc();
+ * const { el, signal, computed, on, mount } = createDOMView();
  *
  * const App = () => {
  *   const count = signal(0);
@@ -29,7 +29,7 @@ import {
   createAddEventListener,
   type AddEventListener,
 } from '../deps/addEventListener';
-import { createViewSvc } from './core';
+import { createView } from './core';
 import type { NodeRef, RefSpec } from '../types';
 import type {
   ElFactory,
@@ -54,11 +54,11 @@ export type ViewSvc = LatticeContext<
  *
  * @example
  * ```typescript
- * import { createDOMSvc, type DOMViewSvc } from '@lattice/view/presets/dom';
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
+ * import { createDOMView, type DOMViewSvc } from '@lattice/view/presets/dom';
+ * import { createSignals } from '@lattice/signals/presets/core';
  *
- * const signals = createSignalsSvc();
- * const view = createDOMSvc(signals());
+ * const signals = createSignals();
+ * const view = createDOMView(signals());
  * const { el, map, on, mount } = view();
  * ```
  */
@@ -73,9 +73,9 @@ export type DOMViewSvc = ViewSvc &
  *
  * @example
  * ```typescript
- * import { createDOMSvc, type DOMSvc } from '@lattice/view/presets/dom';
+ * import { createDOMView, type DOMSvc } from '@lattice/view/presets/dom';
  *
- * const use = createDOMSvc();
+ * const use = createDOMView();
  * const { signal, computed, el, map, match, on, mount } = use();
  * ```
  */
@@ -91,20 +91,24 @@ export type DOMSvc = SignalsSvc & DOMViewSvc;
  *
  * @example With shared signals
  * ```ts
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const signals = createSignalsSvc()();
- * const dom = createDOMSvc(signals);
+ * const signals = createSignals()();
+ * const dom = createDOMView(signals);
  * const canvas = createCanvasViewSvc(signals);
  *
  * export const { signal, computed } = signals;
  * export { dom, canvas };
  * ```
  */
-export const createDOMSvc = (): Use<DOMViewSvc> => {
+export const createDOMView = ({
+  signals,
+}: {
+  signals: Use<SignalsSvc>;
+}): Use<DOMViewSvc> => {
   const adapter = createDOMAdapter();
-  const viewSvc = createViewSvc(adapter);
+  const viewSvc = createView({ adapter, signals });
   const withOn = extend(viewSvc, (svc) => ({
     ...svc,
     on: createAddEventListener(svc.batch),

@@ -37,9 +37,9 @@ export type Use<TSvc> = <Args extends unknown[], Result>(
  * @example
  * ```typescript
  * import { createUse } from '@lattice/view/deps/use';
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const svc = createDOMSvc();
+ * const svc = createDOMView();
  * const use = createUse(svc);
  *
  * // Define a portable behavior that can work with any service

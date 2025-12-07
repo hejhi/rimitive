@@ -5,9 +5,9 @@ Declarative view primitives for Lattice. Build reactive UIs with an adapter syst
 ## Quick Start
 
 ```typescript
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createDOMView } from '@lattice/view/presets/dom';
 
-const { el, signal, computed, map, match, on, mount } = createDOMSvc();
+const { el, signal, computed, map, match, on, mount } = createDOMView();
 
 const count = signal(0);
 
@@ -141,7 +141,7 @@ const counter =
   };
 
 // Use in view
-const { use, el, computed } = createDOMSvc();
+const { use, el, computed } = createDOMView();
 const useCounter = use(counter);
 
 const c = useCounter(10);
@@ -231,12 +231,12 @@ const canvasAdapter: Adapter<CanvasConfig> = {
 For apps with multiple render targets (DOM + Canvas):
 
 ```typescript
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createSignals } from '@lattice/signals/presets/core';
+import { createDOMView } from '@lattice/view/presets/dom';
 
 // Share signals between adapters
-const signals = createSignalsSvc();
-const dom = createDOMSvc(signals);
+const signals = createSignals();
+const dom = createDOMView(signals);
 const canvas = createCanvasViewSvc(signals);
 
 // Same signal works everywhere
@@ -297,9 +297,9 @@ el('div').ref((element) => {
 For most applications, use the preset—it bundles signals, views, and DOM helpers:
 
 ```typescript
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createDOMView } from '@lattice/view/presets/dom';
 
-const { el, signal, computed, effect, map, match, on, mount } = createDOMSvc();
+const { el, signal, computed, effect, map, match, on, mount } = createDOMView();
 ```
 
 This is the recommended path. Signals and views are wired together automatically.
@@ -309,14 +309,14 @@ This is the recommended path. Signals and views are wired together automatically
 If you need to share signals across multiple render targets (e.g., DOM + Canvas), create signals separately:
 
 ```typescript
-import { createSignalsSvc } from '@lattice/signals/presets/core';
-import { createDOMSvc } from '@lattice/view/presets/dom';
+import { createSignals } from '@lattice/signals/presets/core';
+import { createDOMView } from '@lattice/view/presets/dom';
 
 // Shared signals
-const signals = createSignalsSvc();
+const signals = createSignals();
 
 // DOM-specific views using shared signals
-const dom = createDOMSvc(signals);
+const dom = createDOMView(signals);
 
 // Canvas views could use the same signals instance
 const canvas = createCanvasViewSvc(signals);
@@ -330,7 +330,7 @@ const position = signals.signal({ x: 0, y: 0 });
 Create views for non-DOM targets by implementing the `Adapter` interface:
 
 ```typescript
-import { createViewSvc } from '@lattice/view/presets/core';
+import { createView } from '@lattice/view/presets/core';
 import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
 
 const myAdapter: Adapter<MyConfig> = {
@@ -351,15 +351,15 @@ const myAdapter: Adapter<MyConfig> = {
   },
 };
 
-const svc = createViewSvc(myAdapter, signals);
+const svc = createView(myAdapter, signals);
 ```
 
 ## Import Paths
 
 | Path                         | What You Get      | Use Case        |
 | ---------------------------- | ----------------- | --------------- |
-| `@lattice/view/presets/dom`  | `createDOMSvc()`  | Most users      |
-| `@lattice/view/presets/core` | `createViewSvc()` | Custom adapters |
+| `@lattice/view/presets/dom`  | `createDOMView()` | Most users      |
+| `@lattice/view/presets/core` | `createView()`    | Custom adapters |
 | `@lattice/view`              | `El`, `Map`, etc. | Maximum control |
 
 ## Types

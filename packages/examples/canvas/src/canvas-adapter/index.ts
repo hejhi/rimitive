@@ -17,10 +17,12 @@
  * libraries like Konva or PixiJS.
  */
 
-import { createViewSvc } from '@lattice/view/presets/core';
-import type { RefSpec, Readable, Writable } from '@lattice/view/types';
+import { createView } from '@lattice/view/presets/core';
+import type { RefSpec } from '@lattice/view/types';
 import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
+import { Use } from '@lattice/lattice';
+import { SignalsSvc } from '@lattice/signals';
 
 export { createCanvasAdapter } from './adapter';
 export { createCanvasAddEventListener } from './addEventListener';
@@ -50,35 +52,32 @@ export type {
  *
  * @example
  * ```ts
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * import { createDOMSvc } from '@lattice/view/presets/dom';
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createDOMView } from '@lattice/view/presets/dom';
  * import { createCanvasViewSvc } from './canvas-adapter';
  *
- * const signals = createSignalsSvc();
- * const dom = createDOMSvc(signals);
+ * const signals = createSignals();
+ * const dom = createDOMView(signals);
  * const canvas = createCanvasViewSvc(signals, { clearColor: '#16213e' });
  *
  * export const { signal, computed } = signals;
  * export { dom, canvas };
  * ```
  */
-export const createCanvasViewSvc = <
-  TSignals extends {
-    signal: <T>(initialValue: T) => Writable<T>;
-    computed: <T>(fn: () => T) => Readable<T>;
-    effect: (fn: () => void | (() => void)) => () => void;
-    batch: <T>(fn: () => T) => T;
+export const createCanvasViewSvc = (
+  {
+    signals,
+  }: {
+    signals: Use<SignalsSvc>;
   },
->(
-  signals: TSignals,
-  options: CanvasAdapterOptions = {}
+  options: CanvasAdapterOptions
 ) => {
   const { adapter, hitTest } = createCanvasAdapter(options);
-  const viewSvc = createViewSvc(adapter)();
+  const viewSvc = createView({ adapter, signals })();
 
   const svc = {
     ...viewSvc,
-    on: createCanvasAddEventListener(hitTest, signals.batch),
+    on: createCanvasAddEventListener(hitTest, viewSvc.batch),
   };
 
   return {

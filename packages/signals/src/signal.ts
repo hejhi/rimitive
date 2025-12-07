@@ -107,13 +107,13 @@ export type SignalService = ReturnType<typeof Signal>;
  *
  * **Most users should use the preset instead:**
  * ```ts
- * import { createSignalsSvc } from '@lattice/signals/presets/core';
- * const { signal } = createSignalsSvc();
+ * import { createSignals } from '@lattice/signals/presets/core';
+ * const { signal } = createSignals();
  * ```
  *
  * @example Basic usage (via preset)
  * ```ts
- * const { signal } = createSignalsSvc();
+ * const { signal } = createSignals();
  *
  * const count = signal(0);
  * count();     // read: 0

@@ -3,16 +3,16 @@
  *
  * ## Quick Start
  * ```typescript
- * import { createSignalsSvc } from '@lattice/signals';
+ * import { createSignals } from '@lattice/signals';
  *
- * const { signal, computed, effect } = createSignalsSvc();
+ * const { signal, computed, effect } = createSignals();
  * ```
  *
  * ## Import Guide
  *
  * | Use Case | Import |
  * |----------|--------|
- * | Quick start | `import { createSignalsSvc } from '@lattice/signals'` |
+ * | Quick start | `import { createSignals } from '@lattice/signals'` |
  * | Custom composition | `import { Signal, Computed, deps } from '@lattice/signals/extend'` |
  * | Types only | `import type { Readable, SignalFunction } from '@lattice/signals'` |
  *
@@ -32,7 +32,7 @@
 // Primary API - What most users need
 // =============================================================================
 
-export { createSignalsSvc, deps } from './presets/core';
+export { createSignals, deps } from './presets/core';
 export type {
   SignalsSvc,
   Helpers,

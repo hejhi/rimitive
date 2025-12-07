@@ -11,22 +11,24 @@ import { describe, it, expect } from 'vitest';
 import { createDOMServerAdapter } from './dom-server';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
-import { createViewSvc } from '@lattice/view/presets/core';
+import { createView } from '@lattice/view/presets/core';
 import { renderToString } from '../deps/renderToString';
 import { createSSRContext, runWithSSRContext } from '../ssr-context';
 import type { IslandNodeMeta } from '../types';
+import { createSignals } from '@lattice/signals';
 
 /**
  * Create SSR service for tests - matches the old preset pattern
  * Uses explicit composition to preserve full type inference
  */
 function createTestSSRService() {
-  const renderer = createDOMServerAdapter();
-  const svc = createViewSvc(renderer)();
+  const adapter = createDOMServerAdapter();
+  const signals = createSignals();
+  const svc = createView({ adapter, signals })();
 
   return {
     svc,
-    renderer,
+    adapter,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
   };
 }

@@ -26,7 +26,7 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[createDOMSvc()](../createdomsvc/)
+[createDOMView()](../createdomsvc/)
 
 </td><td>
 
@@ -37,7 +37,7 @@ Returns a flat service with all signals and view primitives, plus DOM-specific h
 </td></tr>
 <tr><td>
 
-[createDOMSvc({ signal, computed, effect, batch, })](../createdomviewsvc/)
+[createDOMView({ signal, computed, effect, batch, })](../createdomviewsvc/)
 
 </td><td>
 
@@ -48,7 +48,7 @@ Use this when you need to share signals between multiple adapters (e.g., DOM + C
 </td></tr>
 <tr><td>
 
-[createViewSvc(adapter, { effect, signal, computed, batch })](../createviewsvc/)
+[createView(adapter, { effect, signal, computed, batch })](../createviewsvc/)
 
 </td><td>
 

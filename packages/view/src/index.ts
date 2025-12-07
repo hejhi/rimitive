@@ -3,17 +3,17 @@
  *
  * ## Quick Start
  * ```typescript
- * import { createDOMSvc } from '@lattice/view';
+ * import { createDOMView } from '@lattice/view';
  *
- * const { el, map, match, signal, computed, mount } = createDOMSvc();
+ * const { el, map, match, signal, computed, mount } = createDOMView();
  * ```
  *
  * ## Import Guide
  *
  * | Use Case | Import |
  * |----------|--------|
- * | DOM apps | `import { createDOMSvc } from '@lattice/view'` |
- * | Custom adapter | `import { createViewSvc } from '@lattice/view'` |
+ * | DOM apps | `import { createDOMView } from '@lattice/view'` |
+ * | Custom adapter | `import { createView } from '@lattice/view'` |
  * | Extend/customize | `import { El, Map, Match } from '@lattice/view/extend'` |
  * | Types only | `import type { RefSpec, NodeRef } from '@lattice/view'` |
  *
@@ -33,8 +33,8 @@
 // Primary API - What most users need
 // =============================================================================
 
-export { createDOMSvc } from './presets/dom';
-export { createViewSvc } from './presets/core';
+export { createDOMView } from './presets/dom';
+export { createView } from './presets/core';
 export type { DOMSvc, DOMViewSvc, DOMAdapterConfig } from './presets/dom';
 export type {
   ViewSvc,

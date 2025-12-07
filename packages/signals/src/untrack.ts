@@ -21,7 +21,7 @@ export type UntrackedOpts = {
  *
  * @example Basic usage
  * ```ts
- * const { signal, effect } = createSignalsSvc();
+ * const { signal, effect } = createSignals();
  * const { untrack } = deps();
  *
  * const a = signal(1);
