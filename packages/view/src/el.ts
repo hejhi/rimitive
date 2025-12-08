@@ -9,7 +9,9 @@ import type {
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './deps/scope';
+import { ScopesModule } from './deps/scope';
 import { createProcessChildren } from './deps/processChildren';
+import { defineModule, type Module } from '@lattice/lattice';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
@@ -325,9 +327,7 @@ export function createElFactory<TConfig extends AdapterConfig>({
     factory.props = (
       propsOrFn:
         | ElementProps<TConfig, Tag>
-        | ((
-            current: ElementProps<TConfig, Tag>
-          ) => ElementProps<TConfig, Tag>)
+        | ((current: ElementProps<TConfig, Tag>) => ElementProps<TConfig, Tag>)
     ): TagFactory<TConfig, Tag> => {
       const newProps =
         typeof propsOrFn === 'function'
@@ -358,3 +358,34 @@ export function createElFactory<TConfig extends AdapterConfig>({
 
   return el;
 }
+
+/**
+ * Create an El module for a given adapter.
+ *
+ * The adapter is configuration, not a module, so this is a factory
+ * that returns a module parameterized by the adapter.
+ *
+ * @example
+ * ```ts
+ * import { compose } from '@lattice/lattice';
+ * import { createElModule } from '@lattice/view/el';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const adapter = createDOMAdapter();
+ * const ElModule = createElModule(adapter);
+ *
+ * const { el, scopes, effect } = compose(ElModule)();
+ * ```
+ */
+export const createElModule = <TConfig extends AdapterConfig>(
+  adapter: Adapter<TConfig>
+): Module<'el', ElFactory<TConfig>, { scopes: CreateScopes }> =>
+  defineModule({
+    name: 'el',
+    dependencies: [ScopesModule],
+    create: ({ scopes }: { scopes: CreateScopes }) =>
+      createElFactory({
+        adapter,
+        ...scopes,
+      }),
+  });

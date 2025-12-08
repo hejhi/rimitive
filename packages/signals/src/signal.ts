@@ -115,7 +115,10 @@ export const SignalModule = defineModule({
   }): SignalFactory => {
     return createSignalFactory({ graphEdges, propagate: scheduler.propagate });
   },
-  instrument(impl: SignalFactory, instr: InstrumentationContext): SignalFactory {
+  instrument(
+    impl: SignalFactory,
+    instr: InstrumentationContext
+  ): SignalFactory {
     return <T>(value: T): SignalFunction<T> => {
       const sig = impl(value);
       instr.register(sig, 'signal');

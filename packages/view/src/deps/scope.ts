@@ -1,4 +1,6 @@
 import type { RenderScope } from '../types';
+import { defineModule } from '@lattice/lattice';
+import { EffectModule } from '@lattice/signals/effect';
 
 // Status constants for RenderScope disposal tracking
 // Note: RenderScope is not a reactive node - these are just for lifecycle management
@@ -300,3 +302,13 @@ export function createScopes({
     getElementScope,
   };
 }
+
+/**
+ * Scopes module - provides element lifecycle and cleanup management.
+ * Depends on EffectModule for the underlying reactive effect.
+ */
+export const ScopesModule = defineModule({
+  name: 'scopes',
+  dependencies: [EffectModule],
+  create: ({ effect }) => createScopes({ baseEffect: effect }),
+});

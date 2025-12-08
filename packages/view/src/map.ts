@@ -12,9 +12,16 @@ import type {
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './deps/scope';
+import { ScopesModule } from './deps/scope';
 import { createReconciler, ReconcileNode } from './deps/reconcile';
 import { createNodeHelpers } from './deps/node-deps';
 import { removeFromFragment } from './deps/fragment-boundaries';
+import { defineModule, type Module } from '@lattice/lattice';
+import { SignalModule, type SignalFactory } from '@lattice/signals/signal';
+import {
+  ComputedModule,
+  type ComputedFactory,
+} from '@lattice/signals/computed';
 
 /**
  * Map factory type
@@ -90,7 +97,9 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<ItemSignal<T>>;
  * const mapFactory: MapService<DOMAdapterConfig> = createMapFactory<DOMAdapterConfig>(opts);
  * ```
  */
-export type MapService<TConfig extends AdapterConfig> = MapFactory<TConfig['baseElement']>;
+export type MapService<TConfig extends AdapterConfig> = MapFactory<
+  TConfig['baseElement']
+>;
 
 /**
  * Create a map factory with the given dependencies.
@@ -141,8 +150,7 @@ export function createMapFactory<TConfig extends AdapterConfig>({
     refSpec.status = STATUS_REF_SPEC;
     refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
       const fragRef = createFragmentRef(svc);
-      if (!extensions || Object.keys(extensions).length === 0)
-        return fragRef;
+      if (!extensions || Object.keys(extensions).length === 0) return fragRef;
 
       return {
         ...fragRef,
@@ -306,8 +314,7 @@ export function createMapFactory<TConfig extends AdapterConfig>({
           // Create effect within parent's scope - auto-tracked!
           const effectDispose = scopedEffect(() => {
             // Get items - handle both array and function
-            const itemsArray =
-              typeof items === 'function' ? items() : items;
+            const itemsArray = typeof items === 'function' ? items() : items;
 
             // Validate: require key function when mapping over objects
             if (!keyFn && itemsArray.length > 0) {
@@ -332,7 +339,7 @@ export function createMapFactory<TConfig extends AdapterConfig>({
             );
           });
 
-            // Return cleanup function
+          // Return cleanup function
           return () => {
             effectDispose();
             dispose();
@@ -345,3 +352,45 @@ export function createMapFactory<TConfig extends AdapterConfig>({
 
   return map;
 }
+
+/**
+ * Create a Map module for a given adapter.
+ *
+ * @example
+ * ```ts
+ * import { compose } from '@lattice/lattice';
+ * import { createMapModule } from '@lattice/view/map';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const adapter = createDOMAdapter();
+ * const MapModule = createMapModule(adapter);
+ *
+ * const { map, signal, computed } = compose(MapModule)();
+ * ```
+ */
+export const createMapModule = <TConfig extends AdapterConfig>(
+  adapter: Adapter<TConfig>
+): Module<
+  'map',
+  MapFactory<TConfig['baseElement']>,
+  { signal: SignalFactory; computed: ComputedFactory; scopes: CreateScopes }
+> =>
+  defineModule({
+    name: 'map',
+    dependencies: [SignalModule, ComputedModule, ScopesModule],
+    create: ({
+      signal,
+      computed,
+      scopes,
+    }: {
+      signal: SignalFactory;
+      computed: ComputedFactory;
+      scopes: CreateScopes;
+    }) =>
+      createMapFactory({
+        adapter,
+        signal,
+        computed,
+        ...scopes, // flatten all of it in
+      }),
+  });

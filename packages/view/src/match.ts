@@ -2,8 +2,10 @@ import type { RefSpec, Writable, FragmentRef, ElementRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './deps/scope';
+import { ScopesModule } from './deps/scope';
 import { createNodeHelpers } from './deps/node-deps';
 import { setFragmentChild } from './deps/fragment-boundaries';
+import { defineModule, type Module } from '@lattice/lattice';
 
 /**
  * Options passed to Match factory
@@ -223,3 +225,35 @@ export function createMatchFactory<TConfig extends AdapterConfig>({
 
   return match;
 }
+
+/**
+ * Create a Match module for a given adapter.
+ *
+ * @example
+ * ```ts
+ * import { compose } from '@lattice/lattice';
+ * import { createMatchModule } from '@lattice/view/match';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const adapter = createDOMAdapter();
+ * const MatchModule = createMatchModule(adapter);
+ *
+ * const { match } = compose(MatchModule)();
+ * ```
+ */
+export const createMatchModule = <TConfig extends AdapterConfig>(
+  adapter: Adapter<TConfig>
+): Module<
+  'match',
+  MatchFactory<TConfig['baseElement']>,
+  { scopes: CreateScopes }
+> =>
+  defineModule({
+    name: 'match',
+    dependencies: [ScopesModule],
+    create: ({ scopes }: { scopes: CreateScopes }) =>
+      createMatchFactory({
+        adapter,
+        ...scopes,
+      }),
+  });

@@ -30,8 +30,10 @@ import type { RefSpec, FragmentRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
 import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './deps/scope';
+import { ScopesModule } from './deps/scope';
 import { createNodeHelpers } from './deps/node-deps';
 import { setFragmentChild } from './deps/fragment-boundaries';
+import { defineModule, type Module } from '@lattice/lattice';
 
 /**
  * Portal target - where content should be rendered
@@ -94,8 +96,9 @@ export type PortalFactory<TBaseElement> = <TElement extends TBaseElement>(
  * })();
  * ```
  */
-export type PortalService<TConfig extends AdapterConfig> =
-  PortalFactory<TConfig['baseElement']>;
+export type PortalService<TConfig extends AdapterConfig> = PortalFactory<
+  TConfig['baseElement']
+>;
 
 /**
  * Create a portal factory with the given dependencies.
@@ -215,13 +218,7 @@ export function createPortalFactory<TConfig extends AdapterConfig>({
 
                 const childRef = child.create(svc);
                 setFragmentChild(fragment, childRef);
-                insertNodeBefore(
-                  svc,
-                  targetElement,
-                  childRef,
-                  undefined,
-                  null
-                );
+                insertNodeBefore(svc, targetElement, childRef, undefined, null);
 
                 return () => {
                   setFragmentChild(fragment, null);
@@ -244,13 +241,7 @@ export function createPortalFactory<TConfig extends AdapterConfig>({
                 // Create and insert child
                 const childRef = child.create(svc);
                 setFragmentChild(fragment, childRef);
-                insertNodeBefore(
-                  svc,
-                  targetElement,
-                  childRef,
-                  undefined,
-                  null
-                );
+                insertNodeBefore(svc, targetElement, childRef, undefined, null);
 
                 // Cleanup when target changes or portal disposes
                 return () => {
@@ -268,3 +259,36 @@ export function createPortalFactory<TConfig extends AdapterConfig>({
     return portal;
   };
 }
+
+/**
+ * Create a Portal module for a given adapter.
+ *
+ * @example
+ * ```ts
+ * import { compose } from '@lattice/lattice';
+ * import { createPortalModule } from '@lattice/view/portal';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const adapter = createDOMAdapter();
+ * const PortalModule = createPortalModule(adapter);
+ *
+ * const { portal } = compose(PortalModule)();
+ * ```
+ */
+export const createPortalModule = <TConfig extends AdapterConfig>(
+  adapter: Adapter<TConfig>,
+  props?: PortalProps<TConfig['baseElement']>
+): Module<
+  'portal',
+  PortalFactory<TConfig['baseElement']>,
+  { scopes: CreateScopes }
+> =>
+  defineModule({
+    name: 'portal',
+    dependencies: [ScopesModule],
+    create: ({ scopes }: { scopes: CreateScopes }) =>
+      createPortalFactory({
+        adapter,
+        ...scopes,
+      })(props),
+  });
