@@ -18,12 +18,13 @@ import { createGraphTraversal } from './deps/graph-traversal';
 export function createDefaultContext() {
   const graphEdges = createGraphEdges();
   const { withVisitor } = createGraphTraversal();
-  const _scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const { withPropagate, ...scheduler } = _scheduler;
+  const scheduler = createScheduler({
+    detachAll: graphEdges.detachAll,
+    withVisitor,
+  });
   const pull = createPullPropagator({ track: graphEdges.track });
 
   return {
-    propagate: withPropagate(withVisitor),
     ...graphEdges,
     ...scheduler,
     ...pull,
@@ -33,12 +34,12 @@ export function createDefaultContext() {
 // Create a test instance with a stable context
 export function createTestInstance() {
   const opts = createDefaultContext();
-  const { consumer, propagate } = opts;
+  const { consumer } = opts;
 
   // Create factories with deps
   const signal = createSignalFactory({
     graphEdges: opts,
-    propagate,
+    propagate: opts.propagate,
   });
 
   const computed = createComputedFactory({

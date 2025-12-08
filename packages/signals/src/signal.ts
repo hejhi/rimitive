@@ -3,6 +3,7 @@ import type { InstrumentationContext } from '@lattice/lattice';
 import { defineModule } from '@lattice/lattice';
 import { CONSTANTS } from './constants';
 import { GraphEdgesModule, type GraphEdges } from './deps/graph-edges';
+import { SchedulerModule, type Scheduler } from './deps/scheduler';
 
 const { CLEAN, PRODUCER, DIRTY } = CONSTANTS;
 
@@ -100,21 +101,19 @@ export function createSignalFactory(deps: SignalDeps): SignalFactory {
  *
  * Dependencies:
  * - graphEdges: Provides consumer tracking and dependency tracking
- * - propagate: Propagation function (from PropagateModule)
+ * - scheduler: Provides propagate function for notifying subscribers
  */
 export const SignalModule = defineModule({
   name: 'signal',
-  dependencies: [GraphEdgesModule],
-  create: ({ graphEdges }: { graphEdges: GraphEdges }): SignalFactory => {
-    // Note: propagate needs to be injected from PropagateModule
-    // For now, throw if used without proper wiring
-    const propagate = (): void => {
-      throw new Error(
-        'Signal.propagate not wired. Use compose() with PropagateModule.'
-      );
-    };
-
-    return createSignalFactory({ graphEdges, propagate });
+  dependencies: [GraphEdgesModule, SchedulerModule],
+  create: ({
+    graphEdges,
+    scheduler,
+  }: {
+    graphEdges: GraphEdges;
+    scheduler: Scheduler;
+  }): SignalFactory => {
+    return createSignalFactory({ graphEdges, propagate: scheduler.propagate });
   },
   instrument(impl: SignalFactory, instr: InstrumentationContext): SignalFactory {
     return <T>(value: T): SignalFunction<T> => {

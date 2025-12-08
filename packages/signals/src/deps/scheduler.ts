@@ -11,6 +11,7 @@ import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { defineModule } from '@lattice/lattice';
 import { GraphEdgesModule } from './graph-edges';
+import { GraphTraversalModule } from './graph-traversal';
 
 const { PENDING, DIRTY, CLEAN, DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } =
   CONSTANTS;
@@ -24,12 +25,8 @@ const SCHEDULED_DISPOSED = CONSUMER | SCHEDULED | DISPOSED;
 export type { Dependency, ScheduledNode, ConsumerNode } from '../types';
 
 export type Scheduler = {
-  /** Propagate updates through subscriber graph (includes both computeds and effects) */
-  withPropagate: (
-    visitorFn: (
-      v: (dep: Dependency) => void
-    ) => (subscribers: Dependency) => void
-  ) => (subscribers: Dependency) => void;
+  /** Propagate updates through subscriber graph and flush scheduled effects */
+  propagate: (subscribers: Dependency) => void;
   /** Dispose a scheduled node */
   dispose: <T extends ScheduledNode>(
     node: T,
@@ -45,8 +42,10 @@ export type Scheduler = {
 
 export function createScheduler({
   detachAll,
+  withVisitor,
 }: {
   detachAll: (dep: Dependency) => void;
+  withVisitor: (visit: (dep: Dependency) => void) => (subscribers: Dependency) => void;
 }): Scheduler {
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;
@@ -121,18 +120,12 @@ export function createScheduler({
   };
 
   // Propagate through subscribers (both computeds and effects)
-  const withPropagate = (
-    visit: (
-      queueDep: (dep: Dependency) => void
-    ) => (subscribers: Dependency) => void
-  ) => {
-    const traverse = visit(queueIfScheduled);
+  const traverse = withVisitor(queueIfScheduled);
 
-    return (subscribers: Dependency): void => {
-      traverse(subscribers);
-      if (queueHead === undefined) return;
-      flush();
-    };
+  const propagate = (subscribers: Dependency): void => {
+    traverse(subscribers);
+    if (queueHead === undefined) return;
+    flush();
   };
 
   const startBatch = (): number => batchDepth++;
@@ -168,7 +161,7 @@ export function createScheduler({
   };
 
   return {
-    withPropagate,
+    propagate,
     dispose,
     startBatch,
     endBatch,
@@ -178,6 +171,10 @@ export function createScheduler({
 
 export const SchedulerModule = defineModule({
   name: 'scheduler',
-  dependencies: [GraphEdgesModule],
-  create: ({ graphEdges }) => createScheduler({ detachAll: graphEdges.detachAll }),
+  dependencies: [GraphEdgesModule, GraphTraversalModule],
+  create: ({ graphEdges, graphTraversal }) =>
+    createScheduler({
+      detachAll: graphEdges.detachAll,
+      withVisitor: graphTraversal.withVisitor,
+    }),
 });

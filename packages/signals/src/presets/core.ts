@@ -54,7 +54,6 @@ import { createSignalFactory, type SignalFactory } from '../signal';
 import { createComputedFactory, type ComputedFactory } from '../computed';
 import { createEffectFactory, type EffectFactory } from '../effect';
 import { createSubscribeFactory, type SubscribeFunction } from '../subscribe';
-import type { Dependency } from '../types';
 import type { Use } from '@lattice/lattice';
 
 /**
@@ -67,11 +66,10 @@ import type { Use } from '@lattice/lattice';
  */
 export type Helpers = {
   untrack: <T>(fn: () => T) => T;
-  propagate: (subscribers: Dependency) => void;
 } & GraphEdges &
   GraphTraversal &
   PullPropagator &
-  Omit<Scheduler, 'withPropagate'>;
+  Scheduler;
 
 // Re-export user-facing types
 export type { SignalFactory, SignalFunction } from '../signal';
@@ -93,8 +91,9 @@ export function deps(): Helpers {
   const untrack = createUntracked({ consumer: edges.consumer });
   const traversal = createGraphTraversal();
   const pull = createPullPropagator({ track: edges.track });
-  const { withPropagate, ...scheduler } = createScheduler({
+  const scheduler = createScheduler({
     detachAll: edges.detachAll,
+    withVisitor: traversal.withVisitor,
   });
 
   return {
@@ -103,7 +102,6 @@ export function deps(): Helpers {
     ...traversal,
     ...pull,
     ...scheduler,
-    propagate: withPropagate(traversal.withVisitor),
   };
 }
 
