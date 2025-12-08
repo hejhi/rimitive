@@ -222,6 +222,8 @@ export type SignalsSvc = Svc<{
 export function createSignals(): Use<SignalsSvc> {
   return compose(
     {
+      // TODO: add a .mapDependencies() method that can map a dependency namespace to a
+      // services Dependencies to avoid namespace collisions
       signal: Signal(),
       computed: Computed(),
       effect: Effect(),

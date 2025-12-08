@@ -135,7 +135,11 @@ function isFactoriesObject(
 export function compose<
   T extends Record<string, DefinedService>,
   TDeps extends ExtractDeps<T>,
->(factories: T, deps: TDeps, options?: CreateContextOptions): Use<Svc<T>>;
+>(
+  factories: T | DefinedService,
+  deps: TDeps,
+  options?: CreateContextOptions
+): Use<Svc<T>>;
 
 // Overload 2: ServiceDefinitions (variadic)
 export function compose<
