@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { El } from './el';
+import { createElFactory } from './el';
 import {
   createMockAdapter,
   createSignal,
@@ -50,12 +50,12 @@ describe('el primitive - lazy scope creation', () => {
   it('creates scope for fully static elements (always creates scopes)', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect,
       adapter,
       createElementScope,
       onCleanup,
-    }).impl;
+    });
 
     // Static element - no reactive content, no lifecycle callbacks
     // Note: scopes only register if they have disposables (performance optimization)
@@ -74,12 +74,12 @@ describe('el primitive - lazy scope creation', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect,
       adapter,
       createElementScope,
       onCleanup,
-    }).impl;
+    });
 
     // Element with reactive prop
     const ref = el('div').props({ title: text })();
@@ -98,12 +98,12 @@ describe('el primitive - lazy scope creation', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect,
       adapter,
       createElementScope,
       onCleanup,
-    }).impl;
+    });
 
     // Element with reactive text child
     const ref = el('div')(text);
@@ -117,12 +117,12 @@ describe('el primitive - lazy scope creation', () => {
   it('creates scope for elements with lifecycle cleanup via .ref()', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect,
       adapter,
       createElementScope,
       onCleanup,
-    }).impl;
+    });
 
     // Static element with lifecycle callback that returns cleanup
     const ref = el('div')
@@ -139,12 +139,12 @@ describe('el primitive - lazy scope creation', () => {
   it('does not register scope when lifecycle callback returns undefined (no disposables)', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect,
       adapter,
       createElementScope,
       onCleanup,
-    }).impl;
+    });
 
     // Static element with lifecycle callback that returns nothing
     const ref = el('div')
@@ -161,12 +161,12 @@ describe('el primitive - lazy scope creation', () => {
   it('nested static elements do not register scopes (no disposables)', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect,
       adapter,
       createElementScope,
       onCleanup,
-    }).impl;
+    });
 
     // Nested static elements
     const child = el('span')('Child') as unknown as RefSpec<MockElement>;

@@ -11,9 +11,9 @@ import { STATUS_REF_SPEC } from '../types';
  * Instrument a map factory to emit events
  */
 export function instrumentMap<TBaseElement>(
-  impl: MapFactory<TBaseElement>['impl'],
+  impl: MapFactory<TBaseElement>,
   instrumentation: InstrumentationContext
-): MapFactory<TBaseElement>['impl'] {
+): MapFactory<TBaseElement> {
   function instrumentedMap<T, TEl>(
     items: T[] | Reactive<T[]>,
     keyFnOrRender:

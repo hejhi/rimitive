@@ -6,6 +6,7 @@ import type {
   Dependency,
 } from '../types';
 import { CONSTANTS } from '../constants';
+import { defineModule } from '@lattice/lattice';
 
 const { TYPE_MASK, CLEAN } = CONSTANTS;
 
@@ -172,3 +173,12 @@ export function createGraphEdges(): GraphEdges {
     track,
   };
 }
+
+/**
+ * GraphEdges module - provides the core reactive graph infrastructure.
+ * No dependencies - this is a foundational module.
+ */
+export const GraphEdgesModule = defineModule({
+  name: 'graphEdges',
+  create: createGraphEdges,
+});

@@ -1,17 +1,18 @@
-import { Signal } from '@lattice/signals/signal';
+import { createSignalFactory } from '@lattice/signals/signal';
 import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
-import { compose as createLatticeContext } from '@lattice/lattice';
+import { createScheduler } from '@lattice/signals/deps/scheduler';
 
 export const createSvc = () => {
-  const { trackDependency, consumer } = createGraphEdges();
-  const { propagate } = createGraphTraversal();
+  const graphEdges = createGraphEdges();
+  const { withVisitor } = createGraphTraversal();
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const propagate = scheduler.withPropagate(withVisitor);
 
-  const opts = {
-    consumer,
-    trackDependency,
+  const signal = createSignalFactory({
+    graphEdges,
     propagate,
-  };
+  });
 
-  return createLatticeContext(Signal().create(opts))();
+  return { signal };
 };

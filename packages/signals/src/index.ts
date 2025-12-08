@@ -13,7 +13,7 @@
  * | Use Case | Import |
  * |----------|--------|
  * | Quick start | `import { createSignals } from '@lattice/signals'` |
- * | Custom composition | `import { Signal, Computed, deps } from '@lattice/signals/extend'` |
+ * | Custom composition | `import { SignalModule, ComputedModule } from '@lattice/signals/extend'` |
  * | Types only | `import type { Readable, SignalFunction } from '@lattice/signals'` |
  *
  * ### Without a bundler
@@ -23,8 +23,8 @@
  * triggers a separate network request. For bundler-free usage, import directly:
  *
  * ```typescript
- * import { Signal } from '@lattice/signals/signal';
- * import { Computed } from '@lattice/signals/computed';
+ * import { SignalModule } from '@lattice/signals/signal';
+ * import { ComputedModule } from '@lattice/signals/computed';
  * ```
  */
 
@@ -36,22 +36,11 @@ export { createSignals, deps } from './presets/core';
 export type {
   SignalsSvc,
   Helpers,
-  // Service types
-  SignalService,
+  // Factory types
   SignalFactory,
-  SignalOptions,
-  ComputedService,
   ComputedFactory,
-  ComputedOptions,
-  EffectService,
   EffectFactory,
-  EffectOptions,
-  BatchService,
   BatchFactory,
-  BatchOptions,
-  SubscribeService,
-  SubscribeFactory,
-  SubscribeOptions,
   SubscribeFunction,
   SubscribeCallback,
   UnsubscribeFunction,

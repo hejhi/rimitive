@@ -7,14 +7,14 @@ import {
   type MockText,
   getTextContent,
 } from '../../view/src/test-utils';
-import { El } from '@lattice/view/el';
+import { createElFactory } from '@lattice/view/el';
 import type { ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT } from '@lattice/view/types';
 
 describe('Link component - basic rendering', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
@@ -28,7 +28,7 @@ describe('Link component - basic rendering', () => {
     };
 
     const svc = {
-      el: el.impl,
+      el,
       navigate,
     };
 
@@ -96,8 +96,8 @@ describe('Link component - basic rendering', () => {
     const { Link, el, adapter, svc } = setup();
 
     const linkSpec = Link({ href: '/home' })(
-      el.impl('span')('Go to '),
-      el.impl('strong')('Home')
+      el('span')('Go to '),
+      el('strong')('Home')
     );
 
     const parent = mountElement(linkSpec, svc, adapter);
@@ -109,7 +109,7 @@ describe('Link component - basic rendering', () => {
 describe('Link component - click handling', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
@@ -125,7 +125,7 @@ describe('Link component - click handling', () => {
     };
 
     const svc = {
-      el: el.impl,
+      el,
       navigate,
     };
 
@@ -344,7 +344,7 @@ describe('Link component - click handling', () => {
 describe('Link component - lifecycle callbacks', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
@@ -358,7 +358,7 @@ describe('Link component - lifecycle callbacks', () => {
     };
 
     const svc = {
-      el: el.impl,
+      el,
       navigate,
     };
 

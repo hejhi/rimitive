@@ -20,4 +20,4 @@ export type {
   Writable,
 } from './signals';
 
-export type { ServiceDefinition, LatticeContext } from '@lattice/lattice';
+export type { Module, ComposedContext } from '@lattice/lattice';

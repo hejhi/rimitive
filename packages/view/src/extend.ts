@@ -21,10 +21,10 @@
 // Primitive Factories - For custom composition
 // =============================================================================
 
-export { El } from './el';
-export { Map } from './map';
-export { Match } from './match';
-export { Portal } from './portal';
+export { createElFactory } from './el';
+export { createMapFactory } from './map';
+export { createMatchFactory } from './match';
+export { createPortalFactory } from './portal';
 
 // =============================================================================
 // View Service Factories
@@ -56,7 +56,6 @@ export { createUse } from './deps/use';
 export type {
   ElFactory,
   ElOpts,
-  ElProps,
   TagFactory,
   ElementProps,
 } from './el';

@@ -14,21 +14,22 @@ import {
   getTextContent,
   MockAdapterConfig,
 } from './test-utils';
-import { Map } from './map';
-import { El } from './el';
+import { createMapFactory } from './map';
+import { createElFactory } from './el';
+import type { Reactive } from './types';
 
 describe('map() - User-facing behavior', () => {
   // Helper to set up test environment
   function setup() {
     const env = createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const mapFactory = Map<MockAdapterConfig>().create({
+    const map = createMapFactory<MockAdapterConfig>({
       signal: env.signal,
       computed: env.computed,
       scopedEffect: env.scopedEffect,
@@ -37,7 +38,7 @@ describe('map() - User-facing behavior', () => {
       getElementScope: env.getElementScope,
     });
 
-    return { ...env, el, map: mapFactory.impl };
+    return { ...env, el, map };
   }
 
   describe('Initial rendering', () => {
@@ -50,11 +51,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Cherry' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -71,11 +72,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -88,11 +89,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'Only' }]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -111,11 +112,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -137,11 +138,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -165,11 +166,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -191,11 +192,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([{ id: 1, name: 'First' }]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -222,11 +223,11 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal<Array<{ id: number; name: string }>>([]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -255,11 +256,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -283,11 +284,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -311,11 +312,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -342,11 +343,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'Fifth' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -370,11 +371,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Second' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -398,11 +399,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -426,11 +427,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -457,11 +458,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -489,11 +490,11 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -521,11 +522,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -555,11 +556,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -590,11 +591,11 @@ describe('map() - User-facing behavior', () => {
         { id: 6, name: 'F' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -634,11 +635,11 @@ describe('map() - User-facing behavior', () => {
         { id: 7, name: 'G' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -680,11 +681,11 @@ describe('map() - User-facing behavior', () => {
         { id: 4, name: 'D' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -716,11 +717,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -747,11 +748,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -786,11 +787,11 @@ describe('map() - User-facing behavior', () => {
         }))
       );
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -813,11 +814,11 @@ describe('map() - User-facing behavior', () => {
         Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `Item ${i}` }))
       );
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -843,14 +844,14 @@ describe('map() - User-facing behavior', () => {
       type Mode = 'loading' | 'error' | 'success';
       const mode = signal<Mode>('loading');
 
-      const view = el.impl('div')(
+      const view = el('div')(
         map(
           () => [mode()],
-          (modeSignal) => {
-            if (modeSignal() === 'loading') return el.impl('div')('Loading...');
+          (modeSignal: Reactive<Mode>) => {
+            if (modeSignal() === 'loading') return el('div')('Loading...');
             if (modeSignal() === 'error')
-              return el.impl('div')('Error occurred');
-            return el.impl('div')('Success!');
+              return el('div')('Error occurred');
+            return el('div')('Success!');
           }
         )
       );
@@ -886,11 +887,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'Third' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -923,11 +924,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -958,11 +959,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -995,11 +996,11 @@ describe('map() - User-facing behavior', () => {
         { id: 3, name: 'C' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -1031,11 +1032,11 @@ describe('map() - User-facing behavior', () => {
         { id: 5, name: 'E' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) => el.impl('li')(itemSignal().name)
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('li')(itemSignal().name)
         )
       );
 
@@ -1068,12 +1069,12 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'B' },
       ]);
 
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id, // Key function
-          (itemSignal) =>
-            el.impl('li').ref((element) => {
+          (item: { id: number; name: string }) => item.id, // Key function
+          (itemSignal: Reactive<{ id: number; name: string }>) =>
+            el('li').ref((element: MockElement) => {
               // Simulate attaching custom state during lifecycle
               element.__customState = `state-${itemSignal().id}`;
             })(itemSignal().name)
@@ -1106,16 +1107,16 @@ describe('map() - User-facing behavior', () => {
 
       // Nested map: outer creates div, inner creates span
       // Signal passed to inner element (not called) for reactivity
-      const view = el.impl('div')(
+      const view = el('div')(
         map(
           () => [{ id: 1 }],
-          (item) => item.id,
+          (item: { id: number }) => item.id,
           () =>
-            el.impl('div')(
+            el('div')(
               map(
                 () => [{ id: 1 }],
-                (item) => item.id,
-                () => el.impl('span')(displayValue)
+                (item: { id: number }) => item.id,
+                () => el('span')(displayValue)
               )
             )
         )
@@ -1141,21 +1142,21 @@ describe('map() - User-facing behavior', () => {
       const value = signal('initial');
 
       // Triple nested map to test deep nesting
-      const view = el.impl('div')(
+      const view = el('div')(
         map(
           () => [{ id: 1 }],
-          (item) => item.id,
+          (item: { id: number }) => item.id,
           () =>
-            el.impl('section')(
+            el('section')(
               map(
                 () => [{ id: 1 }],
-                (item) => item.id,
+                (item: { id: number }) => item.id,
                 () =>
-                  el.impl('article')(
+                  el('article')(
                     map(
                       () => [{ id: 1 }],
-                      (item) => item.id,
-                      () => el.impl('span')(value)
+                      (item: { id: number }) => item.id,
+                      () => el('span')(value)
                     )
                   )
               )
@@ -1186,16 +1187,16 @@ describe('map() - User-facing behavior', () => {
       let renderCount = 0;
 
       // Create list where render() accidentally reads outerState
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id,
-          (itemSignal) => {
+          (item: { id: number; name: string }) => item.id,
+          (itemSignal: Reactive<{ id: number; name: string }>) => {
             renderCount++;
             // This read should NOT become a dependency of map's effect
             // because render() is called untracked
             outerState(); // Read but don't track
-            return el.impl('li')(itemSignal().name);
+            return el('li')(itemSignal().name);
           }
         )
       );
@@ -1224,13 +1225,13 @@ describe('map() - User-facing behavior', () => {
       let renderCount = 0;
 
       // Create list where lifecycle callback reads outerState
-      const list = el.impl('ul')(
+      const list = el('ul')(
         map(
           items,
-          (item) => item.id,
-          (itemSignal) => {
+          (item: { id: number; name: string }) => item.id,
+          (itemSignal: Reactive<{ id: number; name: string }>) => {
             renderCount++;
-            return el.impl('li').ref(
+            return el('li').ref(
               // Lifecycle callback reads a signal
               () => {
                 lifecycleCallCount++;
@@ -1273,8 +1274,8 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Item 2' },
       ]);
 
-      const container = el.impl('div')(
-        map(items, (itemSignal) => el.impl('div')(`Item ${itemSignal().name}`))
+      const container = el('div')(
+        map(items, (itemSignal: Reactive<{ id: number; name: string }>) => el('div')(`Item ${itemSignal().name}`))
       );
 
       // Should throw when trying to create and attach (which runs the effect)
@@ -1288,8 +1289,8 @@ describe('map() - User-facing behavior', () => {
 
       const items = signal([1, 2, 3]);
 
-      const container = el.impl('div')(
-        map(items, (itemSignal) => el.impl('div')(`Item ${itemSignal()}`))
+      const container = el('div')(
+        map(items, (itemSignal: Reactive<number>) => el('div')(`Item ${itemSignal()}`))
       );
 
       // Should NOT throw - primitives are valid keys
@@ -1304,11 +1305,11 @@ describe('map() - User-facing behavior', () => {
         { id: 2, name: 'Item 2' },
       ]);
 
-      const container = el.impl('div')(
+      const container = el('div')(
         map(
           items,
-          (item) => item.id,
-          (itemSignal) => el.impl('div')(`Item ${itemSignal().name}`)
+          (item: { id: number; name: string }) => item.id,
+          (itemSignal: Reactive<{ id: number; name: string }>) => el('div')(`Item ${itemSignal().name}`)
         )
       );
 

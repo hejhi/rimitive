@@ -1,6 +1,7 @@
 import type { Dependency, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
-import { GraphEdges } from './graph-edges';
+import { GraphEdges, GraphEdgesModule } from './graph-edges';
+import { defineModule } from '@lattice/lattice';
 
 // Re-export types for proper type inference
 export type { DerivedNode } from '../types';
@@ -166,3 +167,13 @@ export function createPullPropagator({
 
   return { pullUpdates, shallowPropagate };
 }
+
+/**
+ * PullPropagator module - provides pull-based reactivity propagation.
+ * Depends on GraphEdges for the track function.
+ */
+export const PullPropagatorModule = defineModule({
+  name: 'pullPropagator',
+  dependencies: [GraphEdgesModule],
+  create: ({ graphEdges }) => createPullPropagator({ track: graphEdges.track }),
+});

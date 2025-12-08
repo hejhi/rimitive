@@ -11,8 +11,6 @@ import { STATUS_ROUTE_SPEC } from './types';
 import { composePath, matchPath, matchPathPrefix } from './deps/matching';
 import type { RouteTree, RouteNode } from './defineRoutes';
 
-type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
-
 /**
  * Standalone connect function - doesn't require a router instance
  *
@@ -52,8 +50,8 @@ export function connect<
  * View service that the router depends on
  */
 export type ViewSvc<TConfig extends AdapterConfig> = {
-  el: ElMethod<TConfig>;
-  match: MatchFactory<TConfig['baseElement']>['impl'];
+  el: ElFactory<TConfig>;
+  match: MatchFactory<TConfig['baseElement']>;
   signal: <T>(value: T) => Writable<T>;
   computed: <T>(fn: () => T) => Readable<T>;
 };

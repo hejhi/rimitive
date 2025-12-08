@@ -2,15 +2,13 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { SignalFunction } from './signal';
-// Effect now returns () => void directly
 import type { ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
-import { Signal } from './signal';
-import { Subscribe, SubscribeCallback } from './subscribe';
-import { Computed } from './computed';
-import { Effect } from './effect';
-import { Batch } from './batch';
-import { compose as createLattice } from '@lattice/lattice';
+import type { SubscribeCallback } from './subscribe';
+import { createSignalFactory } from './signal';
+import { createComputedFactory } from './computed';
+import { createEffectFactory } from './effect';
+import { createSubscribeFactory } from './subscribe';
 import { createGraphEdges } from './deps/graph-edges';
 import { createPullPropagator } from './deps/pull-propagator';
 import { createScheduler } from './deps/scheduler';
@@ -35,23 +33,41 @@ export function createDefaultContext() {
 // Create a test instance with a stable context
 export function createTestInstance() {
   const opts = createDefaultContext();
-  const { consumer, propagate, startBatch, endBatch } = opts;
+  const { consumer, propagate } = opts;
 
-  // Create extensions
-  const signalExt = Signal().create({ ...opts, propagate });
-  const computedExt = Computed().create(opts);
-  const effectExt = Effect().create(opts);
-  const batchExt = Batch().create({ ...opts, startBatch, endBatch });
-  const subscribeExt = Subscribe().create(opts);
+  // Create factories with deps
+  const signal = createSignalFactory({
+    graphEdges: opts,
+    propagate,
+  });
 
-  const use = createLattice(
-    signalExt,
-    computedExt,
-    effectExt,
-    batchExt,
-    subscribeExt
-  );
-  const svc = use();
+  const computed = createComputedFactory({
+    consumer: opts.consumer,
+    trackDependency: opts.trackDependency,
+    pullUpdates: opts.pullUpdates,
+    track: opts.track,
+    shallowPropagate: opts.shallowPropagate,
+  });
+
+  const effect = createEffectFactory({
+    track: opts.track,
+    dispose: opts.dispose,
+  });
+
+  const subscribe = createSubscribeFactory({
+    track: opts.track,
+    dispose: opts.dispose,
+  });
+
+  // Batch function
+  function batch<T>(fn: () => T): T {
+    opts.startBatch();
+    try {
+      return fn();
+    } finally {
+      opts.endBatch();
+    }
+  }
 
   // Reset function for test cleanup
   const resetGlobalState = () => {
@@ -60,11 +76,11 @@ export function createTestInstance() {
   };
 
   return {
-    signal: svc.signal,
-    computed: svc.computed,
-    effect: svc.effect,
-    batch: svc.batch,
-    subscribe: svc.subscribe,
+    signal,
+    computed,
+    effect,
+    batch,
+    subscribe,
 
     // Context access for testing
     setCurrentConsumer: (consumerNode: ConsumerNode | null) => {

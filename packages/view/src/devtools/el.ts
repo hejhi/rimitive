@@ -11,9 +11,9 @@ import type { AdapterConfig } from '../adapter';
  * Instrument an el factory to emit events
  */
 export function instrumentEl<TConfig extends AdapterConfig>(
-  impl: ElFactory<TConfig>['impl'],
+  impl: ElFactory<TConfig>,
   instrumentation: InstrumentationContext
-): ElFactory<TConfig>['impl'] {
+): ElFactory<TConfig> {
   // Static element instrumentation matching ElFactory signature
   function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
     tag: Tag

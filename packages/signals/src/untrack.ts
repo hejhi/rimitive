@@ -2,7 +2,8 @@
  * Untracked execution - temporarily disable reactive tracking
  */
 
-import type { Consumer } from './deps/graph-edges';
+import { defineModule } from '@lattice/lattice';
+import { GraphEdgesModule, type Consumer } from './deps/graph-edges';
 
 /**
  * Options for creating the untrack helper.
@@ -100,3 +101,9 @@ export function createUntracked(opts: UntrackedOpts) {
     }
   };
 }
+
+export const UntrackModule = defineModule({
+  name: 'untrack',
+  dependencies: [GraphEdgesModule],
+  create: ({ graphEdges }) => createUntracked({ consumer: graphEdges.consumer }),
+});

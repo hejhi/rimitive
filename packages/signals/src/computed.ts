@@ -1,13 +1,8 @@
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
-import type {
-  ServiceDefinition,
-  InstrumentationContext,
-  ServiceContext,
-} from '@lattice/lattice';
-import { defineService } from '@lattice/lattice';
-import { GraphEdges, Consumer } from './deps/graph-edges';
-import { PullPropagator } from './deps/pull-propagator';
+import { defineModule } from '@lattice/lattice';
+import { GraphEdgesModule, type GraphEdges, type Consumer } from './deps/graph-edges';
+import { PullPropagatorModule, type PullPropagator } from './deps/pull-propagator';
 
 /**
  * Computed function type - a callable that derives values from other reactives.
@@ -46,29 +41,9 @@ export type ComputedDeps = {
 };
 
 /**
- * Options for customizing Computed behavior.
- *
- * @example Adding instrumentation
- * ```ts
- * const computedService = Computed({
- *   instrument(impl, instr, ctx) {
- *     return (compute) => {
- *       const c = impl(compute);
- *       instr.register(c, 'computed');
- *       return c;
- *     };
- *   },
- * });
- * ```
+ * Computed factory function type - creates computed values from computation functions
  */
-export type ComputedOptions = {
-  /** Custom instrumentation wrapper for debugging/profiling */
-  instrument?: (
-    impl: <T>(compute: () => T) => ComputedFunction<T>,
-    instrumentation: InstrumentationContext,
-    context: ServiceContext
-  ) => <T>(compute: () => T) => ComputedFunction<T>;
-};
+export type ComputedFactory = <T>(compute: () => T) => ComputedFunction<T>;
 
 // Re-export types for proper type inference
 export type { Consumer } from './deps/graph-edges';
@@ -89,29 +64,7 @@ const COMPUTED_CLEAN = COMPUTED | CLEAN;
 const COMPUTED_DIRTY = COMPUTED | DIRTY;
 
 /**
- * ServiceDefinition for the computed primitive.
- * This is what gets composed into a service context.
- */
-export type ComputedFactory = ServiceDefinition<
-  'computed',
-  <T>(compute: () => T) => ComputedFunction<T>
->;
-
-/**
- * The instantiable service returned by Computed().
- *
- * @example
- * ```ts
- * import { Computed, type ComputedService } from '@lattice/signals/computed';
- *
- * const computedService: ComputedService = Computed();
- * const factory = computedService.create(deps); // ComputedFactory
- * ```
- */
-export type ComputedService = ReturnType<typeof Computed>;
-
-/**
- * Create a Computed service factory.
+ * Create a computed factory function.
  *
  * Computeds are derived values that automatically track their dependencies
  * and recompute lazily when those dependencies change.
@@ -163,86 +116,96 @@ export type ComputedService = ReturnType<typeof Computed>;
  * );
  * ```
  */
-export const Computed = defineService(
-  ({
-    consumer,
-    trackDependency,
-    pullUpdates,
-    track,
-    shallowPropagate,
-  }: ComputedDeps) =>
-    ({ instrument }: ComputedOptions = {}): ComputedFactory => {
-      // Shared computed function - uses `this` binding
-      function computedImpl<T>(this: ComputedNode<T>): T {
-        const status = this.status;
-        const isPending = status & PENDING;
+export function createComputedFactory({
+  consumer,
+  trackDependency,
+  pullUpdates,
+  track,
+  shallowPropagate,
+}: ComputedDeps): ComputedFactory {
+  // Shared computed function - uses `this` binding
+  function computedImpl<T>(this: ComputedNode<T>): T {
+    const status = this.status;
+    const isPending = status & PENDING;
 
-        // Check if we need to pull updates
-        update: if (status & DIRTY || (isPending && pullUpdates(this))) {
-          // Recompute the value
-          const prev = this.value;
-          this.value = track(this, this.compute);
+    // Check if we need to pull updates
+    update: if (status & DIRTY || (isPending && pullUpdates(this))) {
+      // Recompute the value
+      const prev = this.value;
+      this.value = track(this, this.compute);
 
-          // Propagate if value changed and there are multiple subscribers
-          if (prev === this.value) break update;
+      // Propagate if value changed and there are multiple subscribers
+      if (prev === this.value) break update;
 
-          const subs = this.subscribers;
-          if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
-        } else if (isPending) this.status = COMPUTED_CLEAN;
+      const subs = this.subscribers;
+      if (subs && subs.nextConsumer !== undefined) shallowPropagate(subs);
+    } else if (isPending) this.status = COMPUTED_CLEAN;
 
-        // Track dependency AFTER pulling updates
-        const activeConsumer = consumer.active;
-        if (activeConsumer) trackDependency(this, activeConsumer);
+    // Track dependency AFTER pulling updates
+    const activeConsumer = consumer.active;
+    if (activeConsumer) trackDependency(this, activeConsumer);
 
-        return this.value;
-      }
+    return this.value;
+  }
 
-      // Shared peek function - uses `this` binding
-      function peekImpl<T>(this: ComputedNode<T>): T {
-        // Save and clear consumer to prevent tracking
-        const prevConsumer = consumer.active;
-        consumer.active = null;
+  // Shared peek function - uses `this` binding
+  function peekImpl<T>(this: ComputedNode<T>): T {
+    // Save and clear consumer to prevent tracking
+    const prevConsumer = consumer.active;
+    consumer.active = null;
 
-        try {
-          const status = this.status;
-          const isPending = status & PENDING;
+    try {
+      const status = this.status;
+      const isPending = status & PENDING;
 
-          if (status & DIRTY || (isPending && pullUpdates(this))) {
-            this.value = track(this, this.compute);
-          } else if (isPending) this.status = COMPUTED_CLEAN;
+      if (status & DIRTY || (isPending && pullUpdates(this))) {
+        this.value = track(this, this.compute);
+      } else if (isPending) this.status = COMPUTED_CLEAN;
 
-          return this.value;
-        } finally {
-          consumer.active = prevConsumer;
-        }
-      }
-
-      function createComputed<T>(compute: () => T): ComputedFunction<T> {
-        const node: ComputedNode<T> = {
-          __type: 'computed' as const,
-          value: undefined as T,
-          subscribers: undefined,
-          subscribersTail: undefined,
-          dependencies: undefined,
-          dependencyTail: undefined,
-          status: COMPUTED_DIRTY,
-          trackingVersion: 0,
-          compute,
-        };
-
-        // Bind shared functions to this node
-        const computed = computedImpl.bind(
-          node
-        ) as unknown as ComputedFunction<T>;
-        computed.peek = peekImpl.bind(node) as () => T;
-
-        return computed;
-      }
-
-      return {
-        name: 'computed',
-        impl: createComputed,
-        ...(instrument && { instrument }),
-      };
+      return this.value;
+    } finally {
+      consumer.active = prevConsumer;
     }
-);
+  }
+
+  function computed<T>(compute: () => T): ComputedFunction<T> {
+    const node: ComputedNode<T> = {
+      __type: 'computed' as const,
+      value: undefined as T,
+      subscribers: undefined,
+      subscribersTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
+      status: COMPUTED_DIRTY,
+      trackingVersion: 0,
+      compute,
+    };
+
+    // Bind shared functions to this node
+    const computedFn = computedImpl.bind(
+      node
+    ) as unknown as ComputedFunction<T>;
+    computedFn.peek = peekImpl.bind(node) as () => T;
+
+    return computedFn;
+  }
+
+  return computed;
+}
+
+/**
+ * ComputedModule - provides the computed primitive for reactive computations.
+ * Depends on GraphEdges for dependency tracking and PullPropagator for update propagation.
+ */
+export const ComputedModule = defineModule({
+  name: 'computed',
+  dependencies: [GraphEdgesModule, PullPropagatorModule],
+  create: ({ graphEdges, pullPropagator }) =>
+    createComputedFactory({
+      consumer: graphEdges.consumer,
+      trackDependency: graphEdges.trackDependency,
+      pullUpdates: pullPropagator.pullUpdates,
+      track: graphEdges.track,
+      shallowPropagate: pullPropagator.shallowPropagate,
+    }),
+});

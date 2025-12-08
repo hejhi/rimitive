@@ -1,10 +1,4 @@
 import type {
-  ServiceDefinition,
-  InstrumentationContext,
-  ServiceContext,
-} from '@lattice/lattice';
-import { defineService } from '@lattice/lattice';
-import type {
   LifecycleCallback,
   RefSpec,
   Reactive,
@@ -80,14 +74,6 @@ export type ElOpts<TConfig extends AdapterConfig> = {
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
   adapter: Adapter<TConfig>;
-};
-
-export type ElProps<TConfig extends AdapterConfig> = {
-  instrument?: (
-    impl: ElFactory<TConfig>['impl'],
-    instrumentation: InstrumentationContext,
-    context: ServiceContext
-  ) => ElFactory<TConfig>['impl'];
 };
 
 /**
@@ -177,39 +163,28 @@ export type TagFactory<
  * );
  * ```
  */
-/**
- * ServiceDefinition for the el primitive.
- * This is what gets composed into a service context.
- */
-export type ElFactory<TConfig extends AdapterConfig> = ServiceDefinition<
-  'el',
-  {
-    // Tag selector - returns a TagFactory
-    <Tag extends string & keyof TConfig['props'] & keyof TConfig['elements']>(
-      tag: Tag
-    ): TagFactory<TConfig, Tag>;
-  }
->;
+export type ElFactory<TConfig extends AdapterConfig> = {
+  // Tag selector - returns a TagFactory
+  <Tag extends string & keyof TConfig['props'] & keyof TConfig['elements']>(
+    tag: Tag
+  ): TagFactory<TConfig, Tag>;
+};
 
 /**
- * The instantiable service returned by El().
+ * The el service type - alias for ElFactory for backwards compatibility.
  *
  * Use this type when building custom view service compositions:
  * @example
  * ```ts
- * import { El, type ElService } from '@lattice/view/el';
+ * import { createElFactory, type ElService } from '@lattice/view/el';
  *
- * const elService: ElService<DOMAdapterConfig> = El<DOMAdapterConfig>();
- * const factory = elService.create(opts); // ElFactory<DOMAdapterConfig>
+ * const el: ElService<DOMAdapterConfig> = createElFactory(opts);
  * ```
  */
-export type ElService<TConfig extends AdapterConfig> = ReturnType<
-  typeof El<TConfig>
->;
+export type ElService<TConfig extends AdapterConfig> = ElFactory<TConfig>;
 
 /**
- * El primitive - instantiatable extension using the create pattern
- * Similar to Signal() in signals preset
+ * Create an el factory with the given dependencies.
  *
  * Generic over:
  * - TConfig: The renderer configuration (inferred from renderer)
@@ -218,174 +193,168 @@ export type ElService<TConfig extends AdapterConfig> = ReturnType<
  *
  * @example
  * ```typescript
- * import { El } from '@lattice/view/el';
+ * import { createElFactory } from '@lattice/view/el';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
  *
- * const elService = El<DOMAdapterConfig>();
- * const elFactory = elService.create({ adapter, scopedEffect, createElementScope, onCleanup });
+ * const el = createElFactory<DOMAdapterConfig>({
+ *   adapter,
+ *   scopedEffect,
+ *   createElementScope,
+ *   onCleanup
+ * });
  *
- * const button = elFactory('button')
+ * const button = el('button')
  *   .props({ textContent: 'Click me' })
  *   ();
  * ```
  */
-export const El = defineService(
-  <TConfig extends AdapterConfig>({
+export function createElFactory<TConfig extends AdapterConfig>({
+  scopedEffect,
+  adapter,
+  createElementScope,
+  onCleanup,
+}: ElOpts<TConfig>): ElFactory<TConfig> {
+  type TBaseElement = TConfig['baseElement'];
+  type TProps = TConfig['props'];
+  type TElements = TConfig['elements'];
+  type TElementKeys = keyof TProps & keyof TElements;
+
+  const { processChildren } = createProcessChildren<TConfig>({
     scopedEffect,
     adapter,
-    createElementScope,
-    onCleanup,
-  }: ElOpts<TConfig>) =>
-    (props: ElProps<TConfig> = {}) => {
-      type TBaseElement = TConfig['baseElement'];
-      type TProps = TConfig['props'];
-      type TElements = TConfig['elements'];
-      type TElementKeys = keyof TProps & keyof TElements;
+  });
+  const { setProperty, createNode } = adapter;
 
-      const { instrument } = props;
-      const { processChildren } = createProcessChildren<TConfig>({
-        scopedEffect,
-        adapter,
-      });
-      const { setProperty, createNode } = adapter;
+  /**
+   * Helper to create a RefSpec
+   * Generic over El - the element type (no longer constrained to HTMLElement)
+   */
+  const createRefSpec = <El>(
+    createElement: (
+      svc?: unknown,
+      parentContext?: ParentContext<unknown>
+    ) => ElementRef<El>
+  ): RefSpec<El> => {
+    const refSpec = {} as RefSpec<El>;
 
-      /**
-       * Helper to create a RefSpec
-       * Generic over El - the element type (no longer constrained to HTMLElement)
-       */
-      const createRefSpec = <El>(
-        createElement: (
-          svc?: unknown,
-          parentContext?: ParentContext<unknown>
-        ) => ElementRef<El>
-      ): RefSpec<El> => {
-        const refSpec = {} as RefSpec<El>;
+    refSpec.status = STATUS_REF_SPEC;
+    refSpec.create = <TExt>(
+      svc?: unknown,
+      extensions?: TExt,
+      parentContext?: ParentContext<unknown>
+    ) => {
+      const elRef = createElement(svc, parentContext);
+      // If no extensions, return the ref directly to preserve mutability
+      // This is critical for FragmentRef which gets firstChild set after creation
+      if (!extensions || Object.keys(extensions).length === 0) return elRef;
 
-        refSpec.status = STATUS_REF_SPEC;
-        refSpec.create = <TExt>(
-          svc?: unknown,
-          extensions?: TExt,
-          parentContext?: ParentContext<unknown>
-        ) => {
-          const elRef = createElement(svc, parentContext);
-          // If no extensions, return the ref directly to preserve mutability
-          // This is critical for FragmentRef which gets firstChild set after creation
-          if (!extensions || Object.keys(extensions).length === 0) return elRef;
+      // With extensions, we need to merge - but this breaks FragmentRef mutation
+      // For now, prioritize FragmentRef correctness over extensions
+      return {
+        ...elRef,
+        ...extensions,
+      };
+    };
 
-          // With extensions, we need to merge - but this breaks FragmentRef mutation
-          // For now, prioritize FragmentRef correctness over extensions
-          return {
-            ...elRef,
-            ...extensions,
-          };
+    return refSpec;
+  };
+
+  /**
+   * Create a TagFactory for a given tag with accumulated props and lifecycle callbacks
+   */
+  function createTagFactory<Tag extends string & TElementKeys>(
+    tag: Tag,
+    accumulatedProps: ElementProps<TConfig, Tag>,
+    accumulatedCallbacks: LifecycleCallback<TElements[Tag]>[]
+  ): TagFactory<TConfig, Tag> {
+    // The callable part - applies children and returns RefSpec
+    const factory = (...children: ElRefSpecChild[]) => {
+      return createRefSpec((svc, parentContext) => {
+        // Pass initial props to createNode - needed for renderers that require
+        // props at creation time (e.g., canvas renderer needs width/height)
+        const element = createNode(
+          tag,
+          accumulatedProps as Record<string, unknown>,
+          parentContext
+        );
+        const elRef: ElementRef<TBaseElement> = {
+          status: STATUS_ELEMENT,
+          element: element,
+          parent: null,
+          prev: null,
+          next: null,
+          firstChild: null,
+          lastChild: null,
         };
 
-        return refSpec;
-      };
+        // Create context for children - they'll see this element as their parent
+        const childContext: ParentContext<TBaseElement> = {
+          adapter,
+          element,
+        };
 
-      /**
-       * Create a TagFactory for a given tag with accumulated props and lifecycle callbacks
-       */
-      function createTagFactory<Tag extends string & TElementKeys>(
-        tag: Tag,
-        accumulatedProps: ElementProps<TConfig, Tag>,
-        accumulatedCallbacks: LifecycleCallback<TElements[Tag]>[]
-      ): TagFactory<TConfig, Tag> {
-        // The callable part - applies children and returns RefSpec
-        const factory = (...children: ElRefSpecChild[]) => {
-          return createRefSpec((svc, parentContext) => {
-            // Pass initial props to createNode - needed for renderers that require
-            // props at creation time (e.g., canvas renderer needs width/height)
-            const element = createNode(
-              tag,
-              accumulatedProps as Record<string, unknown>,
-              parentContext
+        createElementScope(element, () => {
+          for (const [key, val] of Object.entries(accumulatedProps)) {
+            // Event handlers are functions but NOT reactive - treat as static
+            const isEventHandler = key.startsWith('on');
+
+            if (typeof val !== 'function' || isEventHandler) {
+              setProperty(element, key, val);
+              continue;
+            }
+            // Reactive value - wrap in effect for updates
+            scopedEffect(() =>
+              setProperty(element, key, (val as () => unknown)())
             );
-            const elRef: ElementRef<TBaseElement> = {
-              status: STATUS_ELEMENT,
-              element: element,
-              parent: null,
-              prev: null,
-              next: null,
-              firstChild: null,
-              lastChild: null,
-            };
+          }
+          processChildren(elRef, children, svc, childContext);
 
-            // Create context for children - they'll see this element as their parent
-            const childContext: ParentContext<TBaseElement> = {
-              adapter,
-              element,
-            };
+          // Execute lifecycle callbacks within scope
+          for (const callback of accumulatedCallbacks) {
+            const cleanup = callback(element as TElements[Tag]);
+            if (cleanup) onCleanup(cleanup);
+          }
+        });
 
-            createElementScope(element, () => {
-              for (const [key, val] of Object.entries(accumulatedProps)) {
-                // Event handlers are functions but NOT reactive - treat as static
-                const isEventHandler = key.startsWith('on');
+        return elRef as ElementRef<TElements[Tag]>;
+      });
+    };
 
-                if (typeof val !== 'function' || isEventHandler) {
-                  setProperty(element, key, val);
-                  continue;
-                }
-                // Reactive value - wrap in effect for updates
-                scopedEffect(() =>
-                  setProperty(element, key, (val as () => unknown)())
-                );
-              }
-              processChildren(elRef, children, svc, childContext);
+    // Add .props() method
+    factory.props = (
+      propsOrFn:
+        | ElementProps<TConfig, Tag>
+        | ((
+            current: ElementProps<TConfig, Tag>
+          ) => ElementProps<TConfig, Tag>)
+    ): TagFactory<TConfig, Tag> => {
+      const newProps =
+        typeof propsOrFn === 'function'
+          ? propsOrFn(accumulatedProps)
+          : { ...accumulatedProps, ...propsOrFn };
+      return createTagFactory(tag, newProps, accumulatedCallbacks);
+    };
 
-              // Execute lifecycle callbacks within scope
-              for (const callback of accumulatedCallbacks) {
-                const cleanup = callback(element as TElements[Tag]);
-                if (cleanup) onCleanup(cleanup);
-              }
-            });
+    // Add .ref() method
+    factory.ref = (
+      ...callbacks: LifecycleCallback<TElements[Tag]>[]
+    ): TagFactory<TConfig, Tag> => {
+      return createTagFactory(tag, accumulatedProps, [
+        ...accumulatedCallbacks,
+        ...callbacks,
+      ]);
+    };
 
-            return elRef as ElementRef<TElements[Tag]>;
-          });
-        };
+    return factory as TagFactory<TConfig, Tag>;
+  }
 
-        // Add .props() method
-        factory.props = (
-          propsOrFn:
-            | ElementProps<TConfig, Tag>
-            | ((
-                current: ElementProps<TConfig, Tag>
-              ) => ElementProps<TConfig, Tag>)
-        ): TagFactory<TConfig, Tag> => {
-          const newProps =
-            typeof propsOrFn === 'function'
-              ? propsOrFn(accumulatedProps)
-              : { ...accumulatedProps, ...propsOrFn };
-          return createTagFactory(tag, newProps, accumulatedCallbacks);
-        };
+  // Main el function - just selects tag, returns TagFactory
+  function el<Tag extends string & TElementKeys>(
+    tag: Tag
+  ): TagFactory<TConfig, Tag> {
+    return createTagFactory(tag, {} as ElementProps<TConfig, Tag>, []);
+  }
 
-        // Add .ref() method
-        factory.ref = (
-          ...callbacks: LifecycleCallback<TElements[Tag]>[]
-        ): TagFactory<TConfig, Tag> => {
-          return createTagFactory(tag, accumulatedProps, [
-            ...accumulatedCallbacks,
-            ...callbacks,
-          ]);
-        };
-
-        return factory as TagFactory<TConfig, Tag>;
-      }
-
-      // Main el function - just selects tag, returns TagFactory
-      function el<Tag extends string & TElementKeys>(
-        tag: Tag
-      ): TagFactory<TConfig, Tag> {
-        return createTagFactory(tag, {} as ElementProps<TConfig, Tag>, []);
-      }
-
-      const extension: ElFactory<TConfig> = {
-        name: 'el',
-        impl: el,
-        ...(instrument && { instrument }),
-      };
-
-      return extension;
-    }
-);
+  return el;
+}

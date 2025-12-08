@@ -19,13 +19,13 @@ describe('location() - basic properties', () => {
       return result;
     };
 
-    const location = createLocationFactory().create({
+    const location = createLocationFactory({
       signal: env.signal,
       computed,
       currentPath,
     });
 
-    return { location: location.impl, currentPath, env };
+    return { location, currentPath, env };
   }
 
   it('returns pathname from current path', () => {
@@ -73,13 +73,13 @@ describe('location() - empty/missing parts', () => {
       return result;
     };
 
-    const location = createLocationFactory().create({
+    const location = createLocationFactory({
       signal: env.signal,
       computed,
       currentPath,
     });
 
-    return { location: location.impl, currentPath };
+    return { location, currentPath };
   }
 
   it('handles path with no query or hash', () => {
@@ -129,13 +129,13 @@ describe('location() - reactive updates', () => {
       return result;
     };
 
-    const location = createLocationFactory().create({
+    const location = createLocationFactory({
       signal: env.signal,
       computed,
       currentPath,
     });
 
-    return { location: location.impl, currentPath };
+    return { location, currentPath };
   }
 
   it('pathname updates when path changes', () => {
@@ -207,13 +207,13 @@ describe('location() - query parsing edge cases', () => {
       return result;
     };
 
-    const location = createLocationFactory().create({
+    const location = createLocationFactory({
       signal: env.signal,
       computed,
       currentPath,
     });
 
-    return { location: location.impl };
+    return { location };
   }
 
   it('handles multiple query params', () => {

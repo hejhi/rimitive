@@ -1,12 +1,12 @@
-import { El, type ElService } from '../el';
-import { Map, type MapService } from '../map';
-import { Match, type MatchService } from '../match';
-import { Portal, type PortalService } from '../portal';
+import { createElFactory, type ElFactory } from '../el';
+import { createMapFactory, type MapFactory } from '../map';
+import { createMatchFactory, type MatchFactory } from '../match';
+import { createPortalFactory, type PortalFactory } from '../portal';
 import { createScopes } from '../deps/scope';
 import type { Adapter, AdapterConfig } from '../adapter';
 import type { RefSpec, NodeRef } from '../types';
-import { compose, type Svc, type Use, extend } from '@lattice/lattice';
-import { SignalsSvc } from '@lattice/signals/presets/core';
+import type { Use } from '@lattice/lattice';
+import type { SignalsSvc } from '@lattice/signals/presets/core';
 
 // Re-export user-facing types for convenience
 export type { ElementProps, TagFactory, ElFactory, ElService } from '../el';
@@ -47,13 +47,13 @@ export type ComponentFactory<TSvc> = <TArgs extends unknown[], TElement>(
  * const { el, map, match, portal } = view;
  * ```
  */
-export type ViewSvc<TConfig extends AdapterConfig> = SignalsSvc &
-  Svc<{
-    el: ElService<TConfig>;
-    map: MapService<TConfig>;
-    match: MatchService<TConfig>;
-    portal: PortalService<TConfig>;
-  }>;
+export type ViewSvc<TConfig extends AdapterConfig> = SignalsSvc & {
+  el: ElFactory<TConfig>;
+  map: MapFactory<TConfig['baseElement']>;
+  match: MatchFactory<TConfig['baseElement']>;
+  portal: PortalFactory<TConfig['baseElement']>;
+  dispose(): void;
+};
 
 /**
  * Create a view service for a given adapter and optional signal implementation
@@ -96,23 +96,62 @@ export const createView = <TConfig extends AdapterConfig>({
   signals: Use<SignalsSvc>;
 }): Use<ViewSvc<TConfig>> => {
   const signalsSvc = signals();
-  const defaultViewSvc = compose(
-    {
-      el: El<TConfig>(),
-      map: Map<TConfig>(),
-      match: Match<TConfig>(),
-      portal: Portal<TConfig>(),
-    },
-    {
-      adapter,
-      signal: signalsSvc.signal,
-      computed: signalsSvc.computed,
-      ...createScopes({ baseEffect: signalsSvc.effect }),
-    }
-  );
 
-  return extend(defaultViewSvc, (svc) => ({
-    ...svc,
+  // Create scope management
+  const scopes = createScopes({ baseEffect: signalsSvc.effect });
+
+  // Create view primitives with deps
+  const el = createElFactory<TConfig>({
+    adapter,
+    scopedEffect: scopes.scopedEffect,
+    createElementScope: scopes.createElementScope,
+    onCleanup: scopes.onCleanup,
+  });
+
+  const map = createMapFactory<TConfig>({
+    adapter,
+    signal: signalsSvc.signal,
+    computed: signalsSvc.computed,
+    scopedEffect: scopes.scopedEffect,
+    disposeScope: scopes.disposeScope,
+    getElementScope: scopes.getElementScope,
+  });
+
+  const match = createMatchFactory<TConfig>({
+    adapter,
+    scopedEffect: scopes.scopedEffect,
+    disposeScope: scopes.disposeScope,
+    getElementScope: scopes.getElementScope,
+  });
+
+  const portal = createPortalFactory<TConfig>({
+    adapter,
+    scopedEffect: scopes.scopedEffect,
+    disposeScope: scopes.disposeScope,
+    getElementScope: scopes.getElementScope,
+  })(); // Note: portal factory returns a curried function, call with no props
+
+  // Build the service object
+  const svc: ViewSvc<TConfig> = {
     ...signalsSvc,
-  }));
+    el,
+    map,
+    match,
+    portal,
+    dispose: () => {
+      signalsSvc.dispose();
+    },
+  };
+
+  // Return a Use function
+  const use = <TResult>(
+    callback?: (ctx: ViewSvc<TConfig>) => TResult
+  ): ViewSvc<TConfig> | TResult => {
+    if (callback === undefined) {
+      return svc;
+    }
+    return callback(svc);
+  };
+
+  return use as Use<ViewSvc<TConfig>>;
 };

@@ -1,18 +1,20 @@
-export { compose, extend, type CreateContextOptions } from './compose';
-export { defineService } from './defineService';
+export { compose, extend, type ComposeOptions } from './compose';
+export { defineModule, isModule, STATUS_MODULE } from './module';
 export type {
-  Service,
-  ServiceDefinition,
+  Module,
+  ModuleDefinition,
+  ModuleImpl,
+  ModuleName,
+  ModuleDeps,
+} from './module';
+export type {
   ServiceContext,
   InstrumentationContext,
-  LatticeContext,
-  ServiceImpl,
-  ServiceName,
-  DefinedService,
-  Svc,
   Use,
-  ExtractDeps,
+  ComposedContext,
   UnionToIntersection,
+  ModuleImpl as ServiceImpl,
+  ModuleName as ServiceName,
 } from './types';
 export { createInstrumentation } from './instrumentation';
 export type {

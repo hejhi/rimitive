@@ -8,6 +8,7 @@
 
 import type { Dependency, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { defineModule } from '@lattice/lattice';
 
 const { CLEAN, DIRTY, PENDING, STATE_MASK, TYPE_MASK, PRODUCER } = CONSTANTS;
 
@@ -104,3 +105,12 @@ export function createGraphTraversal(): GraphTraversal {
     propagate: withVisitor(null),
   };
 }
+
+/**
+ * GraphTraversal module - provides pure graph traversal without scheduling.
+ * No dependencies - this is a foundational module.
+ */
+export const GraphTraversalModule = defineModule({
+  name: 'graphTraversal',
+  create: createGraphTraversal,
+});

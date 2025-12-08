@@ -1,13 +1,16 @@
+/**
+ * Module composition for Lattice
+ *
+ * @module
+ */
+
 import type {
-  DefinedService,
-  ExtractDeps,
   InstrumentationContext,
-  LatticeContext,
   ServiceContext,
-  ServiceDefinition,
-  Svc,
   Use,
+  ComposedContext,
 } from './types';
+import { type AnyModule, isModule } from './module';
 
 type ContextState = {
   disposed: boolean;
@@ -15,225 +18,134 @@ type ContextState = {
 };
 
 /**
- * Options for creating a composed context
+ * Options for composing modules
  *
  * @example
  * ```ts
  * import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
- * import { Signal, Computed, deps } from '@lattice/signals/extend';
+ * import { Signal, Computed } from '@lattice/signals';
  *
  * const instrumentation = createInstrumentation({
  *   enabled: true,
  *   providers: [devtoolsProvider()],
  * });
  *
- * const use = compose(
- *   { signal: Signal(), computed: Computed() },
- *   deps(),
- *   { instrumentation }
- * );
+ * const use = compose(Signal, Computed, { instrumentation });
  * ```
  */
-export type CreateContextOptions = {
+export type ComposeOptions = {
   /** Optional instrumentation context for debugging/profiling */
   instrumentation?: InstrumentationContext;
 };
 
 /**
- * Check if a value is a DefinedService (factory with .create method)
+ * Collect all modules including transitive dependencies
+ * Returns modules in dependency order (dependencies before dependents)
  */
-function isDefinedService(value: unknown): value is DefinedService {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    'create' in value &&
-    typeof (value as DefinedService).create === 'function'
-  );
+function collectModules(modules: AnyModule[]): AnyModule[] {
+  const visited = new Set<string>();
+  const result: AnyModule[] = [];
+
+  function visit(mod: AnyModule) {
+    if (visited.has(mod.name)) return;
+    visited.add(mod.name);
+
+    // Visit dependencies first (ensures they're created before dependents)
+    for (const dep of mod.dependencies) {
+      visit(dep);
+    }
+
+    result.push(mod);
+  }
+
+  for (const mod of modules) {
+    visit(mod);
+  }
+
+  return result;
 }
 
 /**
- * Check if a value is a factories object (Record<string, DefinedService>)
- */
-function isFactoriesObject(
-  value: unknown
-): value is Record<string, DefinedService> {
-  if (value === null || typeof value !== 'object') return false;
-  // Must have at least one key and all values must be DefinedService
-  const entries = Object.entries(value);
-  return entries.length > 0 && entries.every(([, v]) => isDefinedService(v));
-}
-
-/**
- * Compose service factories into a unified context with shared dependencies.
+ * Compose modules into a unified context.
+ *
+ * Resolves the dependency graph automatically - you only need to pass the
+ * modules you want, and their dependencies are included transitively.
  *
  * Returns a `use()` function that provides access to the composed context:
- * - `use()` - Returns the service context directly
+ * - `use()` - Returns the context directly
  * - `use(callback)` - Passes the context to callback and returns its result
  *
- * This is the primary way to create a Lattice context. It supports three patterns:
- *
- * **Pattern 1: Factory object + deps** (recommended for most cases)
- * Pass an object of service factories and shared dependencies.
- *
- * @example
+ * @example Basic usage
  * ```ts
  * import { compose } from '@lattice/lattice';
- * import { Signal, Computed, Effect, deps } from '@lattice/signals/extend';
+ * import { Signal, Computed, Effect } from '@lattice/signals';
  *
- * const use = compose(
- *   { signal: Signal(), computed: Computed(), effect: Effect() },
- *   deps()
- * );
+ * const use = compose(Signal, Computed, Effect);
+ * const { signal, computed, effect } = use();
  *
- * // Get the service directly
- * const { signal, computed } = use();
- *
- * // Or wrap a component
- * const Counter = use(({ signal }) => () => {
- *   const count = signal(0);
- *   return count;
- * });
+ * const count = signal(0);
+ * const doubled = computed(() => count() * 2);
+ * effect(() => console.log(doubled()));
  * ```
  *
- * **Pattern 2: Pre-created ServiceDefinitions**
- * Pass already-instantiated service definitions.
- *
- * @example
- * ```ts
- * import { Signal, Computed, deps } from '@lattice/signals/extend';
- *
- * const helpers = deps();
- * const signalService = Signal().create(helpers);
- * const computedService = Computed().create(helpers);
- *
- * const use = compose(signalService, computedService);
- * const { signal, computed } = use();
- * ```
- *
- * **Pattern 3: With instrumentation**
- * Add debugging/profiling to any composition pattern.
- *
- * @example
+ * @example With instrumentation
  * ```ts
  * import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
- * import { Signal, Computed, deps } from '@lattice/signals/extend';
+ * import { Signal, Computed } from '@lattice/signals';
  *
- * const instrumentation = createInstrumentation({
- *   providers: [devtoolsProvider()],
+ * const use = compose(Signal, Computed, {
+ *   instrumentation: createInstrumentation({
+ *     providers: [devtoolsProvider()],
+ *   }),
  * });
- *
- * const use = compose(
- *   { signal: Signal(), computed: Computed() },
- *   deps(),
- *   { instrumentation }
- * );
  * ```
  *
- * @returns A `use()` function for accessing the composed service context
+ * @example Component pattern
+ * ```ts
+ * const Counter = use(({ signal, computed }) => () => {
+ *   const count = signal(0);
+ *   return {
+ *     value: computed(() => count()),
+ *     increment: () => count(c => c + 1),
+ *   };
+ * });
+ * ```
  */
-// Overload 1: Factory object + deps pattern
-export function compose<
-  T extends Record<string, DefinedService>,
-  TDeps extends ExtractDeps<T>,
->(
-  factories: T | DefinedService,
-  deps: TDeps,
-  options?: CreateContextOptions
-): Use<Svc<T>>;
+// Overload: modules only
+export function compose<TModules extends AnyModule[]>(
+  ...modules: TModules
+): Use<ComposedContext<TModules>>;
 
-// Overload 2: ServiceDefinitions (variadic)
-export function compose<
-  TServices extends readonly ServiceDefinition<string, unknown>[],
->(...services: TServices): Use<LatticeContext<TServices>>;
-
-// Overload 3: Options + ServiceDefinitions
-export function compose<
-  TServices extends readonly ServiceDefinition<string, unknown>[],
->(
-  options: CreateContextOptions,
-  ...services: TServices
-): Use<LatticeContext<TServices>>;
+// Overload: modules + options (options must be last)
+export function compose<TModules extends AnyModule[]>(
+  ...args: [...TModules, ComposeOptions]
+): Use<ComposedContext<TModules>>;
 
 // Implementation
 export function compose(
-  ...args: unknown[]
+  ...args: (AnyModule | ComposeOptions)[]
 ): Use<Record<string, unknown> & { dispose(): void }> {
-  // Detect which overload was called
-  const firstArg = args[0];
+  // Separate modules from options
+  const lastArg = args[args.length - 1];
+  const hasOptions = lastArg && !isModule(lastArg);
 
-  let svc: Record<string, unknown> & { dispose(): void };
+  const modules = (hasOptions ? args.slice(0, -1) : args) as AnyModule[];
+  const options = hasOptions ? (lastArg as ComposeOptions) : undefined;
 
-  // Pattern 1: Factory object + deps
-  // compose({ signal: Signal(), computed: Computed() }, deps, options?)
-  if (isFactoriesObject(firstArg)) {
-    const factories = firstArg;
-    const deps = args[1];
-    const options = args[2] as CreateContextOptions | undefined;
-
-    // Map factories to service definitions
-    const mappedServices = Object.values(factories).map((factory) =>
-      factory.create(deps)
-    );
-
-    svc = composeServices(mappedServices, options);
-  } else {
-    // Pattern 2 & 3: ServiceDefinitions (with optional leading options)
-    let services: ServiceDefinition<string, unknown>[];
-    let options: CreateContextOptions | undefined;
-
-    if (
-      firstArg &&
-      typeof firstArg === 'object' &&
-      'instrumentation' in firstArg
-    ) {
-      // Pattern 3: Options object first
-      options = firstArg as CreateContextOptions;
-      services = args.slice(1) as ServiceDefinition<string, unknown>[];
-    } else {
-      // Pattern 2: Just services
-      services = args as ServiceDefinition<string, unknown>[];
+  // Validate no duplicate names in input modules (different instances with same name)
+  const seenNames = new Map<string, AnyModule>();
+  for (const mod of modules) {
+    const existing = seenNames.get(mod.name);
+    if (existing && existing !== mod) {
+      throw new Error(`Duplicate module name: ${mod.name}`);
     }
-
-    // Flatten in case of arrays
-    const flatServices = services.flat(1) as ServiceDefinition<
-      string,
-      unknown
-    >[];
-
-    svc = composeServices(flatServices, options);
+    seenNames.set(mod.name, mod);
   }
 
-  // Return a use() function
-  type SvcType = typeof svc;
+  // Collect all modules including transitive dependencies
+  const allModules = collectModules(modules);
 
-  const use = <TResult>(
-    callback?: (s: SvcType) => TResult
-  ): SvcType | TResult => {
-    if (callback === undefined) {
-      return svc;
-    }
-    return callback(svc);
-  };
-
-  return use as Use<SvcType>;
-}
-
-/**
- * Core composition logic - takes instantiated ServiceDefinitions and creates context
- */
-function composeServices(
-  services: ServiceDefinition<string, unknown>[],
-  options?: CreateContextOptions
-): Record<string, unknown> & { dispose(): void } {
-  // Validate no duplicate names
-  const names = new Set<string>();
-  for (const service of services) {
-    if (names.has(service.name)) {
-      throw new Error(`Duplicate service name: ${service.name}`);
-    }
-    names.add(service.name);
-  }
-
+  // State management
   const state: ContextState = {
     disposed: false,
     disposers: new Set(),
@@ -243,22 +155,27 @@ function composeServices(
     destroy(cleanup: () => void): void {
       state.disposers.add(cleanup);
     },
-
     get isDestroyed(): boolean {
       return state.disposed;
     },
   };
 
-  // Build the context object
+  // Build the context - resolved deps namespace
+  const resolvedDeps: Record<string, unknown> = {};
+
+  // Context object that will be returned
   const context: Record<string, unknown> & { dispose(): void } = {
     dispose(): void {
       if (state.disposed) return;
       state.disposed = true;
 
-      for (const service of services) {
-        service.destroy?.(serviceCtx);
+      // Call destroy hooks in reverse order
+      for (let i = allModules.length - 1; i >= 0; i--) {
+        const mod = allModules[i];
+        if (mod) mod.destroy?.(serviceCtx);
       }
 
+      // Run registered disposers
       for (const disposer of state.disposers) {
         disposer();
       }
@@ -266,57 +183,59 @@ function composeServices(
     },
   };
 
-  // Add each service's impl to the context
-  for (const service of services) {
-    service.init?.(serviceCtx);
-    let impl = service.impl;
+  // Create each module in dependency order
+  for (const mod of allModules) {
+    // Call init hook
+    mod.init?.(serviceCtx);
 
-    if (options?.instrumentation && service.instrument) {
-      impl = service.instrument(impl, options.instrumentation, serviceCtx);
+    // Create the implementation with resolved deps
+    let impl = mod.create(resolvedDeps);
+
+    // Apply instrumentation if enabled
+    if (options?.instrumentation && mod.instrument) {
+      impl = mod.instrument(impl, options.instrumentation, serviceCtx);
     }
 
-    if (service.adapt) impl = service.adapt(impl, serviceCtx);
+    // Add to resolved deps (for other modules to use)
+    resolvedDeps[mod.name] = impl;
 
-    context[service.name] = impl;
+    // Add to context (for user access)
+    context[mod.name] = impl;
   }
 
-  return context;
+  // Return a use() function
+  type ContextType = Record<string, unknown> & { dispose(): void };
+
+  const use = <TResult>(
+    callback?: (ctx: ContextType) => TResult
+  ): ContextType | TResult => {
+    if (callback === undefined) {
+      return context;
+    }
+    return callback(context);
+  };
+
+  return use as Use<ContextType>;
 }
 
 /**
- * Extend a composed service with additional functionality.
+ * Extend a composed context with additional functionality.
  *
  * Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`.
- * This preserves the composition pattern through extensions, allowing further
- * chaining with additional `extend` calls.
  *
  * @example
  * ```ts
  * import { compose, extend } from '@lattice/lattice';
- * import { Signal, deps } from '@lattice/signals/extend';
+ * import { Signal } from '@lattice/signals';
  *
- * const base = compose({ signal: Signal() }, deps());
+ * const base = compose(Signal);
  *
- * const extended = extend(base, (svc) => ({
- *   ...svc,
+ * const extended = extend(base, (ctx) => ({
+ *   ...ctx,
  *   customMethod: () => console.log('extended!'),
  * }));
  *
- * // Use like any other composed service
  * const { signal, customMethod } = extended();
- *
- * // Or wrap components
- * const Component = extended(({ signal, customMethod }) => () => {
- *   // ...
- * });
- * ```
- *
- * @example Chaining multiple extensions
- * ```ts
- * const final = extend(
- *   extend(base, (svc) => ({ ...svc, foo: 'foo' })),
- *   (svc) => ({ ...svc, bar: 'bar' })
- * );
  * ```
  */
 export function extend<TSvc, TExtended>(

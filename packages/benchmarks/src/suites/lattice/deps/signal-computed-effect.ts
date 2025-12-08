@@ -1,31 +1,37 @@
-import { Signal } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Effect } from '@lattice/signals/effect';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
 import { createScheduler } from '@lattice/signals/deps/scheduler';
 import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
 import { createPullPropagator } from '@lattice/signals/deps/pull-propagator';
-import { compose as createLatticeContext } from '@lattice/lattice';
 
 export const createSvc = () => {
-  const { trackDependency, track, detachAll, consumer } = createGraphEdges();
-  const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
+  const graphEdges = createGraphEdges();
+  const { pullUpdates, shallowPropagate } = createPullPropagator({
+    track: graphEdges.track,
+  });
   const { withVisitor } = createGraphTraversal();
-  const { dispose, withPropagate } = createScheduler({ detachAll });
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const propagate = scheduler.withPropagate(withVisitor);
 
-  const opts = {
-    consumer,
-    dispose,
-    trackDependency,
-    track,
-    propagate: withPropagate(withVisitor),
+  const signal = createSignalFactory({
+    graphEdges,
+    propagate,
+  });
+
+  const computed = createComputedFactory({
+    consumer: graphEdges.consumer,
+    trackDependency: graphEdges.trackDependency,
     pullUpdates,
+    track: graphEdges.track,
     shallowPropagate,
-  };
+  });
 
-  return createLatticeContext(
-    Signal().create(opts),
-    Computed().create(opts),
-    Effect().create(opts)
-  )();
+  const effect = createEffectFactory({
+    track: graphEdges.track,
+    dispose: scheduler.dispose,
+  });
+
+  return { signal, computed, effect };
 };

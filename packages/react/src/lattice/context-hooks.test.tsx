@@ -1,32 +1,42 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useLatticeContext } from './context-hooks';
-import { createTestSignalSvc } from '../test-setup';
+import { defineModule } from '@lattice/lattice';
+import { createSignals } from '@lattice/signals';
+
+// Create a complete signals module that wraps createSignals
+// This is necessary because the individual SignalModule, ComputedModule etc.
+// require proper wiring that only happens through createSignals
+const SignalsModule = defineModule({
+  name: 'signals' as const,
+  create: () => {
+    const svc = createSignals()();
+    return {
+      signal: svc.signal,
+      computed: svc.computed,
+      effect: svc.effect,
+      batch: svc.batch,
+      subscribe: svc.subscribe,
+    };
+  },
+});
 
 describe('Lattice Context Hooks', () => {
   describe('useLatticeContext', () => {
     it('should create and manage context lifecycle', () => {
-      const testSvc = createTestSignalSvc();
-      const mockExtensions = [
-        { name: 'signal' as const, impl: testSvc.signal },
-        { name: 'computed' as const, impl: testSvc.computed },
-        { name: 'effect' as const, impl: testSvc.effect },
-        { name: 'batch' as const, impl: testSvc.batch },
-      ];
-
       const { result, unmount } = renderHook(() =>
-        useLatticeContext(...mockExtensions)
+        useLatticeContext(SignalsModule)
       );
 
-      // Context should have all impls
-      expect(typeof result.current.signal).toBe('function');
-      expect(typeof result.current.computed).toBe('function');
-      expect(typeof result.current.effect).toBe('function');
-      expect(typeof result.current.batch).toBe('function');
+      // Context should have the signals module
+      expect(typeof result.current.signals.signal).toBe('function');
+      expect(typeof result.current.signals.computed).toBe('function');
+      expect(typeof result.current.signals.effect).toBe('function');
+      expect(typeof result.current.signals.batch).toBe('function');
       expect(typeof result.current.dispose).toBe('function');
 
       // Create a signal to verify it works
-      const count = result.current.signal(0);
+      const count = result.current.signals.signal(0);
       expect(count()).toBe(0);
 
       // Spy on dispose to verify cleanup
@@ -43,16 +53,8 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should only create context once per component instance', () => {
-      const testSvc = createTestSignalSvc();
-      const mockExtensions = [
-        { name: 'signal' as const, impl: testSvc.signal },
-        { name: 'computed' as const, impl: testSvc.computed },
-        { name: 'effect' as const, impl: testSvc.effect },
-        { name: 'batch' as const, impl: testSvc.batch },
-      ];
-
       const { result, rerender } = renderHook(() =>
-        useLatticeContext(...mockExtensions)
+        useLatticeContext(SignalsModule)
       );
 
       const firstContext = result.current;
@@ -65,18 +67,12 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should allow signal creation and updates', () => {
-      const testSvc = createTestSignalSvc();
-      const mockExtensions = [
-        { name: 'signal' as const, impl: testSvc.signal },
-        { name: 'computed' as const, impl: testSvc.computed },
-        { name: 'effect' as const, impl: testSvc.effect },
-        { name: 'batch' as const, impl: testSvc.batch },
-      ];
+      const { result } = renderHook(() =>
+        useLatticeContext(SignalsModule)
+      );
 
-      const { result } = renderHook(() => useLatticeContext(...mockExtensions));
-
-      const count = result.current.signal(0);
-      const doubled = result.current.computed(() => count() * 2);
+      const count = result.current.signals.signal(0);
+      const doubled = result.current.signals.computed(() => count() * 2);
 
       expect(count()).toBe(0);
       expect(doubled()).toBe(0);
@@ -90,22 +86,18 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should support batch updates', () => {
-      const testSvc = createTestSignalSvc();
-      const mockExtensions = [
-        { name: 'signal' as const, impl: testSvc.signal },
-        { name: 'computed' as const, impl: testSvc.computed },
-        { name: 'effect' as const, impl: testSvc.effect },
-        { name: 'batch' as const, impl: testSvc.batch },
-      ];
+      const { result } = renderHook(() =>
+        useLatticeContext(SignalsModule)
+      );
 
-      const { result } = renderHook(() => useLatticeContext(...mockExtensions));
+      const { signal, computed, effect, batch } = result.current.signals;
 
-      const a = result.current.signal(1);
-      const b = result.current.signal(2);
-      const sum = result.current.computed(() => a() + b());
+      const a = signal(1);
+      const b = signal(2);
+      const sum = computed(() => a() + b());
 
       let computeCount = 0;
-      result.current.effect(() => {
+      effect(() => {
         void sum(); // Track the sum
         computeCount++;
       });
@@ -113,7 +105,7 @@ describe('Lattice Context Hooks', () => {
       expect(computeCount).toBe(1);
 
       act(() => {
-        result.current.batch(() => {
+        batch(() => {
           a(10);
           b(20);
         });
@@ -124,23 +116,23 @@ describe('Lattice Context Hooks', () => {
       expect(sum()).toBe(30);
     });
 
-    it('should work with custom extensions', () => {
-      // Create a custom extension
-      const counterExtension = {
+    it('should work with custom modules', () => {
+      // Create a custom module
+      const CounterModule = defineModule({
         name: 'counter' as const,
-        impl: (() => {
+        create: () => {
           let count = 0;
           return {
             increment: () => ++count,
             decrement: () => --count,
             get: () => count,
           };
-        })(),
-      };
+        },
+      });
 
-      const { result } = renderHook(() => useLatticeContext(counterExtension));
+      const { result } = renderHook(() => useLatticeContext(CounterModule));
 
-      // Should have the custom extension impl
+      // Should have the custom module impl
       expect(typeof result.current.counter).toBe('object');
       expect(typeof result.current.counter.increment).toBe('function');
       expect(typeof result.current.dispose).toBe('function');

@@ -1,23 +1,24 @@
-import { Signal } from '@lattice/signals/signal';
-import { Effect } from '@lattice/signals/effect';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createEffectFactory } from '@lattice/signals/effect';
 import { createScheduler } from '@lattice/signals/deps/scheduler';
 import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
-import { compose as createLatticeContext } from '@lattice/lattice';
 
 export const createSvc = () => {
+  const graphEdges = createGraphEdges();
   const { withVisitor } = createGraphTraversal();
-  const { detachAll, trackDependency, track, consumer } = createGraphEdges();
-  const { dispose, withPropagate } = createScheduler({ detachAll });
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const propagate = scheduler.withPropagate(withVisitor);
 
-  const opts = {
-    consumer,
-    dispose,
-    trackDependency,
-    track,
-    propagate: withPropagate(withVisitor),
-    detachAll,
-  };
+  const signal = createSignalFactory({
+    graphEdges,
+    propagate,
+  });
 
-  return createLatticeContext(Signal().create(opts), Effect().create(opts))();
+  const effect = createEffectFactory({
+    track: graphEdges.track,
+    dispose: scheduler.dispose,
+  });
+
+  return { signal, effect };
 };

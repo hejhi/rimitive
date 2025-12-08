@@ -8,43 +8,40 @@
  */
 
 // =============================================================================
-// Primitive Factories - For custom composition
+// Modules - For custom composition with defineModule
 // =============================================================================
 
-export { Signal } from './signal';
-export { Computed } from './computed';
-export { Effect } from './effect';
-export { Batch } from './batch';
-export { Subscribe } from './subscribe';
+export { SignalModule, createSignalFactory } from './signal';
+export { ComputedModule } from './computed';
+export { EffectModule } from './effect';
+export { BatchModule } from './batch';
+export { SubscribeModule, createSubscribeFactory } from './subscribe';
+export { UntrackModule, createUntracked } from './untrack';
 
 // =============================================================================
-// Helper Factories - For custom wiring
+// Dependency Modules - For custom wiring
+// =============================================================================
+
+export { GraphEdgesModule, createGraphEdges } from './deps/graph-edges';
+export { GraphTraversalModule, createGraphTraversal } from './deps/graph-traversal';
+export { PullPropagatorModule, createPullPropagator } from './deps/pull-propagator';
+export { SchedulerModule, createScheduler } from './deps/scheduler';
+
+// =============================================================================
+// Presets - For quick setup
 // =============================================================================
 
 export { deps } from './presets/core';
-export { createGraphEdges } from './deps/graph-edges';
-export { createGraphTraversal } from './deps/graph-traversal';
-export { createPullPropagator } from './deps/pull-propagator';
-export { createScheduler } from './deps/scheduler';
-export { createUntracked } from './untrack';
 
 // =============================================================================
 // Factory Types - For typing custom services
 // =============================================================================
 
-export type { SignalFactory, SignalDeps, SignalOptions } from './signal';
-export type {
-  ComputedFactory,
-  ComputedDeps,
-  ComputedOptions,
-} from './computed';
-export type { EffectFactory, EffectDeps, EffectOptions } from './effect';
-export type { BatchFactory, BatchDeps, BatchOptions } from './batch';
-export type {
-  SubscribeFactory,
-  SubscribeDeps,
-  SubscribeOptions,
-} from './subscribe';
+export type { SignalFactory, SignalDeps } from './signal';
+export type { ComputedFactory, ComputedDeps } from './computed';
+export type { EffectFactory, EffectDeps } from './effect';
+export type { BatchFactory } from './batch';
+export type { SubscribeFunction, SubscribeDeps } from './subscribe';
 
 // =============================================================================
 // Helper Types - For custom helper implementations

@@ -1,79 +1,13 @@
-import type {
-  ServiceDefinition,
-  InstrumentationContext,
-  ServiceContext,
-} from '@lattice/lattice';
-import { defineService } from '@lattice/lattice';
+import { defineModule } from '@lattice/lattice';
 import type { ScheduledNode } from './types';
-import { GraphEdges } from './deps/graph-edges';
+import { GraphEdgesModule } from './deps/graph-edges';
+import { SchedulerModule } from './deps/scheduler';
 import { CONSTANTS } from './constants';
-import { Scheduler } from './deps/scheduler';
 
 const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
 // Predefined status combinations for effect nodes
 const EFFECT_CLEAN = CONSUMER | SCHEDULED | CLEAN;
-
-/**
- * Dependencies required by the Effect factory.
- * Wired automatically by presets - only needed for custom compositions.
- * @internal
- */
-export type EffectDeps = {
-  track: GraphEdges['track'];
-  dispose: Scheduler['dispose'];
-};
-
-/**
- * Options for customizing Effect behavior.
- *
- * @example Adding instrumentation
- * ```ts
- * const effectService = Effect({
- *   instrument(impl, instr, ctx) {
- *     return (fn) => {
- *       const dispose = impl(fn);
- *       instr.emit({ type: 'effect:create', timestamp: Date.now(), data: {} });
- *       return dispose;
- *     };
- *   },
- * });
- * ```
- */
-export type EffectOptions = {
-  /** Custom instrumentation wrapper for debugging/profiling */
-  instrument?: (
-    impl: (fn: () => void | (() => void)) => () => void,
-    instrumentation: InstrumentationContext,
-    context: ServiceContext
-  ) => (fn: () => void | (() => void)) => () => void;
-};
-
-// Re-export types for proper type inference
-export type { GraphEdges } from './deps/graph-edges';
-export type { Scheduler } from './deps/scheduler';
-
-/**
- * ServiceDefinition for the effect primitive.
- * This is what gets composed into a service context.
- */
-export type EffectFactory = ServiceDefinition<
-  'effect',
-  (fn: () => void | (() => void)) => () => void
->;
-
-/**
- * The instantiable service returned by Effect().
- *
- * @example
- * ```ts
- * import { Effect, type EffectService } from '@lattice/signals/effect';
- *
- * const effectService: EffectService = Effect();
- * const factory = effectService.create(deps); // EffectFactory
- * ```
- */
-export type EffectService = ReturnType<typeof Effect>;
 
 // Effect node type
 type EffectNode = ScheduledNode & {
@@ -82,7 +16,25 @@ type EffectNode = ScheduledNode & {
 };
 
 /**
- * Create an Effect service factory.
+ * The effect factory function type
+ */
+export type EffectFactory = (fn: () => void | (() => void)) => () => void;
+
+/**
+ * Dependencies required by the Effect module.
+ * @internal
+ */
+export type EffectDeps = {
+  track: (node: ScheduledNode, fn: () => void | (() => void)) => void | (() => void);
+  dispose: (node: ScheduledNode, cleanup: () => void) => void;
+};
+
+// Re-export types needed for type inference
+export type { GraphEdges } from './deps/graph-edges';
+export type { Scheduler } from './deps/scheduler';
+
+/**
+ * Create an effect factory function.
  *
  * Effects are side effects that run when their dependencies change.
  * They run immediately on creation and re-run whenever any dependency changes.
@@ -135,42 +87,50 @@ type EffectNode = ScheduledNode & {
  * title('World'); // Document title updates automatically
  * ```
  */
-export const Effect = defineService(
-  ({ dispose: disposeNode, track }: EffectDeps) =>
-    ({ instrument }: EffectOptions = {}): EffectFactory => {
-      function createEffect(run: () => void | (() => void)): () => void {
-        const node: EffectNode = {
-          __type: 'effect' as const,
-          status: EFFECT_CLEAN,
-          dependencies: undefined,
-          dependencyTail: undefined,
-          nextScheduled: undefined,
-          trackingVersion: 0,
-          cleanup: undefined,
-          flush(): void {
-            if (node.cleanup !== undefined) node.cleanup = node.cleanup();
-            node.cleanup = track(node, run);
-          },
-        };
+export function createEffectFactory(deps: EffectDeps): EffectFactory {
+  const { track, dispose: disposeNode } = deps;
 
-        // Run a single time on creation
+  return function effect(run: () => void | (() => void)): () => void {
+    const node: EffectNode = {
+      __type: 'effect' as const,
+      status: EFFECT_CLEAN,
+      dependencies: undefined,
+      dependencyTail: undefined,
+      nextScheduled: undefined,
+      trackingVersion: 0,
+      cleanup: undefined,
+      flush(): void {
+        if (node.cleanup !== undefined) node.cleanup = node.cleanup();
         node.cleanup = track(node, run);
+      },
+    };
 
-        // Return dispose function
-        return () => {
-          disposeNode(node, () => {
-            if (node.cleanup === undefined) return;
-            node.cleanup = node.cleanup();
-          });
-        };
-      }
+    // Run a single time on creation
+    node.cleanup = track(node, run);
 
-      const extension: EffectFactory = {
-        name: 'effect',
-        impl: createEffect,
-        ...(instrument && { instrument }),
-      };
+    // Return dispose function
+    return () => {
+      disposeNode(node, () => {
+        if (node.cleanup === undefined) return;
+        node.cleanup = node.cleanup();
+      });
+    };
+  };
+}
 
-      return extension;
-    }
-);
+export const EffectModule = defineModule({
+  name: 'effect',
+  dependencies: [GraphEdgesModule, SchedulerModule],
+  create: ({
+    graphEdges,
+    scheduler,
+  }: {
+    graphEdges: { track: EffectDeps['track'] };
+    scheduler: { dispose: EffectDeps['dispose'] };
+  }): EffectFactory => {
+    return createEffectFactory({
+      track: graphEdges.track,
+      dispose: scheduler.dispose,
+    });
+  },
+});

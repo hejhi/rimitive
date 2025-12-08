@@ -1,34 +1,40 @@
-import { Signal } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Batch } from '@lattice/signals/batch';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
 import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
 import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
 import { createPullPropagator } from '@lattice/signals/deps/pull-propagator';
 import { createScheduler } from '@lattice/signals/deps/scheduler';
-import { compose as createLatticeContext } from '@lattice/lattice';
 
 export const createSvc = () => {
-  const { trackDependency, track, detachAll, consumer } = createGraphEdges();
-  const { pullUpdates, shallowPropagate } = createPullPropagator({ track });
+  const graphEdges = createGraphEdges();
+  const { pullUpdates, shallowPropagate } = createPullPropagator({
+    track: graphEdges.track,
+  });
   const { withVisitor } = createGraphTraversal();
-  const { startBatch, endBatch, withPropagate } = createScheduler({
-    detachAll,
+  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
+  const propagate = scheduler.withPropagate(withVisitor);
+
+  const signal = createSignalFactory({
+    graphEdges,
+    propagate,
   });
 
-  const opts = {
-    trackDependency,
-    propagate: withPropagate(withVisitor),
+  const computed = createComputedFactory({
+    consumer: graphEdges.consumer,
+    trackDependency: graphEdges.trackDependency,
     pullUpdates,
-    startBatch,
-    endBatch,
-    track,
+    track: graphEdges.track,
     shallowPropagate,
-    consumer,
-  };
+  });
 
-  return createLatticeContext(
-    Signal().create(opts),
-    Computed().create(opts),
-    Batch().create(opts)
-  )();
+  function batch<T>(fn: () => T): T {
+    scheduler.startBatch();
+    try {
+      return fn();
+    } finally {
+      scheduler.endBatch();
+    }
+  }
+
+  return { signal, computed, batch };
 };

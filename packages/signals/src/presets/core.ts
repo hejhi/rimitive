@@ -39,11 +39,6 @@
  * @module
  */
 
-import { Signal } from '../signal';
-import { Computed } from '../computed';
-import { Effect } from '../effect';
-import { Batch } from '../batch';
-import { Subscribe } from '../subscribe';
 import { createGraphEdges, type GraphEdges } from '../deps/graph-edges';
 import {
   createGraphTraversal,
@@ -55,14 +50,18 @@ import {
 } from '../deps/pull-propagator';
 import { createScheduler, type Scheduler } from '../deps/scheduler';
 import { createUntracked } from '../untrack';
-import { compose, type Svc, type Use } from '@lattice/lattice';
+import { createSignalFactory, type SignalFactory } from '../signal';
+import { createComputedFactory, type ComputedFactory } from '../computed';
+import { createEffectFactory, type EffectFactory } from '../effect';
+import { createSubscribeFactory, type SubscribeFunction } from '../subscribe';
 import type { Dependency } from '../types';
+import type { Use } from '@lattice/lattice';
 
 /**
  * Combined deps type - all reactive graph operations.
  *
  * This is the dependency type required by signal primitives.
- * Created by `deps()` and passed to `compose()`.
+ * Created by `deps()` and passed to factory functions.
  *
  * @internal Typically you don't need to use this directly - use `createSignals()()`.
  */
@@ -75,50 +74,20 @@ export type Helpers = {
   Omit<Scheduler, 'withPropagate'>;
 
 // Re-export user-facing types
-// Note: Internal dependency types (*Deps) are intentionally not exported.
-// They are wired automatically by presets and deps.
-
-// Signal types
+export type { SignalFactory, SignalFunction } from '../signal';
+export type { ComputedFactory, ComputedFunction } from '../computed';
+export type { EffectFactory } from '../effect';
+export type { BatchFactory } from '../batch';
 export type {
-  SignalFactory,
-  SignalService,
-  SignalOptions,
-  SignalFunction,
-} from '../signal';
-
-// Computed types
-export type {
-  ComputedFactory,
-  ComputedService,
-  ComputedOptions,
-  ComputedFunction,
-} from '../computed';
-
-// Effect types
-export type { EffectFactory, EffectService, EffectOptions } from '../effect';
-
-// Batch types
-export type { BatchFactory, BatchService, BatchOptions } from '../batch';
-
-// Subscribe types
-export type {
-  SubscribeFactory,
-  SubscribeService,
-  SubscribeOptions,
   SubscribeFunction,
   SubscribeCallback,
   UnsubscribeFunction,
 } from '../subscribe';
 
-// Lattice composition types
-export type { DefinedService } from '@lattice/lattice';
-
-import type { SignalService } from '../signal';
-import type { ComputedService } from '../computed';
-import type { EffectService } from '../effect';
-import type { BatchService } from '../batch';
-import type { SubscribeService } from '../subscribe';
-
+/**
+ * Create all the reactive graph infrastructure.
+ * This wires up the dependencies between graph components.
+ */
 export function deps(): Helpers {
   const edges = createGraphEdges();
   const untrack = createUntracked({ consumer: edges.consumer });
@@ -157,13 +126,14 @@ export function deps(): Helpers {
  * initApp(svc);
  * ```
  */
-export type SignalsSvc = Svc<{
-  signal: SignalService;
-  computed: ComputedService;
-  effect: EffectService;
-  batch: BatchService;
-  subscribe: SubscribeService;
-}>;
+export type SignalsSvc = {
+  signal: SignalFactory;
+  computed: ComputedFactory;
+  effect: EffectFactory;
+  batch: <T>(fn: () => T) => T;
+  subscribe: SubscribeFunction;
+  dispose(): void;
+};
 
 /**
  * Create a fully-configured signals service.
@@ -220,16 +190,64 @@ export type SignalsSvc = Svc<{
  * @returns A signals service with all primitives and a dispose method
  */
 export function createSignals(): Use<SignalsSvc> {
-  return compose(
-    {
-      // TODO: add a .mapDependencies() method that can map a dependency namespace to a
-      // services Dependencies to avoid namespace collisions
-      signal: Signal(),
-      computed: Computed(),
-      effect: Effect(),
-      batch: Batch(),
-      subscribe: Subscribe(),
+  // Create all the reactive graph infrastructure
+  const helpers = deps();
+
+  // Create all the signal factories
+  const signal = createSignalFactory({
+    graphEdges: helpers,
+    propagate: helpers.propagate,
+  });
+
+  const computed = createComputedFactory({
+    consumer: helpers.consumer,
+    trackDependency: helpers.trackDependency,
+    pullUpdates: helpers.pullUpdates,
+    track: helpers.track,
+    shallowPropagate: helpers.shallowPropagate,
+  });
+
+  const effect = createEffectFactory({
+    track: helpers.track,
+    dispose: helpers.dispose,
+  });
+
+  const subscribe = createSubscribeFactory({
+    track: helpers.track,
+    dispose: helpers.dispose,
+  });
+
+  // Batch function
+  function batch<T>(fn: () => T): T {
+    helpers.startBatch();
+    try {
+      return fn();
+    } finally {
+      helpers.endBatch();
+    }
+  }
+
+  // Build the service object
+  const svc: SignalsSvc = {
+    signal,
+    computed,
+    effect,
+    batch,
+    subscribe,
+    dispose: () => {
+      // Cleanup logic could go here
     },
-    deps()
-  );
+  };
+
+  // Return a Use function that provides access to the service
+  const use = <TResult>(
+    callback?: (ctx: SignalsSvc) => TResult
+  ): SignalsSvc | TResult => {
+    if (callback === undefined) {
+      return svc;
+    }
+    return callback(svc);
+  };
+
+  return use as Use<SignalsSvc>;
 }

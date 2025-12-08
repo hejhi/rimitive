@@ -1,143 +1,26 @@
 /**
- * A factory that creates service instances with injected dependencies.
+ * Core types for Lattice module system
  *
- * Services are created by `defineService` and have a `.create(deps)` method
- * that wires dependencies and returns a `ServiceDefinition`.
+ * @module
+ */
+
+import type { Module } from './module';
+
+/**
+ * Context provided to modules for lifecycle management.
+ *
+ * Passed to `init`, `destroy`, and `instrument` hooks.
  *
  * @example
  * ```ts
- * import { Signal, deps } from '@lattice/signals/extend';
- *
- * // Signal() returns a Service
- * const signalService = Signal();
- *
- * // .create() wires dependencies and returns ServiceDefinition
- * const signalDef = signalService.create(deps());
- * ```
- */
-export type Service<TResult, TContext> = {
-  /**
-   * Create an instance with the provided dependencies
-   *
-   * @param context - The dependencies required to instantiate the service
-   * @returns The instantiated ServiceDefinition
-   */
-  create(context: TContext): TResult;
-};
-
-/**
- * A service definition that can be composed into a Lattice context.
- *
- * ServiceDefinitions are the building blocks of Lattice composition.
- * They describe an implementation plus optional lifecycle hooks.
- *
- * @example Basic service definition
- * ```ts
- * const counterService: ServiceDefinition<'counter', CounterImpl> = {
- *   name: 'counter',
- *   impl: {
- *     value: 0,
- *     increment() { this.value++; },
- *   },
- * };
- *
- * const use = compose(counterService);
- * const { counter } = use();
- * counter.increment();
- * ```
- *
- * @example With lifecycle hooks
- * ```ts
- * const timerService: ServiceDefinition<'timer', TimerImpl> = {
- *   name: 'timer',
- *   impl: createTimer(),
+ * const MyModule = defineModule({
+ *   name: 'myModule',
+ *   create: () => createImpl(),
  *   init(ctx) {
- *     // Called when added to context
- *     this.impl.start();
- *   },
- *   destroy(ctx) {
- *     // Called when context is disposed
- *     this.impl.stop();
- *   },
- * };
- * ```
- *
- * @example With adapt hook for context awareness
- * ```ts
- * const resourceService: ServiceDefinition<'resource', () => Resource> = {
- *   name: 'resource',
- *   impl: () => createResource(),
- *   adapt(impl, ctx) {
- *     return () => {
- *       if (ctx.isDestroyed) throw new Error('Context disposed');
- *       const resource = impl();
- *       ctx.destroy(() => resource.cleanup());
- *       return resource;
- *     };
- *   },
- * };
- * ```
- */
-export type ServiceDefinition<TName extends string, TImpl> = {
-  /**
-   * Unique name for this service (becomes the property name on context)
-   */
-  name: TName;
-
-  /**
-   * The actual implementation exposed on the context
-   */
-  impl: TImpl;
-
-  /**
-   * Optional wrapper to add context awareness (disposal checks, tracking, etc.)
-   * Called after `instrument` if both are present.
-   */
-  adapt?(impl: TImpl, context: ServiceContext): TImpl;
-
-  /**
-   * Optional instrumentation wrapper for debugging/profiling.
-   * Called before `adapt` if both are present.
-   */
-  instrument?(
-    impl: TImpl,
-    instrumentation: InstrumentationContext,
-    context: ServiceContext
-  ): TImpl;
-
-  /**
-   * Called when the service is added to a context.
-   * Use for initialization logic.
-   */
-  init?(context: ServiceContext): void;
-
-  /**
-   * Called when the context is disposed.
-   * Use for cleanup logic (or register cleanup via `context.destroy()`).
-   */
-  destroy?(context: ServiceContext): void;
-};
-
-/**
- * Context provided to services for lifecycle management.
- *
- * Passed to `init`, `destroy`, `adapt`, and `instrument` hooks.
- *
- * @example
- * ```ts
- * const myService: ServiceDefinition<'my', MyImpl> = {
- *   name: 'my',
- *   impl: createImpl(),
- *   adapt(impl, ctx) {
- *     // Check disposal state
- *     if (ctx.isDestroyed) throw new Error('Already disposed');
- *
  *     // Register cleanup
- *     ctx.destroy(() => impl.cleanup());
- *
- *     return impl;
+ *     ctx.destroy(() => cleanup());
  *   },
- * };
+ * });
  * ```
  */
 export type ServiceContext = {
@@ -157,28 +40,21 @@ export type ServiceContext = {
 /**
  * Instrumentation context for debugging and profiling.
  *
- * Passed to the `instrument` hook of services when instrumentation is enabled.
+ * Passed to the `instrument` hook of modules when instrumentation is enabled.
  *
  * @example
  * ```ts
- * const signalService: ServiceDefinition<'signal', SignalImpl> = {
+ * const Signal = defineModule({
  *   name: 'signal',
- *   impl: createSignal,
- *   instrument(impl, instr, ctx) {
+ *   create: ({ graphEdges }) => (value) => createSignal(value, graphEdges),
+ *   instrument(impl, instr) {
  *     return (value) => {
- *       const { id, resource: signal } = instr.register(impl(value), 'signal');
- *
- *       // Emit event on creation
- *       instr.emit({
- *         type: 'signal:create',
- *         timestamp: Date.now(),
- *         data: { id, initialValue: value },
- *       });
- *
- *       return signal;
+ *       const sig = impl(value);
+ *       instr.register(sig, 'signal');
+ *       return sig;
  *     };
  *   },
- * };
+ * });
  * ```
  */
 export type InstrumentationContext = {
@@ -213,80 +89,39 @@ export type InstrumentationContext = {
 };
 
 /**
- * Extract the implementation type from a ServiceDefinition.
+ * A callable returned by `compose()` that provides access to the module context.
+ *
+ * Can be called in two ways:
+ * - `use()` - Returns the context directly
+ * - `use(callback)` - Passes the context to callback and returns its result
  *
  * @example
  * ```ts
- * type SignalDef = ServiceDefinition<'signal', <T>(v: T) => SignalFn<T>>;
- * type SignalImpl = ServiceImpl<SignalDef>;
- * // SignalImpl = <T>(v: T) => SignalFn<T>
+ * import { compose } from '@lattice/lattice';
+ * import { Signal, Computed } from '@lattice/signals';
+ *
+ * const use = compose(Signal, Computed);
+ *
+ * // Get the context directly
+ * const { signal, computed } = use();
+ *
+ * // Wrap a component with context access
+ * const Counter = use(({ signal, computed }) => () => {
+ *   const count = signal(0);
+ *   return computed(() => count());
+ * });
  * ```
  */
-export type ServiceImpl<TService> =
-  TService extends ServiceDefinition<string, infer M> ? M : never;
-
-/**
- * Extract the name from a ServiceDefinition.
- *
- * @example
- * ```ts
- * type SignalDef = ServiceDefinition<'signal', SignalImpl>;
- * type Name = ServiceName<SignalDef>;
- * // Name = 'signal'
- * ```
- */
-export type ServiceName<TService> =
-  TService extends ServiceDefinition<infer N, unknown> ? N : never;
-
-/**
- * The composed context type for a tuple of ServiceDefinitions.
- *
- * Maps service names to their implementations and adds a `dispose()` method.
- *
- * @example
- * ```ts
- * type SignalDef = ServiceDefinition<'signal', SignalImpl>;
- * type ComputedDef = ServiceDefinition<'computed', ComputedImpl>;
- *
- * type Ctx = LatticeContext<[SignalDef, ComputedDef]>;
- * // Ctx = { signal: SignalImpl; computed: ComputedImpl; dispose(): void }
- * ```
- */
-export type LatticeContext<
-  TService extends readonly ServiceDefinition<string, unknown>[],
-> = {
-  [K in TService[number] as ServiceName<K>]: ServiceImpl<K>;
-} & {
-  dispose(): void;
+export type Use<TSvc> = {
+  /** Returns the context directly */
+  (): TSvc;
+  /** Passes the context to callback and returns its result */
+  <TResult>(callback: (svc: TSvc) => TResult): TResult;
 };
 
 /**
- * A service factory returned by `defineService()`.
- *
- * Has a `.create(deps)` method that wires dependencies.
- * This is what you pass to `compose()`.
- *
- * @example
- * ```ts
- * import { Signal, deps } from '@lattice/signals/extend';
- * import { compose } from '@lattice/lattice';
- *
- * // Signal() returns DefinedService
- * const signalFactory: DefinedService = Signal();
- *
- * // Used with compose
- * const use = compose({ signal: signalFactory }, deps());
- * const { signal } = use();
- * ```
- */
-export type DefinedService<TDeps = unknown> = Service<
-  ServiceDefinition<string, TDeps>,
-  TDeps
->;
-
-/**
  * Utility type: Convert a union to an intersection.
- * Used internally to combine dependency requirements.
+ * Used internally to combine types.
  */
 export type UnionToIntersection<U> = (
   U extends unknown ? (k: U) => void : never
@@ -295,78 +130,35 @@ export type UnionToIntersection<U> = (
   : never;
 
 /**
- * Extract the combined dependency type from a record of DefinedServices.
- *
- * Used by `compose()` to infer the required deps parameter.
- *
- * @example
- * ```ts
- * type Factories = {
- *   signal: DefinedService<{ consumer: Consumer }>;
- *   computed: DefinedService<{ track: TrackFn }>;
- * };
- *
- * type Deps = ExtractDeps<Factories>;
- * // Deps = { consumer: Consumer } & { track: TrackFn }
- * ```
+ * Extract the implementation type from a Module.
  */
-export type ExtractDeps<T extends Record<string, DefinedService>> =
-  UnionToIntersection<T[keyof T] extends Service<unknown, infer C> ? C : never>;
+export type ModuleImpl<T> = T extends Module<string, infer TImpl, unknown>
+  ? TImpl
+  : never;
 
 /**
- * The composed context type for object-based composition.
+ * Extract the name from a Module.
+ */
+export type ModuleName<T> = T extends Module<infer TName, unknown, unknown>
+  ? TName
+  : never;
+
+/**
+ * The composed context type from a tuple of Modules.
  *
- * Extracts impl types from service factories, preserving key names.
+ * Maps module names to their implementations and adds a `dispose()` method.
  *
  * @example
  * ```ts
- * type Factories = {
- *   signal: DefinedService<SignalDeps>;
- *   computed: DefinedService<ComputedDeps>;
- * };
+ * type SignalModule = Module<'signal', SignalImpl, SignalDeps>;
+ * type ComputedModule = Module<'computed', ComputedImpl, ComputedDeps>;
  *
- * type Ctx = Svc<Factories>;
+ * type Ctx = ComposedContext<[SignalModule, ComputedModule]>;
  * // Ctx = { signal: SignalImpl; computed: ComputedImpl; dispose(): void }
  * ```
  */
-export type Svc<T extends Record<string, DefinedService>> = {
-  [K in keyof T]: T[K] extends Service<
-    ServiceDefinition<string, infer TImpl>,
-    unknown
-  >
-    ? TImpl
-    : never;
+export type ComposedContext<TModules extends readonly Module[]> = {
+  [M in TModules[number] as ModuleName<M>]: ModuleImpl<M>;
 } & {
   dispose(): void;
-};
-
-/**
- * A callable returned by `compose()` that provides access to the service context.
- *
- * Can be called in two ways:
- * - `use()` - Returns the service context directly
- * - `use(callback)` - Passes the context to callback and returns its result
- *
- * @example
- * ```ts
- * import { Signal, Computed, deps } from '@lattice/signals/extend';
- * import { compose } from '@lattice/lattice';
- *
- * const use = compose({ signal: Signal(), computed: Computed() }, deps());
- *
- * // Get the service directly
- * const { signal, computed } = use();
- *
- * // Wrap a component with service access
- * const Counter = use(({ signal, computed }) => () => {
- *   const count = signal(0);
- *   return el('div')(computed(() => count()));
- * });
- * ```
- */
-export type Use<TSvc> = {
-  /** Returns the service context directly */
-  (): TSvc;
-  /** Passes the context to callback and returns its result */
-  <TResult>(callback: (svc: TSvc) => TResult): TResult;
 };

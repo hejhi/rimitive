@@ -9,6 +9,8 @@
 
 import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { defineModule } from '@lattice/lattice';
+import { GraphEdgesModule } from './graph-edges';
 
 const { PENDING, DIRTY, CLEAN, DISPOSED, STATE_MASK, CONSUMER, SCHEDULED } =
   CONSTANTS;
@@ -173,3 +175,9 @@ export function createScheduler({
     flush,
   };
 }
+
+export const SchedulerModule = defineModule({
+  name: 'scheduler',
+  dependencies: [GraphEdgesModule],
+  create: ({ graphEdges }) => createScheduler({ detachAll: graphEdges.detachAll }),
+});

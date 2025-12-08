@@ -4,29 +4,29 @@
 
 import { describe, it, expect } from 'vitest';
 import { createTestEnv, MockAdapterConfig, MockElement } from './test-utils';
-import { Match } from './match';
-import { El } from './el';
+import { createMatchFactory } from './match';
+import { createElFactory } from './el';
 import type { FragmentRef, ElementRef } from './types';
 import { STATUS_ELEMENT } from './types';
 
 describe('match() - reactive element switching', () => {
   function setup() {
     const env = createTestEnv();
-    const el = El<MockAdapterConfig>().create({
+    const el = createElFactory<MockAdapterConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = Match<MockAdapterConfig>().create({
+    const match = createMatchFactory<MockAdapterConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       disposeScope: env.disposeScope,
       getElementScope: env.getElementScope,
     });
 
-    return { ...env, el, match: match.impl };
+    return { ...env, el, match };
   }
 
   describe('Untracked lifecycle callbacks', () => {
@@ -39,10 +39,10 @@ describe('match() - reactive element switching', () => {
       let matcherCallCount = 0;
 
       // Create match where lifecycle callback reads outerState
-      const spec = match(showDiv, (show) => {
+      const spec = match(showDiv, (show: boolean) => {
         matcherCallCount++;
         return show
-          ? el.impl('div').ref(() => {
+          ? el('div').ref(() => {
               lifecycleCallCount++;
               // This read should NOT become a dependency of match's effect
               const value = outerState();

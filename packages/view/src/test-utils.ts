@@ -6,9 +6,9 @@ import { createScopes } from './deps/scope';
 import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
 import { createScheduler } from '@lattice/signals/deps/scheduler';
 import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
-import { Signal } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Effect } from '@lattice/signals/effect';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
 import { createPullPropagator } from '@lattice/signals/deps/pull-propagator';
 
 // Re-export types for convenience
@@ -379,34 +379,28 @@ export function createTestEnv() {
   const propagate = scheduler.withPropagate(withVisitor);
 
   // Create real signal factory
-  const signalFactory = Signal().create({
-    consumer: graphEdges.consumer,
-    trackDependency: graphEdges.trackDependency,
+  const signal = createSignalFactory({
+    graphEdges,
     propagate,
   });
-
-  // Use real signal
-  const signal = signalFactory.impl;
 
   // Create pull propagator for computed
   const pullPropagator = createPullPropagator({ track: graphEdges.track });
 
   // Use real computed from signals
-  const computedFactory = Computed().create({
+  const computed = createComputedFactory({
     consumer: graphEdges.consumer,
     track: graphEdges.track,
     trackDependency: graphEdges.trackDependency,
     pullUpdates: pullPropagator.pullUpdates,
     shallowPropagate: pullPropagator.shallowPropagate,
   });
-  const computed = computedFactory.impl;
 
   // Use real effect from signals
-  const effectFactory = Effect().create({
+  const effect = createEffectFactory({
     track: graphEdges.track,
     dispose: scheduler.dispose,
   });
-  const effect = effectFactory.impl;
 
   const {
     disposeScope,

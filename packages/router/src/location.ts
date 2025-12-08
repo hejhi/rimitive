@@ -2,7 +2,6 @@
  * Location primitive for reactive URL state access
  */
 
-import { defineService } from '@lattice/lattice';
 import type { LocationOpts, LocationFactory, LocationSvc } from './types';
 
 /**
@@ -60,19 +59,18 @@ function parseURL(url: string): {
 }
 
 /**
- * Create location factory that provides reactive access to URL state
+ * Create a location factory that provides reactive access to URL state
  *
  * @example
  * ```typescript
  * import { createLocationFactory } from '@lattice/router';
  *
- * const location = createLocationFactory().create({
- *   signal,
+ * const location = createLocationFactory({
  *   computed,
  *   currentPath: router.currentPath
  * });
  *
- * const loc = location.impl();
+ * const loc = location();
  *
  * // Access URL components reactively
  * effect(() => {
@@ -82,46 +80,37 @@ function parseURL(url: string): {
  * });
  * ```
  */
-export const createLocationFactory = defineService(
-  ({ computed, currentPath }: LocationOpts) => {
-    return () => {
-      function location(): LocationSvc {
-        // Create computed values for each part of the URL
-        const pathname = computed(() => {
-          const path = currentPath();
-          return parseURL(path).pathname;
-        });
+export function createLocationFactory(opts: LocationOpts): LocationFactory {
+  const { computed, currentPath } = opts;
 
-        const search = computed(() => {
-          const path = currentPath();
-          return parseURL(path).search;
-        });
+  return function location(): LocationSvc {
+    // Create computed values for each part of the URL
+    const pathname = computed(() => {
+      const path = currentPath();
+      return parseURL(path).pathname;
+    });
 
-        const hash = computed(() => {
-          const path = currentPath();
-          return parseURL(path).hash;
-        });
+    const search = computed(() => {
+      const path = currentPath();
+      return parseURL(path).search;
+    });
 
-        const query = computed(() => {
-          const path = currentPath();
-          const { search: searchString } = parseURL(path);
-          return parseQueryString(searchString);
-        });
+    const hash = computed(() => {
+      const path = currentPath();
+      return parseURL(path).hash;
+    });
 
-        return {
-          pathname,
-          search,
-          hash,
-          query,
-        };
-      }
+    const query = computed(() => {
+      const path = currentPath();
+      const { search: searchString } = parseURL(path);
+      return parseQueryString(searchString);
+    });
 
-      const extension: LocationFactory = {
-        name: 'location' as const,
-        impl: location,
-      };
-
-      return extension;
+    return {
+      pathname,
+      search,
+      hash,
+      query,
     };
-  }
-);
+  };
+}

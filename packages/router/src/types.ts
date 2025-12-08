@@ -7,10 +7,7 @@ import type {
   Writable,
 } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import type { ServiceDefinition } from '@lattice/lattice';
 import type { ElementProps, ElFactory } from '@lattice/view/el';
-
-type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
 
 /**
  * Route parameter map extracted from path patterns
@@ -75,23 +72,18 @@ export type MatchFunction<TBaseElement> = {
  * Link is DOM-only - routing with window.history is a web browser concept
  */
 export type LinkOpts = {
-  el: ElMethod<DOMAdapterConfig>;
+  el: ElFactory<DOMAdapterConfig>;
   navigate: (path: string) => void;
 };
 
 /**
- * Link factory type
+ * Link function type
  *
  * Link is DOM-only - no need for generic adapter abstraction
  */
-export type LinkFactory = ServiceDefinition<
-  'Link',
-  {
-    (
-      props: ElementProps<DOMAdapterConfig, 'a'> & { href: string }
-    ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
-  }
->;
+export type LinkFunction = (
+  props: ElementProps<DOMAdapterConfig, 'a'> & { href: string }
+) => (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
 
 /**
  * Location - reactive access to URL components
@@ -115,9 +107,4 @@ export type LocationOpts = {
 /**
  * Location factory type
  */
-export type LocationFactory = ServiceDefinition<
-  'location',
-  {
-    (): LocationSvc;
-  }
->;
+export type LocationFactory = () => LocationSvc;

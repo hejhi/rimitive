@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { El } from './el';
+import { createElFactory } from './el';
 import {
   createTestEnv,
   getTextContent,
@@ -47,12 +47,12 @@ describe('el primitive', () => {
     it('renders static content', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const ref = el('div').props({ className: 'container' })('Hello ', 'World');
 
@@ -65,12 +65,12 @@ describe('el primitive', () => {
     it('nests elements', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const child = el('span')(
         'nested content'
@@ -100,12 +100,12 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const ref = el('div')(text);
 
@@ -130,12 +130,12 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const ref = el('div').props({ className })();
 
@@ -156,12 +156,12 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const ref = el('div')('Count: ', count);
 
@@ -182,12 +182,12 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const ref = el('div')(text);
       asElement(ref.create());
@@ -206,12 +206,12 @@ describe('el primitive', () => {
     it('calls lifecycle cleanup function via .ref()', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const cleanup = vi.fn();
       const ref = el('div').ref(() => cleanup)();
@@ -230,12 +230,12 @@ describe('el primitive', () => {
     it('allows chaining multiple .props() calls', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const ref = el('div')
         .props({ className: 'base' })
@@ -249,12 +249,12 @@ describe('el primitive', () => {
     it('allows props callback to access and extend current props', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const card = el('div').props({ className: 'card' });
       const blueCard = card.props((p) => ({
@@ -269,12 +269,12 @@ describe('el primitive', () => {
     it('creates reusable element factories', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const div = el('div');
       const container = div.props({ className: 'container' });
@@ -297,12 +297,12 @@ describe('el primitive', () => {
     it('allows .ref() to add lifecycle callbacks', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const lifecycleCalled = vi.fn();
       const ref = el('div').ref(lifecycleCalled)('content');
@@ -314,12 +314,12 @@ describe('el primitive', () => {
     it('allows chaining multiple .ref() calls', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const callback1 = vi.fn();
       const callback2 = vi.fn();
@@ -333,12 +333,12 @@ describe('el primitive', () => {
     it('allows mixing .props() and .ref() in any order', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const lifecycleCalled = vi.fn();
       const ref = el('div')
@@ -355,12 +355,12 @@ describe('el primitive', () => {
     it('creates reusable factories with baked-in lifecycle', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = El<MockAdapterConfig>().create({
+      const el = createElFactory<MockAdapterConfig>({
         scopedEffect,
         adapter,
         createElementScope,
         onCleanup,
-      }).impl;
+      });
 
       const callCount = { value: 0 };
       const autoFocus = el('input')

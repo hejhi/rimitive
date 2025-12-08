@@ -15,7 +15,7 @@ export type {
   RouteSpec,
   RouteMetadata,
   LinkOpts,
-  LinkFactory,
+  LinkFunction,
   LocationSvc,
   LocationOpts,
   LocationFactory,

@@ -1,26 +1,25 @@
 import { describe, it, expect, vi } from 'vitest';
 import { compose } from './compose';
-import { ServiceDefinition } from './types';
+import { defineModule } from './module';
 
-describe('Service Composition System', () => {
-  it('should create a context with custom extensions', () => {
+describe('Module Composition System', () => {
+  it('should create a context with modules', () => {
     let counterValue = 0;
 
-    const counterExtension: ServiceDefinition<'counter', () => number> = {
+    const Counter = defineModule({
       name: 'counter',
-      impl: () => ++counterValue,
-    };
+      create: () => () => ++counterValue,
+    });
 
-    const loggerExtension: ServiceDefinition<'log', (message: string) => void> =
-      {
-        name: 'log',
-        impl: vi.fn(),
-      };
+    const Logger = defineModule({
+      name: 'log',
+      create: () => vi.fn() as (message: string) => void,
+    });
 
-    const use = compose(counterExtension, loggerExtension);
+    const use = compose(Counter, Logger);
     const context = use();
 
-    // Extensions should be available
+    // Modules should be available
     expect('counter' in context).toBe(true);
     expect('log' in context).toBe(true);
     expect('dispose' in context).toBe(true);
@@ -29,10 +28,6 @@ describe('Service Composition System', () => {
     expect(context.counter()).toBe(1);
     expect(context.counter()).toBe(2);
 
-    // Test logger
-    context.log('test message');
-    expect(loggerExtension.impl).toHaveBeenCalledWith('test message');
-
     context.dispose();
   });
 
@@ -40,14 +35,14 @@ describe('Service Composition System', () => {
     const init = vi.fn();
     const destroy = vi.fn();
 
-    const lifecycleExtension: ServiceDefinition<'test', () => void> = {
+    const TestModule = defineModule({
       name: 'test',
-      impl: () => {},
+      create: () => () => {},
       init,
       destroy,
-    };
+    });
 
-    const use = compose(lifecycleExtension);
+    const use = compose(TestModule);
     const context = use();
     expect(init).toHaveBeenCalledOnce();
     expect(destroy).not.toHaveBeenCalled();
@@ -56,50 +51,48 @@ describe('Service Composition System', () => {
     expect(destroy).toHaveBeenCalledOnce();
   });
 
-  it('should wrap impls when wrapper is provided', () => {
-    let disposed = false;
+  it('should resolve dependencies automatically', () => {
+    const Logger = defineModule({
+      name: 'logger',
+      create: () => ({
+        log: vi.fn() as (msg: string) => void,
+      }),
+    });
 
-    const wrappedExtension: ServiceDefinition<
-      'wrapped',
-      (value: string) => string
-    > = {
-      name: 'wrapped',
-      impl: (value: string) => value.toUpperCase(),
-      adapt(impl, ctx) {
-        return (value: string) => {
-          if (ctx.isDestroyed) {
-            throw new Error('Context is disposed');
-          }
-          return impl(value) + '!';
+    const Counter = defineModule({
+      name: 'counter',
+      dependencies: [Logger],
+      create: ({ logger }: { logger: { log: (msg: string) => void } }) => {
+        let count = 0;
+        return {
+          increment: () => {
+            count++;
+            logger.log(`Count: ${count}`);
+            return count;
+          },
         };
       },
-      destroy() {
-        disposed = true;
-      },
-    };
+    });
 
-    const use = compose(wrappedExtension);
+    // Pass all modules for proper typing (deps are still auto-resolved at runtime)
+    const use = compose(Logger, Counter);
     const context = use();
 
-    // Test wrapped behavior
-    expect(context.wrapped('hello')).toBe('HELLO!');
+    expect('counter' in context).toBe(true);
+    expect('logger' in context).toBe(true);
+
+    context.counter.increment();
+    expect(context.logger.log).toHaveBeenCalledWith('Count: 1');
 
     context.dispose();
-    expect(disposed).toBe(true);
-
-    // Should throw after disposal
-    expect(() => context.wrapped('test')).toThrow('Context is disposed');
   });
 
-  it('should support custom resource tracking', () => {
+  it('should support custom resource tracking via destroy', () => {
     const disposables: Array<() => void> = [];
 
-    const resourceExtension: ServiceDefinition<
-      'createResource',
-      () => { dispose: () => void }
-    > = {
+    const ResourceFactory = defineModule({
       name: 'createResource',
-      impl: () => {
+      create: () => () => {
         const resource = {
           dispose: vi.fn(),
         };
@@ -110,9 +103,9 @@ describe('Service Composition System', () => {
         // Dispose all resources when context is disposed
         disposables.forEach((dispose) => dispose());
       },
-    };
+    });
 
-    const use = compose(resourceExtension);
+    const use = compose(ResourceFactory);
     const context = use();
 
     const r1 = context.createResource();
@@ -127,27 +120,27 @@ describe('Service Composition System', () => {
     expect(r2.dispose).toHaveBeenCalledOnce();
   });
 
-  it('should prevent duplicate service names', () => {
-    const ext1: ServiceDefinition<'test', () => void> = {
+  it('should prevent duplicate module names', () => {
+    const Ext1 = defineModule({
       name: 'test',
-      impl: () => {},
-    };
+      create: () => () => {},
+    });
 
-    const ext2: ServiceDefinition<'test', () => void> = {
+    const Ext2 = defineModule({
       name: 'test',
-      impl: () => {},
-    };
+      create: () => () => {},
+    });
 
-    expect(() => compose(ext1, ext2)()).toThrow('Duplicate service name: test');
+    expect(() => compose(Ext1, Ext2)()).toThrow('Duplicate module name: test');
   });
 
   it('should support use() with callback pattern', () => {
-    const counterExtension: ServiceDefinition<'counter', () => number> = {
+    const Counter = defineModule({
       name: 'counter',
-      impl: () => 42,
-    };
+      create: () => () => 42,
+    });
 
-    const use = compose(counterExtension);
+    const use = compose(Counter);
 
     // Test callback pattern
     const result = use(({ counter }) => counter());
@@ -157,5 +150,66 @@ describe('Service Composition System', () => {
     const contextKeys = use((ctx) => Object.keys(ctx));
     expect(contextKeys).toContain('counter');
     expect(contextKeys).toContain('dispose');
+  });
+
+  it('should handle transitive dependencies', () => {
+    const A = defineModule({
+      name: 'a',
+      create: () => 'A',
+    });
+
+    const B = defineModule({
+      name: 'b',
+      dependencies: [A],
+      create: ({ a }: { a: string }) => `B(${a})`,
+    });
+
+    const C = defineModule({
+      name: 'c',
+      dependencies: [B],
+      create: ({ b }: { b: string }) => `C(${b})`,
+    });
+
+    // Pass all modules for proper typing (deps are still auto-resolved at runtime)
+    const use = compose(A, B, C);
+    const context = use();
+
+    expect(context.a).toBe('A');
+    expect(context.b).toBe('B(A)');
+    expect(context.c).toBe('C(B(A))');
+
+    context.dispose();
+  });
+
+  it('should call destroy hooks in reverse order', () => {
+    const order: string[] = [];
+
+    const A = defineModule({
+      name: 'a',
+      create: () => 'A',
+      destroy: () => order.push('A'),
+    });
+
+    const B = defineModule({
+      name: 'b',
+      dependencies: [A],
+      create: () => 'B',
+      destroy: () => order.push('B'),
+    });
+
+    const C = defineModule({
+      name: 'c',
+      dependencies: [B],
+      create: () => 'C',
+      destroy: () => order.push('C'),
+    });
+
+    // Pass all modules for proper typing
+    const use = compose(A, B, C);
+    const context = use();
+    context.dispose();
+
+    // Should be in reverse dependency order
+    expect(order).toEqual(['C', 'B', 'A']);
   });
 });

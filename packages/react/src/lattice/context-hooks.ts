@@ -1,25 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { compose } from '@lattice/lattice';
-import type { ServiceDefinition, LatticeContext } from '@lattice/lattice';
+import type { Module, ComposedContext } from '@lattice/lattice';
 
 /**
- * Create a Lattice context with custom extensions that is scoped to the component lifecycle.
+ * Create a Lattice context with modules that is scoped to the component lifecycle.
  * The context will be automatically disposed when the component unmounts.
  *
- * @param extensions - The Lattice extensions to include in the context
- * @returns A context with methods from all provided extensions
+ * @param modules - The Lattice modules to include in the context
+ * @returns A context with implementations from all provided modules
  *
  * @example
  * ```tsx
- * import { Signal, Computed, deps } from '@lattice/signals/extend';
+ * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
  *
  * function App() {
- *   // Create a context with specific extensions
- *   const helpers = deps();
- *   const context = useLatticeContext(
- *     Signal().create(helpers),
- *     Computed().create(helpers)
- *   );
+ *   // Create a context with specific modules
+ *   const context = useLatticeContext(SignalModule, ComputedModule, EffectModule);
  *
  *   const count = useRef(context.signal(0));
  *   const doubled = useRef(context.computed(() => count.current() * 2));
@@ -51,13 +47,13 @@ import type { ServiceDefinition, LatticeContext } from '@lattice/lattice';
  * }
  * ```
  */
-export function useLatticeContext<
-  E extends readonly ServiceDefinition<string, unknown>[],
->(...extensions: E): LatticeContext<E> {
+export function useLatticeContext<M extends Module[]>(
+  ...modules: M
+): ComposedContext<M> {
   // Create context only once, using ref to ensure stability
-  const contextRef = useRef<LatticeContext<E> | null>(null);
+  const contextRef = useRef<ComposedContext<M> | null>(null);
 
-  if (!contextRef.current) contextRef.current = compose(...extensions)();
+  if (!contextRef.current) contextRef.current = compose(...modules)();
 
   const context = contextRef.current;
 

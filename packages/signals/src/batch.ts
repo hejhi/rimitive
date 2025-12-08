@@ -1,68 +1,14 @@
-import type {
-  ServiceContext,
-  InstrumentationContext,
-  ServiceDefinition,
-} from '@lattice/lattice';
-import { defineService } from '@lattice/lattice';
-import { Scheduler } from './deps/scheduler';
+import type { InstrumentationContext } from '@lattice/lattice';
+import { defineModule } from '@lattice/lattice';
+import { SchedulerModule, type Scheduler } from './deps/scheduler';
 
 /**
- * ServiceDefinition for the batch primitive.
- * This is what gets composed into a service context.
+ * The batch function type - groups multiple signal writes into a single update cycle.
  */
-export type BatchFactory = ServiceDefinition<'batch', <T>(fn: () => T) => T>;
+export type BatchFactory = <T>(fn: () => T) => T;
 
 /**
- * The instantiable service returned by Batch().
- *
- * @example
- * ```ts
- * import { Batch, type BatchService } from '@lattice/signals/batch';
- *
- * const batchService: BatchService = Batch();
- * const factory = batchService.create(deps); // BatchFactory
- * ```
- */
-export type BatchService = ReturnType<typeof Batch>;
-
-/**
- * Dependencies required by the Batch factory.
- * Wired automatically by presets - only needed for custom compositions.
- * @internal
- */
-export type BatchDeps = {
-  startBatch: Scheduler['startBatch'];
-  endBatch: Scheduler['endBatch'];
-};
-
-/**
- * Options for customizing Batch behavior.
- *
- * @example Adding instrumentation
- * ```ts
- * const batchService = Batch({
- *   instrument(impl, instr, ctx) {
- *     return (fn) => {
- *       instr.emit({ type: 'batch:start', timestamp: Date.now(), data: {} });
- *       const result = impl(fn);
- *       instr.emit({ type: 'batch:end', timestamp: Date.now(), data: {} });
- *       return result;
- *     };
- *   },
- * });
- * ```
- */
-export type BatchOptions = {
-  /** Custom instrumentation wrapper for debugging/profiling */
-  instrument?: (
-    impl: <T>(fn: () => T) => T,
-    instrumentation: InstrumentationContext,
-    context: ServiceContext
-  ) => <T>(fn: () => T) => T;
-};
-
-/**
- * Create a Batch service factory.
+ * Batch module - groups multiple signal writes into a single update cycle.
  *
  * Batch groups multiple signal writes into a single update cycle,
  * preventing intermediate effect executions.
@@ -114,25 +60,28 @@ export type BatchOptions = {
  * console.log(result); // New count value
  * ```
  */
-export const Batch = defineService(
-  ({ startBatch, endBatch }: BatchDeps) =>
-    ({ instrument }: BatchOptions = {}): BatchFactory => {
-      // Signal writes propagate immediately during batch.
-      // We only defer effect execution to batch end.
-      const batch = function batch<T>(fn: () => T): T {
-        startBatch();
+export const BatchModule = defineModule({
+  name: 'batch',
+  dependencies: [SchedulerModule],
+  create: ({ scheduler }: { scheduler: Scheduler }): BatchFactory => {
+    // Signal writes propagate immediately during batch.
+    // We only defer effect execution to batch end.
+    return function batch<T>(fn: () => T): T {
+      scheduler.startBatch();
 
-        try {
-          return fn();
-        } finally {
-          endBatch(); // endBatch automatically flushes when depth reaches 0
-        }
-      };
-
-      return {
-        name: 'batch',
-        impl: batch,
-        ...(instrument && { instrument }),
-      };
-    }
-);
+      try {
+        return fn();
+      } finally {
+        scheduler.endBatch(); // endBatch automatically flushes when depth reaches 0
+      }
+    };
+  },
+  instrument: (impl: BatchFactory, instr: InstrumentationContext): BatchFactory => {
+    return <T>(fn: () => T): T => {
+      instr.emit({ type: 'batch:start', timestamp: Date.now(), data: {} });
+      const result = impl(fn);
+      instr.emit({ type: 'batch:end', timestamp: Date.now(), data: {} });
+      return result;
+    };
+  },
+});

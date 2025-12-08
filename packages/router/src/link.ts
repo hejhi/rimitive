@@ -5,18 +5,11 @@
  * Automatically gets navigate from API if available (client-side).
  */
 
-import type {
-  ElRefSpecChild,
-  RefSpec,
-  LifecycleCallback,
-  AdapterConfig,
-} from '@lattice/view/types';
+import type { ElRefSpecChild, RefSpec, LifecycleCallback } from '@lattice/view/types';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import type { ElementProps, ElFactory } from '@lattice/view/el';
 import { getActiveRouterContext } from './ssr-context';
-
-type ElMethod<T extends AdapterConfig> = ElFactory<T>['impl'];
 
 /**
  * Link builder function
@@ -59,7 +52,7 @@ export function Link(
     };
 
     refSpec.status = STATUS_REF_SPEC;
-    refSpec.create = (svc: { el: ElMethod<DOMAdapterConfig> }) => {
+    refSpec.create = (svc: { el: ElFactory<DOMAdapterConfig> }) => {
       const { el } = svc;
       const { href, onclick: userOnClick, ...restProps } = props;
 
