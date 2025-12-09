@@ -34,28 +34,26 @@ const componentMap: Record<
       ProductDetail(svc, { params: params as { id: string } }),
 };
 
-export const AppLayout =
-  ({ el, match, matches, use }: Service) =>
-  () =>
-    el('div').props({ className: 'app' })(
-      // Navbar with navigation
-      el('nav').props({ className: 'navbar' })(
-        el('div').props({ className: 'nav-brand' })(
-          el('h1')('🧩 Lattice SSR + Router')
-        ),
-        use(Navigation)({})
+export const AppLayout = ({ el, match, matches, use }: Service) =>
+  el('div').props({ className: 'app' })(
+    // Navbar with navigation
+    el('nav').props({ className: 'navbar' })(
+      el('div').props({ className: 'nav-brand' })(
+        el('h1')('🧩 Lattice SSR + Router')
       ),
+      use(Navigation)({})
+    ),
 
-      // Route content - renders based on router.matches()
-      el('main').props({ className: 'main-content' })(
-        match(matches, (matchedRoutes: MatchedRoute[]) => {
-          const route = matchedRoutes[0];
-          if (!route) return use(NotFound)({});
+    // Route content - renders based on router.matches()
+    el('main').props({ className: 'main-content' })(
+      match(matches, (matchedRoutes: MatchedRoute[]) => {
+        const route = matchedRoutes[0];
+        if (!route) return use(NotFound)({});
 
-          const Component = componentMap[route.id];
-          if (!Component) return use(NotFound)({});
+        const Component = componentMap[route.id];
+        if (!Component) return use(NotFound)({});
 
-          return use(Component)({ params: route.params });
-        })
-      )
-    );
+        return use(Component)({ params: route.params });
+      })
+    )
+  );

@@ -15,15 +15,29 @@ import { createElModule } from '@lattice/view/el';
 import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { OnModule } from '@lattice/view/deps/addEventListener';
-import type { Adapter, Readable, RefSpec } from '@lattice/view/types';
+import { createRouter, type RouterConfig } from '@lattice/router';
+import type { Adapter, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import type { MatchedRoute } from '@lattice/router';
+import { routes } from './routes.js';
 
 /**
- * Create a base service with the given adapter
+ * Portable component - receives service, returns a function that returns RefSpec
  */
-export function createBaseService(adapter: Adapter<DOMAdapterConfig>) {
-  const use = compose(
+export type Portable<TProps = Record<string, never>> = (
+  svc: Service
+) => (props: TProps) => RefSpec<unknown>;
+
+/**
+ * Create a full service with router
+ *
+ * @param adapter - DOM adapter (regular, server, or hydrating)
+ * @param routerConfig - Optional router config (e.g., initialPath for SSR)
+ */
+export function createService(
+  adapter: Adapter<DOMAdapterConfig>,
+  routerConfig?: RouterConfig
+) {
+  const baseSvc = compose(
     SignalModule,
     ComputedModule,
     EffectModule,
@@ -32,38 +46,25 @@ export function createBaseService(adapter: Adapter<DOMAdapterConfig>) {
     createMapModule(adapter),
     createMatchModule(adapter),
     OnModule
+  )();
+
+  const router = createRouter(
+    { signal: baseSvc.signal, computed: baseSvc.computed },
+    routes,
+    routerConfig
   );
-  return use();
+
+  const service = {
+    ...baseSvc,
+    ...router,
+    // Ergonomic convenience for portable components
+    use: <TProps>(fn: Portable<TProps>) => fn(service),
+  };
+
+  return service;
 }
-
-/**
- * Base service type - from composition (without router)
- */
-export type BaseService = ReturnType<typeof createBaseService>;
-
-/**
- * Portable component - receives service, returns a function that returns RefSpec
- */
-export type PortableComponent<TProps = Record<string, never>> = (
-  svc: Service
-) => (props: TProps) => RefSpec<unknown>;
 
 /**
  * Full service type - base + router methods + use helper
  */
-export type Service = BaseService & {
-  navigate: (path: string) => void;
-  currentPath: Readable<string>;
-  matches: Readable<MatchedRoute[]>;
-  /**
-   * Bind a portable component to this service
-   *
-   * @example
-   * ```ts
-   * const Home = (svc: Service) => () => svc.el('div')('Hello');
-   * // In AppLayout:
-   * use(Home)({})  // returns RefSpec
-   * ```
-   */
-  use: <TProps>(component: PortableComponent<TProps>) => (props: TProps) => RefSpec<unknown>;
-};
+export type Service = ReturnType<typeof createService>;

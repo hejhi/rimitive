@@ -1,4 +1,4 @@
-export const tpl = (content: string, scripts: string) => `
+export const tpl = (content: string) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -285,7 +285,6 @@ export const tpl = (content: string, scripts: string) => `
 </head>
 <body>
   ${content}
-  ${scripts}
   <script type="module" src="/client.js"></script>
 </body>
 </html>
