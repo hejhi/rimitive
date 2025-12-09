@@ -9,22 +9,47 @@
 
 import { describe, it, expect } from 'vitest';
 import { createDOMServerAdapter } from './dom-server';
-import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import type { ElementRef, FragmentRef, RefSpec } from '@lattice/view/types';
-import { createView } from '@lattice/view/presets/core';
+import {
+  STATUS_ELEMENT,
+  STATUS_FRAGMENT,
+  type ElementRef,
+  type FragmentRef,
+  type RefSpec,
+} from '@lattice/view/types';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { MountModule } from '@lattice/view/deps/mount';
 import { renderToString } from '../deps/renderToString';
 import { createSSRContext, runWithSSRContext } from '../ssr-context';
 import type { IslandNodeMeta } from '../types';
-import { createSignals } from '@lattice/signals';
 
 /**
- * Create SSR service for tests - matches the old preset pattern
- * Uses explicit composition to preserve full type inference
+ * Create SSR service for tests using compose pattern
  */
 function createTestSSRService() {
   const adapter = createDOMServerAdapter();
-  const signals = createSignals();
-  const svc = createView({ adapter, signals })();
+  const ElModule = createElModule(adapter);
+  const MapModule = createMapModule(adapter);
+  const MatchModule = createMatchModule(adapter);
+
+  const svc = compose(
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    BatchModule,
+    ElModule,
+    MapModule,
+    MatchModule,
+    MountModule
+  )();
 
   return {
     svc,

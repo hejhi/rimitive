@@ -27,13 +27,6 @@ export { createMatchFactory } from './match';
 export { createPortalFactory } from './portal';
 
 // =============================================================================
-// View Service Factories
-// =============================================================================
-
-export { createView } from './presets/core';
-export { createDOMView } from './presets/dom';
-
-// =============================================================================
 // Adapters
 // =============================================================================
 

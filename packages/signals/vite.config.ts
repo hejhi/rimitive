@@ -86,7 +86,6 @@ export default defineConfig({
           __dirname,
           'src/deps/pull-propagator.ts'
         ),
-        'presets/core': resolve(__dirname, 'src/presets/core.ts'),
       },
       formats: ['es'],
     },

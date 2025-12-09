@@ -19,11 +19,3 @@ export { setClientContext } from '../client-context.browser';
 
 // Types
 export type { IslandComponent, IslandStrategy, GetContext } from '../types';
-
-// Composable preset (for ssr-router style apps)
-export {
-  createIslandsApp,
-  type ClientApp,
-  type ClientOptions,
-  type IslandsClientService,
-} from '../presets/core.client';

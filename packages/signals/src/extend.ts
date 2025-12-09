@@ -28,12 +28,6 @@ export { PullPropagatorModule, createPullPropagator } from './deps/pull-propagat
 export { SchedulerModule, createScheduler } from './deps/scheduler';
 
 // =============================================================================
-// Presets - For quick setup
-// =============================================================================
-
-export { deps } from './presets/core';
-
-// =============================================================================
 // Factory Types - For typing custom services
 // =============================================================================
 
@@ -47,7 +41,6 @@ export type { SubscribeFunction, SubscribeDeps } from './subscribe';
 // Helper Types - For custom helper implementations
 // =============================================================================
 
-export type { Helpers } from './presets/core';
 export type { GraphEdges, Consumer } from './deps/graph-edges';
 export type { GraphTraversal } from './deps/graph-traversal';
 export type { PullPropagator } from './deps/pull-propagator';

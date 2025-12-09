@@ -1,16 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useLatticeContext } from './context-hooks';
-import { defineModule } from '@lattice/lattice';
-import { createSignals } from '@lattice/signals';
+import { compose, defineModule } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+} from '@lattice/signals/extend';
 
-// Create a complete signals module that wraps createSignals
-// This is necessary because the individual SignalModule, ComputedModule etc.
-// require proper wiring that only happens through createSignals
+// Create a complete signals module using compose
 const SignalsModule = defineModule({
   name: 'signals' as const,
   create: () => {
-    const svc = createSignals()();
+    const svc = compose(
+      SignalModule,
+      ComputedModule,
+      EffectModule,
+      BatchModule,
+      SubscribeModule
+    )();
     return {
       signal: svc.signal,
       computed: svc.computed,

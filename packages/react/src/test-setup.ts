@@ -3,20 +3,38 @@ import '@testing-library/jest-dom';
 import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
-import { SignalProvider } from './signals/context';
-import { createSignals, SignalsSvc } from '@lattice/signals/presets/core';
+import { SignalProvider, SignalSvc } from './signals/context';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
+
+/** Create a signals service for testing */
+function createTestSignals(): SignalSvc {
+  const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule)();
+  return {
+    signal: svc.signal,
+    computed: svc.computed,
+    effect: svc.effect,
+    batch: svc.batch,
+    dispose: () => {},
+  };
+}
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
   // Create a fresh signal service for each test
   return render(
-    createElement(SignalProvider, { svc: createSignals()(), children: ui })
+    createElement(SignalProvider, { svc: createTestSignals(), children: ui })
   );
 }
 
 // Also export svc creation for tests that need direct access
-export function createTestSignalSvc(): SignalsSvc {
-  return createSignals()();
+export function createTestSignalSvc(): SignalSvc {
+  return createTestSignals();
 }
 
 // Clean up after each test to prevent memory leaks

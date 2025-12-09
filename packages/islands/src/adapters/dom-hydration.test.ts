@@ -798,9 +798,41 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
 // Integration Tests: Full View service with Hydration
 // ============================================================================
 
-import { createView } from '@lattice/view/presets/core';
-import { STATUS_ELEMENT, type ElementRef } from '@lattice/view/types'; // Separate import for integration tests
-import { createSignals } from '@lattice/signals';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { MountModule } from '@lattice/view/deps/mount';
+import {
+  STATUS_ELEMENT,
+  type ElementRef,
+  type Adapter,
+} from '@lattice/view/types';
+import type { DOMAdapterConfig } from './dom-hydration';
+
+/** Create a view service with compose pattern for testing */
+function createTestViewSvc(adapter: Adapter<DOMAdapterConfig>) {
+  const ElModule = createElModule(adapter);
+  const MapModule = createMapModule(adapter);
+  const MatchModule = createMatchModule(adapter);
+
+  return compose(
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    BatchModule,
+    ElModule,
+    MapModule,
+    MatchModule,
+    MountModule
+  )();
+}
 
 describe('Integration: match() hydration with full view service', () => {
   const setupIntegrationHTML = (html: string): HTMLElement => {
@@ -823,10 +855,8 @@ describe('Integration: match() hydration with full view service', () => {
     );
 
     const adapter = createDOMHydrationAdapter(container);
-    const signals = createSignals();
-    const viewSvc = createView({ adapter, signals })();
+    const viewSvc = createTestViewSvc(adapter);
 
-    // Combine signals and views to get full service
     const { el, match, computed } = viewSvc;
 
     // Create the component spec matching the SSR output
@@ -882,8 +912,7 @@ describe('Integration: match() hydration with full view service', () => {
     );
 
     const adapter = createDOMHydrationAdapter(container);
-    const signals = createSignals();
-    const viewSvc = createView({ adapter, signals })();
+    const viewSvc = createTestViewSvc(adapter);
 
     const { el, computed, match } = viewSvc;
 

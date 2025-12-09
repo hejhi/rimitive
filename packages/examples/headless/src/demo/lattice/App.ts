@@ -4,13 +4,36 @@
  * Demonstrates how the same headless behaviors work with Lattice's
  * native signals and view system.
  */
-import { createDOMView } from '@lattice/view/presets/dom';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { createPortalModule } from '@lattice/view/portal';
+import { OnModule } from '@lattice/view/deps/addEventListener';
+import { MountModule } from '@lattice/view/deps/mount';
 import { dialog } from '../../dialog';
 import { select, type SelectOption } from '../../select';
-import { createSignals } from '@lattice/signals';
 
-const signals = createSignals();
-const use = createDOMView({ signals });
+const adapter = createDOMAdapter();
+const use = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter),
+  createPortalModule(adapter),
+  OnModule,
+  MountModule
+);
 const { el, computed, effect, match, portal, mount: mountSpec } = use();
 
 // Bind behaviors to this service

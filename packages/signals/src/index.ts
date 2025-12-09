@@ -29,22 +29,15 @@
  */
 
 // =============================================================================
-// Primary API - What most users need
+// Primary API - Factory functions for composition
 // =============================================================================
 
-export { createSignals, deps } from './presets/core';
-export type {
-  SignalsSvc,
-  Helpers,
-  // Factory types
-  SignalFactory,
-  ComputedFactory,
-  EffectFactory,
-  BatchFactory,
-  SubscribeFunction,
-  SubscribeCallback,
-  UnsubscribeFunction,
-} from './presets/core';
+// Factory types
+export type { SignalFactory } from './signal';
+export type { ComputedFactory } from './computed';
+export type { EffectFactory } from './effect';
+export type { BatchFactory } from './batch';
+export type { SubscribeFunction, SubscribeCallback, UnsubscribeFunction } from './subscribe';
 
 // =============================================================================
 // Core Types - For typing behaviors and components

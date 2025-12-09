@@ -77,10 +77,6 @@
     "./devtools/subscribe": {
       "import": "./dist/devtools/subscribe.js",
       "types": "./dist/devtools/subscribe.d.ts"
-    },
-    "./presets/core": {
-      "import": "./dist/presets/core.js",
-      "types": "./dist/presets/core.d.ts"
     }
   },
   "files": [

@@ -65,8 +65,6 @@ export default defineConfig({
         ),
         'deps/mount': resolve(__dirname, 'src/deps/mount.ts'),
         'deps/use': resolve(__dirname, 'src/deps/use.ts'),
-        'presets/core': resolve(__dirname, 'src/presets/core.ts'),
-        'presets/dom': resolve(__dirname, 'src/presets/dom.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),
       },
       formats: ['es'],

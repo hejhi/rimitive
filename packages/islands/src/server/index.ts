@@ -22,11 +22,3 @@ export { island } from '../island';
 
 // Types
 export type { IslandComponent, IslandStrategy, GetContext } from '../types';
-
-// Composable preset (for ssr-router style apps)
-export {
-  createIslandsApp,
-  type ServerApp,
-  type ServerOptions,
-  type IslandsServerService,
-} from '../presets/core.server';

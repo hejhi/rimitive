@@ -1,9 +1,19 @@
 import type { ContextInfo, LogEntry } from './types';
-
-import { createSignals } from '@lattice/signals/presets/core';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
 
 // Create a Lattice context for the devtools panel itself
-export const devtoolsContext = createSignals()();
+export const devtoolsContext = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule
+)();
 
 export const devtoolsState = {
   connected: devtoolsContext.signal(false),

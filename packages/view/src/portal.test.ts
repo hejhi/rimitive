@@ -1,14 +1,43 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createDOMView, type DOMViewSvc } from './presets/dom';
-import { createSignals } from '@lattice/signals/presets/core';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
+import { createDOMAdapter } from './adapters/dom';
+import { createElModule } from './el';
+import { createMapModule } from './map';
+import { createMatchModule } from './match';
+import { createPortalModule } from './portal';
+import { OnModule } from './deps/addEventListener';
+import { MountModule } from './deps/mount';
+
+function createTestViewSvc() {
+  const adapter = createDOMAdapter();
+  return compose(
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    BatchModule,
+    createElModule(adapter),
+    createMapModule(adapter),
+    createMatchModule(adapter),
+    createPortalModule(adapter),
+    OnModule,
+    MountModule
+  )();
+}
+
+type TestViewSvc = ReturnType<typeof createTestViewSvc>;
 
 describe('portal', () => {
-  let svc: DOMViewSvc;
+  let svc: TestViewSvc;
   let testContainer: HTMLElement;
 
   beforeEach(() => {
-    const signals = createSignals();
-    svc = createDOMView({ signals })();
+    svc = createTestViewSvc();
     // Create a test container for mounting
     testContainer = document.createElement('div');
     testContainer.id = 'test-container';

@@ -3,56 +3,28 @@
  *
  * ## Quick Start
  * ```typescript
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
+ * import { createMapModule } from '@lattice/view/map';
+ * import { MountModule } from '@lattice/view/deps/mount';
  *
- * const use = createDOMView({ signals: createSignals() });
- * const { el, map, match, signal, computed, mount } = use();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(
+ *   SignalModule, ComputedModule, EffectModule, BatchModule,
+ *   createElModule(adapter), createMapModule(adapter), MountModule
+ * )();
  * ```
  *
  * ## Import Guide
  *
  * | Use Case | Import |
  * |----------|--------|
- * | DOM apps | `import { createDOMView } from '@lattice/view'` |
- * | Custom adapter | `import { createView } from '@lattice/view'` |
- * | Extend/customize | `import { El, Map, Match } from '@lattice/view/extend'` |
+ * | DOM adapter | `import { createDOMAdapter } from '@lattice/view/adapters/dom'` |
+ * | View modules | `import { createElModule } from '@lattice/view/el'` |
  * | Types only | `import type { RefSpec, NodeRef } from '@lattice/view'` |
- *
- * ### Without a bundler
- *
- * The `/extend` path re-exports from individual modules for discoverability.
- * Bundlers tree-shake unused exports, but without a bundler each import
- * triggers a separate network request. For bundler-free usage, import directly:
- *
- * ```typescript
- * import { El } from '@lattice/view/el';
- * import { Map } from '@lattice/view/map';
- * ```
  */
-
-// =============================================================================
-// Primary API - What most users need
-// =============================================================================
-
-export { createDOMView } from './presets/dom';
-export { createView } from './presets/core';
-export type { DOMViewSvc, DOMAdapterConfig } from './presets/dom';
-export type {
-  ViewSvc,
-  ComponentFactory,
-  // Service types
-  ElFactory,
-  ElService,
-  MapFactory,
-  MapService,
-  MatchFactory,
-  MatchService,
-  PortalFactory,
-  PortalService,
-  ElementProps,
-  TagFactory,
-} from './presets/core';
 
 // =============================================================================
 // Core Types - For typing components and behaviors
