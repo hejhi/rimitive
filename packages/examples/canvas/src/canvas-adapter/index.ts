@@ -17,12 +17,20 @@
  * libraries like Konva or PixiJS.
  */
 
-import { createView } from '@lattice/view/presets/core';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { MountModule } from '@lattice/view/deps/mount';
 import type { RefSpec } from '@lattice/view/types';
 import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
-import { Use } from '@lattice/lattice';
-import { SignalsSvc } from '@lattice/signals';
 
 export { createCanvasAdapter } from './adapter';
 export { createCanvasAddEventListener } from './addEventListener';
@@ -48,32 +56,36 @@ export type {
 /**
  * Create a canvas view service (view primitives for canvas adapter)
  *
- * Use with shared signals for multi-adapter apps (DOM + Canvas).
- *
  * @example
  * ```ts
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
  * import { createCanvasViewSvc } from './canvas-adapter';
  *
- * const signals = createSignals();
- * const dom = createDOMView(signals);
- * const canvas = createCanvasViewSvc(signals, { clearColor: '#16213e' });
+ * const canvas = createCanvasViewSvc({ clearColor: '#16213e' });
  *
- * export const { signal, computed } = signals;
- * export { dom, canvas };
+ * export const { signal, computed, el, map, match } = canvas;
  * ```
  */
-export const createCanvasViewSvc = (
-  {
-    signals,
-  }: {
-    signals: Use<SignalsSvc>;
-  },
-  options: CanvasAdapterOptions
-) => {
+export const createCanvasViewSvc = (options: CanvasAdapterOptions) => {
   const { adapter, hitTest } = createCanvasAdapter(options);
-  const viewSvc = createView({ adapter, signals })();
+
+  // Create canvas-adapter-bound view modules
+  const CanvasElModule = createElModule(adapter);
+  const CanvasMapModule = createMapModule(adapter);
+  const CanvasMatchModule = createMatchModule(adapter);
+
+  // Compose canvas view service
+  const canvasUse = compose(
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    BatchModule,
+    CanvasElModule,
+    CanvasMapModule,
+    CanvasMatchModule,
+    MountModule
+  );
+
+  const viewSvc = canvasUse();
 
   const svc = {
     ...viewSvc,

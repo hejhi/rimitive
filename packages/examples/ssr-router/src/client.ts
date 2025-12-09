@@ -81,7 +81,7 @@ const mount = (spec: { create: (svc: Service) => { element: unknown } }) => ({
 });
 
 // Mount routes (renders on client side)
-const routeSpec = router.mount(appRoutes);
+router.mount(appRoutes);
 const container = document.querySelector('.app');
 if (container) {
   // For SSR + hydration, the HTML is already there

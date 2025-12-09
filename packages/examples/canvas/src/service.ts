@@ -5,21 +5,51 @@
  * This example shows mixing DOM and Canvas rendering in a single tree,
  * both sharing the same signals service for reactive state.
  */
-import { createSignals } from '@lattice/signals/presets/core';
-import { createDOMView } from '@lattice/view/presets/dom';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+} from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { OnModule } from '@lattice/view/deps/addEventListener';
+import { MountModule } from '@lattice/view/deps/mount';
 import { createCanvasViewSvc } from './canvas-adapter';
 
-// Shared signals service
-const signals = createSignals();
+// Create DOM adapter
+const domAdapter = createDOMAdapter();
 
-// DOM view (for toolbar/UI)
-const domSvc = createDOMView({ signals })();
+// Create adapter-bound view modules for DOM
+const DOMElModule = createElModule(domAdapter);
+const DOMMapModule = createMapModule(domAdapter);
+const DOMMatchModule = createMatchModule(domAdapter);
+
+// Compose DOM view service
+const domUse = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+  DOMElModule,
+  DOMMapModule,
+  DOMMatchModule,
+  OnModule,
+  MountModule
+);
+
+const domSvc = domUse();
 
 // Canvas view (for scene)
-const canvasSvc = createCanvasViewSvc({ signals }, { clearColor: '#16213e' });
+const canvasSvc = createCanvasViewSvc({ clearColor: '#16213e' });
 
-// Export signals
-export const { signal, computed, effect, batch, subscribe } = signals();
+// Export signals from DOM service (they're shared via compose)
+export const { signal, computed, effect, batch, subscribe } = domSvc;
 
 // Export canvas types
 export type {
