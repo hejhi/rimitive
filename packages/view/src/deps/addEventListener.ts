@@ -6,6 +6,9 @@
  * only one re-render happens instead of multiple.
  */
 
+import { defineModule } from '@lattice/lattice';
+import { BatchModule } from '@lattice/signals/batch';
+
 /**
  * Type of the addEventListener helper returned by createAddEventListener
  *
@@ -89,3 +92,13 @@ export const createAddEventListener = (
     };
   };
 };
+
+/**
+ * On module - provides the `on` event listener helper.
+ * Depends on BatchModule for automatic batching of signal updates in handlers.
+ */
+export const OnModule = defineModule({
+  name: 'on',
+  dependencies: [BatchModule],
+  create: ({ batch }) => createAddEventListener(batch),
+});

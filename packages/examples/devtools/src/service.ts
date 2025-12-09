@@ -4,33 +4,20 @@
  * Demonstrates how to configure instrumentation at the service level.
  * All components using this service are automatically instrumented for devtools.
  */
+import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
 import {
-  createDOMAdapter,
-  type DOMAdapterConfig,
-} from '@lattice/view/adapters/dom';
-import { El } from '@lattice/view/el';
-import { Map } from '@lattice/view/map';
-import { Match } from '@lattice/view/match';
-import { Signal } from '@lattice/signals/signal';
-import { Computed } from '@lattice/signals/computed';
-import { Effect } from '@lattice/signals/effect';
-import { Batch } from '@lattice/signals/batch';
-import { Subscribe } from '@lattice/signals/subscribe';
-import { instrumentSignal } from '@lattice/signals/devtools/signal';
-import { instrumentComputed } from '@lattice/signals/devtools/computed';
-import { instrumentEffect } from '@lattice/signals/devtools/effect';
-import { instrumentBatch } from '@lattice/signals/devtools/batch';
-import { instrumentSubscribe } from '@lattice/signals/devtools/subscribe';
-import { instrumentEl, instrumentMap } from '@lattice/view/devtools';
-import {
-  compose,
-  createInstrumentation,
-  devtoolsProvider,
-} from '@lattice/lattice';
-import { deps } from '@lattice/signals/presets/core';
-import { createScopes } from '@lattice/view/deps/scope';
-import { RefSpec } from '@lattice/view/types';
-import { createAddEventListener } from '@lattice/view/deps/addEventListener';
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+} from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { OnModule } from '@lattice/view/deps/addEventListener';
+import { MountModule } from '@lattice/view/deps/mount';
 
 // Create instrumentation
 const instrumentation = createInstrumentation({
@@ -38,56 +25,47 @@ const instrumentation = createInstrumentation({
   enabled: true,
 });
 
-// Create instrumented signals
-const signalsSvc = compose(
-  {
-    signal: Signal({ instrument: instrumentSignal }),
-    computed: Computed({ instrument: instrumentComputed }),
-    effect: Effect({ instrument: instrumentEffect }),
-    batch: Batch({ instrument: instrumentBatch }),
-    subscribe: Subscribe({ instrument: instrumentSubscribe }),
-  },
-  deps(),
-  { instrumentation }
-)();
-
-// Create view deps
+// Create the DOM adapter
 const adapter = createDOMAdapter();
-const scopes = createScopes({ baseEffect: signalsSvc.effect });
 
-// Create instrumented view
-const viewSvc = compose(
-  {
-    el: El<DOMAdapterConfig>({ instrument: instrumentEl }),
-    map: Map<DOMAdapterConfig>({ instrument: instrumentMap }),
-    match: Match<DOMAdapterConfig>(),
-  },
-  {
-    adapter,
-    ...scopes,
-    signal: signalsSvc.signal,
-    computed: signalsSvc.computed,
-    effect: signalsSvc.effect,
-    batch: signalsSvc.batch,
-  }
-)();
+// Create adapter-bound view modules
+const ElModule = createElModule(adapter);
+const MapModule = createMapModule(adapter);
+const MatchModule = createMatchModule(adapter);
 
-// Combined service
-const svc = {
-  ...signalsSvc,
-  ...viewSvc,
-  on: createAddEventListener(signalsSvc.batch),
-};
+// Compose everything together with instrumentation
+const use = compose(
+  // Signals
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+  // View
+  ElModule,
+  MapModule,
+  MatchModule,
+  // Helpers
+  OnModule,
+  MountModule,
+  // Options
+  { instrumentation }
+);
 
 // Export primitives for direct import
-export const { signal, computed, effect, batch, subscribe } = signalsSvc;
-export const { el, map, match } = viewSvc;
-export const { on } = svc;
-
-// Export mount helper
-export const mount = <TElement>(spec: RefSpec<TElement>) => spec.create(svc);
+export const {
+  signal,
+  computed,
+  effect,
+  batch,
+  subscribe,
+  el,
+  map,
+  match,
+  on,
+  mount,
+} = use();
+export { use };
 
 // Export types
-export type Service = typeof svc;
-export type Signals = typeof signalsSvc;
-export type Views = typeof viewSvc;
+export type Service = ReturnType<typeof use>;

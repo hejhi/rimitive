@@ -46,6 +46,10 @@
       "import": "./dist/deps/addEventListener.js",
       "types": "./dist/deps/addEventListener.d.ts"
     },
+    "./deps/mount": {
+      "import": "./dist/deps/mount.js",
+      "types": "./dist/deps/mount.d.ts"
+    },
     "./deps/use": {
       "import": "./dist/deps/use.js",
       "types": "./dist/deps/use.d.ts"
