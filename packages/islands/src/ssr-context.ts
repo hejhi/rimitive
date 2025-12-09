@@ -6,7 +6,7 @@
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { SSRContext, GetContext } from './types';
+import type { SSRContext } from './types';
 
 /**
  * AsyncLocalStorage instance for SSR context
@@ -15,41 +15,20 @@ import type { SSRContext, GetContext } from './types';
 const ssrContextStore = new AsyncLocalStorage<SSRContext>();
 
 /**
- * Options for creating SSR context
- */
-export type SSRContextOptions<TContext = unknown> = {
-  /**
-   * Context getter for islands
-   * Called by islands to get user-defined context
-   */
-  getContext?: GetContext<TContext>;
-};
-
-/**
  * Create a new SSR context
- *
- * @param options - Optional configuration including context getter
  *
  * @example
  * ```typescript
  * import { createSSRContext, runWithSSRContext } from '@lattice/islands/ssr-context';
  *
- * type AppContext = { userId: string };
- *
- * const ctx = createSSRContext<AppContext>({
- *   getContext: () => ({ userId: 'user-123' })
- * });
- *
+ * const ctx = createSSRContext();
  * const html = runWithSSRContext(ctx, () => renderToString(app));
  * ```
  */
-export function createSSRContext<TContext = unknown>(
-  options?: SSRContextOptions<TContext>
-): SSRContext<TContext> {
+export function createSSRContext(): SSRContext {
   return {
     islands: [],
     islandCounter: 0,
-    getContext: options?.getContext,
   };
 }
 
@@ -68,11 +47,8 @@ export function createSSRContext<TContext = unknown>(
  * const html = runWithSSRContext(ctx, () => renderToString(appElement));
  * ```
  */
-export function runWithSSRContext<T, TContext = unknown>(
-  ctx: SSRContext<TContext>,
-  fn: () => T
-): T {
-  return ssrContextStore.run(ctx as SSRContext, fn);
+export function runWithSSRContext<T>(ctx: SSRContext, fn: () => T): T {
+  return ssrContextStore.run(ctx, fn);
 }
 
 /**

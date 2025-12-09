@@ -52,11 +52,6 @@ export default defineConfig({
         'client/index': resolve(__dirname, 'src/client/index.ts'),
         'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
         'ssr-context.browser': resolve(__dirname, 'src/ssr-context.browser.ts'),
-        'client-context': resolve(__dirname, 'src/client-context.ts'),
-        'client-context.browser': resolve(
-          __dirname,
-          'src/client-context.browser.ts'
-        ),
         island: resolve(__dirname, 'src/island.ts'),
         'island.browser': resolve(__dirname, 'src/island.browser.ts'),
         'hydration-svc': resolve(__dirname, 'src/hydration-svc.ts'),

@@ -8,11 +8,6 @@
 export { island } from './island.browser';
 
 // Core types
-export type {
-  IslandComponent,
-  IslandStrategy,
-  GetContext,
-  IslandMetaData,
-} from './types';
+export type { IslandComponent, IslandStrategy, IslandMetaData } from './types';
 
 export { HydrationMismatch, ISLAND_META } from './types';

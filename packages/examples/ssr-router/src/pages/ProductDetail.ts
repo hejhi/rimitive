@@ -4,9 +4,7 @@
  * Shows details for a single product based on route params.
  * Demonstrates using an island inside a connected route component.
  */
-import { connect, type RouteContext } from '@lattice/router';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { withSvc } from '../service.js';
+import { connect } from '../service.js';
 import { AddToCart } from '../islands/AddToCart.js';
 
 const products = [
@@ -55,81 +53,76 @@ const products = [
 ];
 
 export const ProductDetail = connect(
-  withSvc(
-    (
-      { el, navigate, computed, match },
-      { params }: RouteContext<DOMAdapterConfig>
-    ) =>
-      () => {
-        const product = computed(() => {
-          const idParam = params().id;
-          if (!idParam) return null;
-          const id = parseInt(idParam, 10);
-          return products.find((p) => p.id === id) ?? null;
-        });
+  ({ el, navigate, computed, match, params }) =>
+    () => {
+      const product = computed(() => {
+        const idParam = params().id;
+        if (!idParam) return null;
+        const id = parseInt(idParam, 10);
+        return products.find((p) => p.id === id) ?? null;
+      });
 
-        // Create island once with reactive props
-        // Note: Island props must be static at creation time for SSR hydration
-        // The initial product data comes from the first params() value
-        const initialProduct = product();
-        const addToCart = initialProduct
-          ? AddToCart({
-              productId: initialProduct.id,
-              productName: initialProduct.name,
-              price: initialProduct.price,
-            })
-          : null;
+      // Create island once with reactive props
+      // Note: Island props must be static at creation time for SSR hydration
+      // The initial product data comes from the first params() value
+      const initialProduct = product();
+      const addToCart = initialProduct
+        ? AddToCart({
+            productId: initialProduct.id,
+            productName: initialProduct.name,
+            price: initialProduct.price,
+          })
+        : null;
 
-        return match(product, (p) =>
-          p === null
-            ? el('div').props({ className: 'page product-detail-page' })(
-                el('h2')('Product Not Found'),
-                el('p')('The product you are looking for does not exist.'),
+      return match(product, (p) =>
+        p === null
+          ? el('div').props({ className: 'page product-detail-page' })(
+              el('h2')('Product Not Found'),
+              el('p')('The product you are looking for does not exist.'),
+              el('button').props({
+                className: 'primary-btn',
+                onclick: () => navigate('/products'),
+              })('← Back to Products')
+            )
+          : el('div').props({ className: 'page product-detail-page' })(
+              el('nav').props({ className: 'breadcrumb' })(
+                el('a').props({
+                  href: '/products',
+                  onclick: (e: Event) => {
+                    e.preventDefault();
+                    navigate('/products');
+                  },
+                })('Products'),
+                el('span')(' / '),
+                el('span')(p.name)
+              ),
+
+              el('article').props({ className: 'product-detail card' })(
+                el('header')(
+                  el('h2')(p.name),
+                  el('span').props({ className: 'category' })(p.category)
+                ),
+
+                el('p').props({ className: 'description' })(p.description),
+
+                el('p').props({ className: 'price' })(`$${p.price}`),
+
+                // Interactive island - gets hydrated on client
+                // Created once with initial product data
+                ...(addToCart
+                  ? [
+                      el('section').props({
+                        className: 'add-to-cart-section',
+                      })(addToCart),
+                    ]
+                  : []),
+
                 el('button').props({
-                  className: 'primary-btn',
+                  className: 'secondary-btn',
                   onclick: () => navigate('/products'),
                 })('← Back to Products')
               )
-            : el('div').props({ className: 'page product-detail-page' })(
-                el('nav').props({ className: 'breadcrumb' })(
-                  el('a').props({
-                    href: '/products',
-                    onclick: (e: Event) => {
-                      e.preventDefault();
-                      navigate('/products');
-                    },
-                  })('Products'),
-                  el('span')(' / '),
-                  el('span')(p.name)
-                ),
-
-                el('article').props({ className: 'product-detail card' })(
-                  el('header')(
-                    el('h2')(p.name),
-                    el('span').props({ className: 'category' })(p.category)
-                  ),
-
-                  el('p').props({ className: 'description' })(p.description),
-
-                  el('p').props({ className: 'price' })(`$${p.price}`),
-
-                  // Interactive island - gets hydrated on client
-                  // Created once with initial product data
-                  ...(addToCart
-                    ? [
-                        el('section').props({
-                          className: 'add-to-cart-section',
-                        })(addToCart),
-                      ]
-                    : []),
-
-                  el('button').props({
-                    className: 'secondary-btn',
-                    onclick: () => navigate('/products'),
-                  })('← Back to Products')
-                )
-              )
-        );
-      }
-  )
+            )
+      );
+    }
 );

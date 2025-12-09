@@ -12,7 +12,7 @@
  * 6. On failure: fallback to client-side render with regular service
  */
 
-import type { IslandMetaData, IslandRegistryEntry, GetContext } from '../types';
+import type { IslandMetaData, IslandRegistryEntry } from '../types';
 import type { RefSpec, ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
@@ -21,17 +21,6 @@ import { createIslandsAdapter } from '../adapters/islands';
 import { createDOMHydrationAdapter } from '../adapters/dom-hydration';
 import { createHydrationSvc } from '../hydration-svc';
 import type { EffectSvc } from '../hydration-svc';
-import { getClientContext } from '../client-context.browser';
-
-/**
- * Get the context getter for hydration
- *
- * Returns the client context getter if set, otherwise returns
- * a getter that always returns undefined.
- */
-function getContextGetter(): GetContext<unknown> {
-  return getClientContext() ?? (() => undefined);
-}
 
 /**
  * Base island type for registration - accepts any object with island metadata
@@ -191,10 +180,7 @@ export function createDOMHydrator(
           const { svc, createElementScope } = createSvc(adapter);
           const { hydratingSvc, activate } = createHydrationSvc(svc);
 
-          // Get the context getter
-          const getContext = getContextGetter();
-
-          const componentFn = Component(hydratingSvc, getContext);
+          const componentFn = Component(hydratingSvc);
           const nodeRef = componentFn(props).create(hydratingSvc);
 
           // For fragment islands, call attach() and activate while in hydrating mode
@@ -294,15 +280,9 @@ export function createDOMHydrator(
               createIslandsAdapter(fallbackAdapter, fallbackAdapter)
             );
 
-            // Get context getter for fallback rendering
-            const fallbackGetContext = getContextGetter();
-
             if (isFragment) {
               container.innerHTML = '';
-              const fallbackComponentFn = Component(
-                fallbackSvc,
-                fallbackGetContext
-              );
+              const fallbackComponentFn = Component(fallbackSvc);
               const instance = mount(fallbackComponentFn(props));
               if (instance.element)
                 container.appendChild(instance.element as Node);
@@ -311,10 +291,7 @@ export function createDOMHydrator(
               const parent = islandElement?.parentNode;
               if (islandElement) islandElement.remove();
               script.remove();
-              const fallbackComponentFn = Component(
-                fallbackSvc,
-                fallbackGetContext
-              );
+              const fallbackComponentFn = Component(fallbackSvc);
               const instance = mount(fallbackComponentFn(props));
               if (instance.element && parent)
                 parent.appendChild(instance.element as Node);

@@ -21,4 +21,4 @@ export { createDOMServerAdapter } from '../adapters/dom-server';
 export { island } from '../island';
 
 // Types
-export type { IslandComponent, IslandStrategy, GetContext } from '../types';
+export type { IslandComponent, IslandStrategy } from '../types';

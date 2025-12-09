@@ -16,35 +16,13 @@ import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { OnModule } from '@lattice/view/deps/addEventListener';
 import { island as baseIsland, type IslandComponent } from '@lattice/islands';
-import type { Adapter } from '@lattice/view/types';
+import {
+  connect as baseConnect,
+  type ConnectedContext,
+  type RouteContext,
+} from '@lattice/router';
+import type { Adapter, Readable, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import type { RefSpec } from '@lattice/view/types';
-
-/**
- * App context - user-defined context available to islands
- *
- * Passed via getContext() to island factories.
- * On server: derived from request URL
- * On client: derived from window.location
- */
-export type AppContext = {
-  /** URL pathname (e.g., "/products/123") */
-  pathname: string;
-  /** URL search string (e.g., "?sort=price") */
-  search: string;
-};
-
-/**
- * Build AppContext from a URL
- */
-export function buildAppContext(url: URL | string): AppContext {
-  const urlObj =
-    typeof url === 'string' ? new URL(url, 'http://localhost') : url;
-  return {
-    pathname: urlObj.pathname,
-    search: urlObj.search,
-  };
-}
 
 /**
  * Create a base service with the given adapter
@@ -70,49 +48,59 @@ export type BaseService = ReturnType<typeof createBaseService>;
 
 /**
  * Full service type - base + router methods
+ *
+ * Islands use `currentPath` to derive URL-based state reactively.
+ * No separate "context" mechanism needed - currentPath is just
+ * another signal on the service.
  */
 export type Service = BaseService & {
   navigate: (path: string) => void;
-  currentPath: () => string;
+  currentPath: Readable<string>;
 };
 
 /**
- * Island factory - typed wrapper that fixes Service and AppContext types
+ * Island factory - typed wrapper that fixes Service type
+ *
+ * Islands receive the service which includes currentPath for URL-based reactivity.
  */
 export function island<TProps>(
   id: string,
-  factory: (
-    svc: Service,
-    getContext: () => AppContext | undefined
-  ) => (props: TProps) => RefSpec<unknown>
+  factory: (svc: Service) => (props: TProps) => RefSpec<unknown>
 ): IslandComponent<TProps> {
   return baseIsland(id, factory);
 }
 
 /**
- * Service getter - set by server (AsyncLocalStorage) or client (singleton)
+ * Connected context type for this app
+ *
+ * Merges Service with RouteContext for connected components.
  */
-let getService: () => Service;
+export type AppConnectedContext = ConnectedContext<DOMAdapterConfig>;
 
 /**
- * Configure the service lookup
+ * Typed connect for this app
  *
- * Called once at startup:
- * - Server: passes AsyncLocalStorage-based getter
- * - Client: passes singleton getter
- */
-export function setServiceGetter(getter: () => Service): void {
-  getService = getter;
-}
-
-/**
- * SSR middleware - injects service as first parameter
+ * Connected components receive a merged context with:
+ * - Service methods (el, signal, computed, match, etc.)
+ * - Route methods (navigate, currentPath)
+ * - Route context (children, params)
  *
- * Generic middleware that prepends the current service to any function call.
- * Works with connect(), standalone components, or any other pattern.
+ * @example
+ * ```typescript
+ * const HomePage = connect(({ el, navigate, children }) => () => {
+ *   return el('div')(
+ *     el('h1')('Welcome'),
+ *     ...children ?? []
+ *   );
+ * });
+ * ```
  */
-export function withSvc<TArgs extends unknown[], TResult>(
-  factory: (svc: Service, ...args: TArgs) => TResult
-): (...args: TArgs) => TResult {
-  return (...args) => factory(getService(), ...args);
+export function connect<TUserProps = Record<string, unknown>>(
+  wrapper: (
+    ctx: AppConnectedContext
+  ) => (userProps: TUserProps) => RefSpec<DOMAdapterConfig['baseElement']>
+): (
+  ...args: [TUserProps?]
+) => (routeContext: RouteContext<DOMAdapterConfig>) => RefSpec<DOMAdapterConfig['baseElement']> {
+  return baseConnect<DOMAdapterConfig, DOMAdapterConfig['baseElement'], TUserProps>(wrapper);
 }

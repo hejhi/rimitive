@@ -16,34 +16,6 @@ export { HydrationMismatch };
 // ============================================================================
 
 /**
- * Context getter type - passed to island factories as second argument
- *
- * Islands receive a getter function that returns user-defined context.
- * On server: static, from SSR setup
- * On client: reactive, called on init and navigation (popstate)
- *
- * If no context is configured, the getter returns undefined.
- *
- * @example
- * ```typescript
- * import { island } from '@lattice/islands';
- * import type { IslandSvc } from '@lattice/islands';
- *
- * type AppContext = { userId: string };
- *
- * const UserProfile = island<{ showEmail: boolean }, IslandSvc, AppContext>(
- *   'profile',
- *   (svc, getContext) => ({ showEmail }) => {
- *     const context = getContext();
- *     const userId = context?.userId ?? 'guest';
- *     return svc.el('div')(userId);
- *   }
- * );
- * ```
- */
-export type GetContext<TContext = unknown> = () => TContext | undefined;
-
-/**
  * SSR Context - tracks islands during server-side rendering
  *
  * Uses AsyncLocalStorage for implicit context during render.
@@ -53,11 +25,11 @@ export type GetContext<TContext = unknown> = () => TContext | undefined;
  * ```typescript
  * import { createSSRContext, runWithSSRContext } from '@lattice/islands/ssr-context';
  *
- * const ctx = createSSRContext({ getContext: () => ({ userId: 'user-123' }) });
+ * const ctx = createSSRContext();
  * const html = runWithSSRContext(ctx, () => renderToString(app));
  * ```
  */
-export type SSRContext<TContext = unknown> = {
+export type SSRContext = {
   /**
    * Islands discovered during rendering
    * Collected as components are rendered on the server
@@ -69,12 +41,6 @@ export type SSRContext<TContext = unknown> = {
    * Increments for each island instantiation: "counter-0", "counter-1", etc.
    */
   islandCounter: number;
-
-  /**
-   * Context getter for the current SSR request
-   * Set by the request handler, available to islands
-   */
-  getContext?: GetContext<TContext>;
 };
 
 /**
@@ -148,16 +114,12 @@ export type IslandComponent<TProps = unknown> = {
  *   }
  * };
  *
- * const FormInput = island('form-input', formStrategy, (svc, getContext) => ({ value }) => {
+ * const FormInput = island('form-input', formStrategy, (svc) => ({ value }) => {
  *   return svc.el('input').props({ value })();
  * });
  * ```
  */
-export type IslandStrategy<
-  TProps = unknown,
-  TSvc = unknown,
-  TContext = unknown,
-> = {
+export type IslandStrategy<TProps = unknown, TSvc = unknown> = {
   /**
    * Called when hydration fails
    */
@@ -165,10 +127,7 @@ export type IslandStrategy<
     error: HydrationMismatch,
     containerEl: HTMLElement,
     props: TProps,
-    Component: (
-      svc: TSvc,
-      getContext: GetContext<TContext>
-    ) => (props: TProps) => RefSpec<unknown>,
+    Component: (svc: TSvc) => (props: TProps) => RefSpec<unknown>,
     mount: (spec: RefSpec<unknown>) => { element: unknown }
   ) => boolean | void;
 };
@@ -183,34 +142,20 @@ export const ISLAND_META = Symbol.for('lattice.island');
  * Island metadata stored on component functions (temporary, only for registry construction)
  * @internal
  */
-export type IslandMetaData<
-  TProps = unknown,
-  TSvc = unknown,
-  TContext = unknown,
-> = {
+export type IslandMetaData<TProps = unknown, TSvc = unknown> = {
   id: string;
-  strategy?: IslandStrategy<TProps, TSvc, TContext>;
-  component: (
-    svc: TSvc,
-    getContext: GetContext<TContext>
-  ) => (props: TProps) => RefSpec<unknown>;
+  strategy?: IslandStrategy<TProps, TSvc>;
+  component: (svc: TSvc) => (props: TProps) => RefSpec<unknown>;
 };
 
 /**
  * Island registry entry - stores component and metadata together
  * @internal
  */
-export type IslandRegistryEntry<
-  TProps = unknown,
-  TSvc = unknown,
-  TContext = unknown,
-> = {
-  component: (
-    svc: TSvc,
-    getContext: GetContext<TContext>
-  ) => (props: TProps) => RefSpec<unknown>;
+export type IslandRegistryEntry<TProps = unknown, TSvc = unknown> = {
+  component: (svc: TSvc) => (props: TProps) => RefSpec<unknown>;
   id: string;
-  strategy?: IslandStrategy<TProps, TSvc, TContext>;
+  strategy?: IslandStrategy<TProps, TSvc>;
 };
 
 /**

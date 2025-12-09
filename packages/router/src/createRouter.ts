@@ -1,8 +1,9 @@
-import type {
-  AdapterConfig,
-  Readable,
-  RefSpec,
-  Writable,
+import {
+  STATUS_REF_SPEC,
+  type AdapterConfig,
+  type Readable,
+  type RefSpec,
+  type Writable,
 } from '@lattice/view/types';
 import type { ElFactory } from '@lattice/view/el';
 import type { MatchFactory } from '@lattice/view/match';
@@ -14,14 +15,19 @@ import type { RouteTree, RouteNode } from './defineRoutes';
 /**
  * Standalone connect function - doesn't require a router instance
  *
- * Creates a connected component that receives route context (children, params)
- * when mounted via router.mount(). Works identically on server and client.
+ * Creates a connected component that receives a merged context containing
+ * both service methods (el, signal, etc.) and route context (children, params).
+ * Works identically on server and client.
+ *
+ * The wrapper function receives everything in one place - no need for
+ * separate service injection mechanisms like withSvc.
  *
  * @example
  * ```typescript
- * const Layout = connect(({ children, params }) => (props) => {
+ * const Layout = connect(({ el, navigate, children }) => () => {
  *   return el('div').props({ class: 'layout' })(
- *     el('h1')()('My App'),
+ *     el('h1')('My App'),
+ *     el('button').props({ onclick: () => navigate('/') })('Home'),
  *     ...children ?? []
  *   );
  * });
@@ -33,16 +39,31 @@ export function connect<
   TUserProps = Record<string, unknown>,
 >(
   wrapper: (
-    routeContext: RouteContext<TConfig>
+    ctx: ConnectedContext<TConfig>
   ) => (userProps: TUserProps) => RefSpec<TElement>
 ): (
   ...args: [TUserProps?]
 ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
   return (...args: [TUserProps?]) =>
     (routeContext: RouteContext<TConfig>) => {
-      const componentFactory = wrapper(routeContext);
       const userProps = args[0] ?? ({} as TUserProps);
-      return componentFactory(userProps);
+
+      // Return a deferred RefSpec that merges svc + routeContext at create time
+      const deferredSpec: RefSpec<TElement> = {
+        status: STATUS_REF_SPEC,
+        create(svc: ConnectedSvc<TConfig>) {
+          // Merge service with route context
+          const ctx: ConnectedContext<TConfig> = { ...svc, ...routeContext };
+          // Call wrapper with merged context to get component factory
+          const componentFactory = wrapper(ctx);
+          // Call factory with user props to get the actual RefSpec
+          const spec = componentFactory(userProps);
+          // Create the final element
+          return spec.create(svc);
+        },
+      };
+
+      return deferredSpec;
     };
 }
 
@@ -86,15 +107,27 @@ export type ConnectedSvc<TConfig extends AdapterConfig> = ViewSvc<TConfig> &
   RouteSvc;
 
 /**
- * Route context passed to connect wrapper
+ * Route context - route-specific data (children, params)
  *
- * Contains route-specific data (children, params) for routing.
- * Service injection is handled separately via the svc() middleware pattern.
+ * This is combined with the service to form ConnectedContext.
  */
 export type RouteContext<TConfig extends AdapterConfig> = {
   children: RefSpec<TConfig['baseElement']>[] | null;
   params: Readable<RouteParams>;
 };
+
+/**
+ * Connected context - merged service + route context
+ *
+ * This is what connected components receive. It includes everything:
+ * - Service methods (el, signal, computed, match, etc.)
+ * - Route methods (navigate, currentPath)
+ * - Route context (children, params)
+ *
+ * No separate mechanisms - everything flows through one object.
+ */
+export type ConnectedContext<TConfig extends AdapterConfig> =
+  ConnectedSvc<TConfig> & RouteContext<TConfig>;
 
 /**
  * A connected component that can be instantiated with route context
@@ -105,14 +138,30 @@ export type ConnectedComponent<TConfig extends AdapterConfig> = (
 
 /**
  * The connect impl signature
+ *
+ * Connected components receive a single merged context that includes:
+ * - Service methods (el, signal, computed, etc.)
+ * - Route methods (navigate, currentPath)
+ * - Route context (children, params)
+ *
+ * This eliminates the need for separate service injection mechanisms.
+ *
+ * @example
+ * ```typescript
+ * const HomePage = connect(({ el, navigate, children }) => () => {
+ *   return el('div')(
+ *     el('h1')('Welcome'),
+ *     el('button').props({ onclick: () => navigate('/about') })('About'),
+ *     ...children ?? []
+ *   );
+ * });
+ * ```
  */
 export type ConnectMethod<TConfig extends AdapterConfig> = <
   TElement extends TConfig['baseElement'],
   TUserProps = Record<string, unknown>,
 >(
-  wrapper: (
-    routeContext: RouteContext<TConfig>
-  ) => (userProps: TUserProps) => RefSpec<TElement>
+  wrapper: (ctx: ConnectedContext<TConfig>) => (userProps: TUserProps) => RefSpec<TElement>
 ) => (
   ...args: [TUserProps?]
 ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
@@ -605,27 +654,57 @@ export function createRouter<TConfig extends AdapterConfig>(
   }
 
   /**
-   * Connect method - wraps a component to receive route context
+   * Connect method - wraps a component to receive merged context
    *
-   * Takes a wrapper function that receives route context (children, params),
-   * and returns a function that can be called with user props.
+   * Connected components receive a single context object containing:
+   * - Service methods (el, signal, computed, etc.)
+   * - Route methods (navigate, currentPath)
+   * - Route context (children, params)
+   *
+   * This eliminates the need for separate service injection mechanisms.
+   *
+   * @example
+   * ```typescript
+   * const HomePage = router.connect(({ el, navigate, children }) => () => {
+   *   return el('div')(
+   *     el('h1')('Welcome'),
+   *     ...children ?? []
+   *   );
+   * });
+   * ```
    */
   function connect<
     TElement extends TConfig['baseElement'],
     TUserProps = Record<string, unknown>,
   >(
     wrapper: (
-      routeContext: RouteContext<TConfig>
+      ctx: ConnectedContext<TConfig>
     ) => (userProps: TUserProps) => RefSpec<TElement>
   ): (
     ...args: [TUserProps?]
   ) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
     return (...args: [TUserProps?]) =>
       (routeContext: RouteContext<TConfig>) => {
-        const componentFactory = wrapper(routeContext);
-        // Use empty object as default if no props provided
         const userProps = args[0] ?? ({} as TUserProps);
-        return componentFactory(userProps);
+
+        // Return a deferred RefSpec that merges connectedSvc + routeContext at create time
+        const deferredSpec: RefSpec<TElement> = {
+          status: STATUS_REF_SPEC,
+          create(svc?: ConnectedSvc<TConfig>) {
+            // Use provided svc or fall back to router's connectedSvc
+            const baseSvc = svc ?? connectedSvc;
+            // Merge service with route context
+            const ctx: ConnectedContext<TConfig> = { ...baseSvc, ...routeContext };
+            // Call wrapper with merged context to get component factory
+            const componentFactory = wrapper(ctx);
+            // Call factory with user props to get the actual RefSpec
+            const spec = componentFactory(userProps);
+            // Create the final element
+            return spec.create(baseSvc);
+          },
+        };
+
+        return deferredSpec;
       };
   }
 

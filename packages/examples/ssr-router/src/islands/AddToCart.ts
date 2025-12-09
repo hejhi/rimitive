@@ -3,7 +3,7 @@
  *
  * An interactive component for the product detail page.
  * Demonstrates how islands can reactively respond to route changes
- * by using getContext() to derive the current product.
+ * using currentPath from the service.
  *
  * Props provide initial values for SSR, but on client the island
  * derives current state from the URL for proper navigation support.
@@ -27,14 +27,13 @@ type AddToCartProps = {
 
 export const AddToCart = island(
   'AddToCart',
-  ({ el, signal, computed }, getContext) =>
+  ({ el, signal, computed, currentPath }) =>
     (initialProps: AddToCartProps) => {
-      // Use context to reactively derive current product
-      // Falls back to initial props for SSR or if path doesn't match
+      // Use currentPath to reactively derive current product
+      // Falls back to initial props if path doesn't match
       const currentProduct = computed(() => {
-        const ctx = getContext();
-        const path = ctx?.pathname ?? '';
-        const match = path.match(/^\/products\/(\d+)$/);
+        const path = currentPath();
+        const match = path.match(/^\/products\/(\d+)/);
         if (match?.[1]) {
           const id = parseInt(match[1], 10);
           const found = products.find((p) => p.id === id);

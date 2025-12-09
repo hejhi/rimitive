@@ -32,6 +32,7 @@ export type {
   RootContext,
   ConnectMethod,
   ConnectedSvc,
+  ConnectedContext,
   RouteSvc,
   RouteContext,
   ConnectedComponent,

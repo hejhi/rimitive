@@ -2,12 +2,12 @@
  * SSR Server with Router Support
  *
  * Uses the module composition pattern with per-request service creation.
+ * Islands receive the service which includes currentPath for URL-based state.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
 import {
@@ -20,33 +20,7 @@ import { createRouter, type RouteTree } from '@lattice/router';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 import { appRoutes } from './routes.js';
-import {
-  createBaseService,
-  buildAppContext,
-  setServiceGetter,
-  type Service,
-  type AppContext,
-} from './service.js';
-
-/**
- * AsyncLocalStorage for per-request service and context injection
- */
-type RequestContext = {
-  service: Service;
-  appContext: AppContext;
-};
-const requestStorage = new AsyncLocalStorage<RequestContext>();
-
-// Configure service lookup to use AsyncLocalStorage
-setServiceGetter(() => {
-  const ctx = requestStorage.getStore();
-  if (!ctx) {
-    throw new Error(
-      'Service not available - are you inside a request context?'
-    );
-  }
-  return ctx.service;
-});
+import { createBaseService, type Service } from './service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
@@ -57,6 +31,9 @@ const clientBundlePath = isDev
 
 /**
  * Create a per-request service with routing
+ *
+ * Each request gets its own service instance with currentPath set
+ * to the request URL. Islands use currentPath directly for URL-based state.
  */
 function createRequestService(
   url: URL,
@@ -65,12 +42,13 @@ function createRequestService(
   const adapter = createDOMServerAdapter();
   const baseSvc = createBaseService(adapter);
 
-  // Create router with initial path
+  // Create router with initial path from request URL
   const router = createRouter<DOMAdapterConfig>(baseSvc, {
-    initialPath: url.pathname,
+    initialPath: url.pathname + url.search,
   });
 
   // Build full service with router methods
+  // Islands use currentPath directly - no separate "context" mechanism
   const service: Service = {
     ...baseSvc,
     navigate: router.navigate,
@@ -83,9 +61,7 @@ function createRequestService(
 
   // Render function
   const render = () => {
-    // Get context from AsyncLocalStorage
-    const getContext = () => requestStorage.getStore()?.appContext;
-    const ctx = createSSRContext({ getContext });
+    const ctx = createSSRContext();
     const routeSpec = router.mount(routes);
     const html = runWithSSRContext(ctx, () => renderToString(mount(routeSpec)));
     const scripts = getIslandScripts(ctx);
@@ -413,11 +389,11 @@ const server = createServer((req, res) => {
   );
 
   // Create per-request service with routing
-  const { service, render } = createRequestService(url, appRoutes);
-  const appContext = buildAppContext(url);
+  // No AsyncLocalStorage needed - service is passed directly through render
+  const { render } = createRequestService(url, appRoutes);
 
-  // Render within request context
-  const { html, scripts } = requestStorage.run({ service, appContext }, render);
+  // Render the page
+  const { html, scripts } = render();
 
   // Generate full HTML page
   const fullHtml = template(html, scripts);

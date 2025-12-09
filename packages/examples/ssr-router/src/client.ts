@@ -2,22 +2,17 @@
  * Client-side hydration with routing
  *
  * Uses the module composition pattern with DOM adapter.
+ * Islands receive the service which includes currentPath for URL-based reactivity.
  */
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import { createScopes } from '@lattice/view/deps/scope';
 import type { Adapter } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { createDOMHydrator, setClientContext } from '@lattice/islands/client';
+import { createDOMHydrator } from '@lattice/islands/client';
 import { createRouter } from '@lattice/router';
 
 import { appRoutes } from './routes.js';
-import {
-  createBaseService,
-  buildAppContext,
-  setServiceGetter,
-  type Service,
-  type AppContext,
-} from './service.js';
+import { createBaseService, type Service } from './service.js';
 import { ProductFilter } from './islands/ProductFilter.js';
 import { Navigation } from './islands/Navigation.js';
 import { AddToCart } from './islands/AddToCart.js';
@@ -31,36 +26,20 @@ const router = createRouter<DOMAdapterConfig>(baseSvc, {
   initialPath: location.pathname + location.search + location.hash,
 });
 
-// Mutable context for navigation updates
-let currentContext: AppContext = buildAppContext(window.location.href);
-
 // Build full service with router methods
+// Islands use currentPath directly - no separate "context" needed
 const service: Service = {
   ...baseSvc,
-  navigate: (path: string) => {
-    router.navigate(path);
-    // Update context after navigation
-    currentContext = buildAppContext(window.location.href);
-  },
+  navigate: router.navigate,
   currentPath: router.currentPath,
 };
-
-// Configure service lookup to use singleton
-setServiceGetter(() => service);
-
-// Configure island context getter
-setClientContext(() => currentContext);
-
-// Handle browser back/forward
-window.addEventListener('popstate', () => {
-  currentContext = buildAppContext(window.location.href);
-});
 
 // Service factory for hydrator - creates per-island service with hydrating adapter
 const createSvc = (islandAdapter: Adapter<DOMAdapterConfig>) => {
   const islandBaseSvc = createBaseService(islandAdapter);
 
   // Build island service with router methods from main service
+  // currentPath is shared across all islands for reactive URL tracking
   const islandSvc: Service = {
     ...islandBaseSvc,
     navigate: service.navigate,

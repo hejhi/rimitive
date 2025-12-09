@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createRouter } from './createRouter';
-import type { ViewSvc, RouteContext, ConnectedComponent } from './createRouter';
+import type { ViewSvc, RouteContext, ConnectedComponent, ConnectedContext } from './createRouter';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { RefSpec, STATUS_REF_SPEC } from '@lattice/view/types';
 
@@ -369,12 +369,12 @@ describe('createRouter', () => {
 
     it('should provide route context to wrapper function', () => {
       const router = createRouter(mockViewSvc);
-      let capturedRouteContext: RouteContext<DOMAdapterConfig> | null = null;
+      let capturedContext: ConnectedContext<DOMAdapterConfig> | null = null;
 
       const wrapper = (
-        routeContext: RouteContext<DOMAdapterConfig>
+        ctx: ConnectedContext<DOMAdapterConfig>
       ): (() => RefSpec<HTMLElement>) => {
-        capturedRouteContext = routeContext;
+        capturedContext = ctx;
         return () => createMockRefSpec();
       };
 
@@ -387,15 +387,25 @@ describe('createRouter', () => {
         params: mockParams,
       };
 
-      connected(routeContext);
+      const deferredSpec = connected(routeContext);
 
-      // TypeScript assertion - we know this will be set after instantiate
-      expect(capturedRouteContext).not.toBeNull();
-      const context =
-        capturedRouteContext as unknown as RouteContext<DOMAdapterConfig>;
+      // Wrapper is not called yet - it's deferred until create()
+      expect(capturedContext).toBeNull();
+
+      // Call create() to trigger the wrapper
+      deferredSpec.create(mockViewSvc);
+
+      // Now the wrapper should have been called with merged context
+      expect(capturedContext).not.toBeNull();
+      const context = capturedContext as unknown as ConnectedContext<DOMAdapterConfig>;
       expect(context).toHaveProperty('children', null);
       expect(context).toHaveProperty('params');
       expect(context.params()).toEqual({ id: '123' });
+      // Verify it has svc methods too
+      expect(context).toHaveProperty('el');
+      expect(context).toHaveProperty('signal');
+      expect(context).toHaveProperty('computed');
+      expect(context).toHaveProperty('match');
     });
 
     it('should pass user props to component factory', () => {
@@ -415,7 +425,13 @@ describe('createRouter', () => {
       const connected = connectedFactory({ theme: 'dark', title: 'App' });
 
       const mockParams = createMockComputed(() => ({}));
-      connected({ children: null, params: mockParams });
+      const deferredSpec = connected({ children: null, params: mockParams });
+
+      // User props not captured yet - deferred until create()
+      expect(capturedUserProps).toBeNull();
+
+      // Call create() to trigger the wrapper and component factory
+      deferredSpec.create(mockViewSvc);
 
       expect(capturedUserProps).toEqual({ theme: 'dark', title: 'App' });
     });
@@ -432,9 +448,17 @@ describe('createRouter', () => {
       const connectedFactory = router.connect(wrapper);
       const connected = connectedFactory({});
       const mockParams = createMockComputed(() => ({}));
-      const result = connected({ children: null, params: mockParams });
+      const deferredSpec = connected({ children: null, params: mockParams });
 
-      expect(result).toBe(mockRefSpec);
+      // The result is now a deferred RefSpec wrapper, not the inner spec
+      expect(deferredSpec).not.toBe(mockRefSpec);
+      expect(deferredSpec.status).toBe(STATUS_REF_SPEC);
+      expect(typeof deferredSpec.create).toBe('function');
+
+      // When we call create(), it should execute the wrapper and return the created element
+      const elementRef = deferredSpec.create(mockViewSvc);
+      expect(elementRef).toBeDefined();
+      expect(elementRef.status).toBe(1); // Element status
     });
 
     it('should work with create() pattern integration', () => {
