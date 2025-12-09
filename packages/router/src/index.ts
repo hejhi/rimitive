@@ -1,32 +1,57 @@
 /**
  * @lattice/router
  *
- * Minimal client-side routing for Lattice applications
+ * Minimal routing for Lattice applications
+ *
+ * The router is pure reactive state - it provides:
+ * - matches: Signal<MatchedRoute[]> - currently matched routes
+ * - currentPath: Signal<string> - current URL path
+ * - navigate(path): void - navigation function
+ *
+ * The view layer uses match() to render based on router.matches().
+ * Router does not create elements or manage rendering.
  */
 
+// New minimal router API
+export { createRouter } from './router';
+export type {
+  Router,
+  RouterDeps,
+  RouterOptions,
+  RouteConfig,
+  MatchedRoute,
+} from './router';
+
+// Link component
 export { Link } from './link';
+
+// Location utilities
 export { createLocationFactory } from './location';
-export { matchPath } from './deps/matching';
-export { createRouter, connect } from './createRouter';
-export { defineRoutes } from './defineRoutes';
+
+// Path matching utilities
+export { matchPath, matchPathPrefix, composePath } from './deps/matching';
+
+// Types
 export type {
   RouteParams,
   RouteMatch,
-  RouteSpec,
-  RouteMetadata,
   LinkOpts,
   LinkFunction,
   LocationSvc,
   LocationOpts,
   LocationFactory,
-  MatchFunction,
 } from './types';
 
+// Legacy exports for backwards compatibility (deprecated)
+// TODO: Remove in next major version
+export { createRouter as createLegacyRouter, connect } from './createRouter';
+export { defineRoutes } from './defineRoutes';
 export { STATUS_ROUTE_SPEC } from './types';
+export type { RouteSpec, RouteMetadata, MatchFunction } from './types';
 export type {
   ViewSvc,
   RouterConfig,
-  Router,
+  Router as LegacyRouter,
   RouteMethod,
   RootMethod,
   RootContext,
