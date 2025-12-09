@@ -30,22 +30,6 @@
       "import": "./dist/island.js",
       "types": "./dist/island.d.ts"
     },
-    "./factory": {
-      "browser": {
-        "import": "./dist/factory.browser.js",
-        "types": "./dist/factory.browser.d.ts"
-      },
-      "import": "./dist/factory.js",
-      "types": "./dist/factory.d.ts"
-    },
-    "./presets/islands.client": {
-      "import": "./dist/presets/islands.client.js",
-      "types": "./dist/presets/islands.client.d.ts"
-    },
-    "./presets/islands.server": {
-      "import": "./dist/presets/islands.server.js",
-      "types": "./dist/presets/islands.server.d.ts"
-    },
     "./adapters/dom-server": {
       "import": "./dist/adapters/dom-server.js",
       "types": "./dist/adapters/dom-server.d.ts"

@@ -1,41 +1,26 @@
 /**
  * Client Module
  *
- * Client-side hydration preset for islands architecture.
- *
- * @example
- * ```ts
- * import { createIslandsClientApp } from '@lattice/islands/client';
- * import { Counter } from './islands/Counter';
- *
- * const { hydrate } = createIslandsClientApp();
- *
- * hydrate(Counter);
- * ```
+ * Client-side utilities for islands hydration.
  */
 
-// Batteries-included preset
-export {
-  createIslandsClientApp,
-  type IslandsClientApp,
-  type IslandSvc,
-} from '../presets/islands.client';
+// Hydrator
+export { createDOMHydrator } from '../hydrators/dom';
 
-// Pre-configured island factory for the simple case (no custom context)
-// For custom context, use: createIsland<IslandSvc, MyContext>() from '@lattice/islands/factory'
-export { island } from './island';
+// Adapters
+export { createDOMHydrationAdapter } from '../adapters/dom-hydration';
+export { createIslandsAdapter } from '../adapters/islands';
 
-// Advanced: composable preset for custom wiring (e.g., routing integration)
+// Base island function (for creating typed wrappers)
+export { island } from '../island.browser';
+
+// Types
+export type { IslandComponent, IslandStrategy, GetContext } from '../types';
+
+// Composable preset (for ssr-router style apps)
 export {
   createIslandsApp,
   type ClientApp,
   type ClientOptions,
   type IslandsClientService,
-  type IslandComponent,
-  type HybridAdapter,
-  type DomViewSvc,
 } from '../presets/core.client';
-
-// Advanced: adapters for custom composition
-export { createDOMHydrationAdapter } from '../adapters/dom-hydration';
-export { createIslandsAdapter } from '../adapters/islands';

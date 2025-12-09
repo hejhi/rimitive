@@ -1,32 +1,53 @@
 /**
- * SSR Service - Browser-Safe Island Factory
+ * SSR Service - Shared Composition
  *
- * This file creates a typed island factory for use in island definitions.
- * It uses the browser-safe export path that doesn't include Node.js dependencies.
- *
- * Islands import from this file, which gets bundled for the browser.
- * Server-side code should import from service.server.ts instead.
+ * Single source of truth for service composition.
+ * Both server and client use this with their respective adapters.
  */
-
-import { createIsland } from '@lattice/islands';
-import type { SignalFactory, ComputedFactory, EffectFactory } from '@lattice/signals/presets/core';
-import type { ElFactory, MapFactory, MatchFactory } from '@lattice/view/presets/core';
+import { compose } from '@lattice/lattice';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@lattice/signals/extend';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { OnModule } from '@lattice/view/deps/addEventListener';
+import { island as baseIsland, type IslandComponent } from '@lattice/islands';
+import type { Adapter } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import type { RefSpec } from '@lattice/view/types';
 
-// Define the Service type inline to avoid circular dependency with service.server.ts
-// This matches the composed service type from service.server.ts
-export type Service = {
-  signal: SignalFactory;
-  computed: ComputedFactory;
-  effect: EffectFactory;
-  batch: (fn: () => void) => void;
-  el: ElFactory<DOMAdapterConfig>;
-  map: MapFactory<DOMAdapterConfig['baseElement']>;
-  match: MatchFactory<DOMAdapterConfig['baseElement']>;
-  mount: <T>(spec: { create: (svc: Service) => T }) => T;
-};
+/**
+ * Create a service with the given adapter
+ */
+export function createService(adapter: Adapter<DOMAdapterConfig>) {
+  const use = compose(
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    BatchModule,
+    createElModule(adapter),
+    createMapModule(adapter),
+    createMatchModule(adapter),
+    OnModule
+  );
+  return use();
+}
 
-// Create typed island factory - uses browser condition in @lattice/islands
-// In browser: loads island.browser.ts (no AsyncLocalStorage)
-// In Node: loads island.ts (with SSR context)
-export const island = createIsland<Service>();
+/**
+ * Service type - derived from the composition
+ */
+export type Service = ReturnType<typeof createService>;
+
+/**
+ * Island factory - typed wrapper that fixes Service type
+ */
+export function island<TProps>(
+  id: string,
+  factory: (svc: Service) => (props: TProps) => RefSpec<unknown>
+): IslandComponent<TProps> {
+  return baseIsland(id, factory);
+}

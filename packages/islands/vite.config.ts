@@ -49,9 +49,7 @@ export default defineConfig({
         'index.browser': resolve(__dirname, 'src/index.browser.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         'server/index': resolve(__dirname, 'src/server/index.ts'),
-        'server/island': resolve(__dirname, 'src/server/island.ts'),
         'client/index': resolve(__dirname, 'src/client/index.ts'),
-        'client/island': resolve(__dirname, 'src/client/island.ts'),
         'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
         'ssr-context.browser': resolve(__dirname, 'src/ssr-context.browser.ts'),
         'client-context': resolve(__dirname, 'src/client-context.ts'),
@@ -61,8 +59,6 @@ export default defineConfig({
         ),
         island: resolve(__dirname, 'src/island.ts'),
         'island.browser': resolve(__dirname, 'src/island.browser.ts'),
-        factory: resolve(__dirname, 'src/factory.ts'),
-        'factory.browser': resolve(__dirname, 'src/factory.browser.ts'),
         'hydration-svc': resolve(__dirname, 'src/hydration-svc.ts'),
         'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
         'deps/renderToString': resolve(__dirname, 'src/deps/renderToString.ts'),
@@ -74,14 +70,6 @@ export default defineConfig({
         'adapters/islands': resolve(__dirname, 'src/adapters/islands.ts'),
         'presets/core.client': resolve(__dirname, 'src/presets/core.client.ts'),
         'presets/core.server': resolve(__dirname, 'src/presets/core.server.ts'),
-        'presets/islands.client': resolve(
-          __dirname,
-          'src/presets/islands.client.ts'
-        ),
-        'presets/islands.server': resolve(
-          __dirname,
-          'src/presets/islands.server.ts'
-        ),
       },
       formats: ['es'],
     },

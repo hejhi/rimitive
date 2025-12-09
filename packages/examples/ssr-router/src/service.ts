@@ -6,8 +6,9 @@
  * - Service type (derived from preset)
  * - AppContext type for island context
  */
-import { createIsland } from '@lattice/islands/factory';
+import { island as baseIsland, type IslandComponent } from '@lattice/islands';
 import type { SSRService } from './preset.js';
+import type { RefSpec } from '@lattice/view/types';
 
 /**
  * App context - user-defined context available to islands
@@ -44,9 +45,16 @@ export type Service = SSRService;
  * Typed island factory
  *
  * Creates islands with Service and AppContext types baked in.
- * Props are inferred from the factory function - no generics needed!
  */
-export const island = createIsland<Service, AppContext>();
+export function island<TProps>(
+  id: string,
+  factory: (
+    svc: Service,
+    getContext: () => AppContext | undefined
+  ) => (props: TProps) => RefSpec<unknown>
+): IslandComponent<TProps> {
+  return baseIsland(id, factory);
+}
 
 /**
  * Service getter - set by server (AsyncLocalStorage) or client (singleton)
