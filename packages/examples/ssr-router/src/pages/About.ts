@@ -1,6 +1,7 @@
 import { connect } from '../service.js';
 
-export const About = connect(({ el }) => () => {
+export const About = connect((svc) => () => {
+  const { el } = svc;
   return el('div').props({ className: 'page about-page' })(
     el('h2')('About This Example'),
 

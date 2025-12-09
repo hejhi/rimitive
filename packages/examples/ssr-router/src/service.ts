@@ -18,7 +18,7 @@ import { OnModule } from '@lattice/view/deps/addEventListener';
 import { island as baseIsland, type IslandComponent } from '@lattice/islands';
 import {
   connect as baseConnect,
-  type ConnectedContext,
+  type ConnectedSvc,
   type RouteContext,
 } from '@lattice/router';
 import type { Adapter, Readable, RefSpec } from '@lattice/view/types';
@@ -71,23 +71,28 @@ export function island<TProps>(
 }
 
 /**
- * Connected context type for this app
- *
- * Merges Service with RouteContext for connected components.
+ * Connected service type for this app
  */
-export type AppConnectedContext = ConnectedContext<DOMAdapterConfig>;
+export type AppConnectedSvc = ConnectedSvc<DOMAdapterConfig>;
+
+/**
+ * Route context type for this app
+ */
+export type AppRouteContext = RouteContext<DOMAdapterConfig>;
 
 /**
  * Typed connect for this app
  *
- * Connected components receive a merged context with:
- * - Service methods (el, signal, computed, match, etc.)
- * - Route methods (navigate, currentPath)
- * - Route context (children, params)
+ * Connected components receive two arguments:
+ * - svc: The service (el, signal, computed, navigate, currentPath, etc.)
+ * - routeCtx: Route-specific data (children, params)
+ *
+ * This keeps the service "owned" by you while making route data explicit.
  *
  * @example
  * ```typescript
- * const HomePage = connect(({ el, navigate, children }) => () => {
+ * const HomePage = connect((svc, { children }) => () => {
+ *   const { el, navigate } = svc;
  *   return el('div')(
  *     el('h1')('Welcome'),
  *     ...children ?? []
@@ -97,7 +102,8 @@ export type AppConnectedContext = ConnectedContext<DOMAdapterConfig>;
  */
 export function connect<TUserProps = Record<string, unknown>>(
   wrapper: (
-    ctx: AppConnectedContext
+    svc: AppConnectedSvc,
+    routeCtx: AppRouteContext
   ) => (userProps: TUserProps) => RefSpec<DOMAdapterConfig['baseElement']>
 ): (
   ...args: [TUserProps?]

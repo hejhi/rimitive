@@ -53,8 +53,9 @@ const products = [
 ];
 
 export const ProductDetail = connect(
-  ({ el, navigate, computed, match, params }) =>
+  (svc, { params }) =>
     () => {
+      const { el, navigate, computed, match } = svc;
       const product = computed(() => {
         const idParam = params().id;
         if (!idParam) return null;
