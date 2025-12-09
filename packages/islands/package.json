@@ -45,6 +45,22 @@
     "./presets/islands.server": {
       "import": "./dist/presets/islands.server.js",
       "types": "./dist/presets/islands.server.d.ts"
+    },
+    "./adapters/dom-server": {
+      "import": "./dist/adapters/dom-server.js",
+      "types": "./dist/adapters/dom-server.d.ts"
+    },
+    "./ssr-context": {
+      "import": "./dist/ssr-context.js",
+      "types": "./dist/ssr-context.d.ts"
+    },
+    "./deps/renderToString": {
+      "import": "./dist/deps/renderToString.js",
+      "types": "./dist/deps/renderToString.d.ts"
+    },
+    "./hydrators/dom": {
+      "import": "./dist/hydrators/dom.js",
+      "types": "./dist/hydrators/dom.d.ts"
     }
   },
   "files": [

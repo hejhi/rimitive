@@ -1,23 +1,21 @@
 /**
  * SSR Server Example
  *
- * Demonstrates server-side rendering with islands hydration.
+ * Demonstrates server-side rendering with islands hydration
+ * using the module composition pattern.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createIslandsServerApp } from '@lattice/islands/presets/islands.server';
 
+import { el, render } from './service.server.js';
 import { Counter } from './islands/Counter.js';
 import { TodoList } from './islands/TodoList.js';
 import { TagList } from './islands/TagList.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientBundlePath = join(__dirname, '../dist/client/client.js');
-
-// Create islands server app
-const { el, render } = createIslandsServerApp();
 
 const div = el('div');
 const p = el('p');
