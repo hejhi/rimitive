@@ -1,6 +1,8 @@
-import { connect } from '../service.js';
+import type { Service } from '../service.js';
 
-export const About = connect(({ el }) => () => {
+export function About(svc: Service) {
+  const { el } = svc;
+
   return el('div').props({ className: 'page about-page' })(
     el('h2')('About This Example'),
 
@@ -11,9 +13,8 @@ export const About = connect(({ el }) => () => {
       ),
       el('ol')(
         el('li')('Server receives a request for a specific URL'),
-        el('li')('Router context is created with the request URL'),
-        el('li')('App renders within the router context on the server'),
-        el('li')('Router uses SSR context to determine which route to render'),
+        el('li')('Router matches path and provides route info'),
+        el('li')('View layer renders matched component'),
         el('li')('HTML is sent to the client with inline island data'),
         el('li')('Client hydrates interactive islands only'),
         el('li')('Router continues working on client for navigation')
@@ -21,16 +22,14 @@ export const About = connect(({ el }) => () => {
     ),
 
     el('section').props({ className: 'card' })(
-      el('h3')('Universal API'),
+      el('h3')('Pure Reactive State'),
       el('p')(
-        'The same router API works everywhere - no special SSR-specific code needed!'
+        'The router is just reactive state - it provides matches, currentPath, and navigate.'
       ),
       el('ul')(
-        el('li')(
-          'On server: Router reads from SSR context (createRouterContext)'
-        ),
-        el('li')('On client: Router reads from window.location'),
-        el('li')('Environment detection is automatic')
+        el('li')('Router does NOT create elements'),
+        el('li')('View layer uses match() to render based on router.matches()'),
+        el('li')('Same code works on server and client')
       )
     ),
 
@@ -41,4 +40,4 @@ export const About = connect(({ el }) => () => {
       )
     )
   );
-});
+}

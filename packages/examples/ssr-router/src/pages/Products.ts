@@ -1,9 +1,7 @@
 /**
  * Products Page (Contains Island)
- *
- * This page includes an interactive island component.
  */
-import { connect } from '../service.js';
+import type { Service } from '../service.js';
 import { ProductFilter } from '../islands/ProductFilter.js';
 
 const products = [
@@ -17,7 +15,9 @@ const products = [
 
 const productFilter = ProductFilter({ products });
 
-export const Products = connect(({ el }) => () => {
+export function Products(svc: Service) {
+  const { el } = svc;
+
   return el('div').props({ className: 'page products-page' })(
     el('h2')('Products'),
 
@@ -43,4 +43,4 @@ export const Products = connect(({ el }) => () => {
       )
     )
   );
-});
+}

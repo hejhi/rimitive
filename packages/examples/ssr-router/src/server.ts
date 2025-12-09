@@ -1,8 +1,11 @@
 /**
- * SSR Server with Router Support
+ * SSR Server
  *
- * Uses the module composition pattern with per-request service creation.
- * Islands receive the service which includes currentPath for URL-based state.
+ * Simple flow:
+ * 1. Create router with initial path from request URL
+ * 2. Create service with router's navigate/currentPath
+ * 3. Render AppLayout to string
+ * 4. Send HTML
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
@@ -16,11 +19,11 @@ import {
   getIslandScripts,
 } from '@lattice/islands/ssr-context';
 import { renderToString } from '@lattice/islands/deps/renderToString';
-import { createRouter, type RouteTree } from '@lattice/router';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { createRouter } from '@lattice/router';
 
-import { appRoutes } from './routes.js';
+import { routes } from './routes.js';
 import { createBaseService, type Service } from './service.js';
+import { AppLayout } from './layouts/AppLayout.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
@@ -30,45 +33,27 @@ const clientBundlePath = isDev
   : join(__dirname, '../client/client.js');
 
 /**
- * Create a per-request service with routing
- *
- * Each request gets its own service instance with currentPath set
- * to the request URL. Islands use currentPath directly for URL-based state.
+ * Create per-request service and router
  */
-function createRequestService(
-  url: URL,
-  routes: RouteTree<DOMAdapterConfig>
-): { service: Service; render: () => { html: string; scripts: string } } {
+function createRequestService(pathname: string) {
   const adapter = createDOMServerAdapter();
   const baseSvc = createBaseService(adapter);
 
-  // Create router with initial path from request URL
-  const router = createRouter<DOMAdapterConfig>(baseSvc, {
-    initialPath: url.pathname + url.search,
-  });
+  // Create router with initial path from request
+  const router = createRouter(
+    { signal: baseSvc.signal, computed: baseSvc.computed },
+    routes,
+    { initialPath: pathname }
+  );
 
-  // Build full service with router methods
-  // Islands use currentPath directly - no separate "context" mechanism
+  // Build full service
   const service: Service = {
     ...baseSvc,
     navigate: router.navigate,
     currentPath: router.currentPath,
   };
 
-  // Mount helper
-  const mount = <T>(spec: { create: (svc: Service) => T }) =>
-    spec.create(service);
-
-  // Render function
-  const render = () => {
-    const ctx = createSSRContext();
-    const routeSpec = router.mount(routes);
-    const html = runWithSSRContext(ctx, () => renderToString(mount(routeSpec)));
-    const scripts = getIslandScripts(ctx);
-    return { html, scripts };
-  };
-
-  return { service, render };
+  return { service, router };
 }
 
 /**
@@ -382,18 +367,20 @@ const server = createServer((req, res) => {
     return;
   }
 
-  // SSR handling
+  // Get pathname from request
   const url = new URL(
     req.url || '/',
     `http://${req.headers.host || 'localhost'}`
   );
 
-  // Create per-request service with routing
-  // No AsyncLocalStorage needed - service is passed directly through render
-  const { render } = createRequestService(url, appRoutes);
+  // Create per-request service and router
+  const { service, router } = createRequestService(url.pathname);
 
-  // Render the page
-  const { html, scripts } = render();
+  // Render the app
+  const ctx = createSSRContext();
+  const appSpec = AppLayout(service, router);
+  const html = runWithSSRContext(ctx, () => renderToString(appSpec.create(service)));
+  const scripts = getIslandScripts(ctx);
 
   // Generate full HTML page
   const fullHtml = template(html, scripts);
@@ -407,10 +394,9 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}/`);
   console.log('Try these URLs:');
-  console.log(`  http://localhost:${PORT}/       - Home page (static)`);
-  console.log(`  http://localhost:${PORT}/about  - About page (static)`);
-  console.log(
-    `  http://localhost:${PORT}/products - Products page (with island)`
-  );
+  console.log(`  http://localhost:${PORT}/       - Home page`);
+  console.log(`  http://localhost:${PORT}/about  - About page`);
+  console.log(`  http://localhost:${PORT}/products - Products page (with island)`);
+  console.log(`  http://localhost:${PORT}/products/1 - Product detail`);
   console.log('Press Ctrl+C to stop');
 });

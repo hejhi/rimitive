@@ -1,8 +1,8 @@
 /**
- * SSR Router Service - Shared Composition
+ * SSR Router Service
  *
- * Single source of truth for service composition.
- * Both server and client use this with their respective adapters.
+ * Service composition for the app. Both server and client
+ * use this with their respective adapters.
  */
 import { compose } from '@lattice/lattice';
 import {
@@ -16,7 +16,6 @@ import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { OnModule } from '@lattice/view/deps/addEventListener';
 import { island as baseIsland, type IslandComponent } from '@lattice/islands';
-import { connect as baseConnect } from '@lattice/router';
 import type { Adapter, Readable, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
@@ -44,10 +43,6 @@ export type BaseService = ReturnType<typeof createBaseService>;
 
 /**
  * Full service type - base + router methods
- *
- * Islands use `currentPath` to derive URL-based state reactively.
- * No separate "context" mechanism needed - currentPath is just
- * another signal on the service.
  */
 export type Service = BaseService & {
   navigate: (path: string) => void;
@@ -55,9 +50,7 @@ export type Service = BaseService & {
 };
 
 /**
- * Island factory - typed wrapper that fixes Service type
- *
- * Islands receive the service which includes currentPath for URL-based reactivity.
+ * Island factory - typed wrapper
  */
 export function island<TProps>(
   id: string,
@@ -65,6 +58,3 @@ export function island<TProps>(
 ): IslandComponent<TProps> {
   return baseIsland(id, factory);
 }
-
-// Pre-bind our connect to the dom adapter
-export const connect = baseConnect<DOMAdapterConfig>;

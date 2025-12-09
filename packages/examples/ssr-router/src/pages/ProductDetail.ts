@@ -1,10 +1,9 @@
 /**
  * Product Detail Page
  *
- * Shows details for a single product based on route params.
- * Demonstrates using an island inside a connected route component.
+ * Receives params from the router match.
  */
-import { connect } from '../service.js';
+import type { Service } from '../service.js';
 import { AddToCart } from '../islands/AddToCart.js';
 
 const products = [
@@ -52,77 +51,63 @@ const products = [
   },
 ];
 
-export const ProductDetail = connect(
-  ({ el, navigate, computed, match }, { params }) =>
-    () => {
-      const product = computed(() => {
-        const idParam = params().id;
-        if (!idParam) return null;
-        const id = parseInt(idParam, 10);
-        return products.find((p) => p.id === id) ?? null;
-      });
+type ProductDetailProps = {
+  params: { id: string };
+};
 
-      // Create island once with reactive props
-      // Note: Island props must be static at creation time for SSR hydration
-      // The initial product data comes from the first params() value
-      const initialProduct = product();
-      const addToCart = initialProduct
-        ? AddToCart({
-            productId: initialProduct.id,
-            productName: initialProduct.name,
-            price: initialProduct.price,
-          })
-        : null;
+export function ProductDetail(svc: Service, props: ProductDetailProps) {
+  const { el, navigate } = svc;
+  const { params } = props;
 
-      return match(product, (p) =>
-        p === null
-          ? el('div').props({ className: 'page product-detail-page' })(
-              el('h2')('Product Not Found'),
-              el('p')('The product you are looking for does not exist.'),
-              el('button').props({
-                className: 'primary-btn',
-                onclick: () => navigate('/products'),
-              })('← Back to Products')
-            )
-          : el('div').props({ className: 'page product-detail-page' })(
-              el('nav').props({ className: 'breadcrumb' })(
-                el('a').props({
-                  href: '/products',
-                  onclick: (e: Event) => {
-                    e.preventDefault();
-                    navigate('/products');
-                  },
-                })('Products'),
-                el('span')(' / '),
-                el('span')(p.name)
-              ),
+  const id = parseInt(params.id, 10);
+  const product = products.find((p) => p.id === id);
 
-              el('article').props({ className: 'product-detail card' })(
-                el('header')(
-                  el('h2')(p.name),
-                  el('span').props({ className: 'category' })(p.category)
-                ),
+  if (!product) {
+    return el('div').props({ className: 'page product-detail-page' })(
+      el('h2')('Product Not Found'),
+      el('p')('The product you are looking for does not exist.'),
+      el('button').props({
+        className: 'primary-btn',
+        onclick: () => navigate('/products'),
+      })('← Back to Products')
+    );
+  }
 
-                el('p').props({ className: 'description' })(p.description),
+  const addToCart = AddToCart({
+    productId: product.id,
+    productName: product.name,
+    price: product.price,
+  });
 
-                el('p').props({ className: 'price' })(`$${p.price}`),
+  return el('div').props({ className: 'page product-detail-page' })(
+    el('nav').props({ className: 'breadcrumb' })(
+      el('a').props({
+        href: '/products',
+        onclick: (e: Event) => {
+          e.preventDefault();
+          navigate('/products');
+        },
+      })('Products'),
+      el('span')(' / '),
+      el('span')(product.name)
+    ),
 
-                // Interactive island - gets hydrated on client
-                // Created once with initial product data
-                ...(addToCart
-                  ? [
-                      el('section').props({
-                        className: 'add-to-cart-section',
-                      })(addToCart),
-                    ]
-                  : []),
+    el('article').props({ className: 'product-detail card' })(
+      el('header')(
+        el('h2')(product.name),
+        el('span').props({ className: 'category' })(product.category)
+      ),
 
-                el('button').props({
-                  className: 'secondary-btn',
-                  onclick: () => navigate('/products'),
-                })('← Back to Products')
-              )
-            )
-      );
-    }
-);
+      el('p').props({ className: 'description' })(product.description),
+
+      el('p').props({ className: 'price' })(`$${product.price}`),
+
+      el('section').props({ className: 'add-to-cart-section' })(addToCart),
+
+      el('button').props({
+        className: 'secondary-btn',
+        onclick: () => navigate('/products'),
+      })('← Back to Products')
+    )
+  );
+}
