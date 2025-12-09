@@ -1,7 +1,6 @@
 import { connect } from '../service.js';
 
-export const Home = connect((svc) => () => {
-  const { el, navigate } = svc;
+export const Home = connect(({ el, navigate }) => () => {
   return el('div').props({ className: 'page home-page' })(
     el('h2')('Welcome to SSR + Router'),
     el('p').props({ className: 'lead' })(
