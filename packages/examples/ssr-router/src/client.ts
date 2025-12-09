@@ -22,9 +22,7 @@ const domAdapter = createDOMAdapter();
 const baseSvc = createBaseService(domAdapter);
 
 // Create router
-const router = createRouter<DOMAdapterConfig>(baseSvc, {
-  initialPath: location.pathname + location.search + location.hash,
-});
+const router = createRouter(baseSvc);
 
 // Build full service with router methods
 // Islands use currentPath directly - no separate "context" needed
@@ -63,10 +61,9 @@ const mount = (spec: { create: (svc: Service) => { element: unknown } }) => ({
 const routeSpec = router.mount(appRoutes);
 const appRef = router.renderApp(routeSpec);
 const container = document.querySelector('.app');
-if (container) {
-  // Replace SSR content with reactive client-side route tree
-  container.replaceChildren(appRef.element as Node);
-}
+
+// Replace SSR content with reactive client-side route tree
+if (container && appRef.element) container.replaceChildren(appRef.element);
 
 // Create hydrator and hydrate islands
 const hydrator = createDOMHydrator(createSvc, mount);
