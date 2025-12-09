@@ -35,16 +35,18 @@ const router = createRouter(
   routes
 );
 
-// Build full service with router methods
+// Build full service with router methods and use helper
 const service: Service = {
   ...baseSvc,
   navigate: router.navigate,
   currentPath: router.currentPath,
+  matches: router.matches,
+  use: (component) => component(service),
 };
 
 // Render the app
-const appSpec = AppLayout(service, router);
-const appRef = appSpec.create(service);
+const appSpec = AppLayout(service);
+const appRef = appSpec().create(service);
 
 // Mount to DOM
 const container = document.querySelector('.app');
@@ -60,6 +62,8 @@ const createSvc = (islandAdapter: Adapter<DOMAdapterConfig>) => {
     ...islandBaseSvc,
     navigate: router.navigate,
     currentPath: router.currentPath,
+    matches: router.matches,
+    use: (component) => component(islandSvc),
   };
 
   const scopes = createScopes({ baseEffect: islandSvc.effect });

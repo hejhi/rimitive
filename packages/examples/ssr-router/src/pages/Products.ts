@@ -15,10 +15,10 @@ const products = [
 
 const productFilter = ProductFilter({ products });
 
-export function Products(svc: Service) {
-  const { el } = svc;
-
-  return el('div').props({ className: 'page products-page' })(
+export const Products =
+  ({ el }: Service) =>
+  () => {
+    return el('div').props({ className: 'page products-page' })(
     el('h2')('Products'),
 
     // Static content
@@ -42,5 +42,5 @@ export function Products(svc: Service) {
           'The rest of the page is static HTML - faster to load and better for SEO.'
       )
     )
-  );
-}
+    );
+  };

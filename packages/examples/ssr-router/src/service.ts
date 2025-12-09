@@ -18,6 +18,7 @@ import { OnModule } from '@lattice/view/deps/addEventListener';
 import { island as baseIsland, type IslandComponent } from '@lattice/islands';
 import type { Adapter, Readable, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { MatchedRoute } from '@lattice/router';
 
 /**
  * Create a base service with the given adapter
@@ -42,11 +43,30 @@ export function createBaseService(adapter: Adapter<DOMAdapterConfig>) {
 export type BaseService = ReturnType<typeof createBaseService>;
 
 /**
- * Full service type - base + router methods
+ * Portable component - receives service, returns a function that returns RefSpec
+ */
+export type PortableComponent<TProps = void> = (
+  svc: Service
+) => (props: TProps) => RefSpec<unknown>;
+
+/**
+ * Full service type - base + router methods + use helper
  */
 export type Service = BaseService & {
   navigate: (path: string) => void;
   currentPath: Readable<string>;
+  matches: Readable<MatchedRoute[]>;
+  /**
+   * Bind a portable component to this service
+   *
+   * @example
+   * ```ts
+   * const Home = (svc: Service) => () => svc.el('div')('Hello');
+   * // In AppLayout:
+   * use(Home)()  // returns RefSpec
+   * ```
+   */
+  use: <TProps>(component: PortableComponent<TProps>) => (props: TProps) => RefSpec<unknown>;
 };
 
 /**

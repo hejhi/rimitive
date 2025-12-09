@@ -46,14 +46,16 @@ function createRequestService(pathname: string) {
     { initialPath: pathname }
   );
 
-  // Build full service
+  // Build full service with use helper
   const service: Service = {
     ...baseSvc,
     navigate: router.navigate,
     currentPath: router.currentPath,
+    matches: router.matches,
+    use: (component) => component(service),
   };
 
-  return { service, router };
+  return { service };
 }
 
 /**
@@ -373,13 +375,13 @@ const server = createServer((req, res) => {
     `http://${req.headers.host || 'localhost'}`
   );
 
-  // Create per-request service and router
-  const { service, router } = createRequestService(url.pathname);
+  // Create per-request service
+  const { service } = createRequestService(url.pathname);
 
   // Render the app
   const ctx = createSSRContext();
-  const appSpec = AppLayout(service, router);
-  const html = runWithSSRContext(ctx, () => renderToString(appSpec.create(service)));
+  const appSpec = AppLayout(service);
+  const html = runWithSSRContext(ctx, () => renderToString(appSpec().create(service)));
   const scripts = getIslandScripts(ctx);
 
   // Generate full HTML page

@@ -55,10 +55,10 @@ type ProductDetailProps = {
   params: { id: string };
 };
 
-export function ProductDetail(svc: Service, props: ProductDetailProps) {
-  const { el, navigate } = svc;
-  const { params } = props;
-
+export function ProductDetail(
+  { el, navigate }: Service,
+  { params }: ProductDetailProps
+) {
   const id = parseInt(params.id, 10);
   const product = products.find((p) => p.id === id);
 
