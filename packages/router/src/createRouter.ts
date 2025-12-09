@@ -356,13 +356,21 @@ function getInitialPath(config: RouterConfig): string {
  *
  * @example
  * ```typescript
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
+ * import { createMapModule } from '@lattice/view/map';
+ * import { createMatchModule } from '@lattice/view/match';
+ * import { MountModule } from '@lattice/view/deps/mount';
  * import { createRouter } from '@lattice/router';
  *
- * const signals = createSignals();
- * const view = createDOMView({ signals });
- * const svc = view();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(
+ *   SignalModule, ComputedModule, EffectModule, BatchModule,
+ *   createElModule(adapter), createMapModule(adapter), createMatchModule(adapter),
+ *   MountModule
+ * )();
  * const router = createRouter(svc, { initialPath: '/' });
  *
  * // Define routes
