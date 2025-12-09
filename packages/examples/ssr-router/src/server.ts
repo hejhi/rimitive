@@ -1,29 +1,51 @@
 /**
  * SSR Server with Router Support
  *
- * Uses the SSR preset for per-request service creation.
+ * Uses the module composition pattern with per-request service creation.
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AsyncLocalStorage } from 'node:async_hooks';
+
+import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
+import {
+  createSSRContext,
+  runWithSSRContext,
+  getIslandScripts,
+} from '@lattice/islands/ssr-context';
+import { renderToString } from '@lattice/islands/deps/renderToString';
+import { createRouter, type RouteTree } from '@lattice/router';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+
 import { appRoutes } from './routes.js';
-import { buildAppContext, setServiceGetter, type Service } from './service.js';
-import { createSSRApp } from './preset.js';
+import {
+  createBaseService,
+  buildAppContext,
+  setServiceGetter,
+  type Service,
+  type AppContext,
+} from './service.js';
 
 /**
- * AsyncLocalStorage for per-request service injection
+ * AsyncLocalStorage for per-request service and context injection
  */
-const serviceStorage = new AsyncLocalStorage<Service>();
+type RequestContext = {
+  service: Service;
+  appContext: AppContext;
+};
+const requestStorage = new AsyncLocalStorage<RequestContext>();
 
 // Configure service lookup to use AsyncLocalStorage
 setServiceGetter(() => {
-  const svc = serviceStorage.getStore();
-  if (!svc) {
-    throw new Error('Service not available - are you inside a request context?');
+  const ctx = requestStorage.getStore();
+  if (!ctx) {
+    throw new Error(
+      'Service not available - are you inside a request context?'
+    );
   }
-  return svc;
+  return ctx.service;
 });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -32,6 +54,46 @@ const isDev = __dirname.endsWith('src');
 const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')
   : join(__dirname, '../client/client.js');
+
+/**
+ * Create a per-request service with routing
+ */
+function createRequestService(
+  url: URL,
+  routes: RouteTree<DOMAdapterConfig>
+): { service: Service; render: () => { html: string; scripts: string } } {
+  const adapter = createDOMServerAdapter();
+  const baseSvc = createBaseService(adapter);
+
+  // Create router with initial path
+  const router = createRouter<DOMAdapterConfig>(baseSvc, {
+    initialPath: url.pathname,
+  });
+
+  // Build full service with router methods
+  const service: Service = {
+    ...baseSvc,
+    navigate: router.navigate,
+    currentPath: router.currentPath,
+  };
+
+  // Mount helper
+  const mount = <T>(spec: { create: (svc: Service) => T }) =>
+    spec.create(service);
+
+  // Render function
+  const render = () => {
+    // Get context from AsyncLocalStorage
+    const getContext = () => requestStorage.getStore()?.appContext;
+    const ctx = createSSRContext({ getContext });
+    const routeSpec = router.mount(routes);
+    const html = runWithSSRContext(ctx, () => renderToString(mount(routeSpec)));
+    const scripts = getIslandScripts(ctx);
+    return { html, scripts };
+  };
+
+  return { service, render };
+}
 
 /**
  * HTML template
@@ -350,15 +412,12 @@ const server = createServer((req, res) => {
     `http://${req.headers.host || 'localhost'}`
   );
 
-  // Create SSR app with routing (per request)
-  const { service, render } = createSSRApp({
-    url,
-    buildContext: buildAppContext,
-    routes: appRoutes,
-  });
+  // Create per-request service with routing
+  const { service, render } = createRequestService(url, appRoutes);
+  const appContext = buildAppContext(url);
 
-  // Render within service context
-  const { html, scripts } = serviceStorage.run(service, render);
+  // Render within request context
+  const { html, scripts } = requestStorage.run({ service, appContext }, render);
 
   // Generate full HTML page
   const fullHtml = template(html, scripts);
