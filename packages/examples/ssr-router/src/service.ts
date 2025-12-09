@@ -105,8 +105,6 @@ export function connect<TUserProps = Record<string, unknown>>(
     svc: AppConnectedSvc,
     routeCtx: AppRouteContext
   ) => (userProps: TUserProps) => RefSpec<DOMAdapterConfig['baseElement']>
-): (
-  ...args: [TUserProps?]
-) => (routeContext: RouteContext<DOMAdapterConfig>) => RefSpec<DOMAdapterConfig['baseElement']> {
-  return baseConnect<DOMAdapterConfig, DOMAdapterConfig['baseElement'], TUserProps>(wrapper);
+) {
+  return baseConnect<DOMAdapterConfig, TUserProps>(wrapper);
 }

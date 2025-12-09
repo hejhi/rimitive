@@ -33,22 +33,21 @@ import type { RouteTree, RouteNode } from './defineRoutes';
  */
 export function connect<
   TConfig extends AdapterConfig,
-  TElement extends TConfig['baseElement'] = TConfig['baseElement'],
   TUserProps = Record<string, unknown>,
 >(
   wrapper: (
     svc: ConnectedSvc<TConfig>,
     routeCtx: RouteContext<TConfig>
-  ) => (userProps: TUserProps) => RefSpec<TElement>
+  ) => (userProps: TUserProps) => RefSpec<TConfig['baseElement']>
 ): (
   ...args: [TUserProps?]
-) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement> {
+) => (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']> {
   return (...args: [TUserProps?]) =>
     (routeContext: RouteContext<TConfig>) => {
       const userProps = args[0] ?? ({} as TUserProps);
 
       // Return a deferred RefSpec that passes svc and routeContext separately
-      const deferredSpec: RefSpec<TElement> = {
+      const deferredSpec: RefSpec<TConfig['baseElement']> = {
         status: STATUS_REF_SPEC,
         create(svc: ConnectedSvc<TConfig>) {
           // Call wrapper with service and route context as separate args
@@ -141,16 +140,15 @@ export type ConnectedComponent<TConfig extends AdapterConfig> = (
  * ```
  */
 export type ConnectMethod<TConfig extends AdapterConfig> = <
-  TElement extends TConfig['baseElement'],
   TUserProps = Record<string, unknown>,
 >(
   wrapper: (
     svc: ConnectedSvc<TConfig>,
     routeCtx: RouteContext<TConfig>
-  ) => (userProps: TUserProps) => RefSpec<TElement>
+  ) => (userProps: TUserProps) => RefSpec<TConfig['baseElement']>
 ) => (
   ...args: [TUserProps?]
-) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
+) => (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>;
 
 /**
  * Route method signature
