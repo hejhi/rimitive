@@ -20,13 +20,17 @@ import { ProductDetail } from '../pages/ProductDetail.js';
  */
 const componentMap: Record<
   string,
-  (svc: Service) => (props: { params: Record<string, string> }) => RefSpec<unknown>
+  (
+    svc: Service
+  ) => (props: { params: Record<string, string> }) => RefSpec<unknown>
 > = {
   home: (svc) => () => Home(svc)(),
   about: (svc) => () => About(svc)(),
   products: (svc) => () => Products(svc)(),
-  'product-detail': (svc) => ({ params }) =>
-    ProductDetail(svc, { params: params as { id: string } }),
+  'product-detail':
+    (svc) =>
+    ({ params }) =>
+      ProductDetail(svc, { params: params as { id: string } }),
 };
 
 const NotFound = (svc: Service) => () => {
