@@ -375,13 +375,15 @@ export function createTestEnv() {
   // Use real signals integration for proper reactive updates
   const graphEdges = createGraphEdges();
   const { withVisitor } = createGraphTraversal();
-  const scheduler = createScheduler({ detachAll: graphEdges.detachAll });
-  const propagate = scheduler.withPropagate(withVisitor);
+  const scheduler = createScheduler({
+    detachAll: graphEdges.detachAll,
+    withVisitor,
+  });
 
   // Create real signal factory
   const signal = createSignalFactory({
     graphEdges,
-    propagate,
+    propagate: scheduler.propagate,
   });
 
   // Create pull propagator for computed
