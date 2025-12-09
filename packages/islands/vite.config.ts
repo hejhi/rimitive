@@ -68,8 +68,6 @@ export default defineConfig({
           'src/adapters/dom-hydration.ts'
         ),
         'adapters/islands': resolve(__dirname, 'src/adapters/islands.ts'),
-        'presets/core.client': resolve(__dirname, 'src/presets/core.client.ts'),
-        'presets/core.server': resolve(__dirname, 'src/presets/core.server.ts'),
       },
       formats: ['es'],
     },
