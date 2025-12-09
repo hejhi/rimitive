@@ -4,7 +4,7 @@
  * Receives params from the router match.
  */
 import type { Service } from '../service.js';
-import { AddToCart } from '../islands/AddToCart.js';
+import { AddToCart } from '../components/AddToCart.js';
 
 const products = [
   {
@@ -56,7 +56,7 @@ type ProductDetailProps = {
 };
 
 export function ProductDetail(
-  { el, navigate }: Service,
+  { el, navigate, use }: Service,
   { params }: ProductDetailProps
 ) {
   const id = parseInt(params.id, 10);
@@ -72,12 +72,6 @@ export function ProductDetail(
       })('← Back to Products')
     );
   }
-
-  const addToCart = AddToCart({
-    productId: product.id,
-    productName: product.name,
-    price: product.price,
-  });
 
   return el('div').props({ className: 'page product-detail-page' })(
     el('nav').props({ className: 'breadcrumb' })(
@@ -102,7 +96,13 @@ export function ProductDetail(
 
       el('p').props({ className: 'price' })(`$${product.price}`),
 
-      el('section').props({ className: 'add-to-cart-section' })(addToCart),
+      el('section').props({ className: 'add-to-cart-section' })(
+        use(AddToCart)({
+          productId: product.id,
+          productName: product.name,
+          price: product.price,
+        })
+      ),
 
       el('button').props({
         className: 'secondary-btn',

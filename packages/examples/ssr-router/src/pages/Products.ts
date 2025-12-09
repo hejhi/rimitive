@@ -1,8 +1,8 @@
 /**
- * Products Page (Contains Island)
+ * Products Page
  */
 import type { Service } from '../service.js';
-import { ProductFilter } from '../islands/ProductFilter.js';
+import { ProductFilter } from '../components/ProductFilter.js';
 
 const products = [
   { id: 1, name: 'Laptop', category: 'electronics', price: 999 },
@@ -13,34 +13,31 @@ const products = [
   { id: 6, name: 'Blender', category: 'appliances', price: 59 },
 ];
 
-const productFilter = ProductFilter({ products });
-
 export const Products =
-  ({ el }: Service) =>
-  () => {
-    return el('div').props({ className: 'page products-page' })(
-    el('h2')('Products'),
+  ({ el, use }: Service) =>
+  () =>
+    el('div').props({ className: 'page products-page' })(
+      el('h2')('Products'),
 
-    // Static content
-    el('section').props({ className: 'intro' })(
-      el('p')(
-        'This page demonstrates mixing static content with interactive islands.'
+      // Static content
+      el('section').props({ className: 'intro' })(
+        el('p')(
+          'This page demonstrates mixing static content with interactive components.'
+        ),
+        el('p')('The product filter below is interactive and fully hydrated.')
       ),
-      el('p')(
-        "The product filter below is an island - it's interactive and ships JavaScript."
-      )
-    ),
 
-    // Interactive island
-    el('section').props({ className: 'product-filter-section' })(productFilter),
+      // Interactive product filter
+      el('section').props({ className: 'product-filter-section' })(
+        use(ProductFilter)({ products })
+      ),
 
-    // More static content
-    el('section').props({ className: 'card' })(
-      el('h3')('Why Islands?'),
-      el('p')(
-        'Islands architecture lets you ship JavaScript only for interactive components. ' +
-          'The rest of the page is static HTML - faster to load and better for SEO.'
+      // More static content
+      el('section').props({ className: 'card' })(
+        el('h3')('Full App Hydration'),
+        el('p')(
+          'This example uses full app hydration - the entire component tree is hydrated on the client. ' +
+            'The SSR content is preserved and reactivity is wired up without replacing the DOM.'
+        )
       )
-    )
     );
-  };

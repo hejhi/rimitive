@@ -2,33 +2,25 @@
  * Client-side Hydration
  *
  * Simple flow:
- * 1. Create router (reactive state)
- * 2. Create service with router's navigate/currentPath
+ * 1. Create hydrating adapter that walks existing DOM
+ * 2. Create router (reactive state)
  * 3. Hydrate AppLayout (walks existing DOM, wires up reactivity)
- * 4. Hydrate islands
+ * 4. Switch to regular DOM adapter for future updates
  *
- * The key insight: We use the hydrating adapter for the whole app, not just islands.
- * This means match() inside AppLayout walks the existing SSR DOM on first render,
- * then switches to normal DOM operations for subsequent navigation.
+ * The hydrating adapter walks the SSR DOM instead of creating new elements.
+ * This means match() wires up reactivity to existing content, and future
+ * navigations swap content normally.
  */
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createScopes } from '@lattice/view/deps/scope';
-import type { Adapter } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import {
-  createDOMHydrator,
   createDOMHydrationAdapter,
   createIslandsAdapter,
-  createHydrationSvc,
 } from '@lattice/islands/client';
 import { createRouter } from '@lattice/router';
 
 import { routes } from './routes.js';
 import { createBaseService, type Service } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
-import { ProductFilter } from './islands/ProductFilter.js';
-import { Navigation } from './islands/Navigation.js';
-import { AddToCart } from './islands/AddToCart.js';
 
 // Find the app container (SSR-rendered content)
 const container = document.querySelector('.app') as HTMLElement;
@@ -56,46 +48,11 @@ const service: Service = {
   use: (component) => component(service),
 };
 
-// Create hydrating service wrapper (queues effects until hydration completes)
-const { hydratingSvc, activate } = createHydrationSvc(service);
-
-// Hydrate the app - walks existing DOM instead of creating new elements
-AppLayout(hydratingSvc)().create(hydratingSvc);
+// Hydrate the app - walks existing DOM, wires up reactivity
+AppLayout(service)().create(service);
 
 // Switch adapter to fallback mode for future reactive updates
 appAdapter.switchToFallback();
-
-// Activate queued effects now that hydration is complete
-activate(service);
-
-// Service factory for island hydration
-const createSvc = (islandAdapter: Adapter<DOMAdapterConfig>) => {
-  const islandBaseSvc = createBaseService(islandAdapter);
-
-  const islandSvc: Service = {
-    ...islandBaseSvc,
-    navigate: router.navigate,
-    currentPath: router.currentPath,
-    matches: router.matches,
-    use: (component) => component(islandSvc),
-  };
-
-  const scopes = createScopes({ baseEffect: islandSvc.effect });
-
-  return {
-    svc: islandSvc,
-    createElementScope: scopes.createElementScope,
-  };
-};
-
-// Mount function for client-side fallback rendering
-const mount = (spec: { create: (svc: Service) => { element: unknown } }) => ({
-  element: spec.create(service),
-});
-
-// Hydrate islands
-const hydrator = createDOMHydrator(createSvc, mount);
-hydrator.hydrate(ProductFilter, Navigation, AddToCart);
 
 // Export for debugging
 export { router, service };

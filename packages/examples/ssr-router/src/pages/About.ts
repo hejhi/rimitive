@@ -2,8 +2,8 @@ import type { Service } from '../service.js';
 
 export const About =
   ({ el }: Service) =>
-  () => {
-    return el('div').props({ className: 'page about-page' })(
+  () =>
+    el('div').props({ className: 'page about-page' })(
       el('h2')('About This Example'),
 
       el('section').props({ className: 'card' })(
@@ -42,4 +42,3 @@ export const About =
         )
       )
     );
-  };

@@ -2,8 +2,8 @@ import type { Service } from '../service.js';
 
 export const Home =
   ({ el, navigate }: Service) =>
-  () => {
-    return el('div').props({ className: 'page home-page' })(
+  () =>
+    el('div').props({ className: 'page home-page' })(
       el('h2')('Welcome to SSR + Router'),
       el('p').props({ className: 'lead' })(
         'This example demonstrates server-side rendering with routing using the universal API.'
@@ -29,4 +29,3 @@ export const Home =
         })('Learn More →')
       )
     );
-  };
