@@ -408,6 +408,28 @@ importers:
         specifier: ^6.0.5
         version: 6.3.5(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
+  packages/examples/resource:
+    dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../../lattice
+      '@lattice/resource':
+        specifier: workspace:*
+        version: link:../../resource
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../../signals
+      '@lattice/view':
+        specifier: workspace:*
+        version: link:../../view
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.5
+        version: 6.4.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
   packages/examples/router:
     dependencies:
       '@lattice/lattice':
@@ -441,6 +463,9 @@ importers:
       '@lattice/signals':
         specifier: workspace:*
         version: link:../../signals
+      '@lattice/ssr':
+        specifier: workspace:*
+        version: link:../../ssr
       '@lattice/view':
         specifier: workspace:*
         version: link:../../view
@@ -519,6 +544,9 @@ importers:
       '@lattice/signals':
         specifier: workspace:*
         version: link:../signals
+      '@lattice/ssr':
+        specifier: workspace:*
+        version: link:../ssr
       '@lattice/view':
         specifier: workspace:*
         version: link:../view
@@ -618,6 +646,37 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.0)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
+  packages/resource:
+    dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.8
+        version: 0.25.12
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      terser:
+        specifier: ^5.36.0
+        version: 5.43.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.1
+        version: 7.1.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@24.10.0)(rollup@4.52.5)(typescript@5.9.3)(vite@7.1.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.0)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
   packages/router:
     dependencies:
       '@lattice/lattice':
@@ -691,6 +750,46 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.0)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
+  packages/ssr:
+    dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
+      '@lattice/view':
+        specifier: workspace:*
+        version: link:../view
+      linkedom:
+        specifier: ^0.18.12
+        version: 0.18.12
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.15.3
+      esbuild:
+        specifier: ^0.25.8
+        version: 0.25.12
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      terser:
+        specifier: ^5.36.0
+        version: 5.43.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.1
+        version: 7.1.1(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@22.15.3)(rollup@4.52.5)(typescript@5.9.3)(vite@7.1.1(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
   packages/view:
     dependencies:
@@ -11426,7 +11525,7 @@ snapshots:
       magic-string: 0.30.17
       sirv: 3.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@15.11.7)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
       ws: 8.18.2
     transitivePeerDependencies:
       - bufferutil
@@ -17760,6 +17859,25 @@ snapshots:
       local-pkg: 1.1.1
       magic-string: 0.30.17
       typescript: 5.8.3
+    optionalDependencies:
+      vite: 7.1.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+    transitivePeerDependencies:
+      - '@types/node'
+      - rollup
+      - supports-color
+
+  vite-plugin-dts@4.5.4(@types/node@24.10.0)(rollup@4.52.5)(typescript@5.9.3)(vite@7.1.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)):
+    dependencies:
+      '@microsoft/api-extractor': 7.52.8(@types/node@24.10.0)
+      '@rollup/pluginutils': 5.1.4(rollup@4.52.5)
+      '@volar/typescript': 2.4.14
+      '@vue/language-core': 2.2.0(typescript@5.9.3)
+      compare-versions: 6.1.1
+      debug: 4.4.0
+      kolorist: 1.8.0
+      local-pkg: 1.1.1
+      magic-string: 0.30.17
+      typescript: 5.9.3
     optionalDependencies:
       vite: 7.1.1(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
     transitivePeerDependencies:

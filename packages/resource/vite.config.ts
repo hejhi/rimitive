@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import dts from 'vite-plugin-dts';
 import type { Plugin } from 'vite';
 import { minify } from 'terser';
 
@@ -19,7 +20,7 @@ const terserMangleInternals = (): Plugin => {
           mangle: {
             toplevel: true,
             properties: {
-              regex: /^_[^_]/,
+              regex: /^_/,
               // Keep quoted properties as-is for safety
               keep_quoted: true,
             },
@@ -36,7 +37,22 @@ const terserMangleInternals = (): Plugin => {
 };
 
 export default defineConfig({
-  plugins: [terserMangleInternals()],
+  plugins: [
+    dts({
+      insertTypesEntry: true,
+      outDir: 'dist',
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.test.d.ts',
+        'src/**/test-*.ts',
+        'src/**/*.example.ts',
+      ],
+      rollupTypes: false,
+      staticImport: true,
+    }),
+    terserMangleInternals(),
+  ],
   esbuild: {
     minifyIdentifiers: true,
     minifySyntax: true,
@@ -45,21 +61,9 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        // Core entry points
         index: resolve(__dirname, 'src/index.ts'),
-        'index.browser': resolve(__dirname, 'src/index.browser.ts'),
+        extend: resolve(__dirname, 'src/extend.ts'),
         types: resolve(__dirname, 'src/types.ts'),
-        // Server/client modules
-        'server/index': resolve(__dirname, 'src/server/index.ts'),
-        'client/index': resolve(__dirname, 'src/client/index.ts'),
-        // Island-specific code
-        'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
-        'ssr-context.browser': resolve(__dirname, 'src/ssr-context.browser.ts'),
-        island: resolve(__dirname, 'src/island.ts'),
-        'island.browser': resolve(__dirname, 'src/island.browser.ts'),
-        'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
-        // Island-aware server adapter
-        'adapters/dom-server': resolve(__dirname, 'src/adapters/dom-server.ts'),
       },
       formats: ['es'],
     },
@@ -68,15 +72,9 @@ export default defineConfig({
         'vitest',
         /^vitest/,
         'node:test',
-        'node:http',
-        'node:async_hooks',
         '@lattice/lattice',
-        '@lattice/view',
-        /^@lattice\/view\//,
         '@lattice/signals',
         /^@lattice\/signals\//,
-        '@lattice/ssr',
-        /^@lattice\/ssr\//,
       ],
       output: {
         entryFileNames: '[name].js',
@@ -84,6 +82,7 @@ export default defineConfig({
     },
     sourcemap: false,
     target: 'es2022',
+    // Don't empty outDir in watch mode to prevent type resolution issues
     emptyOutDir: !process.argv.includes('--watch'),
   },
 });

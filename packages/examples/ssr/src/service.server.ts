@@ -4,13 +4,12 @@
  * Server-side service with SSR utilities.
  * Uses the shared composition with server adapter.
  */
-import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
+import { createDOMServerAdapter, renderToString } from '@lattice/ssr/server';
 import {
   createSSRContext,
   runWithSSRContext,
   getIslandScripts,
 } from '@lattice/islands/ssr-context';
-import { renderToString } from '@lattice/islands/deps/renderToString';
 import type { RefSpec } from '@lattice/view/types';
 
 import { createService } from './service.js';

@@ -4,17 +4,17 @@
  * Server-side utilities for islands architecture.
  */
 
-// SSR context
+// Island-specific SSR context
 export {
   createSSRContext,
   runWithSSRContext,
   getIslandScripts,
 } from '../ssr-context';
 
-// Render to string
-export { renderToString } from '../deps/renderToString';
+// Re-export renderToString from @lattice/ssr for convenience
+export { renderToString } from '@lattice/ssr/server';
 
-// Server adapter
+// Island-aware server adapter (adds script tags for islands)
 export { createDOMServerAdapter } from '../adapters/dom-server';
 
 // Base island function (for creating typed wrappers)

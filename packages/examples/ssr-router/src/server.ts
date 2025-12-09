@@ -11,8 +11,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
-import { renderToString } from '@lattice/islands/deps/renderToString';
+import { createDOMServerAdapter, renderToString } from '@lattice/islands/server';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';

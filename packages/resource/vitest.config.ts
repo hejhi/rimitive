@@ -1,0 +1,17 @@
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+    includeSource: ['./src/**/*.{js,ts}'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
+    reporters: ['default'],
+  },
+});

@@ -1,7 +1,7 @@
 {
-  "name": "@lattice/islands",
+  "name": "@lattice/ssr",
   "version": "0.0.1",
-  "description": "Islands architecture for server-side rendering with Lattice",
+  "description": "Server-side rendering and hydration for Lattice",
   "author": "Lattice Team",
   "license": "MIT",
   "type": "module",
@@ -22,25 +22,13 @@
       "import": "./dist/client/index.js",
       "types": "./dist/client/index.d.ts"
     },
-    "./island": {
-      "browser": {
-        "import": "./dist/island.browser.js",
-        "types": "./dist/island.browser.d.ts"
-      },
-      "import": "./dist/island.js",
-      "types": "./dist/island.d.ts"
-    },
     "./adapters/dom-server": {
       "import": "./dist/adapters/dom-server.js",
       "types": "./dist/adapters/dom-server.d.ts"
     },
-    "./ssr-context": {
-      "import": "./dist/ssr-context.js",
-      "types": "./dist/ssr-context.d.ts"
-    },
-    "./hydrators/dom": {
-      "import": "./dist/hydrators/dom.js",
-      "types": "./dist/hydrators/dom.d.ts"
+    "./deps/renderToString": {
+      "import": "./dist/deps/renderToString.js",
+      "types": "./dist/deps/renderToString.d.ts"
     }
   },
   "files": [
@@ -61,7 +49,6 @@
   "dependencies": {
     "@lattice/lattice": "workspace:*",
     "@lattice/signals": "workspace:*",
-    "@lattice/ssr": "workspace:*",
     "@lattice/view": "workspace:*",
     "linkedom": "^0.18.12"
   },

@@ -45,21 +45,19 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        // Core entry points
         index: resolve(__dirname, 'src/index.ts'),
         'index.browser': resolve(__dirname, 'src/index.browser.ts'),
         types: resolve(__dirname, 'src/types.ts'),
-        // Server/client modules
         'server/index': resolve(__dirname, 'src/server/index.ts'),
         'client/index': resolve(__dirname, 'src/client/index.ts'),
-        // Island-specific code
-        'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
-        'ssr-context.browser': resolve(__dirname, 'src/ssr-context.browser.ts'),
-        island: resolve(__dirname, 'src/island.ts'),
-        'island.browser': resolve(__dirname, 'src/island.browser.ts'),
-        'hydrators/dom': resolve(__dirname, 'src/hydrators/dom.ts'),
-        // Island-aware server adapter
+        'deps/renderToString': resolve(__dirname, 'src/deps/renderToString.ts'),
+        'deps/hydrate-dom': resolve(__dirname, 'src/deps/hydrate-dom.ts'),
         'adapters/dom-server': resolve(__dirname, 'src/adapters/dom-server.ts'),
+        'adapters/dom-hydration': resolve(
+          __dirname,
+          'src/adapters/dom-hydration.ts'
+        ),
+        'adapters/hydration': resolve(__dirname, 'src/adapters/hydration.ts'),
       },
       formats: ['es'],
     },
@@ -75,8 +73,6 @@ export default defineConfig({
         /^@lattice\/view\//,
         '@lattice/signals',
         /^@lattice\/signals\//,
-        '@lattice/ssr',
-        /^@lattice\/ssr\//,
       ],
       output: {
         entryFileNames: '[name].js',

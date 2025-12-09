@@ -1,26 +1,25 @@
 /**
- * Island-aware linkedom adapter for SSR
+ * Island-aware SSR adapter
  *
- * Standalone linkedom adapter with island support and fragment decoration
+ * Wraps the base SSR adapter from @lattice/ssr and adds island-specific behavior:
+ * - Element islands: adds script tag marker after element
+ * - Fragment islands: wraps in div with script tag marker
  */
 
-import { parseHTML } from 'linkedom';
-import type {
-  Adapter,
-  FragmentRef,
-  NodeRef,
-  ElementRef,
-} from '@lattice/view/types';
+import type { Adapter, FragmentRef, ElementRef } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+import { createDOMServerAdapter as createBaseAdapter } from '@lattice/ssr/server';
 import type { IslandNodeMeta } from '../types';
 import { registerIsland } from '../ssr-context';
 
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
  */
-function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
-  let current: NodeRef<unknown> | null = nodeRef;
+function getFirstDOMNode(
+  nodeRef: ElementRef<unknown> | FragmentRef<unknown>
+): Node | null {
+  let current: ElementRef<unknown> | FragmentRef<unknown> | null = nodeRef;
   while (current) {
     if (current.status === STATUS_ELEMENT) {
       return current.element as Node;
@@ -37,8 +36,10 @@ function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
 /**
  * Get the last DOM node from a NodeRef (iteratively traversing nested fragments)
  */
-function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
-  let current: NodeRef<unknown> | null = nodeRef;
+function getLastDOMNode(
+  nodeRef: ElementRef<unknown> | FragmentRef<unknown>
+): Node | null {
+  let current: ElementRef<unknown> | FragmentRef<unknown> | null = nodeRef;
   while (current) {
     if (current.status === STATUS_ELEMENT) {
       return current.element as Node;
@@ -53,131 +54,76 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
 }
 
 /**
- * Create an island-aware linkedom adapter that decorates island fragments
- * with script tags for hydration
+ * Create an island-aware SSR adapter
+ *
+ * Extends the base SSR adapter with island registration and script tag injection.
  *
  * @example
  * ```typescript
- * import { createDOMServerAdapter } from '@lattice/islands/adapters/dom-server';
- * import { createView } from '@lattice/view/presets/core';
- * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createDOMServerAdapter } from '@lattice/islands/server';
  *
- * const signals = createSignals();
  * const adapter = createDOMServerAdapter();
- * const view = createView({ adapter, signals })();
- *
- * const app = view.el('div')(view.el('h1')('Hello SSR'));
+ * // Use with createView(), components with island() will be registered
  * ```
  */
 export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
-  // Create a document context for element creation
-  const { document } = parseHTML('<!DOCTYPE html><html></html>');
+  const base = createBaseAdapter();
 
   return {
-    createNode: (type: string, props?: Record<string, unknown>) => {
-      if (type === 'text') {
-        const textNode = document.createTextNode(
-          (props?.value as string) || ''
-        );
-        return textNode;
-      }
-      return document.createElement(type);
-    },
-    setProperty: (node: Node, key: string, value: unknown) => {
-      // Handle text nodes
-      if (node.nodeType === 3 && key === 'value') {
-        node.textContent = String(value);
-        return;
-      }
-
-      const element = node as HTMLElement;
-      // Skip event handlers during SSR (no interactivity on server)
-      if (key.startsWith('on')) return;
-
-      // Map JSX-style props to HTML attributes
-      const attributeName = key === 'className' ? 'class' : key;
-
-      // Use setAttribute for proper HTML attribute handling
-      // linkedom automatically handles escaping and attribute normalization
-      if (value != null && value !== false) {
-        // Only stringify primitives, skip objects/functions
-        if (typeof value !== 'object' && typeof value !== 'function') {
-          element.setAttribute(
-            attributeName,
-            String(value as string | number | boolean)
-          );
-        }
-      }
-    },
-    appendChild: (parent, child) => parent.appendChild(child),
-    removeChild: (parent, child) => parent.removeChild(child),
-    insertBefore: (parent, child, reference) =>
-      parent.insertBefore(child, reference),
+    // Delegate base operations to ssr adapter
+    createNode: base.createNode,
+    setProperty: base.setProperty,
+    appendChild: base.appendChild,
+    removeChild: base.removeChild,
+    insertBefore: base.insertBefore,
 
     /**
      * Lifecycle: onCreate
      *
      * For island elements (those with __islandMeta):
-     * 1. Registers the island in SSR context (generates hydration script)
+     * 1. Registers the island in SSR context
      * 2. Inserts <script data-island="..."></script> after the element
-     *
-     * This ensures registration and decoration happen atomically - only
-     * actually-rendered islands get registered for hydration.
      */
     onCreate: (ref, parentElement) => {
-      // Only handle elements in onCreate - fragments are handled in onAttach
       if (ref.status !== STATUS_ELEMENT) return;
 
-      const element = ref.element;
+      const element = ref.element as Node;
       const meta = (ref as ElementRef<Node> & { __islandMeta?: IslandNodeMeta })
         .__islandMeta;
 
       if (meta) {
         if (!parentElement) return;
 
-        // Register NOW - atomic with decoration, only for rendered islands
+        // Register island atomically with decoration
         const instanceId = registerIsland(
           meta.type,
           meta.props,
           STATUS_ELEMENT
         );
 
-        // Store instance ID back on ref for downstream use
+        // Store instance ID on ref
         (ref as ElementRef<Node> & { __islandId?: string }).__islandId =
           instanceId;
 
-        // Create script tag
-        const script = element.ownerDocument?.createElement('script');
-
+        // Create and insert script tag marker
+        const script = (element as Element).ownerDocument?.createElement(
+          'script'
+        );
         if (!script) return;
 
         script.setAttribute('type', 'application/json');
         script.setAttribute('data-island', instanceId);
-
-        // Insert after element
-        parentElement.insertBefore(script, element.nextSibling);
+        parentElement.insertBefore(script, (element as Element).nextSibling);
       }
     },
 
     /**
      * Lifecycle: onAttach
      *
-     * For island fragments (those with __islandMeta):
-     * 1. Registers the island in SSR context (generates hydration script)
-     * 2. Inserts fragment-start/end comments
-     * 3. Wraps the fragment and comments in a container div
-     * 4. Adds script tag marker inside the wrapper div
-     *
-     * Structure: <div><!--fragment-start-->...children...<!--fragment-end--><script data-island="..."></script></div>
-     *
-     * For non-island fragments:
-     * Just adds fragment-start/end comments without wrapper
-     *
-     * This ensures registration and decoration happen atomically - only
-     * actually-rendered islands get registered for hydration.
+     * For island fragments: wraps in div with script tag marker
+     * For regular fragments: delegates to base adapter (adds comment markers)
      */
     onAttach: (ref, parentElement) => {
-      // Only handle fragments in onAttach - elements are handled in onCreate
       if (ref.status !== STATUS_FRAGMENT) return;
 
       const parent = parentElement as HTMLElement;
@@ -185,49 +131,38 @@ export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
         __islandMeta?: IslandNodeMeta;
         __islandId: string;
       };
-      // Check if this is an island fragment (lazy registration)
+
       const meta = frag.__islandMeta;
 
       if (meta) {
-        // Skip if fragment has no children
+        // Island fragment - wrap with div and script tag
         if (!frag.firstChild || !frag.lastChild) return;
 
-        // Find first and last actual DOM nodes
         const firstNode = getFirstDOMNode(frag.firstChild);
         const lastNode = getLastDOMNode(frag.lastChild);
-
         if (!firstNode || !lastNode) return;
 
-        // Register NOW - atomic with decoration, only for rendered islands
+        // Register island
         const instanceId = registerIsland(
           meta.type,
           meta.props,
           STATUS_FRAGMENT
         );
-
-        // Store instance ID back on ref for downstream use
         frag.__islandId = instanceId;
 
-        // Create wrapper div
-        const wrapper = parent.ownerDocument.createElement('div');
-
-        // Create comment markers
-        const startComment =
-          parent.ownerDocument.createComment('fragment-start');
-        const endComment = parent.ownerDocument.createComment('fragment-end');
-
-        // Create script tag
-        const scriptTag = parent.ownerDocument.createElement('script');
+        // Create wrapper and markers
+        const doc = parent.ownerDocument;
+        const wrapper = doc.createElement('div');
+        const startComment = doc.createComment('fragment-start');
+        const endComment = doc.createComment('fragment-end');
+        const scriptTag = doc.createElement('script');
         scriptTag.setAttribute('type', 'application/json');
         scriptTag.setAttribute('data-island', instanceId);
 
-        // Insert wrapper before first node
+        // Build wrapper: insert before first, then move children into it
         parent.insertBefore(wrapper, firstNode);
-
-        // Build wrapper content: comment, nodes, comment, script
         wrapper.appendChild(startComment);
 
-        // Move all fragment nodes into wrapper
         let current: Node | null = firstNode;
         while (current) {
           const next: Node | null = current.nextSibling;
@@ -241,22 +176,8 @@ export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
         return;
       }
 
-      // Skip if fragment has no children
-      if (!frag.firstChild || !frag.lastChild) return;
-
-      // Find first and last actual DOM nodes
-      const firstNode = getFirstDOMNode(frag.firstChild);
-      const lastNode = getLastDOMNode(frag.lastChild);
-
-      if (!firstNode || !lastNode) return;
-
-      // Insert fragment-start comment before first child
-      const startComment = document.createComment('fragment-start');
-      parentElement.insertBefore(startComment, firstNode);
-
-      // Insert fragment-end comment after last child
-      const endComment = document.createComment('fragment-end');
-      parentElement.insertBefore(endComment, lastNode.nextSibling);
+      // Non-island fragment - delegate to base adapter for comment markers
+      base.onAttach?.(ref, parentElement);
     },
   };
 }

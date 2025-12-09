@@ -7,8 +7,8 @@
  *    - Fragment islands: script's parent is the wrapper div container
  * 2. For element islands: use the island's parent as the container
  * 3. Creating hydrating adapter targeting the container
- * 4. Running component with hydrating service (queued effects)
- * 5. On success: activate effects, remove script tag, unwrap fragment containers
+ * 4. Running component with service (effects run immediately, same as SSR)
+ * 5. On success: switch to DOM adapter, remove script tag, unwrap fragment containers
  * 6. On failure: fallback to client-side render with regular service
  */
 
@@ -16,11 +16,12 @@ import type { IslandMetaData, IslandRegistryEntry } from '../types';
 import type { RefSpec, ElementRef } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { HydrationMismatch, ISLAND_META } from '../types';
-import { createIslandsAdapter } from '../adapters/islands';
-import { createDOMHydrationAdapter } from '../adapters/dom-hydration';
-import { createHydrationSvc } from '../hydration-svc';
-import type { EffectSvc } from '../hydration-svc';
+import { ISLAND_META } from '../types';
+import {
+  createHydrationAdapter,
+  createDOMHydrationAdapter,
+  HydrationMismatch,
+} from '@lattice/ssr/client';
 
 /**
  * Base island type for registration - accepts any object with island metadata
@@ -49,7 +50,7 @@ export type MountFn = (spec: RefSpec<unknown>) => { element: unknown };
  * Result type from createSvc - includes both the svc and scope helper
  */
 export type CreateSvcResult = {
-  svc: EffectSvc & Record<string, unknown>;
+  svc: Record<string, unknown>;
   createElementScope: <TElement extends object>(
     element: TElement,
     fn: () => void
@@ -87,7 +88,7 @@ export type CreateSvcResult = {
  */
 export function createDOMHydrator(
   createSvc: (
-    adapter: ReturnType<typeof createIslandsAdapter>
+    adapter: ReturnType<typeof createHydrationAdapter>
   ) => CreateSvcResult,
   mount: MountFn
 ): IslandHydrator {
@@ -172,16 +173,15 @@ export function createDOMHydrator(
         let fragmentParentRef: ElementRef<unknown> | null = null;
 
         try {
-          const adapter = createIslandsAdapter(
+          const adapter = createHydrationAdapter(
             createDOMHydrationAdapter(container),
             createDOMAdapter()
           );
 
-          const { svc, createElementScope } = createSvc(adapter);
-          const { hydratingSvc, activate } = createHydrationSvc(svc);
+          const { svc } = createSvc(adapter);
 
-          const componentFn = Component(hydratingSvc);
-          const nodeRef = componentFn(props).create(hydratingSvc);
+          const componentFn = Component(svc);
+          const nodeRef = componentFn(props).create(svc);
 
           // For fragment islands, call attach() and activate while in hydrating mode
           // attach() is where map() creates the reconciler and binds event handlers
@@ -204,25 +204,12 @@ export function createDOMHydrator(
               lastChild: null,
             };
 
-            nodeRef.attach(fragmentParentRef, null, hydratingSvc);
-
-            // Activate effects within element scope for proper cleanup
-            // For fragments, use the first child element if available, otherwise the container
-            const scopeElement =
-              (container.firstElementChild as HTMLElement) || container;
-            createElementScope(scopeElement, activate);
+            nodeRef.attach(fragmentParentRef, null, svc);
           }
 
           // Success! Hydration complete
           // Switch adapter to fallback mode for future reactive updates
           adapter.switchToFallback();
-
-          // Activate remaining queued effects (for element islands)
-          // Fragment islands already activated above
-          // Wrap in element scope so effects are cleaned up when island is removed
-          if (!isFragment && islandElement) {
-            createElementScope(islandElement, activate);
-          }
 
           // Remove script tag marker
           script.remove();
@@ -277,7 +264,7 @@ export function createDOMHydrator(
             // - For fragment islands: clear the container div and mount fresh
             const fallbackAdapter = createDOMAdapter();
             const { svc: fallbackSvc } = createSvc(
-              createIslandsAdapter(fallbackAdapter, fallbackAdapter)
+              createHydrationAdapter(fallbackAdapter, fallbackAdapter)
             );
 
             if (isFragment) {

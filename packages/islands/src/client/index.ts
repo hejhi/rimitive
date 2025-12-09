@@ -4,15 +4,18 @@
  * Client-side utilities for islands hydration.
  */
 
-// Hydrator
+// Island-specific hydrator
 export { createDOMHydrator } from '../hydrators/dom';
 
-// Adapters
-export { createDOMHydrationAdapter } from '../adapters/dom-hydration';
-export { createIslandsAdapter } from '../adapters/islands';
+// Re-export SSR client utilities for convenience
+export {
+  createDOMHydrationAdapter,
+  createHydrationAdapter,
+  HydrationMismatch,
+} from '@lattice/ssr/client';
 
-// Hydration service wrapper
-export { createHydrationSvc } from '../hydration-svc';
+// Backwards compatibility alias
+export { createHydrationAdapter as createIslandsAdapter } from '@lattice/ssr/client';
 
 // Base island function (for creating typed wrappers)
 export { island } from '../island.browser';

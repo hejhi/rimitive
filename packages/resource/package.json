@@ -1,0 +1,53 @@
+{
+  "name": "@lattice/resource",
+  "version": "0.0.1",
+  "description": "Async data fetching with reactive dependency tracking for Lattice",
+  "author": "Lattice Team",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./extend": {
+      "import": "./dist/extend.js",
+      "types": "./dist/extend.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lattice/lattice": "workspace:*",
+    "@lattice/signals": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.8",
+    "rimraf": "^6.0.1",
+    "terser": "^5.36.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.1.1",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^3.2.4"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

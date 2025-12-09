@@ -15,6 +15,7 @@
     "@lattice/islands": "workspace:*",
     "@lattice/lattice": "workspace:*",
     "@lattice/signals": "workspace:*",
+    "@lattice/ssr": "workspace:*",
     "@lattice/view": "workspace:*"
   },
   "devDependencies": {
