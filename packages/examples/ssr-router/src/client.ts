@@ -80,12 +80,13 @@ const mount = (spec: { create: (svc: Service) => { element: unknown } }) => ({
   element: spec.create(service),
 });
 
-// Mount routes (renders on client side)
-router.mount(appRoutes);
+// Mount routes and render the reactive route tree
+const routeSpec = router.mount(appRoutes);
+const appRef = router.renderApp(routeSpec);
 const container = document.querySelector('.app');
 if (container) {
-  // For SSR + hydration, the HTML is already there
-  // Just hydrate the interactive islands
+  // Replace SSR content with reactive client-side route tree
+  container.replaceChildren(appRef.element as Node);
 }
 
 // Create hydrator and hydrate islands

@@ -10,14 +10,15 @@ import { island } from '../service.js';
 
 export const Navigation = island(
   'Navigation',
-  ({ el, computed }, getContext) =>
+  ({ el, computed, currentPath }, getContext) =>
     () => {
       const navLink = (href: string, label: string) => {
         return Link({
           href,
           className: computed(() => {
-            const ctx = getContext();
-            const path = ctx?.pathname ?? '/';
+            // Use currentPath signal for reactivity on client
+            // Fall back to context pathname for SSR
+            const path = currentPath() ?? getContext()?.pathname ?? '/';
             const isActive = path === href;
             return isActive ? 'nav-link active' : 'nav-link';
           }),
