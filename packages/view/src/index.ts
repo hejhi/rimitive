@@ -65,13 +65,18 @@ export type { Adapter, AdapterConfig } from './adapter';
 // =============================================================================
 
 export type {
+  LoadStatus,
   LoadState,
   LoadFactory,
-  LoadService,
   LoadOpts,
-  LoadOptions,
   AsyncFragment,
   AsyncMeta,
 } from './load';
 
-export { ASYNC_FRAGMENT, isAsyncFragment, getAsyncMeta } from './load';
+export {
+  ASYNC_FRAGMENT,
+  isAsyncFragment,
+  getAsyncMeta,
+  createLoadFactory,
+  LoadModule,
+} from './load';

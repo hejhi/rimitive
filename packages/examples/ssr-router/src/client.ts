@@ -6,43 +6,28 @@
  * navigations swap content normally.
  *
  * For async fragments (load()):
- * - During hydration: withHydrationData injects SSR data before attach
- * - After hydration: withAsyncSupport triggers fetching on attach
+ * - During hydration: data is extracted from fragment markers (base64 encoded)
+ * - After hydration: withAsyncSupport triggers fetching on attach for new content
  */
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import {
   createDOMHydrationAdapter,
   createHydrationAdapter,
   withAsyncSupport,
-  withHydrationData,
-  createWindowHydrationStore,
-  clearWindowHydrationData,
 } from '@lattice/ssr/client';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
 
-// Create hydration data store from window.__LATTICE_HYDRATION_DATA__
-const hydrationStore = createWindowHydrationStore();
-const hasHydrationData = hydrationStore.has('stats-page'); // Check if any data exists
-
-if (hasHydrationData) {
-  console.log('[Lattice] Hydrating with SSR async data');
-}
-
 // Create the adapter stack:
-// 1. Base DOM adapter
-// 2. withAsyncSupport - triggers async fragments on attach (for client nav)
-// 3. withHydrationData - injects SSR data before attach (for initial hydration)
+// 1. Base DOM adapter with async support for post-hydration client navigation
+// 2. Hydration adapter automatically extracts data from fragment markers
 const domAdapter = withAsyncSupport(createDOMAdapter());
 
 const appAdapter = createHydrationAdapter(
-  // Hydration adapter with data injection
-  withHydrationData(
-    createDOMHydrationAdapter(document.querySelector('.app')!),
-    hydrationStore
-  ),
-  // Regular DOM adapter with async support for post-hydration
+  // Hydration adapter - extracts async data from fragment markers automatically
+  createDOMHydrationAdapter(document.querySelector('.app')!),
+  // Regular DOM adapter with async support for post-hydration navigation
   domAdapter
 );
 
@@ -54,9 +39,6 @@ AppLayout(service).create(service);
 
 // Switch adapter to DOM mode for future reactive updates
 appAdapter.switchToFallback();
-
-// Clear hydration data after hydration is complete to free memory
-clearWindowHydrationData();
 
 // Export for debugging
 export { service };

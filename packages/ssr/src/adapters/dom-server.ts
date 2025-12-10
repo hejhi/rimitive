@@ -3,12 +3,17 @@
  *
  * Renders Lattice components to HTML strings for SSR.
  * Adds fragment markers for hydration support.
+ *
+ * For async fragments (load()), resolved data is embedded directly
+ * in the fragment-start marker as base64-encoded JSON. This enables
+ * position-based hydration without needing separate ID tracking.
  */
 
 import { parseHTML } from 'linkedom';
 import type { Adapter, FragmentRef, NodeRef } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+import { isAsyncFragment, ASYNC_FRAGMENT } from '@lattice/view/load';
 
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
@@ -114,6 +119,10 @@ export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
      *
      * For fragments: adds fragment-start/end comment markers.
      * These markers enable the hydration adapter to locate fragment boundaries.
+     *
+     * For async fragments with resolved data, the data is embedded in the
+     * fragment-start marker as base64-encoded JSON:
+     *   <!--fragment-start:eyJkYXRhIjoiLi4uIn0=-->
      */
     onAttach: (ref, parentElement) => {
       // Only handle fragments
@@ -130,8 +139,21 @@ export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
 
       if (!firstNode || !lastNode) return;
 
+      // Build marker content - embed data for async fragments
+      let markerContent = 'fragment-start';
+      if (isAsyncFragment(ref)) {
+        const meta = ref[ASYNC_FRAGMENT];
+        const data = meta.getData();
+        if (data !== undefined) {
+          // Encode data as base64 JSON and append to marker
+          const json = JSON.stringify(data);
+          const base64 = Buffer.from(json, 'utf-8').toString('base64');
+          markerContent = `fragment-start:${base64}`;
+        }
+      }
+
       // Insert fragment-start comment before first child
-      const startComment = document.createComment('fragment-start');
+      const startComment = document.createComment(markerContent);
       parentElement.insertBefore(startComment, firstNode);
 
       // Insert fragment-end comment after last child

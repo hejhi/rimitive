@@ -4,7 +4,6 @@
  */
 
 import type { FragmentRef, LinkedNode, NodeRef } from '../types';
-import { STATUS_ELEMENT } from '../types';
 
 /**
  * Add a node to a fragment's range
@@ -135,8 +134,7 @@ export function countFragmentNodes<T>(fragment: FragmentRef<T>): number {
 
 /**
  * Set a fragment's boundaries to wrap a single child node.
- * If child is an element, fragment wraps that element.
- * If child is a fragment, fragment adopts its boundaries (transparent wrapper).
+ * Child is always kept in the tree (not made transparent).
  * If child is null, clears the fragment.
  *
  * @param fragment - Fragment to update
@@ -149,12 +147,10 @@ export function setFragmentChild<T>(
   if (!child) {
     fragment.firstChild = null;
     fragment.lastChild = null;
-  } else if (child.status === STATUS_ELEMENT) {
+  } else {
+    // Always keep child in tree - don't adopt boundaries for fragments
+    // This ensures nested fragments (like async load boundaries) remain discoverable
     fragment.firstChild = child;
     fragment.lastChild = child;
-  } else {
-    // Fragment child - adopt its boundaries
-    fragment.firstChild = child.firstChild;
-    fragment.lastChild = child.lastChild;
   }
 }

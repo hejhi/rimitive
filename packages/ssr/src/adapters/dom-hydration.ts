@@ -9,11 +9,16 @@
  * - appendChild uses DOM state to detect exit (child.parentNode check)
  * - Fragment ranges are scanned and tracked explicitly
  * - All position transformations are pure functions
+ *
+ * Async fragment data is embedded in fragment-start markers as base64 JSON:
+ *   <!--fragment-start:eyJkYXRhIjoiLi4uIn0=-->
+ * During hydration, this data is extracted and injected into async fragments.
  */
 
 import type { Adapter, NodeRef } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_FRAGMENT } from '@lattice/view/types';
+import { isAsyncFragment, ASYNC_FRAGMENT } from '@lattice/view/load';
 import {
   type Position,
   type TreePath,
@@ -44,13 +49,18 @@ export class HydrationMismatch extends Error {
 
 /**
  * Check if node is a fragment marker comment
+ * Handles both regular markers and markers with embedded data:
+ *   <!--fragment-start-->
+ *   <!--fragment-start:BASE64DATA-->
+ *   <!--fragment-end-->
  */
 function isFragmentMarker(node: Node): boolean {
   if (node.nodeType !== 8) return false; // Not a comment
-  const comment = node as Comment;
+  const text = (node as Comment).textContent ?? '';
   return (
-    comment.textContent === 'fragment-start' ||
-    comment.textContent === 'fragment-end'
+    text === 'fragment-start' ||
+    text.startsWith('fragment-start:') ||
+    text === 'fragment-end'
   );
 }
 
@@ -88,14 +98,39 @@ function getNodeAtPath(root: HTMLElement, path: TreePath): Node {
 }
 
 /**
+ * Check if a comment is a fragment-start marker (with or without data)
+ */
+function isFragmentStartMarker(node: Node): boolean {
+  if (node.nodeType !== 8) return false;
+  const text = (node as Comment).textContent ?? '';
+  return text === 'fragment-start' || text.startsWith('fragment-start:');
+}
+
+/**
+ * Extract embedded data from a fragment-start marker
+ * Returns undefined if no data is embedded
+ */
+function extractMarkerData(node: Node): unknown | undefined {
+  if (node.nodeType !== 8) return undefined;
+  const text = (node as Comment).textContent ?? '';
+  if (!text.startsWith('fragment-start:')) return undefined;
+
+  const base64 = text.slice('fragment-start:'.length);
+  try {
+    const json = atob(base64);
+    return JSON.parse(json);
+  } catch {
+    // Invalid base64 or JSON - treat as no data
+    return undefined;
+  }
+}
+
+/**
  * Scan forward from fragment-start marker to count range size
  * Returns null if node is not a fragment-start marker
  */
 function scanFragmentRange(node: Node): number | null {
-  if (
-    node.nodeType !== 8 ||
-    (node as Comment).textContent !== 'fragment-start'
-  ) {
+  if (!isFragmentStartMarker(node)) {
     return null;
   }
 
@@ -125,14 +160,10 @@ function scanFragmentRange(node: Node): number | null {
 }
 
 /**
- * Check if node is a fragment-start marker
+ * Check if node is a fragment-start marker (with or without data)
  */
 function isFragmentStart(node: Node | null): boolean {
-  return (
-    node !== null &&
-    node.nodeType === 8 &&
-    (node as Comment).textContent === 'fragment-start'
-  );
+  return node !== null && isFragmentStartMarker(node);
 }
 
 /**
@@ -173,6 +204,14 @@ function computePathToElement(root: Element, target: Element): TreePath {
 }
 
 /**
+ * Result of finding fragment content - includes index and optional marker node
+ */
+type FragmentSearchResult = {
+  index: number;
+  markerNode: Node;
+} | null;
+
+/**
  * Find the child index where fragment content starts
  * Scans backwards from nextSibling to find fragment-start marker
  *
@@ -180,11 +219,12 @@ function computePathToElement(root: Element, target: Element): TreePath {
  * (preceded by fragment-start), we need to skip that entire fragment first.
  *
  * Returns null if no fragment markers are found (fragment was hidden during SSR)
+ * Returns index and marker node if found (marker may contain embedded data)
  */
-function findFragmentContentIndex(
+function findFragmentContent(
   parentElement: Element,
   nextSiblingElement: Element | null
-): number | null {
+): FragmentSearchResult {
   // Step 1: Find the starting point for backwards scan
   let node: Node | null = nextSiblingElement
     ? nextSiblingElement.previousSibling
@@ -221,7 +261,7 @@ function findFragmentContentIndex(
     current = current.nextSibling;
   }
 
-  return index;
+  return { index, markerNode: node };
 }
 
 // ============================================================================
@@ -424,13 +464,16 @@ export function createDOMHydrationAdapter(
      *
      * For fragments: Seek to fragment position for deferred content hydration.
      * Computes position from DOM structure before creating deferred content.
+     *
+     * For async fragments: Extract embedded data from marker and inject it.
+     * This prevents re-fetching data that was already fetched during SSR.
      */
     beforeAttach: (ref: NodeRef<Node>, parentElement, nextSiblingElement) => {
       // Only handle fragments - elements don't need special handling during hydration
       if (ref.status !== STATUS_FRAGMENT) return;
 
-      // Find child index where fragment content starts
-      const childIndex = findFragmentContentIndex(
+      // Find fragment content - includes marker node for data extraction
+      const result = findFragmentContent(
         parentElement as HTMLElement,
         nextSiblingElement as HTMLElement
       );
@@ -438,8 +481,19 @@ export function createDOMHydrationAdapter(
       // No fragment markers found - fragment was hidden during SSR
       // This is expected for match() with initially-null result
       // No-op: position doesn't need to change since there's no content to hydrate
-      if (childIndex === null) {
+      if (result === null) {
         return;
+      }
+
+      const { index: childIndex, markerNode } = result;
+
+      // If this is an async fragment, extract and inject embedded data
+      if (isAsyncFragment(ref)) {
+        const data = extractMarkerData(markerNode);
+        if (data !== undefined) {
+          // Inject data into async fragment - prevents re-fetching
+          ref[ASYNC_FRAGMENT].setData(data);
+        }
       }
 
       // Compute path from root to parent element

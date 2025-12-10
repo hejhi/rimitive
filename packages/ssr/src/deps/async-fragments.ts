@@ -5,7 +5,7 @@
  * server-side resolution and client-side hydration triggering.
  */
 
-import type { NodeRef, RefSpec } from '@lattice/view/types';
+import type { NodeRef } from '@lattice/view/types';
 import { STATUS_FRAGMENT, STATUS_ELEMENT } from '@lattice/view/types';
 import {
   ASYNC_FRAGMENT,
@@ -52,21 +52,21 @@ export function collectAsyncFragments<TElement>(
 }
 
 /**
- * Resolve an async fragment and return its ready RefSpec.
+ * Resolve an async fragment and return its data.
  *
- * Used during SSR to await data fetching and get the resolved content.
+ * Used during SSR to await data fetching. The fragment's internal
+ * signals are updated automatically, causing reactive content to update.
  *
  * @example
  * ```ts
- * const resolvedSpec = await resolveAsyncFragment(fragment);
- * const resolvedNode = mount(resolvedSpec);
+ * const data = await resolveAsyncFragment(fragment);
+ * // Fragment's content is now updated with ready state
  * ```
  */
-export async function resolveAsyncFragment<TElement>(
-  fragment: AsyncFragment<TElement>
-): Promise<RefSpec<TElement>> {
-  const { refSpec } = await fragment[ASYNC_FRAGMENT].resolve();
-  return refSpec as RefSpec<TElement>;
+export async function resolveAsyncFragment<TElement, T = unknown>(
+  fragment: AsyncFragment<TElement, T>
+): Promise<T> {
+  return fragment[ASYNC_FRAGMENT].resolve();
 }
 
 /**

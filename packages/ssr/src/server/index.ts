@@ -2,22 +2,16 @@
  * Server Module
  *
  * Server-side utilities for SSR.
+ *
+ * Async fragment data is now embedded directly in fragment markers
+ * by dom-server.ts, so no separate hydration script is needed.
  */
 
 // Render to string
-export {
-  renderToString,
-  renderToStringAsync,
-  renderToStringAsyncWithHydration,
-  collectHydrationData,
-  createHydrationScript,
-} from '../deps/renderToString';
+export { renderToString, renderToStringAsync } from '../deps/renderToString';
 export type {
   AsyncRenderable,
   RenderToStringAsyncOptions,
-  RenderWithHydrationOptions,
-  RenderWithHydrationInlineResult,
-  HydrationData,
 } from '../deps/renderToString';
 
 // Async fragment utilities (server-side)

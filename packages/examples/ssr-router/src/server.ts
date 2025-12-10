@@ -4,7 +4,7 @@
  * Simple flow:
  * 1. Create service with initial path from request URL
  * 2. Render AppLayout to string (awaiting async boundaries from load())
- * 3. Send HTML with hydration data
+ * 3. Send HTML (async data is embedded in fragment markers)
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
@@ -13,8 +13,9 @@ import { fileURLToPath } from 'node:url';
 
 import {
   createDOMServerAdapter,
-  renderToStringAsyncWithHydration,
+  renderToStringAsync,
 } from '@lattice/ssr/server';
+import type { RefSpec } from '@lattice/view/types';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
@@ -55,19 +56,18 @@ const server = createServer(async (req, res) => {
   // Create the app RefSpec
   const appSpec = AppLayout(service);
 
-  // Render the app to a string, awaiting any async boundaries (load())
-  // Returns { html, script, data } with hydration data for async loaders
-  const { html, script } = await renderToStringAsyncWithHydration(appSpec, {
+  // Render the app to string, awaiting any async boundaries (load())
+  // Async data is automatically embedded in fragment markers as base64 JSON
+  const html = await renderToStringAsync(appSpec, {
     svc: service,
-    mount: (spec) => spec.create(service),
-    scriptPlacement: 'inline',
+    mount: (spec: RefSpec<unknown>) => spec.create(service),
   });
 
   // Send response
   res.writeHead(200, { 'Content-Type': 'text/html' });
 
-  // Generate and send HTML with hydration script
-  res.end(tpl(html, script));
+  // Generate and send HTML (no separate hydration script needed)
+  res.end(tpl(html));
 });
 
 const PORT = process.env.PORT || 3000;

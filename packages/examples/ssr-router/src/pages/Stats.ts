@@ -2,11 +2,14 @@
  * Stats Page - Demonstrates async data loading with load()
  *
  * This page uses @lattice/view's load() with the fetcher/renderer pattern.
+ * The renderer receives a state object with reactive properties (status, data, error)
+ * and uses match() to reactively switch between states.
+ *
  * During SSR, the data is fetched and rendered to HTML with ready state.
- * During client hydration, the data is injected without re-fetching.
+ * During client hydration, the data is extracted from markers (no re-fetch).
  * On subsequent client navigations, data is fetched fresh (pending → ready).
  */
-import type { LoadState } from '@lattice/view/load';
+import type { LoadState, LoadStatus } from '@lattice/view/load';
 import type { RefSpec } from '@lattice/view/types';
 import type { Service } from '../service.js';
 
@@ -114,11 +117,15 @@ const StatsContent = (
         'The load() function creates an async boundary with a fetcher/renderer pattern:'
       ),
       el('ol')(
-        el('li')('load(fetcher, renderer) is called inside a component'),
+        el('li')('load(fetcher, renderer) is called - renderer uses match() on state.status'),
         el('li')('SSR awaits the fetcher and renders with ready state'),
-        el('li')('Hydration data is serialized to window.__LATTICE_HYDRATION_DATA__'),
-        el('li')('Client hydration uses serialized data - no re-fetch'),
-        el('li')('Client navigation shows pending state while fetching fresh data')
+        el('li')(
+          'Hydration data is embedded in fragment markers (base64 JSON)'
+        ),
+        el('li')('Client hydration extracts data from markers - no re-fetch'),
+        el('li')(
+          'Client navigation shows pending state while fetching fresh data'
+        )
       )
     ),
 
@@ -147,10 +154,7 @@ const StatsLoading = ({ el }: Service): RefSpec<HTMLDivElement> =>
 /**
  * Error state component
  */
-const StatsError = (
-  { el }: Service,
-  error: unknown
-): RefSpec<HTMLDivElement> =>
+const StatsError = ({ el }: Service, error: unknown): RefSpec<HTMLDivElement> =>
   el('div').props({ className: 'page stats-page error' })(
     el('h2')('Dashboard Stats'),
     el('div').props({ className: 'error-message' })(
@@ -162,30 +166,28 @@ const StatsError = (
 /**
  * Stats Page - uses load() for async data fetching with fetcher/renderer pattern
  *
- * This demonstrates the new load() API:
- * - SSR: awaits fetcher, renders with ready state, serializes data
- * - Client hydration: uses serialized data (no re-fetch)
+ * This demonstrates the load() API:
+ * - Renderer receives state object with reactive properties (status, data, error)
+ * - Uses match() on state.status to reactively switch between states
+ * - SSR: awaits fetcher, renders with ready state, embeds data in markers
+ * - Client hydration: extracts data from markers (no re-fetch)
  * - Client navigation: shows pending, fetches fresh, then ready
  */
-export const Stats =
-  (svc: Service) =>
-  (): RefSpec<HTMLElement> => {
-    const { el, load } = svc;
+export const Stats = (svc: Service) => (): RefSpec<HTMLElement> => {
+  const { load, match } = svc;
 
-    return el('div')(
-      load(
-        () => fetchStats(),
-        (state: LoadState<StatsData>) => {
-          switch (state.status) {
-            case 'pending':
-              return StatsLoading(svc);
-            case 'error':
-              return StatsError(svc, state.error);
-            case 'ready':
-              return StatsContent(svc, state.data);
-          }
-        },
-        { id: 'stats-page' }
-      )
-    );
-  };
+  return load(
+    () => fetchStats(),
+    (state: LoadState<StatsData>) =>
+      match(state.status, (status: LoadStatus) => {
+        switch (status) {
+          case 'pending':
+            return StatsLoading(svc);
+          case 'error':
+            return StatsError(svc, state.error());
+          case 'ready':
+            return StatsContent(svc, state.data()!);
+        }
+      })
+  );
+};

@@ -2,6 +2,10 @@
  * Client Module
  *
  * Client-side utilities for SSR hydration.
+ *
+ * Hydration data is now embedded directly in fragment markers and
+ * extracted automatically by createDOMHydrationAdapter. No separate
+ * hydration store or window globals needed.
  */
 
 // Adapters
@@ -18,14 +22,8 @@ export {
 } from '../deps/async-fragments';
 export type { AsyncFragment } from '../deps/async-fragments';
 
-// Hydration adapter helpers
-export {
-  withAsyncSupport,
-  withHydrationData,
-  createWindowHydrationStore,
-  clearWindowHydrationData,
-} from '../deps/hydration-adapters';
-export type { HydrationDataStore } from '../deps/hydration-adapters';
+// Adapter wrapper for client-side rendering (non-hydration)
+export { withAsyncSupport } from '../deps/hydration-adapters';
 
 // Types
 export { HydrationMismatch } from '../types';
