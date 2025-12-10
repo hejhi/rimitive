@@ -327,7 +327,7 @@ export async function renderToStringAsync<TSvc>(
 
     // Notify caller of resolution (for data serialization)
     if (onAsyncResolved) {
-      onAsyncResolved(renderable.__id, renderable.__hydrationData);
+      onAsyncResolved(renderable.__id, renderable.__data);
     }
 
     // Mount the resolved component
@@ -370,7 +370,7 @@ export async function renderToStringAsync<TSvc>(
 
         // Notify caller of resolution
         if (onAsyncResolved) {
-          onAsyncResolved(fragment.__id, fragment.__hydrationData);
+          onAsyncResolved(fragment.__id, fragment.__data);
         }
 
         // Mount the RefSpec
@@ -422,8 +422,8 @@ export function collectHydrationData(nodeRef: NodeRef<unknown>): HydrationData {
   const fragments = collectAsyncFragments(nodeRef);
 
   for (const fragment of fragments) {
-    if (fragment.__hydrationData !== undefined) {
-      data[fragment.__id] = fragment.__hydrationData;
+    if (fragment.__data !== undefined) {
+      data[fragment.__id] = fragment.__data;
     }
   }
 

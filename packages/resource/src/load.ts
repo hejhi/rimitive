@@ -5,19 +5,12 @@
  * - fetcher: () => Promise<T> - async function to fetch data
  * - renderer: (state: LoadState<T>) => RefSpec - renders based on state
  *
- * load() is completely passive - it doesn't know about SSR, hydration, or environments.
- * The adapter controls when/how data is fetched:
- * - DOM adapter: calls run() on attach → shows pending, then ready/error
- * - SSR: calls run() during traversal, awaits, renders ready state
- * - Hydration: calls setData() before attach → renders ready state immediately
+ * The design mirrors match() - a fragment that swaps content based on state.
+ * SSR support is achieved through introspectable metadata, not special methods.
  */
 
 import type { RefSpec, FragmentRef, NodeRef } from '@lattice/view/types';
-import {
-  STATUS_REF_SPEC,
-  STATUS_FRAGMENT,
-  STATUS_ELEMENT,
-} from '@lattice/view/types';
+import { STATUS_REF_SPEC, STATUS_FRAGMENT, STATUS_ELEMENT } from '@lattice/view/types';
 import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
 import type { CreateScopes } from '@lattice/view/deps/scope';
 import { ScopesModule } from '@lattice/view/deps/scope';
@@ -26,112 +19,58 @@ import { setFragmentChild } from '@lattice/view/deps/fragment-boundaries';
 import { defineModule, type Module } from '@lattice/lattice';
 import type { LoadState } from './types';
 
-/**
- * Options for load()
- */
+/** Options for load() */
 export type LoadOptions = {
-  /**
-   * Unique ID for hydration data matching.
-   * If not provided, one will be generated.
-   */
+  /** Unique ID for hydration data matching */
   id?: string;
 };
 
-/**
- * Load factory type - creates async boundaries with fetcher/renderer pattern
- */
-export interface LoadFactory<TBaseElement> {
-  <T, TElement extends TBaseElement>(
-    fetcher: () => Promise<T>,
-    renderer: (state: LoadState<T>) => RefSpec<TElement>,
-    options?: LoadOptions
-  ): RefSpec<TElement>;
-}
+/** Load factory type */
+export type LoadFactory<TBaseElement> = <T, TElement extends TBaseElement>(
+  fetcher: () => Promise<T>,
+  renderer: (state: LoadState<T>) => RefSpec<TElement>,
+  options?: LoadOptions
+) => RefSpec<TElement>;
 
-/**
- * Options for createLoadFactory
- */
+/** Options for createLoadFactory */
 export type LoadFactoryOpts<TConfig extends AdapterConfig> = {
-  scopedEffect: CreateScopes['scopedEffect'];
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
   adapter: Adapter<TConfig>;
 };
 
 /**
- * Async fragment metadata - stored on fragments created by load()
+ * Async fragment metadata - minimal introspection for SSR.
+ * This is a marker interface that SSR can use to identify and resolve async boundaries.
  */
 export type AsyncFragmentMeta<T> = {
-  /** Marker to identify this as an async fragment */
-  __async: true;
-  /** Unique ID for hydration data matching */
-  __id: string;
-  /** The fetcher function */
-  __fetcher: () => Promise<T>;
-  /** The renderer function */
-  __renderer: (state: LoadState<T>) => RefSpec<unknown>;
-  /** Cached data after fetch completes (for SSR serialization) */
-  __hydrationData?: T;
-  /** Whether this fragment has been resolved */
+  readonly __async: true;
+  readonly __id: string;
+  readonly __fetcher: () => Promise<T>;
+  readonly __renderer: (state: LoadState<T>) => RefSpec<unknown>;
+  /** Set after resolution - SSR reads this for hydration serialization */
+  __data?: T;
+  /** Set after resolution - SSR checks this to know when fetch completed */
   __resolved?: boolean;
-
-  /**
-   * Run the fetcher and return the data.
-   * Call this to trigger the async operation.
-   * Returns cached data if already resolved.
-   */
-  run: () => Promise<T>;
-
-  /**
-   * Inject pre-fetched data (for hydration).
-   * Call this before attach to skip fetching.
-   */
-  setData: (data: T) => void;
-
-  /**
-   * Swap the rendered content based on state.
-   * Called internally after run() completes or setData() is called.
-   * Can also be called externally by adapter if needed.
-   */
-  __swapContent?: (state: LoadState<T>) => void;
 };
 
-/**
- * Async fragment ref - FragmentRef with async metadata
- */
+/** Async fragment ref - FragmentRef with async metadata */
 export type AsyncFragmentRef<TElement> = FragmentRef<TElement> &
   AsyncFragmentMeta<unknown>;
 
 // Counter for generating unique IDs
-let loadIdCounter = 0;
+let idCounter = 0;
 
 /**
  * Create a load factory with the given options.
  *
- * The load factory creates async boundaries for data loading with a clean
- * fetcher/renderer pattern that mirrors the match() API style.
+ * load() creates async boundaries that:
+ * 1. Render pending state immediately on attach
+ * 2. Fetch data asynchronously
+ * 3. Swap to ready/error state when fetch completes
  *
- * @example
- * ```ts
- * const Stats = (svc: Service) => () => {
- *   const { el, load } = svc;
- *
- *   return load(
- *     () => fetchStats(),
- *     (state) => {
- *       switch (state.status) {
- *         case 'pending':
- *           return el('div')('Loading stats...');
- *         case 'error':
- *           return el('div')(`Error: ${state.error}`);
- *         case 'ready':
- *           return StatsContent(svc, state.data);
- *       }
- *     },
- *     { id: 'stats-page' }
- *   );
- * };
- * ```
+ * The pattern mirrors match() - reactive content swapping in a fragment.
+ * SSR can introspect via __async marker and resolve before rendering.
  */
 export function createLoadFactory<TConfig extends AdapterConfig>({
   adapter,
@@ -151,22 +90,17 @@ export function createLoadFactory<TConfig extends AdapterConfig>({
     renderer: (state: LoadState<T>) => RefSpec<TElement>,
     options?: LoadOptions
   ): RefSpec<TElement> {
-    const id = options?.id ?? `load-${++loadIdCounter}`;
+    const id = options?.id ?? `load-${++idCounter}`;
 
-    // Pending fetch promise (to avoid duplicate fetches)
-    let pendingFetch: Promise<T> | undefined;
-
-    // Create RefSpec that produces a fragment with async behavior
     const refSpec = (() => refSpec) as unknown as RefSpec<TElement>;
-
     refSpec.status = STATUS_REF_SPEC;
+
     refSpec.create = (svc) => {
       // Mutable state for the fragment
-      let hydrationData: T | undefined;
+      let data: T | undefined;
       let resolved = false;
-      let swapContentFn: ((state: LoadState<T>) => void) | undefined;
 
-      const fragment: AsyncFragmentRef<TBaseElement> = {
+      const fragment = {
         // FragmentRef properties
         status: STATUS_FRAGMENT,
         element: null,
@@ -176,56 +110,24 @@ export function createLoadFactory<TConfig extends AdapterConfig>({
         firstChild: null,
         lastChild: null,
 
-        // Async metadata
-        __async: true,
+        // Async metadata (getters expose mutable state)
+        __async: true as const,
         __id: id,
         __fetcher: fetcher,
         __renderer: renderer as (state: LoadState<unknown>) => RefSpec<unknown>,
-
-        get __hydrationData() {
-          return hydrationData;
+        get __data() {
+          return data;
+        },
+        set __data(v: unknown) {
+          data = v as T;
         },
         get __resolved() {
           return resolved;
         },
-        get __swapContent() {
-          return swapContentFn as
-            | ((state: LoadState<unknown>) => void)
-            | undefined;
+        set __resolved(v: boolean) {
+          resolved = v;
         },
 
-        // Run the fetcher - returns promise with data
-        run: async (): Promise<unknown> => {
-          // Return cached data if already resolved
-          if (resolved && hydrationData !== undefined) {
-            return hydrationData;
-          }
-
-          // Reuse pending fetch if already started
-          if (pendingFetch) {
-            return pendingFetch;
-          }
-
-          // Start fetch
-          pendingFetch = fetcher();
-
-          try {
-            const data = await pendingFetch;
-            hydrationData = data;
-            resolved = true;
-            return data;
-          } finally {
-            pendingFetch = undefined;
-          }
-        },
-
-        // Inject pre-fetched data
-        setData: (data: unknown): void => {
-          hydrationData = data as T;
-          resolved = true;
-        },
-
-        // Attach handler - sets up content swapping
         attach(
           parent: { element: TBaseElement | null },
           nextSibling: NodeRef<TBaseElement> | null
@@ -238,11 +140,8 @@ export function createLoadFactory<TConfig extends AdapterConfig>({
               removeNode(parent.element, currentNode);
             }
 
-            // Get RefSpec from renderer
-            const newSpec = renderer(state);
-
-            // Create the element/fragment from the spec
-            const nodeRef = newSpec.create(svc) as NodeRef<TBaseElement>;
+            // Create new content from renderer
+            const nodeRef = renderer(state).create(svc) as NodeRef<TBaseElement>;
             setFragmentChild(
               fragment as unknown as FragmentRef<TBaseElement>,
               nodeRef
@@ -251,29 +150,25 @@ export function createLoadFactory<TConfig extends AdapterConfig>({
 
             // Insert into DOM
             if (parent.element) {
-              insertNodeBefore(
-                svc,
-                parent.element,
-                nodeRef,
-                undefined,
-                nextSibling
-              );
+              insertNodeBefore(svc, parent.element, nodeRef, undefined, nextSibling);
             }
           };
 
-          // Store swapContent for external use
-          swapContentFn = swapContent;
+          // Store swapContent for external triggering (client-side adapter hooks)
+          (fragment as { __swap?: typeof swapContent }).__swap = swapContent;
 
-          // If data was pre-set (hydration), render ready state immediately
-          if (resolved && hydrationData !== undefined) {
-            swapContent({ status: 'ready', data: hydrationData });
+          // If data was pre-set (hydration or SSR resolution), render ready state
+          if (resolved && data !== undefined) {
+            swapContent({ status: 'ready', data });
             return;
           }
 
-          // Otherwise, render pending state and wait for adapter to call run()
+          // Render pending state - fetching is triggered externally by:
+          // - SSR: resolveAsyncFragment()
+          // - Client: triggerAsyncFragment() via adapter onAttach hook
           swapContent({ status: 'pending' });
         },
-      };
+      } as AsyncFragmentRef<TBaseElement>;
 
       return fragment as unknown as FragmentRef<TElement>;
     };
@@ -286,14 +181,6 @@ export function createLoadFactory<TConfig extends AdapterConfig>({
 
 /**
  * Load module - provides async data loading boundaries.
- *
- * @example
- * ```ts
- * import { compose } from '@lattice/lattice';
- * import { LoadModule } from '@lattice/resource';
- *
- * const { load } = compose(LoadModule)();
- * ```
  */
 export const LoadModule = defineModule({
   name: 'load',
@@ -305,26 +192,11 @@ export const LoadModule = defineModule({
     scopes: CreateScopes;
     adapter: Adapter<TConfig>;
   }): LoadFactory<TConfig['baseElement']> =>
-    createLoadFactory({
-      adapter,
-      ...scopes,
-    }),
+    createLoadFactory({ adapter, ...scopes }),
 });
 
 /**
  * Create a Load module for a given adapter.
- *
- * @example
- * ```ts
- * import { compose } from '@lattice/lattice';
- * import { createLoadModule } from '@lattice/resource';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- *
- * const adapter = createDOMAdapter();
- * const LoadModule = createLoadModule(adapter);
- *
- * const { load } = compose(LoadModule)();
- * ```
  */
 export const createLoadModule = <TConfig extends AdapterConfig>(
   adapter: Adapter<TConfig>
@@ -337,18 +209,11 @@ export const createLoadModule = <TConfig extends AdapterConfig>(
     name: 'load',
     dependencies: [ScopesModule],
     create: ({ scopes }: { scopes: CreateScopes }) =>
-      createLoadFactory({
-        adapter,
-        ...scopes,
-      }),
+      createLoadFactory({ adapter, ...scopes }),
   });
 
-/**
- * Check if a value is an async fragment (created by load())
- */
-export function isAsyncFragment(
-  value: unknown
-): value is AsyncFragmentRef<unknown> {
+/** Check if a value is an async fragment (created by load()) */
+export function isAsyncFragment(value: unknown): value is AsyncFragmentRef<unknown> {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -362,32 +227,31 @@ export function isAsyncFragment(
 /**
  * Resolve an async fragment by calling its fetcher.
  * Used by SSR to await async boundaries before rendering.
- *
- * Returns a RefSpec that can be mounted to get the resolved content.
- *
- * @param fragment - The async fragment to resolve
- * @returns Promise that resolves to the ready-state RefSpec
  */
 export async function resolveAsyncFragment<TElement>(
   fragment: AsyncFragmentRef<TElement>
 ): Promise<RefSpec<TElement>> {
-  try {
-    const data = await fragment.run();
+  // Return cached result if already resolved
+  if (fragment.__resolved && fragment.__data !== undefined) {
     return fragment.__renderer({
       status: 'ready',
-      data,
+      data: fragment.__data,
     }) as RefSpec<TElement>;
+  }
+
+  try {
+    const data = await fragment.__fetcher();
+    fragment.__data = data;
+    fragment.__resolved = true;
+    return fragment.__renderer({ status: 'ready', data }) as RefSpec<TElement>;
   } catch (error) {
+    fragment.__resolved = true;
     return fragment.__renderer({ status: 'error', error }) as RefSpec<TElement>;
   }
 }
 
 /**
  * Collect all async fragments from a node tree.
- * Walks the tree recursively to find all fragments with __async marker.
- *
- * @param nodeRef - The root node to start searching from
- * @returns Array of async fragments found in the tree
  */
 export function collectAsyncFragments<TElement>(
   nodeRef: NodeRef<TElement>
@@ -397,12 +261,10 @@ export function collectAsyncFragments<TElement>(
   function walk(node: NodeRef<TElement> | null): void {
     if (!node) return;
 
-    // Check if this node is an async fragment
     if (isAsyncFragment(node)) {
       fragments.push(node as AsyncFragmentRef<TElement>);
     }
 
-    // Walk children
     if (node.status === STATUS_FRAGMENT || node.status === STATUS_ELEMENT) {
       let child = node.firstChild;
       while (child) {
@@ -417,49 +279,41 @@ export function collectAsyncFragments<TElement>(
 }
 
 /**
- * Trigger an async fragment - runs the fetcher and swaps content when done.
- *
- * This is the primary way adapters should trigger async loading:
- * - Call this in onAttach hook for client-side loading
- * - Don't call this for SSR (use resolveAsyncFragment instead)
- * - Don't call this for hydration (use setData before attach)
- *
- * @param fragment - The async fragment to trigger
+ * Trigger an async fragment - for client-side loading via adapter hooks.
+ * If already resolved (e.g., hydration data was set), this is a no-op.
+ * Must be called after attach() since it uses the swapContent function.
  */
 export function triggerAsyncFragment<TElement>(
   fragment: AsyncFragmentRef<TElement>
 ): void {
-  // Already resolved (data was pre-set or already fetched)
-  if (fragment.__resolved) {
-    return;
-  }
+  // Already resolved - nothing to do (attach() already rendered ready state)
+  if (fragment.__resolved) return;
 
-  // Run fetcher and swap content when done
-  fragment.run().then(
+  // Get the swap function stored by attach()
+  const swap = (fragment as { __swap?: (state: LoadState<unknown>) => void }).__swap;
+  if (!swap) return; // Not attached yet
+
+  // Start fetch and swap content when done
+  fragment.__fetcher().then(
     (data) => {
-      if (fragment.__swapContent) {
-        fragment.__swapContent({ status: 'ready', data });
-      }
+      fragment.__data = data;
+      fragment.__resolved = true;
+      swap({ status: 'ready', data });
     },
     (error) => {
-      if (fragment.__swapContent) {
-        fragment.__swapContent({ status: 'error', error });
-      }
+      fragment.__resolved = true;
+      swap({ status: 'error', error });
     }
   );
 }
 
 /**
  * Trigger all unresolved async fragments in a tree.
- * Convenience function that walks the tree and triggers each fragment.
- *
- * @param nodeRef - The root node to start from
  */
 export function triggerAsyncFragments<TElement>(
   nodeRef: NodeRef<TElement>
 ): void {
-  const fragments = collectAsyncFragments(nodeRef);
-  for (const fragment of fragments) {
+  for (const fragment of collectAsyncFragments(nodeRef)) {
     triggerAsyncFragment(fragment);
   }
 }

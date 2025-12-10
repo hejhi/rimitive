@@ -93,8 +93,8 @@ export function withHydrationData<TConfig extends AdapterConfig>(
       if (isAsyncFragment(ref)) {
         const fragment = ref as AsyncFragmentRef<TConfig['baseElement']>;
         if (store.has(fragment.__id)) {
-          const data = store.get(fragment.__id);
-          fragment.setData(data);
+          fragment.__data = store.get(fragment.__id);
+          fragment.__resolved = true;
         }
       }
 

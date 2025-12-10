@@ -426,31 +426,17 @@ function createTestAsyncFragment<T>(
     __fetcher: fetcher as () => Promise<unknown>,
     __renderer: renderer as (state: LoadState<unknown>) => RefSpec<unknown>,
 
-    get __hydrationData() {
+    get __data() {
       return hydrationData;
+    },
+    set __data(v: unknown) {
+      hydrationData = v as T;
     },
     get __resolved() {
       return resolved;
     },
-
-    // Run the fetcher and cache result
-    run: async (): Promise<unknown> => {
-      // Return cached data if already resolved
-      if (resolved && hydrationData !== undefined) {
-        return hydrationData;
-      }
-
-      // Call fetcher
-      const data = await fetcher();
-      hydrationData = data;
-      resolved = true;
-      return data;
-    },
-
-    // Set hydration data directly
-    setData: (data: unknown): void => {
-      hydrationData = data as T;
-      resolved = true;
+    set __resolved(v: boolean) {
+      resolved = v;
     },
   };
 }

@@ -30,7 +30,7 @@ const terserMangleInternals = (): Plugin => {
                 '__fetcher',
                 '__renderer',
                 '__resolved',
-                '__hydrationData',
+                '__data',
               ],
             },
           },
