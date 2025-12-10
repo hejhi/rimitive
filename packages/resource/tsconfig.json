@@ -9,5 +9,10 @@
     "emitDeclarationOnly": true
   },
   "include": ["src/**/*"],
-  "references": [{ "path": "../lattice" }, { "path": "../signals" }]
+  "exclude": ["src/**/*.test.ts"],
+  "references": [
+    { "path": "../lattice" },
+    { "path": "../signals" },
+    { "path": "../view" }
+  ]
 }

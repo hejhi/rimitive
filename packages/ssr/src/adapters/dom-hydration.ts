@@ -30,18 +30,6 @@ export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 /**
  * Hydration mismatch error
- *
- * @example
- * ```typescript
- * import { HydrationMismatch } from '@lattice/islands/adapters/dom-hydration';
- *
- * const strategy = {
- *   onMismatch: (error: HydrationMismatch) => {
- *     console.warn('Hydration failed:', error.message);
- *     return true; // Preserve server content
- *   }
- * };
- * ```
  */
 export class HydrationMismatch extends Error {
   constructor(message: string) {
@@ -242,14 +230,6 @@ function findFragmentContentIndex(
 
 /**
  * Create a DOM hydration adapter for rehydrating server-rendered content
- *
- * @example
- * ```typescript
- * import { createDOMHydrationAdapter } from '@lattice/islands/adapters/dom-hydration';
- *
- * const container = document.getElementById('island-0');
- * const adapter = createDOMHydrationAdapter(container);
- * ```
  */
 export function createDOMHydrationAdapter(
   containerEl: HTMLElement

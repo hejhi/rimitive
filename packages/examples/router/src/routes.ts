@@ -11,5 +11,4 @@ export const routes: RouteConfig[] = [
   { id: 'about', path: 'about' },
   { id: 'products', path: 'products' },
   { id: 'product-detail', path: 'products/:id' },
-  { id: 'stats', path: 'stats' },
 ];

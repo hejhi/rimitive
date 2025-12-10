@@ -24,6 +24,7 @@ export const Navigation =
     return el('div').props({ className: 'nav-links' })(
       navLink('/', 'Home'),
       navLink('/about', 'About'),
-      navLink('/products', 'Products')
+      navLink('/products', 'Products'),
+      navLink('/stats', 'Stats')
     );
   };

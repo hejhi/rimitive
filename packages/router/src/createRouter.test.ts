@@ -211,9 +211,9 @@ describe('createRouter', () => {
       const routeFactory = router.route('/', mockConnected);
       expect(typeof routeFactory).toBe('function');
 
-      const routeSpec = routeFactory();
-      expect(routeSpec).toBeDefined();
-      expect(routeSpec.status).toBe(32); // STATUS_ROUTE_SPEC
+      const route = routeFactory();
+      expect(route).toBeDefined();
+      expect(route.routeMetadata).toBeDefined();
     });
 
     it('should extract params from path patterns', () => {

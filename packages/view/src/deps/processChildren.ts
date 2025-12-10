@@ -2,8 +2,13 @@
  * Process children into linked list and initialize fragments
  *
  * Single-pass algorithm:
- * 1. Forward pass: Build doubly-linked list including fragments
- * 2. Initialize fragments after all refs are linked
+ * 1. Normalize: Coalesce adjacent text-like children into single text nodes
+ * 2. Forward pass: Build doubly-linked list including fragments
+ * 3. Initialize fragments after all refs are linked
+ *
+ * Text normalization ensures consistent DOM structure regardless of how children
+ * are specified (e.g., el('div')('a', 'b', 'c') produces one text node, not three).
+ * This is critical for SSR hydration since browsers merge adjacent text nodes.
  */
 
 import type {
@@ -16,6 +21,85 @@ import type {
 } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
 import type { Adapter, AdapterConfig } from '../adapter';
+
+/**
+ * Check if a child is text-like (string, number, or bare reactive function).
+ * Text-like children can be coalesced into a single text node.
+ */
+function isTextLike(child: ElRefSpecChild): boolean {
+  if (child == null || typeof child === 'boolean') return false;
+  const t = typeof child;
+  if (t === 'string' || t === 'number') return true;
+  // Bare function (reactive) that's not a RefSpec or Fragment
+  if (t === 'function' && !('status' in (child as object))) return true;
+  return false;
+}
+
+/**
+ * Coalesce adjacent text-like children into single text nodes.
+ * - Adjacent static strings/numbers → single concatenated string
+ * - Adjacent reactives → single reactive that concatenates all values
+ * - Mixed static + reactive → single reactive that concatenates all
+ *
+ * This normalization ensures consistent DOM structure for SSR hydration.
+ */
+function normalizeChildren(children: ElRefSpecChild[]): ElRefSpecChild[] {
+  const result: ElRefSpecChild[] = [];
+  let i = 0;
+
+  while (i < children.length) {
+    const child = children[i];
+
+    // Skip nullish/boolean - they'll be filtered anyway
+    if (child == null || typeof child === 'boolean') {
+      i++;
+      continue;
+    }
+
+    // Not text-like - pass through as-is
+    if (!isTextLike(child)) {
+      result.push(child);
+      i++;
+      continue;
+    }
+
+    // Collect run of adjacent text-like children
+    const textRun: ElRefSpecChild[] = [child];
+    let j = i + 1;
+    while (j < children.length) {
+      const next = children[j] as ElRefSpecChild; // Safe: j < length
+      if (!isTextLike(next)) break;
+      textRun.push(next);
+      j++;
+    }
+
+    // Single text-like child - no coalescing needed
+    if (textRun.length === 1) {
+      result.push(child);
+      i++;
+      continue;
+    }
+
+    // Multiple text-like children - coalesce them
+    const hasReactive = textRun.some((c) => typeof c === 'function');
+
+    if (!hasReactive) {
+      // All static - concatenate into single string
+      result.push(textRun.map((c) => String(c)).join(''));
+    } else {
+      // Has reactive - create combined reactive function
+      const parts = textRun.map((c) =>
+        typeof c === 'function' ? c : () => String(c)
+      ) as Array<() => string | number>;
+
+      result.push(() => parts.map((fn) => String(fn())).join(''));
+    }
+
+    i = j;
+  }
+
+  return result;
+}
 
 export type ProcessChildren<TElement> = {
   processChildren: (
@@ -117,8 +201,12 @@ export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
     let firstChildRef: NodeRef<TNode> | null = null;
     let lastChildRef: NodeRef<TNode> | null = null;
 
+    // Normalize children: coalesce adjacent text-like children into single text nodes.
+    // This ensures consistent DOM structure for SSR hydration (browsers merge adjacent text).
+    const normalizedChildren = normalizeChildren(children);
+
     // Forward pass: create refs and build doubly-linked list (including fragments)
-    for (const child of children) {
+    for (const child of normalizedChildren) {
       const refNode = handleChild(parent, child, svc, parentContext);
 
       if (!refNode) continue;

@@ -35,9 +35,11 @@
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",
-    "@lattice/signals": "workspace:*"
+    "@lattice/signals": "workspace:*",
+    "@lattice/view": "workspace:*"
   },
   "devDependencies": {
+    "@lattice/ssr": "workspace:*",
     "esbuild": "^0.25.8",
     "rimraf": "^6.0.1",
     "terser": "^5.36.0",

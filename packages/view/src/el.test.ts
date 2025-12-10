@@ -62,6 +62,27 @@ describe('el primitive', () => {
       expect(element.props.className).toBe('container');
     });
 
+    it('coalesces adjacent text children into single text node (SSR hydration compatibility)', () => {
+      const { adapter, scopedEffect, createElementScope, onCleanup } =
+        createTestEnv();
+      const el = createElFactory<MockAdapterConfig>({
+        scopedEffect,
+        adapter,
+        createElementScope,
+        onCleanup,
+      });
+
+      // Multiple adjacent strings should become one text node
+      const ref = el('div')('a', 'b', 'c');
+      const element: MockElement = asElement(ref.create());
+
+      // Content is correct
+      expect(getTextContent(element)).toBe('abc');
+      // Critical: only ONE text child, not three
+      // This ensures SSR hydration works (browsers merge adjacent text nodes)
+      expect(element.children.length).toBe(1);
+    });
+
     it('nests elements', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
@@ -148,7 +169,7 @@ describe('el primitive', () => {
       expect(element.props.className).toBe('bar');
     });
 
-    it('handles mixed static and reactive content', () => {
+    it('coalesces adjacent static and reactive content into single text node', () => {
       const { read: count, write: setCount, subscribers } = createSignal(0);
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createCustomTestEnv((fn: () => void) => {
@@ -163,11 +184,16 @@ describe('el primitive', () => {
         onCleanup,
       });
 
+      // Mixed static string + reactive function -> single coalesced reactive text node
       const ref = el('div')('Count: ', count);
 
       // User cares: content combines static and reactive parts
       const element: MockElement = asElement(ref.create());
       expect(getTextContent(element)).toBe('Count: 0');
+
+      // Critical: only ONE text child (coalesced), not two
+      // This ensures SSR hydration works
+      expect(element.children.length).toBe(1);
 
       // User cares: reactive part updates
       setCount(5);

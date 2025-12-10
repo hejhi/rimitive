@@ -15,6 +15,7 @@ import { createElModule } from '@lattice/view/el';
 import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { OnModule } from '@lattice/view/deps/addEventListener';
+import { createLoadModule } from '@lattice/resource';
 import { createRouter, type RouterConfig } from '@lattice/router';
 import type { Adapter, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
@@ -45,7 +46,8 @@ export function createService(
     createElModule(adapter),
     createMapModule(adapter),
     createMatchModule(adapter),
-    OnModule
+    OnModule,
+    createLoadModule(adapter)
   )();
 
   const router = createRouter(

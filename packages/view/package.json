@@ -54,9 +54,17 @@
       "import": "./dist/deps/use.js",
       "types": "./dist/deps/use.d.ts"
     },
-    "./deps": {
-      "import": "./dist/deps/index.js",
-      "types": "./dist/deps/index.d.ts"
+    "./deps/node-deps": {
+      "import": "./dist/deps/node-deps.js",
+      "types": "./dist/deps/node-deps.d.ts"
+    },
+    "./deps/fragment-boundaries": {
+      "import": "./dist/deps/fragment-boundaries.js",
+      "types": "./dist/deps/fragment-boundaries.d.ts"
+    },
+    "./adapter": {
+      "import": "./dist/adapter.js",
+      "types": "./dist/adapter.d.ts"
     },
     "./map": {
       "import": "./dist/map.js",

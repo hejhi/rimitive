@@ -7,8 +7,7 @@ import {
 } from '@lattice/view/types';
 import type { ElFactory } from '@lattice/view/el';
 import type { MatchFactory } from '@lattice/view/match';
-import type { RouteParams, RouteSpec, RouteMatch } from './types';
-import { STATUS_ROUTE_SPEC } from './types';
+import type { RouteParams, Route, RouteMatch } from './types';
 import { composePath, matchPath, matchPathPrefix } from './deps/matching';
 import type { RouteTree, RouteNode } from './defineRoutes';
 
@@ -159,8 +158,8 @@ export type RouteMethod<TConfig extends AdapterConfig> = (
     routeContext: RouteContext<TConfig>
   ) => RefSpec<TConfig['baseElement']>
 ) => (
-  ...children: RouteSpec<TConfig['baseElement']>[]
-) => RouteSpec<TConfig['baseElement']>;
+  ...children: Route<TConfig['baseElement']>[]
+) => Route<TConfig['baseElement']>;
 
 /**
  * Root context returned by router.root()
@@ -172,7 +171,7 @@ export type RootContext<TConfig extends AdapterConfig> = {
    * Returns a RefSpec that renders the root layout with children
    */
   create: (
-    ...children: RouteSpec<TConfig['baseElement']>[]
+    ...children: Route<TConfig['baseElement']>[]
   ) => RefSpec<TConfig['baseElement']>;
 
   /**
@@ -491,7 +490,7 @@ export function createRouter<TConfig extends AdapterConfig>(
       routeContext: RouteContext<TConfig>
     ) => RefSpec<TConfig['baseElement']>
   ) {
-    return (...children: RouteSpec<TConfig['baseElement']>[]) => {
+    return (...children: Route<TConfig['baseElement']>[]) => {
       // Store the original path before processing
       const relativePath = path;
 
@@ -509,7 +508,7 @@ export function createRouter<TConfig extends AdapterConfig>(
         const savedGroupDepth = groupCreationDepth;
 
         for (const child of children) {
-          // All children are RouteSpecs since that's what the function signature accepts
+          // All children are Routes since that's what the function signature accepts
           const metadata = child.routeMetadata;
 
           // Reset route group so children form their own group
@@ -518,9 +517,9 @@ export function createRouter<TConfig extends AdapterConfig>(
 
           // Rebuild with composed path, then unwrap
           const composedPath = composePath(path, metadata.relativePath);
-          const rebuiltRouteSpec = metadata.rebuild(composedPath);
+          const rebuiltRoute = metadata.rebuild(composedPath);
           // Unwrap to get the inner RefSpec for the adapter
-          processedChildren.push(rebuiltRouteSpec.unwrap());
+          processedChildren.push(rebuiltRoute.unwrap());
         }
 
         // Restore the route group
@@ -619,16 +618,13 @@ export function createRouter<TConfig extends AdapterConfig>(
       });
 
       // Create wrapper that delegates to baseRefSpec via closure
-      const routeSpec: RouteSpec<TConfig['baseElement']> = {
-        status: STATUS_ROUTE_SPEC,
+      const routeHandle: Route<TConfig['baseElement']> = {
         routeMetadata: {
           relativePath,
           rebuild: (parentPath: string) =>
             route(parentPath, connectedComponent)(...children),
         },
-        // Unwrap method returns the wrapped RefSpec
         unwrap: () => baseRefSpec,
-        // Delegate create method to base spec
         create: <TExt = Record<string, unknown>>(
           svc?: unknown,
           extensions?: TExt
@@ -637,7 +633,7 @@ export function createRouter<TConfig extends AdapterConfig>(
         },
       };
 
-      return routeSpec;
+      return routeHandle;
     };
   }
 
@@ -730,7 +726,7 @@ export function createRouter<TConfig extends AdapterConfig>(
      * Create the root element with its child routes
      */
     const create = (
-      ...children: RouteSpec<TConfig['baseElement']>[]
+      ...children: Route<TConfig['baseElement']>[]
     ): RefSpec<TConfig['baseElement']> => {
       // Process children - compose their paths with the root path
       const processedChildren: RefSpec<TConfig['baseElement']>[] = [];
@@ -749,9 +745,9 @@ export function createRouter<TConfig extends AdapterConfig>(
 
         // Rebuild with composed path (route group is shared across siblings)
         const composedPath = composePath(path, metadata.relativePath);
-        const rebuiltRouteSpec = metadata.rebuild(composedPath);
+        const rebuiltRoute = metadata.rebuild(composedPath);
         // Unwrap to get the inner RefSpec for the adapter
-        processedChildren.push(rebuiltRouteSpec.unwrap());
+        processedChildren.push(rebuiltRoute.unwrap());
       }
 
       // Restore the route group

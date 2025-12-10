@@ -19,7 +19,9 @@ const posts = resource<Post[]>((abortSignal) => {
   if (userId === null) {
     return Promise.resolve([]);
   }
-  return fetch(`/api/posts?userId=${userId}`, { signal: abortSignal }).then((r) => r.json());
+  return fetch(`/api/posts?userId=${userId}`, { signal: abortSignal }).then(
+    (r) => r.json()
+  );
 });
 
 // User button component - receives a signal wrapping the user
@@ -28,12 +30,10 @@ const UserButton = (userSignal: Reactive<User>) => {
   const user = userSignal;
   const isActive = computed(() => selectedUserId() === user().id);
 
-  return el('button')
-    .props({
-      className: computed(() => `user-btn ${isActive() ? 'active' : ''}`),
-      onclick: () => selectedUserId(user().id),
-    })
-    (computed(() => user().name));
+  return el('button').props({
+    className: computed(() => `user-btn ${isActive() ? 'active' : ''}`),
+    onclick: () => selectedUserId(user().id),
+  })(computed(() => user().name));
 };
 
 // Post item component - receives a signal wrapping the post

@@ -65,6 +65,12 @@ export default defineConfig({
         ),
         'deps/mount': resolve(__dirname, 'src/deps/mount.ts'),
         'deps/use': resolve(__dirname, 'src/deps/use.ts'),
+        'deps/node-deps': resolve(__dirname, 'src/deps/node-deps.ts'),
+        'deps/fragment-boundaries': resolve(
+          __dirname,
+          'src/deps/fragment-boundaries.ts'
+        ),
+        adapter: resolve(__dirname, 'src/adapter.ts'),
         'devtools/index': resolve(__dirname, 'src/devtools/index.ts'),
       },
       formats: ['es'],

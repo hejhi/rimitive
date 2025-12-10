@@ -1,6 +1,5 @@
-import { el } from '../service';
-import { router } from '../service';
-import { Link } from '@lattice/router';
+import { Link } from '@lattice/router/link';
+import type { Service } from '../service';
 
 const products = [
   { id: '1', name: 'Apple', description: 'Fresh and crispy', price: '$1.99' },
@@ -10,8 +9,9 @@ const products = [
   { id: '5', name: 'Strawberry', description: 'Berry delicious', price: '$3.99' },
 ];
 
-export const Products = router.connect(
-  ({ children }) => () =>
+export const Products =
+  ({ el }: Service) =>
+  () =>
     el('div').props({ className: 'page' })(
       el('h2')('Products'),
       el('p')('Click on a product to view details with route parameters.'),
@@ -30,7 +30,5 @@ export const Products = router.connect(
             )
           )
         )
-      ),
-      ...(children || [])
-    )
-);
+      )
+    );

@@ -7,6 +7,17 @@ export type ResourceState<T> =
   | { status: 'error'; error: unknown };
 
 /**
+ * Load state - discriminated union for async load boundaries
+ *
+ * Similar to ResourceState but uses 'data' instead of 'value' for clarity
+ * in the load() context where data is being fetched and rendered.
+ */
+export type LoadState<T> =
+  | { status: 'pending' }
+  | { status: 'ready'; data: T }
+  | { status: 'error'; error: unknown };
+
+/**
  * Resource API - reactive async data fetching
  *
  * A resource tracks the state of an async operation and automatically

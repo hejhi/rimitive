@@ -373,3 +373,466 @@ describe('Rendering Invariants', () => {
     expect(result.indexOf('<second')).toBeLessThan(result.indexOf('<third'));
   });
 });
+
+// ============================================================================
+// Tests: Async Rendering (renderToStringAsync)
+// ============================================================================
+
+import {
+  renderToStringAsync,
+  collectHydrationData,
+  createHydrationScript,
+  renderToStringAsyncWithHydration,
+} from './renderToString';
+import type { AsyncFragmentRef } from '@lattice/resource';
+import type { LoadState } from '@lattice/resource';
+import { STATUS_REF_SPEC } from '@lattice/view/types';
+import type { RefSpec } from '@lattice/view/types';
+
+// Counter for test IDs
+let testLoadId = 0;
+
+/**
+ * Create an async fragment for testing.
+ * This is a simplified version that doesn't need the full adapter setup.
+ * It creates fragments that can be resolved by resolveAsyncFragment.
+ */
+function createTestAsyncFragment<T>(
+  fetcher: () => Promise<T>,
+  renderer: (state: LoadState<T>) => RefSpec<unknown>,
+  id?: string
+): AsyncFragmentRef<unknown> {
+  const fragmentId = id ?? `test-load-${++testLoadId}`;
+
+  // Mutable state for hydration data and resolved status
+  let hydrationData: T | undefined;
+  let resolved = false;
+
+  return {
+    // FragmentRef properties
+    status: STATUS_FRAGMENT,
+    element: null,
+    parent: null,
+    prev: null,
+    next: null,
+    firstChild: null,
+    lastChild: null,
+    // Stub attach - not used in SSR tests since we use resolveAsyncFragment directly
+    attach: () => {},
+
+    // Async metadata
+    __async: true,
+    __id: fragmentId,
+    __fetcher: fetcher as () => Promise<unknown>,
+    __renderer: renderer as (state: LoadState<unknown>) => RefSpec<unknown>,
+
+    get __hydrationData() {
+      return hydrationData;
+    },
+    get __resolved() {
+      return resolved;
+    },
+
+    // Run the fetcher and cache result
+    run: async (): Promise<unknown> => {
+      // Return cached data if already resolved
+      if (resolved && hydrationData !== undefined) {
+        return hydrationData;
+      }
+
+      // Call fetcher
+      const data = await fetcher();
+      hydrationData = data;
+      resolved = true;
+      return data;
+    },
+
+    // Set hydration data directly
+    setData: (data: unknown): void => {
+      hydrationData = data as T;
+      resolved = true;
+    },
+  };
+}
+
+// Alias for cleaner tests
+const load = createTestAsyncFragment;
+
+/**
+ * Create a mock RefSpec that returns a given element when mounted
+ */
+function createMockRefSpec(html: string): RefSpec<unknown> {
+  return {
+    status: STATUS_REF_SPEC,
+    create: () => createElementRef(html),
+  };
+}
+
+/**
+ * Mock mount function that calls create() on RefSpec
+ */
+function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
+  return spec.create();
+}
+
+/**
+ * Mock service context
+ */
+const mockSvc = {
+  el: (tag: string) => (content: string) =>
+    createMockRefSpec(`<${tag}>${content}</${tag}>`),
+};
+
+describe('Async Rendering - renderToStringAsync', () => {
+  it('should render a simple async fragment', async () => {
+    const asyncFrag = load(
+      async () => 'content',
+      (state: LoadState<string>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<div>Loaded content</div>')
+          : createMockRefSpec('<div>Loading...</div>')
+    );
+
+    const result = await renderToStringAsync(asyncFrag, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    expect(result).toBe('<div>Loaded content</div>');
+  });
+
+  it('should render async fragment with hydration data', async () => {
+    const asyncFrag = load(
+      async () => ({ message: 'Hello' }),
+      (state: LoadState<{ message: string }>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<div>Hello</div>')
+          : createMockRefSpec('<div>Loading...</div>')
+    );
+
+    const resolvedData: Array<{ id: string; data: unknown }> = [];
+
+    const result = await renderToStringAsync(asyncFrag, {
+      svc: mockSvc,
+      mount: mockMount,
+      onAsyncResolved: (id, data) => {
+        resolvedData.push({ id, data });
+      },
+    });
+
+    expect(result).toBe('<div>Hello</div>');
+    expect(resolvedData).toHaveLength(1);
+    expect(resolvedData[0]?.data).toEqual({ message: 'Hello' });
+  });
+
+  it('should render RefSpec directly', async () => {
+    const spec = createMockRefSpec('<span>Direct spec</span>');
+
+    const result = await renderToStringAsync(spec, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    expect(result).toBe('<span>Direct spec</span>');
+  });
+
+  it('should render NodeRef directly', async () => {
+    const nodeRef = createElementRef('<p>Direct node</p>');
+
+    const result = await renderToStringAsync(nodeRef, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    expect(result).toBe('<p>Direct node</p>');
+  });
+
+  it('should resolve async fragments nested inside elements', async () => {
+    // Create an async fragment
+    const asyncChild = load(
+      async () => 'child',
+      (state: LoadState<string>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<span>Async child</span>')
+          : createMockRefSpec('<span>Loading...</span>')
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    // Create a parent element that contains the async fragment
+    const parentElement = createElementRef('<div>Parent</div>');
+    parentElement.firstChild = asyncChild;
+    parentElement.lastChild = asyncChild;
+    asyncChild.parent = parentElement;
+
+    const result = await renderToStringAsync(parentElement, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    // The async child should be resolved and its content rendered
+    expect(result).toContain('Parent');
+    // After resolution, the fragment should have content
+    expect(asyncChild.firstChild).not.toBeNull();
+  });
+
+  it('should resolve multiple async fragments in parallel', async () => {
+    const resolveOrder: string[] = [];
+
+    const asyncFrag1 = load(
+      async () => {
+        await new Promise((r) => setTimeout(r, 50));
+        resolveOrder.push('first');
+        return 'first';
+      },
+      (state: LoadState<string>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<div>First</div>')
+          : createMockRefSpec('<div>Loading...</div>')
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    const asyncFrag2 = load(
+      async () => {
+        await new Promise((r) => setTimeout(r, 10));
+        resolveOrder.push('second');
+        return 'second';
+      },
+      (state: LoadState<string>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<div>Second</div>')
+          : createMockRefSpec('<div>Loading...</div>')
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    // Create a parent with both async fragments
+    const parent = createFragmentRef([asyncFrag1, asyncFrag2]);
+
+    await renderToStringAsync(parent, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    // Both should resolve, with second finishing first due to shorter delay
+    expect(resolveOrder).toContain('first');
+    expect(resolveOrder).toContain('second');
+    // Second should resolve before first due to parallel execution
+    expect(resolveOrder.indexOf('second')).toBeLessThan(
+      resolveOrder.indexOf('first')
+    );
+  });
+});
+
+describe('Async Rendering - Nested Async Fragments', () => {
+  it('should resolve deeply nested async fragments', async () => {
+    // Inner async fragment (level 2)
+    const innerAsync = load(
+      async () => 'inner',
+      (state: LoadState<string>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<span>Inner async content</span>')
+          : createMockRefSpec('<span>Loading...</span>')
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    // Outer async fragment (level 1) that returns content containing the inner async
+    const outerAsync = load(
+      async () => 'outer',
+      (state: LoadState<string>) => {
+        if (state.status !== 'ready') {
+          return createMockRefSpec('<div>Loading...</div>');
+        }
+        // Create a spec that when mounted, has the innerAsync as a child
+        const outerElement = createElementRef('<div>Outer</div>');
+        outerElement.firstChild = innerAsync;
+        outerElement.lastChild = innerAsync;
+        innerAsync.parent = outerElement;
+
+        return {
+          status: STATUS_REF_SPEC,
+          create: () => outerElement,
+        } as RefSpec<unknown>;
+      }
+    );
+
+    const result = await renderToStringAsync(outerAsync, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    // Both outer and inner async should be resolved
+    expect(result).toContain('Outer');
+
+    // The inner async fragment should have been resolved and populated
+    expect(innerAsync.firstChild).not.toBeNull();
+    expect(innerAsync.__resolved).toBeDefined();
+  });
+
+  it('should resolve three levels of nested async fragments', async () => {
+    const resolutionOrder: string[] = [];
+
+    // Level 3 (deepest)
+    const level3Async = load(
+      async () => {
+        resolutionOrder.push('level3');
+        return 'level3';
+      },
+      (state: LoadState<string>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<span>Level 3</span>')
+          : createMockRefSpec('<span>Loading...</span>')
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    // Level 2
+    const level2Async = load(
+      async () => {
+        resolutionOrder.push('level2');
+        return 'level2';
+      },
+      (state: LoadState<string>) => {
+        if (state.status !== 'ready') {
+          return createMockRefSpec('<div>Loading...</div>');
+        }
+        const el = createElementRef('<div>Level 2</div>');
+        el.firstChild = level3Async;
+        el.lastChild = level3Async;
+        level3Async.parent = el;
+        return {
+          status: STATUS_REF_SPEC,
+          create: () => el,
+        } as RefSpec<unknown>;
+      }
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    // Level 1 (outermost)
+    const level1Async = load(
+      async () => {
+        resolutionOrder.push('level1');
+        return 'level1';
+      },
+      (state: LoadState<string>) => {
+        if (state.status !== 'ready') {
+          return createMockRefSpec('<main>Loading...</main>');
+        }
+        const el = createElementRef('<main>Level 1</main>');
+        el.firstChild = level2Async;
+        el.lastChild = level2Async;
+        level2Async.parent = el;
+        return {
+          status: STATUS_REF_SPEC,
+          create: () => el,
+        } as RefSpec<unknown>;
+      }
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    await renderToStringAsync(level1Async, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    // All three levels should be resolved
+    expect(resolutionOrder).toContain('level1');
+    expect(resolutionOrder).toContain('level2');
+    expect(resolutionOrder).toContain('level3');
+
+    // Each async fragment should have resolved content
+    expect(level1Async.__resolved).toBeDefined();
+    expect(level2Async.__resolved).toBeDefined();
+    expect(level3Async.__resolved).toBeDefined();
+
+    // Each should have children populated
+    expect(level3Async.firstChild).not.toBeNull();
+  });
+});
+
+describe('Hydration Data Serialization', () => {
+  it('should collect hydration data from async fragments', async () => {
+    type Products = { products: Array<{ id: number; name: string }> };
+    const asyncFrag = load(
+      async () => ({ products: [{ id: 1, name: 'Widget' }] }),
+      (state: LoadState<Products>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<ul><li>Widget</li></ul>')
+          : createMockRefSpec('<ul>Loading...</ul>')
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    // Resolve the fragment
+    await renderToStringAsync(asyncFrag, {
+      svc: mockSvc,
+      mount: mockMount,
+    });
+
+    // Create a parent node containing the resolved fragment
+    const parent = createFragmentRef([asyncFrag]);
+    const data = collectHydrationData(parent);
+
+    expect(data[asyncFrag.__id]).toEqual({
+      products: [{ id: 1, name: 'Widget' }],
+    });
+  });
+
+  it('should create hydration script with proper escaping', () => {
+    const data = {
+      'load-1': { html: '</script><script>alert("xss")</script>' },
+      'load-2': { comment: '<!-- comment -->' },
+    };
+
+    const script = createHydrationScript(data);
+
+    expect(script).toContain('window.__LATTICE_HYDRATION_DATA__=');
+    // Should escape </script> to prevent XSS
+    expect(script).not.toContain('</script><script>');
+    expect(script).toContain('<\\/script');
+    // Should escape <!-- to prevent breaking out
+    expect(script).not.toContain('<!--');
+    expect(script).toContain('<\\!--');
+  });
+
+  it('should return empty string for empty hydration data', () => {
+    const script = createHydrationScript({});
+    expect(script).toBe('');
+  });
+});
+
+describe('renderToStringAsyncWithHydration', () => {
+  it('should render with hydration script in body', async () => {
+    const asyncFrag = load(
+      async () => ({ count: 42 }),
+      (state: LoadState<{ count: number }>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<html><body><div>Content</div></body></html>')
+          : createMockRefSpec('<html><body><div>Loading...</div></body></html>')
+    );
+
+    const result = await renderToStringAsyncWithHydration(asyncFrag, {
+      svc: mockSvc,
+      mount: mockMount,
+      scriptPlacement: 'body',
+    });
+
+    expect(result).toContain('<div>Content</div>');
+    expect(result).toContain('window.__LATTICE_HYDRATION_DATA__=');
+    expect(result).toContain('"count":42');
+    // Script should be before </body>
+    expect(result.indexOf('__LATTICE_HYDRATION_DATA__')).toBeLessThan(
+      result.indexOf('</body>')
+    );
+  });
+
+  it('should return inline result when requested', async () => {
+    const asyncFrag = load(
+      async () => ({ items: ['a', 'b'] }),
+      (state: LoadState<{ items: string[] }>) =>
+        state.status === 'ready'
+          ? createMockRefSpec('<div>Items</div>')
+          : createMockRefSpec('<div>Loading...</div>')
+    ) as unknown as AsyncFragmentRef<unknown>;
+
+    const result = await renderToStringAsyncWithHydration(asyncFrag, {
+      svc: mockSvc,
+      mount: mockMount,
+      scriptPlacement: 'inline',
+    });
+
+    expect(result).toHaveProperty('html');
+    expect(result).toHaveProperty('script');
+    expect(result).toHaveProperty('data');
+    expect(result.html).toBe('<div>Items</div>');
+    expect(result.data).toEqual({ [asyncFrag.__id]: { items: ['a', 'b'] } });
+  });
+});

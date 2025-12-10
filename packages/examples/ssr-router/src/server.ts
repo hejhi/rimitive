@@ -3,15 +3,18 @@
  *
  * Simple flow:
  * 1. Create service with initial path from request URL
- * 2. Render AppLayout to string
- * 3. Send HTML
+ * 2. Render AppLayout to string (awaiting async boundaries from load())
+ * 3. Send HTML with hydration data
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createDOMServerAdapter, renderToString } from '@lattice/islands/server';
+import {
+  createDOMServerAdapter,
+  renderToStringAsyncWithHydration,
+} from '@lattice/ssr/server';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
@@ -25,7 +28,7 @@ const clientBundlePath = isDev
   : join(__dirname, '../client/client.js');
 
 // Create HTTP server
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   // Serve client bundle
   if (req.url === '/client.js') {
     if (existsSync(clientBundlePath)) {
@@ -49,14 +52,22 @@ const server = createServer((req, res) => {
   const adapter = createDOMServerAdapter(); // linkedom adapter/renderer
   const service = createService(adapter, { initialPath: url.pathname });
 
-  // Render the app to a string
-  const html = renderToString(AppLayout(service).create(service));
+  // Create the app RefSpec
+  const appSpec = AppLayout(service);
+
+  // Render the app to a string, awaiting any async boundaries (load())
+  // Returns { html, script, data } with hydration data for async loaders
+  const { html, script } = await renderToStringAsyncWithHydration(appSpec, {
+    svc: service,
+    mount: (spec) => spec.create(service),
+    scriptPlacement: 'inline',
+  });
 
   // Send response
   res.writeHead(200, { 'Content-Type': 'text/html' });
 
-  // Generate and send HTML
-  res.end(tpl(html));
+  // Generate and send HTML with hydration script
+  res.end(tpl(html, script));
 });
 
 const PORT = process.env.PORT || 3000;
@@ -67,4 +78,5 @@ server.listen(PORT, () => {
   console.log(`  http://localhost:${PORT}/about`);
   console.log(`  http://localhost:${PORT}/products`);
   console.log(`  http://localhost:${PORT}/products/1`);
+  console.log(`  http://localhost:${PORT}/stats (async data loading with load())`);
 });

@@ -1,4 +1,4 @@
-export const tpl = (content: string) => `
+export const tpl = (content: string, hydrationScript = '') => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -281,11 +281,77 @@ export const tpl = (content: string) => `
     .add-btn:disabled {
       cursor: default;
     }
+    /* Stats page styles */
+    .stats-page .lead {
+      font-size: 1.1rem;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .top-pages-section {
+      margin: 2rem 0;
+    }
+    .top-pages-section h3 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    .top-pages-list {
+      background: #fafafa;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .top-page-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #eee;
+    }
+    .top-page-item:last-child {
+      border-bottom: none;
+    }
+    .page-path {
+      font-family: monospace;
+      color: #333;
+    }
+    .page-views {
+      color: #666;
+    }
+    .stats-meta {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      color: #999;
+    }
   </style>
 </head>
 <body>
   ${content}
   <script type="module" src="/client.js"></script>
+  ${hydrationScript}
 </body>
 </html>
 `;

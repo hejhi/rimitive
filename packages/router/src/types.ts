@@ -24,31 +24,20 @@ export type RouteMatch = {
 };
 
 /**
- * Status bit for route specs - next power of 2 after STATUS_COMMENT (16)
- */
-export const STATUS_ROUTE_SPEC = 32; // 100000
-
-/**
  * Route-specific metadata
  */
 export type RouteMetadata<TConfig extends AdapterConfig> = {
   relativePath: string;
-  rebuild: (parentPath: string) => RouteSpec<TConfig['baseElement']>;
+  rebuild: (parentPath: string) => Route<TConfig['baseElement']>;
 };
 
 /**
- * RouteSpec wraps a RefSpec with routing metadata
- * Uses true wrapper pattern - delegates to internal RefSpec via closure
- * Status is ONLY STATUS_ROUTE_SPEC (32) - not combined with STATUS_REF_SPEC
- * The wrapped RefSpec is kept internal and accessed via delegation
- *
- * Note: Does not extend RefSpec to avoid status type conflict.
- * Instead, provides same create type through delegation.
+ * Route wraps a RefSpec with routing metadata for path composition.
+ * Delegates to internal RefSpec via closure.
  */
-export type RouteSpec<TElement> = {
-  status: typeof STATUS_ROUTE_SPEC;
+export type Route<TElement> = {
   routeMetadata: RouteMetadata<AdapterConfig>;
-  // Unwrap method to get the inner RefSpec for adapter
+  /** Get the inner RefSpec for the adapter */
   unwrap(): RefSpec<TElement>;
   create<TExt = Record<string, unknown>>(
     svc?: unknown,

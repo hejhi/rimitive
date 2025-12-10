@@ -46,8 +46,7 @@ export type {
 // TODO: Remove in next major version
 export { createRouter as createLegacyRouter, connect } from './createRouter';
 export { defineRoutes } from './defineRoutes';
-export { STATUS_ROUTE_SPEC } from './types';
-export type { RouteSpec, RouteMetadata, MatchFunction } from './types';
+export type { Route, RouteMetadata, MatchFunction } from './types';
 export type {
   ViewSvc,
   RouterConfig,

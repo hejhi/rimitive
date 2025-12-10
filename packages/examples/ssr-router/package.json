@@ -12,10 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/islands": "workspace:*",
     "@lattice/lattice": "workspace:*",
+    "@lattice/resource": "workspace:*",
     "@lattice/router": "workspace:*",
     "@lattice/signals": "workspace:*",
+    "@lattice/ssr": "workspace:*",
     "@lattice/view": "workspace:*"
   },
   "devDependencies": {

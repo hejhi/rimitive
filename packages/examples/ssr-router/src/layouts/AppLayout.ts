@@ -11,13 +11,14 @@ import { Home } from '../pages/Home.js';
 import { About } from '../pages/About.js';
 import { Products } from '../pages/Products.js';
 import { ProductDetail } from '../pages/ProductDetail.js';
+import { Stats } from '../pages/Stats.js';
 import { NotFound } from '../pages/NotFound.js';
 
 /**
  * Map route IDs to portable component functions
  *
- * Since pages are in portable style: (svc) => () => RefSpec,
- * we wrap them to fit the (svc) => (props) => RefSpec signature.
+ * All pages follow the portable style: (svc) => () => RefSpec
+ * We wrap them to fit the (svc) => (props) => RefSpec signature.
  */
 const componentMap: Record<
   string,
@@ -32,6 +33,8 @@ const componentMap: Record<
     (svc) =>
     ({ params }) =>
       ProductDetail(svc, { params: params as { id: string } }),
+  // Stats uses load() internally for async data - same pattern as other routes
+  stats: Stats,
 };
 
 export const AppLayout = ({ el, match, matches, use }: Service) =>
