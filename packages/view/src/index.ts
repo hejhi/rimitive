@@ -59,3 +59,19 @@ export {
 } from './types';
 
 export type { Adapter, AdapterConfig } from './adapter';
+
+// =============================================================================
+// Load - Async data loading boundaries
+// =============================================================================
+
+export type {
+  LoadState,
+  LoadFactory,
+  LoadService,
+  LoadOpts,
+  LoadOptions,
+  AsyncFragment,
+  AsyncMeta,
+} from './load';
+
+export { ASYNC_FRAGMENT, isAsyncFragment, getAsyncMeta } from './load';

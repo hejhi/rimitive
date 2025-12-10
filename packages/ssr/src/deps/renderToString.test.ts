@@ -384,9 +384,9 @@ import {
   createHydrationScript,
   renderToStringAsyncWithHydration,
 } from './renderToString';
-import type { AsyncFragment } from '@lattice/resource';
-import { ASYNC_FRAGMENT } from '@lattice/resource';
-import type { LoadState } from '@lattice/resource';
+import type { AsyncFragment } from './async-fragments';
+import { ASYNC_FRAGMENT } from './async-fragments';
+import type { LoadState } from '@lattice/view/load';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { RefSpec } from '@lattice/view/types';
 

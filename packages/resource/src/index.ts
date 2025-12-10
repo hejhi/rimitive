@@ -1,94 +1,59 @@
 /**
- * @lattice/resource - Async data fetching with reactive dependency tracking
+ * @lattice/resource - Reactive async data fetching
+ *
+ * Provides the `resource()` primitive for reactive async data fetching
+ * with automatic dependency tracking and cancellation.
  *
  * ## Quick Start
  * ```typescript
- * import { ResourceModule, createLoadModule } from '@lattice/resource';
+ * import { ResourceModule } from '@lattice/resource';
  * import { compose } from '@lattice/lattice';
  * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  *
- * const adapter = createDOMAdapter();
- * const modules = compose(
+ * const { resource } = compose(
  *   SignalModule,
  *   ComputedModule,
  *   EffectModule,
- *   ResourceModule,
- *   createLoadModule(adapter)
- * );
- * const { resource, load } = modules();
+ *   ResourceModule
+ * )();
  *
  * // Reactive resource with auto-refetch
- * const products = resource(() =>
- *   fetch('/api/products').then(r => r.json())
+ * const products = resource((signal) =>
+ *   fetch('/api/products', { signal }).then(r => r.json())
  * );
  *
- * // Async boundary with fetcher/renderer pattern
- * load(
- *   () => fetchStats(),
- *   (state) => {
- *     switch (state.status) {
- *       case 'pending': return el('div')('Loading...');
- *       case 'error': return el('div')(`Error: ${state.error}`);
- *       case 'ready': return StatsContent(state.data);
- *     }
- *   }
- * );
+ * // Read state reactively
+ * products();        // { status: 'pending' | 'ready' | 'error', ... }
+ * products.loading(); // boolean
+ * products.data();    // T | undefined
+ * products.error();   // unknown | undefined
  * ```
  *
  * ## Import Guide
  *
  * | Use Case | Import |
  * |----------|--------|
- * | Module composition | `import { ResourceModule, createLoadModule } from '@lattice/resource'` |
- * | Adapter helpers | `import { withAsyncSupport } from '@lattice/resource'` |
- * | Types only | `import type { Resource, ResourceState, LoadState } from '@lattice/resource'` |
+ * | Module composition | `import { ResourceModule } from '@lattice/resource'` |
+ * | Factory (advanced) | `import { createResourceFactory } from '@lattice/resource'` |
+ * | Types only | `import type { Resource, ResourceState } from '@lattice/resource'` |
+ *
+ * ## Related
+ *
+ * For async loading boundaries with UI rendering, see `@lattice/view/load`:
+ * ```typescript
+ * import { createLoadModule } from '@lattice/view/load';
+ * ```
  */
 
 // =============================================================================
-// Primary API - Modules for composition
+// Primary API - Module for composition
 // =============================================================================
 
-export { ResourceModule } from './resource';
-export { createLoadModule } from './load';
+export { ResourceModule, createResourceFactory } from './resource';
+export type { ResourceDeps } from './resource';
 
 // =============================================================================
-// Async Boundaries - load() helpers
-// =============================================================================
-
-export {
-  ASYNC_FRAGMENT,
-  createLoadFactory,
-  isAsyncFragment,
-  getAsyncMeta,
-  resolveAsyncFragment,
-  collectAsyncFragments,
-  triggerAsyncFragment,
-  triggerAsyncFragments,
-} from './load';
-export type {
-  LoadFactory,
-  LoadService,
-  LoadOpts,
-  LoadOptions,
-  AsyncFragment,
-  AsyncMeta,
-} from './load';
-
-// =============================================================================
-// Adapter Helpers - Wrap adapters with async fragment support
-// =============================================================================
-
-export {
-  withAsyncSupport,
-  withHydrationData,
-  createWindowHydrationStore,
-  clearWindowHydrationData,
-} from './adapters';
-export type { HydrationDataStore } from './adapters';
-
-// =============================================================================
-// Core Types - For typing behaviors and components
+// Core Types
 // =============================================================================
 
 export type {
@@ -96,5 +61,4 @@ export type {
   ResourceState,
   Fetcher,
   ResourceFactory,
-  LoadState,
 } from './types';

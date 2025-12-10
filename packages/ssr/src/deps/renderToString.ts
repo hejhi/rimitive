@@ -20,7 +20,7 @@ import {
   isAsyncFragment,
   collectAsyncFragments,
   type AsyncFragment,
-} from '@lattice/resource';
+} from './async-fragments';
 
 /**
  * Render a node tree to HTML string
@@ -237,8 +237,6 @@ export async function renderToStringAsync<TSvc>(
 
   return renderToString(nodeRef);
 }
-
-export { isAsyncFragment };
 
 // =============================================================================
 // Hydration Data Serialization

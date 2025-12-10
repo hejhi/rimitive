@@ -6,18 +6,42 @@
  * SSR introspection via Symbol-keyed metadata.
  */
 
-import type { RefSpec, FragmentRef, NodeRef } from '@lattice/view/types';
-import { STATUS_FRAGMENT, STATUS_ELEMENT } from '@lattice/view/types';
-import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
-import type { CreateScopes } from '@lattice/view/deps/scope';
-import { ScopesModule } from '@lattice/view/deps/scope';
-import { createMatchFactory } from '@lattice/view/match';
+import type { RefSpec, FragmentRef } from './types';
+import type { Adapter, AdapterConfig } from './adapter';
+import type { CreateScopes } from './deps/scope';
+import { ScopesModule } from './deps/scope';
+import { createMatchFactory } from './match';
 import { defineModule, type Module } from '@lattice/lattice';
 import { SignalModule, type SignalFactory } from '@lattice/signals/signal';
-import type { LoadState } from './types';
 
 // =============================================================================
-// Public API
+// Types
+// =============================================================================
+
+/**
+ * Load state - discriminated union for async load boundaries
+ *
+ * @example
+ * ```ts
+ * load(
+ *   () => fetchData(),
+ *   (state) => {
+ *     switch (state.status) {
+ *       case 'pending': return el('div')('Loading...');
+ *       case 'error': return el('div')(`Error: ${state.error}`);
+ *       case 'ready': return DataView(state.data);
+ *     }
+ *   }
+ * )
+ * ```
+ */
+export type LoadState<T> =
+  | { status: 'pending' }
+  | { status: 'ready'; data: T }
+  | { status: 'error'; error: unknown };
+
+// =============================================================================
+// Async Fragment API
 // =============================================================================
 
 /** Symbol marking async fragments created by load() */
@@ -83,7 +107,7 @@ export type LoadFactory<TBaseElement> = <T, TElement extends TBaseElement>(
  * Use this type when building custom view service compositions:
  * @example
  * ```ts
- * import { createLoadFactory, type LoadService } from '@lattice/resource';
+ * import { createLoadFactory, type LoadService } from '@lattice/view/load';
  *
  * const load: LoadService<DOMAdapterConfig> = createLoadFactory(opts);
  * ```
@@ -105,6 +129,25 @@ export type LoadOpts<TConfig extends AdapterConfig> = {
 
 let idCounter = 0;
 
+/**
+ * Create a load factory with the given dependencies.
+ *
+ * @example
+ * ```ts
+ * import { createLoadFactory } from '@lattice/view/load';
+ *
+ * const load = createLoadFactory({
+ *   signal,
+ *   adapter,
+ *   ...scopes,
+ * });
+ *
+ * const asyncContent = load(
+ *   () => fetchData(),
+ *   (state) => state.status === 'ready' ? Content(state.data) : Loading()
+ * );
+ * ```
+ */
 export function createLoadFactory<TConfig extends AdapterConfig>({
   signal,
   adapter,
@@ -190,48 +233,6 @@ export function createLoadFactory<TConfig extends AdapterConfig>({
 }
 
 // =============================================================================
-// SSR Helpers
-// =============================================================================
-
-export async function resolveAsyncFragment<TElement>(
-  fragment: AsyncFragment<TElement>
-): Promise<RefSpec<TElement>> {
-  const { refSpec } = await fragment[ASYNC_FRAGMENT].resolve();
-  return refSpec as RefSpec<TElement>;
-}
-
-export function collectAsyncFragments<TElement>(
-  nodeRef: NodeRef<TElement>
-): AsyncFragment<TElement>[] {
-  const fragments: AsyncFragment<TElement>[] = [];
-
-  function walk(node: NodeRef<TElement> | null): void {
-    if (!node) return;
-    if (isAsyncFragment(node)) fragments.push(node as AsyncFragment<TElement>);
-    if (node.status === STATUS_FRAGMENT || node.status === STATUS_ELEMENT) {
-      let child = node.firstChild;
-      while (child) {
-        walk(child);
-        child = child.next;
-      }
-    }
-  }
-
-  walk(nodeRef);
-  return fragments;
-}
-
-export function triggerAsyncFragment<TElement>(fragment: AsyncFragment<TElement>): void {
-  fragment[ASYNC_FRAGMENT].trigger();
-}
-
-export function triggerAsyncFragments<TElement>(nodeRef: NodeRef<TElement>): void {
-  for (const fragment of collectAsyncFragments(nodeRef)) {
-    triggerAsyncFragment(fragment);
-  }
-}
-
-// =============================================================================
 // Module Definition
 // =============================================================================
 
@@ -244,7 +245,7 @@ export function triggerAsyncFragments<TElement>(nodeRef: NodeRef<TElement>): voi
  * @example
  * ```ts
  * import { compose } from '@lattice/lattice';
- * import { createLoadModule } from '@lattice/resource';
+ * import { createLoadModule } from '@lattice/view/load';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();

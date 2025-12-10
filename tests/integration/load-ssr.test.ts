@@ -26,8 +26,8 @@ import {
   renderToStringAsyncWithHydration,
 } from '@lattice/ssr/server';
 
-import { createLoadModule } from '@lattice/resource';
-import type { LoadState } from '@lattice/resource';
+import { createLoadModule } from '@lattice/view/load';
+import type { LoadState } from '@lattice/view/load';
 
 /**
  * Create SSR service for tests

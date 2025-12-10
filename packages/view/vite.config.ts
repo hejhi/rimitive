@@ -49,6 +49,7 @@ export default defineConfig({
         extend: resolve(__dirname, 'src/extend.ts'),
         el: resolve(__dirname, 'src/el.ts'),
         match: resolve(__dirname, 'src/match.ts'),
+        load: resolve(__dirname, 'src/load.ts'),
         portal: resolve(__dirname, 'src/portal.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         map: resolve(__dirname, 'src/map.ts'),

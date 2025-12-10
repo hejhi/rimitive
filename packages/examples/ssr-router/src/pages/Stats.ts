@@ -1,12 +1,12 @@
 /**
  * Stats Page - Demonstrates async data loading with load()
  *
- * This page uses @lattice/resource's load() with the fetcher/renderer pattern.
+ * This page uses @lattice/view's load() with the fetcher/renderer pattern.
  * During SSR, the data is fetched and rendered to HTML with ready state.
  * During client hydration, the data is injected without re-fetching.
  * On subsequent client navigations, data is fetched fresh (pending → ready).
  */
-import type { LoadState } from '@lattice/resource';
+import type { LoadState } from '@lattice/view/load';
 import type { RefSpec } from '@lattice/view/types';
 import type { Service } from '../service.js';
 

@@ -13,13 +13,11 @@ import { createDOMAdapter } from '@lattice/view/adapters/dom';
 import {
   createDOMHydrationAdapter,
   createHydrationAdapter,
-} from '@lattice/ssr/client';
-import {
   withAsyncSupport,
   withHydrationData,
   createWindowHydrationStore,
   clearWindowHydrationData,
-} from '@lattice/resource';
+} from '@lattice/ssr/client';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';

@@ -70,6 +70,10 @@
       "import": "./dist/map.js",
       "types": "./dist/map.d.ts"
     },
+    "./load": {
+      "import": "./dist/load.js",
+      "types": "./dist/load.d.ts"
+    },
     "./portal": {
       "import": "./dist/portal.js",
       "types": "./dist/portal.d.ts"
