@@ -29,10 +29,10 @@ export type SignalProviderProps = {
 
 
 ```tsx
-import { compose, coreExtensions } from '@lattice/signals';
+import { createSignals } from '@lattice/signals';
 
 const props: SignalProviderProps = {
-  svc: compose(...coreExtensions),
+  svc: createSignals()(),
   children: <App />
 };
 ```

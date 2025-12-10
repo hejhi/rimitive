@@ -22,5 +22,5 @@ export type IslandsClientService = SignalsSvc & DomViewSvc & {
     addEventListener: ReturnType<typeof createAddEventListener>;
 };
 ```
-**References:** [SignalsSvc](../../signals/signalssvc/)<!-- -->, [DomViewSvc](../domviewsvc/)
+**References:** [DomViewSvc](../domviewsvc/)
 

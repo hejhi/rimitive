@@ -28,97 +28,34 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[createDOMView({ signals, })](../createdomview/)
+[createLoadFactory({ signal })](../createloadfactory/)
 
 
 </td><td>
 
-Create DOM view service (view primitives + on + mount)
-
-Use this when you need to share signals between multiple adapters (e.g., DOM + Canvas in the same app).
+Create a load factory with the given dependencies.
 
 
 </td></tr>
 <tr><td>
 
-[createView({ adapter, signals, })](../createview/)
+[getAsyncMeta(node)](../getasyncmeta/)
 
 
 </td><td>
 
-Create a view service for a given adapter and optional signal implementation
-
-Combines the default view primitives (el, map, match, portal) with an adapter and signal system to create a complete view service.
+Get async metadata from a node
 
 
 </td></tr>
 <tr><td>
 
-[El(props)](../el/)
+[isAsyncFragment(value)](../isasyncfragment/)
 
 
 </td><td>
 
-El primitive - instantiatable extension using the create pattern Similar to Signal() in signals preset
-
-Generic over: - TConfig: The renderer configuration (inferred from renderer) - TElement: Base element type - TText: Text node type
-
-
-</td></tr>
-<tr><td>
-
-[Map\_2(props)](../map_2/)
-
-
-</td><td>
-
-Map primitive - instantiatable extension using the create pattern Similar to Signal() in signals preset
-
-
-</td></tr>
-<tr><td>
-
-[Match(props)](../match/)
-
-
-</td><td>
-
-Match primitive - switches between different elements based on reactive value
-
-Takes a Reactive<T> (signal, computed, or any () =<!-- -->&gt; T) and rebuilds children when the value changes. Use for polymorphic rendering where the value determines WHAT to render.
-
-For simple show/hide based on truthiness, use when() instead - it's more efficient as it doesn't rebuild the parent.
-
-Usage:
-
-```typescript
-const currentTab = signal<'home' | 'settings'>('home');
-
-// Switch between different views based on tab
-match(currentTab, (tab) =>
-  tab === 'home' ? HomePage() : SettingsPage()
-)
-
-// With computed
-const viewMode = computed(() => user().isAdmin ? 'admin' : 'user');
-match(viewMode, (mode) =>
-  mode === 'admin' ? AdminPanel() : UserPanel()
-)
-```
-The matcher function is called with the current reactive value and must return a RefSpec. It is NOT a reactive tracking scope - it's a pure mapping function.
-
-
-</td></tr>
-<tr><td>
-
-[Portal(props)](../portal/)
-
-
-</td><td>
-
-Portal primitive - renders content into a different DOM location
-
-Creates a fragment in the logical tree that attaches its children to a different DOM location (target element). This enables modals, tooltips, and other overlay patterns while preserving: - Reactive scope inheritance - Automatic cleanup when logical parent disposes
+Check if a value is an async fragment
 
 
 </td></tr>
@@ -138,6 +75,28 @@ Description
 
 </th></tr></thead>
 <tbody><tr><td>
+
+[ASYNC\_FRAGMENT](../async_fragment/)
+
+
+</td><td>
+
+Symbol marking async fragments created by load()
+
+
+</td></tr>
+<tr><td>
+
+[LoadModule](../loadmodule/)
+
+
+</td><td>
+
+Load module - provides the load() factory for async data boundaries.
+
+
+</td></tr>
+<tr><td>
 
 [STATUS\_COMMENT](../status_comment/)
 
@@ -252,12 +211,23 @@ Note: Text is just another node type created via createNode('text', { value: '..
 </td></tr>
 <tr><td>
 
-[AddEventListener](../addeventlistener/)
+[AsyncFragment](../asyncfragment/)
 
 
 </td><td>
 
-Type of the addEventListener helper returned by createAddEventListener
+Node with async metadata
+
+
+</td></tr>
+<tr><td>
+
+[AsyncMeta](../asyncmeta/)
+
+
+</td><td>
+
+Async fragment metadata for SSR introspection
 
 
 </td></tr>
@@ -267,17 +237,6 @@ Type of the addEventListener helper returned by createAddEventListener
 
 
 </td><td>
-
-
-</td></tr>
-<tr><td>
-
-[ComponentFactory](../componentfactory/)
-
-
-</td><td>
-
-Component factory type - dynamically typed based on actual service Supports both RefSpec (elements) and NodeRef (fragments) returns Preserves element type inference through TElement generic
 
 
 </td></tr>
@@ -305,95 +264,12 @@ Linked list node for tracking dispose functions Used by RenderScope to track cle
 </td></tr>
 <tr><td>
 
-[DOMAdapterConfig](../domadapterconfig/)
-
-
-</td><td>
-
-DOM adapter configuration type
-
-Provides type-safe props and elements for standard HTML tags plus text nodes.
-
-
-</td></tr>
-<tr><td>
-
-[DOMSvc](../domsvc/)
-
-
-</td><td>
-
-Full DOM service type - signals + view + on + mount
-
-
-</td></tr>
-<tr><td>
-
-[DOMViewSvc](../domviewsvc/)
-
-
-</td><td>
-
-DOM View service type - view primitives + on + mount
-
-
-</td></tr>
-<tr><td>
-
-[ElementProps](../elementprops/)
-
-
-</td><td>
-
-Props for an element - type-safe based on the renderer's props configuration Each prop can be either a static value or a Reactive value
-
-The type provides autocomplete for known element properties while allowing arbitrary attributes (data-\*, aria-\*, custom attributes) via index signature. This matches real DOM behavior where any attribute can be set on any element.
-
-Generic over: - TConfig: The renderer configuration - Tag: The element tag name (must be a key in TConfig\['props'\])
-
-
-</td></tr>
-<tr><td>
-
 [ElementRef](../elementref/)
 
 
 </td><td>
 
 Element ref node - wraps created elements for tree structure Forms doubly-linked list with prev/next pointers for efficient sibling traversal Links to parent for tree traversal Tracks child NodeRefs for tree walking (needed for SSR fragment detection)
-
-
-</td></tr>
-<tr><td>
-
-[ElFactory](../elfactory/)
-
-
-</td><td>
-
-ServiceDefinition for the el primitive. This is what gets composed into a service context.
-
-
-</td></tr>
-<tr><td>
-
-[ElOpts](../elopts/)
-
-
-</td><td>
-
-Options passed to el factory
-
-Generic over: - TConfig: The renderer configuration - TElement: Base element type - TText: Text node type
-
-
-</td></tr>
-<tr><td>
-
-[ElProps](../elprops/)
-
-
-</td><td>
 
 
 </td></tr>
@@ -409,19 +285,6 @@ Valid child types for an element
 Note: Bare functions are not supported. For dynamic content, use map() or other reconciliation helpers that provide efficient updates.
 
 The TElement parameter is kept for API consistency, but child RefSpecs/FragmentRefs use `unknown` since any element can be a child of any other element at runtime. Using `unknown` (the top type) allows proper variance - any RefSpec<T> is assignable to RefSpec<unknown>.
-
-
-</td></tr>
-<tr><td>
-
-[ElService](../elservice/)
-
-
-</td><td>
-
-The instantiable service returned by El().
-
-Use this type when building custom view service compositions:
 
 
 </td></tr>
@@ -460,99 +323,49 @@ Linked nodes - nodes that form doubly-linked lists Elements are actual DOM nodes
 </td></tr>
 <tr><td>
 
-[MapFactory](../mapfactory/)
+[LoadFactory](../loadfactory/)
 
 
 </td><td>
 
-Map factory type
+Load factory type - creates async boundaries with fetcher/renderer pattern
 
-Items can be a static array or a reactive signal of array. The render callback receives a signal wrapping each item, enabling reactive updates without recreating elements.
+The renderer receives a state object with reactive properties: - status: Reactive<!-- -->&lt;<!-- -->'pending' \| 'ready' \| 'error'<!-- -->&gt; - data: Reactive<!-- -->&lt;<!-- -->T \| undefined<!-- -->&gt; - error: Reactive<!-- -->&lt;<!-- -->unknown \| undefined<!-- -->&gt;
 
-When the source array updates, map pushes new values into the item signals, triggering reactive updates in computeds that read them.
-
-Note: Uses function overloads with Writable first to ensure proper type inference when passing signals directly.
+User controls how to render based on state - typically using match() on state.status.
 
 
 </td></tr>
 <tr><td>
 
-[MapOpts](../mapopts/)
+[LoadOpts](../loadopts/)
 
 
 </td><td>
+
+Options for createLoadFactory
 
 
 </td></tr>
 <tr><td>
 
-[MapProps](../mapprops/)
+[LoadState](../loadstate/)
 
 
 </td><td>
+
+Load state object with reactive properties
 
 
 </td></tr>
 <tr><td>
 
-[MapService](../mapservice/)
+[LoadStatus](../loadstatus/)
 
 
 </td><td>
 
-The instantiable service returned by Map().
-
-Use this type when building custom view service compositions:
-
-
-</td></tr>
-<tr><td>
-
-[MatchFactory](../matchfactory/)
-
-
-</td><td>
-
-Match factory type - reactive element switching based on a reactive value
-
-Takes a signal, computed, or () =<!-- -->&gt; T and a matcher function. When the reactive value changes, the current element is disposed and replaced with a new one from the matcher.
-
-The matcher function is NOT a reactive scope - it's a pure function that receives the current value and returns a RefSpec.
-
-Uses function overloads with Writable<T> first to ensure proper type inference when passing signals directly (without arrow function wrapper).
-
-
-</td></tr>
-<tr><td>
-
-[MatchOpts](../matchopts/)
-
-
-</td><td>
-
-Options passed to Match factory
-
-
-</td></tr>
-<tr><td>
-
-[MatchProps](../matchprops/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[MatchService](../matchservice/)
-
-
-</td><td>
-
-The instantiable service returned by Match().
-
-Use this type when building custom view service compositions:
+Load status values
 
 
 </td></tr>
@@ -582,21 +395,6 @@ Note: adapter uses 'unknown' for variance - any Adapter<T> is assignable
 </td></tr>
 <tr><td>
 
-[PortalFactory](../portalfactory/)
-
-
-</td><td>
-
-Portal factory type - renders children into a target element
-
-Takes an optional target (element, getter, or signal) and a child RefSpec. The child is rendered into the target element.
-
-Generic over: - TBaseElement: The base element type from renderer config
-
-
-</td></tr>
-<tr><td>
-
 [PortalOpts](../portalopts/)
 
 
@@ -608,45 +406,12 @@ Options passed to Portal factory
 </td></tr>
 <tr><td>
 
-[PortalProps](../portalprops/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[PortalService](../portalservice/)
-
-
-</td><td>
-
-The instantiable service returned by Portal().
-
-Use this type when building custom view service compositions:
-
-
-</td></tr>
-<tr><td>
-
 [PortalTarget](../portaltarget/)
 
 
 </td><td>
 
 Portal target - where content should be rendered - undefined: use default (document.body) - Element: use directly - () =<!-- -->&gt; Element \| null: getter/signal (called to resolve target)
-
-
-</td></tr>
-<tr><td>
-
-[ReactiveProps](../reactiveprops/)
-
-
-</td><td>
-
-Makes each property in T accept either the value or a Reactive<value>
 
 
 </td></tr>
@@ -667,39 +432,6 @@ Ref spec - a specification/blueprint for a ref that can be instantiated multiple
 
 
 </td><td>
-
-
-</td></tr>
-<tr><td>
-
-[TagFactory](../tagfactory/)
-
-
-</td><td>
-
-Tag factory - returned from el(tag) Callable with children to create RefSpec, or use .props()/.ref() to configure
-
-Generic over: - TConfig: The renderer configuration - Tag: The element tag name (must exist in both props and elements)
-
-
-</td></tr>
-<tr><td>
-
-[ViewSvc\_2](../viewsvc/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[ViewSvc](../viewsvc/)
-
-
-</td><td>
-
-View service type for a given adapter config
 
 
 </td></tr>

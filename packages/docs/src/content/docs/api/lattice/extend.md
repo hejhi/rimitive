@@ -13,9 +13,9 @@ sidebar:
 
 ## extend() function
 
-Extend a composed service with additional functionality.
+Extend a composed context with additional functionality.
 
-Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`<!-- -->. This preserves the composition pattern through extensions, allowing further chaining with additional `extend` calls.
+Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`<!-- -->.
 
 **Signature:**
 
@@ -75,36 +75,20 @@ extender
 
 [Use](../use/)<!-- -->&lt;TExtended&gt;
 
-## Example 1
+## Example
 
 
 ```ts
 import { compose, extend } from '@lattice/lattice';
+import { Signal } from '@lattice/signals';
 
-const base = compose({ signal: Signal() }, deps);
+const base = compose(Signal);
 
-const extended = extend(base, (svc) => ({
-  ...svc,
+const extended = extend(base, (ctx) => ({
+  ...ctx,
   customMethod: () => console.log('extended!'),
 }));
 
-// Use like any other composed service
 const { signal, customMethod } = extended();
-
-// Or wrap components
-const Component = extended(({ signal, customMethod }) => () => {
-  // ...
-});
-```
-
-## Example 2
-
-Chaining multiple extensions
-
-```ts
-const final = extend(
-  extend(base, (svc) => ({ ...svc, foo: 'foo' })),
-  (svc) => ({ ...svc, bar: 'bar' })
-);
 ```
 

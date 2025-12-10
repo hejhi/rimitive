@@ -13,16 +13,51 @@ sidebar:
 
 ## createLocationFactory() function
 
-Create location factory that provides reactive access to URL state
+Create a location factory that provides reactive access to URL state
 
 **Signature:**
 
 ```typescript
-createLocationFactory: () => import("@lattice/lattice").Service<LocationFactory, LocationOpts>
+export declare function createLocationFactory(opts: LocationOpts): LocationFactory;
 ```
+
+## Parameters
+
+<table><thead><tr><th>
+
+Parameter
+
+
+</th><th>
+
+Type
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+opts
+
+
+</td><td>
+
+[LocationOpts](../locationopts/)
+
+
+</td><td>
+
+
+</td></tr>
+</tbody></table>
+
 **Returns:**
 
-import("@lattice/lattice").[Service](../../lattice/service/)<!-- -->&lt;[LocationFactory](../locationfactory/)<!-- -->, [LocationOpts](../locationopts/)<!-- -->&gt;
+[LocationFactory](../locationfactory/)
 
 ## Example
 
@@ -30,18 +65,18 @@ import("@lattice/lattice").[Service](../../lattice/service/)<!-- -->&lt;[Locatio
 ```typescript
 import { createLocationFactory } from '@lattice/router';
 
-const locationFactory = createLocationFactory({
+const location = createLocationFactory({
   computed,
   currentPath: router.currentPath
 });
 
-const location = locationFactory();
+const loc = location();
 
 // Access URL components reactively
 effect(() => {
-  console.log('Pathname:', location.pathname());
-  console.log('Query params:', location.query());
-  console.log('Hash:', location.hash());
+  console.log('Pathname:', loc.pathname());
+  console.log('Query params:', loc.query());
+  console.log('Hash:', loc.hash());
 });
 ```
 

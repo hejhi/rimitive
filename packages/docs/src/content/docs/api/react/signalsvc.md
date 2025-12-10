@@ -32,8 +32,8 @@ export type SignalSvc = {
 
 
 ```tsx
-import { compose, coreExtensions } from '@lattice/signals';
+import { createSignals } from '@lattice/signals';
 
-const svc: SignalSvc = compose(...coreExtensions);
+const svc: SignalSvc = createSignals()();
 ```
 

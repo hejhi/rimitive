@@ -13,12 +13,10 @@ sidebar:
 
 ## EffectFactory type
 
-ServiceDefinition for the effect primitive. This is what gets composed into a service context.
+The effect factory function type
 
 **Signature:**
 
 ```typescript
-export type EffectFactory = ServiceDefinition<'effect', (fn: () => void | (() => void)) => () => void>;
+export type EffectFactory = (fn: () => void | (() => void)) => () => void;
 ```
-**References:** [ServiceDefinition](../../lattice/servicedefinition/)
-

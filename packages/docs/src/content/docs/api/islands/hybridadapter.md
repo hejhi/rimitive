@@ -22,5 +22,5 @@ export type HybridAdapter = Adapter<DOMAdapterConfig> & {
     switchToFallback: () => void;
 };
 ```
-**References:** [Adapter](../../view/adapter/)<!-- -->, [DOMAdapterConfig](../../view/domadapterconfig/)
+**References:** [Adapter](../../view/adapter/)
 

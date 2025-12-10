@@ -19,9 +19,9 @@ Root context returned by router.root() Provides scoped route creation and a crea
 
 ```typescript
 export type RootContext<TConfig extends AdapterConfig> = {
-    create: (...children: RouteSpec<TConfig['baseElement']>[]) => RefSpec<TConfig['baseElement']>;
+    create: (...children: Route<TConfig['baseElement']>[]) => RefSpec<TConfig['baseElement']>;
     route: RouteMethod<TConfig>;
 };
 ```
-**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RouteSpec](../routespec/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [RouteMethod](../routemethod/)
+**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [Route](../route/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [RouteMethod](../routemethod/)
 

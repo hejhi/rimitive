@@ -15,12 +15,12 @@ sidebar:
 
 Standalone connect function - doesn't require a router instance
 
-Creates a connected component that receives route context (children, params) when mounted via router.mount(). Works identically on server and client.
+Creates a connected component that receives the service and route context as separate arguments. This keeps the service "owned" by the user while making route-specific data explicit.
 
 **Signature:**
 
 ```typescript
-export declare function connect<TConfig extends AdapterConfig, TElement extends TConfig['baseElement'] = TConfig['baseElement'], TUserProps = Record<string, unknown>>(wrapper: (routeContext: RouteContext<TConfig>) => (userProps: TUserProps) => RefSpec<TElement>): (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
+export declare function connect<TConfig extends AdapterConfig, TUserProps = Record<string, unknown>>(wrapper: (svc: ConnectedSvc<TConfig>, routeCtx: RouteContext<TConfig>) => (userProps: TUserProps) => RefSpec<TConfig['baseElement']>): (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>;
 ```
 
 ## Parameters
@@ -48,7 +48,7 @@ wrapper
 
 </td><td>
 
-(routeContext: [RouteContext](../routecontext/)<!-- -->&lt;TConfig&gt;) =&gt; (userProps: TUserProps) =&gt; [RefSpec](../../view/refspec/)<!-- -->&lt;TElement&gt;
+(svc: [ConnectedSvc](../connectedsvc/)<!-- -->&lt;TConfig&gt;, routeCtx: [RouteContext](../routecontext/)<!-- -->&lt;TConfig&gt;) =&gt; (userProps: TUserProps) =&gt; [RefSpec](../../view/refspec/)<!-- -->&lt;TConfig\['baseElement'\]&gt;
 
 
 </td><td>
@@ -59,18 +59,19 @@ wrapper
 
 **Returns:**
 
-(...args: \[TUserProps?\]) =&gt; (routeContext: [RouteContext](../routecontext/)<!-- -->&lt;TConfig&gt;) =&gt; [RefSpec](../../view/refspec/)<!-- -->&lt;TElement&gt;
+(...args: \[TUserProps?\]) =&gt; (routeContext: [RouteContext](../routecontext/)<!-- -->&lt;TConfig&gt;) =&gt; [RefSpec](../../view/refspec/)<!-- -->&lt;TConfig\['baseElement'\]&gt;
 
 ## Example
 
 
 ```typescript
-const Layout = connect(({ children, params }) => (props) => {
-  return el('div')
-    .class('layout')(
-      el('h1')()('My App'),
-      ...children ?? []
-    );
+const Layout = connect((svc, { children, params }) => () => {
+  const { el, navigate } = svc;
+  return el('div').props({ class: 'layout' })(
+    el('h1')('My App'),
+    el('button').props({ onclick: () => navigate('/') })('Home'),
+    ...children ?? []
+  );
 });
 ```
 

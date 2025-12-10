@@ -29,5 +29,5 @@ export type ClientApp = {
     };
 };
 ```
-**References:** [IslandsClientService](../islandsclientservice/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [NodeRef](../../view/noderef/)<!-- -->, [IslandComponent](../islandcomponent/)<!-- -->, [Adapter](../../view/adapter/)<!-- -->, [DOMAdapterConfig](../../view/domadapterconfig/)
+**References:** [IslandsClientService](../islandsclientservice/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [NodeRef](../../view/noderef/)<!-- -->, [IslandComponent](../islandcomponent/)<!-- -->, [Adapter](../../view/adapter/)
 

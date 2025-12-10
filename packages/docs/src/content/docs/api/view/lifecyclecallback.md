@@ -26,9 +26,10 @@ export type LifecycleCallback<TElement> = (element: TElement) => void | (() => v
 
 ```typescript
 import type { LifecycleCallback } from '@lattice/view/types';
+import { createSignals } from '@lattice/signals/presets/core';
 import { createDOMView } from '@lattice/view/presets/dom';
 
-const { el } = createDOMView();
+const { el } = createDOMView({ signals: createSignals() })();
 
 // Simple callback
 const autofocus: LifecycleCallback<HTMLInputElement> = (elem) => {

@@ -14,18 +14,16 @@ sidebar:
 
 ## compose() function
 
-Compose service factories into a unified context with shared dependencies.
+Compose modules into a unified context.
 
-Returns a `use()` function that provides access to the composed context: - `use()` - Returns the service context directly - `use(callback)` - Passes the context to callback and returns its result
+Resolves the dependency graph automatically - you only need to pass the modules you want, and their dependencies are included transitively.
 
-This is the primary way to create a Lattice context. It supports three patterns:
-
-\*\*Pattern 1: Factory object + deps\*\* (recommended for most cases) Pass an object of service factories and shared dependencies.
+Returns a `use()` function that provides access to the composed context: - `use()` - Returns the context directly - `use(callback)` - Passes the context to callback and returns its result
 
 **Signature:**
 
 ```typescript
-export declare function compose<T extends Record<string, DefinedService>, TDeps extends ExtractDeps<T>>(factories: T, deps: TDeps, options?: CreateContextOptions): Use<Svc<T>>;
+export declare function compose<TModules extends AnyModule[]>(...modules: TModules): Use<ComposedContext<TModules>>;
 ```
 
 ## Parameters
@@ -48,45 +46,15 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-factories
+modules
 
 
 </td><td>
 
-T
+TModules
 
 
 </td><td>
-
-
-</td></tr>
-<tr><td>
-
-deps
-
-
-</td><td>
-
-TDeps
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-options
-
-
-</td><td>
-
-[CreateContextOptions](../createcontextoptions/)
-
-
-</td><td>
-
-_(Optional)_
 
 
 </td></tr>
@@ -94,55 +62,50 @@ _(Optional)_
 
 **Returns:**
 
-[Use](../use/)<!-- -->&lt;[Svc](../svc/)<!-- -->&lt;T&gt;&gt;
-
-A `use()` function for accessing the composed service context
+[Use](../use/)<!-- -->&lt;[ComposedContext](../composedcontext/)<!-- -->&lt;TModules&gt;&gt;
 
 ## Example 1
 
+Basic usage
 
 ```ts
 import { compose } from '@lattice/lattice';
 import { Signal, Computed, Effect } from '@lattice/signals';
-import { deps } from '@lattice/signals/presets/core';
 
-const deps = deps();
-const use = compose(
-  { signal: Signal(), computed: Computed(), effect: Effect() },
-  deps
-);
+const use = compose(Signal, Computed, Effect);
+const { signal, computed, effect } = use();
 
-// Get the service directly
-const { signal, computed } = use();
-
-// Or wrap a component
-const Counter = use(({ signal }) => () => {
-  const count = signal(0);
-  return count;
-});
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+effect(() => console.log(doubled()));
 ```
-\*\*Pattern 2: Pre-created ServiceDefinitions\*\* Pass already-instantiated service definitions.
 
 ## Example 2
 
+With instrumentation
 
 ```ts
-const signalService = Signal().create(deps);
-const computedService = Computed().create(deps);
+import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
+import { Signal, Computed } from '@lattice/signals';
 
-const use = compose(signalService, computedService);
-const { signal, computed } = use();
+const use = compose(Signal, Computed, {
+  instrumentation: createInstrumentation({
+    providers: [devtoolsProvider()],
+  }),
+});
 ```
-\*\*Pattern 3: With instrumentation\*\* Add debugging/profiling to any composition pattern.
 
 ## Example 3
 
+Component pattern
 
 ```ts
-const use = compose(
-  { signal: Signal(), computed: Computed() },
-  deps,
-  { instrumentation }
-);
+const Counter = use(({ signal, computed }) => () => {
+  const count = signal(0);
+  return {
+    value: computed(() => count()),
+    increment: () => count(c => c + 1),
+  };
+});
 ```
 

@@ -50,7 +50,7 @@ props
 
 </td><td>
 
-[ElementProps](../../view/elementprops/)<!-- -->&lt;[DOMAdapterConfig](../../view/domadapterconfig/)<!-- -->, 'a'&gt; &amp; { href: string; }
+ElementProps&lt;DOMAdapterConfig, 'a'&gt; &amp; { href: string; }
 
 
 </td><td>

@@ -13,7 +13,7 @@ sidebar:
 
 ## UnionToIntersection type
 
-Utility type: Convert a union to an intersection. Used internally to combine dependency requirements.
+Utility type: Convert a union to an intersection. Used internally to combine types.
 
 **Signature:**
 

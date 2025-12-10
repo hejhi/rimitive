@@ -20,8 +20,8 @@ Route-specific metadata
 ```typescript
 export type RouteMetadata<TConfig extends AdapterConfig> = {
     relativePath: string;
-    rebuild: (parentPath: string) => RouteSpec<TConfig['baseElement']>;
+    rebuild: (parentPath: string) => Route<TConfig['baseElement']>;
 };
 ```
-**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RouteSpec](../routespec/)
+**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [Route](../route/)
 

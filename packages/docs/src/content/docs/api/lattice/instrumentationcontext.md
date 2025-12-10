@@ -15,7 +15,7 @@ sidebar:
 
 Instrumentation context for debugging and profiling.
 
-Passed to the `instrument` hook of services when instrumentation is enabled.
+Passed to the `instrument` hook of modules when instrumentation is enabled.
 
 **Signature:**
 
@@ -39,23 +39,16 @@ export type InstrumentationContext = {
 
 
 ```ts
-const signalService: ServiceDefinition<'signal', SignalImpl> = {
+const Signal = defineModule({
   name: 'signal',
-  impl: createSignal,
-  instrument(impl, instr, ctx) {
+  create: ({ graphEdges }) => (value) => createSignal(value, graphEdges),
+  instrument(impl, instr) {
     return (value) => {
-      const { id, resource: signal } = instr.register(impl(value), 'signal');
-
-      // Emit event on creation
-      instr.emit({
-        type: 'signal:create',
-        timestamp: Date.now(),
-        data: { id, initialValue: value },
-      });
-
-      return signal;
+      const sig = impl(value);
+      instr.register(sig, 'signal');
+      return sig;
     };
   },
-};
+});
 ```
 

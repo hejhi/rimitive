@@ -13,12 +13,12 @@ sidebar:
 
 ## useLatticeContext() function
 
-Create a Lattice context with custom extensions that is scoped to the component lifecycle. The context will be automatically disposed when the component unmounts.
+Create a Lattice context with modules that is scoped to the component lifecycle. The context will be automatically disposed when the component unmounts.
 
 **Signature:**
 
 ```typescript
-export declare function useLatticeContext<E extends readonly ServiceDefinition<string, unknown>[]>(...extensions: E): LatticeContext<E>;
+export declare function useLatticeContext<M extends Module[]>(...modules: M): ComposedContext<M>;
 ```
 
 ## Parameters
@@ -41,17 +41,17 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-extensions
+modules
 
 
 </td><td>
 
-E
+M
 
 
 </td><td>
 
-The Lattice extensions to include in the context
+The Lattice modules to include in the context
 
 
 </td></tr>
@@ -59,22 +59,22 @@ The Lattice extensions to include in the context
 
 **Returns:**
 
-[LatticeContext](../../lattice/latticecontext/)<!-- -->&lt;E&gt;
+[ComposedContext](../../lattice/composedcontext/)<!-- -->&lt;M&gt;
 
-A context with methods from all provided extensions
+A context with implementations from all provided modules
 
 ## Example 1
 
 
 ```tsx
-import { signalExtension, computedExtension } from '@lattice/signals';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
 function App() {
-  // Create a context with specific extensions
-  const context = useLatticeContext(signalExtension, computedExtension);
+  // Create a context with specific modules
+  const context = useLatticeContext(SignalModule, ComputedModule, EffectModule);
 
   const count = useRef(context.signal(0));
-  const doubled = useRef(context.computed(() => count.current.value * 2));
+  const doubled = useRef(context.computed(() => count.current() * 2));
 
   return <div>...</div>;
 }
@@ -84,14 +84,18 @@ function App() {
 
 
 ```tsx
-// For convenience with signals, you can use coreExtensions
-import { coreExtensions } from '@lattice/signals';
+// For most use cases, prefer createSignals() instead of useLatticeContext
+import { createSignals } from '@lattice/signals';
 
 function TodoApp() {
-  const context = useLatticeContext(...coreExtensions);
+  const svcRef = useRef(createSignals()());
+  const { signal } = svcRef.current;
 
-  const todos = useRef(context.signal([]));
-  const filter = useRef(context.signal('all'));
+  const todos = useRef(signal([]));
+  const filter = useRef(signal('all'));
+
+  // Dispose on unmount
+  useEffect(() => () => svcRef.current.dispose(), []);
 
   return (
     <AppContext.Provider value={{ todos: todos.current, filter: filter.current }}>

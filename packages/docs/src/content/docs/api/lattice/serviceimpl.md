@@ -13,21 +13,12 @@ sidebar:
 
 ## ServiceImpl type
 
-Extract the implementation type from a ServiceDefinition.
+Extract the implementation type from a Module.
 
 **Signature:**
 
 ```typescript
-export type ServiceImpl<TService> = TService extends ServiceDefinition<string, infer M> ? M : never;
+export type ModuleImpl<T> = T extends Module<string, infer TImpl, unknown> ? TImpl : never;
 ```
-**References:** [ServiceDefinition](../servicedefinition/)
-
-## Example
-
-
-```ts
-type SignalDef = ServiceDefinition<'signal', <T>(v: T) => SignalFn<T>>;
-type SignalImpl = ServiceImpl<SignalDef>;
-// SignalImpl = <T>(v: T) => SignalFn<T>
-```
+**References:** [Module](../module/)
 

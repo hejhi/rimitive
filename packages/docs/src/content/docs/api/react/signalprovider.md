@@ -64,9 +64,9 @@ ReactNode
 
 ```tsx
 import { SignalProvider } from '@lattice/react';
-import { compose, coreExtensions } from '@lattice/signals';
+import { createSignals } from '@lattice/signals';
 
-const svc = compose(...coreExtensions);
+const svc = createSignals()();
 
 function App() {
   return (

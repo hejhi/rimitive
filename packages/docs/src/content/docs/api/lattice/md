@@ -28,33 +28,22 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[compose(factories, deps, options)](../compose/)
+[compose(modules)](../compose/)
 
 
 </td><td>
 
-Compose service factories into a unified context with shared dependencies.
+Compose modules into a unified context.
 
-Returns a `use()` function that provides access to the composed context: - `use()` - Returns the service context directly - `use(callback)` - Passes the context to callback and returns its result
+Resolves the dependency graph automatically - you only need to pass the modules you want, and their dependencies are included transitively.
 
-This is the primary way to create a Lattice context. It supports three patterns:
-
-\*\*Pattern 1: Factory object + deps\*\* (recommended for most cases) Pass an object of service factories and shared dependencies.
+Returns a `use()` function that provides access to the composed context: - `use()` - Returns the context directly - `use(callback)` - Passes the context to callback and returns its result
 
 
 </td></tr>
 <tr><td>
 
-[compose(services)](../compose/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[compose(options, services)](../compose/)
+[compose(args)](../compose/)
 
 
 </td><td>
@@ -105,16 +94,14 @@ Type overloads provide precise return types: - `enabled: false` → always retur
 </td></tr>
 <tr><td>
 
-[defineService(factory)](../defineservice/)
+[defineModule(definition)](../definemodule/)
 
 
 </td><td>
 
-Define a composable service factory with dependency injection.
+Define a module - the fundamental building block of Lattice composition.
 
-This is the foundational building block for creating Lattice services. It implements a double-function pattern: 1. Outer function receives dependencies (injected at composition time) 2. Inner function receives user arguments (passed when creating instances)
-
-The returned factory has a `.create(deps)` method that wires dependencies.
+Modules declare dependencies on other modules and provide a create function that receives resolved dependencies and returns the implementation.
 
 
 </td></tr>
@@ -138,9 +125,107 @@ Sends instrumentation events to the Lattice DevTools browser extension via `wind
 
 </td><td>
 
-Extend a composed service with additional functionality.
+Extend a composed context with additional functionality.
 
-Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`<!-- -->. This preserves the composition pattern through extensions, allowing further chaining with additional `extend` calls.
+Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`<!-- -->.
+
+
+</td></tr>
+<tr><td>
+
+[isDevtoolsAvailable()](../isdevtoolsavailable/)
+
+
+</td><td>
+
+Check if Lattice DevTools extension is available in the current environment.
+
+
+</td></tr>
+<tr><td>
+
+[isModule(value)](../ismodule/)
+
+
+</td><td>
+
+Check if a value is a Module
+
+
+</td></tr>
+</tbody></table>
+
+## Interfaces
+
+<table><thead><tr><th>
+
+Interface
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+[AnyModule](../anymodule/)
+
+
+</td><td>
+
+Base module interface for dependency arrays. Uses interface + method syntax for bivariant function parameters. This allows Module<specific> to be assignable to AnyModule.
+
+
+</td></tr>
+<tr><td>
+
+[Module](../module/)
+
+
+</td><td>
+
+A module definition - the unit of composition in Lattice.
+
+Modules declare their dependencies and provide a create function that receives resolved dependencies and returns the implementation.
+
+
+</td></tr>
+<tr><td>
+
+[ModuleDefinition](../moduledefinition/)
+
+
+</td><td>
+
+Input type for defineModule - same as Module but without status and with optional dependencies.
+
+
+</td></tr>
+</tbody></table>
+
+## Variables
+
+<table><thead><tr><th>
+
+Variable
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+[STATUS\_MODULE](../status_module/)
+
+
+</td><td>
+
+Status constant for module type discrimination
 
 
 </td></tr>
@@ -161,25 +246,25 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[CreateContextOptions](../createcontextoptions/)
+[ComposedContext](../composedcontext/)
 
 
 </td><td>
 
-Options for creating a composed context
+The composed context type from a tuple of Modules.
+
+Maps module names to their implementations and adds a `dispose()` method.
 
 
 </td></tr>
 <tr><td>
 
-[DefinedService](../definedservice/)
+[ComposeOptions](../composeoptions/)
 
 
 </td><td>
 
-A service factory returned by `defineService()`<!-- -->.
-
-Has a `.create(deps)` method that wires dependencies. This is what you pass to `compose()`<!-- -->.
+Options for composing modules
 
 
 </td></tr>
@@ -191,19 +276,6 @@ Has a `.create(deps)` method that wires dependencies. This is what you pass to `
 </td><td>
 
 Options for the DevTools instrumentation provider.
-
-
-</td></tr>
-<tr><td>
-
-[ExtractDeps](../extractdeps/)
-
-
-</td><td>
-
-Extract the combined dependency type from a record of DefinedServices.
-
-Used by `compose()` to infer the required deps parameter.
 
 
 </td></tr>
@@ -227,7 +299,7 @@ Configuration for creating an instrumentation context.
 
 Instrumentation context for debugging and profiling.
 
-Passed to the `instrument` hook of services when instrumentation is enabled.
+Passed to the `instrument` hook of modules when instrumentation is enabled.
 
 
 </td></tr>
@@ -257,27 +329,34 @@ Providers are the output targets for instrumentation data. Examples: DevTools, l
 </td></tr>
 <tr><td>
 
-[LatticeContext](../latticecontext/)
+[ModuleDeps](../moduledeps/)
 
 
 </td><td>
 
-The composed context type for a tuple of ServiceDefinitions.
-
-Maps service names to their implementations and adds a `dispose()` method.
+Helper type to extract the deps type from a Module
 
 
 </td></tr>
 <tr><td>
 
-[Service](../service/)
+[ModuleImpl](../moduleimpl/)
 
 
 </td><td>
 
-A factory that creates service instances with injected dependencies.
+Helper type to extract the implementation type from a Module
 
-Services are created by `defineService` and have a `.create(deps)` method that wires dependencies and returns a `ServiceDefinition`<!-- -->.
+
+</td></tr>
+<tr><td>
+
+[ModuleName](../modulename/)
+
+
+</td><td>
+
+Helper type to extract the name from a Module
 
 
 </td></tr>
@@ -288,22 +367,9 @@ Services are created by `defineService` and have a `.create(deps)` method that w
 
 </td><td>
 
-Context provided to services for lifecycle management.
+Context provided to modules for lifecycle management.
 
-Passed to `init`<!-- -->, `destroy`<!-- -->, `adapt`<!-- -->, and `instrument` hooks.
-
-
-</td></tr>
-<tr><td>
-
-[ServiceDefinition](../servicedefinition/)
-
-
-</td><td>
-
-A service definition that can be composed into a Lattice context.
-
-ServiceDefinitions are the building blocks of Lattice composition. They describe an implementation plus optional lifecycle hooks.
+Passed to `init`<!-- -->, `destroy`<!-- -->, and `instrument` hooks.
 
 
 </td></tr>
@@ -314,7 +380,7 @@ ServiceDefinitions are the building blocks of Lattice composition. They describe
 
 </td><td>
 
-Extract the implementation type from a ServiceDefinition.
+Extract the implementation type from a Module.
 
 
 </td></tr>
@@ -325,20 +391,7 @@ Extract the implementation type from a ServiceDefinition.
 
 </td><td>
 
-Extract the name from a ServiceDefinition.
-
-
-</td></tr>
-<tr><td>
-
-[Svc](../svc/)
-
-
-</td><td>
-
-The composed context type for object-based composition.
-
-Extracts impl types from service factories, preserving key names.
+Extract the name from a Module.
 
 
 </td></tr>
@@ -349,7 +402,7 @@ Extracts impl types from service factories, preserving key names.
 
 </td><td>
 
-Utility type: Convert a union to an intersection. Used internally to combine dependency requirements.
+Utility type: Convert a union to an intersection. Used internally to combine types.
 
 
 </td></tr>
@@ -360,9 +413,9 @@ Utility type: Convert a union to an intersection. Used internally to combine dep
 
 </td><td>
 
-A callable returned by `compose()` that provides access to the service context.
+A callable returned by `compose()` that provides access to the module context.
 
-Can be called in two ways: - `use()` - Returns the service context directly - `use(callback)` - Passes the context to callback and returns its result
+Can be called in two ways: - `use()` - Returns the context directly - `use(callback)` - Passes the context to callback and returns its result
 
 
 </td></tr>

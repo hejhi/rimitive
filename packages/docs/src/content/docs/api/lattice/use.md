@@ -13,9 +13,9 @@ sidebar:
 
 ## Use type
 
-A callable returned by `compose()` that provides access to the service context.
+A callable returned by `compose()` that provides access to the module context.
 
-Can be called in two ways: - `use()` - Returns the service context directly - `use(callback)` - Passes the context to callback and returns its result
+Can be called in two ways: - `use()` - Returns the context directly - `use(callback)` - Passes the context to callback and returns its result
 
 **Signature:**
 
@@ -30,15 +30,18 @@ export type Use<TSvc> = {
 
 
 ```ts
-const use = compose({ signal: Signal() }, deps);
+import { compose } from '@lattice/lattice';
+import { Signal, Computed } from '@lattice/signals';
 
-// Get the service directly
+const use = compose(Signal, Computed);
+
+// Get the context directly
 const { signal, computed } = use();
 
-// Wrap a component with service access
+// Wrap a component with context access
 const Counter = use(({ signal, computed }) => () => {
   const count = signal(0);
-  return el('div')(computed(() => count()));
+  return computed(() => count());
 });
 ```
 

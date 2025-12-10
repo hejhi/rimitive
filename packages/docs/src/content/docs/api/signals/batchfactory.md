@@ -13,12 +13,10 @@ sidebar:
 
 ## BatchFactory type
 
-ServiceDefinition for the batch primitive. This is what gets composed into a service context.
+The batch function type - groups multiple signal writes into a single update cycle.
 
 **Signature:**
 
 ```typescript
-export type BatchFactory = ServiceDefinition<'batch', <T>(fn: () => T) => T>;
+export type BatchFactory = <T>(fn: () => T) => T;
 ```
-**References:** [ServiceDefinition](../../lattice/servicedefinition/)
-

@@ -13,21 +13,12 @@ sidebar:
 
 ## ServiceName type
 
-Extract the name from a ServiceDefinition.
+Extract the name from a Module.
 
 **Signature:**
 
 ```typescript
-export type ServiceName<TService> = TService extends ServiceDefinition<infer N, unknown> ? N : never;
+export type ModuleName<T> = T extends Module<infer TName, unknown, unknown> ? TName : never;
 ```
-**References:** [ServiceDefinition](../servicedefinition/)
-
-## Example
-
-
-```ts
-type SignalDef = ServiceDefinition<'signal', SignalImpl>;
-type Name = ServiceName<SignalDef>;
-// Name = 'signal'
-```
+**References:** [Module](../module/)
 

@@ -13,143 +13,6 @@ sidebar:
 
 ## signals package
 
-## Functions
-
-<table><thead><tr><th>
-
-Function
-
-
-</th><th>
-
-Description
-
-
-</th></tr></thead>
-<tbody><tr><td>
-
-[Batch(args\_0)](../batch/)
-
-
-</td><td>
-
-Create a Batch service factory.
-
-Batch groups multiple signal writes into a single update cycle, preventing intermediate effect executions.
-
-\*\*Most users should use the preset instead:\*\*
-
-```ts
-import { createSignals } from '@lattice/signals/presets/core';
-const { batch } = createSignals();
-```
-
-
-</td></tr>
-<tr><td>
-
-[Computed(args\_0)](../computed/)
-
-
-</td><td>
-
-Create a Computed service factory.
-
-Computeds are derived values that automatically track their dependencies and recompute lazily when those dependencies change.
-
-\*\*Most users should use the preset instead:\*\*
-
-```ts
-import { createSignals } from '@lattice/signals/presets/core';
-const { computed } = createSignals();
-```
-
-
-</td></tr>
-<tr><td>
-
-[createSignals()](../createsignals/)
-
-
-</td><td>
-
-Create a fully-configured signals service.
-
-This is the main entry point for using Lattice signals. Returns a service with all primitives wired up and ready to use.
-
-
-</td></tr>
-<tr><td>
-
-[deps()](../deps/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[Effect(args\_0)](../effect/)
-
-
-</td><td>
-
-Create an Effect service factory.
-
-Effects are side effects that run when their dependencies change. They run immediately on creation and re-run whenever any dependency changes.
-
-\*\*Most users should use the preset instead:\*\*
-
-```ts
-import { createSignals } from '@lattice/signals/presets/core';
-const { effect } = createSignals();
-```
-
-
-</td></tr>
-<tr><td>
-
-[Signal(args\_0)](../signal/)
-
-
-</td><td>
-
-Create a Signal service factory.
-
-Signals are reactive containers that notify subscribers when their value changes. They are the foundation of the reactivity system.
-
-\*\*Most users should use the preset instead:\*\*
-
-```ts
-import { createSignals } from '@lattice/signals/presets/core';
-const { signal } = createSignals();
-```
-
-
-</td></tr>
-<tr><td>
-
-[Subscribe(args\_0)](../subscribe/)
-
-
-</td><td>
-
-Create a Subscribe service factory.
-
-Subscribe tracks dependencies only from the source function, not the callback. This is useful when you want to react to specific signals without tracking all dependencies used in the callback.
-
-\*\*Most users should use the preset instead:\*\*
-
-```ts
-import { createSignals } from '@lattice/signals/presets/core';
-const { subscribe } = createSignals();
-```
-
-
-</td></tr>
-</tbody></table>
-
 ## Type Aliases
 
 <table><thead><tr><th>
@@ -170,29 +33,7 @@ Description
 
 </td><td>
 
-ServiceDefinition for the batch primitive. This is what gets composed into a service context.
-
-
-</td></tr>
-<tr><td>
-
-[BatchOptions](../batchoptions/)
-
-
-</td><td>
-
-Options for customizing Batch behavior.
-
-
-</td></tr>
-<tr><td>
-
-[BatchService](../batchservice/)
-
-
-</td><td>
-
-The instantiable service returned by Batch().
+The batch function type - groups multiple signal writes into a single update cycle.
 
 
 </td></tr>
@@ -203,7 +44,7 @@ The instantiable service returned by Batch().
 
 </td><td>
 
-ServiceDefinition for the computed primitive. This is what gets composed into a service context.
+Computed factory function type - creates computed values from computation functions
 
 
 </td></tr>
@@ -222,94 +63,12 @@ Computeds are lazy: they only recompute when read and their dependencies have ch
 </td></tr>
 <tr><td>
 
-[ComputedOptions](../computedoptions/)
-
-
-</td><td>
-
-Options for customizing Computed behavior.
-
-
-</td></tr>
-<tr><td>
-
-[ComputedService](../computedservice/)
-
-
-</td><td>
-
-The instantiable service returned by Computed().
-
-
-</td></tr>
-<tr><td>
-
-[Consumer](../consumer/)
-
-
-</td><td>
-
-Consumer tracking state - tracks the currently active consumer during reactive reads
-
-
-</td></tr>
-<tr><td>
-
 [EffectFactory](../effectfactory/)
 
 
 </td><td>
 
-ServiceDefinition for the effect primitive. This is what gets composed into a service context.
-
-
-</td></tr>
-<tr><td>
-
-[EffectOptions](../effectoptions/)
-
-
-</td><td>
-
-Options for customizing Effect behavior.
-
-
-</td></tr>
-<tr><td>
-
-[EffectService](../effectservice/)
-
-
-</td><td>
-
-The instantiable service returned by Effect().
-
-
-</td></tr>
-<tr><td>
-
-[GraphEdges](../graphedges/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[GraphTraversal](../graphtraversal/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[PullPropagator](../pullpropagator/)
-
-
-</td><td>
+The effect factory function type
 
 
 </td></tr>
@@ -341,21 +100,12 @@ Call with no arguments to read the current value. Reading inside a reactive cont
 </td></tr>
 <tr><td>
 
-[Scheduler](../scheduler/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
 [SignalFactory](../signalfactory/)
 
 
 </td><td>
 
-ServiceDefinition for the signal primitive. This is what gets composed into a service context.
+The signal factory function type
 
 
 </td></tr>
@@ -374,58 +124,12 @@ Call with no arguments to read, call with a value to write. Use `.peek()` to rea
 </td></tr>
 <tr><td>
 
-[SignalOptions](../signaloptions/)
-
-
-</td><td>
-
-Options for customizing Signal behavior.
-
-
-</td></tr>
-<tr><td>
-
-[SignalService](../signalservice/)
-
-
-</td><td>
-
-The instantiable service returned by Signal().
-
-
-</td></tr>
-<tr><td>
-
-[SignalsSvc](../signalssvc/)
-
-
-</td><td>
-
-The type of the signals service returned by `createSignals()()`<!-- -->.
-
-Contains all signal primitives: `signal`<!-- -->, `computed`<!-- -->, `effect`<!-- -->, `batch`<!-- -->, `subscribe`<!-- -->, plus a `dispose()` method for cleanup.
-
-
-</td></tr>
-<tr><td>
-
 [SubscribeCallback](../subscribecallback/)
 
 
 </td><td>
 
 Callback invoked when the source value changes
-
-
-</td></tr>
-<tr><td>
-
-[SubscribeFactory](../subscribefactory/)
-
-
-</td><td>
-
-ServiceDefinition for the subscribe primitive. This is what gets composed into a service context.
 
 
 </td></tr>
@@ -442,43 +146,12 @@ Subscribe function type - tracks source dependencies, calls callback on change.
 </td></tr>
 <tr><td>
 
-[SubscribeOptions](../subscribeoptions/)
-
-
-</td><td>
-
-Options for customizing Subscribe behavior.
-
-
-</td></tr>
-<tr><td>
-
-[SubscribeService](../subscribeservice/)
-
-
-</td><td>
-
-The instantiable service returned by Subscribe().
-
-
-</td></tr>
-<tr><td>
-
 [UnsubscribeFunction](../unsubscribefunction/)
 
 
 </td><td>
 
 Function to stop the subscription
-
-
-</td></tr>
-<tr><td>
-
-[Visit](../visit/)
-
-
-</td><td>
 
 
 </td></tr>

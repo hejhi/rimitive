@@ -28,6 +28,17 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
+[composePath(parentPath, childPath)](../composepath/)
+
+
+</td><td>
+
+Compose a parent path with a child path
+
+
+</td></tr>
+<tr><td>
+
 [connect(wrapper)](../connect/)
 
 
@@ -35,24 +46,13 @@ Description
 
 Standalone connect function - doesn't require a router instance
 
-Creates a connected component that receives route context (children, params) when mounted via router.mount(). Works identically on server and client.
+Creates a connected component that receives the service and route context as separate arguments. This keeps the service "owned" by the user while making route-specific data explicit.
 
 
 </td></tr>
 <tr><td>
 
-[createLocationFactory()](../createlocationfactory/)
-
-
-</td><td>
-
-Create location factory that provides reactive access to URL state
-
-
-</td></tr>
-<tr><td>
-
-[createRouter(viewSvc, config)](../createrouter/)
+[createLegacyRouter(viewSvc, config)](../createlegacyrouter/)
 
 
 </td><td>
@@ -60,6 +60,28 @@ Create location factory that provides reactive access to URL state
 Create a router instance
 
 The router is a separate app-level service that takes a view service as input. It manages navigation state and provides routing primitives.
+
+
+</td></tr>
+<tr><td>
+
+[createLocationFactory(opts)](../createlocationfactory/)
+
+
+</td><td>
+
+Create a location factory that provides reactive access to URL state
+
+
+</td></tr>
+<tr><td>
+
+[createRouter(deps, routes, options)](../createrouter/)
+
+
+</td><td>
+
+Create a router instance
 
 
 </td></tr>
@@ -100,29 +122,16 @@ Supports exact string matching, path parameters using :paramName syntax, and wil
 
 
 </td></tr>
-</tbody></table>
+<tr><td>
 
-## Variables
-
-<table><thead><tr><th>
-
-Variable
-
-
-</th><th>
-
-Description
-
-
-</th></tr></thead>
-<tbody><tr><td>
-
-[STATUS\_ROUTE\_SPEC](../status_route_spec/)
+[matchPathPrefix(pattern, path)](../matchpathprefix/)
 
 
 </td><td>
 
-Status bit for route specs - next power of 2 after STATUS\_COMMENT (16)
+Matches a URL path against a route pattern (prefix match for parent routes)
+
+Used for routes with children - matches if the path starts with the pattern
 
 
 </td></tr>
@@ -185,6 +194,8 @@ This is the service passed to connected components, enabling them to use whateve
 
 The connect impl signature
 
+Connected components receive the service and route context as separate arguments. This keeps the service "owned" by the user while making route-specific data explicit.
+
 
 </td></tr>
 <tr><td>
@@ -198,30 +209,23 @@ The connect impl signature
 </td></tr>
 <tr><td>
 
-[ElMethod\_2](../elmethod/)
+[LegacyRouter](../legacyrouter/)
 
 
 </td><td>
+
+Router object returned by createRouter Generic over TConfig for type safety with adapter-specific implementations
 
 
 </td></tr>
 <tr><td>
 
-[ElMethod](../elmethod/)
+[LinkFunction](../linkfunction/)
 
 
 </td><td>
 
-
-</td></tr>
-<tr><td>
-
-[LinkFactory](../linkfactory/)
-
-
-</td><td>
-
-Link factory type
+Link function type
 
 Link is DOM-only - no need for generic adapter abstraction
 
@@ -275,6 +279,17 @@ Location - reactive access to URL components
 </td></tr>
 <tr><td>
 
+[MatchedRoute](../matchedroute/)
+
+
+</td><td>
+
+A matched route with its extracted parameters
+
+
+</td></tr>
+<tr><td>
+
 [MatchFunction](../matchfunction/)
 
 
@@ -308,6 +323,17 @@ Root method signature - defines the always-rendered root layout
 </td></tr>
 <tr><td>
 
+[Route](../route/)
+
+
+</td><td>
+
+Route wraps a RefSpec with routing metadata for path composition. Delegates to internal RefSpec via closure.
+
+
+</td></tr>
+<tr><td>
+
 [RouteBuilder](../routebuilder/)
 
 
@@ -319,14 +345,25 @@ A route builder - returned by route() before children are applied
 </td></tr>
 <tr><td>
 
+[RouteConfig](../routeconfig/)
+
+
+</td><td>
+
+Route configuration - pure data, no components
+
+
+</td></tr>
+<tr><td>
+
 [RouteContext](../routecontext/)
 
 
 </td><td>
 
-Route context passed to connect wrapper
+Route context - route-specific data (children, params)
 
-Contains route-specific data (children, params) for routing. Service injection is handled separately via the svc() middleware pattern.
+Passed as the second argument to connected components. Kept separate from the service to maintain explicit ownership.
 
 
 </td></tr>
@@ -392,7 +429,7 @@ Route parameter map extracted from path patterns e.g., '/products/:id' -<!-- -->
 
 </td><td>
 
-Router object returned by createRouter Generic over TConfig for type safety with adapter-specific implementations
+Router instance - reactive state + navigation
 
 
 </td></tr>
@@ -409,14 +446,23 @@ Router configuration
 </td></tr>
 <tr><td>
 
-[RouteSpec](../routespec/)
+[RouterDeps](../routerdeps/)
 
 
 </td><td>
 
-RouteSpec wraps a RefSpec with routing metadata Uses true wrapper pattern - delegates to internal RefSpec via closure Status is ONLY STATUS\_ROUTE\_SPEC (32) - not combined with STATUS\_REF\_SPEC The wrapped RefSpec is kept internal and accessed via delegation
+Dependencies for creating the router These come from the signals module
 
-Note: Does not extend RefSpec to avoid status type conflict. Instead, provides same create type through delegation.
+
+</td></tr>
+<tr><td>
+
+[RouterOptions](../routeroptions/)
+
+
+</td><td>
+
+Router configuration
 
 
 </td></tr>

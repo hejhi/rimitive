@@ -18,9 +18,7 @@ Location factory type
 **Signature:**
 
 ```typescript
-export type LocationFactory = ServiceDefinition<'location', {
-    (): LocationSvc;
-}>;
+export type LocationFactory = () => LocationSvc;
 ```
-**References:** [ServiceDefinition](../../lattice/servicedefinition/)<!-- -->, [LocationSvc](../locationsvc/)
+**References:** [LocationSvc](../locationsvc/)
 

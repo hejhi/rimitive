@@ -20,5 +20,5 @@ Island Svc type - the service type available to island components Use this with 
 ```typescript
 export type IslandSvc = SignalsSvc & DomViewSvc;
 ```
-**References:** [SignalsSvc](../../signals/signalssvc/)<!-- -->, [DomViewSvc](../domviewsvc/)
+**References:** [DomViewSvc](../domviewsvc/)
 

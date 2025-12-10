@@ -13,22 +13,18 @@ sidebar:
 
 ## Router type
 
-Router object returned by createRouter Generic over TConfig for type safety with adapter-specific implementations
+Router instance - reactive state + navigation
 
 **Signature:**
 
 ```typescript
-export type Router<TConfig extends AdapterConfig> = {
-    root: RootMethod<TConfig>;
-    route: RouteMethod<TConfig>;
-    connect: ConnectMethod<TConfig>;
-    navigate: (path: string) => void;
+export type Router = {
+    matches: Readable<MatchedRoute[]>;
     currentPath: Readable<string>;
-    useCurrentPath: (initialPath: string) => Readable<string>;
-    mount: (routeTree: RouteTree<TConfig>) => RefSpec<TConfig['baseElement']>;
-    renderApp: <TElement extends TConfig['baseElement']>(spec: RefSpec<TElement>) => ReturnType<RefSpec<TElement>['create']>;
-    _configType?: TConfig;
+    navigate: (path: string) => void;
+    back: () => void;
+    forward: () => void;
 };
 ```
-**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RootMethod](../rootmethod/)<!-- -->, [RouteMethod](../routemethod/)<!-- -->, [ConnectMethod](../connectmethod/)<!-- -->, [Readable](../../signals/readable/)<!-- -->, [RouteTree](../routetree/)<!-- -->, [RefSpec](../../view/refspec/)
+**References:** [Readable](../../signals/readable/)<!-- -->, [MatchedRoute](../matchedroute/)
 

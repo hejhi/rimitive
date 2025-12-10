@@ -15,12 +15,10 @@ sidebar:
 
 Create a router instance
 
-The router is a separate app-level service that takes a view service as input. It manages navigation state and provides routing primitives.
-
 **Signature:**
 
 ```typescript
-export declare function createRouter<TConfig extends AdapterConfig>(viewSvc: ViewSvc<TConfig>, config?: RouterConfig): Router<TConfig>;
+export declare function createRouter(deps: RouterDeps, routes: RouteConfig[], options?: RouterOptions): Router;
 ```
 
 ## Parameters
@@ -43,31 +41,49 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-viewSvc
+deps
 
 
 </td><td>
 
-[ViewSvc](../viewsvc/)<!-- -->&lt;TConfig&gt;
+[RouterDeps](../routerdeps/)
 
 
 </td><td>
+
+Signal primitives from @<!-- -->lattice/signals
 
 
 </td></tr>
 <tr><td>
 
-config
+routes
 
 
 </td><td>
 
-[RouterConfig](../routerconfig/)
+[RouteConfig](../routeconfig/)<!-- -->\[\]
 
 
 </td><td>
 
-_(Optional)_
+Route configuration (pure data)
+
+
+</td></tr>
+<tr><td>
+
+options
+
+
+</td><td>
+
+[RouterOptions](../routeroptions/)
+
+
+</td><td>
+
+_(Optional)_ Router options
 
 
 </td></tr>
@@ -75,27 +91,29 @@ _(Optional)_
 
 **Returns:**
 
-[Router](../router/)<!-- -->&lt;TConfig&gt;
+[Router](../router/)
 
 ## Example
 
 
 ```typescript
-import { createView } from '@lattice/view';
 import { createRouter } from '@lattice/router';
 
-const view = createView();
-const router = createRouter(view, { initialPath: '/' });
+const routes = [
+  { id: 'home', path: '' },
+  { id: 'about', path: 'about' },
+  { id: 'products', path: 'products', children: [
+    { id: 'product-detail', path: ':id' }
+  ]}
+];
 
-// Define routes
-const App = router.root('/', Layout).create(
-  router.route('/', HomePage)(),
-  router.route('/about', AboutPage)(),
-  router.route('/products/:id', ProductPage)()
-);
+const router = createRouter({ signal, computed }, routes);
 
-// Render the app
-const appRef = router.renderApp(App);
-document.body.appendChild(appRef.element);
+// Use in view layer
+match(router.matches, (matches) => {
+  const route = matches[0];
+  if (!route) return NotFound();
+  return componentMap[route.id]({ params: route.params });
+});
 ```
 

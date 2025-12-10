@@ -17,7 +17,7 @@ sidebar:
 **Signature:**
 
 ```typescript
-export declare function compose<TServices extends readonly ServiceDefinition<string, unknown>[]>(...services: TServices): Use<LatticeContext<TServices>>;
+export declare function compose<TModules extends AnyModule[]>(...args: [...TModules, ComposeOptions]): Use<ComposedContext<TModules>>;
 ```
 
 ## Parameters
@@ -40,12 +40,12 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-services
+args
 
 
 </td><td>
 
-TServices
+\[...TModules, [ComposeOptions](../composeoptions/)<!-- -->\]
 
 
 </td><td>
@@ -56,5 +56,5 @@ TServices
 
 **Returns:**
 
-[Use](../use/)<!-- -->&lt;[LatticeContext](../latticecontext/)<!-- -->&lt;TServices&gt;&gt;
+[Use](../use/)<!-- -->&lt;[ComposedContext](../composedcontext/)<!-- -->&lt;TModules&gt;&gt;
 

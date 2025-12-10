@@ -19,5 +19,3 @@ sidebar:
 ```typescript
 type DomViewSvc = ViewSvc<DOMAdapterConfig>;
 ```
-**References:** [ViewSvc](../../view/viewsvc/)<!-- -->, [DOMAdapterConfig](../../view/domadapterconfig/)
-

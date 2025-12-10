@@ -13,9 +13,9 @@ sidebar:
 
 ## RouteContext type
 
-Route context passed to connect wrapper
+Route context - route-specific data (children, params)
 
-Contains route-specific data (children, params) for routing. Service injection is handled separately via the svc() middleware pattern.
+Passed as the second argument to connected components. Kept separate from the service to maintain explicit ownership.
 
 **Signature:**
 

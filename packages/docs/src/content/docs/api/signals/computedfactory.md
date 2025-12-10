@@ -13,12 +13,12 @@ sidebar:
 
 ## ComputedFactory type
 
-ServiceDefinition for the computed primitive. This is what gets composed into a service context.
+Computed factory function type - creates computed values from computation functions
 
 **Signature:**
 
 ```typescript
-export type ComputedFactory = ServiceDefinition<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
+export type ComputedFactory = <T>(compute: () => T) => ComputedFunction<T>;
 ```
-**References:** [ServiceDefinition](../../lattice/servicedefinition/)<!-- -->, [ComputedFunction](../computedfunction/)
+**References:** [ComputedFunction](../computedfunction/)
 

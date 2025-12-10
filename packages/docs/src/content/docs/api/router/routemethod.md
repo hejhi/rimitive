@@ -18,7 +18,7 @@ Route method signature
 **Signature:**
 
 ```typescript
-export type RouteMethod<TConfig extends AdapterConfig> = (path: string, connectedComponent: (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>) => (...children: RouteSpec<TConfig['baseElement']>[]) => RouteSpec<TConfig['baseElement']>;
+export type RouteMethod<TConfig extends AdapterConfig> = (path: string, connectedComponent: (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>) => (...children: Route<TConfig['baseElement']>[]) => Route<TConfig['baseElement']>;
 ```
-**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RouteContext](../routecontext/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [RouteSpec](../routespec/)
+**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RouteContext](../routecontext/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [Route](../route/)
 

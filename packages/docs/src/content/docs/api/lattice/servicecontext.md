@@ -13,9 +13,9 @@ sidebar:
 
 ## ServiceContext type
 
-Context provided to services for lifecycle management.
+Context provided to modules for lifecycle management.
 
-Passed to `init`<!-- -->, `destroy`<!-- -->, `adapt`<!-- -->, and `instrument` hooks.
+Passed to `init`<!-- -->, `destroy`<!-- -->, and `instrument` hooks.
 
 **Signature:**
 
@@ -30,18 +30,13 @@ export type ServiceContext = {
 
 
 ```ts
-const myService: ServiceDefinition<'my', MyImpl> = {
-  name: 'my',
-  impl: createImpl(),
-  adapt(impl, ctx) {
-    // Check disposal state
-    if (ctx.isDestroyed) throw new Error('Already disposed');
-
+const MyModule = defineModule({
+  name: 'myModule',
+  create: () => createImpl(),
+  init(ctx) {
     // Register cleanup
-    ctx.destroy(() => impl.cleanup());
-
-    return impl;
+    ctx.destroy(() => cleanup());
   },
-};
+});
 ```
 

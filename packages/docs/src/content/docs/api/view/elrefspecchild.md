@@ -31,9 +31,10 @@ export type ElRefSpecChild = string | number | boolean | null | RefSpec<unknown>
 
 ```typescript
 import type { ElRefSpecChild } from '@lattice/view/types';
+import { createSignals } from '@lattice/signals/presets/core';
 import { createDOMView } from '@lattice/view/presets/dom';
 
-const { el, signal, computed } = createDOMView();
+const { el, signal, computed } = createDOMView({ signals: createSignals() })();
 const name = signal('World');
 
 // All valid children types

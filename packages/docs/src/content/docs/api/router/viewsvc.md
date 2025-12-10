@@ -19,11 +19,11 @@ View service that the router depends on
 
 ```typescript
 export type ViewSvc<TConfig extends AdapterConfig> = {
-    el: ElMethod<TConfig>;
-    match: MatchFactory<TConfig['baseElement']>['impl'];
+    el: ElFactory<TConfig>;
+    match: MatchFactory<TConfig['baseElement']>;
     signal: <T>(value: T) => Writable<T>;
     computed: <T>(fn: () => T) => Readable<T>;
 };
 ```
-**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [ElMethod](../elmethod/)<!-- -->, [MatchFactory](../../view/matchfactory/)<!-- -->, [Writable](../../signals/writable/)<!-- -->, [Readable](../../signals/readable/)
+**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [Writable](../../signals/writable/)<!-- -->, [Readable](../../signals/readable/)
 

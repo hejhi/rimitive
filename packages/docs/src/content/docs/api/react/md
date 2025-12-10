@@ -56,12 +56,12 @@ Provides a signal service to all descendant components. Automatically disposes t
 </td></tr>
 <tr><td>
 
-[useLatticeContext(extensions)](../uselatticecontext/)
+[useLatticeContext(modules)](../uselatticecontext/)
 
 
 </td><td>
 
-Create a Lattice context with custom extensions that is scoped to the component lifecycle. The context will be automatically disposed when the component unmounts.
+Create a Lattice context with modules that is scoped to the component lifecycle. The context will be automatically disposed when the component unmounts.
 
 
 </td></tr>

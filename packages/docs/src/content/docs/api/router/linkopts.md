@@ -21,9 +21,7 @@ Link is DOM-only - routing with window.history is a web browser concept
 
 ```typescript
 export type LinkOpts = {
-    el: ElMethod<DOMAdapterConfig>;
+    el: ElFactory<DOMAdapterConfig>;
     navigate: (path: string) => void;
 };
 ```
-**References:** [ElMethod](../elmethod/)<!-- -->, [DOMAdapterConfig](../../view/domadapterconfig/)
-

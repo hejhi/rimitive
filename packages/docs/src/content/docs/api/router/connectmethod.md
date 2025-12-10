@@ -15,10 +15,26 @@ sidebar:
 
 The connect impl signature
 
+Connected components receive the service and route context as separate arguments. This keeps the service "owned" by the user while making route-specific data explicit.
+
 **Signature:**
 
 ```typescript
-export type ConnectMethod<TConfig extends AdapterConfig> = <TElement extends TConfig['baseElement'], TUserProps = Record<string, unknown>>(wrapper: (routeContext: RouteContext<TConfig>) => (userProps: TUserProps) => RefSpec<TElement>) => (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TElement>;
+export type ConnectMethod<TConfig extends AdapterConfig> = <TUserProps = Record<string, unknown>>(wrapper: (svc: ConnectedSvc<TConfig>, routeCtx: RouteContext<TConfig>) => (userProps: TUserProps) => RefSpec<TConfig['baseElement']>) => (...args: [TUserProps?]) => (routeContext: RouteContext<TConfig>) => RefSpec<TConfig['baseElement']>;
 ```
-**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RouteContext](../routecontext/)<!-- -->, [RefSpec](../../view/refspec/)
+**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [ConnectedSvc](../connectedsvc/)<!-- -->, [RouteContext](../routecontext/)<!-- -->, [RefSpec](../../view/refspec/)
+
+## Example
+
+
+```typescript
+const HomePage = connect((svc, { children }) => () => {
+  const { el, navigate } = svc;
+  return el('div')(
+    el('h1')('Welcome'),
+    el('button').props({ onclick: () => navigate('/about') })('About'),
+    ...children ?? []
+  );
+});
+```
 

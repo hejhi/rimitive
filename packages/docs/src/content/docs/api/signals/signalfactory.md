@@ -13,12 +13,12 @@ sidebar:
 
 ## SignalFactory type
 
-ServiceDefinition for the signal primitive. This is what gets composed into a service context.
+The signal factory function type
 
 **Signature:**
 
 ```typescript
-export type SignalFactory = ServiceDefinition<'signal', <T>(value: T) => SignalFunction<T>>;
+export type SignalFactory = <T>(value: T) => SignalFunction<T>;
 ```
-**References:** [ServiceDefinition](../../lattice/servicedefinition/)<!-- -->, [SignalFunction](../signalfunction/)
+**References:** [SignalFunction](../signalfunction/)
 
