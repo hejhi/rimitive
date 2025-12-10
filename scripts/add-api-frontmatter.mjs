@@ -20,6 +20,8 @@ const PACKAGE_MAP = {
   router: 'router',
   islands: 'islands',
   react: 'react',
+  ssr: 'ssr',
+  resource: 'resource',
 };
 
 // Friendly names for sidebar ordering
@@ -30,6 +32,8 @@ const PACKAGE_LABELS = {
   router: '@lattice/router',
   islands: '@lattice/islands',
   react: '@lattice/react',
+  ssr: '@lattice/ssr',
+  resource: '@lattice/resource',
 };
 
 // Sidebar order (lower = higher in sidebar)
@@ -40,6 +44,8 @@ const PACKAGE_ORDER = {
   router: 4,
   islands: 5,
   react: 6,
+  ssr: 7,
+  resource: 8,
 };
 
 // Badge variants for different API kinds

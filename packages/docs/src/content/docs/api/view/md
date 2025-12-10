@@ -28,6 +28,21 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
+[createLoader(opts)](../createloader/)
+
+
+</td><td>
+
+Create a loader for managing async data boundaries.
+
+On the server: - Create loader without initial data - Use load() with IDs to create async boundaries - After render, call getData() to get all resolved data - Serialize data to a script tag in your HTML
+
+On the client: - Create loader with initial data from the script tag - Same load() calls will use cached data instead of fetching
+
+
+</td></tr>
+<tr><td>
+
 [createLoadFactory({ signal })](../createloadfactory/)
 
 
@@ -323,6 +338,17 @@ Linked nodes - nodes that form doubly-linked lists Elements are actual DOM nodes
 </td></tr>
 <tr><td>
 
+[Loader](../loader/)
+
+
+</td><td>
+
+Loader instance returned by createLoader
+
+
+</td></tr>
+<tr><td>
+
 [LoadFactory](../loadfactory/)
 
 
@@ -333,6 +359,17 @@ Load factory type - creates async boundaries with fetcher/renderer pattern
 The renderer receives a state object with reactive properties: - status: Reactive<!-- -->&lt;<!-- -->'pending' \| 'ready' \| 'error'<!-- -->&gt; - data: Reactive<!-- -->&lt;<!-- -->T \| undefined<!-- -->&gt; - error: Reactive<!-- -->&lt;<!-- -->unknown \| undefined<!-- -->&gt;
 
 User controls how to render based on state - typically using match() on state.status.
+
+
+</td></tr>
+<tr><td>
+
+[LoadFn](../loadfn/)
+
+
+</td><td>
+
+Load function with explicit ID for data lookup
 
 
 </td></tr>
