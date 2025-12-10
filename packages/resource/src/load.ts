@@ -54,13 +54,48 @@ export function getAsyncMeta<T>(fragment: FragmentRef<unknown>): AsyncMeta<T> | 
 
 export type LoadOptions = { id?: string };
 
+/**
+ * Load factory type - creates async boundaries with fetcher/renderer pattern
+ *
+ * @example
+ * ```ts
+ * load(
+ *   () => fetch('/api/data').then(r => r.json()),
+ *   (state) => {
+ *     switch (state.status) {
+ *       case 'pending': return el('div')('Loading...');
+ *       case 'error': return el('div')(`Error: ${state.error}`);
+ *       case 'ready': return DataView(state.data);
+ *     }
+ *   }
+ * )
+ * ```
+ */
 export type LoadFactory<TBaseElement> = <T, TElement extends TBaseElement>(
   fetcher: () => Promise<T>,
   renderer: (state: LoadState<T>) => RefSpec<TElement>,
   options?: LoadOptions
 ) => RefSpec<TElement>;
 
-export type LoadFactoryOpts<TConfig extends AdapterConfig> = {
+/**
+ * The load service type - alias for LoadFactory for discoverability.
+ *
+ * Use this type when building custom view service compositions:
+ * @example
+ * ```ts
+ * import { createLoadFactory, type LoadService } from '@lattice/resource';
+ *
+ * const load: LoadService<DOMAdapterConfig> = createLoadFactory(opts);
+ * ```
+ */
+export type LoadService<TConfig extends AdapterConfig> = LoadFactory<
+  TConfig['baseElement']
+>;
+
+/**
+ * Options for createLoadFactory
+ */
+export type LoadOpts<TConfig extends AdapterConfig> = {
   signal: SignalFactory;
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
@@ -76,7 +111,7 @@ export function createLoadFactory<TConfig extends AdapterConfig>({
   disposeScope,
   scopedEffect,
   getElementScope,
-}: LoadFactoryOpts<TConfig>): LoadFactory<TConfig['baseElement']> {
+}: LoadOpts<TConfig>): LoadFactory<TConfig['baseElement']> {
   type TBaseElement = TConfig['baseElement'];
 
   const match = createMatchFactory<TConfig>({
@@ -200,21 +235,24 @@ export function triggerAsyncFragments<TElement>(nodeRef: NodeRef<TElement>): voi
 // Module Definition
 // =============================================================================
 
-export const LoadModule = defineModule({
-  name: 'load',
-  dependencies: [SignalModule, ScopesModule],
-  create: <TConfig extends AdapterConfig>({
-    signal,
-    scopes,
-    adapter,
-  }: {
-    signal: SignalFactory;
-    scopes: CreateScopes;
-    adapter: Adapter<TConfig>;
-  }): LoadFactory<TConfig['baseElement']> =>
-    createLoadFactory({ signal, adapter, ...scopes }),
-});
-
+/**
+ * Create a Load module for a given adapter.
+ *
+ * The adapter is configuration, not a module, so this is a factory
+ * that returns a module parameterized by the adapter.
+ *
+ * @example
+ * ```ts
+ * import { compose } from '@lattice/lattice';
+ * import { createLoadModule } from '@lattice/resource';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const adapter = createDOMAdapter();
+ * const LoadModule = createLoadModule(adapter);
+ *
+ * const { load } = compose(LoadModule)();
+ * ```
+ */
 export const createLoadModule = <TConfig extends AdapterConfig>(
   adapter: Adapter<TConfig>
 ): Module<

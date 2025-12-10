@@ -3,12 +3,20 @@
  *
  * ## Quick Start
  * ```typescript
- * import { ResourceModule, LoadModule } from '@lattice/resource';
- * import { compose, instantiate } from '@lattice/lattice';
+ * import { ResourceModule, createLoadModule } from '@lattice/resource';
+ * import { compose } from '@lattice/lattice';
  * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
  *
- * const modules = compose(SignalModule, ComputedModule, EffectModule, ResourceModule, LoadModule);
- * const { resource, load } = instantiate(modules);
+ * const adapter = createDOMAdapter();
+ * const modules = compose(
+ *   SignalModule,
+ *   ComputedModule,
+ *   EffectModule,
+ *   ResourceModule,
+ *   createLoadModule(adapter)
+ * );
+ * const { resource, load } = modules();
  *
  * // Reactive resource with auto-refetch
  * const products = resource(() =>
@@ -32,7 +40,7 @@
  *
  * | Use Case | Import |
  * |----------|--------|
- * | Module composition | `import { ResourceModule, LoadModule } from '@lattice/resource'` |
+ * | Module composition | `import { ResourceModule, createLoadModule } from '@lattice/resource'` |
  * | Adapter helpers | `import { withAsyncSupport } from '@lattice/resource'` |
  * | Types only | `import type { Resource, ResourceState, LoadState } from '@lattice/resource'` |
  */
@@ -42,7 +50,7 @@
 // =============================================================================
 
 export { ResourceModule } from './resource';
-export { LoadModule, createLoadModule } from './load';
+export { createLoadModule } from './load';
 
 // =============================================================================
 // Async Boundaries - load() helpers
@@ -58,7 +66,14 @@ export {
   triggerAsyncFragment,
   triggerAsyncFragments,
 } from './load';
-export type { LoadFactory, LoadOptions, AsyncFragment, AsyncMeta } from './load';
+export type {
+  LoadFactory,
+  LoadService,
+  LoadOpts,
+  LoadOptions,
+  AsyncFragment,
+  AsyncMeta,
+} from './load';
 
 // =============================================================================
 // Adapter Helpers - Wrap adapters with async fragment support
