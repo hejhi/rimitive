@@ -587,9 +587,6 @@ importers:
         specifier: workspace:*
         version: link:../view
     devDependencies:
-      '@lattice/ssr':
-        specifier: workspace:*
-        version: link:../ssr
       esbuild:
         specifier: ^0.25.8
         version: 0.25.12
@@ -765,6 +762,30 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@15.11.7)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
+  tests:
+    devDependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../packages/lattice
+      '@lattice/resource':
+        specifier: workspace:*
+        version: link:../packages/resource
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../packages/signals
+      '@lattice/ssr':
+        specifier: workspace:*
+        version: link:../packages/ssr
+      '@lattice/view':
+        specifier: workspace:*
+        version: link:../packages/view
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.0)(@vitest/browser@3.2.4)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
 packages:
 

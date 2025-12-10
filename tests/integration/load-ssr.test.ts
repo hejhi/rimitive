@@ -1,7 +1,7 @@
 /**
- * Integration tests for load() async boundaries
+ * Integration tests for load() async boundaries with SSR
  *
- * Tests the new fetcher/renderer API pattern:
+ * Tests the fetcher/renderer API pattern with server-side rendering:
  * load(fetcher, renderer) where:
  * - fetcher: () => Promise<T>
  * - renderer: (state: LoadState<T>) => RefSpec
@@ -26,8 +26,8 @@ import {
   renderToStringAsyncWithHydration,
 } from '@lattice/ssr/server';
 
-import { createLoadModule } from './load';
-import type { LoadState } from './types';
+import { createLoadModule } from '@lattice/resource';
+import type { LoadState } from '@lattice/resource';
 
 /**
  * Create SSR service for tests

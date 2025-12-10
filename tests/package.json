@@ -1,0 +1,22 @@
+{
+  "name": "@lattice/tests",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Integration tests for Lattice packages",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@lattice/lattice": "workspace:*",
+    "@lattice/resource": "workspace:*",
+    "@lattice/signals": "workspace:*",
+    "@lattice/ssr": "workspace:*",
+    "@lattice/view": "workspace:*",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

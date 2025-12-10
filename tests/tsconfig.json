@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "types": ["vitest/importMeta"],
+    "noEmit": true
+  },
+  "include": ["**/*.ts"],
+  "references": [
+    { "path": "../packages/lattice" },
+    { "path": "../packages/signals" },
+    { "path": "../packages/view" },
+    { "path": "../packages/resource" },
+    { "path": "../packages/ssr" }
+  ]
+}
