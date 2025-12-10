@@ -32,11 +32,12 @@ import { createDOMServerAdapter, renderToStringAsync } from './server/index';
 
 /**
  * Create a service composition for SSR testing
+ * Returns both the service and adapter (needed for renderToStringAsync)
  */
 function createTestService() {
   const adapter = createDOMServerAdapter();
 
-  return compose(
+  const service = compose(
     SignalModule,
     ComputedModule,
     EffectModule,
@@ -45,6 +46,8 @@ function createTestService() {
     createMatchModule(adapter),
     LoadModule
   )();
+
+  return { service, adapter } as const;
 }
 
 describe('load() SSR fragment marker positioning', () => {
@@ -61,7 +64,7 @@ describe('load() SSR fragment marker positioning', () => {
    * updates status to 'ready', the content changes but markers stay in their original position.
    */
   it('should embed data in fragment-start marker for async fragments', async () => {
-    const svc = createTestService();
+    const { service: svc, adapter } = createTestService();
     const { el, load, match } = svc;
 
     // Simulate the Stats page pattern: load() wrapping match(status)
@@ -89,6 +92,7 @@ describe('load() SSR fragment marker positioning', () => {
     const html = await renderToStringAsync(appSpec, {
       svc,
       mount: (spec: RefSpec<unknown>) => spec.create(svc),
+      adapter,
     });
 
     // The fragment markers should contain base64-encoded data
@@ -101,10 +105,10 @@ describe('load() SSR fragment marker positioning', () => {
     expect(html).not.toContain('Loading...');
   });
 
-  it.fails(
+  it(
     'should position markers around the actual content, not the initial pending state',
     async () => {
-      const svc = createTestService();
+      const { service: svc, adapter } = createTestService();
       const { el, load, match } = svc;
 
       const testData = { message: 'Hello World' };
@@ -131,6 +135,7 @@ describe('load() SSR fragment marker positioning', () => {
       const html = await renderToStringAsync(appSpec, {
         svc,
         mount: (spec: RefSpec<unknown>) => spec.create(svc),
+        adapter,
       });
 
       // Extract the main content to analyze marker positioning
@@ -162,7 +167,7 @@ describe('load() SSR fragment marker positioning', () => {
   );
 
   it('should handle nested load() correctly', async () => {
-    const svc = createTestService();
+    const { service: svc, adapter } = createTestService();
     const { el, load, match } = svc;
 
     const outerData = { outer: true };
@@ -202,6 +207,7 @@ describe('load() SSR fragment marker positioning', () => {
     const html = await renderToStringAsync(appSpec, {
       svc,
       mount: (spec: RefSpec<unknown>) => spec.create(svc),
+      adapter,
     });
 
     // Both should be resolved

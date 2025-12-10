@@ -61,6 +61,7 @@ const server = createServer(async (req, res) => {
   const html = await renderToStringAsync(appSpec, {
     svc: service,
     mount: (spec: RefSpec<unknown>) => spec.create(service),
+    adapter, // Required for correct async fragment markers
   });
 
   // Send response

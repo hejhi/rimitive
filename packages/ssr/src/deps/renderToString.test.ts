@@ -384,6 +384,7 @@ import { ASYNC_FRAGMENT } from './async-fragments';
 import type { LoadState } from '@lattice/view/load';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { RefSpec } from '@lattice/view/types';
+import { createDOMServerAdapter } from '../server/index';
 
 
 /**
@@ -548,15 +549,20 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
 }
 
 /**
- * Mock service context
+ * Mock service context with adapter
  */
-const mockSvc = {
-  el: (tag: string) => (content: string) =>
-    createMockRefSpec(`<${tag}>${content}</${tag}>`),
-};
+function createMockService() {
+  const adapter = createDOMServerAdapter();
+  const svc = {
+    el: (tag: string) => (content: string) =>
+      createMockRefSpec(`<${tag}>${content}</${tag}>`),
+  };
+  return { svc, adapter };
+}
 
 describe('Async Rendering - renderToStringAsync', () => {
   it('should render a simple async fragment', async () => {
+    const { svc, adapter } = createMockService();
     const asyncFrag = load(
       async () => 'content',
       (state: LoadState<string>) =>
@@ -566,14 +572,16 @@ describe('Async Rendering - renderToStringAsync', () => {
     );
 
     const result = await renderToStringAsync(asyncFrag, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     expect(result).toBe('<div>Loaded content</div>');
   });
 
   it('should render async fragment and resolve data', async () => {
+    const { svc, adapter } = createMockService();
     const asyncFrag = load(
       async () => ({ message: 'Hello' }),
       (state: LoadState<{ message: string }>) =>
@@ -583,8 +591,9 @@ describe('Async Rendering - renderToStringAsync', () => {
     );
 
     const result = await renderToStringAsync(asyncFrag, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     expect(result).toBe('<div>Hello</div>');
@@ -593,28 +602,33 @@ describe('Async Rendering - renderToStringAsync', () => {
   });
 
   it('should render RefSpec directly', async () => {
+    const { svc, adapter } = createMockService();
     const spec = createMockRefSpec('<span>Direct spec</span>');
 
     const result = await renderToStringAsync(spec, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     expect(result).toBe('<span>Direct spec</span>');
   });
 
   it('should render NodeRef directly', async () => {
+    const { svc, adapter } = createMockService();
     const nodeRef = createElementRef('<p>Direct node</p>');
 
     const result = await renderToStringAsync(nodeRef, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     expect(result).toBe('<p>Direct node</p>');
   });
 
   it('should resolve async fragments nested inside elements', async () => {
+    const { svc, adapter } = createMockService();
     // Create an async fragment
     const asyncChild = load(
       async () => 'child',
@@ -631,8 +645,9 @@ describe('Async Rendering - renderToStringAsync', () => {
     asyncChild.parent = parentElement;
 
     const result = await renderToStringAsync(parentElement, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     // The async child should be resolved and its content rendered
@@ -642,6 +657,7 @@ describe('Async Rendering - renderToStringAsync', () => {
   });
 
   it('should resolve multiple async fragments in parallel', async () => {
+    const { svc, adapter } = createMockService();
     const resolveOrder: string[] = [];
 
     const asyncFrag1 = load(
@@ -672,8 +688,9 @@ describe('Async Rendering - renderToStringAsync', () => {
     const parent = createFragmentRef([asyncFrag1, asyncFrag2]);
 
     await renderToStringAsync(parent, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     // Both should resolve, with second finishing first due to shorter delay
@@ -688,6 +705,7 @@ describe('Async Rendering - renderToStringAsync', () => {
 
 describe('Async Rendering - Nested Async Fragments', () => {
   it('should resolve deeply nested async fragments', async () => {
+    const { svc, adapter } = createMockService();
     // Inner async fragment (level 2)
     const innerAsync = load(
       async () => 'inner',
@@ -718,8 +736,9 @@ describe('Async Rendering - Nested Async Fragments', () => {
     );
 
     const result = await renderToStringAsync(outerAsync, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     // Both outer and inner async should be resolved
@@ -731,6 +750,7 @@ describe('Async Rendering - Nested Async Fragments', () => {
   });
 
   it('should resolve three levels of nested async fragments', async () => {
+    const { svc, adapter } = createMockService();
     const resolutionOrder: string[] = [];
 
     // Level 3 (deepest)
@@ -788,8 +808,9 @@ describe('Async Rendering - Nested Async Fragments', () => {
     );
 
     await renderToStringAsync(level1Async, {
-      svc: mockSvc,
+      svc,
       mount: mockMount,
+      adapter,
     });
 
     // All three levels should be resolved

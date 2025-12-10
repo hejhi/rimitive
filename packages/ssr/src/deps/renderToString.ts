@@ -22,6 +22,11 @@ import {
   collectAsyncFragments,
   type AsyncFragment,
 } from './async-fragments';
+import {
+  DEFERRED_MARKERS,
+  insertFragmentMarkers,
+  type DeferredMarkerEntry,
+} from '../adapters/dom-server';
 
 /**
  * Render a node tree to HTML string
@@ -68,6 +73,8 @@ export type AsyncRenderable<TElement> =
 export type RenderToStringAsyncOptions<TSvc> = {
   svc: TSvc;
   mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
+  /** Server adapter for deferred marker insertion (async fragments) */
+  adapter: unknown;
 };
 
 function isRefSpec(value: unknown): value is RefSpec<unknown> {
@@ -93,14 +100,18 @@ function isNodeRef(value: unknown): value is NodeRef<unknown> {
  * Each async fragment's resolve() fetches data and updates internal signals,
  * which causes the reactive content to update in-place (via linkedom).
  *
- * Data is embedded in fragment markers by dom-server.ts during onAttach,
- * so no separate hydration script is needed for async data.
+ * After all resolves complete, deferred fragment markers are inserted around
+ * the final resolved content. This ensures markers wrap the correct content,
+ * not the initial pending state.
  *
  * @example
  * ```ts
+ * const adapter = createDOMServerAdapter();
+ * const service = createService(adapter);
  * const html = await renderToStringAsync(appSpec, {
  *   svc: service,
  *   mount: (spec) => spec.create(service),
+ *   adapter, // Required for correct async fragment markers
  * });
  * ```
  */
@@ -108,7 +119,7 @@ export async function renderToStringAsync<TSvc>(
   renderable: AsyncRenderable<unknown>,
   options: RenderToStringAsyncOptions<TSvc>
 ): Promise<string> {
-  const { mount } = options;
+  const { mount, adapter } = options;
 
   let nodeRef: NodeRef<unknown>;
 
@@ -149,6 +160,18 @@ export async function renderToStringAsync<TSvc>(
     asyncFragments = collectAsyncFragments(nodeRef).filter(
       (f) => !processedFragments.has(f)
     );
+  }
+
+  // Insert deferred markers for async fragments AFTER all resolves complete
+  // This ensures markers wrap the final resolved content, not the initial pending state
+  if (adapter && typeof adapter === 'object' && DEFERRED_MARKERS in adapter) {
+    const deferredMarkers = (
+      adapter as { [DEFERRED_MARKERS]: DeferredMarkerEntry[] }
+    )[DEFERRED_MARKERS];
+
+    for (const { fragment, parentElement } of deferredMarkers) {
+      insertFragmentMarkers(fragment, parentElement);
+    }
   }
 
   return renderToString(nodeRef);
