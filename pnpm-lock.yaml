@@ -10,10 +10,6 @@ overrides:
 importers:
 
   .:
-    dependencies:
-      zustand:
-        specifier: ^5.0.3
-        version: 5.0.3(@types/react@19.2.2)(immer@10.1.1)(react@19.2.0)(use-sync-external-store@1.5.0(react@19.2.0))
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.5
@@ -139,9 +135,6 @@ importers:
       vue:
         specifier: ^3.5.0
         version: 3.5.16(typescript@5.9.3)
-      zustand:
-        specifier: ^5.0.3
-        version: 5.0.3(@types/react@18.3.22)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))
 
   packages/benchmarks/frameworks/lattice-keyed:
     dependencies:
@@ -8718,24 +8711,6 @@ packages:
 
   zod@4.1.12:
     resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
-
-  zustand@5.0.3:
-    resolution: {integrity: sha512-14fwWQtU3pH4dE0dOpdMiWjddcH+QzKIgk1cl8epwSE7yag43k/AD/m4L6+K7DytAOr9gGBe3/EXj9g7cdostg==}
-    engines: {node: '>=12.20.0'}
-    peerDependencies:
-      '@types/react': '>=18.0.0'
-      immer: '>=9.0.6'
-      react: '>=18.0.0'
-      use-sync-external-store: '>=1.2.0'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-      immer:
-        optional: true
-      react:
-        optional: true
-      use-sync-external-store:
-        optional: true
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -17661,11 +17636,6 @@ snapshots:
       react: 18.3.1
     optional: true
 
-  use-sync-external-store@1.5.0(react@19.2.0):
-    dependencies:
-      react: 19.2.0
-    optional: true
-
   util-deprecate@1.0.2: {}
 
   uuid@10.0.0: {}
@@ -18517,19 +18487,5 @@ snapshots:
   zod@4.1.11: {}
 
   zod@4.1.12: {}
-
-  zustand@5.0.3(@types/react@18.3.22)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1)):
-    optionalDependencies:
-      '@types/react': 18.3.22
-      immer: 10.1.1
-      react: 18.3.1
-      use-sync-external-store: 1.5.0(react@18.3.1)
-
-  zustand@5.0.3(@types/react@19.2.2)(immer@10.1.1)(react@19.2.0)(use-sync-external-store@1.5.0(react@19.2.0)):
-    optionalDependencies:
-      '@types/react': 19.2.2
-      immer: 10.1.1
-      react: 19.2.0
-      use-sync-external-store: 1.5.0(react@19.2.0)
 
   zwitch@2.0.4: {}
