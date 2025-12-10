@@ -61,7 +61,6 @@ const server = createServer(async (req, res) => {
   const html = await renderToStringAsync(appSpec, {
     svc: service,
     mount: (spec: RefSpec<unknown>) => spec.create(service),
-    adapter, // Required for correct async fragment markers
   });
 
   // Send response
@@ -79,5 +78,7 @@ server.listen(PORT, () => {
   console.log(`  http://localhost:${PORT}/about`);
   console.log(`  http://localhost:${PORT}/products`);
   console.log(`  http://localhost:${PORT}/products/1`);
-  console.log(`  http://localhost:${PORT}/stats (async data loading with load())`);
+  console.log(
+    `  http://localhost:${PORT}/stats (async data loading with load())`
+  );
 });

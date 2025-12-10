@@ -19,13 +19,10 @@ import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import { isAsyncFragment, ASYNC_FRAGMENT } from '@lattice/view/load';
 
-/** Symbol to mark fragments that need deferred marker insertion */
-export const DEFERRED_MARKERS = Symbol.for('lattice.deferred-markers');
-
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
  */
-function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
+export function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
   let current: NodeRef<unknown> | null = nodeRef;
   while (current) {
     if (current.status === STATUS_ELEMENT) {
@@ -58,23 +55,14 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
   return null;
 }
 
-/** Type for deferred marker entries */
-export interface DeferredMarkerEntry {
-  fragment: FragmentRef<HTMLElement>;
-  parentElement: HTMLElement;
-}
-
-/** Adapter with deferred marker support (internal type) */
-export type DOMServerAdapter = Adapter<DOMAdapterConfig> & {
-  [DEFERRED_MARKERS]: DeferredMarkerEntry[];
-};
-
 /**
- * Insert markers for a fragment (used for deferred async fragment markers)
+ * Insert markers for a fragment.
+ *
+ * parentElement is derived from the DOM tree - by the time we call this,
+ * the content is already attached so we can get it from firstNode.parentNode.
  */
 export function insertFragmentMarkers(
-  fragment: FragmentRef<HTMLElement>,
-  parentElement: HTMLElement
+  fragment: FragmentRef<unknown>
 ): void {
   if (!fragment.firstChild || !fragment.lastChild) return;
 
@@ -82,6 +70,10 @@ export function insertFragmentMarkers(
   const lastNode = getLastDOMNode(fragment.lastChild);
 
   if (!firstNode || !lastNode) return;
+
+  // Derive parentElement from the DOM tree - content is already attached
+  const parentElement = firstNode.parentNode as HTMLElement | null;
+  if (!parentElement) return;
 
   // Build marker content - embed data for async fragments
   let markerContent = 'fragment-start';
@@ -129,12 +121,6 @@ export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
-  // Track async fragments for deferred marker insertion
-  const deferredMarkers: Array<{
-    fragment: FragmentRef<HTMLElement>;
-    parentElement: HTMLElement;
-  }> = [];
-
   return {
     createNode: (type: string, props?: Record<string, unknown>) => {
       if (type === 'text') {
@@ -179,36 +165,21 @@ export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
     /**
      * Lifecycle: onAttach
      *
-     * For fragments: adds fragment-start/end comment markers.
+     * For non-async fragments: adds fragment-start/end comment markers immediately.
      * These markers enable the hydration adapter to locate fragment boundaries.
      *
-     * For async fragments: DEFERS marker insertion until after all resolves complete.
+     * For async fragments: skips marker insertion entirely. Markers are inserted
+     * by renderToStringAsync AFTER all resolves complete, using tree traversal
+     * to find async fragments and derive parentElement from the DOM tree.
      * This ensures markers wrap the final resolved content, not the initial pending state.
-     *
-     * For resolved async fragments, the data is embedded in the fragment-start marker
-     * as base64-encoded JSON: <!--fragment-start:eyJkYXRhIjoiLi4uIn0=-->
      */
-    onAttach: (ref, parentElement) => {
-      // Only handle fragments
+    onAttach: (ref) => {
+      // Only handle non-async fragments - async fragments are handled by renderToStringAsync
       if (ref.status !== STATUS_FRAGMENT) return;
-
-      const frag = ref as FragmentRef<HTMLElement>;
-
-      // Defer async fragments - their content may change after resolve()
-      // renderToStringAsync will insert markers after all resolves complete
-      if (isAsyncFragment(ref)) {
-        deferredMarkers.push({
-          fragment: frag,
-          parentElement: parentElement as HTMLElement,
-        });
-        return;
-      }
+      if (isAsyncFragment(ref)) return;
 
       // For non-async fragments, insert markers immediately
-      insertFragmentMarkers(frag, parentElement as HTMLElement);
+      insertFragmentMarkers(ref as FragmentRef<HTMLElement>);
     },
-
-    // Expose deferred markers for renderToStringAsync (not part of public Adapter type)
-    [DEFERRED_MARKERS]: deferredMarkers,
-  } as Adapter<DOMAdapterConfig>;
+  };
 }

@@ -26,7 +26,7 @@ import {
   renderToStringAsyncWithHydration,
 } from '@lattice/ssr/server';
 
-import { createLoadModule } from '@lattice/view/load';
+import { LoadModule } from '@lattice/view/load';
 import type { LoadState } from '@lattice/view/load';
 
 /**
@@ -34,21 +34,17 @@ import type { LoadState } from '@lattice/view/load';
  */
 function createSSRService() {
   const adapter = createDOMServerAdapter();
-  const ElModule = createElModule(adapter);
-  const MapModule = createMapModule(adapter);
-  const MatchModule = createMatchModule(adapter);
-  const LoadModuleInstance = createLoadModule(adapter);
 
   const svc = compose(
     SignalModule,
     ComputedModule,
     EffectModule,
     BatchModule,
-    ElModule,
-    MapModule,
-    MatchModule,
+    createElModule(adapter),
+    createMapModule(adapter),
+    createMatchModule(adapter),
     MountModule,
-    LoadModuleInstance
+    LoadModule
   )();
 
   return {
