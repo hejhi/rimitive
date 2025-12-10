@@ -277,7 +277,7 @@ export type Loader = {
  * - Create loader with initial data from the script tag
  * - Same load() calls will use cached data instead of fetching
  *
- * @example
+ * @example Basic usage
  * ```ts
  * // Server
  * const loader = createLoader({ signal });
@@ -296,12 +296,26 @@ export type Loader = {
  * const { load } = loader;
  * // Same App component - uses cached data, no re-fetch
  * ```
+ *
+ * @example SSR streaming
+ * ```ts
+ * const loader = createLoader({
+ *   signal,
+ *   onResolve: (id, data) => {
+ *     // Stream chunk to client as each boundary resolves
+ *     const html = renderFragment(id);
+ *     stream.write(`<script>__LATTICE_HYDRATE__("${id}", ${JSON.stringify(html)})</script>`);
+ *   }
+ * });
+ * ```
  */
 export function createLoader(opts: {
   signal: SignalFactory;
   initialData?: Record<string, unknown>;
+  /** Called when a load() boundary resolves. Useful for SSR streaming. */
+  onResolve?: (id: string, data: unknown) => void;
 }): Loader {
-  const { signal, initialData } = opts;
+  const { signal, initialData, onResolve } = opts;
 
   // Collected data from resolved async boundaries (for getData())
   const collectedData: Record<string, unknown> = {};
@@ -353,6 +367,7 @@ export function createLoader(opts: {
           // Update signals so reactive content updates
           data(result);
           status('ready');
+          onResolve?.(id, result);
           return result;
         } catch (err) {
           resolved = true;
@@ -368,6 +383,7 @@ export function createLoader(opts: {
         collectedData[id] = d;
         data(d);
         status('ready');
+        onResolve?.(id, d);
       },
       isResolved: () => resolved,
       trigger: () => {
@@ -379,6 +395,7 @@ export function createLoader(opts: {
             collectedData[id] = result;
             data(result);
             status('ready');
+            onResolve?.(id, result);
           },
           (err) => {
             resolved = true;
