@@ -3,8 +3,8 @@
  *
  * Server-side utilities for SSR.
  *
- * Async fragment data is now embedded directly in fragment markers
- * by dom-server.ts, so no separate hydration script is needed.
+ * Async fragment data is managed by createLoader() - use loader.getData()
+ * to collect resolved data and serialize it to a script tag for the client.
  */
 
 // Render to string
@@ -18,7 +18,6 @@ export type {
 export {
   isAsyncFragment,
   collectAsyncFragments,
-  resolveAsyncFragment,
   ASYNC_FRAGMENT,
 } from '../deps/async-fragments';
 export type { AsyncFragment } from '../deps/async-fragments';

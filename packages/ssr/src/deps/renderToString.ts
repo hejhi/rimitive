@@ -161,9 +161,7 @@ export async function renderToStringAsync<TSvc>(
   // parentElement is derived from the DOM tree via firstNode.parentNode
   for (const fragment of processedFragments) {
     // load() always creates a fragment wrapper, so async fragments are always FragmentRefs
-    if (fragment.status === STATUS_FRAGMENT) {
-      insertFragmentMarkers(fragment);
-    }
+    if (fragment.status === STATUS_FRAGMENT) insertFragmentMarkers(fragment);
   }
 
   return renderToString(nodeRef);

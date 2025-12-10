@@ -1,18 +1,18 @@
 /**
  * Integration test for load() + match() SSR marker positioning
  *
- * This test verifies the root cause of a hydration mismatch bug:
+ * This test verifies the fix for a hydration mismatch bug:
  *
  * During SSR, when load() wraps a match() that switches between pending/ready states:
  * 1. Initially, match() renders the "pending" content (e.g., Loading...)
- * 2. The SSR adapter's onAttach inserts fragment markers around the pending content
- * 3. Later, resolve() updates status to 'ready', causing match() to re-render
- * 4. The "ready" content (e.g., actual data) replaces the pending content
- * 5. BUT the markers stay in their original position (around where pending content was)
- * 6. The final HTML has markers in the wrong place, causing hydration mismatch
+ * 2. renderToStringAsync resolves the async fragment
+ * 3. The "ready" content replaces the pending content
+ * 4. Markers are inserted AFTER resolution, around the final content
  *
- * Expected: <!--fragment-start:DATA--><div class="ready">...</div><!--fragment-end-->
- * Actual:   <!--fragment-start--><!--fragment-end--><div class="ready">...</div>
+ * Expected: <!--fragment-start--><div class="ready">...</div><!--fragment-end-->
+ *           (with data available via loader.getData())
+ *
+ * The bug was markers being inserted early, around the pending content.
  */
 
 import { describe, it, expect } from 'vitest';

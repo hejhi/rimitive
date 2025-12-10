@@ -47,19 +47,11 @@ export class HydrationMismatch extends Error {
 
 /**
  * Check if node is a fragment marker comment
- * Handles both regular markers and markers with embedded data:
- *   <!--fragment-start-->
- *   <!--fragment-start:BASE64DATA-->
- *   <!--fragment-end-->
  */
 function isFragmentMarker(node: Node): boolean {
   if (node.nodeType !== 8) return false; // Not a comment
   const text = (node as Comment).textContent ?? '';
-  return (
-    text === 'fragment-start' ||
-    text.startsWith('fragment-start:') ||
-    text === 'fragment-end'
-  );
+  return text === 'fragment-start' || text === 'fragment-end';
 }
 
 /**
@@ -96,12 +88,12 @@ function getNodeAtPath(root: HTMLElement, path: TreePath): Node {
 }
 
 /**
- * Check if a comment is a fragment-start marker (with or without data)
+ * Check if a comment is a fragment-start marker
  */
 function isFragmentStartMarker(node: Node): boolean {
   if (node.nodeType !== 8) return false;
   const text = (node as Comment).textContent ?? '';
-  return text === 'fragment-start' || text.startsWith('fragment-start:');
+  return text === 'fragment-start';
 }
 
 
@@ -140,7 +132,7 @@ function scanFragmentRange(node: Node): number | null {
 }
 
 /**
- * Check if node is a fragment-start marker (with or without data)
+ * Check if node is a fragment-start marker
  */
 function isFragmentStart(node: Node | null): boolean {
   return node !== null && isFragmentStartMarker(node);
@@ -184,7 +176,7 @@ function computePathToElement(root: Element, target: Element): TreePath {
 }
 
 /**
- * Result of finding fragment content - includes index and optional marker node
+ * Result of finding fragment content - includes index and marker node
  */
 type FragmentSearchResult = {
   index: number;
@@ -199,7 +191,7 @@ type FragmentSearchResult = {
  * (preceded by fragment-start), we need to skip that entire fragment first.
  *
  * Returns null if no fragment markers are found (fragment was hidden during SSR)
- * Returns index and marker node if found (marker may contain embedded data)
+ * Returns index and marker node if found
  */
 function findFragmentContent(
   parentElement: Element,

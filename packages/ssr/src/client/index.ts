@@ -3,9 +3,8 @@
  *
  * Client-side utilities for SSR hydration.
  *
- * Hydration data is now embedded directly in fragment markers and
- * extracted automatically by createDOMHydrationAdapter. No separate
- * hydration store or window globals needed.
+ * Async fragment data is managed by createLoader() - pass initial data
+ * from window.__LATTICE_DATA__ (or similar) to seed the loader on the client.
  */
 
 // Adapters
@@ -15,7 +14,6 @@ export { createHydrationAdapter } from '../adapters/hydration';
 // Async fragment utilities (client-side)
 export {
   triggerAsyncFragment,
-  triggerAsyncFragments,
   collectAsyncFragments,
   isAsyncFragment,
   ASYNC_FRAGMENT,

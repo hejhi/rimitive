@@ -52,32 +52,13 @@ export function collectAsyncFragments<TElement>(
 }
 
 /**
- * Resolve an async fragment and return its data.
- *
- * Used during SSR to await data fetching. The fragment's internal
- * signals are updated automatically, causing reactive content to update.
- *
- * @example
- * ```ts
- * const data = await resolveAsyncFragment(fragment);
- * // Fragment's content is now updated with ready state
- * ```
- */
-export async function resolveAsyncFragment<TElement, T = unknown>(
-  fragment: AsyncFragment<TElement, T>
-): Promise<T> {
-  return fragment[ASYNC_FRAGMENT].resolve();
-}
-
-/**
  * Trigger an async fragment to start fetching.
  *
- * Used during client-side hydration to start data fetching for
- * fragments that weren't resolved on the server.
+ * Used by withAsyncSupport to start data fetching for async fragments
+ * during client-side rendering (post-hydration navigation).
  *
  * @example
  * ```ts
- * // During hydration
  * triggerAsyncFragment(fragment);
  * ```
  */
@@ -85,24 +66,4 @@ export function triggerAsyncFragment<TElement>(
   fragment: AsyncFragment<TElement>
 ): void {
   fragment[ASYNC_FRAGMENT].trigger();
-}
-
-/**
- * Trigger all async fragments in a node tree to start fetching.
- *
- * Convenience function that collects all async fragments and triggers them.
- * Used during client-side hydration.
- *
- * @example
- * ```ts
- * // After hydration, trigger any pending async boundaries
- * triggerAsyncFragments(rootNode);
- * ```
- */
-export function triggerAsyncFragments<TElement>(
-  nodeRef: NodeRef<TElement>
-): void {
-  for (const fragment of collectAsyncFragments(nodeRef)) {
-    triggerAsyncFragment(fragment);
-  }
 }
