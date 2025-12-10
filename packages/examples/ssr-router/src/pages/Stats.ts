@@ -1,13 +1,5 @@
 /**
  * Stats Page - Demonstrates async data loading with load()
- *
- * This page uses @lattice/view's load() with the fetcher/renderer pattern.
- * The renderer receives a state object with reactive properties (status, data, error)
- * and uses match() to reactively switch between states.
- *
- * During SSR, the data is fetched and rendered to HTML with ready state.
- * During client hydration, the data is extracted from markers (no re-fetch).
- * On subsequent client navigations, data is fetched fresh (pending → ready).
  */
 import type { LoadState, LoadStatus } from '@lattice/view/load';
 import type { RefSpec } from '@lattice/view/types';
@@ -27,7 +19,6 @@ type StatsData = {
 
 /**
  * Simulate fetching stats from an API
- * In a real app, this would be a fetch() call
  */
 async function fetchStats(): Promise<StatsData> {
   // Simulate network delay
@@ -117,7 +108,9 @@ const StatsContent = (
         'The load() function creates an async boundary with a fetcher/renderer pattern:'
       ),
       el('ol')(
-        el('li')('load(fetcher, renderer) is called - renderer uses match() on state.status'),
+        el('li')(
+          'load(fetcher, renderer) is called - renderer uses match() on state.status'
+        ),
         el('li')('SSR awaits the fetcher and renders with ready state'),
         el('li')(
           'Hydration data is embedded in fragment markers (base64 JSON)'
@@ -164,14 +157,7 @@ const StatsError = ({ el }: Service, error: unknown): RefSpec<HTMLDivElement> =>
   );
 
 /**
- * Stats Page - uses load() for async data fetching with fetcher/renderer pattern
- *
- * This demonstrates the load() API:
- * - Renderer receives state object with reactive properties (status, data, error)
- * - Uses match() on state.status to reactively switch between states
- * - SSR: awaits fetcher, renders with ready state, embeds data in markers
- * - Client hydration: extracts data from markers (no re-fetch)
- * - Client navigation: shows pending, fetches fresh, then ready
+ * Stats Page - uses load() for async data fetching with fetcher/renderer pattern and ssr
  */
 export const Stats = (svc: Service) => (): RefSpec<HTMLElement> => {
   const { load, match } = svc;
