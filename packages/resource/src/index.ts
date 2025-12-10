@@ -49,19 +49,16 @@ export { LoadModule, createLoadModule } from './load';
 // =============================================================================
 
 export {
+  ASYNC_FRAGMENT,
   createLoadFactory,
   isAsyncFragment,
+  getAsyncMeta,
   resolveAsyncFragment,
   collectAsyncFragments,
   triggerAsyncFragment,
   triggerAsyncFragments,
 } from './load';
-export type {
-  LoadFactory,
-  LoadOptions,
-  AsyncFragmentRef,
-  AsyncFragmentMeta,
-} from './load';
+export type { LoadFactory, LoadOptions, AsyncFragment, AsyncMeta } from './load';
 
 // =============================================================================
 // Adapter Helpers - Wrap adapters with async fragment support

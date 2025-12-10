@@ -21,17 +21,7 @@ const terserMangleInternals = (): Plugin => {
             toplevel: true,
             properties: {
               regex: /^_/,
-              // Keep quoted properties as-is for safety
               keep_quoted: true,
-              // Reserve AsyncFragmentRef properties that are part of the public API
-              reserved: [
-                '__async',
-                '__id',
-                '__fetcher',
-                '__renderer',
-                '__resolved',
-                '__data',
-              ],
             },
           },
           format: {

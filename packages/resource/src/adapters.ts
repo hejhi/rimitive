@@ -8,8 +8,8 @@
 
 import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
 import type { NodeRef } from '@lattice/view/types';
-import { isAsyncFragment, triggerAsyncFragment } from './load';
-import type { AsyncFragmentRef } from './load';
+import { ASYNC_FRAGMENT, isAsyncFragment, triggerAsyncFragment } from './load';
+import type { AsyncFragment } from './load';
 
 /**
  * Hydration data store interface
@@ -24,18 +24,6 @@ export type HydrationDataStore = {
  *
  * Use this for client-side rendering where async fragments should
  * immediately start fetching when attached to the DOM.
- *
- * @param adapter - The base adapter to wrap
- * @returns Wrapped adapter that triggers async fragments
- *
- * @example
- * ```ts
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { withAsyncSupport } from '@lattice/resource';
- *
- * const adapter = withAsyncSupport(createDOMAdapter());
- * // Async fragments will auto-fetch when attached
- * ```
  */
 export function withAsyncSupport<TConfig extends AdapterConfig>(
   adapter: Adapter<TConfig>
@@ -45,12 +33,9 @@ export function withAsyncSupport<TConfig extends AdapterConfig>(
   return {
     ...adapter,
     onAttach: (ref: NodeRef<TConfig['baseElement']>, parent) => {
-      // Call original hook first
       originalOnAttach?.(ref, parent);
-
-      // Trigger async fragments
       if (isAsyncFragment(ref)) {
-        triggerAsyncFragment(ref as AsyncFragmentRef<TConfig['baseElement']>);
+        triggerAsyncFragment(ref as AsyncFragment<TConfig['baseElement']>);
       }
     },
   };
@@ -61,24 +46,6 @@ export function withAsyncSupport<TConfig extends AdapterConfig>(
  *
  * Use this for client-side hydration where SSR-fetched data should be
  * injected into fragments to prevent re-fetching.
- *
- * @param adapter - The base adapter to wrap
- * @param store - Hydration data store (typically backed by window.__LATTICE_HYDRATION_DATA__)
- * @returns Wrapped adapter that injects hydration data
- *
- * @example
- * ```ts
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { withHydrationData } from '@lattice/resource';
- *
- * const hydrationStore = {
- *   get: (id) => window.__LATTICE_HYDRATION_DATA__?.[id],
- *   has: (id) => id in (window.__LATTICE_HYDRATION_DATA__ ?? {}),
- * };
- *
- * const adapter = withHydrationData(createDOMAdapter(), hydrationStore);
- * // Async fragments will use hydration data instead of fetching
- * ```
  */
 export function withHydrationData<TConfig extends AdapterConfig>(
   adapter: Adapter<TConfig>,
@@ -89,16 +56,13 @@ export function withHydrationData<TConfig extends AdapterConfig>(
   return {
     ...adapter,
     beforeAttach: (ref, parent, nextSibling) => {
-      // Inject hydration data before attach
       if (isAsyncFragment(ref)) {
-        const fragment = ref as AsyncFragmentRef<TConfig['baseElement']>;
-        if (store.has(fragment.__id)) {
-          fragment.__data = store.get(fragment.__id);
-          fragment.__resolved = true;
+        const fragment = ref as AsyncFragment<TConfig['baseElement']>;
+        const meta = fragment[ASYNC_FRAGMENT];
+        if (store.has(meta.id)) {
+          meta.setData(store.get(meta.id));
         }
       }
-
-      // Call original hook
       originalBeforeAttach?.(ref, parent, nextSibling);
     },
   };
@@ -106,16 +70,6 @@ export function withHydrationData<TConfig extends AdapterConfig>(
 
 /**
  * Create a hydration data store from window.__LATTICE_HYDRATION_DATA__
- *
- * @returns HydrationDataStore backed by window global, or empty store if not available
- *
- * @example
- * ```ts
- * import { createWindowHydrationStore, withHydrationData } from '@lattice/resource';
- *
- * const store = createWindowHydrationStore();
- * const adapter = withHydrationData(createDOMAdapter(), store);
- * ```
  */
 export function createWindowHydrationStore(): HydrationDataStore {
   type WindowWithHydration = typeof globalThis & {
@@ -136,7 +90,6 @@ export function createWindowHydrationStore(): HydrationDataStore {
 
 /**
  * Clear hydration data from window after hydration is complete.
- * Call this after the initial render to free memory.
  */
 export function clearWindowHydrationData(): void {
   type WindowWithHydration = typeof globalThis & {
