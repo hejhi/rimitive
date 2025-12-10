@@ -109,13 +109,13 @@ const StatsContent = (
       ),
       el('ol')(
         el('li')(
-          'load(fetcher, renderer) is called - renderer uses match() on state.status'
+          'load(id, fetcher, renderer) is called - renderer uses match() on state.status'
         ),
         el('li')('SSR awaits the fetcher and renders with ready state'),
         el('li')(
-          'Hydration data is embedded in fragment markers (base64 JSON)'
+          'Resolved data is collected by createLoader() and serialized to a script tag'
         ),
-        el('li')('Client hydration extracts data from markers - no re-fetch'),
+        el('li')('Client hydration receives data via initialData - no re-fetch'),
         el('li')(
           'Client navigation shows pending state while fetching fresh data'
         )
@@ -163,6 +163,7 @@ export const Stats = (svc: Service) => (): RefSpec<HTMLElement> => {
   const { load, match } = svc;
 
   return load(
+    'stats', // ID for data lookup during hydration
     () => fetchStats(),
     (state: LoadState<StatsData>) =>
       match(state.status, (status: LoadStatus) => {

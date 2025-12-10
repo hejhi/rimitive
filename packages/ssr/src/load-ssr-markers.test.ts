@@ -25,46 +25,52 @@ import {
 } from '@lattice/signals/extend';
 import { createElModule } from '@lattice/view/el';
 import { createMatchModule } from '@lattice/view/match';
-import { LoadModule } from '@lattice/view/load';
+import { createLoader } from '@lattice/view/load';
 import type { LoadState, LoadStatus } from '@lattice/view/load';
 import type { RefSpec } from '@lattice/view/types';
 import { createDOMServerAdapter, renderToStringAsync } from './server/index';
 
 /**
  * Create a service composition for SSR testing
- * Returns both the service and adapter (needed for renderToStringAsync)
+ * Returns service, adapter, and getLoaderData function
  */
 function createTestService() {
   const adapter = createDOMServerAdapter();
 
-  const service = compose(
+  const baseSvc = compose(
     SignalModule,
     ComputedModule,
     EffectModule,
     BatchModule,
     createElModule(adapter),
-    createMatchModule(adapter),
-    LoadModule
+    createMatchModule(adapter)
   )();
 
-  return { service, adapter } as const;
+  const loader = createLoader({ signal: baseSvc.signal });
+
+  return {
+    service: { ...baseSvc, load: loader.load },
+    adapter,
+    getLoaderData: loader.getData,
+  } as const;
 }
 
 describe('load() SSR fragment marker positioning', () => {
   /**
-   * This test demonstrates the hydration mismatch bug.
+   * Tests async fragment marker positioning with new createLoader API.
    *
-   * The actual output is:
-   *   <div class="container"><!--fragment-start--><!--fragment-end--><div class="ready">Value: 42</div></div>
+   * With createLoader:
+   * - Markers are now just <!--fragment-start--> without embedded data
+   * - Data is collected separately via loader.getData()
+   * - load() calls require an ID as the first parameter
    *
-   * The expected output should be:
-   *   <div class="container"><!--fragment-start:BASE64DATA--><div class="ready">Value: 42</div><!--fragment-end--></div>
-   *
-   * The bug: Markers are inserted around initial pending content, then when resolve()
-   * updates status to 'ready', the content changes but markers stay in their original position.
+   * The test verifies:
+   * 1. Markers exist and wrap the rendered content
+   * 2. No data is embedded in markers (no colon)
+   * 3. Data is available via getLoaderData()
    */
-  it('should embed data in fragment-start marker for async fragments', async () => {
-    const { service: svc } = createTestService();
+  it('should collect data via loader.getData() for async fragments', async () => {
+    const { service: svc, getLoaderData } = createTestService();
     const { el, load, match } = svc;
 
     // Simulate the Stats page pattern: load() wrapping match(status)
@@ -72,6 +78,7 @@ describe('load() SSR fragment marker positioning', () => {
 
     const appSpec = el('div').props({ className: 'container' })(
       load(
+        'test-fragment',
         async () => testData,
         (state: LoadState<typeof testData>) =>
           match(state.status, (status: LoadStatus) => {
@@ -94,26 +101,32 @@ describe('load() SSR fragment marker positioning', () => {
       mount: (spec: RefSpec<unknown>) => spec.create(svc),
     });
 
-    // The fragment markers should contain base64-encoded data
-    expect(html).toContain('fragment-start:');
+    // Markers should NOT contain embedded data anymore
+    expect(html).toContain('<!--fragment-start-->');
+    expect(html).not.toContain('fragment-start:');
 
     // The ready content should be present (not loading)
     expect(html).toContain('class="ready"');
     expect(html).toContain('Value: 42');
     expect(html).not.toContain('class="loading"');
     expect(html).not.toContain('Loading...');
+
+    // Data should be available via getLoaderData()
+    const loaderData = getLoaderData();
+    expect(loaderData['test-fragment']).toEqual(testData);
   });
 
   it(
     'should position markers around the actual content, not the initial pending state',
     async () => {
-      const { service: svc } = createTestService();
+      const { service: svc, getLoaderData } = createTestService();
       const { el, load, match } = svc;
 
       const testData = { message: 'Hello World' };
 
       const appSpec = el('main')(
         load(
+          'message-fragment',
           async () => testData,
           (state: LoadState<typeof testData>) =>
             match(state.status, (status: LoadStatus) => {
@@ -142,7 +155,7 @@ describe('load() SSR fragment marker positioning', () => {
       const mainContent = mainMatch![1];
 
       // The markers should wrap the ready content (the <p>), not be empty
-      // CORRECT: <!--fragment-start:...--> ... <p>...</p> ... <!--fragment-end-->
+      // CORRECT: <!--fragment-start--> ... <p>...</p> ... <!--fragment-end-->
       // WRONG:   <!--fragment-start--><!--fragment-end--><p>...</p>
 
       // Check that fragment-start comes before the actual content
@@ -154,18 +167,22 @@ describe('load() SSR fragment marker positioning', () => {
       expect(pTagIndex).toBeGreaterThan(fragmentStartIndex);
       expect(fragmentEndIndex).toBeGreaterThan(pTagIndex);
 
-      // Verify data is embedded
-      expect(mainContent).toContain('fragment-start:');
+      // Verify data is NOT embedded in markers
+      expect(mainContent).not.toContain('fragment-start:');
 
       // Verify no empty marker pairs (the bug symptom)
       expect(mainContent).not.toMatch(
-        /<!--fragment-start[^:>]*--><!--fragment-end-->/
+        /<!--fragment-start--><!--fragment-end-->/
       );
+
+      // Data should be available via getLoaderData()
+      const loaderData = getLoaderData();
+      expect(loaderData['message-fragment']).toEqual(testData);
     }
   );
 
   it('should handle nested load() correctly', async () => {
-    const { service: svc } = createTestService();
+    const { service: svc, getLoaderData } = createTestService();
     const { el, load, match } = svc;
 
     const outerData = { outer: true };
@@ -173,6 +190,7 @@ describe('load() SSR fragment marker positioning', () => {
 
     const appSpec = el('div')(
       load(
+        'outer-fragment',
         async () => outerData,
         (outerState: LoadState<typeof outerData>) =>
           match(outerState.status, (status: LoadStatus) => {
@@ -184,6 +202,7 @@ describe('load() SSR fragment marker positioning', () => {
             // Nested load inside the ready state
             return el('section')(
               load(
+                'inner-fragment',
                 async () => innerData,
                 (innerState: LoadState<typeof innerData>) =>
                   match(innerState.status, (innerStatus: LoadStatus) => {
@@ -211,8 +230,16 @@ describe('load() SSR fragment marker positioning', () => {
     expect(html).toContain('class="inner-ready"');
     expect(html).not.toContain('loading');
 
-    // Both should have data markers
-    const markerCount = (html.match(/fragment-start:/g) || []).length;
+    // Both should have markers (without embedded data)
+    const markerCount = (html.match(/<!--fragment-start-->/g) || []).length;
     expect(markerCount).toBe(2); // outer and inner async fragments
+
+    // Both should NOT have data embedded in markers
+    expect(html).not.toContain('fragment-start:');
+
+    // Both should have data available via getLoaderData()
+    const loaderData = getLoaderData();
+    expect(loaderData['outer-fragment']).toEqual(outerData);
+    expect(loaderData['inner-fragment']).toEqual(innerData);
   });
 });

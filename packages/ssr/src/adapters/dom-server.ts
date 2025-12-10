@@ -4,20 +4,19 @@
  * Renders Lattice components to HTML strings for SSR.
  * Adds fragment markers for hydration support.
  *
- * For async fragments (load()), resolved data is embedded directly
- * in the fragment-start marker as base64-encoded JSON. This enables
- * position-based hydration without needing separate ID tracking.
- *
  * IMPORTANT: Async fragment markers are inserted by renderToStringAsync AFTER
  * all async resolves complete. This ensures markers wrap the final resolved
  * content, not the initial pending state.
+ *
+ * Data for async fragments is managed by createLoader() - users serialize
+ * loader.getData() to a script tag, and pass it to createLoader() on the client.
  */
 
 import { parseHTML } from 'linkedom';
 import type { Adapter, FragmentRef, NodeRef } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import { isAsyncFragment, ASYNC_FRAGMENT } from '@lattice/view/load';
+import { isAsyncFragment } from '@lattice/view/load';
 
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
@@ -60,6 +59,9 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
  *
  * parentElement is derived from the DOM tree - by the time we call this,
  * the content is already attached so we can get it from firstNode.parentNode.
+ *
+ * Note: Async fragment data is no longer embedded in markers. Use createLoader()
+ * to manage data serialization separately.
  */
 export function insertFragmentMarkers(
   fragment: FragmentRef<unknown>
@@ -75,23 +77,11 @@ export function insertFragmentMarkers(
   const parentElement = firstNode.parentNode as HTMLElement | null;
   if (!parentElement) return;
 
-  // Build marker content - embed data for async fragments
-  let markerContent = 'fragment-start';
-  if (isAsyncFragment(fragment)) {
-    const meta = fragment[ASYNC_FRAGMENT];
-    const data = meta.getData();
-    if (data !== undefined) {
-      const json = JSON.stringify(data);
-      const base64 = Buffer.from(json, 'utf-8').toString('base64');
-      markerContent = `fragment-start:${base64}`;
-    }
-  }
-
   // Get document from parent element
   const doc = parentElement.ownerDocument;
 
   // Insert fragment-start comment before first child
-  const startComment = doc.createComment(markerContent);
+  const startComment = doc.createComment('fragment-start');
   parentElement.insertBefore(startComment, firstNode);
 
   // Insert fragment-end comment after last child

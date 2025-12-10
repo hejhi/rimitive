@@ -4,7 +4,8 @@
  * Simple flow:
  * 1. Create service with initial path from request URL
  * 2. Render AppLayout to string (awaiting async boundaries from load())
- * 3. Send HTML (async data is embedded in fragment markers)
+ * 3. Serialize loader data to a script tag for client hydration
+ * 4. Send HTML
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
@@ -57,17 +58,25 @@ const server = createServer(async (req, res) => {
   const appSpec = AppLayout(service);
 
   // Render the app to string, awaiting any async boundaries (load())
-  // Async data is automatically embedded in fragment markers as base64 JSON
   const html = await renderToStringAsync(appSpec, {
     svc: service,
     mount: (spec: RefSpec<unknown>) => spec.create(service),
   });
 
+  // Get collected loader data for hydration
+  const loaderData = service.getLoaderData();
+
+  // Create hydration script with loader data
+  const hydrationScript =
+    Object.keys(loaderData).length > 0
+      ? `<script>window.__LATTICE_DATA__=${JSON.stringify(loaderData)}</script>`
+      : '';
+
   // Send response
   res.writeHead(200, { 'Content-Type': 'text/html' });
 
-  // Generate and send HTML (no separate hydration script needed)
-  res.end(tpl(html));
+  // Generate and send HTML with loader data
+  res.end(tpl(html, hydrationScript));
 });
 
 const PORT = process.env.PORT || 3000;

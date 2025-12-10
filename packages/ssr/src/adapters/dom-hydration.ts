@@ -10,15 +10,13 @@
  * - Fragment ranges are scanned and tracked explicitly
  * - All position transformations are pure functions
  *
- * Async fragment data is embedded in fragment-start markers as base64 JSON:
- *   <!--fragment-start:eyJkYXRhIjoiLi4uIn0=-->
- * During hydration, this data is extracted and injected into async fragments.
+ * Async fragment data is managed by createLoader() - data is passed via
+ * initialData option, not embedded in markers.
  */
 
 import type { Adapter, NodeRef } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_FRAGMENT } from '@lattice/view/types';
-import { isAsyncFragment, ASYNC_FRAGMENT } from '@lattice/view/load';
 import {
   type Position,
   type TreePath,
@@ -106,24 +104,6 @@ function isFragmentStartMarker(node: Node): boolean {
   return text === 'fragment-start' || text.startsWith('fragment-start:');
 }
 
-/**
- * Extract embedded data from a fragment-start marker
- * Returns undefined if no data is embedded
- */
-function extractMarkerData(node: Node): unknown | undefined {
-  if (node.nodeType !== 8) return undefined;
-  const text = (node as Comment).textContent ?? '';
-  if (!text.startsWith('fragment-start:')) return undefined;
-
-  const base64 = text.slice('fragment-start:'.length);
-  try {
-    const json = atob(base64);
-    return JSON.parse(json);
-  } catch {
-    // Invalid base64 or JSON - treat as no data
-    return undefined;
-  }
-}
 
 /**
  * Scan forward from fragment-start marker to count range size
@@ -465,14 +445,14 @@ export function createDOMHydrationAdapter(
      * For fragments: Seek to fragment position for deferred content hydration.
      * Computes position from DOM structure before creating deferred content.
      *
-     * For async fragments: Extract embedded data from marker and inject it.
-     * This prevents re-fetching data that was already fetched during SSR.
+     * Note: Async fragment data is managed by createLoader() - data is passed
+     * via initialData option, not extracted from markers.
      */
     beforeAttach: (ref: NodeRef<Node>, parentElement, nextSiblingElement) => {
       // Only handle fragments - elements don't need special handling during hydration
       if (ref.status !== STATUS_FRAGMENT) return;
 
-      // Find fragment content - includes marker node for data extraction
+      // Find fragment content
       const result = findFragmentContent(
         parentElement as HTMLElement,
         nextSiblingElement as HTMLElement
@@ -485,16 +465,7 @@ export function createDOMHydrationAdapter(
         return;
       }
 
-      const { index: childIndex, markerNode } = result;
-
-      // If this is an async fragment, extract and inject embedded data
-      if (isAsyncFragment(ref)) {
-        const data = extractMarkerData(markerNode);
-        if (data !== undefined) {
-          // Inject data into async fragment - prevents re-fetching
-          ref[ASYNC_FRAGMENT].setData(data);
-        }
-      }
+      const { index: childIndex } = result;
 
       // Compute path from root to parent element
       const parentPath = computePathToElement(

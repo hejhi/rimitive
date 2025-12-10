@@ -71,6 +71,8 @@ export type {
   LoadOpts,
   AsyncFragment,
   AsyncMeta,
+  LoadFn,
+  Loader,
 } from './load';
 
 export {
@@ -78,5 +80,6 @@ export {
   isAsyncFragment,
   getAsyncMeta,
   createLoadFactory,
+  createLoader,
   LoadModule,
 } from './load';

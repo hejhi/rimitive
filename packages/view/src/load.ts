@@ -240,3 +240,176 @@ export const LoadModule: Module<'load', LoadFactory, { signal: SignalFactory }> 
     dependencies: [SignalModule, ScopesModule],
     create: ({ signal }: { signal: SignalFactory }) => createLoadFactory({ signal }),
   });
+
+// =============================================================================
+// Loader API - Explicit data management for SSR
+// =============================================================================
+
+/**
+ * Load function with explicit ID for data lookup
+ */
+export type LoadFn = <T, TElement>(
+  id: string,
+  fetcher: () => Promise<T>,
+  renderer: (state: LoadState<T>) => RefSpec<TElement>
+) => RefSpec<TElement>;
+
+/**
+ * Loader instance returned by createLoader
+ */
+export type Loader = {
+  /** Load function that takes an ID for data lookup */
+  load: LoadFn;
+  /** Get all collected data (for serialization after SSR) */
+  getData: () => Record<string, unknown>;
+};
+
+/**
+ * Create a loader for managing async data boundaries.
+ *
+ * On the server:
+ * - Create loader without initial data
+ * - Use load() with IDs to create async boundaries
+ * - After render, call getData() to get all resolved data
+ * - Serialize data to a script tag in your HTML
+ *
+ * On the client:
+ * - Create loader with initial data from the script tag
+ * - Same load() calls will use cached data instead of fetching
+ *
+ * @example
+ * ```ts
+ * // Server
+ * const loader = createLoader({ signal });
+ * const { load } = loader;
+ *
+ * const App = () => load('stats', () => fetchStats(), (state) =>
+ *   match(state.status, (s) => s === 'ready' ? Stats(state.data()!) : Loading())
+ * );
+ *
+ * // After render
+ * const data = loader.getData();
+ * // Add to HTML: <script>window.__DATA__ = ${JSON.stringify(data)}</script>
+ *
+ * // Client
+ * const loader = createLoader({ signal, initialData: window.__DATA__ });
+ * const { load } = loader;
+ * // Same App component - uses cached data, no re-fetch
+ * ```
+ */
+export function createLoader(opts: {
+  signal: SignalFactory;
+  initialData?: Record<string, unknown>;
+}): Loader {
+  const { signal, initialData } = opts;
+
+  // Collected data from resolved async boundaries (for getData())
+  const collectedData: Record<string, unknown> = {};
+
+  function load<T, TElement>(
+    id: string,
+    fetcher: () => Promise<T>,
+    renderer: (state: LoadState<T>) => RefSpec<TElement>
+  ): RefSpec<TElement> {
+    // Create reactive state properties
+    const status = signal<LoadStatus>('pending');
+    const data = signal<T | undefined>(undefined);
+    const error = signal<unknown | undefined>(undefined);
+
+    const state: LoadState<T> = { status, data, error };
+
+    // Check if we have initial data for this ID (consume once, then delete)
+    const hasInitialData = initialData !== undefined && id in initialData;
+    let resolvedData: T | undefined = hasInitialData
+      ? (initialData[id] as T)
+      : undefined;
+    let resolved = hasInitialData;
+
+    // Delete after consuming so subsequent mounts will re-fetch
+    if (hasInitialData) {
+      delete initialData[id];
+    }
+
+    // If we have initial data, set signals immediately
+    if (hasInitialData && resolvedData !== undefined) {
+      data(resolvedData);
+      status('ready');
+    }
+
+    // Call renderer once with the state object
+    const innerSpec = renderer(state);
+
+    const meta: AsyncMeta<T> = {
+      resolve: async () => {
+        if (resolved && resolvedData !== undefined) {
+          return resolvedData;
+        }
+        try {
+          const result = await fetcher();
+          resolvedData = result;
+          resolved = true;
+          // Store in collected data for getData()
+          collectedData[id] = result;
+          // Update signals so reactive content updates
+          data(result);
+          status('ready');
+          return result;
+        } catch (err) {
+          resolved = true;
+          error(err);
+          status('error');
+          throw err;
+        }
+      },
+      getData: () => resolvedData,
+      setData: (d: T) => {
+        resolvedData = d;
+        resolved = true;
+        collectedData[id] = d;
+        data(d);
+        status('ready');
+      },
+      isResolved: () => resolved,
+      trigger: () => {
+        if (resolved) return;
+        fetcher().then(
+          (result) => {
+            resolvedData = result;
+            resolved = true;
+            collectedData[id] = result;
+            data(result);
+            status('ready');
+          },
+          (err) => {
+            resolved = true;
+            error(err);
+            status('error');
+          }
+        );
+      },
+    };
+
+    // Wrap the user's RefSpec to attach async metadata
+    const refSpec = (() => refSpec) as unknown as RefSpec<TElement>;
+    refSpec.status = STATUS_REF_SPEC;
+    refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
+      const nodeRef = innerSpec.create(svc, extensions);
+      (nodeRef as AsyncFragment<TElement, T>)[ASYNC_FRAGMENT] = meta;
+
+      // If already resolved (from initial data), ensure signals are set
+      if (resolved && resolvedData !== undefined) {
+        data(resolvedData);
+        status('ready');
+      }
+
+      return nodeRef;
+    };
+
+    return refSpec;
+  }
+
+  return {
+    load,
+    getData: () => ({ ...collectedData }),
+  };
+}
