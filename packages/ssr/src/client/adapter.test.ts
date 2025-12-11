@@ -831,7 +831,7 @@ function createTestViewSvc(adapter: Adapter<DOMAdapterConfig>) {
     MapModule,
     MatchModule,
     MountModule
-  )();
+  );
 }
 
 describe('Integration: match() hydration with full view service', () => {

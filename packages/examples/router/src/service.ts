@@ -3,7 +3,7 @@
  *
  * Service composition for the app.
  */
-import { compose, extend } from '@lattice/lattice';
+import { compose, merge } from '@lattice/lattice';
 import {
   SignalModule,
   ComputedModule,
@@ -24,14 +24,14 @@ import { routes } from './routes';
  * Portable component - receives service, returns a function that returns RefSpec
  */
 export type Portable<TProps = Record<string, never>> = (
-  svc: Service
+  use: typeof svc
 ) => (props: TProps) => RefSpec<unknown>;
 
 // Create the DOM adapter
 const adapter = createDOMAdapter();
 
-// Compose base service
-const useSvc = compose(
+// Compose base service - `use` is both callable AND has all services as properties
+const use = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
@@ -43,23 +43,18 @@ const useSvc = compose(
   OnModule
 );
 
-const useRouteSvc = extend(useSvc, (svc) => ({
-  ...svc,
-  // Create router with route config
-  ...createRouter({ signal: svc.signal, computed: svc.computed }, routes, {
+// Merge router into the service
+export const svc = merge(
+  use,
+  createRouter({ signal: use.signal, computed: use.computed }, routes, {
     initialPath:
       typeof window !== 'undefined'
         ? window.location.pathname +
           window.location.search +
           window.location.hash
         : '/',
-  }),
-}));
-
-export const svc = useRouteSvc((_svc) => ({
-  ..._svc,
-  use: <TProps>(fn: Portable<TProps>) => fn(svc),
-}));
+  })
+);
 
 /**
  * Full service type

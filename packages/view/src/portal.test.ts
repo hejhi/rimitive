@@ -27,7 +27,7 @@ function createTestViewSvc() {
     createPortalModule(adapter),
     OnModule,
     MountModule
-  )();
+  );
 }
 
 type TestViewSvc = ReturnType<typeof createTestViewSvc>;

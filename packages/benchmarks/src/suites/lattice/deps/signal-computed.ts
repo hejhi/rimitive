@@ -1,4 +1,4 @@
 import { compose } from '@lattice/lattice';
 import { SignalModule, ComputedModule } from '@lattice/signals/extend';
 
-export const createSvc = () => compose(SignalModule, ComputedModule)();
+export const createSvc = () => compose(SignalModule, ComputedModule);

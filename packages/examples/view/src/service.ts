@@ -38,5 +38,5 @@ const use = compose(
 
 // Export primitives
 export const { signal, computed, effect, batch, el, map, match, on, mount } =
-  use();
+  use;
 export { use };

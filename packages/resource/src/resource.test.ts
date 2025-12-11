@@ -31,7 +31,7 @@ describe('resource', () => {
       EffectModule,
       ResourceModule
     );
-    return use();
+    return use;
   };
 
   describe('basic functionality', () => {

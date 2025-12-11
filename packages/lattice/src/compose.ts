@@ -203,55 +203,72 @@ export function compose(
     context[mod.name] = impl;
   }
 
-  // Return a use() function
+  // Create a callable that also has all context properties
+  // The callable passes ITSELF (with call signature) to the callback,
+  // not just the plain context object. This allows portables to call
+  // other portables using the same Use object.
   type ContextType = Record<string, unknown> & { dispose(): void };
 
-  const use = <TResult>(
-    callback?: (ctx: ContextType) => TResult
-  ): ContextType | TResult => {
-    if (callback === undefined) {
-      return context;
-    }
-    return callback(context);
-  };
+  const use = (<TResult>(fn: (ctx: ContextType) => TResult): TResult => {
+    // Pass `use` itself (the callable with properties) to the callback
+    return fn(use as ContextType);
+  }) as Use<ContextType>;
 
-  return use as Use<ContextType>;
+  // Copy all context properties onto the function
+  Object.assign(use, context);
+
+  return use;
 }
 
 /**
- * Extend a composed context with additional functionality.
+ * Merge additional properties into a Use context.
  *
- * Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`.
+ * Creates a new `Use` that has all properties from the base plus the additions.
+ * The base service instances are preserved (not cloned), so you stay on the
+ * same reactive graph.
  *
  * @example
  * ```ts
- * import { compose, extend } from '@lattice/lattice';
+ * import { compose, merge } from '@lattice/lattice';
  * import { Signal } from '@lattice/signals';
  *
- * const base = compose(Signal);
+ * const use = compose(Signal);
  *
- * const extended = extend(base, (ctx) => ({
- *   ...ctx,
- *   customMethod: () => console.log('extended!'),
- * }));
+ * // Add new properties
+ * const extended = merge(use, { theme: createTheme() });
+ * extended.theme; // available
+ * extended.signal; // same instance as use.signal
  *
- * const { signal, customMethod } = extended();
+ * // Override existing properties for a subtree
+ * const childUse = merge(use, { signal: customSignal });
+ * ```
+ *
+ * @example Inside a component
+ * ```ts
+ * const MyComponent = use((svc) => {
+ *   // Add router for this subtree
+ *   const childUse = merge(use, createRouter(svc));
+ *
+ *   return () => childUse(ChildComponent);
+ * });
  * ```
  */
-export function extend<TSvc, TExtended>(
-  use: Use<TSvc>,
-  extender: (svc: TSvc) => TExtended
-): Use<TExtended> {
-  const extended = extender(use());
+export function merge<TSvc, TAdditions extends object>(
+  base: Use<TSvc>,
+  additions: TAdditions
+): Use<Omit<TSvc, keyof TAdditions> & TAdditions> {
+  const merged = { ...base, ...additions };
 
-  const extendedUse = <TResult>(
-    callback?: (svc: TExtended) => TResult
-  ): TExtended | TResult => {
-    if (callback === undefined) {
-      return extended;
-    }
-    return callback(extended);
-  };
+  type MergedType = typeof merged;
 
-  return extendedUse as Use<TExtended>;
+  // Create a new callable that passes ITSELF to the callback
+  // This allows portables to call other portables using the same Use object
+  const mergedUse = (<TResult>(fn: (svc: MergedType) => TResult) =>
+    fn(mergedUse)) as Use<MergedType>;
+
+  // Merge base properties with additions (additions override base)
+  // Copy merged properties onto the function
+  Object.assign(mergedUse, merged);
+
+  return mergedUse;
 }

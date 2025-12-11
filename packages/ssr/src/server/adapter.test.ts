@@ -47,7 +47,7 @@ function createTestSSRService() {
     MapModule,
     MatchModule,
     MountModule
-  )();
+  );
 
   return {
     svc,

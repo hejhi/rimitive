@@ -59,7 +59,7 @@ export function createService(
     createMapModule(adapter),
     createMatchModule(adapter),
     OnModule
-  )();
+  );
 
   // Create loader with optional initial data for hydration
   // and onResolve for streaming SSR

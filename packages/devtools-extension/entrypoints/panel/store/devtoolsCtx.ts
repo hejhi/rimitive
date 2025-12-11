@@ -13,7 +13,7 @@ export const devtoolsContext = compose(
   ComputedModule,
   EffectModule,
   BatchModule
-)();
+);
 
 export const devtoolsState = {
   connected: devtoolsContext.signal(false),

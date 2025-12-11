@@ -14,12 +14,12 @@ import {
 
 /** Create a signals service for testing */
 function createTestSignals(): SignalSvc {
-  const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule)();
+  const use = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
   return {
-    signal: svc.signal,
-    computed: svc.computed,
-    effect: svc.effect,
-    batch: svc.batch,
+    signal: use.signal,
+    computed: use.computed,
+    effect: use.effect,
+    batch: use.batch,
     dispose: () => {},
   };
 }

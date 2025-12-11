@@ -30,7 +30,7 @@ const DOMMapModule = createMapModule(domAdapter);
 const DOMMatchModule = createMatchModule(domAdapter);
 
 // Compose DOM view service
-const domUse = compose(
+const domSvc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
@@ -42,8 +42,6 @@ const domUse = compose(
   OnModule,
   MountModule
 );
-
-const domSvc = domUse();
 
 // Canvas view (for scene)
 const canvasSvc = createCanvasViewSvc({ clearColor: '#16213e' });

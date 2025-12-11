@@ -64,7 +64,7 @@ export const {
   match,
   on,
   mount,
-} = use();
+} = use;
 export { use };
 
 // Export types

@@ -34,7 +34,7 @@ const use = compose(
   OnModule,
   MountModule
 );
-const { el, computed, effect, match, portal, mount: mountSpec } = use();
+const { el, computed, effect, match, portal, mount: mountSpec } = use;
 
 // Bind behaviors to this service
 const useDialog = use(dialog);

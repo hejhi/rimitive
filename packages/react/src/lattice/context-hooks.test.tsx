@@ -14,19 +14,19 @@ import {
 const SignalsModule = defineModule({
   name: 'signals' as const,
   create: () => {
-    const svc = compose(
+    const use = compose(
       SignalModule,
       ComputedModule,
       EffectModule,
       BatchModule,
       SubscribeModule
-    )();
+    );
     return {
-      signal: svc.signal,
-      computed: svc.computed,
-      effect: svc.effect,
-      batch: svc.batch,
-      subscribe: svc.subscribe,
+      signal: use.signal,
+      computed: use.computed,
+      effect: use.effect,
+      batch: use.batch,
+      subscribe: use.subscribe,
     };
   },
 });

@@ -44,7 +44,7 @@ function createTestService() {
     BatchModule,
     createElModule(adapter),
     createMatchModule(adapter)
-  )();
+  );
 
   const loader = createLoader({ signal: baseSvc.signal });
 

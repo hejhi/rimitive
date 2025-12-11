@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { compose } from './compose';
+import { compose, merge } from './compose';
 import { defineModule } from './module';
 
 describe('Module Composition System', () => {
@@ -17,18 +17,17 @@ describe('Module Composition System', () => {
     });
 
     const use = compose(Counter, Logger);
-    const context = use();
 
-    // Modules should be available
-    expect('counter' in context).toBe(true);
-    expect('log' in context).toBe(true);
-    expect('dispose' in context).toBe(true);
+    // Modules should be available as properties on use
+    expect('counter' in use).toBe(true);
+    expect('log' in use).toBe(true);
+    expect('dispose' in use).toBe(true);
 
-    // Test counter
-    expect(context.counter()).toBe(1);
-    expect(context.counter()).toBe(2);
+    // Test counter via property access
+    expect(use.counter()).toBe(1);
+    expect(use.counter()).toBe(2);
 
-    context.dispose();
+    use.dispose();
   });
 
   it('should call lifecycle hooks', () => {
@@ -43,11 +42,11 @@ describe('Module Composition System', () => {
     });
 
     const use = compose(TestModule);
-    const context = use();
+    // init is called during compose
     expect(init).toHaveBeenCalledOnce();
     expect(destroy).not.toHaveBeenCalled();
 
-    context.dispose();
+    use.dispose();
     expect(destroy).toHaveBeenCalledOnce();
   });
 
@@ -76,15 +75,14 @@ describe('Module Composition System', () => {
 
     // Pass all modules for proper typing (deps are still auto-resolved at runtime)
     const use = compose(Logger, Counter);
-    const context = use();
 
-    expect('counter' in context).toBe(true);
-    expect('logger' in context).toBe(true);
+    expect('counter' in use).toBe(true);
+    expect('logger' in use).toBe(true);
 
-    context.counter.increment();
-    expect(context.logger.log).toHaveBeenCalledWith('Count: 1');
+    use.counter.increment();
+    expect(use.logger.log).toHaveBeenCalledWith('Count: 1');
 
-    context.dispose();
+    use.dispose();
   });
 
   it('should support custom resource tracking via destroy', () => {
@@ -106,15 +104,14 @@ describe('Module Composition System', () => {
     });
 
     const use = compose(ResourceFactory);
-    const context = use();
 
-    const r1 = context.createResource();
-    const r2 = context.createResource();
+    const r1 = use.createResource();
+    const r2 = use.createResource();
 
     expect(r1.dispose).not.toHaveBeenCalled();
     expect(r2.dispose).not.toHaveBeenCalled();
 
-    context.dispose();
+    use.dispose();
 
     expect(r1.dispose).toHaveBeenCalledOnce();
     expect(r2.dispose).toHaveBeenCalledOnce();
@@ -131,7 +128,7 @@ describe('Module Composition System', () => {
       create: () => () => {},
     });
 
-    expect(() => compose(Ext1, Ext2)()).toThrow('Duplicate module name: test');
+    expect(() => compose(Ext1, Ext2)).toThrow('Duplicate module name: test');
   });
 
   it('should support use() with callback pattern', () => {
@@ -172,13 +169,12 @@ describe('Module Composition System', () => {
 
     // Pass all modules for proper typing (deps are still auto-resolved at runtime)
     const use = compose(A, B, C);
-    const context = use();
 
-    expect(context.a).toBe('A');
-    expect(context.b).toBe('B(A)');
-    expect(context.c).toBe('C(B(A))');
+    expect(use.a).toBe('A');
+    expect(use.b).toBe('B(A)');
+    expect(use.c).toBe('C(B(A))');
 
-    context.dispose();
+    use.dispose();
   });
 
   it('should call destroy hooks in reverse order', () => {
@@ -206,10 +202,138 @@ describe('Module Composition System', () => {
 
     // Pass all modules for proper typing
     const use = compose(A, B, C);
-    const context = use();
-    context.dispose();
+    use.dispose();
 
     // Should be in reverse dependency order
     expect(order).toEqual(['C', 'B', 'A']);
+  });
+
+  describe('merge', () => {
+    it('should merge additional properties into a Use context', () => {
+      const Counter = defineModule({
+        name: 'counter',
+        create: () => ({ count: 0 }),
+      });
+
+      const use = compose(Counter);
+      const merged = merge(use, { theme: 'dark' });
+
+      // Original properties preserved
+      expect(merged.counter).toBe(use.counter);
+      // New property added
+      expect(merged.theme).toBe('dark');
+    });
+
+    it('should allow overriding existing properties', () => {
+      const Counter = defineModule({
+        name: 'counter',
+        create: () => ({ count: 0 }),
+      });
+
+      const use = compose(Counter);
+      const customCounter = { count: 100 };
+      const merged = merge(use, { counter: customCounter });
+
+      // Property is overridden
+      expect(merged.counter).toBe(customCounter);
+      expect(merged.counter.count).toBe(100);
+    });
+
+    it('should preserve base service instances (same reactive graph)', () => {
+      const state = { value: 0 };
+      const Signal = defineModule({
+        name: 'signal',
+        create: () => () => state,
+      });
+
+      const use = compose(Signal);
+      const merged = merge(use, { extra: 'data' });
+
+      // Same instance reference
+      expect(merged.signal).toBe(use.signal);
+      expect(merged.signal()).toBe(use.signal());
+    });
+
+    it('should be callable with portables', () => {
+      const Counter = defineModule({
+        name: 'counter',
+        create: () => () => 42,
+      });
+
+      const use = compose(Counter);
+      const merged = merge(use, { multiplier: 2 });
+
+      // Can call merged with a function
+      const result = merged((svc) => svc.counter() * svc.multiplier);
+      expect(result).toBe(84);
+    });
+
+    it('should support chaining multiple merges', () => {
+      const Base = defineModule({
+        name: 'base',
+        create: () => 'base',
+      });
+
+      const use = compose(Base);
+      const withTheme = merge(use, { theme: 'dark' });
+      const withRouter = merge(withTheme, { route: '/home' });
+
+      expect(withRouter.base).toBe('base');
+      expect(withRouter.theme).toBe('dark');
+      expect(withRouter.route).toBe('/home');
+    });
+  });
+
+  describe('use as callable + properties', () => {
+    it('should allow direct property access', () => {
+      const Counter = defineModule({
+        name: 'counter',
+        create: () => () => 42,
+      });
+
+      const use = compose(Counter);
+
+      // Direct property access
+      expect(use.counter()).toBe(42);
+    });
+
+    it('should allow destructuring', () => {
+      const Counter = defineModule({
+        name: 'counter',
+        create: () => () => 42,
+      });
+
+      const Logger = defineModule({
+        name: 'logger',
+        create: () => ({ log: vi.fn() }),
+      });
+
+      const use = compose(Counter, Logger);
+
+      // Destructuring works
+      const { counter, logger } = use;
+      expect(counter()).toBe(42);
+      expect(typeof logger.log).toBe('function');
+    });
+
+    it('should support both calling and property access in same portable', () => {
+      const Counter = defineModule({
+        name: 'counter',
+        create: () => () => 10,
+      });
+
+      const use = compose(Counter);
+
+      // Simulate a portable pattern
+      const result = use((svc) => {
+        // Can access via callback arg
+        const fromCallback = svc.counter();
+        // Can also access via use directly (same instance)
+        const fromUse = use.counter();
+        return fromCallback + fromUse;
+      });
+
+      expect(result).toBe(20);
+    });
   });
 });

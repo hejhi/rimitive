@@ -24,7 +24,7 @@ const signalsSvc = compose(
   ComputedModule,
   EffectModule,
   BatchModule
-)();
+);
 
 // ============================================================================
 // Create React hooks from portable headless behaviors

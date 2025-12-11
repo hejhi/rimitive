@@ -22,7 +22,7 @@ export const service = compose(
   EffectModule,
   BatchModule,
   { instrumentation }
-)();
+);
 
 // Export the service type for behaviors
 export type Service = typeof service;

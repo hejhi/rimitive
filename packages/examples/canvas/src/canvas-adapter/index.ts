@@ -74,7 +74,7 @@ export const createCanvasViewSvc = (options: CanvasAdapterOptions) => {
   const CanvasMatchModule = createMatchModule(adapter);
 
   // Compose canvas view service
-  const canvasUse = compose(
+  const viewSvc = compose(
     SignalModule,
     ComputedModule,
     EffectModule,
@@ -84,8 +84,6 @@ export const createCanvasViewSvc = (options: CanvasAdapterOptions) => {
     CanvasMatchModule,
     MountModule
   );
-
-  const viewSvc = canvasUse();
 
   const svc = {
     ...viewSvc,
