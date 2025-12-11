@@ -33,7 +33,7 @@ export class HydrationMismatch extends Error {
 /** Check if node is any fragment marker comment */
 function isMarker(node: Node | null): boolean {
   if (!node || node.nodeType !== 8) return false;
-  const t = (node as Comment).textContent ?? '';
+  const t = node.textContent ?? '';
   return (
     t === 'fragment-start' ||
     t === 'fragment-end' ||
@@ -45,14 +45,14 @@ function isMarker(node: Node | null): boolean {
 /** Check if node is a fragment-start marker */
 function isStartMarker(node: Node | null): boolean {
   if (!node || node.nodeType !== 8) return false;
-  const t = (node as Comment).textContent ?? '';
+  const t = node.textContent ?? '';
   return t === 'fragment-start' || t.startsWith('async:');
 }
 
 /** Check if node is a fragment-end marker */
 function isEndMarker(node: Node | null): boolean {
   if (!node || node.nodeType !== 8) return false;
-  const t = (node as Comment).textContent ?? '';
+  const t = node.textContent ?? '';
   return t === 'fragment-end' || t.startsWith('/async:');
 }
 
@@ -79,9 +79,7 @@ function getNthChild(parent: Node, index: number): Node {
 /** Resolve path to DOM node */
 function getNodeAtPath(root: Node, path: number[]): Node {
   let node = root;
-  for (const index of path) {
-    node = getNthChild(node, index);
-  }
+  for (const index of path) node = getNthChild(node, index);
   return node;
 }
 
@@ -116,19 +114,13 @@ function findFragmentIndex(
   let node = nextSibling ? nextSibling.previousSibling : parent.lastChild;
 
   // Skip if nextSibling is preceded by a fragment-start (adjacent fragments)
-  if (nextSibling && node && isStartMarker(node)) {
-    node = node.previousSibling;
-  }
+  if (nextSibling && node && isStartMarker(node)) node = node.previousSibling;
 
   // Skip fragment-end markers
-  while (isEndMarker(node)) {
-    node = node!.previousSibling;
-  }
+  while (isEndMarker(node)) node = node!.previousSibling;
 
   // Find fragment-start
-  while (node && !isStartMarker(node)) {
-    node = node.previousSibling;
-  }
+  while (node && !isStartMarker(node)) node = node.previousSibling;
 
   if (!node) return null; // No markers - fragment hidden during SSR
 
