@@ -18,7 +18,7 @@ Route configuration - pure data, no components
 **Signature:**
 
 ```typescript
-export declare type RouteConfig = {
+export type RouteConfig = {
     id: string;
     path: string;
     children?: RouteConfig[];

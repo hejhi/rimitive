@@ -18,7 +18,7 @@ Router instance - reactive state + navigation
 **Signature:**
 
 ```typescript
-export declare type Router = {
+export type Router = {
     matches: Readable<MatchedRoute[]>;
     currentPath: Readable<string>;
     navigate: (path: string) => void;
