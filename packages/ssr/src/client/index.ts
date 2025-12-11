@@ -7,7 +7,12 @@
  * from window.__LATTICE_DATA__ (or similar) to seed the loader on the client.
  */
 
-import type { Loader } from '@lattice/view/load';
+import type { Adapter } from '@lattice/view/types';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createDOMHydrationAdapter as createDOMHydrationAdapterInternal } from '../adapters/dom-hydration';
+import { createHydrationAdapter as createHydrationAdapterInternal } from '../adapters/hydration';
+import { withAsyncSupport } from '../deps/hydration-adapters';
 
 // =============================================================================
 // Window Globals for SSR
@@ -30,50 +35,75 @@ declare global {
 }
 
 // =============================================================================
-// Streaming SSR Client Support
+// Client Adapter
 // =============================================================================
 
-/**
- * Stream receiver interface - matches what stream.bootstrap() creates.
- * The receiver queues data until a loader connects, then forwards directly.
- */
-export type StreamReceiver = {
-  push: (id: string, data: unknown) => void;
-  connect: (loader: Loader) => void;
+/** Client adapter with activate() method for switching from hydration to normal mode */
+export type ClientAdapter = ReturnType<
+  typeof createHydrationAdapterInternal
+> & {
+  /** Switch from hydration mode to normal DOM mode */
+  activate: () => void;
+};
+
+/** Options for createClientAdapter */
+export type ClientAdapterOptions = {
+  /** Custom adapter for walking SSR DOM during hydration */
+  hydration?: Adapter<DOMAdapterConfig>;
+  /** Custom adapter for post-hydration client rendering */
+  client?: Adapter<DOMAdapterConfig>;
 };
 
 /**
- * Connect a loader to a stream receiver.
+ * Create a client adapter for hydration.
  *
- * Call this after hydration to connect the loader to the stream receiver
- * created by stream.bootstrap(). The receiver flushes its queue
- * and forwards future chunks directly to the loader.
+ * This creates the full adapter stack needed for hydrating SSR content:
+ * 1. DOM hydration adapter that walks existing SSR DOM
+ * 2. Regular DOM adapter for post-hydration rendering
+ * 3. Async support for load() boundaries
  *
- * @param loader - The loader instance from your service
- * @param streamKey - The window property name (stream.key)
+ * After hydration, call adapter.activate() to switch to normal DOM mode.
+ *
+ * @param root - The root element containing SSR content
+ * @param options - Optional custom adapters
+ * @returns Hydration adapter with activate() method
  *
  * @example
  * ```ts
- * // Server: const stream = createStreamWriter('__APP_STREAM__');
- * // Server: res.write(stream.bootstrap());
+ * const adapter = createClientAdapter(document.querySelector('.app')!);
+ * const service = createService(adapter);
  *
- * // Client
- * import { connectStream } from '@lattice/ssr/client';
- *
- * const service = createService(appAdapter);
+ * // Hydrate
  * AppLayout(service).create(service);
- * appAdapter.switchToFallback();
  *
- * // Connect to the stream - same key as server
- * connectStream(service.loader, '__APP_STREAM__');
+ * // Switch to normal client mode
+ * adapter.activate();
  * ```
  */
-export function connectStream(loader: Loader, streamKey: string): void {
-  const receiver = (window as unknown as Record<string, unknown>)[streamKey] as StreamReceiver | undefined;
-  if (receiver && typeof receiver.connect === 'function') {
-    receiver.connect(loader);
-  }
+export function createClientAdapter(
+  root: HTMLElement,
+  options?: ClientAdapterOptions
+): ClientAdapter {
+  const clientAdapter = options?.client ?? withAsyncSupport(createDOMAdapter());
+  const hydrationAdapter =
+    options?.hydration ?? createDOMHydrationAdapterInternal(root);
+  const adapter = createHydrationAdapterInternal(
+    hydrationAdapter,
+    clientAdapter
+  );
+
+  return {
+    ...adapter,
+    activate: adapter.switchToFallback,
+  };
 }
+
+// =============================================================================
+// Streaming
+// =============================================================================
+
+export { connectStream } from './stream';
+export type { StreamReceiver } from './stream';
 
 // =============================================================================
 // Adapters

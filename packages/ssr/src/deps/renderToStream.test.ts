@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { renderToStream } from './renderToStream';
-import { createStreamWriter } from './stream';
+import { createStreamWriter } from '../server/stream';
 import { createLoader } from '@lattice/view/load';
 import type { LoadState } from '@lattice/view/load';
 import { STATUS_REF_SPEC } from '@lattice/view/types';

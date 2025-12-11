@@ -24,12 +24,13 @@ import type { RefSpec } from '@lattice/view/types';
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
 import { getStyles } from './styles.js';
+import { STREAM_KEY } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
 
-// Create stream writer - same key must be used on client in connectStream()
-const { chunk, bootstrap } = createStreamWriter('__APP_STREAM__');
+// Create stream writer - same key used on client in connectStream()
+const { chunk, bootstrap } = createStreamWriter(STREAM_KEY);
 
 const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')

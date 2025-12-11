@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createStreamWriter } from './stream';
+import { createStreamWriter } from '../server/stream';
 
 describe('createStreamWriter', () => {
   it('should format chunk as script tag that pushes to proxy', () => {

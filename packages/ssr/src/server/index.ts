@@ -16,10 +16,13 @@ export type {
 
 // Streaming SSR
 export { renderToStream } from '../deps/renderToStream';
-export type { RenderToStreamOptions, StreamResult } from '../deps/renderToStream';
+export type {
+  RenderToStreamOptions,
+  StreamResult,
+} from '../deps/renderToStream';
 
-export { createStreamWriter } from '../deps/stream';
-export type { StreamWriter } from '../deps/stream';
+export { createStreamWriter } from './stream';
+export type { StreamWriter } from './stream';
 
 // Async fragment utilities (server-side)
 export {
