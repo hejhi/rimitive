@@ -18,7 +18,7 @@ Create a Lattice context with modules that is scoped to the component lifecycle.
 **Signature:**
 
 ```typescript
-export declare function useLatticeContext<M extends Module[]>(...modules: M): ComposedContext<M>;
+export declare function useLatticeContext<M extends Module[]>(...modules: M): Use<ComposedContext<M>>;
 ```
 
 ## Parameters
@@ -59,9 +59,9 @@ The Lattice modules to include in the context
 
 **Returns:**
 
-[ComposedContext](../../lattice/composedcontext/)<!-- -->&lt;M&gt;
+[Use](../../lattice/use/)<!-- -->&lt;[ComposedContext](../../lattice/composedcontext/)<!-- -->&lt;M&gt;&gt;
 
-A context with implementations from all provided modules
+A Use context with implementations from all provided modules
 
 ## Example 1
 
@@ -71,10 +71,10 @@ import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/ext
 
 function App() {
   // Create a context with specific modules
-  const context = useLatticeContext(SignalModule, ComputedModule, EffectModule);
+  const use = useLatticeContext(SignalModule, ComputedModule, EffectModule);
 
-  const count = useRef(context.signal(0));
-  const doubled = useRef(context.computed(() => count.current() * 2));
+  const count = useRef(use.signal(0));
+  const doubled = useRef(use.computed(() => count.current() * 2));
 
   return <div>...</div>;
 }
@@ -88,14 +88,14 @@ function App() {
 import { createSignals } from '@lattice/signals';
 
 function TodoApp() {
-  const svcRef = useRef(createSignals()());
-  const { signal } = svcRef.current;
+  const use = useRef(createSignals());
+  const { signal } = use.current;
 
   const todos = useRef(signal([]));
   const filter = useRef(signal('all'));
 
   // Dispose on unmount
-  useEffect(() => () => svcRef.current.dispose(), []);
+  useEffect(() => () => use.current.dispose(), []);
 
   return (
     <AppContext.Provider value={{ todos: todos.current, filter: filter.current }}>

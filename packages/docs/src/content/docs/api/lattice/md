@@ -120,19 +120,6 @@ Sends instrumentation events to the Lattice DevTools browser extension via `wind
 </td></tr>
 <tr><td>
 
-[extend(use, extender)](../extend/)
-
-
-</td><td>
-
-Extend a composed context with additional functionality.
-
-Takes a `Use<TSvc>` and an extender function, returning a new `Use<TExtended>`<!-- -->.
-
-
-</td></tr>
-<tr><td>
-
 [isDevtoolsAvailable()](../isdevtoolsavailable/)
 
 
@@ -150,6 +137,19 @@ Check if Lattice DevTools extension is available in the current environment.
 </td><td>
 
 Check if a value is a Module
+
+
+</td></tr>
+<tr><td>
+
+[merge(base, additions)](../merge/)
+
+
+</td><td>
+
+Merge additional properties into a Use context.
+
+Creates a new `Use` that has all properties from the base plus the additions. The base service instances are preserved (not cloned), so you stay on the same reactive graph.
 
 
 </td></tr>
@@ -415,7 +415,9 @@ Utility type: Convert a union to an intersection. Used internally to combine typ
 
 A callable returned by `compose()` that provides access to the module context.
 
-Can be called in two ways: - `use()` - Returns the context directly - `use(callback)` - Passes the context to callback and returns its result
+`Use` is both a function AND an object with all service properties: - Call `use(fn)` to invoke a portable/behavior with the service context - Access `use.signal`<!-- -->, `use.el`<!-- -->, etc. directly as properties
+
+When you call `use(fn)`<!-- -->, the callback receives the `Use` object itself, allowing nested portables to call other portables.
 
 
 </td></tr>

@@ -21,7 +21,7 @@ Route wraps a RefSpec with routing metadata for path composition. Delegates to i
 export type Route<TElement> = {
     routeMetadata: RouteMetadata<AdapterConfig>;
     unwrap(): RefSpec<TElement>;
-    create<TExt = Record<string, unknown>>(svc?: unknown, extensions?: TExt): import('@lattice/view/types').NodeRef<TElement> & TExt;
+    create<TExt = Record<string, unknown>>(svc?: unknown, extensions?: TExt): NodeRef<TElement> & TExt;
 };
 ```
 **References:** [RouteMetadata](../routemetadata/)<!-- -->, [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [NodeRef](../../view/noderef/)

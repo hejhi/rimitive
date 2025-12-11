@@ -13,7 +13,6 @@
     "src/api.ts",
     "src/pages/**/*",
     "src/layouts/**/*",
-    "src/islands/**/*",
     "src/routes.ts"
   ]
 }

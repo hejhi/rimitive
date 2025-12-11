@@ -15,16 +15,18 @@ sidebar:
 
 A callable returned by `compose()` that provides access to the module context.
 
-Can be called in two ways: - `use()` - Returns the context directly - `use(callback)` - Passes the context to callback and returns its result
+`Use` is both a function AND an object with all service properties: - Call `use(fn)` to invoke a portable/behavior with the service context - Access `use.signal`<!-- -->, `use.el`<!-- -->, etc. directly as properties
+
+When you call `use(fn)`<!-- -->, the callback receives the `Use` object itself, allowing nested portables to call other portables.
 
 **Signature:**
 
 ```typescript
 export type Use<TSvc> = {
-    (): TSvc;
-    <TResult>(callback: (svc: TSvc) => TResult): TResult;
-};
+    <TResult>(fn: (svc: Use<TSvc>) => TResult): TResult;
+} & TSvc;
 ```
+**References:** Use
 
 ## Example
 
@@ -35,13 +37,25 @@ import { Signal, Computed } from '@lattice/signals';
 
 const use = compose(Signal, Computed);
 
-// Get the context directly
-const { signal, computed } = use();
+// Access services directly as properties
+const count = use.signal(0);
+const doubled = use.computed(() => count() * 2);
 
-// Wrap a component with context access
-const Counter = use(({ signal, computed }) => () => {
-  const count = signal(0);
-  return computed(() => count());
+// Or invoke a portable/behavior
+const Counter = use((svc) => () => {
+  const count = svc.signal(0);
+  return { value: count };
+});
+
+// Inside a portable, you can do both:
+const MyComponent = use((svc) => {
+  // Call svc() with another portable (svc is also callable)
+  const behavior = svc(someBehavior);
+
+  // Access services directly
+  const { signal, el } = svc;
+
+  return () => { ... };
 });
 ```
 

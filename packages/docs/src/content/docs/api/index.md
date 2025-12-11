@@ -1,5 +1,5 @@
 ---
-title: "API Reference"
+title: 'API Reference'
 sidebar:
   hidden: true
 ---
@@ -16,75 +16,51 @@ sidebar:
 
 Package
 
-
 </th><th>
 
 Description
 
-
 </th></tr></thead>
 <tbody><tr><td>
 
-[@lattice/islands](./islands/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
 [@lattice/lattice](./lattice/)
 
-
 </td><td>
-
 
 </td></tr>
 <tr><td>
 
 [@lattice/react](./react/)
 
-
 </td><td>
-
 
 </td></tr>
 <tr><td>
 
 [@lattice/router](./router/)
 
-
 </td><td>
-
 
 </td></tr>
 <tr><td>
 
 [@lattice/signals](./signals/)
 
-
 </td><td>
-
 
 </td></tr>
 <tr><td>
 
 [@lattice/ssr](./ssr/)
 
-
 </td><td>
-
 
 </td></tr>
 <tr><td>
 
 [@lattice/view](./view/)
 
-
 </td><td>
-
 
 </td></tr>
 </tbody></table>
-

@@ -4,7 +4,6 @@
     { "path": "./packages/lattice" },
     { "path": "./packages/signals" },
     { "path": "./packages/view" },
-    { "path": "./packages/islands" },
     { "path": "./packages/router" },
     { "path": "./packages/react" },
     { "path": "./packages/devtools-extension" },

@@ -16,7 +16,6 @@ export const About =
           el('li')('Router matches path and provides route info'),
           el('li')('View layer renders matched component'),
           el('li')('HTML is sent to the client with inline island data'),
-          el('li')('Client hydrates interactive islands only'),
           el('li')('Router continues working on client for navigation')
         )
       ),

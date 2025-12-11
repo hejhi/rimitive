@@ -39,7 +39,6 @@ Use the format: `@lattice/package-name`
 Examples:
 
 - `@lattice/ui-components`
-- `@lattice/islands`
 - `@lattice/validation`
 
 ## Key Principles

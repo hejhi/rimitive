@@ -39,32 +39,6 @@ Compose a parent path with a child path
 </td></tr>
 <tr><td>
 
-[connect(wrapper)](../connect/)
-
-
-</td><td>
-
-Standalone connect function - doesn't require a router instance
-
-Creates a connected component that receives the service and route context as separate arguments. This keeps the service "owned" by the user while making route-specific data explicit.
-
-
-</td></tr>
-<tr><td>
-
-[createLegacyRouter(viewSvc, config)](../createlegacyrouter/)
-
-
-</td><td>
-
-Create a router instance
-
-The router is a separate app-level service that takes a view service as input. It manages navigation state and provides routing primitives.
-
-
-</td></tr>
-<tr><td>
-
 [createLocationFactory(opts)](../createlocationfactory/)
 
 
@@ -87,12 +61,14 @@ Create a router instance
 </td></tr>
 <tr><td>
 
-[defineRoutes(rootPath, rootComponent)](../defineroutes/)
+[createRouterModule(routes, options)](../createroutermodule/)
 
 
 </td><td>
 
-Define routes without requiring a router instance
+Create a Router module for use with compose().
+
+Like createElModule(adapter), this takes configuration at module creation time and returns a Module that can be composed with other modules.
 
 
 </td></tr>
@@ -151,74 +127,6 @@ Description
 
 </th></tr></thead>
 <tbody><tr><td>
-
-[ConnectedComponent\_2](../connectedcomponent/)
-
-
-</td><td>
-
-Connected component type - a function that receives route context
-
-
-</td></tr>
-<tr><td>
-
-[ConnectedComponent](../connectedcomponent/)
-
-
-</td><td>
-
-A connected component that can be instantiated with route context
-
-
-</td></tr>
-<tr><td>
-
-[ConnectedSvc](../connectedsvc/)
-
-
-</td><td>
-
-Connected service - merged view service + route service
-
-This is the service passed to connected components, enabling them to use whatever adapter is provided (hydrating or regular) rather than pulling from a singleton.
-
-
-</td></tr>
-<tr><td>
-
-[ConnectMethod](../connectmethod/)
-
-
-</td><td>
-
-The connect impl signature
-
-Connected components receive the service and route context as separate arguments. This keeps the service "owned" by the user while making route-specific data explicit.
-
-
-</td></tr>
-<tr><td>
-
-[DefineRoutesContext](../defineroutescontext/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
-[LegacyRouter](../legacyrouter/)
-
-
-</td><td>
-
-Router object returned by createRouter Generic over TConfig for type safety with adapter-specific implementations
-
-
-</td></tr>
-<tr><td>
 
 [LinkFunction](../linkfunction/)
 
@@ -301,28 +209,6 @@ Match function type
 </td></tr>
 <tr><td>
 
-[RootContext](../rootcontext/)
-
-
-</td><td>
-
-Root context returned by router.root() Provides scoped route creation and a create method for finalizing the route tree
-
-
-</td></tr>
-<tr><td>
-
-[RootMethod](../rootmethod/)
-
-
-</td><td>
-
-Root method signature - defines the always-rendered root layout
-
-
-</td></tr>
-<tr><td>
-
 [Route](../route/)
 
 
@@ -334,36 +220,12 @@ Route wraps a RefSpec with routing metadata for path composition. Delegates to i
 </td></tr>
 <tr><td>
 
-[RouteBuilder](../routebuilder/)
-
-
-</td><td>
-
-A route builder - returned by route() before children are applied
-
-
-</td></tr>
-<tr><td>
-
 [RouteConfig](../routeconfig/)
 
 
 </td><td>
 
 Route configuration - pure data, no components
-
-
-</td></tr>
-<tr><td>
-
-[RouteContext](../routecontext/)
-
-
-</td><td>
-
-Route context - route-specific data (children, params)
-
-Passed as the second argument to connected components. Kept separate from the service to maintain explicit ownership.
 
 
 </td></tr>
@@ -391,28 +253,6 @@ Route-specific metadata
 </td></tr>
 <tr><td>
 
-[RouteMethod](../routemethod/)
-
-
-</td><td>
-
-Route method signature
-
-
-</td></tr>
-<tr><td>
-
-[RouteNode](../routenode/)
-
-
-</td><td>
-
-A single route node in the tree
-
-
-</td></tr>
-<tr><td>
-
 [RouteParams](../routeparams/)
 
 
@@ -435,17 +275,6 @@ Router instance - reactive state + navigation
 </td></tr>
 <tr><td>
 
-[RouterConfig](../routerconfig/)
-
-
-</td><td>
-
-Router configuration
-
-
-</td></tr>
-<tr><td>
-
 [RouterDeps](../routerdeps/)
 
 
@@ -463,39 +292,6 @@ Dependencies for creating the router These come from the signals module
 </td><td>
 
 Router configuration
-
-
-</td></tr>
-<tr><td>
-
-[RouteSvc](../routesvc/)
-
-
-</td><td>
-
-Route - navigation and path signals
-
-
-</td></tr>
-<tr><td>
-
-[RouteTree](../routetree/)
-
-
-</td><td>
-
-The complete route tree returned by defineRoutes().create()
-
-
-</td></tr>
-<tr><td>
-
-[ViewSvc](../viewsvc/)
-
-
-</td><td>
-
-View service that the router depends on
 
 
 </td></tr>

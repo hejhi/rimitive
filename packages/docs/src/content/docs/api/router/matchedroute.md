@@ -18,7 +18,7 @@ A matched route with its extracted parameters
 **Signature:**
 
 ```typescript
-export type MatchedRoute = {
+export declare type MatchedRoute = {
     id: string;
     pattern: string;
     params: Record<string, string>;

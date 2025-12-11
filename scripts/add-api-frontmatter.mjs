@@ -18,7 +18,6 @@ const PACKAGE_MAP = {
   view: 'view',
   lattice: 'lattice',
   router: 'router',
-  islands: 'islands',
   react: 'react',
   ssr: 'ssr',
   resource: 'resource',
@@ -30,7 +29,6 @@ const PACKAGE_LABELS = {
   view: '@lattice/view',
   lattice: '@lattice/lattice',
   router: '@lattice/router',
-  islands: '@lattice/islands',
   react: '@lattice/react',
   ssr: '@lattice/ssr',
   resource: '@lattice/resource',
@@ -42,10 +40,9 @@ const PACKAGE_ORDER = {
   view: 2,
   lattice: 3,
   router: 4,
-  islands: 5,
-  react: 6,
-  ssr: 7,
-  resource: 8,
+  react: 5,
+  ssr: 6,
+  resource: 7,
 };
 
 // Badge variants for different API kinds
@@ -62,17 +59,6 @@ const KIND_BADGES = {
   constructor: { text: 'new', variant: 'caution' },
   package: { text: 'pkg', variant: 'success' },
   overloads: { text: 'fn', variant: 'tip' },
-};
-
-// Sort order for kinds within a package (lower = higher)
-const KIND_ORDER = {
-  function: 1,
-  class: 2,
-  interface: 3,
-  type: 4,
-  variable: 5,
-  enum: 6,
-  namespace: 7,
 };
 
 function getPackageFromFilename(filename) {
@@ -92,7 +78,10 @@ function parseOverloadInfo(filename) {
   // Match patterns like "name_1.md", "name_2.md"
   const overloadMatch = filename.match(/^(.+)_(\d+)\.md$/);
   if (overloadMatch) {
-    return { baseName: overloadMatch[1], overloadNum: parseInt(overloadMatch[2], 10) };
+    return {
+      baseName: overloadMatch[1],
+      overloadNum: parseInt(overloadMatch[2], 10),
+    };
   }
   // Regular file without overload suffix
   const baseMatch = filename.match(/^(.+)\.md$/);
@@ -141,7 +130,9 @@ function extractTitleAndKind(content) {
   const fullTitle = h2Match[1].trim();
 
   // Parse titles like "Computed() function" or "Signal type" or "HydrationMismatch class"
-  const kindMatch = fullTitle.match(/^(.+?)\s+(function|type|class|interface|variable|enum|namespace|property|method|package)$/i);
+  const kindMatch = fullTitle.match(
+    /^(.+?)\s+(function|type|class|interface|variable|enum|namespace|property|method|package)$/i
+  );
 
   if (kindMatch) {
     const cleanTitle = kindMatch[1].trim();
@@ -151,7 +142,11 @@ function extractTitleAndKind(content) {
 
   // Handle constructor pattern "(constructor)"
   if (fullTitle.includes('(constructor)')) {
-    return { title: fullTitle, kind: 'constructor', cleanTitle: fullTitle.replace('.(constructor)', '') };
+    return {
+      title: fullTitle,
+      kind: 'constructor',
+      cleanTitle: fullTitle.replace('.(constructor)', ''),
+    };
   }
 
   return { title: fullTitle, kind: null, cleanTitle: fullTitle };
@@ -176,30 +171,33 @@ function fixLinks(content, currentPackage, currentFilename, overloadGroups) {
   // Fix item links: ./signals.computed.md -> ../computed/ (same package)
   // or ./view.el.md -> ../../view/el/ (different package)
   // If it's a self-link (same file), remove the link entirely
-  result = result.replace(/\[([^\]]+)\]\(\.\/([a-z]+)\.([^)]+)\.md\)/g, (match, text, pkg, rest) => {
-    const targetFile = `${rest}.md`;
-    if (targetFile === currentFilename) {
-      // Self-link: just return the text without a link
-      return text;
-    }
-
-    // Check if target has overloads - if so, link to the folder
-    const { baseName } = parseOverloadInfo(targetFile);
-    const targetKey = `${pkg}.${baseName}`;
-    const targetHasOverloads = overloadGroups.has(targetKey);
-
-    if (pkg === currentPackage) {
-      if (targetHasOverloads) {
-        return `[${text}](../${baseName}/)`;
+  result = result.replace(
+    /\[([^\]]+)\]\(\.\/([a-z]+)\.([^)]+)\.md\)/g,
+    (match, text, pkg, rest) => {
+      const targetFile = `${rest}.md`;
+      if (targetFile === currentFilename) {
+        // Self-link: just return the text without a link
+        return text;
       }
-      return `[${text}](../${rest}/)`;
-    } else {
-      if (targetHasOverloads) {
-        return `[${text}](../../${pkg}/${baseName}/)`;
+
+      // Check if target has overloads - if so, link to the folder
+      const { baseName } = parseOverloadInfo(targetFile);
+      const targetKey = `${pkg}.${baseName}`;
+      const targetHasOverloads = overloadGroups.has(targetKey);
+
+      if (pkg === currentPackage) {
+        if (targetHasOverloads) {
+          return `[${text}](../${baseName}/)`;
+        }
+        return `[${text}](../${rest}/)`;
+      } else {
+        if (targetHasOverloads) {
+          return `[${text}](../../${pkg}/${baseName}/)`;
+        }
+        return `[${text}](../../${pkg}/${rest}/)`;
       }
-      return `[${text}](../../${pkg}/${rest}/)`;
     }
-  });
+  );
 
   return result;
 }
@@ -253,14 +251,23 @@ sidebar:
 ---
 
 `;
-      return { content: frontmatter + fixedContent, destDir: API_DIR, destName: 'index.md' };
+      return {
+        content: frontmatter + fixedContent,
+        destDir: API_DIR,
+        destName: 'index.md',
+      };
     }
 
     // Package index files like "signals.md" -> signals/index.md
     const pkgMatch = filename.match(/^([a-z]+)\.md$/);
     if (pkgMatch && PACKAGE_MAP[pkgMatch[1]]) {
       const pkgName = pkgMatch[1];
-      const fixedContent = fixLinks(content, pkgName, 'index.md', overloadGroups);
+      const fixedContent = fixLinks(
+        content,
+        pkgName,
+        'index.md',
+        overloadGroups
+      );
       const frontmatter = generateFrontmatter(PACKAGE_LABELS[pkgName], {
         order: PACKAGE_ORDER[pkgName],
         kind: 'package',
@@ -268,7 +275,7 @@ sidebar:
       return {
         content: frontmatter + fixedContent,
         destDir: join(API_DIR, pkgName),
-        destName: 'index.md'
+        destName: 'index.md',
       };
     }
 
@@ -342,10 +349,9 @@ sidebar:
   };
 }
 
-
 async function main() {
   const files = await readdir(API_DIR);
-  const mdFiles = files.filter(f => f.endsWith('.md'));
+  const mdFiles = files.filter((f) => f.endsWith('.md'));
 
   console.log(`Processing ${mdFiles.length} files...`);
 
@@ -379,7 +385,9 @@ async function main() {
   );
 
   const processed = results.filter(Boolean).length;
-  console.log(`Organized ${processed} files into package subfolders with badges.`);
+  console.log(
+    `Organized ${processed} files into package subfolders with badges.`
+  );
 }
 
 main().catch(console.error);

@@ -18,7 +18,7 @@ Router configuration
 **Signature:**
 
 ```typescript
-export type RouterOptions = {
+export declare type RouterOptions = {
     initialPath?: string;
 };
 ```

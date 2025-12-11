@@ -16,7 +16,6 @@ export const Home =
           el('li')('✓ Universal API - same code on server and client'),
           el('li')('✓ Multiple routes with different rendering modes'),
           el('li')('✓ Static pages (no JS)'),
-          el('li')('✓ Interactive islands (selective hydration)'),
           el('li')('✓ Client-side navigation after hydration')
         )
       ),

@@ -18,7 +18,7 @@ Dependencies for creating the router These come from the signals module
 **Signature:**
 
 ```typescript
-export type RouterDeps = {
+export declare type RouterDeps = {
     signal: <T>(value: T) => Writable<T>;
     computed: <T>(fn: () => T) => Readable<T>;
 };
