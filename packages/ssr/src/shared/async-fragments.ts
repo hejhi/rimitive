@@ -1,8 +1,10 @@
 /**
- * Async fragment utilities for SSR
+ * Async Fragment Utilities
  *
  * These utilities work with AsyncFragment nodes created by load() to enable
  * server-side resolution and client-side hydration triggering.
+ *
+ * Used by both server and client code.
  */
 
 import type { NodeRef } from '@lattice/view/types';

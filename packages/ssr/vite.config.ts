@@ -50,14 +50,6 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types.ts'),
         'server/index': resolve(__dirname, 'src/server/index.ts'),
         'client/index': resolve(__dirname, 'src/client/index.ts'),
-        'deps/renderToString': resolve(__dirname, 'src/deps/renderToString.ts'),
-        'deps/hydrate-dom': resolve(__dirname, 'src/deps/hydrate-dom.ts'),
-        'adapters/dom-server': resolve(__dirname, 'src/adapters/dom-server.ts'),
-        'adapters/dom-hydration': resolve(
-          __dirname,
-          'src/adapters/dom-hydration.ts'
-        ),
-        'adapters/hydration': resolve(__dirname, 'src/adapters/hydration.ts'),
       },
       formats: ['es'],
     },
@@ -68,6 +60,7 @@ export default defineConfig({
         'node:test',
         'node:http',
         'node:async_hooks',
+        'linkedom',
         '@lattice/lattice',
         '@lattice/view',
         /^@lattice\/view\//,

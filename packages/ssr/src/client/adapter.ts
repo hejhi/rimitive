@@ -1,20 +1,13 @@
 /**
- * Coordinate-Based Hydrating DOM Adapter
+ * Client Adapters for Hydration
  *
- * Uses explicit tree coordinates and range tracking instead of
- * imperative cursor manipulation. More algorithmic, easier to reason about.
- *
- * Key improvements:
- * - Position is explicit TreePath + RangeStack, not implicit cursor state
- * - appendChild uses DOM state to detect exit (child.parentNode check)
- * - Fragment ranges are scanned and tracked explicitly
- * - All position transformations are pure functions
- *
- * Async fragment data is managed by createLoader() - data is passed via
- * initialData option, not embedded in markers.
+ * Provides adapters for rehydrating server-rendered content:
+ * - createDOMHydrationAdapter: Walks existing DOM during hydration
+ * - createHydrationAdapter: Switches between hydration and normal mode
+ * - withAsyncSupport: Triggers async fragments on attach
  */
 
-import type { Adapter, NodeRef } from '@lattice/view/types';
+import type { Adapter, AdapterConfig, NodeRef } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_FRAGMENT } from '@lattice/view/types';
 import {
@@ -26,10 +19,19 @@ import {
   enterFragmentRange,
   getCurrentPath,
   positionFromPath,
-} from '../deps/hydrate-dom';
+} from './hydrate';
+import {
+  isAsyncFragment,
+  triggerAsyncFragment,
+  type AsyncFragment,
+} from '../shared/async-fragments';
 
 // Re-export DOMAdapterConfig for consumers that import from here
 export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+
+// =============================================================================
+// HydrationMismatch Error
+// =============================================================================
 
 /**
  * Hydration mismatch error
@@ -41,9 +43,9 @@ export class HydrationMismatch extends Error {
   }
 }
 
-// ============================================================================
+// =============================================================================
 // DOM Navigation Utilities
-// ============================================================================
+// =============================================================================
 
 /**
  * Check if node is a fragment marker comment (including async markers)
@@ -100,7 +102,6 @@ function isFragmentStartMarker(node: Node): boolean {
   const text = (node as Comment).textContent ?? '';
   return text === 'fragment-start' || text.startsWith('async:');
 }
-
 
 /**
  * Scan forward from fragment-start marker to count range size
@@ -236,12 +237,21 @@ function findFragmentContent(
   return { index, markerNode: node };
 }
 
-// ============================================================================
-// Adapter Implementation
-// ============================================================================
+// =============================================================================
+// DOM Hydration Adapter
+// =============================================================================
 
 /**
  * Create a DOM hydration adapter for rehydrating server-rendered content
+ *
+ * @example
+ * ```ts
+ * import { createDOMHydrationAdapter, createHydrationAdapter } from '@lattice/ssr/client';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const hydrateAdapter = createDOMHydrationAdapter(container);
+ * const adapter = createHydrationAdapter(hydrateAdapter, createDOMAdapter());
+ * ```
  */
 export function createDOMHydrationAdapter(
   containerEl: HTMLElement
@@ -311,9 +321,14 @@ export function createDOMHydrationAdapter(
       ) {
         // Debug: show parent context
         const parent = node.parentNode;
-        const siblings = parent ? Array.from(parent.childNodes).map((n, i) =>
-          `${i}: ${n.nodeType === 1 ? `<${(n as Element).tagName}>` : n.nodeType === 8 ? `<!--${(n as Comment).textContent}-->` : `"${n.textContent?.slice(0, 20)}..."`}`
-        ).join(', ') : 'no parent';
+        const siblings = parent
+          ? Array.from(parent.childNodes)
+              .map(
+                (n, i) =>
+                  `${i}: ${n.nodeType === 1 ? `<${(n as Element).tagName}>` : n.nodeType === 8 ? `<!--${(n as Comment).textContent}-->` : `"${n.textContent?.slice(0, 20)}..."`}`
+              )
+              .join(', ')
+          : 'no parent';
         throw new HydrationMismatch(
           `Expected <${type}> at ${getCurrentPath(position).join('/')}, got <${(node as Element).tagName}>. Parent children: [${siblings}]`
         );
@@ -472,6 +487,103 @@ export function createDOMHydrationAdapter(
 
       // Set position to point at fragment content
       position = positionFromPath([...parentPath, childIndex]);
+    },
+  };
+}
+
+// =============================================================================
+// Hydration Adapter (Mode Switching)
+// =============================================================================
+
+/**
+ * Create a hydration adapter that switches to a fallback after hydration is complete
+ *
+ * @example
+ * ```typescript
+ * import { createHydrationAdapter, createDOMHydrationAdapter } from '@lattice/ssr/client';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const domAdapter = createDOMAdapter();
+ * const hydrateAdapter = createDOMHydrationAdapter(container);
+ * const adapter = createHydrationAdapter(hydrateAdapter, domAdapter);
+ *
+ * // After hydration completes
+ * adapter.switchToFallback();
+ * ```
+ */
+export function createHydrationAdapter(
+  hydrateAdapter: Adapter<DOMAdapterConfig>,
+  fallbackAdapter: Adapter<DOMAdapterConfig>
+): Adapter<DOMAdapterConfig> & { switchToFallback: () => void } {
+  let useHydrating = true;
+
+  const switchToFallback = () => {
+    useHydrating = false;
+  };
+  const getAdapter = (): Adapter<DOMAdapterConfig> =>
+    useHydrating ? hydrateAdapter : fallbackAdapter;
+
+  return {
+    createNode: (type: string, props?: Record<string, unknown>) =>
+      getAdapter().createNode(type, props),
+    setProperty: (node: Node, key: string, value: unknown) =>
+      getAdapter().setProperty(node, key, value),
+    appendChild: (parent, child) => getAdapter().appendChild(parent, child),
+    removeChild: (parent, child) => getAdapter().removeChild(parent, child),
+    insertBefore: (parent, newNode, refNode) =>
+      getAdapter().insertBefore(parent, newNode, refNode),
+    beforeCreate: (type: string, props?: Record<string, unknown>) =>
+      getAdapter().beforeCreate?.(type, props),
+    onCreate: (ref: NodeRef<Node>, parent: Node) =>
+      getAdapter().onCreate?.(ref, parent),
+    beforeAttach: (
+      ref: NodeRef<Node>,
+      parent: Node,
+      nextSibling: Node | null
+    ) => getAdapter().beforeAttach?.(ref, parent, nextSibling),
+    onAttach: (ref: NodeRef<Node>, parent: Node) =>
+      getAdapter().onAttach?.(ref, parent),
+    beforeDestroy: (ref: NodeRef<Node>, parent: Node) =>
+      getAdapter().beforeDestroy?.(ref, parent),
+    onDestroy: (ref: NodeRef<Node>, parent: Node) =>
+      getAdapter().onDestroy?.(ref, parent),
+    switchToFallback,
+  };
+}
+
+// =============================================================================
+// Async Support Wrapper
+// =============================================================================
+
+/**
+ * Wrap an adapter to trigger async fragments on attach.
+ *
+ * Use this for client-side rendering (not hydration) where async fragments
+ * should immediately start fetching when attached to the DOM.
+ *
+ * For hydration, data is provided via createLoader(initialData) - the loader
+ * seeds async fragments with SSR-resolved data to avoid re-fetching.
+ *
+ * @example
+ * ```ts
+ * import { withAsyncSupport } from '@lattice/ssr/client';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ *
+ * const adapter = withAsyncSupport(createDOMAdapter());
+ * ```
+ */
+export function withAsyncSupport<TConfig extends AdapterConfig>(
+  adapter: Adapter<TConfig>
+): Adapter<TConfig> {
+  const originalOnAttach = adapter.onAttach;
+
+  return {
+    ...adapter,
+    onAttach: (ref: NodeRef<TConfig['baseElement']>, parent) => {
+      originalOnAttach?.(ref, parent);
+      if (isAsyncFragment(ref)) {
+        triggerAsyncFragment(ref as AsyncFragment<TConfig['baseElement']>);
+      }
     },
   };
 }

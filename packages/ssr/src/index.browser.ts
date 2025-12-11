@@ -4,4 +4,4 @@
  * Browser-safe exports for SSR hydration.
  */
 
-export { HydrationMismatch } from './types';
+export { HydrationMismatch } from './client/adapter';

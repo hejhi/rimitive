@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDOMHydrationAdapter, HydrationMismatch } from './dom-hydration';
+import { createDOMHydrationAdapter, HydrationMismatch } from './adapter';
 import { STATUS_FRAGMENT, type FragmentRef } from '@lattice/view/types';
 
 /**
@@ -814,7 +814,7 @@ import {
   type ElementRef,
   type Adapter,
 } from '@lattice/view/types';
-import type { DOMAdapterConfig } from './dom-hydration';
+import type { DOMAdapterConfig } from './adapter';
 
 /** Create a view service with compose pattern for testing */
 function createTestViewSvc(adapter: Adapter<DOMAdapterConfig>) {

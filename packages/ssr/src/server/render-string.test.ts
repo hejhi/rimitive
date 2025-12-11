@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { renderToString } from './renderToString';
+import { renderToString } from './render';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { NodeRef, ElementRef, FragmentRef } from '@lattice/view/types';
 
@@ -378,14 +378,13 @@ describe('Rendering Invariants', () => {
 // Tests: Async Rendering (renderToStringAsync)
 // ============================================================================
 
-import { renderToStringAsync } from './renderToString';
-import type { AsyncFragment } from './async-fragments';
-import { ASYNC_FRAGMENT } from './async-fragments';
+import { renderToStringAsync } from './render';
+import type { AsyncFragment } from '../shared/async-fragments';
+import { ASYNC_FRAGMENT } from '../shared/async-fragments';
 import type { LoadState } from '@lattice/view/load';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
 import type { RefSpec } from '@lattice/view/types';
-import { createDOMServerAdapter } from '../server/index';
-
+import { createDOMServerAdapter } from './adapter';
 
 /**
  * Create an async fragment for testing.
@@ -436,7 +435,8 @@ function createTestAsyncFragment<T>(
             // For elements, set them directly as children
             fragment.firstChild = readyNode;
             fragment.lastChild = readyNode;
-            (readyNode.parent as NodeRef<unknown> | null) = fragment as unknown as NodeRef<unknown>;
+            (readyNode.parent as NodeRef<unknown> | null) =
+              fragment as unknown as NodeRef<unknown>;
           } else if (readyNode.status === STATUS_FRAGMENT) {
             // For fragments, copy their children
             fragment.firstChild = readyNode.firstChild;
@@ -444,7 +444,8 @@ function createTestAsyncFragment<T>(
             // Update parent references
             let child = fragment.firstChild;
             while (child) {
-              (child.parent as NodeRef<unknown> | null) = fragment as unknown as NodeRef<unknown>;
+              (child.parent as NodeRef<unknown> | null) =
+                fragment as unknown as NodeRef<unknown>;
               if (child === fragment.lastChild) break;
               child = child.next;
             }
@@ -466,13 +467,15 @@ function createTestAsyncFragment<T>(
           if (errorNode.status === STATUS_ELEMENT) {
             fragment.firstChild = errorNode;
             fragment.lastChild = errorNode;
-            (errorNode.parent as NodeRef<unknown> | null) = fragment as unknown as NodeRef<unknown>;
+            (errorNode.parent as NodeRef<unknown> | null) =
+              fragment as unknown as NodeRef<unknown>;
           } else if (errorNode.status === STATUS_FRAGMENT) {
             fragment.firstChild = errorNode.firstChild;
             fragment.lastChild = errorNode.lastChild;
             let child = fragment.firstChild;
             while (child) {
-              (child.parent as NodeRef<unknown> | null) = fragment as unknown as NodeRef<unknown>;
+              (child.parent as NodeRef<unknown> | null) =
+                fragment as unknown as NodeRef<unknown>;
               if (child === fragment.lastChild) break;
               child = child.next;
             }
@@ -513,13 +516,15 @@ function createTestAsyncFragment<T>(
   if (pendingNode.status === STATUS_ELEMENT) {
     fragment.firstChild = pendingNode;
     fragment.lastChild = pendingNode;
-    (pendingNode.parent as NodeRef<unknown> | null) = fragment as unknown as NodeRef<unknown>;
+    (pendingNode.parent as NodeRef<unknown> | null) =
+      fragment as unknown as NodeRef<unknown>;
   } else if (pendingNode.status === STATUS_FRAGMENT) {
     fragment.firstChild = pendingNode.firstChild;
     fragment.lastChild = pendingNode.lastChild;
     let child = fragment.firstChild;
     while (child) {
-      (child.parent as NodeRef<unknown> | null) = fragment as unknown as NodeRef<unknown>;
+      (child.parent as NodeRef<unknown> | null) =
+        fragment as unknown as NodeRef<unknown>;
       if (child === fragment.lastChild) break;
       child = child.next;
     }
@@ -819,4 +824,3 @@ describe('Async Rendering - Nested Async Fragments', () => {
     expect(level3Async.firstChild).not.toBeNull();
   });
 });
-

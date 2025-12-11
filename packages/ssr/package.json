@@ -21,14 +21,6 @@
     "./client": {
       "import": "./dist/client/index.js",
       "types": "./dist/client/index.d.ts"
-    },
-    "./adapters/dom-server": {
-      "import": "./dist/adapters/dom-server.js",
-      "types": "./dist/adapters/dom-server.d.ts"
-    },
-    "./deps/renderToString": {
-      "import": "./dist/deps/renderToString.js",
-      "types": "./dist/deps/renderToString.d.ts"
     }
   },
   "files": [

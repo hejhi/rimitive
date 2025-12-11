@@ -1,7 +1,9 @@
 /**
- * Coordinate-based position system for hydration
+ * Hydration Position System
  *
- * Based on Tree Zipper pattern with range stack extension for fragments.
+ * Coordinate-based position system for hydration using the Tree Zipper pattern
+ * with range stack extension for fragments.
+ *
  * Uses linked lists for O(1) operations with structural sharing.
  */
 

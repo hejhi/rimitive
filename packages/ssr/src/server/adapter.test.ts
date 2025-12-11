@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDOMServerAdapter } from './dom-server';
+import { createDOMServerAdapter } from './adapter';
 import {
   STATUS_ELEMENT,
   STATUS_FRAGMENT,
@@ -27,7 +27,7 @@ import { createElModule } from '@lattice/view/el';
 import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { MountModule } from '@lattice/view/deps/mount';
-import { renderToString } from '../deps/renderToString';
+import { renderToString } from './render';
 
 /**
  * Create SSR service for tests using compose pattern

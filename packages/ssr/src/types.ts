@@ -2,7 +2,7 @@
  * Core types for SSR
  */
 
-import { HydrationMismatch } from './adapters/dom-hydration';
+import { HydrationMismatch } from './client/adapter';
 
 // Re-export HydrationMismatch for convenience
 export { HydrationMismatch };

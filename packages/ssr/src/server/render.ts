@@ -1,12 +1,11 @@
 /**
- * Render to string utilities for SSR
+ * Server Render Functions
  *
- * Renders a node tree to HTML string. Async rendering support allows
- * awaiting load() boundaries before serialization.
+ * Renders Lattice components to HTML strings for SSR.
  *
- * With the marker-based hydration approach, async fragment data is
- * embedded directly in fragment markers by dom-server.ts, so no
- * separate hydration script is needed for async data.
+ * - renderToString: Synchronous render
+ * - renderToStringAsync: Waits for all async boundaries
+ * - renderToStream: Progressive streaming render
  */
 
 import type {
@@ -21,8 +20,12 @@ import {
   isAsyncFragment,
   collectAsyncFragments,
   type AsyncFragment,
-} from './async-fragments';
-import { insertFragmentMarkers } from '../adapters/dom-server';
+} from '../shared/async-fragments';
+import { insertFragmentMarkers } from './adapter';
+
+// =============================================================================
+// Render to String
+// =============================================================================
 
 /**
  * Render a node tree to HTML string
@@ -165,4 +168,139 @@ export async function renderToStringAsync<TSvc>(
   }
 
   return renderToString(nodeRef);
+}
+
+// =============================================================================
+// Streaming Render
+// =============================================================================
+
+/**
+ * Options for renderToStream
+ */
+export type RenderToStreamOptions = {
+  /**
+   * Mount function to create NodeRef from RefSpec.
+   * The mount function should use a loader created with onResolve
+   * to enable streaming chunks.
+   */
+  mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
+
+  /**
+   * URL path to the client bundle (e.g., '/client.js').
+   * If provided, generates a blocking script tag to ensure hydration
+   * completes before streaming data chunks are processed.
+   */
+  clientSrc?: string;
+};
+
+/**
+ * Result from renderToStream
+ */
+export type StreamResult = {
+  /** The initial HTML string (with pending states for async boundaries) */
+  initialHtml: string;
+
+  /**
+   * Client script tag - include after initialHtml, before streaming chunks.
+   * Uses blocking (non-module) script to ensure hydration completes first.
+   * Empty string if clientSrc was not provided.
+   */
+  clientScript: string;
+
+  /**
+   * Promise that resolves when all async boundaries have resolved.
+   * The actual data chunks are delivered via the loader's onResolve callback.
+   */
+  done: Promise<void>;
+
+  /** Number of pending async boundaries */
+  pendingCount: number;
+};
+
+/**
+ * Render to stream for progressive SSR.
+ *
+ * Returns initial HTML and client script. Use with createStreamWriter()
+ * for the full streaming flow.
+ *
+ * @example
+ * ```ts
+ * import { renderToStream, createStreamWriter } from '@lattice/ssr/server';
+ *
+ * const { bootstrap, chunk } = createStreamWriter('__APP_STREAM__');
+ *
+ * // Create service with streaming callback
+ * const service = createService(adapter, {
+ *   onResolve: (id, data) => res.write(chunk(id, data)),
+ * });
+ *
+ * // Render
+ * const { initialHtml, clientScript, done } = renderToStream(
+ *   AppLayout(service),
+ *   { mount: (spec) => spec.create(service), clientSrc: '/client.js' }
+ * );
+ *
+ * // Write HTML document
+ * res.write(`<!DOCTYPE html><html><head>`);
+ * res.write(bootstrap());
+ * res.write(`</head><body>`);
+ * res.write(initialHtml);
+ * res.write(clientScript);
+ * await done;  // Data chunks stream via onResolve
+ * res.write('</body></html>');
+ * res.end();
+ * ```
+ */
+export function renderToStream(
+  spec: RefSpec<unknown>,
+  options: RenderToStreamOptions
+): StreamResult {
+  const { mount, clientSrc } = options;
+
+  // Mount the app synchronously - this renders with pending states
+  const nodeRef = mount(spec);
+
+  // Collect all async fragments
+  const asyncFragments = collectAsyncFragments(nodeRef);
+
+  // Insert fragment markers for async fragments BEFORE serializing.
+  // This is needed because createDOMServerAdapter.onAttach skips async fragments
+  // (they're normally handled by renderToStringAsync after resolution).
+  // For streaming, we need markers around the PENDING state content so
+  // the hydration adapter can locate these boundaries.
+  for (const fragment of asyncFragments) {
+    if (fragment.status === STATUS_FRAGMENT) {
+      insertFragmentMarkers(fragment);
+    }
+  }
+
+  // Get initial HTML (with pending states for load() boundaries)
+  const initialHtml = renderToString(nodeRef);
+  const pendingCount = asyncFragments.length;
+
+  // Create promise that resolves when all async boundaries complete
+  // Data chunks are delivered via the loader's onResolve callback
+  const done =
+    pendingCount === 0
+      ? Promise.resolve()
+      : Promise.all(
+          asyncFragments.map((fragment) =>
+            fragment[ASYNC_FRAGMENT].resolve().catch(() => {
+              // Errors are handled by the loader's error state
+              // Don't let one failure break the whole stream
+            })
+          )
+        ).then(() => undefined);
+
+  // Generate client script tag if clientSrc provided
+  // Uses blocking (non-module) script to ensure hydration completes
+  // before streaming data chunks are processed
+  const clientScript = clientSrc ? `<script src="${clientSrc}"></script>` : '';
+
+  return {
+    initialHtml,
+    clientScript,
+    done,
+    pendingCount,
+  };
 }

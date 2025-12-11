@@ -11,4 +11,4 @@
  * | Client hydration | `import { ... } from '@lattice/ssr/client'` |
  */
 
-export { HydrationMismatch } from './types';
+export { HydrationMismatch } from './client/adapter';

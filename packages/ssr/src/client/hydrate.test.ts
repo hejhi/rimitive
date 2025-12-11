@@ -24,7 +24,7 @@ import {
   getDepth,
   positionFromPath,
   pathToArray,
-} from './hydrate-dom';
+} from './hydrate';
 
 // ============================================================================
 // Test Helpers

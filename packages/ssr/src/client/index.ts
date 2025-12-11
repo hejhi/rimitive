@@ -3,16 +3,29 @@
  *
  * Client-side utilities for SSR hydration.
  *
- * Async fragment data is managed by createLoader() - pass initial data
- * from window.__LATTICE_DATA__ (or similar) to seed the loader on the client.
+ * @example
+ * ```ts
+ * import {
+ *   createClientAdapter,
+ *   connectStream,
+ * } from '@lattice/ssr/client';
+ *
+ * const adapter = createClientAdapter(document.querySelector('.app')!);
+ * const service = createService(adapter);
+ * AppLayout(service).create(service);
+ * adapter.activate();
+ * connectStream(service, '__APP_STREAM__');
+ * ```
  */
 
 import type { Adapter } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createDOMHydrationAdapter as createDOMHydrationAdapterInternal } from '../adapters/dom-hydration';
-import { createHydrationAdapter as createHydrationAdapterInternal } from '../adapters/hydration';
-import { withAsyncSupport } from '../deps/hydration-adapters';
+import {
+  createDOMHydrationAdapter,
+  createHydrationAdapter,
+  withAsyncSupport,
+} from './adapter';
 
 // =============================================================================
 // Window Globals for SSR
@@ -39,9 +52,7 @@ declare global {
 // =============================================================================
 
 /** Client adapter with activate() method for switching from hydration to normal mode */
-export type ClientAdapter = ReturnType<
-  typeof createHydrationAdapterInternal
-> & {
+export type ClientAdapter = ReturnType<typeof createHydrationAdapter> & {
   /** Switch from hydration mode to normal DOM mode */
   activate: () => void;
 };
@@ -86,11 +97,8 @@ export function createClientAdapter(
 ): ClientAdapter {
   const clientAdapter = options?.client ?? withAsyncSupport(createDOMAdapter());
   const hydrationAdapter =
-    options?.hydration ?? createDOMHydrationAdapterInternal(root);
-  const adapter = createHydrationAdapterInternal(
-    hydrationAdapter,
-    clientAdapter
-  );
+    options?.hydration ?? createDOMHydrationAdapter(root);
+  const adapter = createHydrationAdapter(hydrationAdapter, clientAdapter);
 
   return {
     ...adapter,
@@ -106,11 +114,15 @@ export { connectStream } from './stream';
 export type { StreamReceiver } from './stream';
 
 // =============================================================================
-// Adapters
+// Adapters (Advanced)
 // =============================================================================
 
-export { createDOMHydrationAdapter } from '../adapters/dom-hydration';
-export { createHydrationAdapter } from '../adapters/hydration';
+export {
+  createDOMHydrationAdapter,
+  createHydrationAdapter,
+  withAsyncSupport,
+  HydrationMismatch,
+} from './adapter';
 
 // Async fragment utilities (client-side)
 export {
@@ -118,11 +130,5 @@ export {
   collectAsyncFragments,
   isAsyncFragment,
   ASYNC_FRAGMENT,
-} from '../deps/async-fragments';
-export type { AsyncFragment } from '../deps/async-fragments';
-
-// Adapter wrapper for client-side rendering (non-hydration)
-export { withAsyncSupport } from '../deps/hydration-adapters';
-
-// Types
-export { HydrationMismatch } from '../types';
+} from '../shared/async-fragments';
+export type { AsyncFragment } from '../shared/async-fragments';

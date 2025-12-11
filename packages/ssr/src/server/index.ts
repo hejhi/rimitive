@@ -1,26 +1,37 @@
 /**
  * Server Module
  *
- * Server-side utilities for SSR.
+ * Server-side utilities for SSR rendering.
  *
- * Async fragment data is managed by createLoader() - use loader.getData()
- * to collect resolved data and serialize it to a script tag for the client.
+ * @example
+ * ```ts
+ * import {
+ *   createDOMServerAdapter,
+ *   renderToString,
+ *   renderToStringAsync,
+ *   renderToStream,
+ *   createStreamWriter,
+ * } from '@lattice/ssr/server';
+ * ```
  */
 
-// Render to string
-export { renderToString, renderToStringAsync } from '../deps/renderToString';
+// Render functions
+export { renderToString, renderToStringAsync, renderToStream } from './render';
 export type {
   AsyncRenderable,
   RenderToStringAsyncOptions,
-} from '../deps/renderToString';
-
-// Streaming SSR
-export { renderToStream } from '../deps/renderToStream';
-export type {
   RenderToStreamOptions,
   StreamResult,
-} from '../deps/renderToStream';
+} from './render';
 
+// Server adapter
+export {
+  createDOMServerAdapter,
+  insertFragmentMarkers,
+  getFirstDOMNode,
+} from './adapter';
+
+// Streaming
 export { createStreamWriter } from './stream';
 export type { StreamWriter } from './stream';
 
@@ -29,8 +40,5 @@ export {
   isAsyncFragment,
   collectAsyncFragments,
   ASYNC_FRAGMENT,
-} from '../deps/async-fragments';
-export type { AsyncFragment } from '../deps/async-fragments';
-
-// Server adapter
-export { createDOMServerAdapter } from '../adapters/dom-server';
+} from '../shared/async-fragments';
+export type { AsyncFragment } from '../shared/async-fragments';

@@ -1,15 +1,8 @@
 /**
- * Server-side DOM adapter using linkedom
+ * Server DOM Adapter
  *
- * Renders Lattice components to HTML strings for SSR.
+ * Renders Lattice components to HTML strings using linkedom.
  * Adds fragment markers for hydration support.
- *
- * IMPORTANT: Async fragment markers are inserted by renderToStringAsync AFTER
- * all async resolves complete. This ensures markers wrap the final resolved
- * content, not the initial pending state.
- *
- * Data for async fragments is managed by createLoader() - users serialize
- * loader.getData() to a script tag, and pass it to createLoader() on the client.
  */
 
 import { parseHTML } from 'linkedom';
@@ -17,6 +10,10 @@ import type { Adapter, FragmentRef, NodeRef } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import { isAsyncFragment } from '@lattice/view/load';
+
+// =============================================================================
+// Fragment Marker Utilities
+// =============================================================================
 
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
@@ -63,9 +60,7 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
  * Note: Async fragment data is no longer embedded in markers. Use createLoader()
  * to manage data serialization separately.
  */
-export function insertFragmentMarkers(
-  fragment: FragmentRef<unknown>
-): void {
+export function insertFragmentMarkers(fragment: FragmentRef<unknown>): void {
   if (!fragment.firstChild || !fragment.lastChild) return;
 
   const firstNode = getFirstDOMNode(fragment.firstChild);
@@ -89,6 +84,10 @@ export function insertFragmentMarkers(
   parentElement.insertBefore(endComment, lastNode.nextSibling);
 }
 
+// =============================================================================
+// Server Adapter
+// =============================================================================
+
 /**
  * Create a linkedom adapter for server-side rendering
  *
@@ -96,7 +95,7 @@ export function insertFragmentMarkers(
  *
  * @example
  * ```typescript
- * import { createDOMServerAdapter } from '@lattice/ssr/adapters/dom-server';
+ * import { createDOMServerAdapter } from '@lattice/ssr/server';
  * import { createView } from '@lattice/view/presets/core';
  * import { createSignals } from '@lattice/signals/presets/core';
  *
