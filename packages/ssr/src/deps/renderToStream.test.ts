@@ -5,8 +5,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   renderToStream,
-  createChunkScript,
-  createStreamingLoader,
+  createStreamWriter,
+  createStreamLoader,
 } from './renderToStream';
 import { createLoader } from '@lattice/view/load';
 import type { LoadState } from '@lattice/view/load';
@@ -69,7 +69,8 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
 describe('renderToStream', () => {
   it('should return initial HTML with pending states, buffer chunks, and resolve done', async () => {
     const { signal } = createServerTestEnv();
-    const { loader, getChunks } = createStreamingLoader({ signal, streamKey: '__TEST__' });
+    const stream = createStreamWriter('__TEST__');
+    const { loader, getChunks } = createStreamLoader({ signal, stream });
 
     let resolveData: (() => void) | null = null;
     const dataPromise = new Promise<{ value: number }>((resolve) => {
@@ -142,9 +143,10 @@ describe('renderToStream', () => {
   });
 });
 
-describe('createChunkScript', () => {
+describe('createStreamWriter', () => {
   it('should format chunk as script tag that pushes to proxy', () => {
-    const chunk = createChunkScript('__APP__', 'user-123', {
+    const stream = createStreamWriter('__APP__');
+    const chunk = stream.chunk('user-123', {
       name: 'Alice',
       age: 30,
     });
@@ -155,21 +157,38 @@ describe('createChunkScript', () => {
   });
 
   it('should escape quotes in JSON strings', () => {
-    const chunk = createChunkScript('__APP__', 'quote-test', {
+    const stream = createStreamWriter('__APP__');
+    const chunk = stream.chunk('quote-test', {
       message: 'Hello "world"',
     });
 
     expect(chunk).toContain('Hello \\"world\\"');
   });
+
+  it('should expose the stream key', () => {
+    const stream = createStreamWriter('__MY_STREAM__');
+    expect(stream.key).toBe('__MY_STREAM__');
+  });
+
+  it('should generate bootstrap script', () => {
+    const stream = createStreamWriter('__BOOT__');
+    const bootstrap = stream.bootstrap();
+
+    expect(bootstrap).toContain('<script>');
+    expect(bootstrap).toContain('window.__BOOT__');
+    expect(bootstrap).toContain('push');
+    expect(bootstrap).toContain('connect');
+  });
 });
 
-describe('createStreamingLoader', () => {
+describe('createStreamLoader', () => {
   it('should not fetch or generate chunks when initialData is provided', async () => {
     const { signal } = createServerTestEnv();
+    const stream = createStreamWriter('__TEST__');
 
-    const { loader, getChunks } = createStreamingLoader({
+    const { loader, getChunks } = createStreamLoader({
       signal,
-      streamKey: '__TEST__',
+      stream,
       initialData: { 'hydrated-1': { message: 'From cache' } },
     });
 
@@ -195,7 +214,8 @@ describe('createStreamingLoader', () => {
 
   it('should preserve chunk order based on resolution timing', async () => {
     const { signal } = createServerTestEnv();
-    const { loader, getChunks } = createStreamingLoader({ signal, streamKey: '__TEST__' });
+    const stream = createStreamWriter('__TEST__');
+    const { loader, getChunks } = createStreamLoader({ signal, stream });
 
     const SlowAsync = loader.load(
       'slow',

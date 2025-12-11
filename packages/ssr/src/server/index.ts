@@ -17,15 +17,15 @@ export type {
 // Streaming SSR
 export {
   renderToStream,
-  createStreamingLoader,
-  createStreamingBootstrap,
-  createChunkScript,
+  createStreamLoader,
+  createStreamWriter,
 } from '../deps/renderToStream';
 export type {
   RenderToStreamOptions,
   StreamResult,
-  CreateStreamingLoaderOptions,
-  StreamingLoaderResult,
+  StreamLoaderOptions,
+  StreamLoaderResult,
+  StreamWriter,
 } from '../deps/renderToStream';
 
 // Async fragment utilities (server-side)

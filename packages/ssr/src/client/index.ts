@@ -19,8 +19,8 @@ import type { Loader } from '@lattice/view/load';
  * Non-streaming SSR uses __LATTICE_DATA__ as a static object containing
  * loader data serialized by the server.
  *
- * Streaming SSR uses a user-defined proxy key (e.g., '__APP_STREAM__')
- * via createStreamingBootstrap() - no hardcoded globals needed.
+ * Streaming SSR uses a user-defined stream key (e.g., '__APP_STREAM__')
+ * via createStreamWriter() - no hardcoded globals needed.
  */
 declare global {
   interface Window {
@@ -34,45 +34,44 @@ declare global {
 // =============================================================================
 
 /**
- * Streaming proxy interface - matches what createStreamingBootstrap() creates.
- * The proxy queues data until a loader connects, then forwards directly.
+ * Stream receiver interface - matches what stream.bootstrap() creates.
+ * The receiver queues data until a loader connects, then forwards directly.
  */
-export type StreamingProxy = {
-  queue: Array<[string, unknown]>;
-  loader: Loader | null;
+export type StreamReceiver = {
   push: (id: string, data: unknown) => void;
   connect: (loader: Loader) => void;
 };
 
 /**
- * Connect a loader to a streaming proxy.
+ * Connect a loader to a stream receiver.
  *
- * Call this after hydration to connect the loader to the streaming proxy
- * created by createStreamingBootstrap(). The proxy flushes its queue
+ * Call this after hydration to connect the loader to the stream receiver
+ * created by stream.bootstrap(). The receiver flushes its queue
  * and forwards future chunks directly to the loader.
  *
  * @param loader - The loader instance from your service
- * @param streamKey - The window property name used in createStreamingBootstrap()
+ * @param streamKey - The window property name (stream.key)
  *
  * @example
  * ```ts
- * // Server used: createStreamingBootstrap('__APP_STREAM__')
+ * // Server: const stream = createStreamWriter('__APP_STREAM__');
+ * // Server: res.write(stream.bootstrap());
  *
  * // Client
- * import { connectStreamingLoader } from '@lattice/ssr/client';
+ * import { connectStream } from '@lattice/ssr/client';
  *
  * const service = createService(appAdapter);
  * AppLayout(service).create(service);
  * appAdapter.switchToFallback();
  *
- * // Connect to the streaming proxy - same key as server
- * connectStreamingLoader(service.loader, '__APP_STREAM__');
+ * // Connect to the stream - same key as server
+ * connectStream(service.loader, '__APP_STREAM__');
  * ```
  */
-export function connectStreamingLoader(loader: Loader, streamKey: string): void {
-  const proxy = (window as unknown as Record<string, unknown>)[streamKey] as StreamingProxy | undefined;
-  if (proxy && typeof proxy.connect === 'function') {
-    proxy.connect(loader);
+export function connectStream(loader: Loader, streamKey: string): void {
+  const receiver = (window as unknown as Record<string, unknown>)[streamKey] as StreamReceiver | undefined;
+  if (receiver && typeof receiver.connect === 'function') {
+    receiver.connect(loader);
   }
 }
 

@@ -61,7 +61,7 @@ export type StreamResult = {
 };
 
 // =============================================================================
-// Streaming Receiver
+// Stream Writer
 // =============================================================================
 
 /**
@@ -71,87 +71,84 @@ export type StreamResult = {
  * @internal
  */
 function createStreamingReceiver() {
+  const queue: Array<[string, unknown]> = [];
+  let loader: { setData: (id: string, data: unknown) => void } | null = null;
+
   return {
-    queue: [] as Array<[string, unknown]>,
-    loader: null as { setData: (id: string, data: unknown) => void } | null,
-    push: function (id: string, data: unknown) {
-      if (this.loader) {
-        this.loader.setData(id, data);
+    push(id: string, data: unknown) {
+      if (loader) {
+        loader.setData(id, data);
       } else {
-        this.queue.push([id, data]);
+        queue.push([id, data]);
       }
     },
-    connect: function (loader: {
-      setData: (id: string, data: unknown) => void;
-    }) {
-      this.loader = loader;
-      for (let i = 0; i < this.queue.length; i++) {
-        const item = this.queue[i];
-        if (item) loader.setData(item[0], item[1]);
+    connect(l: { setData: (id: string, data: unknown) => void }) {
+      loader = l;
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
+        if (item) l.setData(item[0], item[1]);
       }
-      this.queue = [];
+      queue.length = 0;
     },
   };
 }
 
 /**
- * Create bootstrap script that sets up a streaming receiver at the given key.
- *
- * The receiver queues data chunks until a loader connects, then forwards directly.
- * User controls the key name, making the connection explicit and traceable.
- *
- * @param streamKey - The window property name (e.g., '__MY_APP_STREAM__')
- * @returns Script tag string to include in <head>
- *
- * @example
- * ```ts
- * // Server
- * const STREAM_KEY = '__APP_STREAM__';
- * res.write(createStreamingBootstrap(STREAM_KEY));
- *
- * // Streams data via:
- * res.write(createChunkScript(STREAM_KEY, 'stats', { users: 100 }));
- * ```
+ * A factory for generating streaming script tags.
  */
-export function createStreamingBootstrap(streamKey: string): string {
-  return `<script>window.${streamKey}=(${createStreamingReceiver.toString()})();</script>`;
-}
+export type StreamWriter = {
+  /** The stream key (window property name) */
+  key: string;
+  /** Script tag that initializes the streaming receiver */
+  bootstrap: () => string;
+  /** Script tag that pushes data to the receiver */
+  chunk: (id: string, data: unknown) => string;
+};
 
 /**
- * Create a script tag that pushes data to the streaming receiver.
+ * Create a stream writer for generating streaming script tags.
  *
- * @param streamKey - The window property name used in createStreamingBootstrap
- * @param id - The async boundary ID
- * @param data - The resolved data
- * @returns Script tag string
+ * The writer generates script tags that set up and communicate with a
+ * streaming receiver on the client. The receiver queues data chunks until
+ * a loader connects, then forwards directly.
+ *
+ * @param streamKey - The window property name (e.g., '__MY_APP_STREAM__')
+ * @returns StreamWriter with bootstrap() and chunk() methods
  *
  * @example
  * ```ts
- * res.write(createChunkScript('__APP_STREAM__', 'stats', { users: 100 }));
- * // Outputs: <script>__APP_STREAM__.push("stats",{"users":100})</script>
+ * const stream = createStreamWriter('__APP_STREAM__');
+ *
+ * res.write(`<head>${stream.bootstrap()}</head>`);
+ * res.write(`<body>${initialHtml}</body>`);
+ *
+ * // As async boundaries resolve:
+ * res.write(stream.chunk('stats', { users: 100 }));
  * ```
  */
-export function createChunkScript(
-  streamKey: string,
-  id: string,
-  data: unknown
-): string {
-  return `<script>${streamKey}.push(${JSON.stringify(id)},${JSON.stringify(data)})</script>`;
+export function createStreamWriter(streamKey: string): StreamWriter {
+  return {
+    key: streamKey,
+    bootstrap: () =>
+      `<script>window.${streamKey}=(${createStreamingReceiver.toString()})();</script>`,
+    chunk: (id, data) =>
+      `<script>${streamKey}.push(${JSON.stringify(id)},${JSON.stringify(data)})</script>`,
+  };
 }
 
 /**
  * Render to stream for progressive SSR.
  *
- * Returns initial HTML and client script. Use with createStreamingBootstrap()
- * and createChunkScript() for the full streaming flow.
+ * Returns initial HTML and client script. Use with createStreamWriter()
+ * for the full streaming flow.
  *
  * @example
  * ```ts
- * const STREAM_KEY = '__APP_STREAM__';
+ * const stream = createStreamWriter('__APP_STREAM__');
  *
  * // Create service with streaming callback
  * const service = createService(adapter, {
- *   onResolve: (id, data) => res.write(createChunkScript(STREAM_KEY, id, data)),
+ *   onResolve: (id, data) => res.write(stream.chunk(id, data)),
  * });
  *
  * // Render
@@ -162,7 +159,7 @@ export function createChunkScript(
  *
  * // Write HTML document
  * res.write(`<!DOCTYPE html><html><head>`);
- * res.write(createStreamingBootstrap(STREAM_KEY));
+ * res.write(stream.bootstrap());
  * res.write(`</head><body>`);
  * res.write(initialHtml);
  * res.write(clientScript);
@@ -230,17 +227,17 @@ export function renderToStream(
  *
  * @example
  * ```ts
- * import { createStreamingLoader, renderToStream, createStreamingBootstrap } from '@lattice/ssr/server';
+ * import { createStreamLoader, renderToStream, createStreamWriter } from '@lattice/ssr/server';
  *
- * const STREAM_KEY = '__APP_STREAM__';
- * const { loader, getChunks } = createStreamingLoader({ signal, streamKey: STREAM_KEY });
+ * const stream = createStreamWriter('__APP_STREAM__');
+ * const { loader, getChunks } = createStreamLoader({ signal, stream });
  *
  * const App = createApp(loader);
  * const { initialHtml, done } = renderToStream(App, {
  *   mount: (spec) => spec.create(svc),
  * });
  *
- * res.write(createStreamingBootstrap(STREAM_KEY));
+ * res.write(stream.bootstrap());
  * res.write(initialHtml);
  * await done;
  * for (const chunk of getChunks()) {
@@ -249,18 +246,18 @@ export function renderToStream(
  * res.end();
  * ```
  */
-export type CreateStreamingLoaderOptions = {
+export type StreamLoaderOptions = {
   /** Signal factory for creating reactive state */
   signal: SignalFactory;
 
-  /** The streaming proxy key (same as used in createStreamingBootstrap) */
-  streamKey: string;
+  /** The stream writer (from createStreamWriter) */
+  stream: StreamWriter;
 
   /** Initial data for hydration (optional) */
   initialData?: Record<string, unknown>;
 };
 
-export type StreamingLoaderResult = {
+export type StreamLoaderResult = {
   loader: Loader;
   getChunks: () => string[];
   clearChunks: () => void;
@@ -272,10 +269,10 @@ export type StreamingLoaderResult = {
  * Chunks are buffered in an array that you can access via getChunks().
  * This is useful when you need to write chunks after the initial HTML.
  */
-export function createStreamingLoader(
-  options: CreateStreamingLoaderOptions
-): StreamingLoaderResult {
-  const { signal, streamKey, initialData } = options;
+export function createStreamLoader(
+  options: StreamLoaderOptions
+): StreamLoaderResult {
+  const { signal, stream, initialData } = options;
 
   const chunks: string[] = [];
 
@@ -283,7 +280,7 @@ export function createStreamingLoader(
     signal,
     initialData,
     onResolve: (id: string, data: unknown) => {
-      chunks.push(createChunkScript(streamKey, id, data));
+      chunks.push(stream.chunk(id, data));
     },
   });
 

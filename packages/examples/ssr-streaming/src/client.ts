@@ -6,8 +6,8 @@
  * navigations swap content normally.
  *
  * For streaming SSR:
- * - Server creates a streaming proxy at STREAM_KEY via createStreamingBootstrap()
- * - connectStreamingLoader() connects the loader to that proxy
+ * - Server creates a stream receiver at STREAM_KEY via stream.bootstrap()
+ * - connectStream() connects the loader to that receiver
  * - Data flows through signals, updating the UI reactively
  */
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
@@ -15,7 +15,7 @@ import {
   createDOMHydrationAdapter,
   createHydrationAdapter,
   withAsyncSupport,
-  connectStreamingLoader,
+  connectStream,
 } from '@lattice/ssr/client';
 
 import { createService } from './service.js';
@@ -46,9 +46,9 @@ AppLayout(service).create(service);
 // Otherwise, signal updates would trigger re-renders while still in hydration mode
 appAdapter.switchToFallback();
 
-// Connect the loader to the streaming proxy - same key as server
+// Connect the loader to the stream - same key as server
 // This flushes queued data and wires up future chunks
-connectStreamingLoader(service.loader, STREAM_KEY);
+connectStream(service.loader, STREAM_KEY);
 
 console.log('[client] Hydration complete, streaming loader connected');
 

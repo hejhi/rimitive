@@ -17,8 +17,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createDOMServerAdapter,
   renderToStream,
-  createStreamingBootstrap,
-  createChunkScript,
+  createStreamWriter,
 } from '@lattice/ssr/server';
 import type { RefSpec } from '@lattice/view/types';
 
@@ -29,9 +28,8 @@ import { getStyles } from './styles.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
 
-// User-defined key for the streaming proxy
-// Same key must be used on client in connectStreamingLoader()
-const STREAM_KEY = '__APP_STREAM__';
+// Create stream writer - same key must be used on client in connectStreamingLoader()
+const stream = createStreamWriter('__APP_STREAM__');
 
 const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')
@@ -65,7 +63,7 @@ const server = createServer(async (req, res) => {
     initialPath: url.pathname,
     onResolve: (id, data) => {
       console.log(`[stream] Streaming chunk: ${id}`);
-      res.write(createChunkScript(STREAM_KEY, id, data));
+      res.write(stream.chunk(id, data));
     },
   });
 
@@ -88,7 +86,7 @@ const server = createServer(async (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lattice SSR Streaming</title>
-  ${createStreamingBootstrap(STREAM_KEY)}
+  ${stream.bootstrap()}
   <style>${getStyles()}</style>
 </head>
 <body>`);
