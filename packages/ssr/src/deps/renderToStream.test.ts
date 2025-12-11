@@ -3,11 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  renderToStream,
-  createStreamWriter,
-  createStreamLoader,
-} from './renderToStream';
+import { renderToStream } from './renderToStream';
+import { createStreamWriter } from './stream';
 import { createLoader } from '@lattice/view/load';
 import type { LoadState } from '@lattice/view/load';
 import { STATUS_REF_SPEC } from '@lattice/view/types';
@@ -67,10 +64,14 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
 // ============================================================================
 
 describe('renderToStream', () => {
-  it('should return initial HTML with pending states, buffer chunks, and resolve done', async () => {
+  it('should return initial HTML with pending states and resolve done when data arrives', async () => {
     const { signal } = createServerTestEnv();
-    const stream = createStreamWriter('__TEST__');
-    const { loader, getChunks } = createStreamLoader({ signal, stream });
+    const chunks: string[] = [];
+    const { chunk } = createStreamWriter('__TEST__');
+    const loader = createLoader({
+      signal,
+      onResolve: (id, data) => chunks.push(chunk(id, data)),
+    });
 
     let resolveData: (() => void) | null = null;
     const dataPromise = new Promise<{ value: number }>((resolve) => {
@@ -109,8 +110,7 @@ describe('renderToStream', () => {
     await result.done;
     expect(doneResolved).toBe(true);
 
-    // Should have buffered chunk with correct data
-    const chunks = getChunks();
+    // Should have chunk with correct data
     expect(chunks.length).toBe(1);
     expect(chunks[0]).toContain('__TEST__.push');
     expect(chunks[0]).toContain('test-1');
@@ -181,113 +181,3 @@ describe('createStreamWriter', () => {
   });
 });
 
-describe('createStreamLoader', () => {
-  it('should not fetch or generate chunks when initialData is provided', async () => {
-    const { signal } = createServerTestEnv();
-    const stream = createStreamWriter('__TEST__');
-
-    const { loader, getChunks } = createStreamLoader({
-      signal,
-      stream,
-      initialData: { 'hydrated-1': { message: 'From cache' } },
-    });
-
-    const AsyncContent = loader.load(
-      'hydrated-1',
-      async () => {
-        throw new Error('Should not fetch when data is provided');
-      },
-      (state: LoadState<{ message: string }>) => {
-        const status = state.status();
-        if (status === 'pending')
-          return createMockRefSpec('<div>Loading...</div>');
-        if (status === 'error') return createMockRefSpec('<div>Error</div>');
-        return createMockRefSpec(`<div>${state.data()?.message}</div>`);
-      }
-    );
-
-    const result = renderToStream(AsyncContent, { mount: mockMount });
-    await result.done;
-
-    expect(getChunks()).toEqual([]);
-  });
-
-  it('should preserve chunk order based on resolution timing', async () => {
-    const { signal } = createServerTestEnv();
-    const stream = createStreamWriter('__TEST__');
-    const { loader, getChunks } = createStreamLoader({ signal, stream });
-
-    const SlowAsync = loader.load(
-      'slow',
-      async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        return { speed: 'slow' };
-      },
-      (state: LoadState<{ speed: string }>) => {
-        const status = state.status();
-        if (status === 'pending')
-          return createMockRefSpec('<div>Loading slow...</div>');
-        return createMockRefSpec('<div>Slow done</div>');
-      }
-    );
-
-    const FastAsync = loader.load(
-      'fast',
-      async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        return { speed: 'fast' };
-      },
-      (state: LoadState<{ speed: string }>) => {
-        const status = state.status();
-        if (status === 'pending')
-          return createMockRefSpec('<div>Loading fast...</div>');
-        return createMockRefSpec('<div>Fast done</div>');
-      }
-    );
-
-    const App: RefSpec<unknown> = {
-      status: STATUS_REF_SPEC,
-      create: () => {
-        const { document } = parseHTML('<!DOCTYPE html><html></html>');
-        const container = document.createElement('div');
-
-        const node1 = SlowAsync.create();
-        const node2 = FastAsync.create();
-
-        if (node1.element) container.appendChild(node1.element as Node);
-        if (node2.element) container.appendChild(node2.element as Node);
-
-        const parentNode = {
-          status: 1 as const,
-          element: container,
-          parent: null,
-          prev: null,
-          next: null,
-          firstChild: node1,
-          lastChild: node2,
-        };
-
-        node1.parent = parentNode;
-        node1.prev = null;
-        node1.next = node2;
-
-        node2.parent = parentNode;
-        node2.prev = node1;
-        node2.next = null;
-
-        return parentNode;
-      },
-    };
-
-    const result = renderToStream(App, { mount: mockMount });
-    await result.done;
-
-    const chunks = getChunks();
-    expect(chunks.length).toBe(2);
-
-    const fastIndex = chunks.findIndex((c) => c.includes('fast'));
-    const slowIndex = chunks.findIndex((c) => c.includes('slow'));
-
-    expect(fastIndex).toBeLessThan(slowIndex);
-  });
-});

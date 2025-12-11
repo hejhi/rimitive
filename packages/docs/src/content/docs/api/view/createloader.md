@@ -25,6 +25,7 @@ On the client: - Create loader with initial data from the script tag - Same load
 export declare function createLoader(opts: {
     signal: SignalFactory;
     initialData?: Record<string, unknown>;
+    onResolve?: (id: string, data: unknown) => void;
 }): Loader;
 ```
 
@@ -53,7 +54,7 @@ opts
 
 </td><td>
 
-{ signal: [SignalFactory](../../signals/signalfactory/)<!-- -->; initialData?: Record&lt;string, unknown&gt;; }
+{ signal: [SignalFactory](../../signals/signalfactory/)<!-- -->; initialData?: Record&lt;string, unknown&gt;; onResolve?: (id: string, data: unknown) =&gt; void; }
 
 
 </td><td>
@@ -66,8 +67,9 @@ opts
 
 [Loader](../loader/)
 
-## Example
+## Example 1
 
+Basic usage
 
 ```ts
 // Server
@@ -86,5 +88,20 @@ const data = loader.getData();
 const loader = createLoader({ signal, initialData: window.__DATA__ });
 const { load } = loader;
 // Same App component - uses cached data, no re-fetch
+```
+
+## Example 2
+
+SSR streaming
+
+```ts
+const loader = createLoader({
+  signal,
+  onResolve: (id, data) => {
+    // Stream chunk to client as each boundary resolves
+    const html = renderFragment(id);
+    stream.write(`<script>__LATTICE_HYDRATE__("${id}", ${JSON.stringify(html)})</script>`);
+  }
+});
 ```
 

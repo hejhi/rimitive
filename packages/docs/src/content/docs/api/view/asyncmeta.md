@@ -19,6 +19,7 @@ Async fragment metadata for SSR introspection
 
 ```typescript
 export type AsyncMeta<T = unknown> = {
+    readonly id?: string;
     readonly resolve: () => Promise<T>;
     readonly getData: () => T | undefined;
     readonly setData: (data: T) => void;

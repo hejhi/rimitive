@@ -28,8 +28,8 @@ import { getStyles } from './styles.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
 
-// Create stream writer - same key must be used on client in connectStreamingLoader()
-const stream = createStreamWriter('__APP_STREAM__');
+// Create stream writer - same key must be used on client in connectStream()
+const { chunk, bootstrap } = createStreamWriter('__APP_STREAM__');
 
 const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')
@@ -63,7 +63,7 @@ const server = createServer(async (req, res) => {
     initialPath: url.pathname,
     onResolve: (id, data) => {
       console.log(`[stream] Streaming chunk: ${id}`);
-      res.write(stream.chunk(id, data));
+      res.write(chunk(id, data));
     },
   });
 
@@ -76,7 +76,9 @@ const server = createServer(async (req, res) => {
     }
   );
 
-  console.log(`[stream] Initial render complete, ${pendingCount} pending boundaries`);
+  console.log(
+    `[stream] Initial render complete, ${pendingCount} pending boundaries`
+  );
 
   // Start response and write HTML document
   res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -86,7 +88,7 @@ const server = createServer(async (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lattice SSR Streaming</title>
-  ${stream.bootstrap()}
+  ${bootstrap()}
   <style>${getStyles()}</style>
 </head>
 <body>`);
@@ -121,5 +123,7 @@ server.listen(PORT, () => {
   console.log(`  http://localhost:${PORT}/`);
   console.log(`  http://localhost:${PORT}/about`);
   console.log(`  http://localhost:${PORT}/products`);
-  console.log(`  http://localhost:${PORT}/stats (async data - watch the streaming!)`);
+  console.log(
+    `  http://localhost:${PORT}/stats (async data - watch the streaming!)`
+  );
 });

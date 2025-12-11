@@ -21,6 +21,8 @@ Loader instance returned by createLoader
 export type Loader = {
     load: LoadFn;
     getData: () => Record<string, unknown>;
+    setData: (id: string, data: unknown) => void;
+    has: (id: string) => boolean;
 };
 ```
 **References:** [LoadFn](../loadfn/)
