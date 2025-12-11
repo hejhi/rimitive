@@ -3,7 +3,7 @@
  *
  * Service composition for the app.
  */
-import { compose, merge } from '@lattice/lattice';
+import { compose } from '@lattice/lattice';
 import {
   SignalModule,
   ComputedModule,
@@ -16,7 +16,7 @@ import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { MountModule } from '@lattice/view/deps/mount';
 import { OnModule } from '@lattice/view/deps/addEventListener';
-import { createRouter } from '@lattice/router';
+import { createRouterModule } from '@lattice/router';
 import type { RefSpec } from '@lattice/view/types';
 import { routes } from './routes';
 
@@ -30,8 +30,8 @@ export type Portable<TProps = Record<string, never>> = (
 // Create the DOM adapter
 const adapter = createDOMAdapter();
 
-// Compose base service - `use` is both callable AND has all services as properties
-const use = compose(
+// Compose all modules including router - router is now a proper module
+export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
@@ -40,13 +40,8 @@ const use = compose(
   createMapModule(adapter),
   createMatchModule(adapter),
   MountModule,
-  OnModule
-);
-
-// Merge router into the service
-export const svc = merge(
-  use,
-  createRouter({ signal: use.signal, computed: use.computed }, routes, {
+  OnModule,
+  createRouterModule(routes, {
     initialPath:
       typeof window !== 'undefined'
         ? window.location.pathname +

@@ -52,15 +52,14 @@ export function Link(
     };
 
     refSpec.status = STATUS_REF_SPEC;
-    refSpec.create = (svc: { el: ElFactory<DOMAdapterConfig> }) => {
+    refSpec.create = (
+      svc: { el: ElFactory<DOMAdapterConfig>; router?: { navigate: (path: string) => void } }
+    ) => {
       const { el } = svc;
       const { href, onclick: userOnClick, ...restProps } = props;
 
-      // Get navigate from API if available
-      const navigate: ((path: string) => void) | null =
-        'navigate' in svc
-          ? (svc as { navigate: (path: string) => void }).navigate
-          : null;
+      // Get navigate from router module
+      const navigate = svc.router?.navigate ?? null;
 
       const ssrContext = getActiveRouterContext();
       if (ssrContext) {

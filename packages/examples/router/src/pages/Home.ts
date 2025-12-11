@@ -1,9 +1,10 @@
 import type { Service } from '../service';
 
 export const Home =
-  ({ el, navigate }: Service) =>
-  () =>
-    el('div').props({ className: 'page' })(
+  ({ el, router }: Service) =>
+  () => {
+    const { navigate } = router;
+    return el('div').props({ className: 'page' })(
       el('h2')('Welcome Home'),
       el('p')('This is the home page of the Lattice Router example.'),
       el('div').props({ className: 'card' })(
@@ -21,3 +22,4 @@ export const Home =
         onclick: () => navigate('/products'),
       })('Go to Products')
     );
+  };

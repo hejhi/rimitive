@@ -50,43 +50,48 @@ type ProductDetailProps = {
   params: { id: string };
 };
 
-export function ProductDetail(
-  { el, navigate }: Service,
-  { params }: ProductDetailProps
-) {
-  const product = products[params.id];
+export const ProductDetail =
+  ({ el, router }: Service) =>
+  ({ params }: { params: Record<string, string> }) => {
+    const {
+      params: { id },
+    } = params as unknown as ProductDetailProps;
+    const { navigate } = router;
+    const product = products[id];
 
-  if (!product) {
+    if (!product) {
+      return el('div').props({ className: 'product-detail' })(
+        el('h2')('Product Not Found'),
+        el('p')('The product you are looking for does not exist.'),
+        el('button').props({
+          className: 'primary-btn',
+          onclick: () => navigate('/products'),
+        })('Back to Products')
+      );
+    }
+
     return el('div').props({ className: 'product-detail' })(
-      el('h2')('Product Not Found'),
-      el('p')('The product you are looking for does not exist.'),
-      el('button').props({
-        className: 'primary-btn',
-        onclick: () => navigate('/products'),
-      })('Back to Products')
+      el('h2')(product.name),
+      el('div').props({ className: 'product-meta' })(
+        el('span').props({ className: 'product-id' })(`Product ID: ${id}`),
+        el('span').props({ className: 'product-price-large' })(product.price)
+      ),
+      el('p').props({ className: 'product-description-large' })(
+        product.description
+      ),
+      el('div').props({ className: 'card' })(
+        el('h3')('Details'),
+        el('p')(product.details)
+      ),
+      el('div').props({ className: 'button-group' })(
+        el('button').props({
+          className: 'secondary-btn',
+          onclick: () => navigate('/products'),
+        })('Back to Products'),
+        el('button').props({
+          className: 'primary-btn',
+          onclick: () => navigate('/'),
+        })('Home')
+      )
     );
-  }
-
-  return el('div').props({ className: 'product-detail' })(
-    el('h2')(product.name),
-    el('div').props({ className: 'product-meta' })(
-      el('span').props({ className: 'product-id' })(`Product ID: ${params.id}`),
-      el('span').props({ className: 'product-price-large' })(product.price)
-    ),
-    el('p').props({ className: 'product-description-large' })(product.description),
-    el('div').props({ className: 'card' })(
-      el('h3')('Details'),
-      el('p')(product.details)
-    ),
-    el('div').props({ className: 'button-group' })(
-      el('button').props({
-        className: 'secondary-btn',
-        onclick: () => navigate('/products'),
-      })('Back to Products'),
-      el('button').props({
-        className: 'primary-btn',
-        onclick: () => navigate('/'),
-      })('Home')
-    )
-  );
-}
+  };

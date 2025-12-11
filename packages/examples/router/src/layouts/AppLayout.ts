@@ -25,14 +25,12 @@ const componentMap: Record<
   home: Home,
   about: About,
   products: Products,
-  'product-detail':
-    (svc) =>
-    ({ params }) =>
-      ProductDetail(svc, { params: params as { id: string } }),
+  'product-detail': ProductDetail,
 };
 
 export const AppLayout = (svc: Service) => {
-  const { el, match, matches, computed, currentPath } = svc;
+  const { el, match, router, computed } = svc;
+  const { matches, currentPath } = router;
 
   return el('div').props({ className: 'app-layout' })(
     // Navbar with navigation

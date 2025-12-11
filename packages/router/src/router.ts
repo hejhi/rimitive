@@ -15,7 +15,11 @@
  */
 
 import type { Readable, Writable } from '@lattice/view/types';
-import { matchPath, matchPathPrefix } from './deps/matching';
+import { defineModule, type Module } from '@lattice/lattice';
+import type { SignalFactory } from '@lattice/signals/extend';
+import type { ComputedFactory } from '@lattice/signals/extend';
+import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+import { matchPath, matchPathPrefix } from './helpers/matching';
 
 /**
  * Route configuration - pure data, no components
@@ -72,6 +76,32 @@ export type Router = {
    * Navigate forward in history
    */
   forward: () => void;
+
+  // Location - reactive access to URL components
+
+  /**
+   * Reactive pathname (path without query string or hash)
+   * e.g., "/products/123"
+   */
+  pathname: Readable<string>;
+
+  /**
+   * Reactive search/query string (including leading '?')
+   * e.g., "?sort=price&filter=new"
+   */
+  search: Readable<string>;
+
+  /**
+   * Reactive hash (including leading '#')
+   * e.g., "#section-1"
+   */
+  hash: Readable<string>;
+
+  /**
+   * Reactive parsed query parameters
+   * e.g., { sort: "price", filter: "new" }
+   */
+  query: Readable<Record<string, string>>;
 };
 
 /**
@@ -123,6 +153,60 @@ function getPathname(path: string): string {
   if (hashIndex !== -1 && hashIndex < end) end = hashIndex;
 
   return path.slice(0, end);
+}
+
+/**
+ * Parse URL into components
+ */
+function parseURL(url: string): {
+  pathname: string;
+  search: string;
+  hash: string;
+} {
+  // Find hash first (everything after #)
+  const hashIndex = url.indexOf('#');
+  const hash = hashIndex !== -1 ? url.slice(hashIndex) : '';
+  const urlWithoutHash = hashIndex !== -1 ? url.slice(0, hashIndex) : url;
+
+  // Find query string (everything after ?)
+  const searchIndex = urlWithoutHash.indexOf('?');
+  const search = searchIndex !== -1 ? urlWithoutHash.slice(searchIndex) : '';
+  const pathname =
+    searchIndex !== -1 ? urlWithoutHash.slice(0, searchIndex) : urlWithoutHash;
+
+  return { pathname, search, hash };
+}
+
+/**
+ * Parse query string into object
+ * e.g., "?sort=price&filter=new" -> { sort: "price", filter: "new" }
+ */
+function parseQueryString(search: string): Record<string, string> {
+  if (!search || search === '?') {
+    return {};
+  }
+
+  // Remove leading '?' if present
+  const queryString = search.startsWith('?') ? search.slice(1) : search;
+
+  const params: Record<string, string> = {};
+  const pairs = queryString.split('&');
+
+  for (const pair of pairs) {
+    if (!pair) continue;
+
+    const equalsIndex = pair.indexOf('=');
+    if (equalsIndex === -1) {
+      // No '=' means param without value
+      params[pair] = '';
+    } else {
+      const key = pair.slice(0, equalsIndex);
+      const value = pair.slice(equalsIndex + 1);
+      params[key] = value;
+    }
+  }
+
+  return params;
 }
 
 /**
@@ -258,11 +342,81 @@ export function createRouter(
     });
   }
 
+  // Location - reactive URL components
+  const pathname = computed(() => parseURL(pathSignal()).pathname);
+  const search = computed(() => parseURL(pathSignal()).search);
+  const hash = computed(() => parseURL(pathSignal()).hash);
+  const query = computed(() => parseQueryString(parseURL(pathSignal()).search));
+
   return {
     matches,
     currentPath,
     navigate,
     back,
     forward,
+    pathname,
+    search,
+    hash,
+    query,
   };
 }
+
+/**
+ * Create a Router module for use with compose().
+ *
+ * Like createElModule(adapter), this takes configuration at module creation time
+ * and returns a Module that can be composed with other modules.
+ *
+ * @param routes - Route configuration (pure data)
+ * @param options - Router options (initialPath, etc.)
+ *
+ * @example
+ * ```typescript
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+ * import { createRouterModule } from '@lattice/router';
+ *
+ * const routes = [
+ *   { id: 'home', path: '' },
+ *   { id: 'about', path: 'about' },
+ *   { id: 'products', path: 'products', children: [
+ *     { id: 'product-detail', path: ':id' }
+ *   ]}
+ * ];
+ *
+ * const use = compose(
+ *   SignalModule,
+ *   ComputedModule,
+ *   createRouterModule(routes, { initialPath: '/' })
+ * );
+ *
+ * // Router is now part of the composed context
+ * const { router, signal, computed } = use;
+ *
+ * // Use in view layer
+ * match(router.matches, (matches) => {
+ *   const route = matches[0];
+ *   if (!route) return NotFound();
+ *   return componentMap[route.id]({ params: route.params });
+ * });
+ * ```
+ */
+export const createRouterModule = (
+  routes: RouteConfig[],
+  options: RouterOptions = {}
+): Module<
+  'router',
+  Router,
+  { signal: SignalFactory; computed: ComputedFactory }
+> =>
+  defineModule({
+    name: 'router',
+    dependencies: [SignalModule, ComputedModule],
+    create: ({
+      signal,
+      computed,
+    }: {
+      signal: SignalFactory;
+      computed: ComputedFactory;
+    }) => createRouter({ signal, computed }, routes, options),
+  });

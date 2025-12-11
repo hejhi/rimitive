@@ -12,8 +12,8 @@
  * Router does not create elements or manage rendering.
  */
 
-// New minimal router API
-export { createRouter } from './router';
+// New minimal router API - Module pattern
+export { createRouter, createRouterModule } from './router';
 export type {
   Router,
   RouterDeps,
@@ -29,7 +29,7 @@ export { Link } from './link';
 export { createLocationFactory } from './location';
 
 // Path matching utilities
-export { matchPath, matchPathPrefix, composePath } from './deps/matching';
+export { matchPath, matchPathPrefix, composePath } from './helpers/matching';
 
 // Types
 export type {
@@ -42,27 +42,4 @@ export type {
   LocationFactory,
 } from './types';
 
-// Legacy exports for backwards compatibility (deprecated)
-// TODO: Remove in next major version
-export { createRouter as createLegacyRouter, connect } from './createRouter';
-export { defineRoutes } from './defineRoutes';
 export type { Route, RouteMetadata, MatchFunction } from './types';
-export type {
-  ViewSvc,
-  RouterConfig,
-  Router as LegacyRouter,
-  RouteMethod,
-  RootMethod,
-  RootContext,
-  ConnectMethod,
-  ConnectedSvc,
-  RouteSvc,
-  RouteContext,
-  ConnectedComponent,
-} from './createRouter';
-export type {
-  RouteTree,
-  RouteNode,
-  RouteBuilder,
-  DefineRoutesContext,
-} from './defineRoutes';

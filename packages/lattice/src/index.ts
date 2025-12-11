@@ -1,4 +1,4 @@
-export { compose, merge, extend, type ComposeOptions } from './compose';
+export { compose, merge, type ComposeOptions } from './compose';
 export { defineModule, isModule, STATUS_MODULE } from './module';
 export type {
   Module,

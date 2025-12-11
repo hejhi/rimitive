@@ -16,7 +16,7 @@ import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { OnModule } from '@lattice/view/deps/addEventListener';
 import { createLoader } from '@lattice/view/load';
-import { createRouter, type RouterConfig } from '@lattice/router';
+import { createRouter, type RouterOptions } from '@lattice/router';
 import type { Adapter, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { routes } from './routes.js';
@@ -31,7 +31,7 @@ export type Portable<TProps = Record<string, never>> = (
 /**
  * Service options
  */
-export type ServiceOptions = RouterConfig & {
+export type ServiceOptions = RouterOptions & {
   /** Initial data for async boundaries (from SSR) */
   loaderData?: Record<string, unknown>;
 };

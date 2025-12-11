@@ -29,7 +29,7 @@ describe('Link component - basic rendering', () => {
 
     const svc = {
       el,
-      navigate,
+      router: { navigate },
     };
 
     return { ...env, el, Link, navigate, currentPath, svc };
@@ -126,7 +126,7 @@ describe('Link component - click handling', () => {
 
     const svc = {
       el,
-      navigate,
+      router: { navigate },
     };
 
     return { ...env, el, Link, navigate, currentPath, navigateCalls, svc };
@@ -359,7 +359,7 @@ describe('Link component - lifecycle callbacks', () => {
 
     const svc = {
       el,
-      navigate,
+      router: { navigate },
     };
 
     return { ...env, el, Link, navigate, currentPath, svc };
