@@ -46,16 +46,10 @@ const products: Record<
   },
 };
 
-type ProductDetailProps = {
-  params: { id: string };
-};
-
 export const ProductDetail =
   ({ el, router }: Service) =>
   ({ params }: { params: Record<string, string> }) => {
-    const {
-      params: { id },
-    } = params as unknown as ProductDetailProps;
+    const { id } = params as { id: string };
     const { navigate } = router;
     const product = products[id];
 
