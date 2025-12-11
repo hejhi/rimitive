@@ -29,7 +29,7 @@ const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: Computed
 };
 ```
 
-This component works with any service that provides `el`, `signal`, and `computed`—whether that's the DOM view service, a test adapter, or something custom.
+This component works with any service that provides `el`, `signal`, and `computed`—whether that's a DOM view service, a test service, or something custom.
 
 ---
 
@@ -69,43 +69,101 @@ const App = (svc: Service) => {
 ### Lattice DOM View
 
 ```typescript
-import { createDOMView } from '@lattice/view/presets/dom';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { MountModule } from '@lattice/view/deps/mount';
 
-const svc = createDOMView()();
+// Create adapter and compose service
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule, BatchModule,
+  createElModule(adapter), MountModule
+)();
+
 const app = Counter(svc);
 document.body.appendChild(svc.mount(app).element!);
 ```
 
-### Lattice Test Adapter
+### Testing Without DOM
+
+For tests, use a mock adapter or compose with test dependencies:
 
 ```typescript
-import { createTestView } from '@lattice/view/presets/test';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
-const svc = createTestView()();
-const app = Counter(svc);
-// No real DOM—useful for testing
+// Minimal test service - just signals, no view layer
+const testSvc = compose(SignalModule, ComputedModule, EffectModule)();
+
+// Test a behavior directly
+const { count, increment } = counter(testSvc)(0);
+expect(count()).toBe(0);
+increment();
+expect(count()).toBe(1);
 ```
 
 ### React (via @lattice/react)
 
-```typescript
-import { createHook } from '@lattice/react';
+Portable behaviors work in React through `createHook`:
 
-// Turn a portable behavior into a React hook
-const useCounter = createHook(counterBehavior);
+```typescript
+import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+
+// Define a portable behavior
+const counter = (svc: { signal: SignalFactory }) => (initial = 0) => {
+  const count = svc.signal(initial);
+  return {
+    count,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+  };
+};
+
+// Turn it into a React hook
+const useCounter = createHook(counter);
 
 function ReactCounter() {
-  const { count, increment } = useCounter();
-  return <button onClick={increment}>Count: {count()}</button>;
+  const { count, increment } = useCounter(0);
+  const value = useSubscribe(count); // Subscribe to trigger re-renders
+
+  return <button onClick={increment}>Count: {value}</button>;
+}
+
+// Wrap your app with SignalProvider
+const svc = compose(SignalModule, ComputedModule, EffectModule)();
+
+function App() {
+  return (
+    <SignalProvider svc={svc}>
+      <ReactCounter />
+    </SignalProvider>
+  );
 }
 ```
 
+<Aside type="note">
+React doesn't automatically re-render when signals change. Use `useSubscribe(signal)` to read signal values and trigger re-renders when they change.
+</Aside>
+
 ### Custom Renderer
 
-```typescript
-import { createCanvasView } from './my-canvas-adapter';
+The same pattern works with any adapter:
 
-const svc = createCanvasView()();
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createElModule } from '@lattice/view/el';
+import { myCanvasAdapter } from './my-canvas-adapter';
+
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule,
+  createElModule(myCanvasAdapter)
+)();
+
 const app = Counter(svc);
 // Renders to canvas instead of DOM
 ```
@@ -162,7 +220,7 @@ const DataList = (svc: Service) => {
 **Portable behaviors** return reactive state and logic—no UI:
 
 ```typescript
-const counter = (svc: SignalsSvc) => (initial = 0) => {
+const counter = (svc: { signal: SignalFactory }) => (initial = 0) => {
   const count = svc.signal(initial);
   return {
     count,
@@ -176,17 +234,17 @@ const counter = (svc: SignalsSvc) => (initial = 0) => {
 
 ```typescript
 const Counter = (svc: Service) => () => {
-  const { el, use } = svc;
-  const { count, increment } = use(counter)();
+  const { el, signal, computed } = svc;
+  const count = signal(0);
 
   return el('div')(
     el('span')(computed(() => count())),
-    el('button').props({ onclick: increment })('+')
+    el('button').props({ onclick: () => count(count() + 1) })('+')
   );
 };
 ```
 
-Behaviors are more portable than components because they have no UI coupling. A behavior can be used in Lattice views, React, Vue, or anywhere else that can provide the signals service.
+Behaviors are more portable than components because they have no UI coupling. A behavior can be used in Lattice views, React, Vue, or anywhere else that can consume signals.
 
 ---
 
@@ -196,7 +254,8 @@ Define your service contracts with TypeScript:
 
 ```typescript
 import type { SignalFactory, ComputedFactory } from '@lattice/signals';
-import type { ElFactory } from '@lattice/view';
+import type { ElFactory } from '@lattice/view/el';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 
 // Minimal contract for a component
 type MinimalSvc = {
@@ -206,7 +265,7 @@ type MinimalSvc = {
 };
 
 // Component declares exactly what it needs
-const MyComponent = (svc: MinimalSvc) => { ... };
+const MyComponent = (svc: MinimalSvc) => { /* ... */ };
 ```
 
 This makes dependencies explicit and enables better tree-shaking—if a component only needs `signal` and `el`, it doesn't pull in `effect`, `resource`, etc.
@@ -219,12 +278,13 @@ Portable code is easy to test because you control the service:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { createTestView } from '@lattice/view/presets/test';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
-describe('Counter', () => {
+describe('counter behavior', () => {
   it('increments count', () => {
-    const svc = createTestView()();
-    const { count, increment } = svc.use(counter)();
+    const svc = compose(SignalModule, ComputedModule, EffectModule)();
+    const { count, increment } = counter(svc)(0);
 
     expect(count()).toBe(0);
     increment();

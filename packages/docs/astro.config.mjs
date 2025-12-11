@@ -14,6 +14,14 @@ export default defineConfig({
 					items: [],
 				},
 				{
+					label: 'Guides',
+					items: [
+						{ label: 'Composing Signals', slug: 'guides/composing-signals' },
+						{ label: 'Creating a Behavior', slug: 'guides/creating-a-behavior' },
+						{ label: 'Adding View', slug: 'guides/adding-view' },
+					],
+				},
+				{
 					label: 'Patterns',
 					items: [
 						{ label: 'Overview', slug: 'patterns' },

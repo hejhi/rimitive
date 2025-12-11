@@ -1,0 +1,127 @@
+---
+title: Composing Signals
+description: The most basic Lattice setup—just signals.
+---
+
+Lattice is built on composition. You pick the modules you need and `compose()` wires them together into a **reactive service**.
+
+The simplest setup is just signals:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+
+const useSvc = compose(SignalModule, ComputedModule, EffectModule);
+```
+
+`compose()` returns a `use` function. Call it to get your primitives:
+
+```typescript
+const { signal, computed, effect } = useSvc();
+```
+
+---
+
+## Using the Primitives
+
+**Signals** hold reactive values:
+
+```typescript
+const count = signal(0);
+
+count();      // read: 0
+count(1);     // write: 1
+count();      // read: 1
+```
+
+**Computeds** derive values from signals:
+
+```typescript
+const doubled = computed(() => count() * 2);
+
+doubled();    // 2 (count is 1)
+count(5);
+doubled();    // 10
+```
+
+**Effects** run side effects when dependencies change:
+
+```typescript
+effect(() => {
+  console.log('Count is now:', count());
+});
+// logs: "Count is now: 5"
+
+count(10);
+// logs: "Count is now: 10"
+```
+
+---
+
+## A Complete Example
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+
+// Compose the modules
+const useSvc = compose(SignalModule, ComputedModule, EffectModule);
+const { signal, computed, effect } = useSvc();
+
+// Create reactive state
+const firstName = signal('Ada');
+const lastName = signal('Lovelace');
+
+// Derive values
+const fullName = computed(() => `${firstName()} ${lastName()}`);
+
+// React to changes
+effect(() => {
+  console.log('Full name:', fullName());
+});
+// logs: "Full name: Ada Lovelace"
+
+// Update
+lastName('Byron');
+// logs: "Full name: Ada Byron"
+```
+
+---
+
+## Adding More Modules
+
+Need batching? Add `BatchModule`:
+
+```typescript
+import { BatchModule } from '@lattice/signals/extend';
+
+const useSvc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
+const { signal, effect, batch } = useSvc();
+
+const a = signal(1);
+const b = signal(2);
+
+effect(() => console.log(a() + b()));
+// logs: 3
+
+batch(() => {
+  a(10);
+  b(20);
+});
+// logs: 30 (once, not twice)
+```
+
+---
+
+## Why Compose?
+
+You might wonder: why not just export these functions directly?
+
+Composition gives you:
+
+1. **Isolation** — Each `compose()` call creates an independent reactive context
+2. **Tree-shaking** — Only bundle what you use
+3. **Extensibility** — Add view modules, router, custom modules later
+4. **Testing** — Create fresh contexts per test
+
+This is the foundation. Everything else in Lattice builds on top of `compose()`.

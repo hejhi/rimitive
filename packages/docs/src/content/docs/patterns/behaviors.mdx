@@ -14,6 +14,12 @@ Think of behaviors as headless components—all the state and logic, none of the
 ## The Shape
 
 ```typescript
+type SignalsSvc = {
+  signal: <T>(initial: T) => Writable<T>;
+  computed: <T>(fn: () => T) => Readable<T>;
+  effect: (fn: () => void | (() => void)) => () => void;
+};
+
 const behaviorName = (svc: SignalsSvc) => (options?: Options) => {
   // Create reactive state
   // Define actions
@@ -48,11 +54,11 @@ const counter = (svc: SignalsSvc) => (initial = 0) => {
 };
 ```
 
-Usage:
+Usage with `use()`:
 
 ```typescript
 const App = (svc: Service) => {
-  const { el, use } = svc;
+  const { el, use, computed } = svc;
   const { count, increment, decrement } = use(counter)(0);
 
   return el('div')(
@@ -98,10 +104,7 @@ const disclosure = (svc: SignalsSvc) => (initialOpen = false) => {
 
 ```typescript
 const dropdown = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
-  const { use } = svc;
-
-  // Compose disclosure behavior
-  const disc = use(disclosure)(options?.initialOpen ?? false);
+  const disc = disclosure(svc)(options?.initialOpen ?? false);
 
   // Add keyboard handling
   const onKeyDown = (e: KeyboardEvent) => {
@@ -119,7 +122,7 @@ const dropdown = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
 
   return {
     ...disc,
-    triggerProps: computed(() => ({
+    triggerProps: svc.computed(() => ({
       ...disc.triggerProps(),
       onkeydown: onKeyDown,
     })),
@@ -131,9 +134,9 @@ const dropdown = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
 
 ```typescript
 const modal = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
-  const { signal, effect, use } = svc;
+  const { signal, effect } = svc;
 
-  const disc = use(disclosure)(options?.initialOpen ?? false);
+  const disc = disclosure(svc)(options?.initialOpen ?? false);
   const previousFocus = signal<HTMLElement | null>(null);
 
   // Focus trap and scroll lock as an effect
@@ -154,11 +157,11 @@ const modal = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
   return {
     ...disc,
     // Close on backdrop click
-    backdropProps: computed(() => ({
+    backdropProps: svc.computed(() => ({
       onclick: disc.close,
     })),
     // Prevent close when clicking modal content
-    contentProps: computed(() => ({
+    contentProps: svc.computed(() => ({
       ...disc.contentProps(),
       onclick: (e: Event) => e.stopPropagation(),
     })),
@@ -266,29 +269,51 @@ const search = (svc: SignalsSvc) => (options: SearchOptions) => {
 Behaviors work in React via `@lattice/react`:
 
 ```typescript
-import { createHook } from '@lattice/react';
+import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
-// Create a React hook from the behavior
+// Create hooks from behaviors
 const useCounter = createHook(counter);
 const useDisclosure = createHook(disclosure);
 
 function ReactDropdown() {
-  const { isOpen, toggle, triggerProps, contentProps } = useDisclosure();
+  const disc = useDisclosure(false);
+
+  // Subscribe to signals for React re-renders
+  const isOpen = useSubscribe(disc.isOpen);
+  const triggerProps = useSubscribe(disc.triggerProps);
+  const contentProps = useSubscribe(disc.contentProps);
 
   return (
     <div>
-      <button {...triggerProps()} onClick={toggle}>
+      <button {...triggerProps} onClick={disc.toggle}>
         Toggle
       </button>
-      {isOpen() && (
-        <div {...contentProps()}>
+      {isOpen && (
+        <div {...contentProps}>
           Dropdown content
         </div>
       )}
     </div>
   );
 }
+
+// Wrap app with provider
+const svc = compose(SignalModule, ComputedModule, EffectModule)();
+
+function App() {
+  return (
+    <SignalProvider svc={svc}>
+      <ReactDropdown />
+    </SignalProvider>
+  );
+}
 ```
+
+<Aside type="note">
+In React, you must use `useSubscribe(signal)` to read signal values and trigger re-renders. Calling `signal()` directly won't cause React to update when the value changes.
+</Aside>
 
 Same behavior, different framework. The logic stays the same.
 
@@ -339,12 +364,15 @@ Behaviors are trivial to test—no DOM, no framework:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { createSignals } from '@lattice/signals/presets/core';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
 describe('counter', () => {
+  const createTestSvc = () => compose(SignalModule, ComputedModule, EffectModule)();
+
   it('increments and decrements', () => {
-    const svc = createSignals()();
-    const c = svc.use(counter)(5);
+    const svc = createTestSvc();
+    const c = counter(svc)(5);
 
     expect(c.count()).toBe(5);
 
@@ -357,8 +385,8 @@ describe('counter', () => {
   });
 
   it('computes doubled', () => {
-    const svc = createSignals()();
-    const c = svc.use(counter)(3);
+    const svc = createTestSvc();
+    const c = counter(svc)(3);
 
     expect(c.doubled()).toBe(6);
 

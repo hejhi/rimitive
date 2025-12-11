@@ -1,0 +1,225 @@
+---
+title: Adding View
+description: Render reactive UI with el().
+---
+
+You have signals and behaviors. Now render them.
+
+Lattice View provides `el()` — a renderer-agnostic function for creating reactive elements. It works with any adapter (DOM, native, canvas, etc.). In this guide, we'll use the DOM adapter.
+
+---
+
+## Extending the Service
+
+Building on the service from [Creating a Behavior](/guides/creating-a-behavior), add the `el` view module with a DOM adapter, and the Mount module to mount the view:
+
+```typescript
+// service.ts
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { MountModule } from '@lattice/view/deps/mount';
+
+// Create adapter-bound `el`
+const ElModule = createElModule(createDOMAdapter());
+
+const useBaseSvc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+
+  // Add the view modules
+  ElModule,
+  MountModule
+);
+
+export const svc = {
+  ...useBaseSvc(),
+  // Add the `use` helper, like last time
+  use: <TOptions, TResult>(fn: Behavior<TOptions, TResult>) => fn(svc),
+};
+
+export type Service = typeof svc;
+```
+
+The only additions are the view imports and modules — everything else stays the same.
+
+---
+
+## Creating Elements
+
+`el()` is curried: `el(tag)(children)`.
+
+```typescript
+import { el } from './service';
+
+// Just a tag
+const div = el('div')();
+
+// With text content
+const heading = el('h1')('Hello, World');
+
+// With children
+const container = el('div')(
+  el('h1')('Title'),
+  el('p')('Some text')
+);
+```
+
+---
+
+## Adding Props
+
+Use `.props()` to set attributes and event handlers:
+
+```typescript
+const button = el('button').props({
+  className: 'primary',
+  disabled: false,
+  onclick: () => console.log('clicked'),
+})('Click me');
+```
+
+Props are fully typed based on the adapter. With the DOM adapter, `el('button')` knows about `disabled`, `onclick`, `type`, etc. — you get autocomplete and type checking for the specific element.
+
+---
+
+## Reactive Content
+
+Pass a computed for reactive text:
+
+```typescript
+import { signal, computed, el } from './service';
+
+const count = signal(0);
+
+const display = el('div')(
+  computed(() => `Count: ${count()}`)
+);
+
+count(5);  // display updates to "Count: 5"
+```
+
+---
+
+## Reactive Props
+
+Props can be reactive too:
+
+```typescript
+const isDisabled = signal(false);
+
+const button = el('button').props({
+  disabled: isDisabled,  // reactive prop
+  onclick: () => console.log('clicked'),
+})('Submit');
+
+isDisabled(true);  // button becomes disabled
+```
+
+Or use a computed for derived props:
+
+```typescript
+const count = signal(0);
+
+const display = el('div').props({
+  className: computed(() => count() > 10 ? 'warning' : 'normal'),
+})(
+  computed(() => `Count: ${count()}`)
+);
+```
+
+---
+
+## Components
+
+Components are just functions that return elements:
+
+```typescript
+import { el, computed } from './service';
+
+const Greeting = (name: string) => {
+  return el('div')(
+    el('h2')(`Hello, ${name}!`),
+    el('p')('Welcome to Lattice.')
+  );
+};
+
+// Use it
+const app = el('div')(
+  Greeting('Ada'),
+  Greeting('Grace')
+);
+```
+
+**Important:** These functions run once. They are not reactive closures — there's no re-rendering or reconciliation at the function level. All reactivity is encapsulated in the primitives (`signal`, `computed`, `effect`). The function builds the element tree once; signals and computeds handle updates from there.
+
+---
+
+## With Behaviors
+
+Combine behaviors with view for reactive components:
+
+```typescript
+import { el, computed, use } from './service';
+import { counter } from './behaviors/counter';
+
+const useCounter = use(counter);
+
+const Counter = (initial: number) => {
+  const { count, doubled, increment, decrement, reset } = useCounter(initial);
+
+  return el('div')(
+    el('div')(
+      computed(() => `Count: ${count()} (doubled: ${doubled()})`)
+    ),
+    el('div')(
+      el('button').props({ onclick: decrement })('-'),
+      el('button').props({ onclick: increment })('+'),
+      el('button').props({ onclick: reset })('Reset')
+    )
+  );
+};
+
+// Use it
+const app = el('div')(
+  Counter(0),
+  Counter(100)
+);
+```
+
+The behavior can handle state. The component can handle UI. You can also easily make components portable as well, just like behaviors:
+
+```typescript
+import Service from './service';
+import { counter } from './behaviors/counter';
+
+const Counter = ({ el, computed, use }) => {
+  const useCounter = use(counter);
+
+  return (initial: number) => {
+    // same as before
+  };
+}
+```
+
+It's all just patterns of composition with functions—there's no magic.
+
+---
+
+## Mounting
+
+Use `mount()` to attach a view to the DOM:
+
+```typescript
+import { el, mount } from './service';
+
+const App = () => el('div')(
+  el('h1')('My App')
+);
+
+const app = mount(App());
+document.querySelector('#app')?.appendChild(app.element!);
+```

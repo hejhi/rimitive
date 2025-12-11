@@ -88,31 +88,29 @@ Each behavior:
 
 ## Composing Behaviors
 
-Behaviors can depend on other behaviors:
+Behaviors can depend on other behaviors by calling them directly:
 
 ```typescript
-const checkout = ({ use, computed }: SignalsSvc) => {
-  const useCart = use(cart);
-  const useUserProfile = use(userProfile);
+const checkout = (svc: SignalsSvc) => () => {
+  const { computed } = svc;
 
-  return () => {
-    const c = useCart();
-    const profile = useUserProfile();
+  // Call other behaviors directly with the service
+  const c = cart(svc)();
+  const profile = userProfile(svc)();
 
-    const canCheckout = computed(() =>
-      c.items().length > 0 && profile.name() !== ''
-    );
+  const canCheckout = computed(() =>
+    c.items().length > 0 && profile.name() !== ''
+  );
 
-    const submit = async () => {
-      if (!canCheckout()) return;
-      await submitOrder({
-        items: c.items(),
-        customer: profile.name(),
-      });
-    };
-
-    return { canCheckout, submit };
+  const submit = async () => {
+    if (!canCheckout()) return;
+    await submitOrder({
+      items: c.items(),
+      customer: profile.name(),
+    });
   };
+
+  return { canCheckout, submit };
 };
 ```
 

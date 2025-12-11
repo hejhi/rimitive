@@ -83,7 +83,10 @@ The error state is part of the resource's reactive value.
 Errors in effects propagate normally. If you need to catch them:
 
 ```typescript
-const svc = createDOMView()();
+import { compose } from '@lattice/lattice';
+import { SignalModule, EffectModule } from '@lattice/signals/extend';
+
+const svc = compose(SignalModule, EffectModule)();
 const { signal, effect } = svc;
 
 const count = signal(0);

@@ -1,0 +1,189 @@
+---
+title: Creating a Behavior
+description: Encapsulate reusable reactive logic without any UI.
+---
+
+A **behavior** is a function that bundles signals, computeds, and actions into a reusable unit. No UI, no framework—just portable reactive logic.
+
+**Important:** Behaviors run once. They are not reactive closures — there's no re-rendering or re-execution at the function level. All reactivity is encapsulated in the primitives (`signal`, `computed`, `effect`). The function creates the reactive graph once; signals handle updates from there.
+
+---
+
+## The Shape
+
+```typescript
+const behaviorName = (svc: SignalsSvc) => (options?) => {
+  // Create state
+  // Return API
+};
+```
+
+Three levels:
+1. **Service injection** — `(svc) =>` receives the signal primitives
+2. **Factory** — `(options?) =>` configures the instance
+3. **API** — the object consumers interact with
+
+---
+
+## A Counter Behavior
+
+```typescript
+import type { SignalFactory, ComputedFactory } from '@lattice/signals';
+
+type SignalsSvc = {
+  signal: SignalFactory;
+  computed: ComputedFactory;
+};
+
+const counter = ({ signal, computed }: SignalsSvc) => (initial = 0) => {
+  const count = signal(initial);
+  const doubled = computed(() => count() * 2);
+
+  return {
+    count,
+    doubled,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+    reset: () => count(initial),
+  };
+};
+```
+
+---
+
+## Setting Up the Service
+
+First, compose your modules and add a `use` helper:
+
+```typescript
+// service.ts
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+
+type Behavior<TOptions, TResult> = (svc: typeof svc) => (options: TOptions) => TResult;
+
+const baseSvc = compose(SignalModule, ComputedModule)();
+
+export const svc = {
+  ...baseSvc,
+  use: <TOptions, TResult>(fn: Behavior<TOptions, TResult>) => fn(svc),
+};
+```
+
+The `use` method captures the service and passes it to behaviors automatically.
+
+---
+
+## Using It
+
+```typescript
+import { svc } from './service';
+
+const useCounter = svc.use(counter);
+
+const c = useCounter(10);
+
+c.count();      // 10
+c.increment();
+c.count();      // 11
+c.doubled();    // 22
+c.reset();
+c.count();      // 10
+```
+
+`svc.use(counter)` injects the service and returns the factory. The caller just provides options.
+
+---
+
+## Why This Shape?
+
+The two-level function `(svc) => (options) =>` exists for a reason:
+
+**Service injection** lets behaviors work with any signal implementation. Test with mocks, use in React, use in Lattice View—same behavior code.
+
+**Factory pattern** lets you create multiple instances with different options:
+
+```typescript
+const useCounter = svc.use(counter);
+
+const counterA = useCounter(0);
+const counterB = useCounter(100);
+
+counterA.count();  // 0
+counterB.count();  // 100
+```
+
+---
+
+## Composing Behaviors
+
+Behaviors can use other behaviors. Destructure `use` from the service to compose them:
+
+```typescript
+const disclosure = ({ signal }: SignalsSvc) => (initialOpen = false) => {
+  const isOpen = signal(initialOpen);
+
+  return {
+    isOpen,
+    open: () => isOpen(true),
+    close: () => isOpen(false),
+    toggle: () => isOpen(!isOpen()),
+  };
+};
+
+const dropdown = ({ use }: SignalsSvc) => {
+  const useDisclosure = use(disclosure);
+
+  return (options?: { initialOpen?: boolean }) => {
+    const disc = useDisclosure(options?.initialOpen ?? false);
+
+    // Add keyboard handling
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') disc.close();
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        disc.toggle();
+      }
+    };
+
+    return {
+      ...disc,
+      onKeyDown,
+    };
+  };
+};
+```
+
+`dropdown` builds on `disclosure`. Same pattern scales to modals, accordions, tabs—anything with open/close state.
+
+---
+
+## Testing
+
+Behaviors are trivial to test—no DOM, no framework. Just import your service:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { svc } from './service';
+
+describe('counter', () => {
+  it('increments', () => {
+    const c = svc.use(counter)(0);
+
+    c.increment();
+    c.increment();
+
+    expect(c.count()).toBe(2);
+  });
+
+  it('respects initial value', () => {
+    const c = svc.use(counter)(50);
+
+    expect(c.count()).toBe(50);
+    c.reset();
+    expect(c.count()).toBe(50);
+  });
+});
+```
+
+Pure functions, pure tests.
