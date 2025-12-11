@@ -13,8 +13,6 @@ sidebar:
 
 ## HydrationMismatch class
 
-Hydration mismatch error
-
 **Signature:**
 
 ```typescript
