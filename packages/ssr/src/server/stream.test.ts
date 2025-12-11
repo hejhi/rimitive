@@ -6,25 +6,23 @@ import { describe, it, expect } from 'vitest';
 import { createStreamWriter } from '../server/stream';
 
 describe('createStreamWriter', () => {
-  it('should format chunk as script tag that pushes to proxy', () => {
+  it('should format chunkCode as JS that pushes to receiver', () => {
     const stream = createStreamWriter('__APP__');
-    const chunk = stream.chunk('user-123', {
+    const code = stream.chunkCode('user-123', {
       name: 'Alice',
       age: 30,
     });
 
-    expect(chunk).toBe(
-      '<script>__APP__.push("user-123",{"name":"Alice","age":30})</script>'
-    );
+    expect(code).toBe('__APP__.push("user-123",{"name":"Alice","age":30});');
   });
 
   it('should escape quotes in JSON strings', () => {
     const stream = createStreamWriter('__APP__');
-    const chunk = stream.chunk('quote-test', {
+    const code = stream.chunkCode('quote-test', {
       message: 'Hello "world"',
     });
 
-    expect(chunk).toContain('Hello \\"world\\"');
+    expect(code).toContain('Hello \\"world\\"');
   });
 
   it('should expose the stream key', () => {
@@ -32,13 +30,13 @@ describe('createStreamWriter', () => {
     expect(stream.key).toBe('__MY_STREAM__');
   });
 
-  it('should generate bootstrap script', () => {
+  it('should generate bootstrapCode as JS that creates receiver', () => {
     const stream = createStreamWriter('__BOOT__');
-    const bootstrap = stream.bootstrap();
+    const code = stream.bootstrapCode();
 
-    expect(bootstrap).toContain('<script>');
-    expect(bootstrap).toContain('window.__BOOT__');
-    expect(bootstrap).toContain('push');
-    expect(bootstrap).toContain('connect');
+    expect(code).not.toContain('<script>');
+    expect(code).toContain('window.__BOOT__');
+    expect(code).toContain('push');
+    expect(code).toContain('connect');
   });
 });

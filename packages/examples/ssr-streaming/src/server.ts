@@ -30,7 +30,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = __dirname.endsWith('src');
 
 // Create stream writer - same key used on client in connectStream()
-const { chunk, bootstrap } = createStreamWriter(STREAM_KEY);
+const stream = createStreamWriter(STREAM_KEY);
 
 const clientBundlePath = isDev
   ? join(__dirname, '../dist/client/client.js')
@@ -64,7 +64,7 @@ const server = createServer(async (req, res) => {
     initialPath: url.pathname,
     onResolve: (id, data) => {
       console.log(`[stream] Streaming chunk: ${id}`);
-      res.write(chunk(id, data));
+      res.write(`<script>${stream.chunkCode(id, data)}</script>`);
     },
   });
 
@@ -89,7 +89,7 @@ const server = createServer(async (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lattice SSR Streaming</title>
-  ${bootstrap()}
+  <script>${stream.bootstrapCode()}</script>
   <style>${getStyles()}</style>
 </head>
 <body>`);

@@ -70,10 +70,10 @@ describe('renderToStream', () => {
   it('should return initial HTML with pending states and resolve done when data arrives', async () => {
     const { signal } = createServerTestEnv();
     const chunks: string[] = [];
-    const { chunk } = createStreamWriter('__TEST__');
+    const stream = createStreamWriter('__TEST__');
     const loader = createLoader({
       signal,
-      onResolve: (id, data) => chunks.push(chunk(id, data)),
+      onResolve: (id, data) => chunks.push(stream.chunkCode(id, data)),
     });
 
     let resolveData: (() => void) | null = null;

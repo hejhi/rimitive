@@ -219,7 +219,7 @@ export type StreamResult = {
  *
  * // Create service with streaming callback
  * const service = createService(adapter, {
- *   onResolve: (id, data) => res.write(stream.chunk(id, data)),
+ *   onResolve: (id, data) => res.write(`<script>${stream.chunkCode(id, data)}</script>`),
  * });
  *
  * // Render
@@ -230,7 +230,7 @@ export type StreamResult = {
  *
  * // Write HTML document
  * res.write(`<!DOCTYPE html><html><head>`);
- * res.write(stream.bootstrap());
+ * res.write(`<script>${stream.bootstrapCode()}</script>`);
  * res.write(`</head><body>`);
  * res.write(initialHtml);
  * res.write(`<script src="/client.js"></script>`);

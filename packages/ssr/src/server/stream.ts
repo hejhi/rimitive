@@ -35,44 +35,44 @@ function createStreamingReceiver() {
 }
 
 /**
- * A factory for generating streaming script tags.
+ * A factory for generating streaming JavaScript code.
  */
 export type StreamWriter = {
   /** The stream key (window property name) */
   key: string;
-  /** Script tag that initializes the streaming receiver */
-  bootstrap: () => string;
-  /** Script tag that pushes data to the receiver */
-  chunk: (id: string, data: unknown) => string;
+  /** JavaScript code that initializes the streaming receiver */
+  bootstrapCode: () => string;
+  /** JavaScript code that pushes data to the receiver */
+  chunkCode: (id: string, data: unknown) => string;
 };
 
 /**
- * Create a stream writer for generating streaming script tags.
+ * Create a stream writer for generating streaming JavaScript code.
  *
- * The writer generates script tags that set up and communicate with a
+ * The writer generates JavaScript code that sets up and communicates with a
  * streaming receiver on the client. The receiver queues data chunks until
  * a loader connects, then forwards directly.
  *
  * @param streamKey - The window property name (e.g., '__MY_APP_STREAM__')
- * @returns StreamWriter with bootstrap() and chunk() methods
+ * @returns StreamWriter with bootstrapCode() and chunkCode() methods
  *
  * @example
  * ```ts
- * const { bootstrap, chunk } = createStreamWriter('__APP_STREAM__');
+ * const stream = createStreamWriter('__APP_STREAM__');
  *
- * res.write(`<head>${bootstrap()}</head>`);
+ * res.write(`<head><script>${stream.bootstrapCode()}</script></head>`);
  * res.write(`<body>${initialHtml}</body>`);
  *
  * // As async boundaries resolve:
- * res.write(chunk('stats', { users: 100 }));
+ * res.write(`<script>${stream.chunkCode('stats', { users: 100 })}</script>`);
  * ```
  */
 export function createStreamWriter(streamKey: string): StreamWriter {
   return {
     key: streamKey,
-    bootstrap: () =>
-      `<script>window.${streamKey}=(${createStreamingReceiver.toString()})();</script>`,
-    chunk: (id, data) =>
-      `<script>${streamKey}.push(${JSON.stringify(id)},${JSON.stringify(data)})</script>`,
+    bootstrapCode: () =>
+      `window.${streamKey}=(${createStreamingReceiver.toString()})();`,
+    chunkCode: (id, data) =>
+      `${streamKey}.push(${JSON.stringify(id)},${JSON.stringify(data)});`,
   };
 }
