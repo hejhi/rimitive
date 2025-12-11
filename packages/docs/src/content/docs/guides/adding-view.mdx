@@ -24,7 +24,7 @@ import { MountModule } from '@lattice/view/deps/mount';
 // Create adapter-bound `el`
 const ElModule = createElModule(createDOMAdapter());
 
-const useBaseSvc = compose(
+export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
@@ -35,12 +35,7 @@ const useBaseSvc = compose(
   MountModule
 );
 
-export const svc = {
-  ...useBaseSvc(),
-  // Add the `use` helper, like last time
-  use: <TOptions, TResult>(fn: Behavior<TOptions, TResult>) => fn(svc),
-};
-
+export const { signal, computed, effect, batch, el, mount } = svc;
 export type Service = typeof svc;
 ```
 
@@ -163,10 +158,10 @@ const app = el('div')(
 Combine behaviors with view for reactive components:
 
 ```typescript
-import { el, computed, use } from './service';
+import { svc, el, computed, use } from './service';
 import { counter } from './behaviors/counter';
 
-const useCounter = use(counter);
+const useCounter = svc(counter);
 
 const Counter = (initial: number) => {
   const { count, doubled, increment, decrement, reset } = useCounter(initial);
@@ -196,8 +191,9 @@ The behavior can handle state. The component can handle UI. You can also easily 
 import Service from './service';
 import { counter } from './behaviors/counter';
 
-const Counter = ({ el, computed, use }) => {
-  const useCounter = use(counter);
+const Counter = (svc: Service) => {
+  const { el, computed } = svc;
+  const useCounter = svc(counter);
 
   return (initial: number) => {
     // same as before
