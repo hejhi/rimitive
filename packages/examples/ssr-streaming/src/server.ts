@@ -69,12 +69,11 @@ const server = createServer(async (req, res) => {
   });
 
   // Render and get all pieces needed for streaming
-  const { initialHtml, clientScript, done, pendingCount } = renderToStream(
+  const { initialHtml, done, pendingCount } = renderToStream(
     AppLayout(service),
     {
       mount: (spec: RefSpec<unknown>) => spec.create(service),
       serialize,
-      clientSrc: '/client.js',
     }
   );
 
@@ -99,7 +98,7 @@ const server = createServer(async (req, res) => {
   res.write(initialHtml);
 
   // Write client script - blocking to ensure hydration completes before chunks
-  res.write(clientScript);
+  res.write('<script src="/client.js"></script>');
 
   // Wait for all async boundaries to resolve
   // Chunks are streamed via onResolve as each boundary completes

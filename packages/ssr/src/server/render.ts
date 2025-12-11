@@ -186,13 +186,6 @@ export type RenderToStreamOptions = {
    * Function to serialize elements to HTML (from createDOMServerAdapter)
    */
   serialize: Serialize;
-
-  /**
-   * URL path to the client bundle (e.g., '/client.js').
-   * If provided, generates a blocking script tag to ensure hydration
-   * completes before streaming data chunks are processed.
-   */
-  clientSrc?: string;
 };
 
 /**
@@ -201,13 +194,6 @@ export type RenderToStreamOptions = {
 export type StreamResult = {
   /** The initial HTML string (with pending states for async boundaries) */
   initialHtml: string;
-
-  /**
-   * Client script tag - include after initialHtml, before streaming chunks.
-   * Uses blocking (non-module) script to ensure hydration completes first.
-   * Empty string if clientSrc was not provided.
-   */
-  clientScript: string;
 
   /**
    * Promise that resolves when all async boundaries have resolved.
@@ -222,8 +208,7 @@ export type StreamResult = {
 /**
  * Render to stream for progressive SSR.
  *
- * Returns initial HTML and client script. Use with createStreamWriter()
- * for the full streaming flow.
+ * Returns initial HTML. Use with createStreamWriter() for the full streaming flow.
  *
  * @example
  * ```ts
@@ -238,9 +223,9 @@ export type StreamResult = {
  * });
  *
  * // Render
- * const { initialHtml, clientScript, done } = renderToStream(
+ * const { initialHtml, done } = renderToStream(
  *   AppLayout(service),
- *   { mount: (spec) => spec.create(service), serialize, clientSrc: '/client.js' }
+ *   { mount: (spec) => spec.create(service), serialize }
  * );
  *
  * // Write HTML document
@@ -248,7 +233,7 @@ export type StreamResult = {
  * res.write(stream.bootstrap());
  * res.write(`</head><body>`);
  * res.write(initialHtml);
- * res.write(clientScript);
+ * res.write(`<script src="/client.js"></script>`);
  * await done;  // Data chunks stream via onResolve
  * res.write('</body></html>');
  * res.end();
@@ -258,7 +243,7 @@ export function renderToStream(
   spec: RefSpec<unknown>,
   options: RenderToStreamOptions
 ): StreamResult {
-  const { mount, serialize, clientSrc } = options;
+  const { mount, serialize } = options;
 
   // Mount the app synchronously - this renders with pending states
   const nodeRef = mount(spec);
@@ -293,14 +278,8 @@ export function renderToStream(
           )
         ).then(() => undefined);
 
-  // Generate client script tag if clientSrc provided
-  // Uses blocking (non-module) script to ensure hydration completes
-  // before streaming data chunks are processed
-  const clientScript = clientSrc ? `<script src="${clientSrc}"></script>` : '';
-
   return {
     initialHtml,
-    clientScript,
     done,
     pendingCount,
   };
