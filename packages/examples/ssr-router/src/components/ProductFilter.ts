@@ -39,7 +39,8 @@ const useFilters = (
   };
 };
 
-export const ProductFilter = ({ el, signal, computed, map, navigate }: Service) =>
+export const ProductFilter =
+  ({ el, signal, computed, map, router }: Service) =>
   ({ products }: ProductFilterProps) => {
     const selectedCategory = signal<string>('all');
     const { categories, filteredProducts } = useFilters(computed, {
@@ -55,7 +56,7 @@ export const ProductFilter = ({ el, signal, computed, map, navigate }: Service) 
         const product = productSignal();
         return el('div').props({
           className: 'product-card clickable',
-          onclick: () => navigate(`/products/${product.id}`),
+          onclick: () => router.navigate(`/products/${product.id}`),
         })(
           el('h4')(product.name),
           el('p').props({ className: 'category' })(product.category),

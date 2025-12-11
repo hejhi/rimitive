@@ -1,7 +1,7 @@
 import type { Service } from '../service.js';
 
 export const Home =
-  ({ el, navigate }: Service) =>
+  ({ el, router }: Service) =>
   () =>
     el('div').props({ className: 'page home-page' })(
       el('h2')('Welcome to SSR + Router'),
@@ -24,7 +24,7 @@ export const Home =
         el('p')('Try navigating between pages to see SSR in action!'),
         el('button').props({
           className: 'primary-btn',
-          onclick: () => navigate('/about'),
+          onclick: () => router.navigate('/about'),
         })('Learn More →')
       )
     );

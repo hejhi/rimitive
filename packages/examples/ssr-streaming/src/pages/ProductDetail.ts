@@ -51,63 +51,60 @@ const products = [
   },
 ];
 
-type ProductDetailProps = {
-  params: { id: string };
-};
+export const ProductDetail =
+  (svc: Service) =>
+  ({ params }: { params: Record<string, string> }) => {
+    const { id: _id } = params as { id: string };
+    const { el, router } = svc;
+    const id = parseInt(_id, 10);
+    const product = products.find((p) => p.id === id);
 
-export function ProductDetail(
-  { el, navigate, use }: Service,
-  { params }: ProductDetailProps
-) {
-  const id = parseInt(params.id, 10);
-  const product = products.find((p) => p.id === id);
+    if (!product) {
+      return el('div').props({ className: 'page product-detail-page' })(
+        el('h2')('Product Not Found'),
+        el('p')('The product you are looking for does not exist.'),
+        el('button').props({
+          className: 'primary-btn',
+          onclick: () => router.navigate('/products'),
+        })('← Back to Products')
+      );
+    }
 
-  if (!product) {
     return el('div').props({ className: 'page product-detail-page' })(
-      el('h2')('Product Not Found'),
-      el('p')('The product you are looking for does not exist.'),
-      el('button').props({
-        className: 'primary-btn',
-        onclick: () => navigate('/products'),
-      })('← Back to Products')
+      el('nav').props({ className: 'breadcrumb' })(
+        el('a').props({
+          href: '/products',
+          onclick: (e: Event) => {
+            e.preventDefault();
+            router.navigate('/products');
+          },
+        })('Products'),
+        el('span')(' / '),
+        el('span')(product.name)
+      ),
+
+      el('article').props({ className: 'product-detail card' })(
+        el('header')(
+          el('h2')(product.name),
+          el('span').props({ className: 'category' })(product.category)
+        ),
+
+        el('p').props({ className: 'description' })(product.description),
+
+        el('p').props({ className: 'price' })(`$${product.price}`),
+
+        el('section').props({ className: 'add-to-cart-section' })(
+          svc(AddToCart)({
+            productId: product.id,
+            productName: product.name,
+            price: product.price,
+          })
+        ),
+
+        el('button').props({
+          className: 'secondary-btn',
+          onclick: () => router.navigate('/products'),
+        })('← Back to Products')
+      )
     );
-  }
-
-  return el('div').props({ className: 'page product-detail-page' })(
-    el('nav').props({ className: 'breadcrumb' })(
-      el('a').props({
-        href: '/products',
-        onclick: (e: Event) => {
-          e.preventDefault();
-          navigate('/products');
-        },
-      })('Products'),
-      el('span')(' / '),
-      el('span')(product.name)
-    ),
-
-    el('article').props({ className: 'product-detail card' })(
-      el('header')(
-        el('h2')(product.name),
-        el('span').props({ className: 'category' })(product.category)
-      ),
-
-      el('p').props({ className: 'description' })(product.description),
-
-      el('p').props({ className: 'price' })(`$${product.price}`),
-
-      el('section').props({ className: 'add-to-cart-section' })(
-        use(AddToCart)({
-          productId: product.id,
-          productName: product.name,
-          price: product.price,
-        })
-      ),
-
-      el('button').props({
-        className: 'secondary-btn',
-        onclick: () => navigate('/products'),
-      })('← Back to Products')
-    )
-  );
-}
+  };

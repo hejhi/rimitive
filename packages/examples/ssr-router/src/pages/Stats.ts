@@ -115,7 +115,9 @@ const StatsContent = (
         el('li')(
           'Resolved data is collected by createLoader() and serialized to a script tag'
         ),
-        el('li')('Client hydration receives data via initialData - no re-fetch'),
+        el('li')(
+          'Client hydration receives data via initialData - no re-fetch'
+        ),
         el('li')(
           'Client navigation shows pending state while fetching fresh data'
         )
@@ -160,9 +162,9 @@ const StatsError = ({ el }: Service, error: unknown): RefSpec<HTMLDivElement> =>
  * Stats Page - uses load() for async data fetching with fetcher/renderer pattern and ssr
  */
 export const Stats = (svc: Service) => (): RefSpec<HTMLElement> => {
-  const { load, match } = svc;
+  const { loader, match } = svc;
 
-  return load(
+  return loader.load(
     'stats', // ID for data lookup during hydration
     () => fetchStats(),
     (state: LoadState<StatsData>) =>

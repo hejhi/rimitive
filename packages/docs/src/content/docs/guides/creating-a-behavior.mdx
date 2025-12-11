@@ -3,7 +3,7 @@ title: Creating a Behavior
 description: Encapsulate reusable reactive logic without any UI.
 ---
 
-A **behavior** is a function that bundles signals, computeds, and actions into a reusable unit. No UI, no framework—just portable reactive logic.
+A **behavior** is a pattern. It's a function that bundles signals, computeds, and actions into a reusable unit. No UI, no framework—just portable reactive logic.
 
 **Important:** Behaviors run once. They are not reactive closures — there's no re-rendering or re-execution at the function level. All reactivity is encapsulated in the primitives (`signal`, `computed`, `effect`). The function creates the reactive graph once; signals handle updates from there.
 
@@ -51,26 +51,9 @@ const counter = ({ signal, computed }: SignalsSvc) => (initial = 0) => {
 
 ---
 
-## Setting Up the Service
+## Composing the Service
 
-First, compose your modules and add a `use` helper:
-
-```typescript
-// service.ts
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule } from '@lattice/signals/extend';
-
-type Behavior<TOptions, TResult> = (svc: typeof svc) => (options: TOptions) => TResult;
-
-const baseSvc = compose(SignalModule, ComputedModule)();
-
-export const svc = {
-  ...baseSvc,
-  use: <TOptions, TResult>(fn: Behavior<TOptions, TResult>) => fn(svc),
-};
-```
-
-The `use` method captures the service and passes it to behaviors automatically.
+The service is a provider function. Calling it provides the service a function automatically (in our case, a behavior you want to compose).
 
 ---
 
@@ -79,7 +62,8 @@ The `use` method captures the service and passes it to behaviors automatically.
 ```typescript
 import { svc } from './service';
 
-const useCounter = svc.use(counter);
+// Instead of destructuing svc, you can call it to provide the service
+const useCounter = svc(counter);
 
 const c = useCounter(10);
 
@@ -91,7 +75,7 @@ c.reset();
 c.count();      // 10
 ```
 
-`svc.use(counter)` injects the service and returns the factory. The caller just provides options.
+`svc(counter)` provides (or injects) the service. The caller just provides options.
 
 ---
 
@@ -104,7 +88,7 @@ The two-level function `(svc) => (options) =>` exists for a reason:
 **Factory pattern** lets you create multiple instances with different options:
 
 ```typescript
-const useCounter = svc.use(counter);
+const useCounter = svc(counter);
 
 const counterA = useCounter(0);
 const counterB = useCounter(100);
@@ -131,8 +115,8 @@ const disclosure = ({ signal }: SignalsSvc) => (initialOpen = false) => {
   };
 };
 
-const dropdown = ({ use }: SignalsSvc) => {
-  const useDisclosure = use(disclosure);
+const dropdown = (svc: SignalsSvc) => {
+  const useDisclosure = svc(disclosure);
 
   return (options?: { initialOpen?: boolean }) => {
     const disc = useDisclosure(options?.initialOpen ?? false);
@@ -168,7 +152,7 @@ import { svc } from './service';
 
 describe('counter', () => {
   it('increments', () => {
-    const c = svc.use(counter)(0);
+    const c = svc(counter)(0);
 
     c.increment();
     c.increment();
@@ -177,7 +161,7 @@ describe('counter', () => {
   });
 
   it('respects initial value', () => {
-    const c = svc.use(counter)(50);
+    const c = svc(counter)(50);
 
     expect(c.count()).toBe(50);
     c.reset();

@@ -15,8 +15,8 @@ import { createElModule } from '@lattice/view/el';
 import { createMapModule } from '@lattice/view/map';
 import { createMatchModule } from '@lattice/view/match';
 import { OnModule } from '@lattice/view/deps/addEventListener';
-import { createLoader } from '@lattice/view/load';
-import { createRouter, type RouterOptions } from '@lattice/router';
+import { createLoaderModule } from '@lattice/view/load';
+import { createRouterModule, type RouterOptions } from '@lattice/router';
 import type { Adapter, RefSpec } from '@lattice/view/types';
 import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
 import { routes } from './routes.js';
@@ -46,7 +46,7 @@ export function createService(
   adapter: Adapter<DOMAdapterConfig>,
   options?: ServiceOptions
 ) {
-  const baseSvc = compose(
+  return compose(
     SignalModule,
     ComputedModule,
     EffectModule,
@@ -54,32 +54,12 @@ export function createService(
     createElModule(adapter),
     createMapModule(adapter),
     createMatchModule(adapter),
-    OnModule
+    OnModule,
+    createLoaderModule({
+      initialData: options?.loaderData,
+    }),
+    createRouterModule(routes, options)
   );
-
-  // Create loader with optional initial data for hydration
-  const loader = createLoader({
-    signal: baseSvc.signal,
-    initialData: options?.loaderData,
-  });
-
-  const router = createRouter(
-    { signal: baseSvc.signal, computed: baseSvc.computed },
-    routes,
-    options
-  );
-
-  const service = {
-    ...baseSvc,
-    ...router,
-    // Loader API
-    load: loader.load,
-    getLoaderData: loader.getData,
-    // Ergonomic convenience for portable components
-    use: <TProps>(fn: Portable<TProps>) => fn(service),
-  };
-
-  return service;
 }
 
 /**

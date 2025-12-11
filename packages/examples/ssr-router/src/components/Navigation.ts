@@ -8,13 +8,13 @@ import { Link } from '@lattice/router/link';
 import type { Service } from '../service.js';
 
 export const Navigation =
-  ({ el, computed, currentPath }: Service) =>
+  ({ el, computed, router }: Service) =>
   () => {
     const navLink = (href: string, label: string) => {
       return Link({
         href,
         className: computed(() => {
-          const path = currentPath();
+          const path = router.currentPath();
           const isActive = path === href;
           return isActive ? 'nav-link active' : 'nav-link';
         }),

@@ -271,6 +271,16 @@ export type Loader = {
 };
 
 /**
+ * Options for creating a loader module
+ */
+export type LoaderOpts = {
+  signal: SignalFactory;
+  initialData?: Record<string, unknown>;
+  /** Called when a load() boundary resolves. Useful for SSR streaming. */
+  onResolve?: (id: string, data: unknown) => void;
+};
+
+/**
  * Create a loader for managing async data boundaries.
  *
  * On the server:
@@ -315,12 +325,7 @@ export type Loader = {
  * });
  * ```
  */
-export function createLoader(opts: {
-  signal: SignalFactory;
-  initialData?: Record<string, unknown>;
-  /** Called when a load() boundary resolves. Useful for SSR streaming. */
-  onResolve?: (id: string, data: unknown) => void;
-}): Loader {
+export function createLoader(opts: LoaderOpts): Loader {
   const { signal, initialData, onResolve } = opts;
 
   // Collected data from resolved async boundaries (for getData())
@@ -453,3 +458,43 @@ export function createLoader(opts: {
     has: (id: string) => boundarySetters.has(id),
   };
 }
+
+/**
+ * Create a Loader module for use with compose().
+ *
+ * Like createElModule(adapter), this takes configuration at module creation time
+ * and returns a Module that can be composed with other modules.
+ *
+ * @param opts - Loader options (initialData for hydration, onResolve for streaming)
+ *
+ * @example
+ * ```typescript
+ * import { compose, merge } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+ * import { createLoaderModule } from '@lattice/view/load';
+ * import { createRouterModule } from '@lattice/router';
+ *
+ * const baseSvc = compose(SignalModule, ComputedModule, ElModule);
+ *
+ * const svc = merge(
+ *   baseSvc,
+ *   compose(
+ *     createLoaderModule({ initialData: window.__DATA__ }),
+ *     createRouterModule(routes, { initialPath: '/' })
+ *   )
+ * );
+ *
+ * // Loader is now part of the composed context
+ * const { loader } = svc;
+ * loader.load('my-data', () => fetchData(), (state) => ...);
+ * ```
+ */
+export const createLoaderModule = (
+  opts: Omit<LoaderOpts, 'signal'> = {}
+): Module<'loader', Loader, { signal: SignalFactory }> =>
+  defineModule({
+    name: 'loader',
+    dependencies: [SignalModule],
+    create: ({ signal }: { signal: SignalFactory }) =>
+      createLoader({ signal, ...opts }),
+  });

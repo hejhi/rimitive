@@ -55,10 +55,8 @@ type ProductDetailProps = {
   params: { id: string };
 };
 
-export function ProductDetail(
-  { el, navigate, use }: Service,
-  { params }: ProductDetailProps
-) {
+export function ProductDetail(svc: Service, { params }: ProductDetailProps) {
+  const { el, router } = svc;
   const id = parseInt(params.id, 10);
   const product = products.find((p) => p.id === id);
 
@@ -68,7 +66,7 @@ export function ProductDetail(
       el('p')('The product you are looking for does not exist.'),
       el('button').props({
         className: 'primary-btn',
-        onclick: () => navigate('/products'),
+        onclick: () => router.navigate('/products'),
       })('← Back to Products')
     );
   }
@@ -79,7 +77,7 @@ export function ProductDetail(
         href: '/products',
         onclick: (e: Event) => {
           e.preventDefault();
-          navigate('/products');
+          router.navigate('/products');
         },
       })('Products'),
       el('span')(' / '),
@@ -97,7 +95,7 @@ export function ProductDetail(
       el('p').props({ className: 'price' })(`$${product.price}`),
 
       el('section').props({ className: 'add-to-cart-section' })(
-        use(AddToCart)({
+        svc(AddToCart)({
           productId: product.id,
           productName: product.name,
           price: product.price,
@@ -106,7 +104,7 @@ export function ProductDetail(
 
       el('button').props({
         className: 'secondary-btn',
-        onclick: () => navigate('/products'),
+        onclick: () => router.navigate('/products'),
       })('← Back to Products')
     )
   );

@@ -14,10 +14,10 @@ import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/ext
 const useSvc = compose(SignalModule, ComputedModule, EffectModule);
 ```
 
-`compose()` returns a `use` function. Call it to get your primitives:
+`compose()` returns a `use` function with the primitives accessible on it:
 
 ```typescript
-const { signal, computed, effect } = useSvc();
+const { signal, computed, effect } = useSvc;
 ```
 
 ---
@@ -66,7 +66,7 @@ import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/ext
 
 // Compose the modules
 const useSvc = compose(SignalModule, ComputedModule, EffectModule);
-const { signal, computed, effect } = useSvc();
+const { signal, computed, effect } = useSvc;
 
 // Create reactive state
 const firstName = signal('Ada');
@@ -96,7 +96,7 @@ Need batching? Add `BatchModule`:
 import { BatchModule } from '@lattice/signals/extend';
 
 const useSvc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
-const { signal, effect, batch } = useSvc();
+const { signal, effect, batch } = useSvc;
 
 const a = signal(1);
 const b = signal(2);

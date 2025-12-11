@@ -24,12 +24,13 @@ type AddToCartProps = {
   price: number;
 };
 
-export const AddToCart = ({ el, signal, computed, currentPath }: Service) =>
+export const AddToCart =
+  ({ el, signal, computed, router }: Service) =>
   (initialProps: AddToCartProps) => {
     // Use currentPath to reactively derive current product
     // Falls back to initial props if path doesn't match
     const currentProduct = computed(() => {
-      const path = currentPath();
+      const path = router.currentPath();
       const match = path.match(/^\/products\/(\d+)/);
       if (match?.[1]) {
         const id = parseInt(match[1], 10);

@@ -13,9 +13,10 @@ const products = [
   { id: 6, name: 'Blender', category: 'appliances', price: 59 },
 ];
 
-export const Products =
-  ({ el, use }: Service) =>
-  () =>
+export const Products = (svc: Service) => {
+  const { el } = svc;
+
+  return () =>
     el('div').props({ className: 'page products-page' })(
       el('h2')('Products'),
 
@@ -29,7 +30,7 @@ export const Products =
 
       // Interactive product filter
       el('section').props({ className: 'product-filter-section' })(
-        use(ProductFilter)({ products })
+        svc(ProductFilter)({ products })
       ),
 
       // More static content
@@ -41,3 +42,4 @@ export const Products =
         )
       )
     );
+};

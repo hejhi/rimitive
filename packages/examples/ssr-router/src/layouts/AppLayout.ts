@@ -37,26 +37,29 @@ const componentMap: Record<
   stats: Stats,
 };
 
-export const AppLayout = ({ el, match, matches, use }: Service) =>
-  el('div').props({ className: 'app' })(
+export const AppLayout = (svc: Service) => {
+  const { router, el, match } = svc;
+
+  return el('div').props({ className: 'app' })(
     // Navbar with navigation
     el('nav').props({ className: 'navbar' })(
       el('div').props({ className: 'nav-brand' })(
         el('h1')('🧩 Lattice SSR + Router')
       ),
-      use(Navigation)({})
+      svc(Navigation)()
     ),
 
     // Route content - renders based on router.matches()
     el('main').props({ className: 'main-content' })(
-      match(matches, (matchedRoutes: MatchedRoute[]) => {
+      match(router.matches, (matchedRoutes: MatchedRoute[]) => {
         const route = matchedRoutes[0];
-        if (!route) return use(NotFound)({});
+        if (!route) return svc(NotFound)();
 
         const Component = componentMap[route.id];
-        if (!Component) return use(NotFound)({});
+        if (!Component) return svc(NotFound)();
 
-        return use(Component)({ params: route.params });
+        return svc(Component)({ params: route.params });
       })
     )
   );
+};

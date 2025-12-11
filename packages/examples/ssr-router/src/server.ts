@@ -51,7 +51,8 @@ const server = createServer(async (req, res) => {
   );
 
   // Create per-request service with initial path
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } =
+    createDOMServerAdapter();
   const service = createService(adapter, { initialPath: url.pathname });
 
   // Create the app RefSpec
@@ -66,7 +67,7 @@ const server = createServer(async (req, res) => {
   });
 
   // Get collected loader data for hydration
-  const loaderData = service.getLoaderData();
+  const loaderData = service.loader.getData();
 
   // Create hydration script with loader data
   const hydrationScript =

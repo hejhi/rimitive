@@ -199,10 +199,10 @@ const SectionError = (
  * Each section streams independently as its data resolves!
  */
 export const Stats = (svc: Service) => (): RefSpec<HTMLElement> => {
-  const { el, load, match } = svc;
+  const { el, loader, match } = svc;
 
   // Three independent load() boundaries with staggered delays
-  const quickStats = load(
+  const quickStats = loader.load(
     'quick-stats',
     () => fetchQuickStats(),
     (state: LoadState<QuickStats>) =>
@@ -218,7 +218,7 @@ export const Stats = (svc: Service) => (): RefSpec<HTMLElement> => {
       })
   );
 
-  const topPages = load(
+  const topPages = loader.load(
     'top-pages',
     () => fetchTopPages(),
     (state: LoadState<TopPagesData>) =>
@@ -234,7 +234,7 @@ export const Stats = (svc: Service) => (): RefSpec<HTMLElement> => {
       })
   );
 
-  const recentActivity = load(
+  const recentActivity = loader.load(
     'recent-activity',
     () => fetchRecentActivity(),
     (state: LoadState<RecentActivity>) =>
