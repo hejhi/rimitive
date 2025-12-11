@@ -35,6 +35,22 @@ export function createNodeHelpers<TConfig extends AdapterConfig>(
   const { adapter, disposeScope, getElementScope } = opts;
 
   /**
+   * Get the first DOM element from a node ref, drilling into fragments if needed.
+   * Used to find insertion reference points when next sibling is a fragment.
+   */
+  function getFirstElement(
+    node: NodeRef<TElement> | null | undefined
+  ): TElement | null {
+    if (!node) return null;
+    if (node.status === STATUS_ELEMENT) return node.element;
+    if (node.status === STATUS_FRAGMENT) {
+      // Recursively get first element from fragment's first child
+      return getFirstElement(node.firstChild);
+    }
+    return null;
+  }
+
+  /**
    * Insert a node before a reference node in the DOM.
    * Handles ElementRef and FragmentRef correctly.
    *
@@ -55,20 +71,30 @@ export function createNodeHelpers<TConfig extends AdapterConfig>(
       // Determine the next linked node for doubly-linked list
       // nextSiblingNode if it's a linked node, otherwise boundaryNextSibling
       let nextLinked: LinkedNode<TElement> | undefined | null;
-      if (nextSiblingNode && nextSiblingNode.status !== STATUS_FRAGMENT) {
-        nextLinked = nextSiblingNode;
-      } else if (
-        boundaryNextSibling &&
-        boundaryNextSibling.status !== STATUS_FRAGMENT
-      ) {
-        nextLinked = boundaryNextSibling;
+      let nextEl: TElement | null = null;
+
+      if (nextSiblingNode) {
+        if (nextSiblingNode.status !== STATUS_FRAGMENT) {
+          nextLinked = nextSiblingNode;
+          nextEl = nextSiblingNode.element;
+        } else {
+          // nextSiblingNode is a fragment - get its first element for DOM insertion
+          nextEl = getFirstElement(nextSiblingNode);
+        }
+      } else if (boundaryNextSibling) {
+        if (boundaryNextSibling.status !== STATUS_FRAGMENT) {
+          nextLinked = boundaryNextSibling;
+          nextEl = boundaryNextSibling.element;
+        } else {
+          // boundaryNextSibling is a fragment - get its first element for DOM insertion
+          nextEl = getFirstElement(boundaryNextSibling);
+        }
       }
 
       // Link into doubly-linked list
       linkBefore(node, nextLinked);
 
-      // Insert into DOM - use the element from nextLinked if available
-      const nextEl = nextLinked?.element ?? null;
+      // Insert into DOM
       adapter.insertBefore(parentElement, node.element, nextEl);
 
       // Lifecycle hook: onAttach for elements (e.g., SSR adds island markers)

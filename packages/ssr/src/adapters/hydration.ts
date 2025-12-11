@@ -34,7 +34,9 @@ export function createHydrationAdapter(
 ): Adapter<DOMAdapterConfig> & { switchToFallback: () => void } {
   let useHydrating = true;
 
-  const switchToFallback = () => (useHydrating = false);
+  const switchToFallback = () => {
+    useHydrating = false;
+  };
   const getAdapter = (): Adapter<DOMAdapterConfig> =>
     useHydrating ? hydrateAdapter : fallbackAdapter;
 

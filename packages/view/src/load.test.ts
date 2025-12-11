@@ -315,6 +315,60 @@ describe('createLoader', () => {
     expect(onResolve).toHaveBeenCalledTimes(1);
     expect(onResolve).toHaveBeenCalledWith('set-id', 'manually set');
   });
+
+  it('should return true from has() for registered load() boundaries', () => {
+    const { signal } = createTestEnv();
+    const loader = createLoader({ signal });
+
+    loader.load(
+      'registered-id',
+      () => Promise.resolve('data'),
+      () => mockRefSpec()
+    );
+
+    expect(loader.has('registered-id')).toBe(true);
+  });
+
+  it('should return false from has() for unknown IDs', () => {
+    const { signal } = createTestEnv();
+    const loader = createLoader({ signal });
+
+    expect(loader.has('unknown-id')).toBe(false);
+  });
+
+  it('should update signals via loader.setData()', () => {
+    const { signal } = createTestEnv();
+    const loader = createLoader({ signal });
+
+    let capturedState: LoadState<string> | null = null;
+
+    loader.load(
+      'update-id',
+      () => new Promise<string>(() => {}), // never resolves
+      (state) => {
+        capturedState = state;
+        return mockRefSpec();
+      }
+    );
+
+    expect(capturedState!.status()).toBe('pending');
+    expect(capturedState!.data()).toBeUndefined();
+
+    loader.setData('update-id', 'updated data');
+
+    expect(capturedState!.status()).toBe('ready');
+    expect(capturedState!.data()).toBe('updated data');
+  });
+
+  it('should be a no-op when setData() is called with unknown ID', () => {
+    const { signal } = createTestEnv();
+    const loader = createLoader({ signal });
+
+    // Should not throw
+    expect(() => {
+      loader.setData('unknown-id', 'some data');
+    }).not.toThrow();
+  });
 });
 
 describe('isAsyncFragment', () => {

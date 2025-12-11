@@ -52,6 +52,8 @@ export const ASYNC_FRAGMENT = Symbol.for('lattice.async-fragment');
 
 /** Async fragment metadata for SSR introspection */
 export type AsyncMeta<T = unknown> = {
+  /** ID for this async boundary (only present when created via createLoader) */
+  readonly id?: string;
   readonly resolve: () => Promise<T>;
   readonly getData: () => T | undefined;
   readonly setData: (data: T) => void;
@@ -262,6 +264,10 @@ export type Loader = {
   load: LoadFn;
   /** Get all collected data (for serialization after SSR) */
   getData: () => Record<string, unknown>;
+  /** Push data to a load() boundary by ID. Used for SSR streaming. */
+  setData: (id: string, data: unknown) => void;
+  /** Check if a load() boundary with this ID exists */
+  has: (id: string) => boolean;
 };
 
 /**
@@ -320,6 +326,9 @@ export function createLoader(opts: {
   // Collected data from resolved async boundaries (for getData())
   const collectedData: Record<string, unknown> = {};
 
+  // Registry of active load() boundaries by ID for streaming
+  const boundarySetters = new Map<string, (data: unknown) => void>();
+
   function load<T, TElement>(
     id: string,
     fetcher: () => Promise<T>,
@@ -353,7 +362,21 @@ export function createLoader(opts: {
     // Call renderer once with the state object
     const innerSpec = renderer(state);
 
+    // Shared setData implementation for both meta and registry
+    const setDataImpl = (d: T): void => {
+      resolvedData = d;
+      resolved = true;
+      collectedData[id] = d;
+      data(d);
+      status('ready');
+      onResolve?.(id, d);
+    };
+
+    // Register in boundary registry for streaming
+    boundarySetters.set(id, setDataImpl as (data: unknown) => void);
+
     const meta: AsyncMeta<T> = {
+      id,
       resolve: async () => {
         if (resolved && resolvedData !== undefined) {
           return resolvedData;
@@ -377,14 +400,7 @@ export function createLoader(opts: {
         }
       },
       getData: () => resolvedData,
-      setData: (d: T) => {
-        resolvedData = d;
-        resolved = true;
-        collectedData[id] = d;
-        data(d);
-        status('ready');
-        onResolve?.(id, d);
-      },
+      setData: setDataImpl,
       isResolved: () => resolved,
       trigger: () => {
         if (resolved) return;
@@ -428,5 +444,12 @@ export function createLoader(opts: {
   return {
     load,
     getData: () => ({ ...collectedData }),
+    setData: (id: string, data: unknown) => {
+      const setter = boundarySetters.get(id);
+      if (setter) {
+        setter(data);
+      }
+    },
+    has: (id: string) => boundarySetters.has(id),
   };
 }

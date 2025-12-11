@@ -46,12 +46,17 @@ export class HydrationMismatch extends Error {
 // ============================================================================
 
 /**
- * Check if node is a fragment marker comment
+ * Check if node is a fragment marker comment (including async markers)
  */
 function isFragmentMarker(node: Node): boolean {
   if (node.nodeType !== 8) return false; // Not a comment
   const text = (node as Comment).textContent ?? '';
-  return text === 'fragment-start' || text === 'fragment-end';
+  return (
+    text === 'fragment-start' ||
+    text === 'fragment-end' ||
+    text.startsWith('async:') ||
+    text.startsWith('/async:')
+  );
 }
 
 /**
@@ -88,12 +93,12 @@ function getNodeAtPath(root: HTMLElement, path: TreePath): Node {
 }
 
 /**
- * Check if a comment is a fragment-start marker
+ * Check if a comment is a fragment-start marker (including async markers)
  */
 function isFragmentStartMarker(node: Node): boolean {
   if (node.nodeType !== 8) return false;
   const text = (node as Comment).textContent ?? '';
-  return text === 'fragment-start';
+  return text === 'fragment-start' || text.startsWith('async:');
 }
 
 
@@ -110,11 +115,8 @@ function scanFragmentRange(node: Node): number | null {
   let count = 0;
 
   while (current) {
-    // Found end marker
-    if (
-      current.nodeType === 8 &&
-      (current as Comment).textContent === 'fragment-end'
-    ) {
+    // Found end marker (regular or async)
+    if (isFragmentEnd(current)) {
       return count;
     }
 
@@ -139,14 +141,12 @@ function isFragmentStart(node: Node | null): boolean {
 }
 
 /**
- * Check if node is a fragment-end marker
+ * Check if node is a fragment-end marker (including async markers)
  */
 function isFragmentEnd(node: Node | null): boolean {
-  return (
-    node !== null &&
-    node.nodeType === 8 &&
-    (node as Comment).textContent === 'fragment-end'
-  );
+  if (node === null || node.nodeType !== 8) return false;
+  const text = (node as Comment).textContent ?? '';
+  return text === 'fragment-end' || text.startsWith('/async:');
 }
 
 /**
@@ -309,8 +309,13 @@ export function createDOMHydrationAdapter(
         node.nodeType !== 1 ||
         (node as Element).tagName.toLowerCase() !== type.toLowerCase()
       ) {
+        // Debug: show parent context
+        const parent = node.parentNode;
+        const siblings = parent ? Array.from(parent.childNodes).map((n, i) =>
+          `${i}: ${n.nodeType === 1 ? `<${(n as Element).tagName}>` : n.nodeType === 8 ? `<!--${(n as Comment).textContent}-->` : `"${n.textContent?.slice(0, 20)}..."`}`
+        ).join(', ') : 'no parent';
         throw new HydrationMismatch(
-          `Expected <${type}> at ${getCurrentPath(position).join('/')}, got <${(node as Element).tagName}>`
+          `Expected <${type}> at ${getCurrentPath(position).join('/')}, got <${(node as Element).tagName}>. Parent children: [${siblings}]`
         );
       }
 

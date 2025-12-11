@@ -14,6 +14,21 @@ export type {
   RenderToStringAsyncOptions,
 } from '../deps/renderToString';
 
+// Streaming SSR
+export {
+  renderToStream,
+  createStreamingLoader,
+  defaultChunkFormatter,
+  defaultHtmlChunkFormatter,
+} from '../deps/renderToStream';
+export type {
+  RenderToStreamOptions,
+  StreamResult,
+  CreateStreamingLoaderOptions,
+  StreamingLoaderResult,
+  OnAsyncResolve,
+} from '../deps/renderToStream';
+
 // Async fragment utilities (server-side)
 export {
   isAsyncFragment,
@@ -23,4 +38,4 @@ export {
 export type { AsyncFragment } from '../deps/async-fragments';
 
 // Server adapter
-export { createDOMServerAdapter } from '../adapters/dom-server';
+export { createDOMServerAdapter, insertAsyncFragmentMarkers } from '../adapters/dom-server';
