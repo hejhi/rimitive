@@ -40,12 +40,6 @@ export type RenderToStreamOptions = {
  * Result from renderToStream
  */
 export type StreamResult = {
-  /**
-   * Bootstrap script for streaming - include in <head>.
-   * Sets up the data queue for chunks that arrive before hydration.
-   */
-  headScript: string;
-
   /** The initial HTML string (with pending states for async boundaries) */
   initialHtml: string;
 
@@ -66,51 +60,95 @@ export type StreamResult = {
   pendingCount: number;
 };
 
+// =============================================================================
+// Streaming Proxy
+// =============================================================================
+
 /**
- * Default chunk formatter for streaming data
+ * Create bootstrap script that sets up a streaming proxy at the given key.
+ *
+ * The proxy queues data chunks until a loader connects, then forwards directly.
+ * User controls the key name, making the connection explicit and traceable.
+ *
+ * @param streamKey - The window property name (e.g., '__MY_APP_STREAM__')
+ * @returns Script tag string to include in <head>
+ *
+ * @example
+ * ```ts
+ * // Server
+ * const STREAM_KEY = '__APP_STREAM__';
+ * res.write(createStreamingBootstrap(STREAM_KEY));
+ *
+ * // Streams data via:
+ * res.write(createChunkScript(STREAM_KEY, 'stats', { users: 100 }));
+ * ```
  */
-export function defaultChunkFormatter(id: string, data: unknown): string {
-  return `<script>__LATTICE_DATA__(${JSON.stringify(id)},${JSON.stringify(data)})</script>`;
+export function createStreamingBootstrap(streamKey: string): string {
+  return `<script>
+window.${streamKey} = {
+  queue: [],
+  loader: null,
+  push: function(id, data) {
+    if (this.loader) {
+      this.loader.setData(id, data);
+    } else {
+      this.queue.push([id, data]);
+    }
+  },
+  connect: function(loader) {
+    this.loader = loader;
+    for (var i = 0; i < this.queue.length; i++) {
+      loader.setData(this.queue[i][0], this.queue[i][1]);
+    }
+    this.queue = [];
+  }
+};
+</script>`;
 }
 
 /**
- * Bootstrap script for streaming SSR.
- * Sets up a queue for data chunks that arrive before hydration completes.
- * @internal
+ * Create a script tag that pushes data to the streaming proxy.
+ *
+ * @param streamKey - The window property name used in createStreamingBootstrap
+ * @param id - The async boundary ID
+ * @param data - The resolved data
+ * @returns Script tag string
+ *
+ * @example
+ * ```ts
+ * res.write(createChunkScript('__APP_STREAM__', 'stats', { users: 100 }));
+ * // Outputs: <script>__APP_STREAM__.push("stats",{"users":100})</script>
+ * ```
  */
-const BOOTSTRAP_SCRIPT = `<script>
-window.__LATTICE_DATA_QUEUE__=[];
-window.__LATTICE_DATA__=function(i,d){
-if(window.__LATTICE_LOADER__)window.__LATTICE_LOADER__.setData(i,d);
-else window.__LATTICE_DATA_QUEUE__.push([i,d]);
-};
-</script>`;
+export function createChunkScript(streamKey: string, id: string, data: unknown): string {
+  return `<script>${streamKey}.push(${JSON.stringify(id)},${JSON.stringify(data)})</script>`;
+}
 
 /**
  * Render to stream for progressive SSR.
  *
- * Returns all pieces needed for streaming: bootstrap script for head,
- * initial HTML for body, and client script tag. The server just writes
- * what we return - no need to handle IIFE vs module builds manually.
+ * Returns initial HTML and client script. Use with createStreamingBootstrap()
+ * and createChunkScript() for the full streaming flow.
  *
  * @example
  * ```ts
+ * const STREAM_KEY = '__APP_STREAM__';
+ *
  * // Create service with streaming callback
  * const service = createService(adapter, {
- *   onResolve: (id, data) => res.write(defaultChunkFormatter(id, data)),
+ *   onResolve: (id, data) => res.write(createChunkScript(STREAM_KEY, id, data)),
  * });
  *
- * // Render and get all pieces
- * const { headScript, initialHtml, clientScript, done } = renderToStream(
+ * // Render
+ * const { initialHtml, clientScript, done } = renderToStream(
  *   AppLayout(service),
- *   {
- *     mount: (spec) => spec.create(service),
- *     clientSrc: '/client.js',
- *   }
+ *   { mount: (spec) => spec.create(service), clientSrc: '/client.js' }
  * );
  *
  * // Write HTML document
- * res.write(`<!DOCTYPE html><html><head>${headScript}</head><body>`);
+ * res.write(`<!DOCTYPE html><html><head>`);
+ * res.write(createStreamingBootstrap(STREAM_KEY));
+ * res.write(`</head><body>`);
  * res.write(initialHtml);
  * res.write(clientScript);
  * await done;  // Data chunks stream via onResolve
@@ -165,7 +203,6 @@ export function renderToStream(
   const clientScript = clientSrc ? `<script src="${clientSrc}"></script>` : '';
 
   return {
-    headScript: BOOTSTRAP_SCRIPT,
     initialHtml,
     clientScript,
     done,
@@ -178,16 +215,17 @@ export function renderToStream(
  *
  * @example
  * ```ts
- * import { createStreamingLoader, renderToStream } from '@lattice/ssr/server';
+ * import { createStreamingLoader, renderToStream, createStreamingBootstrap } from '@lattice/ssr/server';
  *
- * const { loader, getChunks } = createStreamingLoader({ signal });
+ * const STREAM_KEY = '__APP_STREAM__';
+ * const { loader, getChunks } = createStreamingLoader({ signal, streamKey: STREAM_KEY });
  *
  * const App = createApp(loader);
  * const { initialHtml, done } = renderToStream(App, {
- *   loader,
  *   mount: (spec) => spec.create(svc),
  * });
  *
+ * res.write(createStreamingBootstrap(STREAM_KEY));
  * res.write(initialHtml);
  * await done;
  * for (const chunk of getChunks()) {
@@ -200,11 +238,11 @@ export type CreateStreamingLoaderOptions = {
   /** Signal factory for creating reactive state */
   signal: SignalFactory;
 
+  /** The streaming proxy key (same as used in createStreamingBootstrap) */
+  streamKey: string;
+
   /** Initial data for hydration (optional) */
   initialData?: Record<string, unknown>;
-
-  /** Custom chunk formatter */
-  formatChunk?: (id: string, data: unknown) => string;
 };
 
 export type StreamingLoaderResult = {
@@ -222,7 +260,7 @@ export type StreamingLoaderResult = {
 export function createStreamingLoader(
   options: CreateStreamingLoaderOptions
 ): StreamingLoaderResult {
-  const { signal, initialData, formatChunk = defaultChunkFormatter } = options;
+  const { signal, streamKey, initialData } = options;
 
   const chunks: string[] = [];
 
@@ -230,7 +268,7 @@ export function createStreamingLoader(
     signal,
     initialData,
     onResolve: (id: string, data: unknown) => {
-      chunks.push(formatChunk(id, data));
+      chunks.push(createChunkScript(streamKey, id, data));
     },
   });
 

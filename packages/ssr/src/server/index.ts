@@ -18,7 +18,8 @@ export type {
 export {
   renderToStream,
   createStreamingLoader,
-  defaultChunkFormatter,
+  createStreamingBootstrap,
+  createChunkScript,
 } from '../deps/renderToStream';
 export type {
   RenderToStreamOptions,

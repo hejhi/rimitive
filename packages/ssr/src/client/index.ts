@@ -10,67 +10,70 @@
 import type { Loader } from '@lattice/view/load';
 
 // =============================================================================
-// Streaming SSR Client Support
+// Window Globals for SSR
 // =============================================================================
 
 /**
  * Window globals for SSR.
  *
- * __LATTICE_DATA__ has two forms:
- * - Non-streaming SSR: Object with pre-loaded data (set by server before hydration)
- * - Streaming SSR: Function to receive streamed chunks (set by bootstrap script)
+ * Non-streaming SSR uses __LATTICE_DATA__ as a static object containing
+ * loader data serialized by the server.
  *
- * The other globals are only used for streaming SSR.
+ * Streaming SSR uses a user-defined proxy key (e.g., '__APP_STREAM__')
+ * via createStreamingBootstrap() - no hardcoded globals needed.
  */
 declare global {
   interface Window {
-    /** Streaming: queue for data chunks that arrive before hydration */
-    __LATTICE_DATA_QUEUE__?: Array<[string, unknown]>;
-    /** Non-streaming: static data object. Streaming: function to receive chunks */
-    __LATTICE_DATA__?: Record<string, unknown> | ((id: string, data: unknown) => void);
-    /** Streaming: loader instance for direct data delivery */
-    __LATTICE_LOADER__?: Loader;
+    /** Non-streaming SSR: static data object from server */
+    __LATTICE_DATA__?: Record<string, unknown>;
   }
 }
 
+// =============================================================================
+// Streaming SSR Client Support
+// =============================================================================
+
 /**
- * Connect a loader to receive streamed data chunks.
+ * Streaming proxy interface - matches what createStreamingBootstrap() creates.
+ * The proxy queues data until a loader connects, then forwards directly.
+ */
+export type StreamingProxy = {
+  queue: Array<[string, unknown]>;
+  loader: Loader | null;
+  push: (id: string, data: unknown) => void;
+  connect: (loader: Loader) => void;
+};
+
+/**
+ * Connect a loader to a streaming proxy.
  *
- * Call this during client hydration AFTER creating your loader and
- * AFTER switching the adapter to DOM mode (if using hydration).
+ * Call this after hydration to connect the loader to the streaming proxy
+ * created by createStreamingBootstrap(). The proxy flushes its queue
+ * and forwards future chunks directly to the loader.
  *
- * The bootstrap script (from renderToStream's headScript) queues any data
- * that arrives before this is called. This function processes the queue
- * and wires up future chunks to go directly to the loader.
+ * @param loader - The loader instance from your service
+ * @param streamKey - The window property name used in createStreamingBootstrap()
  *
  * @example
  * ```ts
+ * // Server used: createStreamingBootstrap('__APP_STREAM__')
+ *
  * // Client
  * import { connectStreamingLoader } from '@lattice/ssr/client';
  *
- * // Hydrate the app
+ * const service = createService(appAdapter);
  * AppLayout(service).create(service);
- *
- * // Switch to DOM mode
  * appAdapter.switchToFallback();
  *
- * // Connect streaming - processes queued data and wires up future chunks
- * connectStreamingLoader(service.loader);
+ * // Connect to the streaming proxy - same key as server
+ * connectStreamingLoader(service.loader, '__APP_STREAM__');
  * ```
  */
-export function connectStreamingLoader(loader: Loader): void {
-  // Process any queued data from chunks that arrived before hydration
-  const queue = window.__LATTICE_DATA_QUEUE__;
-  if (queue) {
-    for (const [id, data] of queue) {
-      loader.setData(id, data);
-    }
-    // Clear the queue
-    queue.length = 0;
+export function connectStreamingLoader(loader: Loader, streamKey: string): void {
+  const proxy = (window as unknown as Record<string, unknown>)[streamKey] as StreamingProxy | undefined;
+  if (proxy && typeof proxy.connect === 'function') {
+    proxy.connect(loader);
   }
-
-  // Wire up future chunks to go directly to the loader
-  window.__LATTICE_LOADER__ = loader;
 }
 
 // =============================================================================

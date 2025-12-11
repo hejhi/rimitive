@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   renderToStream,
-  defaultChunkFormatter,
+  createChunkScript,
   createStreamingLoader,
 } from './renderToStream';
 import { createLoader } from '@lattice/view/load';
@@ -69,7 +69,7 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
 describe('renderToStream', () => {
   it('should return initial HTML with pending states, buffer chunks, and resolve done', async () => {
     const { signal } = createServerTestEnv();
-    const { loader, getChunks } = createStreamingLoader({ signal });
+    const { loader, getChunks } = createStreamingLoader({ signal, streamKey: '__TEST__' });
 
     let resolveData: (() => void) | null = null;
     const dataPromise = new Promise<{ value: number }>((resolve) => {
@@ -111,7 +111,7 @@ describe('renderToStream', () => {
     // Should have buffered chunk with correct data
     const chunks = getChunks();
     expect(chunks.length).toBe(1);
-    expect(chunks[0]).toContain('__LATTICE_DATA__');
+    expect(chunks[0]).toContain('__TEST__.push');
     expect(chunks[0]).toContain('test-1');
     expect(chunks[0]).toContain('42');
   });
@@ -142,20 +142,20 @@ describe('renderToStream', () => {
   });
 });
 
-describe('defaultChunkFormatter', () => {
-  it('should format chunk as script tag with JSON data', () => {
-    const chunk = defaultChunkFormatter('user-123', {
+describe('createChunkScript', () => {
+  it('should format chunk as script tag that pushes to proxy', () => {
+    const chunk = createChunkScript('__APP__', 'user-123', {
       name: 'Alice',
       age: 30,
     });
 
     expect(chunk).toBe(
-      '<script>__LATTICE_DATA__("user-123",{"name":"Alice","age":30})</script>'
+      '<script>__APP__.push("user-123",{"name":"Alice","age":30})</script>'
     );
   });
 
   it('should escape quotes in JSON strings', () => {
-    const chunk = defaultChunkFormatter('quote-test', {
+    const chunk = createChunkScript('__APP__', 'quote-test', {
       message: 'Hello "world"',
     });
 
@@ -164,43 +164,12 @@ describe('defaultChunkFormatter', () => {
 });
 
 describe('createStreamingLoader', () => {
-  it('should use custom formatChunk when provided', async () => {
-    const { signal } = createServerTestEnv();
-
-    const customFormatter = (id: string, data: unknown) => {
-      return `<div data-chunk="${id}">${JSON.stringify(data)}</div>`;
-    };
-
-    const { loader, getChunks } = createStreamingLoader({
-      signal,
-      formatChunk: customFormatter,
-    });
-
-    const AsyncContent = loader.load(
-      'custom-1',
-      async () => ({ custom: true }),
-      (state: LoadState<{ custom: boolean }>) => {
-        const status = state.status();
-        if (status === 'pending')
-          return createMockRefSpec('<div>Loading...</div>');
-        return createMockRefSpec('<div>Done</div>');
-      }
-    );
-
-    const result = renderToStream(AsyncContent, { mount: mockMount });
-    await result.done;
-
-    const chunks = getChunks();
-    expect(chunks.length).toBe(1);
-    expect(chunks[0]).toBe('<div data-chunk="custom-1">{"custom":true}</div>');
-    expect(chunks[0]).not.toContain('__LATTICE_DATA__');
-  });
-
   it('should not fetch or generate chunks when initialData is provided', async () => {
     const { signal } = createServerTestEnv();
 
     const { loader, getChunks } = createStreamingLoader({
       signal,
+      streamKey: '__TEST__',
       initialData: { 'hydrated-1': { message: 'From cache' } },
     });
 
@@ -226,7 +195,7 @@ describe('createStreamingLoader', () => {
 
   it('should preserve chunk order based on resolution timing', async () => {
     const { signal } = createServerTestEnv();
-    const { loader, getChunks } = createStreamingLoader({ signal });
+    const { loader, getChunks } = createStreamingLoader({ signal, streamKey: '__TEST__' });
 
     const SlowAsync = loader.load(
       'slow',

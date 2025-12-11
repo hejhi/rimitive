@@ -6,8 +6,8 @@
  * navigations swap content normally.
  *
  * For streaming SSR:
- * - Bootstrap script (in head) queues any data chunks that arrive before hydration
- * - connectStreamingLoader() processes queued data and wires up future chunks
+ * - Server creates a streaming proxy at STREAM_KEY via createStreamingBootstrap()
+ * - connectStreamingLoader() connects the loader to that proxy
  * - Data flows through signals, updating the UI reactively
  */
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
@@ -20,6 +20,9 @@ import {
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
+
+// Same key as server - this is explicit and traceable
+const STREAM_KEY = '__APP_STREAM__';
 
 // Create the adapter stack:
 // 1. Base DOM adapter with async support for post-hydration client navigation
@@ -34,7 +37,6 @@ const appAdapter = createHydrationAdapter(
 );
 
 // Create service with hydrating adapter
-// Note: No loaderData needed - streaming chunks arrive via __LATTICE_DATA__
 const service = createService(appAdapter);
 
 // Hydrate the app FIRST - this registers load() boundaries in the loader
@@ -44,9 +46,9 @@ AppLayout(service).create(service);
 // Otherwise, signal updates would trigger re-renders while still in hydration mode
 appAdapter.switchToFallback();
 
-// NOW connect the streaming loader - boundaries are registered, adapter is in DOM mode
-// This processes any queued data and wires up future chunks
-connectStreamingLoader(service.loader);
+// Connect the loader to the streaming proxy - same key as server
+// This flushes queued data and wires up future chunks
+connectStreamingLoader(service.loader, STREAM_KEY);
 
 console.log('[client] Hydration complete, streaming loader connected');
 
