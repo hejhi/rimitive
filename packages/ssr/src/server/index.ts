@@ -25,11 +25,7 @@ export type {
 } from './render';
 
 // Server adapter
-export {
-  createDOMServerAdapter,
-  insertFragmentMarkers,
-  getFirstDOMNode,
-} from './adapter';
+export { createDOMServerAdapter } from './adapter';
 export type { Serialize, ServerAdapterResult } from './adapter';
 
 // Streaming

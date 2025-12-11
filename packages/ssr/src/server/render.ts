@@ -16,7 +16,7 @@ import {
   collectAsyncFragments,
   type AsyncFragment,
 } from '../shared/async-fragments';
-import { insertFragmentMarkers, type Serialize } from './adapter';
+import type { Serialize } from './adapter';
 
 // =============================================================================
 // Render to String
@@ -68,6 +68,7 @@ export type RenderToStringAsyncOptions<TSvc> = {
   svc: TSvc;
   mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
   serialize: Serialize;
+  insertFragmentMarkers: (fragment: FragmentRef<unknown>) => void;
 };
 
 function isRefSpec(value: unknown): value is RefSpec<unknown> {
@@ -100,12 +101,13 @@ function isNodeRef(value: unknown): value is NodeRef<unknown> {
  *
  * @example
  * ```ts
- * const { adapter, serialize } = createDOMServerAdapter();
+ * const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
  * const service = createService(adapter);
  * const html = await renderToStringAsync(appSpec, {
  *   svc: service,
  *   mount: (spec) => spec.create(service),
  *   serialize,
+ *   insertFragmentMarkers,
  * });
  * ```
  */
@@ -113,7 +115,7 @@ export async function renderToStringAsync<TSvc>(
   renderable: AsyncRenderable<unknown>,
   options: RenderToStringAsyncOptions<TSvc>
 ): Promise<string> {
-  const { mount, serialize } = options;
+  const { mount, serialize, insertFragmentMarkers } = options;
 
   let nodeRef: NodeRef<unknown>;
 
@@ -186,6 +188,11 @@ export type RenderToStreamOptions = {
    * Function to serialize elements to HTML (from createDOMServerAdapter)
    */
   serialize: Serialize;
+
+  /**
+   * Function to insert fragment markers (from createDOMServerAdapter)
+   */
+  insertFragmentMarkers: (fragment: FragmentRef<unknown>) => void;
 };
 
 /**
@@ -214,7 +221,7 @@ export type StreamResult = {
  * ```ts
  * import { createDOMServerAdapter, renderToStream, createStreamWriter } from '@lattice/ssr/server';
  *
- * const { adapter, serialize } = createDOMServerAdapter();
+ * const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
  * const stream = createStreamWriter('__APP_STREAM__');
  *
  * // Create service with streaming callback
@@ -225,7 +232,7 @@ export type StreamResult = {
  * // Render
  * const { initialHtml, done } = renderToStream(
  *   AppLayout(service),
- *   { mount: (spec) => spec.create(service), serialize }
+ *   { mount: (spec) => spec.create(service), serialize, insertFragmentMarkers }
  * );
  *
  * // Write HTML document
@@ -243,7 +250,7 @@ export function renderToStream(
   spec: RefSpec<unknown>,
   options: RenderToStreamOptions
 ): StreamResult {
-  const { mount, serialize } = options;
+  const { mount, serialize, insertFragmentMarkers } = options;
 
   // Mount the app synchronously - this renders with pending states
   const nodeRef = mount(spec);

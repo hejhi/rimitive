@@ -18,7 +18,7 @@ import { isAsyncFragment } from '@lattice/view/load';
 /**
  * Get the first DOM node from a NodeRef (iteratively traversing nested fragments)
  */
-export function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
+function getFirstDOMNode(nodeRef: NodeRef<unknown>): Node | null {
   let current: NodeRef<unknown> | null = nodeRef;
   while (current) {
     if (current.status === STATUS_ELEMENT) {
@@ -51,39 +51,6 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
   return null;
 }
 
-/**
- * Insert markers for a fragment.
- *
- * parentElement is derived from the DOM tree - by the time we call this,
- * the content is already attached so we can get it from firstNode.parentNode.
- *
- * Note: Async fragment data is no longer embedded in markers. Use createLoader()
- * to manage data serialization separately.
- */
-export function insertFragmentMarkers(fragment: FragmentRef<unknown>): void {
-  if (!fragment.firstChild || !fragment.lastChild) return;
-
-  const firstNode = getFirstDOMNode(fragment.firstChild);
-  const lastNode = getLastDOMNode(fragment.lastChild);
-
-  if (!firstNode || !lastNode) return;
-
-  // Derive parentElement from the DOM tree - content is already attached
-  const parentElement = firstNode.parentNode as HTMLElement | null;
-  if (!parentElement) return;
-
-  // Get document from parent element
-  const doc = parentElement.ownerDocument;
-
-  // Insert fragment-start comment before first child
-  const startComment = doc.createComment('fragment-start');
-  parentElement.insertBefore(startComment, firstNode);
-
-  // Insert fragment-end comment after last child
-  const endComment = doc.createComment('fragment-end');
-  parentElement.insertBefore(endComment, lastNode.nextSibling);
-}
-
 // =============================================================================
 // Server Adapter
 // =============================================================================
@@ -101,6 +68,8 @@ export type ServerAdapterResult = {
   adapter: Adapter<DOMAdapterConfig>;
   /** Serialize an element to HTML string */
   serialize: Serialize;
+  /** Insert fragment markers for a fragment (used by render functions) */
+  insertFragmentMarkers: (fragment: FragmentRef<unknown>) => void;
 };
 
 /**
@@ -120,6 +89,39 @@ export type ServerAdapterResult = {
 export function createDOMServerAdapter(): ServerAdapterResult {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
+
+  /**
+   * Insert markers for a fragment.
+   *
+   * parentElement is derived from the DOM tree - by the time we call this,
+   * the content is already attached so we can get it from firstNode.parentNode.
+   *
+   * Note: Async fragment data is no longer embedded in markers. Use createLoader()
+   * to manage data serialization separately.
+   */
+  const insertFragmentMarkers = (fragment: FragmentRef<unknown>): void => {
+    if (!fragment.firstChild || !fragment.lastChild) return;
+
+    const firstNode = getFirstDOMNode(fragment.firstChild);
+    const lastNode = getLastDOMNode(fragment.lastChild);
+
+    if (!firstNode || !lastNode) return;
+
+    // Derive parentElement from the DOM tree - content is already attached
+    const parentElement = firstNode.parentNode as HTMLElement | null;
+    if (!parentElement) return;
+
+    // Get document from parent element
+    const doc = parentElement.ownerDocument;
+
+    // Insert fragment-start comment before first child
+    const startComment = doc.createComment('fragment-start');
+    parentElement.insertBefore(startComment, firstNode);
+
+    // Insert fragment-end comment after last child
+    const endComment = doc.createComment('fragment-end');
+    parentElement.insertBefore(endComment, lastNode.nextSibling);
+  };
 
   const adapter: Adapter<DOMAdapterConfig> = {
     createNode: (type: string, props?: Record<string, unknown>) => {
@@ -188,5 +190,5 @@ export function createDOMServerAdapter(): ServerAdapterResult {
     return el.outerHTML;
   };
 
-  return { adapter, serialize };
+  return { adapter, serialize, insertFragmentMarkers };
 }

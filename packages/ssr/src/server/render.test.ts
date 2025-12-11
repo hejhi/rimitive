@@ -62,6 +62,10 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
   return spec.create();
 }
 
+function mockInsertFragmentMarkers(): void {
+  // Mock implementation - does nothing for these tests
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -93,7 +97,11 @@ describe('renderToStream', () => {
       }
     );
 
-    const result = renderToStream(AsyncContent, { mount: mockMount, serialize });
+    const result = renderToStream(AsyncContent, {
+      mount: mockMount,
+      serialize,
+      insertFragmentMarkers: mockInsertFragmentMarkers,
+    });
 
     // Initial HTML should have pending state
     expect(result.initialHtml).toContain('Loading...');
@@ -139,7 +147,11 @@ describe('renderToStream', () => {
       }
     );
 
-    const result = renderToStream(FailingContent, { mount: mockMount, serialize });
+    const result = renderToStream(FailingContent, {
+      mount: mockMount,
+      serialize,
+      insertFragmentMarkers: mockInsertFragmentMarkers,
+    });
 
     expect(result.initialHtml).toContain('Loading...');
     await expect(result.done).resolves.toBeUndefined();
