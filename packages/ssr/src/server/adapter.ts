@@ -89,28 +89,39 @@ export function insertFragmentMarkers(fragment: FragmentRef<unknown>): void {
 // =============================================================================
 
 /**
+ * Serializer function type - converts an element to HTML string
+ */
+export type Serialize = (element: unknown) => string;
+
+/**
+ * Result from createDOMServerAdapter
+ */
+export type ServerAdapterResult = {
+  /** The adapter for mounting components */
+  adapter: Adapter<DOMAdapterConfig>;
+  /** Serialize an element to HTML string */
+  serialize: Serialize;
+};
+
+/**
  * Create a linkedom adapter for server-side rendering
  *
- * Renders components to HTML with fragment markers for hydration.
+ * Returns an adapter for mounting components and a serialize function
+ * for converting elements to HTML strings.
  *
  * @example
  * ```typescript
  * import { createDOMServerAdapter } from '@lattice/ssr/server';
- * import { createView } from '@lattice/view/presets/core';
- * import { createSignals } from '@lattice/signals/presets/core';
  *
- * const signals = createSignals();
- * const adapter = createDOMServerAdapter();
- * const view = createView({ adapter, signals })();
- *
- * const app = view.el('div')(view.el('h1')('Hello SSR'));
+ * const { adapter, serialize } = createDOMServerAdapter();
+ * // Use adapter for mounting, serialize for renderToString
  * ```
  */
-export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
+export function createDOMServerAdapter(): ServerAdapterResult {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
-  return {
+  const adapter: Adapter<DOMAdapterConfig> = {
     createNode: (type: string, props?: Record<string, unknown>) => {
       if (type === 'text') {
         const textNode = document.createTextNode(
@@ -171,4 +182,11 @@ export function createDOMServerAdapter(): Adapter<DOMAdapterConfig> {
       insertFragmentMarkers(ref as FragmentRef<HTMLElement>);
     },
   };
+
+  const serialize: Serialize = (element) => {
+    const el = element as { outerHTML: string };
+    return el.outerHTML;
+  };
+
+  return { adapter, serialize };
 }

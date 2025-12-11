@@ -12,10 +12,22 @@ import { describe, it, expect } from 'vitest';
 import { renderToString } from './render';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import type { NodeRef, ElementRef, FragmentRef } from '@lattice/view/types';
+import type { Serialize } from './adapter';
 
 // ============================================================================
 // Test Fixtures
 // ============================================================================
+
+/**
+ * Simple serialize function for tests that create elements manually
+ */
+const serialize: Serialize = (el: unknown) => {
+  const element = el as { outerHTML?: string };
+  if (element.outerHTML === undefined) {
+    throw new Error('Element does not have outerHTML property. Are you using linkedom renderer?');
+  }
+  return element.outerHTML;
+};
 
 /**
  * Create a mock element ref with outerHTML
@@ -80,14 +92,14 @@ function createInvalidElementRef(): ElementRef<unknown> {
 describe('Element Rendering', () => {
   it('should render element via outerHTML', () => {
     const element = createElementRef('<div class="test">Hello</div>');
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toBe('<div class="test">Hello</div>');
   });
 
   it('should render self-closing element', () => {
     const element = createElementRef('<img src="test.jpg" />');
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toBe('<img src="test.jpg" />');
   });
@@ -96,14 +108,14 @@ describe('Element Rendering', () => {
     const element = createElementRef(
       '<button type="button" disabled>Click</button>'
     );
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toBe('<button type="button" disabled>Click</button>');
   });
 
   it('should render element with nested children', () => {
     const element = createElementRef('<ul><li>Item 1</li><li>Item 2</li></ul>');
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toBe('<ul><li>Item 1</li><li>Item 2</li></ul>');
   });
@@ -111,10 +123,10 @@ describe('Element Rendering', () => {
   it('should throw error when element lacks outerHTML', () => {
     const element = createInvalidElementRef();
 
-    expect(() => renderToString(element)).toThrow(
+    expect(() => renderToString(element, serialize)).toThrow(
       'Element does not have outerHTML property'
     );
-    expect(() => renderToString(element)).toThrow(
+    expect(() => renderToString(element, serialize)).toThrow(
       'Are you using linkedom renderer?'
     );
   });
@@ -131,7 +143,7 @@ describe('Fragment Rendering', () => {
       createElementRef('<span>Second</span>'),
     ]);
 
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
     expect(result).toBe('<span>First</span><span>Second</span>');
   });
@@ -139,7 +151,7 @@ describe('Fragment Rendering', () => {
   it('should render empty fragment as empty string', () => {
     const fragment = createFragmentRef([]);
 
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
     expect(result).toBe('');
   });
@@ -149,7 +161,7 @@ describe('Fragment Rendering', () => {
       createElementRef('<div>Only child</div>'),
     ]);
 
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
     expect(result).toBe('<div>Only child</div>');
   });
@@ -162,7 +174,7 @@ describe('Fragment Rendering', () => {
       createElementRef('<footer>Footer</footer>'),
     ]);
 
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
     expect(result).toBe(
       '<h1>Title</h1><p>Paragraph 1</p><p>Paragraph 2</p><footer>Footer</footer>'
@@ -188,7 +200,7 @@ describe('Nested Fragments', () => {
 
     const outerFragment = createFragmentRef([innerFragment1, innerFragment2]);
 
-    const result = renderToString(outerFragment);
+    const result = renderToString(outerFragment, serialize);
 
     expect(result).toBe(
       '<span>A</span><span>B</span><span>C</span><span>D</span>'
@@ -205,7 +217,7 @@ describe('Nested Fragments', () => {
       level2,
     ]);
 
-    const result = renderToString(level1);
+    const result = renderToString(level1, serialize);
 
     expect(result).toBe('<span>Top</span><b>Mid</b><i>Deep</i>');
   });
@@ -222,7 +234,7 @@ describe('Nested Fragments', () => {
       createElementRef('<p>Paragraph</p>'),
     ]);
 
-    const result = renderToString(outerFragment);
+    const result = renderToString(outerFragment, serialize);
 
     expect(result).toBe(
       '<h2>Header</h2><em>Italic</em><strong>Bold</strong><p>Paragraph</p>'
@@ -247,7 +259,7 @@ describe('Edge Cases', () => {
       lastChild: null,
     } as unknown as NodeRef<unknown>;
 
-    const result = renderToString(unknownNode);
+    const result = renderToString(unknownNode, serialize);
 
     expect(result).toBe('');
   });
@@ -255,7 +267,7 @@ describe('Edge Cases', () => {
   it('should handle element with empty outerHTML', () => {
     const element = createElementRef('');
 
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toBe('');
   });
@@ -265,7 +277,7 @@ describe('Edge Cases', () => {
       '<div>&lt;script&gt;alert("XSS")&lt;/script&gt;</div>'
     );
 
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toBe('<div>&lt;script&gt;alert("XSS")&lt;/script&gt;</div>');
   });
@@ -273,7 +285,7 @@ describe('Edge Cases', () => {
   it('should preserve whitespace in HTML', () => {
     const element = createElementRef('<pre>  Line 1\n  Line 2  </pre>');
 
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toBe('<pre>  Line 1\n  Line 2  </pre>');
   });
@@ -289,7 +301,7 @@ describe('Island Markers', () => {
       '<div data-island-id="counter-1">Count: 5</div><script type="application/json" data-island="counter-1"></script>'
     );
 
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toContain('data-island-id="counter-1"');
     expect(result).toContain('data-island="counter-1"');
@@ -303,7 +315,7 @@ describe('Island Markers', () => {
       createElementRef('<!--fragment-end-->'),
     ]);
 
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
     expect(result).toContain('<!--fragment-start-->');
     expect(result).toContain('<!--fragment-end-->');
@@ -314,7 +326,7 @@ describe('Island Markers', () => {
       '<div><!--fragment-start--><span>A</span><span>B</span><!--fragment-end--><script type="application/json" data-island="tags-1"></script></div>'
     );
 
-    const result = renderToString(element);
+    const result = renderToString(element, serialize);
 
     expect(result).toContain('<!--fragment-start-->');
     expect(result).toContain('<!--fragment-end-->');
@@ -335,17 +347,17 @@ describe('Rendering Invariants', () => {
     ];
 
     const fragment = createFragmentRef(children);
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
-    const expected = children.map((c) => renderToString(c)).join('');
+    const expected = children.map((c) => renderToString(c, serialize)).join('');
     expect(result).toBe(expected);
   });
 
   it('should satisfy: rendering is idempotent (same input produces same output)', () => {
     const element = createElementRef('<div class="test">Content</div>');
 
-    const result1 = renderToString(element);
-    const result2 = renderToString(element);
+    const result1 = renderToString(element, serialize);
+    const result2 = renderToString(element, serialize);
 
     expect(result1).toBe(result2);
   });
@@ -353,7 +365,7 @@ describe('Rendering Invariants', () => {
   it('should satisfy: empty fragment renders as empty string', () => {
     const fragment = createFragmentRef([]);
 
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
     expect(result).toBe('');
     expect(result.length).toBe(0);
@@ -367,7 +379,7 @@ describe('Rendering Invariants', () => {
     ];
 
     const fragment = createFragmentRef(children);
-    const result = renderToString(fragment);
+    const result = renderToString(fragment, serialize);
 
     expect(result.indexOf('<first')).toBeLessThan(result.indexOf('<second'));
     expect(result.indexOf('<second')).toBeLessThan(result.indexOf('<third'));
@@ -557,17 +569,17 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
  * Mock service context with adapter
  */
 function createMockService() {
-  const adapter = createDOMServerAdapter();
+  const { adapter, serialize } = createDOMServerAdapter();
   const svc = {
     el: (tag: string) => (content: string) =>
       createMockRefSpec(`<${tag}>${content}</${tag}>`),
   };
-  return { svc, adapter };
+  return { svc, adapter, serialize };
 }
 
 describe('Async Rendering - renderToStringAsync', () => {
   it('should render a simple async fragment', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     const asyncFrag = load(
       async () => 'content',
       (state: LoadState<string>) =>
@@ -579,13 +591,14 @@ describe('Async Rendering - renderToStringAsync', () => {
     const result = await renderToStringAsync(asyncFrag, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     expect(result).toBe('<div>Loaded content</div>');
   });
 
   it('should render async fragment and resolve data', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     const asyncFrag = load(
       async () => ({ message: 'Hello' }),
       (state: LoadState<{ message: string }>) =>
@@ -597,6 +610,7 @@ describe('Async Rendering - renderToStringAsync', () => {
     const result = await renderToStringAsync(asyncFrag, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     expect(result).toBe('<div>Hello</div>');
@@ -605,31 +619,33 @@ describe('Async Rendering - renderToStringAsync', () => {
   });
 
   it('should render RefSpec directly', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     const spec = createMockRefSpec('<span>Direct spec</span>');
 
     const result = await renderToStringAsync(spec, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     expect(result).toBe('<span>Direct spec</span>');
   });
 
   it('should render NodeRef directly', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     const nodeRef = createElementRef('<p>Direct node</p>');
 
     const result = await renderToStringAsync(nodeRef, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     expect(result).toBe('<p>Direct node</p>');
   });
 
   it('should resolve async fragments nested inside elements', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     // Create an async fragment
     const asyncChild = load(
       async () => 'child',
@@ -648,6 +664,7 @@ describe('Async Rendering - renderToStringAsync', () => {
     const result = await renderToStringAsync(parentElement, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     // The async child should be resolved and its content rendered
@@ -657,7 +674,7 @@ describe('Async Rendering - renderToStringAsync', () => {
   });
 
   it('should resolve multiple async fragments in parallel', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     const resolveOrder: string[] = [];
 
     const asyncFrag1 = load(
@@ -690,6 +707,7 @@ describe('Async Rendering - renderToStringAsync', () => {
     await renderToStringAsync(parent, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     // Both should resolve, with second finishing first due to shorter delay
@@ -704,7 +722,7 @@ describe('Async Rendering - renderToStringAsync', () => {
 
 describe('Async Rendering - Nested Async Fragments', () => {
   it('should resolve deeply nested async fragments', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     // Inner async fragment (level 2)
     const innerAsync = load(
       async () => 'inner',
@@ -737,6 +755,7 @@ describe('Async Rendering - Nested Async Fragments', () => {
     const result = await renderToStringAsync(outerAsync, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     // Both outer and inner async should be resolved
@@ -748,7 +767,7 @@ describe('Async Rendering - Nested Async Fragments', () => {
   });
 
   it('should resolve three levels of nested async fragments', async () => {
-    const { svc } = createMockService();
+    const { svc, serialize } = createMockService();
     const resolutionOrder: string[] = [];
 
     // Level 3 (deepest)
@@ -808,6 +827,7 @@ describe('Async Rendering - Nested Async Fragments', () => {
     await renderToStringAsync(level1Async, {
       svc,
       mount: mockMount,
+      serialize,
     });
 
     // All three levels should be resolved

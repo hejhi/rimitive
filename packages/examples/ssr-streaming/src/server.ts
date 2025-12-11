@@ -59,7 +59,7 @@ const server = createServer(async (req, res) => {
 
   // Create per-request service with streaming callback
   // onResolve writes data chunks to the streaming proxy
-  const adapter = createDOMServerAdapter();
+  const { adapter, serialize } = createDOMServerAdapter();
   const service = createService(adapter, {
     initialPath: url.pathname,
     onResolve: (id, data) => {
@@ -73,6 +73,7 @@ const server = createServer(async (req, res) => {
     AppLayout(service),
     {
       mount: (spec: RefSpec<unknown>) => spec.create(service),
+      serialize,
       clientSrc: '/client.js',
     }
   );

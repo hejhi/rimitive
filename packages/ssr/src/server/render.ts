@@ -8,12 +8,7 @@
  * - renderToStream: Progressive streaming render
  */
 
-import type {
-  NodeRef,
-  ElementRef,
-  FragmentRef,
-  RefSpec,
-} from '@lattice/view/types';
+import type { NodeRef, FragmentRef, RefSpec } from '@lattice/view/types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
 import {
   ASYNC_FRAGMENT,
@@ -21,7 +16,7 @@ import {
   collectAsyncFragments,
   type AsyncFragment,
 } from '../shared/async-fragments';
-import { insertFragmentMarkers } from './adapter';
+import { insertFragmentMarkers, type Serialize } from './adapter';
 
 // =============================================================================
 // Render to String
@@ -29,30 +24,30 @@ import { insertFragmentMarkers } from './adapter';
 
 /**
  * Render a node tree to HTML string
+ *
+ * @param nodeRef - The node tree to render
+ * @param serialize - Function to serialize elements to HTML (from createDOMServerAdapter)
  */
-export function renderToString(nodeRef: NodeRef<unknown>): string {
-  if (nodeRef.status === STATUS_ELEMENT) return renderElementToString(nodeRef);
-  if (nodeRef.status === STATUS_FRAGMENT)
-    return renderFragmentToString(nodeRef);
+export function renderToString(
+  nodeRef: NodeRef<unknown>,
+  serialize: Serialize
+): string {
+  const { status } = nodeRef;
+  if (status === STATUS_ELEMENT) return serialize(nodeRef.element);
+  if (status === STATUS_FRAGMENT)
+    return renderFragmentToString(nodeRef, serialize);
   return '';
 }
 
-function renderElementToString(elementRef: ElementRef<unknown>): string {
-  const element = elementRef.element as { outerHTML?: string };
-  if (typeof element.outerHTML !== 'string') {
-    throw new Error(
-      'Element does not have outerHTML property. Are you using linkedom renderer?'
-    );
-  }
-  return element.outerHTML;
-}
-
-function renderFragmentToString(fragmentRef: FragmentRef<unknown>): string {
+function renderFragmentToString(
+  fragmentRef: FragmentRef<unknown>,
+  serialize: Serialize
+): string {
   const parts: string[] = [];
   let current = fragmentRef.firstChild;
 
   while (current) {
-    parts.push(renderToString(current));
+    parts.push(renderToString(current, serialize));
     if (current === fragmentRef.lastChild) break;
     current = current.next;
   }
@@ -72,6 +67,7 @@ export type AsyncRenderable<TElement> =
 export type RenderToStringAsyncOptions<TSvc> = {
   svc: TSvc;
   mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
+  serialize: Serialize;
 };
 
 function isRefSpec(value: unknown): value is RefSpec<unknown> {
@@ -80,13 +76,13 @@ function isRefSpec(value: unknown): value is RefSpec<unknown> {
     value !== null &&
     'status' in value &&
     'create' in value &&
-    typeof (value as RefSpec<unknown>).create === 'function'
+    typeof value.create === 'function'
   );
 }
 
 function isNodeRef(value: unknown): value is NodeRef<unknown> {
-  if (typeof value !== 'object' || value === null) return false;
-  const status = (value as { status?: number }).status;
+  if (!value || typeof value !== 'object' || !('status' in value)) return false;
+  const { status } = value;
   return status === STATUS_ELEMENT || status === STATUS_FRAGMENT;
 }
 
@@ -104,11 +100,12 @@ function isNodeRef(value: unknown): value is NodeRef<unknown> {
  *
  * @example
  * ```ts
- * const adapter = createDOMServerAdapter();
+ * const { adapter, serialize } = createDOMServerAdapter();
  * const service = createService(adapter);
  * const html = await renderToStringAsync(appSpec, {
  *   svc: service,
  *   mount: (spec) => spec.create(service),
+ *   serialize,
  * });
  * ```
  */
@@ -116,7 +113,7 @@ export async function renderToStringAsync<TSvc>(
   renderable: AsyncRenderable<unknown>,
   options: RenderToStringAsyncOptions<TSvc>
 ): Promise<string> {
-  const { mount } = options;
+  const { mount, serialize } = options;
 
   let nodeRef: NodeRef<unknown>;
 
@@ -167,7 +164,7 @@ export async function renderToStringAsync<TSvc>(
     if (fragment.status === STATUS_FRAGMENT) insertFragmentMarkers(fragment);
   }
 
-  return renderToString(nodeRef);
+  return renderToString(nodeRef, serialize);
 }
 
 // =============================================================================
@@ -184,6 +181,11 @@ export type RenderToStreamOptions = {
    * to enable streaming chunks.
    */
   mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
+
+  /**
+   * Function to serialize elements to HTML (from createDOMServerAdapter)
+   */
+  serialize: Serialize;
 
   /**
    * URL path to the client bundle (e.g., '/client.js').
@@ -225,24 +227,25 @@ export type StreamResult = {
  *
  * @example
  * ```ts
- * import { renderToStream, createStreamWriter } from '@lattice/ssr/server';
+ * import { createDOMServerAdapter, renderToStream, createStreamWriter } from '@lattice/ssr/server';
  *
- * const { bootstrap, chunk } = createStreamWriter('__APP_STREAM__');
+ * const { adapter, serialize } = createDOMServerAdapter();
+ * const stream = createStreamWriter('__APP_STREAM__');
  *
  * // Create service with streaming callback
  * const service = createService(adapter, {
- *   onResolve: (id, data) => res.write(chunk(id, data)),
+ *   onResolve: (id, data) => res.write(stream.chunk(id, data)),
  * });
  *
  * // Render
  * const { initialHtml, clientScript, done } = renderToStream(
  *   AppLayout(service),
- *   { mount: (spec) => spec.create(service), clientSrc: '/client.js' }
+ *   { mount: (spec) => spec.create(service), serialize, clientSrc: '/client.js' }
  * );
  *
  * // Write HTML document
  * res.write(`<!DOCTYPE html><html><head>`);
- * res.write(bootstrap());
+ * res.write(stream.bootstrap());
  * res.write(`</head><body>`);
  * res.write(initialHtml);
  * res.write(clientScript);
@@ -255,7 +258,7 @@ export function renderToStream(
   spec: RefSpec<unknown>,
   options: RenderToStreamOptions
 ): StreamResult {
-  const { mount, clientSrc } = options;
+  const { mount, serialize, clientSrc } = options;
 
   // Mount the app synchronously - this renders with pending states
   const nodeRef = mount(spec);
@@ -269,13 +272,11 @@ export function renderToStream(
   // For streaming, we need markers around the PENDING state content so
   // the hydration adapter can locate these boundaries.
   for (const fragment of asyncFragments) {
-    if (fragment.status === STATUS_FRAGMENT) {
-      insertFragmentMarkers(fragment);
-    }
+    if (fragment.status === STATUS_FRAGMENT) insertFragmentMarkers(fragment);
   }
 
   // Get initial HTML (with pending states for load() boundaries)
-  const initialHtml = renderToString(nodeRef);
+  const initialHtml = renderToString(nodeRef, serialize);
   const pendingCount = asyncFragments.length;
 
   // Create promise that resolves when all async boundaries complete

@@ -33,7 +33,7 @@ import { renderToString } from './render';
  * Create SSR service for tests using compose pattern
  */
 function createTestSSRService() {
-  const adapter = createDOMServerAdapter();
+  const { adapter, serialize } = createDOMServerAdapter();
   const ElModule = createElModule(adapter);
   const MapModule = createMapModule(adapter);
   const MatchModule = createMatchModule(adapter);
@@ -52,6 +52,7 @@ function createTestSSRService() {
   return {
     svc,
     adapter,
+    serialize,
     mount: <TElement>(spec: RefSpec<TElement>) => spec.create(svc),
   };
 }
@@ -62,7 +63,7 @@ function createTestSSRService() {
 
 describe('Basic DOM Operations', () => {
   it('should create elements with correct tag names', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -72,7 +73,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should create text nodes with correct content', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const text = renderer.createNode('text', { value: 'Hello' });
 
@@ -80,7 +81,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should append children to parent', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -92,7 +93,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should insert child before reference node', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div');
     const first = renderer.createNode('text', { value: 'first' });
@@ -106,7 +107,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should update text node content', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const text = renderer.createNode('text', { value: 'before' });
     renderer.setProperty(text, 'value', 'after');
@@ -121,7 +122,7 @@ describe('Basic DOM Operations', () => {
 
 describe('Attribute Handling', () => {
   it('should skip event handler attributes', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const button = renderer.createNode('button') as HTMLElement;
     renderer.setProperty(button, 'onClick', () => {});
@@ -131,7 +132,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should map className to class attribute', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'className', 'container');
@@ -141,7 +142,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should stringify primitive values', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'data-count', 42);
@@ -152,7 +153,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should skip object values', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'data-config', { foo: 'bar' });
@@ -161,7 +162,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should skip function values', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'ref', () => {});
@@ -170,7 +171,7 @@ describe('Attribute Handling', () => {
   });
 
   it('should skip null and false values', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     renderer.setProperty(div, 'disabled', null);
@@ -187,7 +188,7 @@ describe('Attribute Handling', () => {
 
 describe('Fragment Decoration', () => {
   it('should add fragment-start and fragment-end comments', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
     const child1 = renderer.createNode('span') as HTMLElement;
@@ -235,7 +236,7 @@ describe('Fragment Decoration', () => {
   });
 
   it('should place comments around fragment children', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
     const span1 = renderer.createNode('span') as HTMLElement;
@@ -287,7 +288,7 @@ describe('Fragment Decoration', () => {
   });
 
   it('should skip empty fragments', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
 
@@ -316,7 +317,7 @@ describe('Fragment Decoration', () => {
 
 describe('SSR-Specific Behaviors', () => {
   it('should generate valid HTML from DOM tree', () => {
-    const renderer = createDOMServerAdapter();
+    const { adapter: renderer } = createDOMServerAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const h1 = renderer.createNode('h1') as HTMLElement;
@@ -336,7 +337,7 @@ describe('SSR-Specific Behaviors', () => {
 describe('Full SSR Integration', () => {
   it('should render all items in map() during SSR', () => {
     // Create SSR service
-    const { mount, svc } = createTestSSRService();
+    const { mount, svc, serialize } = createTestSSRService();
     const { el, map, signal } = svc;
 
     // Create component with map() that renders 6 items
@@ -349,7 +350,7 @@ describe('Full SSR Integration', () => {
 
     // Render to string
     const rendered = mount(App);
-    const html = renderToString(rendered);
+    const html = renderToString(rendered, serialize);
 
     // Assert ALL items appear in the output
     expect(html).toContain('Item 1');
@@ -361,7 +362,7 @@ describe('Full SSR Integration', () => {
   });
 
   it('should render all items when map() uses computed', () => {
-    const { mount, svc } = createTestSSRService();
+    const { mount, svc, serialize } = createTestSSRService();
     const { el, map, computed } = svc;
 
     // Use computed() like ProductFilter does
@@ -373,7 +374,7 @@ describe('Full SSR Integration', () => {
     );
 
     const rendered = mount(App);
-    const html = renderToString(rendered);
+    const html = renderToString(rendered, serialize);
 
     expect(html).toContain('Item 1');
     expect(html).toContain('Item 2');

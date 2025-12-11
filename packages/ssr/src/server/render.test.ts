@@ -14,10 +14,13 @@ import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
 import { createScheduler } from '@lattice/signals/deps/scheduler';
 import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
 import { parseHTML } from 'linkedom';
+import type { Serialize } from './adapter';
 
 // ============================================================================
 // Test Fixtures
 // ============================================================================
+
+const serialize: Serialize = (el: unknown) => (el as { outerHTML: string }).outerHTML;
 
 function createMockRefSpec(html: string): RefSpec<unknown> {
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
@@ -90,7 +93,7 @@ describe('renderToStream', () => {
       }
     );
 
-    const result = renderToStream(AsyncContent, { mount: mockMount });
+    const result = renderToStream(AsyncContent, { mount: mockMount, serialize });
 
     // Initial HTML should have pending state
     expect(result.initialHtml).toContain('Loading...');
@@ -136,7 +139,7 @@ describe('renderToStream', () => {
       }
     );
 
-    const result = renderToStream(FailingContent, { mount: mockMount });
+    const result = renderToStream(FailingContent, { mount: mockMount, serialize });
 
     expect(result.initialHtml).toContain('Loading...');
     await expect(result.done).resolves.toBeUndefined();

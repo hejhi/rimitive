@@ -30,6 +30,7 @@ export {
   insertFragmentMarkers,
   getFirstDOMNode,
 } from './adapter';
+export type { Serialize, ServerAdapterResult } from './adapter';
 
 // Streaming
 export { createStreamWriter } from './stream';

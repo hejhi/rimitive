@@ -51,7 +51,7 @@ const server = createServer(async (req, res) => {
   );
 
   // Create per-request service with initial path
-  const adapter = createDOMServerAdapter(); // linkedom adapter/renderer
+  const { adapter, serialize } = createDOMServerAdapter();
   const service = createService(adapter, { initialPath: url.pathname });
 
   // Create the app RefSpec
@@ -61,6 +61,7 @@ const server = createServer(async (req, res) => {
   const html = await renderToStringAsync(appSpec, {
     svc: service,
     mount: (spec: RefSpec<unknown>) => spec.create(service),
+    serialize,
   });
 
   // Get collected loader data for hydration
