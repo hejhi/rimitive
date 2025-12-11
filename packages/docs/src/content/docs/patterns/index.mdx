@@ -1,0 +1,49 @@
+---
+title: Patterns
+description: Common patterns for building Lattice applications.
+---
+
+Lattice is intentionally minimal. It provides primitives—signals, computed, effects, elements, fragments—and lets you compose them into whatever patterns fit your needs.
+
+This section covers common patterns you'll encounter when building with Lattice. These aren't special APIs or hidden features—they're just idiomatic ways to solve common problems using the primitives you already have.
+
+---
+
+## Available Patterns
+
+### [Behaviors](/patterns/behaviors/)
+Headless, reusable UI logic. State and actions without the markup.
+
+### [Portability](/patterns/portability/)
+Write once, run anywhere—Lattice views, React, custom renderers.
+
+### [Shared State](/patterns/shared-state/)
+How to share state across components without prop drilling. Spoiler: the service is the context.
+
+### [Error Handling](/patterns/error-handling/)
+How to handle errors in Lattice applications. Spoiler: use try/catch.
+
+### [Async Loading States](/patterns/async-loading/)
+How to handle loading, error, and ready states for async data using resources and match.
+
+### [Composition Over Stores](/patterns/composition-over-stores/)
+Why Lattice doesn't have stores, and what to do instead.
+
+### [Refs and DOM Access](/patterns/refs/)
+How to access DOM nodes imperatively for focus, measurements, and third-party integrations.
+
+---
+
+## Philosophy
+
+These patterns share a common thread: **explicitness over magic**.
+
+- Shared state is explicit service threading, not implicit context lookup
+- Error handling is try/catch, not a special boundary component
+- Async states are data you render, not suspense boundaries that hide loading
+- State is composed behaviors, not proxy-wrapped objects
+- DOM access is callbacks with cleanup, not magical ref objects
+
+This isn't about purity—it's about predictability. When something goes wrong (and it will), you can trace exactly what happened because there's no hidden machinery.
+
+If you're coming from React or Solid, some of this might feel verbose at first. Give it time. The explicitness pays off when debugging, testing, and reasoning about your code.

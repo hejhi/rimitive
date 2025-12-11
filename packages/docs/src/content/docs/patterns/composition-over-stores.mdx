@@ -1,0 +1,223 @@
+---
+title: Composition Over Stores
+description: Why Lattice doesn't have stores, and what to do instead.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+SolidJS has `createStore`. Vue has `reactive()`. These provide "deep reactivity"—you can mutate nested properties and the framework tracks the changes automatically.
+
+Lattice doesn't have stores. This is intentional.
+
+---
+
+## Why No Stores?
+
+Deep reactivity requires proxies. Proxies have costs:
+
+- **Magic behavior**: Property access triggers invisible tracking. Mutations trigger invisible updates. Hard to debug.
+- **Performance overhead**: Every property access goes through the proxy trap.
+- **Complexity**: Edge cases around arrays, Maps, Sets, class instances, etc.
+- **Encourages sprawl**: Big nested state objects instead of focused, composable units.
+
+There's nothing saying you can't create your own primitive—it's just that lattice doesn't ship one by default.
+
+---
+
+## The Alternative: Composition
+
+Instead of one big store, compose focused behaviors:
+
+```typescript
+// Instead of this:
+const store = createStore({
+  user: {
+    profile: { name: '', avatar: '' },
+    settings: { theme: 'light', notifications: true }
+  },
+  cart: {
+    items: [],
+    total: 0
+  }
+});
+
+// Do this:
+const userProfile = (svc: SignalsSvc) => () => {
+  const name = svc.signal('');
+  const avatar = svc.signal('');
+  return {
+    name,
+    avatar,
+    setName: (n: string) => name(n),
+    setAvatar: (a: string) => avatar(a),
+  };
+};
+
+const userSettings = (svc: SignalsSvc) => () => {
+  const theme = svc.signal<'light' | 'dark'>('light');
+  const notifications = svc.signal(true);
+  return {
+    theme,
+    notifications,
+    toggleTheme: () => theme(theme() === 'light' ? 'dark' : 'light'),
+  };
+};
+
+const cart = (svc: SignalsSvc) => () => {
+  const items = svc.signal<CartItem[]>([]);
+  const total = svc.computed(() =>
+    items().reduce((sum, item) => sum + item.price * item.qty, 0)
+  );
+  return {
+    items,
+    total,
+    addItem: (item: CartItem) => items([...items(), item]),
+    removeItem: (id: string) => items(items().filter(i => i.id !== id)),
+  };
+};
+```
+
+Each behavior:
+- Has a clear, focused purpose
+- Encapsulates its own logic
+- Is independently testable
+- Can be composed with others
+- Is portable
+
+---
+
+## Composing Behaviors
+
+Behaviors can depend on other behaviors:
+
+```typescript
+const checkout = ({ use, computed }: SignalsSvc) => {
+  const useCart = use(cart);
+  const useUserProfile = use(userProfile);
+
+  return () => {
+    const c = useCart();
+    const profile = useUserProfile();
+
+    const canCheckout = computed(() =>
+      c.items().length > 0 && profile.name() !== ''
+    );
+
+    const submit = async () => {
+      if (!canCheckout()) return;
+      await submitOrder({
+        items: c.items(),
+        customer: profile.name(),
+      });
+    };
+
+    return { canCheckout, submit };
+  };
+};
+```
+
+---
+
+## Working with Arrays
+
+For reactive arrays, use a signal holding an array:
+
+```typescript
+const todoList = ({ signal }: SignalsSvc) => () => {
+  const items = signal<Todo[]>([]);
+
+  return {
+    items,
+    add: (text: string) => {
+      items([...items(), { id: crypto.randomUUID(), text, done: false }]);
+    },
+    toggle: (id: string) => {
+      items(items().map(t =>
+        t.id === id ? { ...t, done: !t.done } : t
+      ));
+    },
+    remove: (id: string) => {
+      items(items().filter(t => t.id !== id));
+    },
+  };
+};
+```
+
+This follows an immutable pattern which is:
+- Explicit (you see the update happening)
+- Debuggable (you can log the before/after)
+- Predictable (no proxy magic)
+
+---
+
+## When You Really Want Nested Updates
+
+If you genuinely need to update nested data, create a focused updater:
+
+```typescript
+const nestedSettings = (svc: SignalsSvc) => () => {
+  const settings = svc.signal({
+    display: { theme: 'light', fontSize: 14 },
+    privacy: { shareData: false, analytics: true },
+  });
+
+  // Focused updaters for specific paths
+  const setTheme = (theme: string) => {
+    settings({
+      ...settings(),
+      display: { ...settings().display, theme }
+    });
+  };
+
+  const setFontSize = (size: number) => {
+    settings({
+      ...settings(),
+      display: { ...settings().display, fontSize: size }
+    });
+  };
+
+  // Or a generic path updater if you really need it
+  const update = <K extends keyof Settings>(
+    section: K,
+    updates: Partial<Settings[K]>
+  ) => {
+    settings({
+      ...settings(),
+      [section]: { ...settings()[section], ...updates }
+    });
+  };
+
+  return { settings, setTheme, setFontSize, update };
+};
+```
+
+---
+
+## But I Really Want Proxies
+
+If you're convinced you need proxy-based stores, you can build them on top of Lattice's primitives. The signals are there—wrap them in proxies if you want.
+
+Or use an external store library and connect it via effects:
+
+```typescript
+import { createStore } from 'some-store-library';
+
+const externalStore = createStore({ count: 0 });
+
+const bridged = (svc: SignalsSvc) => () => {
+  const count = svc.signal(externalStore.getState().count);
+
+  // Sync from external store to signal
+  externalStore.subscribe((state) => {
+    count(state.count);
+  });
+
+  return { count };
+};
+```
+
+But consider: if you're reaching for proxies, you might be fighting the framework. Lattice's composition model works best when you embrace it.
+
+<Aside type="note">
+This isn't about purity—it's about predictability. Every abstraction has a cost. Proxies hide what's happening. Composition makes it visible.
+</Aside>

@@ -1,0 +1,227 @@
+---
+title: Async Loading States
+description: How to handle loading, error, and ready states for async data.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+React has Suspense. Solid has `<Suspense>` and `<Show>`. These handle async loading states declaratively.
+
+Lattice handles async state explicitly through the `resource` primitive and `match` for rendering. No magic, no special components—just reactive state.
+
+---
+
+## The Resource Pattern
+
+The `resource` primitive wraps async operations and exposes their state reactively:
+
+```typescript
+const ProductList = (svc: Service) => {
+  const { el, resource, match } = svc;
+
+  const products = resource((signal) =>
+    fetch('/api/products', { signal }).then(r => r.json())
+  );
+
+  // products() returns { status: 'pending' | 'ready' | 'error', value?, error? }
+};
+```
+
+---
+
+## Rendering Different States
+
+Use `match` to render based on state:
+
+```typescript
+return match(products, (state) => {
+  switch (state.status) {
+    case 'pending':
+      return Spinner(svc);
+    case 'error':
+      return ErrorMessage(svc, state.error);
+    case 'ready':
+      return ProductGrid(svc, state.value);
+  }
+});
+```
+
+Or use the convenience accessors:
+
+```typescript
+return el('div')(
+  match(products.loading, (loading) =>
+    loading
+      ? Spinner(svc)
+      : match(products.error, (error) =>
+          error
+            ? ErrorMessage(svc, error)
+            : ProductGrid(svc, products.data()!)
+        )
+  )
+);
+```
+
+The explicit approach is more verbose but clearer about what's happening.
+
+---
+
+## A Show Helper
+
+If you want something closer to Solid's `<Show>`, create a simple helper:
+
+```typescript
+const show = <T, R>(
+  when: () => T | null | undefined | false,
+  render: (value: T) => R,
+  fallback?: () => R
+): R | undefined => {
+  const value = when();
+  if (value) return render(value);
+  return fallback?.();
+};
+
+// Usage
+return el('div')(
+  show(
+    () => products.data(),
+    (data) => ProductGrid(svc, data),
+    () => Spinner(svc)
+  )
+);
+```
+
+But this is just a function—nothing special about it.
+
+---
+
+## Multiple Resources
+
+When loading multiple resources, handle them together:
+
+```typescript
+const Dashboard = (svc: Service) => {
+  const { el, resource, computed, match } = svc;
+
+  const user = resource((s) => fetchUser(s));
+  const stats = resource((s) => fetchStats(s));
+  const notifications = resource((s) => fetchNotifications(s));
+
+  // Combine loading states
+  const allLoading = computed(() =>
+    user.loading() || stats.loading() || notifications.loading()
+  );
+
+  const anyError = computed(() =>
+    user.error() || stats.error() || notifications.error()
+  );
+
+  return match(allLoading, (loading) => {
+    if (loading) return Spinner(svc);
+
+    const error = anyError();
+    if (error) return ErrorMessage(svc, error);
+
+    return el('div')(
+      UserHeader(svc, user.data()!),
+      StatsPanel(svc, stats.data()!),
+      NotificationList(svc, notifications.data()!)
+    );
+  });
+};
+```
+
+---
+
+## Dependent Resources
+
+When one resource depends on another:
+
+```typescript
+const ProductDetail = (svc: Service) => {
+  const { el, resource, computed, match } = svc;
+
+  const productId = svc.params.id; // from router
+
+  const product = resource((s) =>
+    fetch(`/api/products/${productId()}`, { signal: s }).then(r => r.json())
+  );
+
+  // Reviews depend on product being loaded
+  const reviews = resource((s) => {
+    const p = product.data();
+    if (!p) return Promise.resolve([]); // No product yet, return empty
+
+    return fetch(`/api/products/${p.id}/reviews`, { signal: s })
+      .then(r => r.json());
+  });
+
+  return match(product, (state) => {
+    if (state.status !== 'ready') {
+      return state.status === 'pending' ? Spinner(svc) : ErrorMessage(svc, state.error);
+    }
+
+    return el('div')(
+      ProductInfo(svc, state.value),
+      match(reviews, (reviewState) =>
+        reviewState.status === 'pending'
+          ? el('div')('Loading reviews...')
+          : reviewState.status === 'error'
+            ? el('div')('Failed to load reviews')
+            : ReviewList(svc, reviewState.value)
+      )
+    );
+  });
+};
+```
+
+---
+
+## Refetching
+
+Resources track dependencies and refetch automatically:
+
+```typescript
+const category = signal('electronics');
+
+const products = resource((s) =>
+  fetch(`/api/products?category=${category()}`, { signal: s })
+    .then(r => r.json())
+);
+
+// Change category -> products automatically refetches
+category('clothing');
+```
+
+Manual refetch is also available:
+
+```typescript
+el('button').props({
+  onclick: () => products.refetch()
+})('Refresh')
+```
+
+---
+
+## Cleanup
+
+Resources should be disposed when no longer needed:
+
+```typescript
+const ProductPanel = (svc: Service) => {
+  const { el, resource } = svc;
+
+  const products = resource((s) => fetchProducts(s));
+
+  // Cleanup when element is removed
+  return el('div').ref((node, cleanup) => {
+    cleanup(products.dispose);
+  })(
+    // ... content
+  );
+};
+```
+
+<Aside type="tip">
+The explicit state handling might feel verbose compared to Suspense. But it's also more predictable—you always know exactly what renders when, with no framework magic deciding for you.
+</Aside>

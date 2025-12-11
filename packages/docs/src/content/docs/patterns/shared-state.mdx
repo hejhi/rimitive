@@ -1,0 +1,152 @@
+---
+title: Shared State
+description: How to share state across components without prop drilling.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Other frameworks have "context"—a way to pass values down the component tree without threading them through every intermediate component. In React, it's `createContext` and `useContext`. In Solid, it's similar.
+
+Lattice doesn't have a separate context primitive. It doesn't need one.
+
+---
+
+## The Pattern: Service Threading
+
+In Lattice, the **service is the context**. Components receive a service object containing the primitives they need. You can extend that service with additional state at any point in the tree.
+
+```typescript
+// Define your app-level shared state
+type AppService = Service & {
+  theme: Readable<'light' | 'dark'>;
+  user: Readable<User | null>;
+};
+
+const App = (svc: Service) => {
+  const { el, signal } = svc;
+
+  // Create shared state
+  const theme = signal<'light' | 'dark'>('light');
+  const user = signal<User | null>(null);
+
+  // Extend the service
+  const appSvc: AppService = { ...svc, theme, user };
+
+  return el('div')(
+    Header(appSvc),
+    Main(appSvc),
+    Footer(appSvc)
+  );
+};
+```
+
+Child components receive the extended service and can access the shared state directly:
+
+```typescript
+const Header = (svc: AppService) => {
+  const { el, computed, theme, user } = svc;
+
+  return el('header').props({
+    className: computed(() => theme() === 'dark' ? 'header-dark' : 'header-light')
+  })(
+    el('span')(computed(() => user()?.name ?? 'Guest'))
+  );
+};
+```
+
+No magic or implicit tree traversal. You can see exactly what's being passed where.
+
+---
+
+## Nested Overrides
+
+Need to override a value for a subtree? Extend the service again:
+
+```typescript
+const DarkSection = (svc: AppService) => {
+  const { el, signal } = svc;
+
+  // Override theme for this subtree
+  const darkSvc: AppService = { ...svc, theme: signal('dark') };
+
+  return el('section')(
+    // Everything in here sees theme = 'dark'
+    ThemedCard(darkSvc),
+    ThemedButton(darkSvc)
+  );
+};
+```
+
+---
+
+## With Portable Components
+
+The portable component pattern (`(svc) => (props) => spec`) works naturally with this:
+
+```typescript
+// Portable component that expects theme in service
+const ThemedButton = ({ el, computed, theme }: AppService) => (props: { label: string }) => {
+  return el('button').props({
+    className: computed(() => `btn btn-${theme()}`)
+  })(props.label);
+};
+
+// Usage with `use`
+const App = ({ el, use }: AppService) => {
+  return el('div')(
+    use(ThemedButton)({ label: 'Click me' })
+  );
+};
+```
+
+When you call `use(ThemedButton)`, it passes the current service (including any extensions) to the component.
+
+---
+
+## TypeScript Tips
+
+Define your extended service types explicitly:
+
+```typescript
+import type { Service } from './service';
+import type { Readable } from '@lattice/signals/types';
+
+// Base service with your extensions
+export type AppService = Service & {
+  theme: Readable<'light' | 'dark'>;
+  user: Readable<User | null>;
+  // add more as needed
+};
+
+// For components that only need a subset
+export type ThemedService = Service & {
+  theme: Readable<'light' | 'dark'>;
+};
+```
+
+Components declare what they need:
+
+```typescript
+// This component works with any service that has `theme`
+const ThemedCard = (svc: ThemedService) => { ... };
+
+// This one needs the full app service
+const UserProfile = (svc: AppService) => { ... };
+```
+
+---
+
+## Why Not a Context Primitive?
+
+I considered adding one. The problem: context in other frameworks works through implicit tree traversal—a component "finds" the nearest provider by walking up the tree at render time.
+
+Lattice components are just functions returning specs. There's no render cycle or "currently rendering" context to hook into. Any context system would either:
+
+1. Require explicit scope passing (which is what we already have)
+2. Add hidden magic that fights Lattice's design philosophy
+
+The service threading pattern is explicit, type-safe, and composes naturally. It's not as terse as `useContext()`, but you can always see what's happening.
+
+<Aside type="tip">
+If you find yourself passing the same service through many layers, consider whether those intermediate components actually need to be separate. Lattice's composition model often leads to flatter component hierarchies than you might expect.
+</Aside>

@@ -14,6 +14,19 @@ export default defineConfig({
 					items: [],
 				},
 				{
+					label: 'Patterns',
+					items: [
+						{ label: 'Overview', slug: 'patterns' },
+						{ label: 'Behaviors', slug: 'patterns/behaviors' },
+						{ label: 'Portability', slug: 'patterns/portability' },
+						{ label: 'Shared State', slug: 'patterns/shared-state' },
+						{ label: 'Error Handling', slug: 'patterns/error-handling' },
+						{ label: 'Async Loading', slug: 'patterns/async-loading' },
+						{ label: 'Composition Over Stores', slug: 'patterns/composition-over-stores' },
+						{ label: 'Refs & DOM Access', slug: 'patterns/refs' },
+					],
+				},
+				{
 					label: 'Examples',
 					items: [],
 				},

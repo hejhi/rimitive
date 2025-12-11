@@ -1,0 +1,155 @@
+---
+title: Error Handling
+description: How to handle errors in Lattice applications.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+React has Error Boundaries. Solid has `<ErrorBoundary>`. You might expect Lattice to have something similar.
+
+It doesn't—because it doesn't need one.
+
+---
+
+## Why No Error Boundary Primitive?
+
+In React and Solid, components are reactive functions that re-run during a render cycle. Errors can happen mid-render, and the framework needs a way to catch them and show fallback UI.
+
+In Lattice, components are just functions that return specs. They run once, produce a data structure, and that's it. Errors are plain JavaScript errors that propagate normally.
+
+```typescript
+const RiskyComponent = (svc: Service) => {
+  const { el } = svc;
+
+  // If this throws, it's a normal JS error
+  const data = somethingThatMightThrow();
+
+  return el('div')(data.value);
+};
+```
+
+You handle it with... try/catch:
+
+```typescript
+const SafeWrapper = (svc: Service) => {
+  const { el } = svc;
+
+  try {
+    return RiskyComponent(svc);
+  } catch (e) {
+    return el('div').props({ className: 'error' })(
+      'Something went wrong'
+    );
+  }
+};
+```
+
+---
+
+## Handling Async Errors
+
+For async operations, use the `resource` primitive. It tracks error state explicitly:
+
+```typescript
+const ProductList = (svc: Service) => {
+  const { el, resource, match } = svc;
+
+  const products = resource((signal) =>
+    fetch('/api/products', { signal }).then(r => r.json())
+  );
+
+  return match(products, (state) => {
+    if (state.status === 'pending') {
+      return el('div')('Loading...');
+    }
+    if (state.status === 'error') {
+      return el('div').props({ className: 'error' })(
+        `Failed to load: ${state.error}`
+      );
+    }
+    return el('ul')(
+      ...state.value.map(p => el('li')(p.name))
+    );
+  });
+};
+```
+
+The error state is part of the resource's reactive value.
+
+---
+
+## Effect Errors
+
+Errors in effects propagate normally. If you need to catch them:
+
+```typescript
+const svc = createDOMView()();
+const { signal, effect } = svc;
+
+const count = signal(0);
+
+effect(() => {
+  try {
+    riskyOperation(count());
+  } catch (e) {
+    console.error('Effect failed:', e);
+    // Handle gracefully
+  }
+});
+```
+
+Or wrap the risky operation in a function that returns a result type:
+
+```typescript
+type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
+
+const safeRiskyOperation = (n: number): Result<string> => {
+  try {
+    return { ok: true, value: riskyOperation(n) };
+  } catch (e) {
+    return { ok: false, error: e };
+  }
+};
+
+effect(() => {
+  const result = safeRiskyOperation(count());
+  if (!result.ok) {
+    errorState(result.error);
+  }
+});
+```
+
+---
+
+## Creating a Reusable Error Wrapper
+
+If you want an Error Boundary-like pattern, create a behavior:
+
+```typescript
+const errorBoundary = (svc: Service) =>
+  <T>(
+    render: () => T,
+    fallback: (error: unknown) => T
+  ): T => {
+    try {
+      return render();
+    } catch (e) {
+      return fallback(e);
+    }
+  };
+
+// Usage
+const App = (svc: Service) => {
+  const { el, use } = svc;
+  const withErrorBoundary = use(errorBoundary);
+
+  return el('div')(
+    withErrorBoundary(
+      () => RiskyComponent(svc),
+      (e) => el('div')(`Error: ${e}`)
+    )
+  );
+};
+```
+
+But honestly? Just use try/catch. It's JavaScript. It works.
