@@ -14,18 +14,22 @@ import type { Loader } from '@lattice/view/load';
 // =============================================================================
 
 /**
- * Window globals for streaming SSR.
- * These are set by the bootstrap script (included via renderToStream's headScript)
- * and used by connectStreamingLoader and processQueuedHtmlSwaps.
+ * Window globals for SSR.
+ *
+ * __LATTICE_DATA__ has two forms:
+ * - Non-streaming SSR: Object with pre-loaded data (set by server before hydration)
+ * - Streaming SSR: Function to receive streamed chunks (set by bootstrap script)
+ *
+ * The other globals are only used for streaming SSR.
  */
 declare global {
   interface Window {
+    /** Streaming: queue for data chunks that arrive before hydration */
     __LATTICE_DATA_QUEUE__?: Array<[string, unknown]>;
-    __LATTICE_HTML_QUEUE__?: string[];
-    __LATTICE_DATA__?: (id: string, data: unknown) => void;
-    __LATTICE_SWAP__?: (id: string) => void;
+    /** Non-streaming: static data object. Streaming: function to receive chunks */
+    __LATTICE_DATA__?: Record<string, unknown> | ((id: string, data: unknown) => void);
+    /** Streaming: loader instance for direct data delivery */
     __LATTICE_LOADER__?: Loader;
-    __LATTICE_HYDRATING__?: boolean;
   }
 }
 
@@ -67,70 +71,6 @@ export function connectStreamingLoader(loader: Loader): void {
 
   // Wire up future chunks to go directly to the loader
   window.__LATTICE_LOADER__ = loader;
-}
-
-/**
- * Process any HTML swaps that were queued before hydration completed.
- *
- * The bootstrap script queues swap IDs when the placeholder element isn't
- * found yet (e.g., HTML chunk arrived before hydration). Call this after
- * hydration completes and the DOM is ready.
- *
- * @example
- * ```ts
- * // Client
- * import { connectStreamingLoader, processQueuedHtmlSwaps } from '@lattice/ssr/client';
- *
- * // Hydrate the app
- * AppLayout(service).create(service);
- *
- * // Switch to DOM mode
- * appAdapter.switchToFallback();
- *
- * // Connect streaming and process queued swaps
- * connectStreamingLoader(service.loader);
- * processQueuedHtmlSwaps();
- * ```
- */
-export function processQueuedHtmlSwaps(): void {
-  const queue = window.__LATTICE_HTML_QUEUE__;
-  if (!queue || queue.length === 0) return;
-
-  for (const id of queue) {
-    const template = document.getElementById(`S:${id}`);
-    if (!template) continue;
-
-    // Find comment markers: <!--async:id--> and <!--/async:id-->
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT);
-    let startMarker: Comment | null = null;
-    let endMarker: Comment | null = null;
-    let node: Comment | null;
-
-    while ((node = walker.nextNode() as Comment | null)) {
-      if (node.nodeValue === `async:${id}`) startMarker = node;
-      else if (node.nodeValue === `/async:${id}`) {
-        endMarker = node;
-        break;
-      }
-    }
-
-    if (startMarker && endMarker) {
-      const parent = startMarker.parentNode;
-      if (parent) {
-        // Remove all nodes between markers
-        while (startMarker.nextSibling && startMarker.nextSibling !== endMarker) {
-          parent.removeChild(startMarker.nextSibling);
-        }
-        // Insert template content before end marker
-        const content = (template as HTMLTemplateElement).content.cloneNode(true);
-        parent.insertBefore(content, endMarker);
-        template.remove();
-      }
-    }
-  }
-
-  // Clear the queue
-  queue.length = 0;
 }
 
 // =============================================================================

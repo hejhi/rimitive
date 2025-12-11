@@ -1,10 +1,10 @@
 /**
  * SSR Streaming Server
  *
- * Demonstrates TRUE streaming SSR with Lattice:
+ * Demonstrates streaming SSR with Lattice:
  * 1. Send initial HTML immediately (with pending states for async boundaries)
- * 2. Stream BOTH data AND HTML chunks as each load() boundary resolves
- * 3. Client swaps in HTML immediately, then hydrates with correct data
+ * 2. Stream data chunks as each load() boundary resolves
+ * 3. Client receives data and updates UI reactively via signals
  *
  * This is more efficient than renderToStringAsync for pages with slow data sources,
  * as users see the shell immediately and content appears progressively as data loads.
@@ -17,9 +17,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createDOMServerAdapter,
   renderToStream,
-  renderToString,
   defaultChunkFormatter,
-  defaultHtmlChunkFormatter,
 } from '@lattice/ssr/server';
 import type { RefSpec } from '@lattice/view/types';
 
@@ -55,27 +53,23 @@ const server = createServer(async (req, res) => {
     `http://${req.headers.host || 'localhost'}`
   );
 
-  // Create per-request service
+  // Create per-request service with streaming callback
+  // onResolve writes data chunks directly to the response as they resolve
   const adapter = createDOMServerAdapter();
   const service = createService(adapter, {
     initialPath: url.pathname,
+    onResolve: (id, data) => {
+      console.log(`[stream] Streaming chunk: ${id}`);
+      res.write(defaultChunkFormatter(id, data));
+    },
   });
 
   // Render and get all pieces needed for streaming
-  // onAsyncResolve streams BOTH data AND HTML as each boundary resolves
   const { headScript, initialHtml, clientScript, done, pendingCount } = renderToStream(
     AppLayout(service),
     {
       mount: (spec: RefSpec<unknown>) => spec.create(service),
       clientSrc: '/client.js',
-      onAsyncResolve: (id, data, fragment) => {
-        console.log(`[stream] Streaming chunk: ${id}`);
-        // Stream data chunk (for hydration/signals)
-        res.write(defaultChunkFormatter(id, data));
-        // Stream HTML chunk (for immediate display)
-        const html = renderToString(fragment);
-        res.write(defaultHtmlChunkFormatter(id, html));
-      },
     }
   );
 
@@ -115,10 +109,10 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Streaming SSR server running at http://localhost:${PORT}/`);
   console.log('');
-  console.log('This example demonstrates streaming SSR with HTML:');
+  console.log('This example demonstrates streaming SSR:');
   console.log('- Initial HTML is sent immediately with pending states');
-  console.log('- Data AND HTML chunks stream as load() boundaries resolve');
-  console.log('- Client swaps in HTML immediately for instant display');
+  console.log('- Data chunks stream as load() boundaries resolve');
+  console.log('- Client updates reactively via signals (no DOM manipulation)');
   console.log('');
   console.log('Try these URLs:');
   console.log(`  http://localhost:${PORT}/`);

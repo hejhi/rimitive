@@ -90,39 +90,6 @@ export function insertFragmentMarkers(
 }
 
 /**
- * Insert async boundary markers (comments with ID) around fragment content.
- * Uses comments instead of wrapper elements to avoid moving nodes, which
- * would break the view system's parent-child references.
- *
- * @param fragment - The async fragment to mark
- * @param id - The async boundary ID (from loader)
- */
-export function insertAsyncFragmentMarkers(
-  fragment: FragmentRef<unknown>,
-  id: string
-): void {
-  if (!fragment.firstChild || !fragment.lastChild) return;
-
-  const firstNode = getFirstDOMNode(fragment.firstChild);
-  const lastNode = getLastDOMNode(fragment.lastChild);
-
-  if (!firstNode || !lastNode) return;
-
-  const parentElement = firstNode.parentNode as HTMLElement | null;
-  if (!parentElement) return;
-
-  const doc = parentElement.ownerDocument;
-
-  // Insert async-start comment before first child
-  const startComment = doc.createComment(`async:${id}`);
-  parentElement.insertBefore(startComment, firstNode);
-
-  // Insert async-end comment after last child
-  const endComment = doc.createComment(`/async:${id}`);
-  parentElement.insertBefore(endComment, lastNode.nextSibling);
-}
-
-/**
  * Create a linkedom adapter for server-side rendering
  *
  * Renders components to HTML with fragment markers for hydration.

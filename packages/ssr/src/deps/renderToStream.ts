@@ -14,19 +14,8 @@ import { STATUS_FRAGMENT } from '@lattice/view/types';
 import { createLoader, type Loader } from '@lattice/view/load';
 import type { SignalFactory } from '@lattice/signals/signal';
 import { renderToString } from './renderToString';
-import { collectAsyncFragments, ASYNC_FRAGMENT, type AsyncFragment } from './async-fragments';
-import { insertFragmentMarkers, insertAsyncFragmentMarkers } from '../adapters/dom-server';
-
-/**
- * Callback for when an async fragment resolves during streaming.
- * Receives the fragment ID, resolved data, and the fragment itself
- * so you can render the resolved HTML.
- */
-export type OnAsyncResolve = (
-  id: string,
-  data: unknown,
-  fragment: AsyncFragment<unknown>
-) => void;
+import { collectAsyncFragments, ASYNC_FRAGMENT } from './async-fragments';
+import { insertFragmentMarkers } from '../adapters/dom-server';
 
 /**
  * Options for renderToStream
@@ -45,12 +34,6 @@ export type RenderToStreamOptions = {
    * completes before streaming data chunks are processed.
    */
   clientSrc?: string;
-
-  /**
-   * Called when each async fragment resolves.
-   * Use this to stream both data and HTML chunks to the client.
-   */
-  onAsyncResolve?: OnAsyncResolve;
 };
 
 /**
@@ -91,91 +74,16 @@ export function defaultChunkFormatter(id: string, data: unknown): string {
 }
 
 /**
- * Default HTML chunk formatter for streaming resolved content.
- * Creates a template with the resolved HTML and a script to swap it in.
- */
-export function defaultHtmlChunkFormatter(id: string, html: string): string {
-  return `<template id="S:${id}">${html}</template><script>__LATTICE_SWAP__(${JSON.stringify(id)})</script>`;
-}
-
-/**
  * Bootstrap script for streaming SSR.
- * Sets up:
- * - Data queue for chunks that arrive before hydration
- * - Swap function for HTML streaming (finds content between comment markers)
- * - Hydration flag to prevent swaps during hydration (reactive system handles those)
+ * Sets up a queue for data chunks that arrive before hydration completes.
  * @internal
  */
 const BOOTSTRAP_SCRIPT = `<script>
-(function() {
-  // Queues for data and HTML that arrive before hydration
-  window.__LATTICE_DATA_QUEUE__ = [];
-  window.__LATTICE_HTML_QUEUE__ = [];
-
-  // Flag to prevent swaps during hydration - reactive system handles those
-  window.__LATTICE_HYDRATING__ = false;
-
-  // Handle streamed data chunks
-  window.__LATTICE_DATA__ = function(id, data) {
-    if (window.__LATTICE_LOADER__) {
-      // Loader is connected, send data directly
-      window.__LATTICE_LOADER__.setData(id, data);
-    } else {
-      // Queue for later processing
-      window.__LATTICE_DATA_QUEUE__.push([id, data]);
-    }
-  };
-
-  // Handle streamed HTML chunks - swap resolved content into placeholders
-  window.__LATTICE_SWAP__ = function(id) {
-    // Once hydration starts, skip swaps - reactive system handles updates via signals
-    if (window.__LATTICE_HYDRATING__) {
-      return;
-    }
-
-    // Find the streamed template
-    var template = document.getElementById("S:" + id);
-    if (!template) {
-      // Template not in DOM yet, queue for later
-      window.__LATTICE_HTML_QUEUE__.push(id);
-      return;
-    }
-
-    // Find the async boundary markers: <!--async:id--> and <!--/async:id-->
-    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT);
-    var startMarker = null;
-    var endMarker = null;
-    var node;
-
-    while ((node = walker.nextNode())) {
-      if (node.nodeValue === "async:" + id) {
-        startMarker = node;
-      } else if (node.nodeValue === "/async:" + id) {
-        endMarker = node;
-        break;
-      }
-    }
-
-    if (startMarker && endMarker) {
-      var parent = startMarker.parentNode;
-
-      // Remove all nodes between the markers (the pending content)
-      while (startMarker.nextSibling && startMarker.nextSibling !== endMarker) {
-        parent.removeChild(startMarker.nextSibling);
-      }
-
-      // Insert the resolved content from the template
-      var content = template.content.cloneNode(true);
-      parent.insertBefore(content, endMarker);
-
-      // Clean up the template
-      template.remove();
-    } else {
-      // Markers not found yet, queue for later
-      window.__LATTICE_HTML_QUEUE__.push(id);
-    }
-  };
-})();
+window.__LATTICE_DATA_QUEUE__=[];
+window.__LATTICE_DATA__=function(i,d){
+if(window.__LATTICE_LOADER__)window.__LATTICE_LOADER__.setData(i,d);
+else window.__LATTICE_DATA_QUEUE__.push([i,d]);
+};
 </script>`;
 
 /**
@@ -214,7 +122,7 @@ export function renderToStream(
   spec: RefSpec<unknown>,
   options: RenderToStreamOptions
 ): StreamResult {
-  const { mount, clientSrc, onAsyncResolve } = options;
+  const { mount, clientSrc } = options;
 
   // Mount the app synchronously - this renders with pending states
   const nodeRef = mount(spec);
@@ -222,21 +130,14 @@ export function renderToStream(
   // Collect all async fragments
   const asyncFragments = collectAsyncFragments(nodeRef);
 
-  // Insert markers for async fragments BEFORE serializing.
+  // Insert fragment markers for async fragments BEFORE serializing.
   // This is needed because createDOMServerAdapter.onAttach skips async fragments
   // (they're normally handled by renderToStringAsync after resolution).
-  // For streaming with HTML, we use a wrapper span with data-lattice-async
-  // so the client can find and replace it when resolved HTML arrives.
+  // For streaming, we need markers around the PENDING state content so
+  // the hydration adapter can locate these boundaries.
   for (const fragment of asyncFragments) {
     if (fragment.status === STATUS_FRAGMENT) {
-      const id = fragment[ASYNC_FRAGMENT].id;
-      if (id) {
-        // Use async markers (comments with ID) for HTML streaming
-        insertAsyncFragmentMarkers(fragment, id);
-      } else {
-        // Fall back to regular fragment markers
-        insertFragmentMarkers(fragment);
-      }
+      insertFragmentMarkers(fragment);
     }
   }
 
@@ -245,29 +146,23 @@ export function renderToStream(
   const pendingCount = asyncFragments.length;
 
   // Create promise that resolves when all async boundaries complete
+  // Data chunks are delivered via the loader's onResolve callback
   const done =
     pendingCount === 0
       ? Promise.resolve()
       : Promise.all(
-          asyncFragments.map(async (fragment) => {
-            const meta = fragment[ASYNC_FRAGMENT];
-            try {
-              const data = await meta.resolve();
-              // Call onAsyncResolve with id, data, and fragment for HTML streaming
-              if (onAsyncResolve && meta.id) {
-                onAsyncResolve(meta.id, data, fragment);
-              }
-            } catch {
+          asyncFragments.map((fragment) =>
+            fragment[ASYNC_FRAGMENT].resolve().catch(() => {
               // Errors are handled by the loader's error state
               // Don't let one failure break the whole stream
-            }
-          })
+            })
+          )
         ).then(() => undefined);
 
   // Generate client script tag if clientSrc provided
-  // Uses defer so inline scripts (data chunks, HTML swaps) execute first,
-  // then client.js runs for hydration after all swaps are complete
-  const clientScript = clientSrc ? `<script src="${clientSrc}" defer></script>` : '';
+  // Uses blocking (non-module) script to ensure hydration completes
+  // before streaming data chunks are processed
+  const clientScript = clientSrc ? `<script src="${clientSrc}"></script>` : '';
 
   return {
     headScript: BOOTSTRAP_SCRIPT,

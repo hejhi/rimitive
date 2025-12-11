@@ -19,13 +19,6 @@ import {
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
 
-// Declare the global type for loader data
-declare global {
-  interface Window {
-    __LATTICE_DATA__?: Record<string, unknown>;
-  }
-}
-
 // Create the adapter stack:
 // 1. Base DOM adapter with async support for post-hydration client navigation
 // 2. Hydration adapter for walking existing DOM
@@ -38,9 +31,14 @@ const appAdapter = createHydrationAdapter(
   domAdapter
 );
 
+// Get loader data from SSR (non-streaming uses object, streaming uses function)
+const loaderData = typeof window.__LATTICE_DATA__ === 'object'
+  ? window.__LATTICE_DATA__
+  : undefined;
+
 // Create service with hydrating adapter and loader data from SSR
 const service = createService(appAdapter, {
-  loaderData: window.__LATTICE_DATA__,
+  loaderData,
 });
 
 // Hydrate the app with the service and renderer, wiring up reactivity
