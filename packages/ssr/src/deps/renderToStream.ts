@@ -61,13 +61,43 @@ export type StreamResult = {
 };
 
 // =============================================================================
-// Streaming Proxy
+// Streaming Receiver
 // =============================================================================
 
 /**
- * Create bootstrap script that sets up a streaming proxy at the given key.
+ * Creates the streaming receiver object.
+ * This function is stringified and executed in the browser.
+ * Queues data chunks until a loader connects, then forwards directly.
+ * @internal
+ */
+function createStreamingReceiver() {
+  return {
+    queue: [] as Array<[string, unknown]>,
+    loader: null as { setData: (id: string, data: unknown) => void } | null,
+    push: function (id: string, data: unknown) {
+      if (this.loader) {
+        this.loader.setData(id, data);
+      } else {
+        this.queue.push([id, data]);
+      }
+    },
+    connect: function (loader: {
+      setData: (id: string, data: unknown) => void;
+    }) {
+      this.loader = loader;
+      for (let i = 0; i < this.queue.length; i++) {
+        const item = this.queue[i];
+        if (item) loader.setData(item[0], item[1]);
+      }
+      this.queue = [];
+    },
+  };
+}
+
+/**
+ * Create bootstrap script that sets up a streaming receiver at the given key.
  *
- * The proxy queues data chunks until a loader connects, then forwards directly.
+ * The receiver queues data chunks until a loader connects, then forwards directly.
  * User controls the key name, making the connection explicit and traceable.
  *
  * @param streamKey - The window property name (e.g., '__MY_APP_STREAM__')
@@ -84,30 +114,11 @@ export type StreamResult = {
  * ```
  */
 export function createStreamingBootstrap(streamKey: string): string {
-  return `<script>
-window.${streamKey} = {
-  queue: [],
-  loader: null,
-  push: function(id, data) {
-    if (this.loader) {
-      this.loader.setData(id, data);
-    } else {
-      this.queue.push([id, data]);
-    }
-  },
-  connect: function(loader) {
-    this.loader = loader;
-    for (var i = 0; i < this.queue.length; i++) {
-      loader.setData(this.queue[i][0], this.queue[i][1]);
-    }
-    this.queue = [];
-  }
-};
-</script>`;
+  return `<script>window.${streamKey}=(${createStreamingReceiver.toString()})();</script>`;
 }
 
 /**
- * Create a script tag that pushes data to the streaming proxy.
+ * Create a script tag that pushes data to the streaming receiver.
  *
  * @param streamKey - The window property name used in createStreamingBootstrap
  * @param id - The async boundary ID
@@ -120,7 +131,11 @@ window.${streamKey} = {
  * // Outputs: <script>__APP_STREAM__.push("stats",{"users":100})</script>
  * ```
  */
-export function createChunkScript(streamKey: string, id: string, data: unknown): string {
+export function createChunkScript(
+  streamKey: string,
+  id: string,
+  data: unknown
+): string {
   return `<script>${streamKey}.push(${JSON.stringify(id)},${JSON.stringify(data)})</script>`;
 }
 
