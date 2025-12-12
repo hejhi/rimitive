@@ -15,13 +15,6 @@ export default defineConfig({
     },
     // Pool options for benchmarks - use separate processes for memory isolation
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        // Use a single fork so shared setup in beforeAll is visible
-        // across benches in the same file (prevents NaN comparisons).
-        singleFork: true,
-      },
-    },
   },
   resolve: {
     // Prefer Node conditions for benchmarking

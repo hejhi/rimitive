@@ -6,12 +6,6 @@ export default defineConfig({
     environment: 'node',
     includeSource: ['./src/**/*.{js,ts}'],
     exclude: ['**/node_modules/**', '**/dist/**'],
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
     reporters: ['default'],
   },
 });
