@@ -1,6 +1,6 @@
 {
   "name": "@rimitive/core",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Core framework-agnostic behavior composition layer for Rimitive components",
   "author": "Rimitive Team",
   "license": "MIT",

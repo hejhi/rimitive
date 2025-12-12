@@ -1,6 +1,6 @@
 {
   "name": "@rimitive/resource",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Async data fetching with reactive dependency tracking for Rimitive",
   "author": "Rimitive Team",
   "license": "MIT",
