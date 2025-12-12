@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hejhi/core",
+    "url": "https://github.com/rimitive",
     "directory": "packages/signals"
   },
   "keywords": [
