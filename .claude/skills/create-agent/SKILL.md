@@ -93,6 +93,7 @@ The orchestrating agent delegates [task type] to you to **isolate [what noise]**
 | `explorer` | Search/read codebase, return findings | haiku |
 | `implementer` | Execute implementation specs | default |
 | `verifier` | Run tests/build, return pass/fail | haiku |
+| `qa` | End-to-end fix verification | haiku |
 | `reader` | Extract info from long files | haiku |
 | `api-explorer` | Search API docs for relevant APIs | haiku |
 
@@ -131,6 +132,7 @@ The description's examples help Claude know **when** to invoke the agent. Be spe
 │   ├── explorer.md
 │   ├── implementer.md
 │   ├── verifier.md
+│   ├── qa.md
 │   ├── reader.md
 │   └── api-explorer.md
 └── skills/

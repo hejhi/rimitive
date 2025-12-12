@@ -27,6 +27,7 @@ Delegate work that drains context: file searching, code analysis, build logs, te
 | **explorer** | Search/read codebase, return only relevant findings |
 | **implementer** | Receive spec + files, implement, return result |
 | **verifier** | Run tests/typecheck/build, return pass/fail + errors |
+| **qa** | End-to-end fix verification - describe what was fixed, it confirms |
 | **reader** | Read long files, extract only requested information |
 | **api-explorer** | Search API docs/guides for relevant Lattice APIs |
 
