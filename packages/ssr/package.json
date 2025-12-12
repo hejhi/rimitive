@@ -1,6 +1,6 @@
 {
   "name": "@rimitive/ssr",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Server-side rendering and hydration for Rimitive",
   "author": "Rimitive Team",
   "license": "MIT",

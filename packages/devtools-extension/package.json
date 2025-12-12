@@ -1,7 +1,7 @@
 {
   "name": "@rimitive/devtools-extension",
   "description": "Chrome DevTools extension for debugging Rimitive applications",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",

@@ -1,6 +1,6 @@
 {
   "name": "@rimitive/router",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Minimal client-side routing for Rimitive",
   "author": "Rimitive Team",
   "license": "MIT",
