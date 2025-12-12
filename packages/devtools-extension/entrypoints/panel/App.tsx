@@ -1,4 +1,4 @@
-import { useSubscribe } from '@lattice/react';
+import { useSubscribe } from '@rimitive/react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '../../src/components/ui/button';
 import {
@@ -19,7 +19,7 @@ import { devtoolsState } from './store/devtoolsCtx';
 import { filteredTransactions } from './store/computed';
 
 export function App() {
-  // Use Lattice signals with React
+  // Use Rimitive signals with React
   const connected = useSubscribe(devtoolsState.connected);
   const contexts = useSubscribe(devtoolsState.contexts);
   const selectedTab = useSubscribe(devtoolsState.selectedTab);

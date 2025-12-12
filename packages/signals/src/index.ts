@@ -1,10 +1,10 @@
 /**
- * @lattice/signals - Reactive primitives for Lattice
+ * @rimitive/signals - Reactive primitives for Rimitive
  *
  * ## Quick Start
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
  *
  * const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
  * ```
@@ -13,8 +13,8 @@
  *
  * | Use Case | Import |
  * |----------|--------|
- * | Modules | `import { SignalModule, ComputedModule } from '@lattice/signals/extend'` |
- * | Types only | `import type { Readable, SignalFunction } from '@lattice/signals'` |
+ * | Modules | `import { SignalModule, ComputedModule } from '@rimitive/signals/extend'` |
+ * | Types only | `import type { Readable, SignalFunction } from '@rimitive/signals'` |
  *
  * ### Without a bundler
  *
@@ -23,8 +23,8 @@
  * triggers a separate network request. For bundler-free usage, import directly:
  *
  * ```typescript
- * import { SignalModule } from '@lattice/signals/signal';
- * import { ComputedModule } from '@lattice/signals/computed';
+ * import { SignalModule } from '@rimitive/signals/signal';
+ * import { ComputedModule } from '@rimitive/signals/computed';
  * ```
  */
 
@@ -37,7 +37,11 @@ export type { SignalFactory } from './signal';
 export type { ComputedFactory } from './computed';
 export type { EffectFactory } from './effect';
 export type { BatchFactory } from './batch';
-export type { SubscribeFunction, SubscribeCallback, UnsubscribeFunction } from './subscribe';
+export type {
+  SubscribeFunction,
+  SubscribeCallback,
+  UnsubscribeFunction,
+} from './subscribe';
 
 // =============================================================================
 // Core Types - For typing behaviors and components

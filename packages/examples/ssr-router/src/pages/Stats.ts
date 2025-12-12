@@ -1,8 +1,8 @@
 /**
  * Stats Page - Demonstrates async data loading with load()
  */
-import type { LoadState, LoadStatus } from '@lattice/view/load';
-import type { RefSpec } from '@lattice/view/types';
+import type { LoadState, LoadStatus } from '@rimitive/view/load';
+import type { RefSpec } from '@rimitive/view/types';
 import type { Service } from '../service.js';
 
 /**

@@ -9,5 +9,5 @@
     "emitDeclarationOnly": true
   },
   "include": ["src/**/*"],
-  "references": [{ "path": "../lattice" }, { "path": "../signals" }]
+  "references": [{ "path": "../core" }, { "path": "../signals" }]
 }

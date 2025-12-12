@@ -1,15 +1,15 @@
 ---
 title: Composing Signals
-description: The most basic Lattice setup—just signals.
+description: The most basic Rimitive setup—just signals.
 ---
 
-Lattice is built on composition. You pick the modules you need and `compose()` wires them together into a **reactive service**.
+Rimitive is built on composition. You pick the modules you need and `compose()` wires them together into a **reactive service**.
 
 The simplest setup is just signals:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 const svc = compose(SignalModule, ComputedModule, EffectModule);
 ```
@@ -63,8 +63,8 @@ Effects run **synchronously** — when a signal changes, effects execute immedia
 ## A Complete Example
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 // Compose the modules
 const svc = compose(SignalModule, ComputedModule, EffectModule);
@@ -95,7 +95,7 @@ lastName('Byron');
 Need batching? Add `BatchModule`:
 
 ```typescript
-import { BatchModule } from '@lattice/signals/extend';
+import { BatchModule } from '@rimitive/signals/extend';
 
 const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
 const { signal, effect, batch } = svc;
@@ -120,8 +120,8 @@ batch(() => {
 Let's build something real: a todo list with just signals.
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
 
@@ -162,7 +162,7 @@ effect(() => {
 });
 
 // Use it
-addItem('Learn Lattice');
+addItem('Learn Rimitive');
 addItem('Build something');
 // logs: "2 items left"
 
@@ -185,4 +185,4 @@ Composition gives you:
 3. **Extensibility** — Add view modules, router, custom modules later
 4. **Testing** — Create fresh contexts per test
 
-This is the foundation. Everything else in Lattice builds on top of `compose()`.
+This is the foundation. Everything else in Rimitive builds on top of `compose()`.

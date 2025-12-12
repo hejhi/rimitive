@@ -14,12 +14,12 @@ You've got `el()` for creating elements. Now let's make views dynamic: lists tha
 First, add the map module to your service:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 
@@ -65,7 +65,7 @@ For object arrays, provide a key function so `map()` can track identity:
 type Todo = { id: number; text: string; done: boolean };
 
 const todos = signal<Todo[]>([
-  { id: 1, text: 'Learn Lattice', done: false },
+  { id: 1, text: 'Learn Rimitive', done: false },
   { id: 2, text: 'Build something', done: false },
 ]);
 
@@ -109,7 +109,7 @@ const toggleTodo = (id: number) => {
 Add the match module:
 
 ```typescript
-import { createMatchModule } from '@lattice/view/match';
+import { createMatchModule } from '@rimitive/view/match';
 
 const svc = compose(
   // ... other modules
@@ -190,7 +190,7 @@ const tabContent = match(currentTab, (tab) => {
 Add the portal module:
 
 ```typescript
-import { createPortalModule } from '@lattice/view/portal';
+import { createPortalModule } from '@rimitive/view/portal';
 
 const svc = compose(
   // ... other modules
@@ -259,13 +259,13 @@ portal(targetRef)(tooltipContent)
 Here's a todo list combining `map()` and `match()`:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 const svc = compose(

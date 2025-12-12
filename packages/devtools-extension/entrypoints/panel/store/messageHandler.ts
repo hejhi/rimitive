@@ -7,7 +7,7 @@ export type DevToolsMessage = {
   data?: unknown;
 };
 
-export type LatticeEvent = {
+export type RimitiveEvent = {
   type: string;
   contextId: string;
   timestamp?: number;
@@ -17,7 +17,7 @@ export type LatticeEvent = {
 export function handleDevToolsMessage(message: DevToolsMessage) {
   switch (message.type) {
     case 'LATTICE_DETECTED':
-      handleLatticeDetected();
+      handleRimitiveDetected();
       break;
 
     case 'TRANSACTION':
@@ -30,7 +30,7 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
   }
 }
 
-function handleLatticeDetected() {
+function handleRimitiveDetected() {
   devtoolsState.connected(true);
 
   // Reset state for a fresh start
@@ -42,7 +42,7 @@ function handleLatticeDetected() {
 function handleTransaction(data: unknown) {
   if (!data || typeof data !== 'object') return;
 
-  const event = data as LatticeEvent;
+  const event = data as RimitiveEvent;
 
   // Update context metadata
   updateContextFromEvent(event);

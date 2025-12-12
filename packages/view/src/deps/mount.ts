@@ -4,13 +4,15 @@
  * Used to instantiate the root component of an application.
  */
 
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 import type { RefSpec, NodeRef } from '../types';
 
 /**
  * Mount function type - creates a RefSpec into a NodeRef
  */
-export type MountFactory = <TElement>(spec: RefSpec<TElement>) => NodeRef<TElement>;
+export type MountFactory = <TElement>(
+  spec: RefSpec<TElement>
+) => NodeRef<TElement>;
 
 /**
  * Create a mount factory

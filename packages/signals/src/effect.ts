@@ -1,4 +1,4 @@
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 import type { ScheduledNode } from './types';
 import { GraphEdgesModule } from './deps/graph-edges';
 import { SchedulerModule } from './deps/scheduler';
@@ -25,7 +25,10 @@ export type EffectFactory = (fn: () => void | (() => void)) => () => void;
  * @internal
  */
 export type EffectDeps = {
-  track: (node: ScheduledNode, fn: () => void | (() => void)) => void | (() => void);
+  track: (
+    node: ScheduledNode,
+    fn: () => void | (() => void)
+  ) => void | (() => void);
   dispose: (node: ScheduledNode, cleanup: () => void) => void;
 };
 
@@ -41,8 +44,8 @@ export type { Scheduler } from './deps/scheduler';
  *
  * @example Basic composition
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, EffectModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, EffectModule } from '@rimitive/signals/extend';
  *
  * const svc = compose(SignalModule, EffectModule);
  * const { signal, effect } = svc;

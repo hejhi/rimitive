@@ -1,5 +1,5 @@
 /**
- * @lattice/headless
+ * @rimitive/headless
  *
  * Framework-agnostic, accessible headless UI behaviors.
  *
@@ -10,9 +10,9 @@
  *
  * @example
  * ```ts
- * import { dialog, select } from '@lattice/headless';
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+ * import { dialog, select } from '@rimitive/headless';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
  *
  * const svc = compose(SignalModule, ComputedModule, EffectModule);
  *

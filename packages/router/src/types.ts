@@ -5,9 +5,9 @@ import type {
   ElRefSpecChild,
   Readable,
   Writable,
-} from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import type { ElementProps, ElFactory } from '@lattice/view/el';
+} from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type { ElementProps, ElFactory } from '@rimitive/view/el';
 
 /**
  * Route parameter map extracted from path patterns
@@ -42,7 +42,7 @@ export type Route<TElement> = {
   create<TExt = Record<string, unknown>>(
     svc?: unknown,
     extensions?: TExt
-  ): import('@lattice/view/types').NodeRef<TElement> & TExt;
+  ): import('@rimitive/view/types').NodeRef<TElement> & TExt;
 };
 
 /**

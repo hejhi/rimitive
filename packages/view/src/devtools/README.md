@@ -54,8 +54,8 @@ Tracks event listener attachment, event fires, and detachment.
 To use instrumentation, pass the `instrument` function when creating the extension:
 
 ```typescript
-import { El } from '@lattice/view';
-import { instrumentEl } from '@lattice/view/devtools';
+import { El } from '@rimitive/view';
+import { instrumentEl } from '@rimitive/view/devtools';
 
 // Create instrumentation context
 const instrumentation = createInstrumentation({
@@ -73,15 +73,15 @@ const el = El().create({
 ## Example: Full View Context with Instrumentation
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { El } from '@lattice/view';
-import { Map } from '@lattice/view/map';
-import { On } from '@lattice/view/on';
+import { compose } from '@rimitive/core';
+import { El } from '@rimitive/view';
+import { Map } from '@rimitive/view/map';
+import { On } from '@rimitive/view/on';
 import {
   instrumentEl,
   instrumentMap,
   instrumentOn,
-} from '@lattice/view/devtools';
+} from '@rimitive/view/devtools';
 
 // Create instrumentation context
 const instrumentation = createInstrumentation({

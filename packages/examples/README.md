@@ -1,20 +1,20 @@
-# @lattice/examples
+# @rimitive/examples
 
-Example applications demonstrating Lattice features.
+Example applications demonstrating Rimitive features.
 
 ## Examples
 
-| Example | Description | Run |
-|---------|-------------|-----|
-| **view** | Core view primitives (`el`, `map`, `match`) | `pnpm --filter @lattice/example-view dev` |
-| **react** | React integration with `@lattice/react` | `pnpm --filter @lattice/example-react dev` |
-| **router** | Client-side routing | `pnpm --filter @lattice/example-router dev` |
-| **resource** | Async data fetching with `resource()` | `pnpm --filter @lattice/example-resource dev` |
-| **ssr-router** | SSR with routing and data loading | `pnpm --filter @lattice/example-ssr-router dev` |
-| **ssr-streaming** | Streaming SSR | `pnpm --filter @lattice/example-ssr-streaming dev` |
-| **headless** | Portable headless behaviors | `pnpm --filter @lattice/example-headless dev` |
-| **canvas** | Custom canvas adapter | `pnpm --filter @lattice/example-canvas dev` |
-| **devtools** | DevTools integration | `pnpm --filter @lattice/example-devtools dev` |
+| Example           | Description                                 | Run                                                 |
+| ----------------- | ------------------------------------------- | --------------------------------------------------- |
+| **view**          | Core view primitives (`el`, `map`, `match`) | `pnpm --filter @rimitive/example-view dev`          |
+| **react**         | React integration with `@rimitive/react`    | `pnpm --filter @rimitive/example-react dev`         |
+| **router**        | Client-side routing                         | `pnpm --filter @rimitive/example-router dev`        |
+| **resource**      | Async data fetching with `resource()`       | `pnpm --filter @rimitive/example-resource dev`      |
+| **ssr-router**    | SSR with routing and data loading           | `pnpm --filter @rimitive/example-ssr-router dev`    |
+| **ssr-streaming** | Streaming SSR                               | `pnpm --filter @rimitive/example-ssr-streaming dev` |
+| **headless**      | Portable headless behaviors                 | `pnpm --filter @rimitive/example-headless dev`      |
+| **canvas**        | Custom canvas adapter                       | `pnpm --filter @rimitive/example-canvas dev`        |
+| **devtools**      | DevTools integration                        | `pnpm --filter @rimitive/example-devtools dev`      |
 
 ## Quick Start
 
@@ -22,9 +22,9 @@ From the monorepo root:
 
 ```bash
 # Run any example
-pnpm --filter @lattice/example-view dev
-pnpm --filter @lattice/example-react dev
-pnpm --filter @lattice/example-ssr-router dev
+pnpm --filter @rimitive/example-view dev
+pnpm --filter @rimitive/example-react dev
+pnpm --filter @rimitive/example-ssr-router dev
 # etc.
 ```
 
@@ -39,15 +39,15 @@ pnpm dev
 
 ### view
 
-Basic Lattice view example using `el`, `map`, and `match` for DOM rendering. Good starting point for understanding the view primitives.
+Basic Rimitive view example using `el`, `map`, and `match` for DOM rendering. Good starting point for understanding the view primitives.
 
 ### react
 
-Shows how to use Lattice signals in React with `@lattice/react`. Demonstrates `useSignal`, `useSubscribe`, `useSelector`, and `createHook`.
+Shows how to use Rimitive signals in React with `@rimitive/react`. Demonstrates `useSignal`, `useSubscribe`, `useSelector`, and `createHook`.
 
 ### router
 
-Client-side routing with `@lattice/router`. Multiple pages, navigation, and route parameters.
+Client-side routing with `@rimitive/router`. Multiple pages, navigation, and route parameters.
 
 ### resource
 
@@ -67,11 +67,11 @@ Portable behaviors that work across frameworks. Demonstrates the `(svc) => (...a
 
 ### canvas
 
-Custom adapter example rendering to HTML5 Canvas instead of DOM. Shows how Lattice's adapter system enables alternative renderers.
+Custom adapter example rendering to HTML5 Canvas instead of DOM. Shows how Rimitive's adapter system enables alternative renderers.
 
 ### devtools
 
-Example app instrumented for the Lattice DevTools extension. Useful for testing the devtools during development.
+Example app instrumented for the Rimitive DevTools extension. Useful for testing the devtools during development.
 
 ## License
 

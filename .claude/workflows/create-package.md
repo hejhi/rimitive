@@ -1,6 +1,6 @@
 ---
-name: 'Lattice Monorepo Package Creation'
-description: 'Complete workflow for creating a new package in the Lattice monorepo with proper setup and configuration'
+name: 'Rimitive Monorepo Package Creation'
+description: 'Complete workflow for creating a new package in the Rimitive monorepo with proper setup and configuration'
 stages:
   - name: 'Package Scaffolding'
     command: '/scaffold-package'
@@ -11,9 +11,9 @@ stages:
     description: 'Set up package configuration files, such as configs, dotfiles, etc'
 ---
 
-# Lattice Monorepo Package Creation Workflow
+# Rimitive Monorepo Package Creation Workflow
 
-This workflow guides you through creating a new package in the Lattice monorepo following established patterns and conventions.
+This workflow guides you through creating a new package in the Rimitive monorepo following established patterns and conventions.
 
 ## Overview
 
@@ -25,7 +25,7 @@ The process involves 3 main stages that ensure proper monorepo integration:
 
 ## Key Features
 
-- **Pattern Consistency**: Follows established conventions from @lattice/signals, @lattice/lattice, @lattice/react
+- **Pattern Consistency**: Follows established conventions from @rimitive/signals, @rimitive/core, @rimitive/react
 - **Proper Exports**: Sets up modular exports with tree-shaking support
 - **TypeScript Ready**: Full TypeScript configuration with strict settings
 - **Build Integration**: Vite configuration with proper entry points and minification
@@ -34,16 +34,16 @@ The process involves 3 main stages that ensure proper monorepo integration:
 
 ## Package Naming
 
-Use the format: `@lattice/package-name`
+Use the format: `@rimitive/package-name`
 
 Examples:
 
-- `@lattice/ui-components`
-- `@lattice/validation`
+- `@rimitive/ui-components`
+- `@rimitive/validation`
 
 ## Key Principles
 
-- **Follow existing patterns** - Study @lattice/signals, @lattice/lattice, @lattice/react
+- **Follow existing patterns** - Study @rimitive/signals, @rimitive/core, @rimitive/react
 - **Maintain tree-shaking** - Use proper exports and avoid side effects
 - **Factory pattern** - Use composable factories for extensibility where applicable
 - **TypeScript first** - Proper types and strict configuration

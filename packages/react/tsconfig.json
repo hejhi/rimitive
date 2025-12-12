@@ -10,5 +10,5 @@
     "types": ["vitest/importMeta", "@testing-library/jest-dom"]
   },
   "include": ["src/**/*"],
-  "references": [{ "path": "../lattice" }, { "path": "../signals" }]
+  "references": [{ "path": "../core" }, { "path": "../signals" }]
 }

@@ -7,13 +7,13 @@
  * Used by both server and client code.
  */
 
-import type { NodeRef } from '@lattice/view/types';
-import { STATUS_FRAGMENT, STATUS_ELEMENT } from '@lattice/view/types';
+import type { NodeRef } from '@rimitive/view/types';
+import { STATUS_FRAGMENT, STATUS_ELEMENT } from '@rimitive/view/types';
 import {
   ASYNC_FRAGMENT,
   isAsyncFragment,
   type AsyncFragment,
-} from '@lattice/view/load';
+} from '@rimitive/view/load';
 
 // Re-export for convenience
 export { isAsyncFragment, ASYNC_FRAGMENT, type AsyncFragment };

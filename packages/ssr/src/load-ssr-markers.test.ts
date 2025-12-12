@@ -16,18 +16,18 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { createLoader } from '@lattice/view/load';
-import type { LoadState, LoadStatus } from '@lattice/view/load';
-import type { RefSpec } from '@lattice/view/types';
+} from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createLoader } from '@rimitive/view/load';
+import type { LoadState, LoadStatus } from '@rimitive/view/load';
+import type { RefSpec } from '@rimitive/view/types';
 import { createDOMServerAdapter, renderToStringAsync } from './server/index';
 
 /**
@@ -35,7 +35,8 @@ import { createDOMServerAdapter, renderToStringAsync } from './server/index';
  * Returns service, adapter, serialize, insertFragmentMarkers, and getLoaderData function
  */
 function createTestService() {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } =
+    createDOMServerAdapter();
 
   const baseSvc = compose(
     SignalModule,
@@ -125,77 +126,72 @@ describe('load() SSR fragment marker positioning', () => {
     expect(loaderData['test-fragment']).toEqual(testData);
   });
 
-  it(
-    'should position markers around the actual content, not the initial pending state',
-    async () => {
-      const {
-        service: svc,
-        serialize,
-        insertFragmentMarkers,
-        getLoaderData,
-      } = createTestService();
-      const { el, load, match } = svc;
+  it('should position markers around the actual content, not the initial pending state', async () => {
+    const {
+      service: svc,
+      serialize,
+      insertFragmentMarkers,
+      getLoaderData,
+    } = createTestService();
+    const { el, load, match } = svc;
 
-      const testData = { message: 'Hello World' };
+    const testData = { message: 'Hello World' };
 
-      const appSpec = el('main')(
-        load(
-          'message-fragment',
-          async () => testData,
-          (state: LoadState<typeof testData>) =>
-            match(state.status, (status: LoadStatus) => {
-              switch (status) {
-                case 'pending':
-                  return el('span').props({ className: 'pending' })('...');
-                case 'error':
-                  return el('span').props({ className: 'error' })('!');
-                case 'ready':
-                  return el('p').props({ className: 'content' })(
-                    state.data()?.message ?? ''
-                  );
-              }
-            })
-        )
-      );
+    const appSpec = el('main')(
+      load(
+        'message-fragment',
+        async () => testData,
+        (state: LoadState<typeof testData>) =>
+          match(state.status, (status: LoadStatus) => {
+            switch (status) {
+              case 'pending':
+                return el('span').props({ className: 'pending' })('...');
+              case 'error':
+                return el('span').props({ className: 'error' })('!');
+              case 'ready':
+                return el('p').props({ className: 'content' })(
+                  state.data()?.message ?? ''
+                );
+            }
+          })
+      )
+    );
 
-      const html = await renderToStringAsync(appSpec, {
-        svc,
-        mount: (spec: RefSpec<unknown>) => spec.create(svc),
-        serialize,
-        insertFragmentMarkers,
-      });
+    const html = await renderToStringAsync(appSpec, {
+      svc,
+      mount: (spec: RefSpec<unknown>) => spec.create(svc),
+      serialize,
+      insertFragmentMarkers,
+    });
 
-      // Extract the main content to analyze marker positioning
-      const mainMatch = html.match(/<main>([\s\S]*)<\/main>/);
-      expect(mainMatch).not.toBeNull();
-      const mainContent = mainMatch![1];
+    // Extract the main content to analyze marker positioning
+    const mainMatch = html.match(/<main>([\s\S]*)<\/main>/);
+    expect(mainMatch).not.toBeNull();
+    const mainContent = mainMatch![1];
 
-      // The markers should wrap the ready content (the <p>), not be empty
-      // CORRECT: <!--fragment-start--> ... <p>...</p> ... <!--fragment-end-->
-      // WRONG:   <!--fragment-start--><!--fragment-end--><p>...</p>
+    // The markers should wrap the ready content (the <p>), not be empty
+    // CORRECT: <!--fragment-start--> ... <p>...</p> ... <!--fragment-end-->
+    // WRONG:   <!--fragment-start--><!--fragment-end--><p>...</p>
 
-      // Check that fragment-start comes before the actual content
-      const fragmentStartIndex = mainContent!.indexOf('fragment-start');
-      const pTagIndex = mainContent!.indexOf('<p');
-      const fragmentEndIndex = mainContent!.indexOf('fragment-end');
+    // Check that fragment-start comes before the actual content
+    const fragmentStartIndex = mainContent!.indexOf('fragment-start');
+    const pTagIndex = mainContent!.indexOf('<p');
+    const fragmentEndIndex = mainContent!.indexOf('fragment-end');
 
-      expect(fragmentStartIndex).toBeGreaterThanOrEqual(0);
-      expect(pTagIndex).toBeGreaterThan(fragmentStartIndex);
-      expect(fragmentEndIndex).toBeGreaterThan(pTagIndex);
+    expect(fragmentStartIndex).toBeGreaterThanOrEqual(0);
+    expect(pTagIndex).toBeGreaterThan(fragmentStartIndex);
+    expect(fragmentEndIndex).toBeGreaterThan(pTagIndex);
 
-      // Verify data is NOT embedded in markers
-      expect(mainContent).not.toContain('fragment-start:');
+    // Verify data is NOT embedded in markers
+    expect(mainContent).not.toContain('fragment-start:');
 
-      // Verify no empty marker pairs (the bug symptom)
-      expect(mainContent).not.toMatch(
-        /<!--fragment-start--><!--fragment-end-->/
-      );
+    // Verify no empty marker pairs (the bug symptom)
+    expect(mainContent).not.toMatch(/<!--fragment-start--><!--fragment-end-->/);
 
-      // Data should be available via getLoaderData()
-      const loaderData = getLoaderData();
-      expect(loaderData['message-fragment']).toEqual(testData);
-    }
-  );
+    // Data should be available via getLoaderData()
+    const loaderData = getLoaderData();
+    expect(loaderData['message-fragment']).toEqual(testData);
+  });
 
   it('should handle nested load() correctly', async () => {
     const {

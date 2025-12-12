@@ -5,7 +5,7 @@
  * Provides state management, ARIA attributes, keyboard navigation, and typeahead.
  */
 import type { ReactiveSvc } from './types';
-import { Writable, Readable } from '@lattice/signals/types';
+import { Writable, Readable } from '@rimitive/signals/types';
 
 export type SelectOption<T = string> = {
   value: T;

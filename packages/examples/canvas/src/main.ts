@@ -21,7 +21,7 @@ const appRef = dom.mount(
 const root = document.getElementById('root');
 root!.appendChild(appRef.element!);
 
-console.log('Lattice Canvas Example loaded!');
+console.log('Rimitive Canvas Example loaded!');
 console.log('- Click shapes to select');
 console.log('- Drag to move');
 console.log('- Use buttons to add more shapes');

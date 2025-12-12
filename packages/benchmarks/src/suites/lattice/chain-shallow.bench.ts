@@ -30,8 +30,8 @@ import {
 import { createSvc } from './deps/signal-computed';
 
 const ITERATIONS = 10000;
-const latticeSvc = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
+const rimitiveSvc = createSvc();
+const { signal: rimitiveSignal, computed: rimitiveComputed } = rimitiveSvc;
 
 type BenchState = {
   get(name: 'width'): number;
@@ -41,16 +41,16 @@ type BenchState = {
 group('Computed Chain - Shallow (Wide)', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice - $width wide', function* (state: BenchState) {
+      bench('Rimitive - $width wide', function* (state: BenchState) {
         const width = state.get('width');
-        const source = latticeSignal(0);
+        const source = rimitiveSignal(0);
 
         // Level 1: Create N computeds reading from signal
         const intermediates: (() => number)[] = [];
         for (let i = 0; i < width; i++) {
           const index = i;
           intermediates.push(
-            latticeComputed(() => {
+            rimitiveComputed(() => {
               const val = source();
               // Non-trivial computation
               let result = val;
@@ -63,7 +63,7 @@ group('Computed Chain - Shallow (Wide)', () => {
         }
 
         // Level 2: Single computed reading all intermediates
-        const final = latticeComputed(() => {
+        const final = rimitiveComputed(() => {
           let sum = 0;
           for (let i = 0; i < width; i++) {
             sum += intermediates[i]!();

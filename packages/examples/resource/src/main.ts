@@ -1,5 +1,5 @@
 import { signal, computed, resource, el, map, match, mount } from './service';
-import type { Reactive } from '@lattice/signals';
+import type { Reactive } from '@rimitive/signals';
 
 // Types for our API data
 type User = { id: number; name: string; email: string };
@@ -56,7 +56,7 @@ const ErrorDisplay = (error: unknown) =>
 // Main app
 const App = () =>
   el('div')(
-    el('h1')('Lattice Resource Example'),
+    el('h1')('Rimitive Resource Example'),
 
     // Users section
     el('div').props({ className: 'card' })(

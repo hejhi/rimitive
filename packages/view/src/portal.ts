@@ -33,7 +33,7 @@ import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createNodeHelpers } from './deps/node-deps';
 import { setFragmentChild } from './deps/fragment-boundaries';
-import { defineModule, type Module } from '@lattice/lattice';
+import { defineModule, type Module } from '@rimitive/core';
 
 /**
  * Portal target - where content should be rendered
@@ -85,8 +85,8 @@ export type PortalFactory<TBaseElement> = <TElement extends TBaseElement>(
  * Use this type when building custom view service compositions:
  * @example
  * ```ts
- * import { createPortalFactory, type PortalService } from '@lattice/view/portal';
- * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+ * import { createPortalFactory, type PortalService } from '@rimitive/view/portal';
+ * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
  *
  * const portal: PortalService<DOMAdapterConfig> = createPortalFactory({
  *   adapter,
@@ -265,9 +265,9 @@ export function createPortalFactory<TConfig extends AdapterConfig>({
  *
  * @example
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { createPortalModule } from '@lattice/view/portal';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { compose } from '@rimitive/core';
+ * import { createPortalModule } from '@rimitive/view/portal';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();
  * const PortalModule = createPortalModule(adapter);

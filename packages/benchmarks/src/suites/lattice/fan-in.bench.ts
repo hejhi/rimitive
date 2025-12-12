@@ -31,8 +31,8 @@ import {
 import { createSvc } from './deps/signal-computed';
 
 const ITERATIONS = 25000;
-const latticeSvc = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
+const rimitiveSvc = createSvc();
+const { signal: rimitiveSignal, computed: rimitiveComputed } = rimitiveSvc;
 
 type BenchState = {
   get(name: 'sources'): number;
@@ -42,17 +42,17 @@ type BenchState = {
 group('Fan-In Convergence Scaling', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice - $sources sources', function* (state: BenchState) {
+      bench('Rimitive - $sources sources', function* (state: BenchState) {
         const sourceCount = state.get('sources');
 
         // Create many independent sources
         const sources = Array.from({ length: sourceCount }, (_, i) =>
-          latticeSignal(i)
+          rimitiveSignal(i)
         );
 
         // Each source has its own computed with unique work
         const computeds = sources.map((source, i) =>
-          latticeComputed(() => {
+          rimitiveComputed(() => {
             const val = source();
             // Different computation per source to prevent optimization
             let result = val;
@@ -64,7 +64,7 @@ group('Fan-In Convergence Scaling', () => {
         );
 
         // Single fan-in point that aggregates all computeds
-        const fanIn = latticeComputed(() => {
+        const fanIn = rimitiveComputed(() => {
           // Aggregate all computed values
           let total = 0;
           for (const computed of computeds) {

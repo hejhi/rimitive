@@ -1,9 +1,9 @@
 ---
-name: lattice-behavior
-description: Create headless behaviors in Lattice. Use when creating reusable state logic, hooks, or headless UI patterns like toggles, forms, disclosure, or any portable reactive logic.
+name: rimitive-behavior
+description: Create headless behaviors in Rimitive. Use when creating reusable state logic, hooks, or headless UI patterns like toggles, forms, disclosure, or any portable reactive logic.
 ---
 
-# Creating Lattice Behaviors
+# Creating Rimitive Behaviors
 
 Behaviors are portable functions that encapsulate reactive logic without UI. They follow a specific three-level pattern.
 
@@ -21,11 +21,14 @@ const behaviorName = (svc: SignalsSvc) => (options?: Options) => {
   // Derive values with svc.computed()
   // Set up effects with svc.effect()
   // Return the public API
-  return { /* signals, computeds, actions */ };
+  return {
+    /* signals, computeds, actions */
+  };
 };
 ```
 
 Three levels:
+
 1. **Service injection**: `(svc) =>` — receives signal primitives
 2. **Factory**: `(options?) =>` — configures the instance
 3. **API**: `{ ... }` — the reactive interface consumers use
@@ -33,6 +36,7 @@ Three levels:
 ## Instructions
 
 1. **Define the options type** (if needed):
+
    ```typescript
    type CounterOptions = {
      initial?: number;
@@ -42,17 +46,20 @@ Three levels:
    ```
 
 2. **Create signals for internal state**:
+
    ```typescript
    const count = svc.signal(opts.initial ?? 0);
    ```
 
 3. **Create computeds for derived values**:
+
    ```typescript
    const doubled = svc.computed(() => count() * 2);
    const canIncrement = svc.computed(() => count() < (opts.max ?? Infinity));
    ```
 
 4. **Create effects for side effects** (cleanup is returned):
+
    ```typescript
    svc.effect(() => {
      console.log('Count changed:', count());
@@ -70,14 +77,16 @@ Three levels:
 For simple behaviors with one primary signal, attach actions directly:
 
 ```typescript
-const toggle = (svc: SignalsSvc) => (initial = false) => {
-  const value = svc.signal(initial);
-  return Object.assign(value, {
-    on: () => value(true),
-    off: () => value(false),
-    toggle: () => value(v => !v),
-  });
-};
+const toggle =
+  (svc: SignalsSvc) =>
+  (initial = false) => {
+    const value = svc.signal(initial);
+    return Object.assign(value, {
+      on: () => value(true),
+      off: () => value(false),
+      toggle: () => value((v) => !v),
+    });
+  };
 ```
 
 ## Composition
@@ -107,6 +116,7 @@ const dropdown = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
 ## File Location
 
 Place behaviors in a `behaviors/` directory:
+
 - `packages/examples/*/src/behaviors/` for examples
 - `packages/headless/src/` for the headless package
 - Or co-locate with components that use them
@@ -114,6 +124,7 @@ Place behaviors in a `behaviors/` directory:
 ## Naming Conventions
 
 Choose one consistently:
+
 - Plain: `counter`, `disclosure`, `pagination`
 - `use` prefix: `useCounter`, `useDisclosure` (familiar to React users)
 - `create` prefix: `createCounter` (emphasizes factory nature)
@@ -123,8 +134,12 @@ Choose one consistently:
 Behaviors are trivial to test—no DOM needed:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
 
 const createTestSvc = () => compose(SignalModule, ComputedModule, EffectModule);
 

@@ -6,7 +6,7 @@ export const Home =
     const { navigate } = router;
     return el('div').props({ className: 'page' })(
       el('h2')('Welcome Home'),
-      el('p')('This is the home page of the Lattice Router example.'),
+      el('p')('This is the home page of the Rimitive Router example.'),
       el('div').props({ className: 'card' })(
         el('h3')('Features Demonstrated:'),
         el('ul')(

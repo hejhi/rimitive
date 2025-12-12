@@ -1,5 +1,5 @@
 {
-  "name": "@lattice/example-resource",
+  "name": "@rimitive/example-resource",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -10,10 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/resource": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "@lattice/view": "workspace:*"
+    "@rimitive/core": "workspace:*",
+    "@rimitive/resource": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3",

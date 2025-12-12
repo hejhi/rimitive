@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react';
-import type { Readable, Writable } from '@lattice/signals/types';
+import type { Readable, Writable } from '@rimitive/signals/types';
 
 /**
  * Minimal service interface used by React bindings.
@@ -7,8 +7,8 @@ import type { Readable, Writable } from '@lattice/signals/types';
  *
  * @example
  * ```tsx
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
  *
  * const svc: SignalSvc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
  * ```
@@ -29,8 +29,8 @@ const SignalContext = createContext<SignalSvc | null>(null);
  *
  * @example
  * ```tsx
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
  *
  * const props: SignalProviderProps = {
  *   svc: compose(SignalModule, ComputedModule, EffectModule, BatchModule),
@@ -49,9 +49,9 @@ export type SignalProviderProps = {
  *
  * @example
  * ```tsx
- * import { SignalProvider } from '@lattice/react';
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+ * import { SignalProvider } from '@rimitive/react';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
  *
  * const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
  *
@@ -64,7 +64,10 @@ export type SignalProviderProps = {
  * }
  * ```
  */
-export function SignalProvider({ svc, children }: SignalProviderProps): ReactNode {
+export function SignalProvider({
+  svc,
+  children,
+}: SignalProviderProps): ReactNode {
   // Dispose the service when the provider unmounts
   useEffect(() => {
     return () => svc.dispose();

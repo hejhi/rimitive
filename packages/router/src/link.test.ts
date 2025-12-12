@@ -7,9 +7,9 @@ import {
   type MockText,
   getTextContent,
 } from '../../view/src/test-utils';
-import { createElFactory } from '@lattice/view/el';
-import type { ElementRef } from '@lattice/view/types';
-import { STATUS_ELEMENT } from '@lattice/view/types';
+import { createElFactory } from '@rimitive/view/el';
+import type { ElementRef } from '@rimitive/view/types';
+import { STATUS_ELEMENT } from '@rimitive/view/types';
 
 describe('Link component - basic rendering', () => {
   function setup() {

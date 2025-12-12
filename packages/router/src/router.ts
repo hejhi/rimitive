@@ -14,11 +14,11 @@
  * The view layer uses match() to render based on router.matches().
  */
 
-import type { Readable, Writable } from '@lattice/view/types';
-import { defineModule, type Module } from '@lattice/lattice';
-import type { SignalFactory } from '@lattice/signals/extend';
-import type { ComputedFactory } from '@lattice/signals/extend';
-import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+import type { Readable, Writable } from '@rimitive/view/types';
+import { defineModule, type Module } from '@rimitive/core';
+import type { SignalFactory } from '@rimitive/signals/extend';
+import type { ComputedFactory } from '@rimitive/signals/extend';
+import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
 import { matchPath, matchPathPrefix } from './helpers/matching';
 
 /**
@@ -263,13 +263,13 @@ function matchRoutes(
 /**
  * Create a router instance
  *
- * @param deps - Signal primitives from @lattice/signals
+ * @param deps - Signal primitives from @rimitive/signals
  * @param routes - Route configuration (pure data)
  * @param options - Router options
  *
  * @example
  * ```typescript
- * import { createRouter } from '@lattice/router';
+ * import { createRouter } from '@rimitive/router';
  *
  * const routes = [
  *   { id: 'home', path: '' },
@@ -372,9 +372,9 @@ export function createRouter(
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
- * import { createRouterModule } from '@lattice/router';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+ * import { createRouterModule } from '@rimitive/router';
  *
  * const routes = [
  *   { id: 'home', path: '' },

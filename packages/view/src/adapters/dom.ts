@@ -7,7 +7,7 @@ import type { Adapter, AdapterConfig } from '../adapter';
  *
  * @example
  * ```typescript
- * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+ * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
  *
  * // Use in generic view types
  * type MyViewSvc = ViewSvc<DOMAdapterConfig>;
@@ -31,10 +31,10 @@ export type DOMAdapterConfig = AdapterConfig & {
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(SignalModule, ComputedModule, EffectModule, createElModule(adapter));

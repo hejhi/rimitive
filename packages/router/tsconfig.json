@@ -10,7 +10,7 @@
   },
   "include": ["src/**/*"],
   "references": [
-    { "path": "../lattice" },
+    { "path": "../core" },
     { "path": "../signals" },
     { "path": "../view" }
   ]

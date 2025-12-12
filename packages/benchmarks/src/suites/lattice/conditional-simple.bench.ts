@@ -24,8 +24,8 @@ import {
 import { createSvc } from './deps/signal-computed';
 
 const ITERATIONS = 50000;
-const latticeSvc = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
+const rimitiveSvc = createSvc();
+const { signal: rimitiveSignal, computed: rimitiveComputed } = rimitiveSvc;
 
 type BenchState = {
   get(name: 'branches'): number;
@@ -35,18 +35,18 @@ type BenchState = {
 group('Conditional Dependencies - Branch Pruning', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice - $branches branches', function* (state: BenchState) {
+      bench('Rimitive - $branches branches', function* (state: BenchState) {
         const branchCount = state.get('branches');
-        const condition = latticeSignal(0);
+        const condition = rimitiveSignal(0);
 
         // Create multiple branches with expensive computations
         const branches = Array.from({ length: branchCount }, (_, i) =>
-          latticeSignal(i)
+          rimitiveSignal(i)
         );
 
         // Expensive computations for each branch
         const computedBranches = branches.map((branch) =>
-          latticeComputed(() => {
+          rimitiveComputed(() => {
             const val = branch();
             // Expensive computation that should be skipped for inactive branches
             let result = val;
@@ -58,7 +58,7 @@ group('Conditional Dependencies - Branch Pruning', () => {
         );
 
         // Conditional that selects active branch
-        const result = latticeComputed(() => {
+        const result = rimitiveComputed(() => {
           const idx = condition() % branchCount;
           return computedBranches[idx]!();
         });

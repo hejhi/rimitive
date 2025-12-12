@@ -1,5 +1,5 @@
 /**
- * @lattice/signals/extend - Extension API for custom composition
+ * @rimitive/signals/extend - Extension API for custom composition
  *
  * Use this module when you need to:
  * - Create custom signal compositions with different deps
@@ -23,8 +23,14 @@ export { UntrackModule, createUntracked } from './untrack';
 // =============================================================================
 
 export { GraphEdgesModule, createGraphEdges } from './deps/graph-edges';
-export { GraphTraversalModule, createGraphTraversal } from './deps/graph-traversal';
-export { PullPropagatorModule, createPullPropagator } from './deps/pull-propagator';
+export {
+  GraphTraversalModule,
+  createGraphTraversal,
+} from './deps/graph-traversal';
+export {
+  PullPropagatorModule,
+  createPullPropagator,
+} from './deps/pull-propagator';
 export { SchedulerModule, createScheduler } from './deps/scheduler';
 
 // =============================================================================

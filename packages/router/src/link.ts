@@ -5,10 +5,14 @@
  * Automatically gets navigate from API if available (client-side).
  */
 
-import type { ElRefSpecChild, RefSpec, LifecycleCallback } from '@lattice/view/types';
-import { STATUS_REF_SPEC } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import type { ElementProps, ElFactory } from '@lattice/view/el';
+import type {
+  ElRefSpecChild,
+  RefSpec,
+  LifecycleCallback,
+} from '@rimitive/view/types';
+import { STATUS_REF_SPEC } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type { ElementProps, ElFactory } from '@rimitive/view/el';
 import { getActiveRouterContext } from './ssr-context';
 
 /**
@@ -19,7 +23,7 @@ import { getActiveRouterContext } from './ssr-context';
  *
  * @example
  * ```typescript
- * import { Link } from '@lattice/router';
+ * import { Link } from '@rimitive/router';
  *
  * // Basic link
  * const navLink = Link({ href: '/about' })('About Us');
@@ -52,9 +56,10 @@ export function Link(
     };
 
     refSpec.status = STATUS_REF_SPEC;
-    refSpec.create = (
-      svc: { el: ElFactory<DOMAdapterConfig>; router?: { navigate: (path: string) => void } }
-    ) => {
+    refSpec.create = (svc: {
+      el: ElFactory<DOMAdapterConfig>;
+      router?: { navigate: (path: string) => void };
+    }) => {
       const { el } = svc;
       const { href, onclick: userOnClick, ...restProps } = props;
 

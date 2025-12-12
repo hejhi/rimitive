@@ -1,8 +1,8 @@
 {
-  "name": "@lattice/examples",
+  "name": "@rimitive/examples",
   "version": "0.0.1",
   "private": true,
-  "description": "Example applications demonstrating Lattice features",
+  "description": "Example applications demonstrating Rimitive features",
   "type": "module",
   "scripts": {
     "dev": "pnpm dev:react",
@@ -17,10 +17,10 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/react": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "@lattice/view": "workspace:*"
+    "@rimitive/core": "workspace:*",
+    "@rimitive/react": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3"

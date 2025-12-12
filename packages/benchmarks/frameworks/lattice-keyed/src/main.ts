@@ -1,10 +1,15 @@
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { OnModule } from '@lattice/view/deps/addEventListener';
-import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+} from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+import type { Reactive, ElRefSpecChild } from '@rimitive/view/types';
 
 // Wire up view layer
 const adapter = createDOMAdapter();
@@ -192,7 +197,7 @@ const App = () => {
   return el('div').props({ className: 'container' })(
     el('div').props({ className: 'jumbotron' })(
       el('div').props({ className: 'row' })(
-        el('div').props({ className: 'col-md-6' })(el('h1')('Lattice-keyed')),
+        el('div').props({ className: 'col-md-6' })(el('h1')('Rimitive-keyed')),
         el('div').props({ className: 'col-md-6' })(
           el('div').props({ className: 'row' })(
             Button('run', 'Create 1,000 rows', run),

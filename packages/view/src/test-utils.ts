@@ -3,13 +3,13 @@ import type { Adapter, AdapterConfig } from './adapter';
 import type { Reactive, RefSpec, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
 import { createScopes } from './deps/scope';
-import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
-import { createScheduler } from '@lattice/signals/deps/scheduler';
-import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
-import { createPullPropagator } from '@lattice/signals/deps/pull-propagator';
+import { createGraphEdges } from '@rimitive/signals/deps/graph-edges';
+import { createScheduler } from '@rimitive/signals/deps/scheduler';
+import { createGraphTraversal } from '@rimitive/signals/deps/graph-traversal';
+import { createSignalFactory } from '@rimitive/signals/signal';
+import { createComputedFactory } from '@rimitive/signals/computed';
+import { createEffectFactory } from '@rimitive/signals/effect';
+import { createPullPropagator } from '@rimitive/signals/deps/pull-propagator';
 
 // Re-export types for convenience
 export type { Reactive };

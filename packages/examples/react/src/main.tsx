@@ -1,5 +1,5 @@
 /**
- * Lattice React - Portable Behaviors Example
+ * Rimitive React - Portable Behaviors Example
  *
  * This example demonstrates:
  * 1. Using portable behaviors with createHook for clean React integration
@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
+import { SignalProvider, createHook, useSubscribe } from '@rimitive/react';
 
 // Import portable behaviors
 import { counter } from './behaviors/counter';
@@ -68,7 +68,7 @@ function StepCounter() {
  */
 function SlideCarousel() {
   const slides = [
-    'Introduction to Lattice',
+    'Introduction to Rimitive',
     'Creating Portable Behaviors',
     'Using in React',
     'Using in Vue',
@@ -128,7 +128,7 @@ function SlideCarousel() {
 function TodoApp() {
   const todoList = useTodoList({
     initialTodos: [
-      { id: 1, text: 'Learn Lattice', completed: false },
+      { id: 1, text: 'Learn Rimitive', completed: false },
       { id: 2, text: 'Build a React app', completed: false },
       { id: 3, text: 'Try portable behaviors', completed: true },
     ],
@@ -371,7 +371,7 @@ function FineGrainedReactivityDemo() {
         }}
       >
         <strong>Key Point:</strong> With traditional React Context, changing any
-        value would cause ALL four components to re-render. With Lattice
+        value would cause ALL four components to re-render. With Rimitive
         signals, only the specific component subscribed to the changed signal
         re-renders. This is <strong>fine-grained reactivity</strong>!
       </div>
@@ -420,7 +420,7 @@ function DesignSystemDemo() {
         </Modal>
 
         <Modal title="Help & Documentation">
-          <h3 style={{ marginTop: 0 }}>How to use Lattice</h3>
+          <h3 style={{ marginTop: 0 }}>How to use Rimitive</h3>
           <p>This modal demonstrates how design system components can:</p>
           <ul>
             <li>
@@ -458,10 +458,10 @@ function DesignSystemDemo() {
 function App() {
   return (
     <div className="container">
-      <h1>Lattice React - Portable Behaviors</h1>
+      <h1>Rimitive React - Portable Behaviors</h1>
 
       <div className="info">
-        <strong>Open Chrome DevTools → "Lattice" tab</strong> to see reactive
+        <strong>Open Chrome DevTools → "Rimitive" tab</strong> to see reactive
         state updates in real-time!
         <br />
         <br />

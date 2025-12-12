@@ -4,13 +4,13 @@ import { afterEach } from 'vitest';
 import { createElement, ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { SignalProvider, SignalSvc } from './signals/context';
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
+} from '@rimitive/signals/extend';
 
 /** Create a signals service for testing */
 function createTestSignals(): SignalSvc {

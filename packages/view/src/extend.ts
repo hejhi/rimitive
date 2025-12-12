@@ -1,5 +1,5 @@
 /**
- * @lattice/view/extend - Extension API for custom view compositions
+ * @rimitive/view/extend - Extension API for custom view compositions
  *
  * Use this module when you need to:
  * - Create custom adapters (Canvas, WebGL, native, etc.)
@@ -8,9 +8,9 @@
  *
  * ## Example: Custom Adapter
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
- * import { createElModule } from '@lattice/view/el';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+ * import { createElModule } from '@rimitive/view/el';
  * import { myCustomAdapter } from './my-adapter';
  *
  * const svc = compose(SignalModule, ComputedModule, EffectModule, createElModule(myCustomAdapter));
@@ -46,12 +46,7 @@ export { createUse } from './deps/use';
 // Factory Types - For typing custom services
 // =============================================================================
 
-export type {
-  ElFactory,
-  ElOpts,
-  TagFactory,
-  ElementProps,
-} from './el';
+export type { ElFactory, ElOpts, TagFactory, ElementProps } from './el';
 export type { MapFactory, MapOpts } from './map';
 export type { MatchFactory, MatchOpts } from './match';
 export type { PortalFactory, PortalOpts, PortalTarget } from './portal';

@@ -1,10 +1,10 @@
 {
-  "name": "lattice",
+  "name": "rimitive",
   "private": true,
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hejhi/lattice"
+    "url": "https://github.com/rimitive"
   },
   "type": "module",
   "workspaces": [
@@ -20,7 +20,7 @@
     "check": "lerna run check",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "test": "lerna run test",
-    "bench": "pnpm --filter @lattice/benchmarks bench",
+    "bench": "pnpm --filter @rimitive/benchmarks bench",
     "api-extract": "lerna run api-extract",
     "api-collect": "mkdir -p temp && cp packages/*/temp/*.api.json temp/",
     "api-document": "pnpm api-collect && api-documenter markdown -i temp -o packages/docs/src/content/docs/api && node scripts/add-api-frontmatter.mjs",

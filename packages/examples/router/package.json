@@ -1,5 +1,5 @@
 {
-  "name": "@lattice/example-router",
+  "name": "@rimitive/example-router",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -10,10 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/router": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "@lattice/view": "workspace:*"
+    "@rimitive/core": "workspace:*",
+    "@rimitive/router": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3",

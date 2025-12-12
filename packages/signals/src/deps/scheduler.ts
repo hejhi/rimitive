@@ -9,7 +9,7 @@
 
 import type { Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 import { GraphEdgesModule } from './graph-edges';
 import { GraphTraversalModule } from './graph-traversal';
 
@@ -45,7 +45,9 @@ export function createScheduler({
   withVisitor,
 }: {
   detachAll: (dep: Dependency) => void;
-  withVisitor: (visit: (dep: Dependency) => void) => (subscribers: Dependency) => void;
+  withVisitor: (
+    visit: (dep: Dependency) => void
+  ) => (subscribers: Dependency) => void;
 }): Scheduler {
   let batchDepth = 0;
   let queueHead: ScheduledNode | undefined;

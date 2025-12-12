@@ -30,12 +30,12 @@ This attaches the handler directly to the element. Simple and direct.
 Add the on module:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { OnModule } from '@lattice/view/deps/addEventListener';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 
@@ -218,13 +218,13 @@ Both are valid. Props are simpler; `on()` is more powerful.
 A search form with debounced input:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { OnModule } from '@lattice/view/deps/addEventListener';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 const svc = compose(

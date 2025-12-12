@@ -2,7 +2,7 @@
  * Instrumentation wrapper for effect primitives
  */
 
-import type { InstrumentationContext } from '@lattice/lattice';
+import type { InstrumentationContext } from '@rimitive/core';
 
 /**
  * Instrument an effect factory to emit events

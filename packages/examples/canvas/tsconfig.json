@@ -11,6 +11,6 @@
   "references": [
     { "path": "../../signals" },
     { "path": "../../view" },
-    { "path": "../../lattice" }
+    { "path": "../../core" }
   ]
 }

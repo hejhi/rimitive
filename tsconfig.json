@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/lattice" },
+    { "path": "./packages/core" },
     { "path": "./packages/signals" },
     { "path": "./packages/view" },
     { "path": "./packages/router" },

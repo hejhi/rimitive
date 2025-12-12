@@ -7,13 +7,13 @@ import { Aside } from '@astrojs/starlight/components';
 
 Other frameworks have "context"—a way to pass values down the component tree without threading them through every intermediate component. In React, it's `createContext` and `useContext`. In Solid, it's similar.
 
-Lattice doesn't have a separate context primitive. It doesn't need one.
+Rimitive doesn't have a separate context primitive. It doesn't need one.
 
 ---
 
 ## The Pattern: Service Threading
 
-In Lattice, the **service is the context**. Components receive a service object containing the primitives they need. You can extend that service with additional state at any point in the tree.
+In Rimitive, the **service is the context**. Components receive a service object containing the primitives they need. You can extend that service with additional state at any point in the tree.
 
 ```typescript
 // Define your app-level shared state
@@ -109,7 +109,7 @@ Define your extended service types explicitly:
 
 ```typescript
 import type { Service } from './service';
-import type { Readable } from '@lattice/signals/types';
+import type { Readable } from '@rimitive/signals/types';
 
 // Base service with your extensions
 export type AppService = Service & {
@@ -140,13 +140,13 @@ const UserProfile = (svc: AppService) => { ... };
 
 I considered adding one. The problem: context in other frameworks works through implicit tree traversal—a component "finds" the nearest provider by walking up the tree at render time.
 
-Lattice components are just functions returning specs. There's no render cycle or "currently rendering" context to hook into. Any context system would either:
+Rimitive components are just functions returning specs. There's no render cycle or "currently rendering" context to hook into. Any context system would either:
 
 1. Require explicit scope passing (which is what we already have)
-2. Add hidden magic that fights Lattice's design philosophy
+2. Add hidden magic that fights Rimitive's design philosophy
 
 The service threading pattern is explicit, type-safe, and composes naturally. It's not as terse as `useContext()`, but you can always see what's happening.
 
 <Aside type="tip">
-If you find yourself passing the same service through many layers, consider whether those intermediate components actually need to be separate. Lattice's composition model often leads to flatter component hierarchies than you might expect.
+If you find yourself passing the same service through many layers, consider whether those intermediate components actually need to be separate. Rimitive's composition model often leads to flatter component hierarchies than you might expect.
 </Aside>

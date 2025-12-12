@@ -1,12 +1,12 @@
 ---
 title: Getting Started
-description: Get up and running with Lattice in minutes.
+description: Get up and running with Rimitive in minutes.
 ---
 
 ## Installation
 
 ```bash
-npm install @lattice/lattice @lattice/signals @lattice/view
+npm install @rimitive/core @rimitive/signals @rimitive/view
 ```
 
 ## Your First App
@@ -14,11 +14,11 @@ npm install @lattice/lattice @lattice/signals @lattice/view
 Create a counter with reactive state and DOM rendering:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 // 1. Create the adapter
 const adapter = createDOMAdapter();

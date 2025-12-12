@@ -10,7 +10,7 @@
  */
 
 import { ReactNode } from 'react';
-import { createHook, useSubscribe } from '@lattice/react';
+import { createHook, useSubscribe } from '@rimitive/react';
 import { modal } from '../behaviors/modal';
 
 // Create React hook from portable behavior (once at module level)

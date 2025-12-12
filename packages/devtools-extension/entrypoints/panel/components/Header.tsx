@@ -20,7 +20,7 @@ export function Header({ contextCount, onExport, onImport }: HeaderProps) {
     <header className="border-b flex items-center justify-between px-4 py-2">
       <div className="flex items-center gap-2">
         <Code2 className="w-5 h-5" />
-        <h1 className="font-semibold">Lattice DevTools</h1>
+        <h1 className="font-semibold">Rimitive DevTools</h1>
         <Badge variant="secondary" className="text-xs">
           {contextCount} context{contextCount !== 1 ? 's' : ''}
         </Badge>

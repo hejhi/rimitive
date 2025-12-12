@@ -1,16 +1,16 @@
 {
-  "name": "@lattice/react",
+  "name": "@rimitive/react",
   "version": "0.0.1",
-  "description": "React bindings for Lattice signals and stores",
-  "author": "Lattice Team",
+  "description": "React bindings for Rimitive signals and stores",
+  "author": "Rimitive Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hejhi/lattice",
+    "url": "https://github.com/rimitive",
     "directory": "packages/react"
   },
   "keywords": [
-    "lattice",
+    "rimitive",
     "react",
     "signals",
     "hooks",
@@ -29,9 +29,9 @@
       "import": "./dist/signals/index.js",
       "types": "./dist/signals/index.d.ts"
     },
-    "./lattice": {
-      "import": "./dist/lattice/index.js",
-      "types": "./dist/lattice/index.d.ts"
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
     }
   },
   "files": [
@@ -50,8 +50,8 @@
     "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/signals": "workspace:*"
+    "@rimitive/core": "workspace:*",
+    "@rimitive/signals": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=16.8.0"
@@ -78,6 +78,7 @@
   },
   "sideEffects": false,
   "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
     "access": "public"
   }
 }

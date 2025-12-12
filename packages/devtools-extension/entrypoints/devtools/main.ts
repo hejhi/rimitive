@@ -1,15 +1,15 @@
 // This script runs in the devtools page context
-// It creates the Lattice panel in Chrome DevTools
+// It creates the Rimitive panel in Chrome DevTools
 
 chrome.devtools.panels.create(
-  'Lattice',
+  'Rimitive',
   '/icon/128.png',
   '/panel.html',
   (panel) => {
     // Store panel reference for later use
     const windowWithPanel = window as Window & {
-      latticePanel?: chrome.devtools.panels.ExtensionPanel;
+      rimitivePanel?: chrome.devtools.panels.ExtensionPanel;
     };
-    windowWithPanel.latticePanel = panel;
+    windowWithPanel.rimitivePanel = panel;
   }
 );

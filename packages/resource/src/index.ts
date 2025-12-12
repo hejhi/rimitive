@@ -1,14 +1,14 @@
 /**
- * @lattice/resource - Reactive async data fetching
+ * @rimitive/resource - Reactive async data fetching
  *
  * Provides the `resource()` primitive for reactive async data fetching
  * with automatic dependency tracking and cancellation.
  *
  * ## Quick Start
  * ```typescript
- * import { ResourceModule } from '@lattice/resource';
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+ * import { ResourceModule } from '@rimitive/resource';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
  *
  * const { resource } = compose(
  *   SignalModule,
@@ -33,15 +33,15 @@
  *
  * | Use Case | Import |
  * |----------|--------|
- * | Module composition | `import { ResourceModule } from '@lattice/resource'` |
- * | Factory (advanced) | `import { createResourceFactory } from '@lattice/resource'` |
- * | Types only | `import type { Resource, ResourceState } from '@lattice/resource'` |
+ * | Module composition | `import { ResourceModule } from '@rimitive/resource'` |
+ * | Factory (advanced) | `import { createResourceFactory } from '@rimitive/resource'` |
+ * | Types only | `import type { Resource, ResourceState } from '@rimitive/resource'` |
  *
  * ## Related
  *
- * For async loading boundaries with UI rendering, see `@lattice/view/load`:
+ * For async loading boundaries with UI rendering, see `@rimitive/view/load`:
  * ```typescript
- * import { createLoadModule } from '@lattice/view/load';
+ * import { createLoadModule } from '@rimitive/view/load';
  * ```
  */
 

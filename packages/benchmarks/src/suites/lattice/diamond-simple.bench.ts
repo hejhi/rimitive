@@ -25,8 +25,8 @@ import {
 import { createSvc } from './deps/signal-computed';
 
 const ITERATIONS = 50000;
-const latticeSvc = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
+const rimitiveSvc = createSvc();
+const { signal: rimitiveSignal, computed: rimitiveComputed } = rimitiveSvc;
 
 type BenchState = {
   get(name: 'diamonds'): number;
@@ -36,11 +36,11 @@ type BenchState = {
 group('Diamond Scaling', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice - $diamonds diamonds', function* (state: BenchState) {
+      bench('Rimitive - $diamonds diamonds', function* (state: BenchState) {
         const diamondCount = state.get('diamonds');
 
         // Build diamond chain of specified complexity
-        const source = latticeSignal(0);
+        const source = rimitiveSignal(0);
         let currentLeft = source;
         let currentRight = source;
 
@@ -49,7 +49,7 @@ group('Diamond Scaling', () => {
           const prevLeft = currentLeft;
           const prevRight = currentRight;
 
-          currentLeft = latticeComputed(() => {
+          currentLeft = rimitiveComputed(() => {
             const val = prevLeft();
             // Simulate computation with level-specific work
             let result = val;
@@ -59,7 +59,7 @@ group('Diamond Scaling', () => {
             return result;
           });
 
-          currentRight = latticeComputed(() => {
+          currentRight = rimitiveComputed(() => {
             const val = prevRight();
             // Different computation path
             let result = val;
@@ -71,7 +71,7 @@ group('Diamond Scaling', () => {
         }
 
         // Final convergence node
-        const bottom = latticeComputed(() => {
+        const bottom = rimitiveComputed(() => {
           const l = currentLeft();
           const r = currentRight();
           return (l * l + r * r) % 1000007;

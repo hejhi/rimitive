@@ -3,7 +3,7 @@ title: Adding Routing
 description: Navigate between views based on URL.
 ---
 
-Routing in Lattice is reactive state. The router tracks the current URL and matches it against your route definitions. You render different views by reacting to those matches.
+Routing in Rimitive is reactive state. The router tracks the current URL and matches it against your route definitions. You render different views by reacting to those matches.
 
 ---
 
@@ -12,9 +12,9 @@ Routing in Lattice is reactive state. The router tracks the current URL and matc
 Start with just route definitions and a router:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule } from '@lattice/signals/extend';
-import { createRouterModule } from '@lattice/router';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+import { createRouterModule } from '@rimitive/router';
 
 // Define routes - pure data
 const routes = [
@@ -56,13 +56,13 @@ That's the core: routes in, reactive matches out.
 Use `match()` to render different views based on the current route:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
-import { createRouterModule } from '@lattice/router';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { createRouterModule } from '@rimitive/router';
 
 const routes = [
   { id: 'home', path: '' },
@@ -133,7 +133,7 @@ When `router.matches` changes, `match()` swaps the rendered component.
 Use `Link` for declarative navigation that works with the router:
 
 ```typescript
-import { Link } from '@lattice/router/link';
+import { Link } from '@rimitive/router/link';
 
 const Nav = () => el('nav')(
   Link({ href: '/' })('Home'),
@@ -269,14 +269,14 @@ const Nav = () => el('nav')(
 Putting it all together:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
-import { createRouterModule } from '@lattice/router';
-import { Link } from '@lattice/router/link';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { createRouterModule } from '@rimitive/router';
+import { Link } from '@rimitive/router/link';
 
 // Routes
 const routes = [

@@ -1,6 +1,6 @@
 import type { RenderScope } from '../types';
-import { defineModule } from '@lattice/lattice';
-import { EffectModule } from '@lattice/signals/effect';
+import { defineModule } from '@rimitive/core';
+import { EffectModule } from '@rimitive/signals/effect';
 
 // Status constants for RenderScope disposal tracking
 // Note: RenderScope is not a reactive node - these are just for lifecycle management
@@ -13,7 +13,7 @@ const RENDER_SCOPE_CLEAN = CLEAN;
  *
  * @example
  * ```typescript
- * import { createScopes, type CreateScopes } from '@lattice/view/deps/scope';
+ * import { createScopes, type CreateScopes } from '@rimitive/view/deps/scope';
  *
  * const scopes: CreateScopes = createScopes({ baseEffect: effect });
  *
@@ -70,9 +70,9 @@ export type CreateScopes = {
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { EffectModule } from '@lattice/signals/extend';
- * import { createScopes } from '@lattice/view/deps/scope';
+ * import { compose } from '@rimitive/core';
+ * import { EffectModule } from '@rimitive/signals/extend';
+ * import { createScopes } from '@rimitive/view/deps/scope';
  *
  * const { effect } = compose(EffectModule);
  * const { createElementScope, scopedEffect, onCleanup, disposeScope } = createScopes({

@@ -63,7 +63,7 @@ function parseURL(url: string): {
  *
  * @example
  * ```typescript
- * import { createLocationFactory } from '@lattice/router';
+ * import { createLocationFactory } from '@rimitive/router';
  *
  * const location = createLocationFactory({
  *   computed,

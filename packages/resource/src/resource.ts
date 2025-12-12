@@ -1,8 +1,16 @@
-import { defineModule } from '@lattice/lattice';
-import { EffectModule, type EffectFactory } from '@lattice/signals/effect';
-import { SignalModule, type SignalFactory } from '@lattice/signals/signal';
-import { ComputedModule, type ComputedFactory } from '@lattice/signals/computed';
-import type { Resource, ResourceState, Fetcher, ResourceFactory } from './types';
+import { defineModule } from '@rimitive/core';
+import { EffectModule, type EffectFactory } from '@rimitive/signals/effect';
+import { SignalModule, type SignalFactory } from '@rimitive/signals/signal';
+import {
+  ComputedModule,
+  type ComputedFactory,
+} from '@rimitive/signals/computed';
+import type {
+  Resource,
+  ResourceState,
+  Fetcher,
+  ResourceFactory,
+} from './types';
 
 /**
  * Dependencies required by the Resource module.
@@ -169,16 +177,13 @@ export function createResourceFactory(deps: ResourceDeps): ResourceFactory {
     });
 
     // Build resource object using Object.assign to satisfy readonly properties
-    const resourceFn = Object.assign(
-      () => state(),
-      {
-        loading,
-        data,
-        error,
-        refetch: doFetch,
-        dispose,
-      }
-    ) as Resource<T>;
+    const resourceFn = Object.assign(() => state(), {
+      loading,
+      data,
+      error,
+      refetch: doFetch,
+      dispose,
+    }) as Resource<T>;
 
     return resourceFn;
   };

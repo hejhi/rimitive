@@ -1,6 +1,6 @@
 import { devtoolsState } from './devtoolsCtx';
 import { LogEntry } from './types';
-import { LatticeEvent } from './messageHandler';
+import { RimitiveEvent } from './messageHandler';
 import { inferCategory } from './eventTypeManager';
 
 // Track execution depth for indentation
@@ -15,7 +15,7 @@ const RECENT_EVENT_WINDOW = 100; // ms
 /**
  * Process any instrumentation event
  */
-export function processLogEntry(event: LatticeEvent) {
+export function processLogEntry(event: RimitiveEvent) {
   const timestamp = event.timestamp || Date.now();
 
   // Clean up old recent events
@@ -37,7 +37,7 @@ export function processLogEntry(event: LatticeEvent) {
 /**
  * Create a log entry from an instrumentation event
  */
-function createLogEntry(event: LatticeEvent, timestamp: number): LogEntry {
+function createLogEntry(event: RimitiveEvent, timestamp: number): LogEntry {
   const level = calculateExecutionLevel(event);
 
   return {
@@ -57,7 +57,7 @@ function createLogEntry(event: LatticeEvent, timestamp: number): LogEntry {
 /**
  * Calculate execution level for proper indentation
  */
-function calculateExecutionLevel(event: LatticeEvent): number {
+function calculateExecutionLevel(event: RimitiveEvent): number {
   // Handle start/end event pairs
   if (event.type.includes('_START') || event.type.includes('_BEGIN')) {
     const depth = executionDepth++;
@@ -129,7 +129,7 @@ function extractNodeName(data: unknown): string | undefined {
 /**
  * Generate a human-readable summary of the event
  */
-function generateSummary(event: LatticeEvent): string {
+function generateSummary(event: RimitiveEvent): string {
   const data = event.data as Record<string, unknown>;
 
   // Just show the raw data fields, no special handling

@@ -81,9 +81,9 @@ export default defineConfig({
         'vitest',
         /^vitest/,
         'node:test',
-        '@lattice/lattice',
-        '@lattice/signals',
-        /^@lattice\/signals\//,
+        '@rimitive/core',
+        '@rimitive/signals',
+        /^@rimitive\/signals\//,
       ],
       output: {
         entryFileNames: '[name].js',

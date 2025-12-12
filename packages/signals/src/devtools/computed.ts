@@ -2,7 +2,7 @@
  * Instrumentation wrapper for computed primitives
  */
 
-import type { InstrumentationContext } from '@lattice/lattice';
+import type { InstrumentationContext } from '@rimitive/core';
 import type { ComputedFunction } from '../computed';
 
 /**

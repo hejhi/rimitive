@@ -7,4 +7,4 @@ export type { SignalValue, SignalSetter } from './types';
 export type { SignalProviderProps, SignalSvc } from './context';
 
 // Re-export primitives from signals package
-export type { Readable, Writable } from '@lattice/signals/types';
+export type { Readable, Writable } from '@rimitive/signals/types';

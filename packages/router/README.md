@@ -1,28 +1,36 @@
-# @lattice/router
+# @rimitive/router
 
-Minimal client-side routing for Lattice applications.
+Minimal client-side routing for Rimitive applications.
 
 ## Quick Start
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { createRouterModule, Link } from '@lattice/router';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createRouterModule, Link } from '@rimitive/router';
 
 const routes = [
   { id: 'home', path: '' },
   { id: 'about', path: 'about' },
-  { id: 'products', path: 'products', children: [
-    { id: 'product-detail', path: ':id' }
-  ]},
+  {
+    id: 'products',
+    path: 'products',
+    children: [{ id: 'product-detail', path: ':id' }],
+  },
 ];
 
 const adapter = createDOMAdapter();
 const svc = compose(
-  SignalModule, ComputedModule, EffectModule,
+  SignalModule,
+  ComputedModule,
+  EffectModule,
   createElModule(adapter),
   createMatchModule(adapter),
   createRouterModule(routes)
@@ -36,11 +44,12 @@ const { router, match, el } = svc;
 ## Philosophy
 
 The router is **pure reactive state**. It provides:
+
 - `matches` — signal of currently matched routes
 - `currentPath` — signal of current URL
 - `navigate()` — function to change path
 
-It does NOT manage rendering. Use `match()` from `@lattice/view` to render based on router state.
+It does NOT manage rendering. Use `match()` from `@rimitive/view` to render based on router state.
 
 ---
 
@@ -52,10 +61,14 @@ Routes are plain data objects:
 const routes = [
   { id: 'home', path: '' },
   { id: 'about', path: 'about' },
-  { id: 'products', path: 'products', children: [
-    { id: 'product-list', path: '' },
-    { id: 'product-detail', path: ':id' }
-  ]},
+  {
+    id: 'products',
+    path: 'products',
+    children: [
+      { id: 'product-list', path: '' },
+      { id: 'product-detail', path: ':id' },
+    ],
+  },
   { id: 'user', path: 'users/:userId/posts/:postId' },
 ];
 ```
@@ -141,20 +154,21 @@ router.forward();
 `Link` renders anchors that use the router for navigation:
 
 ```typescript
-import { Link } from '@lattice/router';
+import { Link } from '@rimitive/router';
 
 // Basic link
-Link({ href: '/about' })('About Us')
+Link({ href: '/about' })('About Us');
 
 // With additional props
-Link({ href: '/products', className: 'nav-link' })('Products')
+Link({ href: '/products', className: 'nav-link' })('Products');
 
 // Dynamic href
 const productId = signal('123');
-Link({ href: computed(() => `/products/${productId()}`) })('View Product')
+Link({ href: computed(() => `/products/${productId()}`) })('View Product');
 ```
 
 Links automatically:
+
 - Intercept clicks for client-side navigation
 - Allow modifier keys (Cmd/Ctrl+click opens new tab)
 - Pass through external URLs unchanged
@@ -170,10 +184,10 @@ const { router } = svc;
 
 // URL: /products?sort=price&filter=new#section-1
 
-router.pathname();  // '/products'
-router.search();    // '?sort=price&filter=new'
-router.hash();      // '#section-1'
-router.query();     // { sort: 'price', filter: 'new' }
+router.pathname(); // '/products'
+router.search(); // '?sort=price&filter=new'
+router.hash(); // '#section-1'
+router.query(); // { sort: 'price', filter: 'new' }
 ```
 
 ---
@@ -183,7 +197,7 @@ router.query();     // { sort: 'price', filter: 'new' }
 For custom matching logic:
 
 ```typescript
-import { matchPath, matchPathPrefix, composePath } from '@lattice/router';
+import { matchPath, matchPathPrefix, composePath } from '@rimitive/router';
 
 // Exact match
 matchPath('/products/:id', '/products/123');
@@ -194,7 +208,7 @@ matchPathPrefix('/products', '/products/123/details');
 // { path: '/products', params: {} }
 
 // Compose paths
-composePath('/products', ':id');  // '/products/:id'
+composePath('/products', ':id'); // '/products/:id'
 ```
 
 ---
@@ -222,8 +236,8 @@ Creates a router module for composition.
 
 ```typescript
 createRouterModule(routes, {
-  initialPath: '/',  // For SSR or testing
-})
+  initialPath: '/', // For SSR or testing
+});
 ```
 
 ### createRouter(deps, routes, options?)
@@ -254,10 +268,10 @@ type Router = {
 
 ```typescript
 type MatchedRoute = {
-  id: string;                      // Route ID from config
-  pattern: string;                 // Path pattern that matched
-  params: Record<string, string>;  // Extracted parameters
-  path: string;                    // Actual matched path
+  id: string; // Route ID from config
+  pattern: string; // Path pattern that matched
+  params: Record<string, string>; // Extracted parameters
+  path: string; // Actual matched path
 };
 ```
 

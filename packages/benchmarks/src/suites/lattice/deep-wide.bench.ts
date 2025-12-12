@@ -32,11 +32,11 @@ import {
   computed as alienComputed,
 } from 'alien-signals';
 import { createSvc } from './deps/signal-computed';
-import { ComputedFunction } from '@lattice/signals/computed';
+import { ComputedFunction } from '@rimitive/signals/computed';
 
 const ITERATIONS = 1000;
-const latticeSvc = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
+const rimitiveSvc = createSvc();
+const { signal: rimitiveSignal, computed: rimitiveComputed } = rimitiveSvc;
 
 type BenchState = {
   get(name: 'size'): string;
@@ -53,10 +53,10 @@ const SIZES: Record<string, [number, number]> = {
 group('Deep & Wide Tree Scaling', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice - $size tree', function* (state: BenchState) {
+      bench('Rimitive - $size tree', function* (state: BenchState) {
         const sizeKey = state.get('size');
         const [WIDTH, DEPTH] = SIZES[sizeKey]!;
-        const source = latticeSignal(0);
+        const source = rimitiveSignal(0);
 
         // Build tree structure
         let currentLevel = [source];
@@ -67,7 +67,7 @@ group('Deep & Wide Tree Scaling', () => {
 
           for (const parent of currentLevel) {
             for (let w = 0; w < WIDTH; w++) {
-              const child = latticeComputed(() => {
+              const child = rimitiveComputed(() => {
                 // Sum parent value + index for uniqueness
                 return parent() + w + 1;
               });

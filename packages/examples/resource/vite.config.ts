@@ -10,7 +10,12 @@ function mockApi(): Plugin {
 
   const posts = [
     { id: 1, userId: 1, title: 'Hello World', body: 'My first post!' },
-    { id: 2, userId: 1, title: 'Learning Lattice', body: 'Reactive signals are great.' },
+    {
+      id: 2,
+      userId: 1,
+      title: 'Learning Rimitive',
+      body: 'Reactive signals are great.',
+    },
     { id: 3, userId: 2, title: 'Bob here', body: 'Just testing things out.' },
     { id: 4, userId: 3, title: 'Charlie writes', body: 'Another test post.' },
   ];

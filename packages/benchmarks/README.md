@@ -1,6 +1,6 @@
-# @lattice/benchmarks
+# @rimitive/benchmarks
 
-Performance benchmarks for Lattice reactive primitives.
+Performance benchmarks for Rimitive reactive primitives.
 
 ## Quick Start
 
@@ -20,9 +20,9 @@ pnpm bench --skip-build diamond
 
 ## What's Measured
 
-Benchmarks compare Lattice signals against other reactive libraries:
+Benchmarks compare Rimitive signals against other reactive libraries:
 
-- **alien-signals** — The library Lattice's reactivity is based on
+- **alien-signals** — The library Rimitive's reactivity is based on
 - **@preact/signals-core** — Preact's signal implementation
 
 Each benchmark runs the same reactive pattern across all libraries, measuring throughput (operations/second).
@@ -31,16 +31,16 @@ Each benchmark runs the same reactive pattern across all libraries, measuring th
 
 ## Benchmark Suites
 
-| Suite | Description |
-|-------|-------------|
-| `diamond-simple` | Diamond dependency graphs for glitch prevention |
-| `chain-deep` | Deep linear dependency chains |
-| `chain-shallow` | Shallow chains with many updates |
-| `batch-updates` | Batched signal updates |
-| `fan-in` | Many signals feeding into one computed |
-| `fan-out` | One signal feeding many computeds |
-| `conditional-simple` | Conditional dependency tracking |
-| `deep-wide` | Deep and wide dependency graphs |
+| Suite                | Description                                     |
+| -------------------- | ----------------------------------------------- |
+| `diamond-simple`     | Diamond dependency graphs for glitch prevention |
+| `chain-deep`         | Deep linear dependency chains                   |
+| `chain-shallow`      | Shallow chains with many updates                |
+| `batch-updates`      | Batched signal updates                          |
+| `fan-in`             | Many signals feeding into one computed          |
+| `fan-out`            | One signal feeding many computeds               |
+| `conditional-simple` | Conditional dependency tracking                 |
+| `deep-wide`          | Deep and wide dependency graphs                 |
 
 ### Diamond Pattern
 
@@ -99,6 +99,7 @@ dist/
 ```
 
 Each result includes:
+
 - Benchmark name and timestamp
 - Git commit hash
 - System info (Node version, platform, CPUs)
@@ -120,7 +121,7 @@ const { signal, computed } = createSvc();
 group('My Benchmark', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice', function* () {
+      bench('Rimitive', function* () {
         const source = signal(0);
         const derived = computed(() => source() * 2);
 
@@ -141,6 +142,7 @@ await runBenchmark();
 ```
 
 Key patterns:
+
 - Use `function*` generator syntax for setup/teardown
 - `yield` the actual benchmark function
 - Compare against the same pattern in other libraries
@@ -150,9 +152,9 @@ Key patterns:
 Pre-configured service factories in `./deps/`:
 
 ```typescript
-import { createSvc } from './deps/signal-computed';        // signal + computed
+import { createSvc } from './deps/signal-computed'; // signal + computed
 import { createSvc } from './deps/signal-computed-effect'; // + effect
-import { createSvc } from './deps/signal-computed-batch';  // + batch
+import { createSvc } from './deps/signal-computed-batch'; // + batch
 ```
 
 ---
@@ -162,7 +164,7 @@ import { createSvc } from './deps/signal-computed-batch';  // + batch
 Benchmarks run in CI via `pnpm bench`. The runner:
 
 1. Builds all packages first
-2. Runs each `.bench.ts` file in `src/suites/lattice/`
+2. Runs each `.bench.ts` file in `src/suites/core/`
 3. Saves results as markdown with commit hash
 4. Generates a summary with pass/fail status
 
@@ -171,17 +173,19 @@ Benchmarks run in CI via `pnpm bench`. The runner:
 ## Tips
 
 **Accurate measurement:**
+
 - The runner uses `--expose-gc` for consistent GC behavior
 - Each benchmark runs in its own subprocess for isolation
 - Results include warmup iterations before measurement
 
 **Debugging slow benchmarks:**
+
 ```bash
 # Run with timeout
 timeout 60 pnpm bench diamond-simple
 
 # Check a specific suite directly
-npx tsx --expose-gc src/suites/lattice/diamond-simple.bench.ts
+npx tsx --expose-gc src/suites/core/diamond-simple.bench.ts
 ```
 
 **Adding new comparisons:**

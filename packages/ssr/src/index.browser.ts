@@ -1,5 +1,5 @@
 /**
- * @lattice/ssr - Browser entry point
+ * @rimitive/ssr - Browser entry point
  *
  * Browser-safe exports for SSR hydration.
  */

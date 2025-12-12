@@ -4,7 +4,7 @@
  * Example of framework-agnostic, accessible dialog (modal) behaviors.
  * Provides state management, ARIA attributes, keyboard handling, and focus management.
  */
-import { Writable, Readable } from '@lattice/signals/types';
+import { Writable, Readable } from '@rimitive/signals/types';
 import type { ReactiveSvc } from './types';
 
 export type DialogOptions = {

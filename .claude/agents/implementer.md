@@ -51,31 +51,35 @@ The orchestrating agent delegates implementation to you to **isolate coding nois
 5. **Keep changes minimal** - Only change what's needed
 6. **Report blockers** - If spec is unclear, say so immediately
 
-## Lattice Patterns
+## Rimitive Patterns
 
 When implementing in this codebase:
 
 **Imports:**
+
 ```typescript
 // Modules
-import { SignalModule } from '@lattice/signals/extend';
+import { SignalModule } from '@rimitive/signals/extend';
 // Types only
-import type { Readable } from '@lattice/signals';
+import type { Readable } from '@rimitive/signals';
 ```
 
 **Behaviors:**
+
 ```typescript
 const myBehavior = (svc: Service) => (options?: Options) => {
   // implementation
-  return { /* api */ };
+  return {
+    /* api */
+  };
 };
 ```
 
 **View components:**
+
 ```typescript
 const MyComponent = (props: Props) => {
-  return el('div').props({ className: props.class })(
-    // children
-  );
+  return el('div').props({ className: props.class })();
+  // children
 };
 ```

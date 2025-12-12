@@ -8,8 +8,8 @@ export default defineBackground(() => {
   // Store connections from devtools panels
   const devtoolsConnections = new Map<number, chrome.runtime.Port>();
 
-  // Track which tabs have Lattice detected
-  const latticeDetectedTabs = new Set<number>();
+  // Track which tabs have Rimitive detected
+  const rimitiveDetectedTabs = new Set<number>();
 
   // Listen for connections from devtools panels
   chrome.runtime.onConnect.addListener((port) => {
@@ -21,8 +21,8 @@ export default defineBackground(() => {
           tabId = msg.tabId;
           devtoolsConnections.set(tabId, port);
 
-          // If Lattice was detected, notify the panel
-          if (latticeDetectedTabs.has(tabId)) {
+          // If Rimitive was detected, notify the panel
+          if (rimitiveDetectedTabs.has(tabId)) {
             port.postMessage({
               type: 'LATTICE_DETECTED',
               data: { enabled: true },
@@ -50,13 +50,13 @@ export default defineBackground(() => {
       if (!tabId) return;
 
       if (
-        message.source === 'lattice-devtools' ||
-        message.source === 'lattice-devtools-content'
+        message.source === 'rimitive-devtools' ||
+        message.source === 'rimitive-devtools-content'
       ) {
         // Handle messages from the page
         switch (message.type) {
           case 'LATTICE_DETECTED': {
-            latticeDetectedTabs.add(tabId);
+            rimitiveDetectedTabs.add(tabId);
 
             // Forward to devtools if connected
             const port = devtoolsConnections.get(tabId);
@@ -87,7 +87,7 @@ export default defineBackground(() => {
 
   // Clean up when tabs are closed
   chrome.tabs.onRemoved.addListener((tabId) => {
-    latticeDetectedTabs.delete(tabId);
+    rimitiveDetectedTabs.delete(tabId);
     devtoolsConnections.delete(tabId);
   });
 
@@ -95,7 +95,7 @@ export default defineBackground(() => {
   chrome.webNavigation.onBeforeNavigate.addListener((details) => {
     if (details.frameId === 0) {
       // Main frame only
-      latticeDetectedTabs.delete(details.tabId);
+      rimitiveDetectedTabs.delete(details.tabId);
 
       // Notify devtools panel about navigation
       const port = devtoolsConnections.get(details.tabId);

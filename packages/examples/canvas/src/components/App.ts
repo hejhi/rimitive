@@ -44,7 +44,7 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
   // Single composed tree: DOM with embedded canvas
   // canvas.el('canvas') creates an HTMLCanvasElement that acts as the boundary
   return div.props({ className: 'app' })(
-    h1('Lattice Canvas'),
+    h1('Rimitive Canvas'),
     p.props({ className: 'subtitle' })(
       'Reactive canvas rendering with signals'
     ),
@@ -76,7 +76,7 @@ export const App = ({ canvasWidth, canvasHeight }: AppProps) => {
       ' to select them. ',
       strong('Drag'),
       ' to move selected shape. Shapes are reactive - powered by ',
-      code('@lattice/signals'),
+      code('@rimitive/signals'),
       ' and rendered with a custom canvas adapter.'
     )
   );

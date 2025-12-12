@@ -22,7 +22,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         'signals/index': resolve(__dirname, 'src/signals/index.ts'),
-        'lattice/index': resolve(__dirname, 'src/lattice/index.ts'),
+        'rimitive/index': resolve(__dirname, 'src/rimitive/index.ts'),
       },
       formats: ['es'],
     },
@@ -30,8 +30,8 @@ export default defineConfig({
       external: [
         'react',
         'react-dom',
-        '@lattice/signals',
-        '@lattice/signals-store',
+        '@rimitive/signals',
+        '@rimitive/signals-store',
         'vitest',
         /^vitest/,
         'node:test',

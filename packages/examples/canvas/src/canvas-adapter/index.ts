@@ -17,18 +17,18 @@
  * libraries like Konva or PixiJS.
  */
 
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
-import type { RefSpec } from '@lattice/view/types';
+} from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+import type { RefSpec } from '@rimitive/view/types';
 import { createCanvasAdapter, type CanvasAdapterOptions } from './adapter';
 import { createCanvasAddEventListener } from './addEventListener';
 

@@ -1,14 +1,14 @@
 /**
- * @lattice/ssr - Server-Side Rendering for Lattice
+ * @rimitive/ssr - Server-Side Rendering for Rimitive
  *
- * Provides SSR rendering and hydration for Lattice applications.
+ * Provides SSR rendering and hydration for Rimitive applications.
  *
  * ## Import Guide
  *
  * | Use Case | Import |
  * |----------|--------|
- * | Server rendering | `import { ... } from '@lattice/ssr/server'` |
- * | Client hydration | `import { ... } from '@lattice/ssr/client'` |
+ * | Server rendering | `import { ... } from '@rimitive/ssr/server'` |
+ * | Client hydration | `import { ... } from '@rimitive/ssr/client'` |
  */
 
 export { HydrationMismatch } from './client/adapter';

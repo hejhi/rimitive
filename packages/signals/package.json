@@ -1,16 +1,16 @@
 {
-  "name": "@lattice/signals",
+  "name": "@rimitive/signals",
   "version": "0.0.1",
-  "description": "Reactive primitives for Lattice components",
-  "author": "Lattice Team",
+  "description": "Reactive primitives for Rimitive components",
+  "author": "Rimitive Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hejhi/lattice",
+    "url": "https://github.com/hejhi/core",
     "directory": "packages/signals"
   },
   "keywords": [
-    "lattice",
+    "rimitive",
     "signals",
     "reactive",
     "state",
@@ -108,7 +108,7 @@
     "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*"
+    "@rimitive/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.0.10",
@@ -124,6 +124,7 @@
   },
   "sideEffects": false,
   "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
     "access": "public"
   }
 }

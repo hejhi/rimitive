@@ -1,13 +1,13 @@
 ---
 title: Portability
-description: Write once, run anywhere—Lattice views, React, custom renderers.
+description: Write once, run anywhere—Rimitive views, React, custom renderers.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
 Most UI logic isn't tied to a specific framework. A dropdown's open/close behavior is the same whether you're rendering to DOM, React, or a canvas. A form's validation logic doesn't care about the view layer.
 
-Lattice is designed around this insight. The same code can run in different contexts without modification.
+Rimitive is designed around this insight. The same code can run in different contexts without modification.
 
 ---
 
@@ -66,14 +66,14 @@ const App = (svc: Service) => {
 
 ## Running in Different Contexts
 
-### Lattice DOM View
+### Rimitive DOM View
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 // Create adapter and compose service
 const adapter = createDOMAdapter();
@@ -91,8 +91,8 @@ document.body.appendChild(svc.mount(app).element!);
 For tests, use a mock adapter or compose with test dependencies:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 // Minimal test service - just signals, no view layer
 const testSvc = compose(SignalModule, ComputedModule, EffectModule)();
@@ -104,14 +104,14 @@ increment();
 expect(count()).toBe(1);
 ```
 
-### React (via @lattice/react)
+### React (via @rimitive/react)
 
 Portable behaviors work in React through `createHook`:
 
 ```typescript
-import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { SignalProvider, createHook, useSubscribe } from '@rimitive/react';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 // Define a portable behavior
 const counter = (svc: { signal: SignalFactory }) => (initial = 0) => {
@@ -154,9 +154,9 @@ React doesn't automatically re-render when signals change. Use `useSubscribe(sig
 The same pattern works with any adapter:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
 import { myCanvasAdapter } from './my-canvas-adapter';
 
 const svc = compose(
@@ -187,7 +187,7 @@ const MyComponent = (svc: Service) => {
 
 ```typescript
 // This is NOT portable
-import { signal } from '@lattice/signals';
+import { signal } from '@rimitive/signals';
 
 const MyComponent = () => {
   const count = signal(0); // Hardcoded dependency
@@ -244,7 +244,7 @@ const Counter = (svc: Service) => () => {
 };
 ```
 
-Behaviors are more portable than components because they have no UI coupling. A behavior can be used in Lattice views, React, Vue, or anywhere else that can consume signals.
+Behaviors are more portable than components because they have no UI coupling. A behavior can be used in Rimitive views, React, Vue, or anywhere else that can consume signals.
 
 ---
 
@@ -253,9 +253,9 @@ Behaviors are more portable than components because they have no UI coupling. A 
 Define your service contracts with TypeScript:
 
 ```typescript
-import type { SignalFactory, ComputedFactory } from '@lattice/signals';
-import type { ElFactory } from '@lattice/view/el';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import type { SignalFactory, ComputedFactory } from '@rimitive/signals';
+import type { ElFactory } from '@rimitive/view/el';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 // Minimal contract for a component
 type MinimalSvc = {
@@ -278,8 +278,8 @@ Portable code is easy to test because you control the service:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 describe('counter behavior', () => {
   it('increments count', () => {

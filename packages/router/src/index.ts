@@ -1,7 +1,7 @@
 /**
- * @lattice/router
+ * @rimitive/router
  *
- * Minimal routing for Lattice applications
+ * Minimal routing for Rimitive applications
  *
  * The router is pure reactive state - it provides:
  * - matches: Signal<MatchedRoute[]> - currently matched routes

@@ -17,15 +17,15 @@ The orchestrating agent delegates verification to you to **isolate verbose outpu
 pnpm check
 
 # Package-specific
-pnpm --filter @lattice/signals test
-pnpm --filter @lattice/signals typecheck
-pnpm --filter @lattice/view test
+pnpm --filter @rimitive/signals test
+pnpm --filter @rimitive/signals typecheck
+pnpm --filter @rimitive/view test
 
 # Specific test file
-pnpm --filter @lattice/signals test src/computed.test.ts
+pnpm --filter @rimitive/signals test src/computed.test.ts
 
 # Specific test name
-pnpm --filter @lattice/signals test -- "should handle diamond"
+pnpm --filter @rimitive/signals test -- "should handle diamond"
 
 # Build
 pnpm build
@@ -41,6 +41,7 @@ pnpm build
 ## Response Format
 
 ### On Success
+
 ```
 ## ✓ Verification Passed
 
@@ -51,6 +52,7 @@ pnpm build
 ```
 
 ### On Failure
+
 ```
 ## ✗ Verification Failed
 

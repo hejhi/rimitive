@@ -1,21 +1,21 @@
 {
-  "name": "@lattice/benchmarks",
+  "name": "@rimitive/benchmarks",
   "version": "0.0.1",
-  "description": "Performance benchmarks for Lattice framework",
-  "author": "Lattice Team",
+  "description": "Performance benchmarks for Rimitive framework",
+  "author": "Rimitive Team",
   "license": "MIT",
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter @lattice/signals build",
+    "build": "pnpm --filter @rimitive/signals build",
     "bench": "tsx --expose-gc src/runner.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"
   },
   "devDependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/signals": "workspace:*",
+    "@rimitive/core": "workspace:*",
+    "@rimitive/signals": "workspace:*",
     "@preact/signals-core": "1.12.1",
     "@reduxjs/toolkit": "2.11.1",
     "@testing-library/react": "16.3.0",

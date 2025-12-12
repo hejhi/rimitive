@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
-import { SignalProvider } from '@lattice/react';
+import { SignalProvider } from '@rimitive/react';
 import { devtoolsContext } from './store/devtoolsCtx';
 
 const rootElement = document.getElementById('root');

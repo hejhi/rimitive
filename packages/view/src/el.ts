@@ -11,14 +11,14 @@ import type { Adapter, AdapterConfig } from './adapter';
 import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createProcessChildren } from './deps/processChildren';
-import { defineModule, type Module } from '@lattice/lattice';
+import { defineModule, type Module } from '@rimitive/core';
 
 /**
  * Makes each property in T accept either the value or a Reactive<value>
  *
  * @example
  * ```typescript
- * import type { ReactiveProps } from '@lattice/view/el';
+ * import type { ReactiveProps } from '@rimitive/view/el';
  *
  * type ButtonProps = ReactiveProps<{ disabled: boolean; textContent: string }>;
  * const props: ButtonProps = {
@@ -45,8 +45,8 @@ type ReactiveProps<T> = {
  *
  * @example
  * ```typescript
- * import type { ElementProps } from '@lattice/view/el';
- * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+ * import type { ElementProps } from '@rimitive/view/el';
+ * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
  *
  * const buttonProps: ElementProps<DOMAdapterConfig, 'button'> = {
  *   disabled: computed(() => loading()),
@@ -88,11 +88,11 @@ export type ElOpts<TConfig extends AdapterConfig> = {
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import { OnModule } from '@lattice/view/deps/addEventListener';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import { OnModule } from '@rimitive/view/deps/addEventListener';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(SignalModule, createElModule(adapter), OnModule);
@@ -156,11 +156,11 @@ export type TagFactory<
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import { OnModule } from '@lattice/view/deps/addEventListener';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import { OnModule } from '@rimitive/view/deps/addEventListener';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(SignalModule, ComputedModule, createElModule(adapter), OnModule);
@@ -188,7 +188,7 @@ export type ElFactory<TConfig extends AdapterConfig> = {
  * Use this type when building custom view service compositions:
  * @example
  * ```ts
- * import { createElFactory, type ElService } from '@lattice/view/el';
+ * import { createElFactory, type ElService } from '@rimitive/view/el';
  *
  * const el: ElService<DOMAdapterConfig> = createElFactory(opts);
  * ```
@@ -205,9 +205,9 @@ export type ElService<TConfig extends AdapterConfig> = ElFactory<TConfig>;
  *
  * @example
  * ```typescript
- * import { createElFactory } from '@lattice/view/el';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+ * import { createElFactory } from '@rimitive/view/el';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
  *
  * const el = createElFactory<DOMAdapterConfig>({
  *   adapter,
@@ -377,9 +377,9 @@ export function createElFactory<TConfig extends AdapterConfig>({
  *
  * @example
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { createElModule } from '@lattice/view/el';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { compose } from '@rimitive/core';
+ * import { createElModule } from '@rimitive/view/el';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();
  * const ElModule = createElModule(adapter);

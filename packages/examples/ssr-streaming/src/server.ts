@@ -1,7 +1,7 @@
 /**
  * SSR Streaming Server
  *
- * Demonstrates streaming SSR with Lattice:
+ * Demonstrates streaming SSR with Rimitive:
  * 1. Send initial HTML immediately (with pending states for async boundaries)
  * 2. Stream data chunks as each load() boundary resolves
  * 3. Client receives data and updates UI reactively via signals
@@ -18,8 +18,8 @@ import {
   createDOMServerAdapter,
   renderToStream,
   createStreamWriter,
-} from '@lattice/ssr/server';
-import type { RefSpec } from '@lattice/view/types';
+} from '@rimitive/ssr/server';
+import type { RefSpec } from '@rimitive/view/types';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
@@ -59,7 +59,8 @@ const server = createServer(async (req, res) => {
 
   // Create per-request service with streaming callback
   // onResolve writes data chunks to the streaming proxy
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } =
+    createDOMServerAdapter();
   const service = createService(adapter, {
     initialPath: url.pathname,
     onResolve: (id, data) => {
@@ -89,7 +90,7 @@ const server = createServer(async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lattice SSR Streaming</title>
+  <title>Rimitive SSR Streaming</title>
   <script>${stream.bootstrapCode()}</script>
   <style>${getStyles()}</style>
 </head>

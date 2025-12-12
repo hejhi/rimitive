@@ -1,4 +1,4 @@
-import { useSubscribe } from '@lattice/react';
+import { useSubscribe } from '@rimitive/react';
 import type { LogEntry } from './store/types';
 import { filteredLogEntries } from './store/computed';
 import { getCategoryColors } from './store/eventTypeManager';

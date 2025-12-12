@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { compose } from '@lattice/lattice';
-import { SignalModule } from '@lattice/signals/signal';
-import { ComputedModule } from '@lattice/signals/computed';
-import { EffectModule } from '@lattice/signals/effect';
+import { compose } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/signal';
+import { ComputedModule } from '@rimitive/signals/computed';
+import { EffectModule } from '@rimitive/signals/effect';
 import { ResourceModule } from './resource';
 
 // Helper to create a deferred promise for controlled async testing

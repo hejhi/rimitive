@@ -5,7 +5,7 @@ import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createNodeHelpers } from './deps/node-deps';
 import { setFragmentChild } from './deps/fragment-boundaries';
-import { defineModule, type Module } from '@lattice/lattice';
+import { defineModule, type Module } from '@rimitive/core';
 
 /**
  * Options passed to Match factory
@@ -62,7 +62,7 @@ export interface MatchFactory<TBaseElement> {
  * Use this type when building custom view service compositions:
  * @example
  * ```ts
- * import { createMatchFactory, type MatchService } from '@lattice/view/match';
+ * import { createMatchFactory, type MatchService } from '@rimitive/view/match';
  *
  * const matchFactory: MatchService<DOMAdapterConfig> = createMatchFactory(opts);
  * ```
@@ -231,9 +231,9 @@ export function createMatchFactory<TConfig extends AdapterConfig>({
  *
  * @example
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { createMatchModule } from '@lattice/view/match';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { compose } from '@rimitive/core';
+ * import { createMatchModule } from '@rimitive/view/match';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();
  * const MatchModule = createMatchModule(adapter);

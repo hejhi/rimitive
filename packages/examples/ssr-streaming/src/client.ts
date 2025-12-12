@@ -10,7 +10,7 @@
  * - connectStream() connects the loader to that receiver
  * - Data flows through signals, updating the UI reactively
  */
-import { createClientAdapter, connectStream } from '@lattice/ssr/client';
+import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';

@@ -1,5 +1,5 @@
 import type { ScheduledNode } from './types';
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 import { GraphEdgesModule, type GraphEdges } from './deps/graph-edges';
 import { CONSTANTS } from './constants';
 import { SchedulerModule, type Scheduler } from './deps/scheduler';
@@ -49,8 +49,8 @@ export type UnsubscribeFunction = () => void;
  *
  * @example Basic composition
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule, SubscribeModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule, SubscribeModule } from '@rimitive/signals/extend';
  *
  * const svc = compose(SignalModule, ComputedModule, EffectModule, SubscribeModule);
  * const { signal, subscribe } = svc;

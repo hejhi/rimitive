@@ -1,4 +1,9 @@
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, BatchModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  BatchModule,
+} from '@rimitive/signals/extend';
 
-export const createSvc = () => compose(SignalModule, ComputedModule, BatchModule);
+export const createSvc = () =>
+  compose(SignalModule, ComputedModule, BatchModule);

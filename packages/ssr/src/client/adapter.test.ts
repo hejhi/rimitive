@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createDOMHydrationAdapter, HydrationMismatch } from './adapter';
-import { STATUS_FRAGMENT, type FragmentRef } from '@lattice/view/types';
+import { STATUS_FRAGMENT, type FragmentRef } from '@rimitive/view/types';
 
 /**
  * Create a mock fragment ref for testing lifecycle hooks
@@ -798,22 +798,22 @@ describe('onCreate and beforeAttach for Deferred Fragment Content', () => {
 // Integration Tests: Full View service with Hydration
 // ============================================================================
 
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
+} from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
 import {
   STATUS_ELEMENT,
   type ElementRef,
   type Adapter,
-} from '@lattice/view/types';
+} from '@rimitive/view/types';
 import type { DOMAdapterConfig } from './adapter';
 
 /** Create a view service with compose pattern for testing */

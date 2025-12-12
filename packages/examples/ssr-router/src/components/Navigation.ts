@@ -4,7 +4,7 @@
  * Provides client-side navigation using Link components.
  * Uses currentPath from the service for reactive URL tracking.
  */
-import { Link } from '@lattice/router/link';
+import { Link } from '@rimitive/router/link';
 import type { Service } from '../service.js';
 
 export const Navigation =

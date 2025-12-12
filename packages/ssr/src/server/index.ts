@@ -11,7 +11,7 @@
  *   renderToStringAsync,
  *   renderToStream,
  *   createStreamWriter,
- * } from '@lattice/ssr/server';
+ * } from '@rimitive/ssr/server';
  * ```
  */
 

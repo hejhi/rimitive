@@ -16,7 +16,7 @@ const API_DIR = 'packages/docs/src/content/docs/api';
 const PACKAGE_MAP = {
   signals: 'signals',
   view: 'view',
-  lattice: 'lattice',
+  core: 'core',
   router: 'router',
   react: 'react',
   ssr: 'ssr',
@@ -25,20 +25,20 @@ const PACKAGE_MAP = {
 
 // Friendly names for sidebar ordering
 const PACKAGE_LABELS = {
-  signals: '@lattice/signals',
-  view: '@lattice/view',
-  lattice: '@lattice/lattice',
-  router: '@lattice/router',
-  react: '@lattice/react',
-  ssr: '@lattice/ssr',
-  resource: '@lattice/resource',
+  signals: '@rimitive/signals',
+  view: '@rimitive/view',
+  core: '@rimitive/core',
+  router: '@rimitive/router',
+  react: '@rimitive/react',
+  ssr: '@rimitive/ssr',
+  resource: '@rimitive/resource',
 };
 
 // Sidebar order (lower = higher in sidebar)
 const PACKAGE_ORDER = {
   signals: 1,
   view: 2,
-  lattice: 3,
+  core: 3,
   router: 4,
   react: 5,
   ssr: 6,
@@ -158,7 +158,7 @@ function fixLinks(content, currentPackage, currentFilename, overloadGroups) {
   // Fix Home link: ./index.md -> ../../ (up from package/item to api root)
   result = result.replace(/\(\.\/index\.md\)/g, '(../../)');
 
-  // Fix package index links: ./lattice.md -> ../  (when in that package)
+  // Fix package index links: ./core.md -> ../  (when in that package)
   // or ./signals.md -> ../../signals/ (when in different package)
   result = result.replace(/\(\.\/([a-z]+)\.md\)/g, (match, pkg) => {
     if (pkg === currentPackage) {

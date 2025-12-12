@@ -1,16 +1,16 @@
 {
-  "name": "@lattice/view",
+  "name": "@rimitive/view",
   "version": "0.0.1",
-  "description": "Reactive DOM primitives for Lattice",
-  "author": "Lattice Team",
+  "description": "Reactive DOM primitives for Rimitive",
+  "author": "Rimitive Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hejhi/lattice",
+    "url": "https://github.com/rimitive",
     "directory": "packages/view"
   },
   "keywords": [
-    "lattice",
+    "rimitive",
     "view",
     "dom",
     "reactive",
@@ -112,10 +112,10 @@
     "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*"
+    "@rimitive/core": "workspace:*"
   },
   "devDependencies": {
-    "@lattice/signals": "workspace:*",
+    "@rimitive/signals": "workspace:*",
     "@types/node": "25.0.1",
     "esbuild": "0.27.1",
     "happy-dom": "20.0.11",
@@ -128,6 +128,7 @@
   },
   "sideEffects": false,
   "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
     "access": "public"
   }
 }

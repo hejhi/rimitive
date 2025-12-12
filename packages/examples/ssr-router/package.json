@@ -1,5 +1,5 @@
 {
-  "name": "@lattice/example-ssr-router",
+  "name": "@rimitive/example-ssr-router",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -12,12 +12,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/resource": "workspace:*",
-    "@lattice/router": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "@lattice/ssr": "workspace:*",
-    "@lattice/view": "workspace:*"
+    "@rimitive/core": "workspace:*",
+    "@rimitive/resource": "workspace:*",
+    "@rimitive/router": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/ssr": "workspace:*",
+    "@rimitive/view": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "25.0.1",

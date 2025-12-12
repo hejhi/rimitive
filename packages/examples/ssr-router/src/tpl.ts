@@ -4,7 +4,7 @@ export const tpl = (content: string, hydrationScript = '') => `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lattice SSR + Router Example</title>
+  <title>Rimitive SSR + Router Example</title>
   <style>
     * {
       margin: 0;

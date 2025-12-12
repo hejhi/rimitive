@@ -3,7 +3,7 @@ title: Loading Data
 description: Fetch async data with automatic tracking and cancellation.
 ---
 
-Data loading in Lattice is reactive. When dependencies change, data refetches. When requests overlap, stale ones get cancelled. Let's build up to that.
+Data loading in Rimitive is reactive. When dependencies change, data refetches. When requests overlap, stale ones get cancelled. Let's build up to that.
 
 ---
 
@@ -12,8 +12,8 @@ Data loading in Lattice is reactive. When dependencies change, data refetches. W
 You could manage async state yourself with signals and effects:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 const { signal, effect } = compose(SignalModule, ComputedModule, EffectModule);
 
@@ -47,9 +47,9 @@ This works, but you're managing three signals, handling errors, and there's no c
 `resource()` handles all of that. Add the resource module:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { ResourceModule } from '@lattice/resource';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { ResourceModule } from '@rimitive/resource';
 
 const svc = compose(
   SignalModule,
@@ -144,14 +144,14 @@ page(2);             // refetch
 Use `match()` to render different states:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { ResourceModule } from '@lattice/resource';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { createMapModule } from '@lattice/view/map';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { ResourceModule } from '@rimitive/resource';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createMapModule } from '@rimitive/view/map';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 
@@ -276,15 +276,15 @@ const ProductList = () => {
 A product browser with category filtering:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import type { Reactive } from '@lattice/signals';
-import { ResourceModule } from '@lattice/resource';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { createMapModule } from '@lattice/view/map';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import type { Reactive } from '@rimitive/signals';
+import { ResourceModule } from '@rimitive/resource';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createMapModule } from '@rimitive/view/map';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 const svc = compose(
@@ -388,6 +388,6 @@ Reactive dependencies, automatic cancellation, clean rendering. The resource han
 
 ## What About SSR?
 
-For server-side rendering with data, Lattice provides `load()` which integrates with the SSR system. That's covered in the SSR guide—for now, `resource()` handles client-side data fetching.
+For server-side rendering with data, Rimitive provides `load()` which integrates with the SSR system. That's covered in the SSR guide—for now, `resource()` handles client-side data fetching.
 
 Next: [Adding Routing](/guides/adding-routing) for navigation between views.

@@ -1,10 +1,11 @@
 # CLAUDE.md
 
-This file provides guidance for working with the Lattice codebase.
+This file provides guidance for working with the Rimitive codebase.
 
 ## LLM Documentation
 
 For comprehensive LLM-optimized documentation, see:
+
 - `llms.txt` - Quick reference index
 - `llms-full.txt` - Complete documentation (recommended for full context)
 
@@ -22,14 +23,14 @@ Bad research cascades into thousands of bad lines. Bad plan cascades into hundre
 
 Delegate work that drains context: file searching, code analysis, build logs, test output, large diffs.
 
-| Agent | Purpose |
-|-------|---------|
-| **explorer** | Search/read codebase, return only relevant findings |
-| **implementer** | Receive spec + files, implement, return result |
-| **verifier** | Run tests/typecheck/build, return pass/fail + errors |
-| **qa** | End-to-end fix verification - describe what was fixed, it confirms |
-| **reader** | Read long files, extract only requested information |
-| **api-explorer** | Search API docs/guides for relevant Lattice APIs |
+| Agent            | Purpose                                                            |
+| ---------------- | ------------------------------------------------------------------ |
+| **explorer**     | Search/read codebase, return only relevant findings                |
+| **implementer**  | Receive spec + files, implement, return result                     |
+| **verifier**     | Run tests/typecheck/build, return pass/fail + errors               |
+| **qa**           | End-to-end fix verification - describe what was fixed, it confirms |
+| **reader**       | Read long files, extract only requested information                |
+| **api-explorer** | Search API docs/guides for relevant Rimitive APIs                  |
 
 **Pattern**: Stay in orchestration mode. Hold the plan. Delegate noisy work. Receive compact results.
 
@@ -40,6 +41,7 @@ Delegate work that drains context: file searching, code analysis, build logs, te
 Proactively restructure context before hitting limits. Target 40-60% context utilization for complex work.
 
 When compacting (via `/compact` or manually), include:
+
 - Current goal and overall approach
 - Completed steps with outcomes
 - Current blocking issue or next phase
@@ -56,9 +58,9 @@ pnpm lint
 pnpm check                        # all of the above
 
 # Package-specific commands
-pnpm --filter @lattice/signals test
-pnpm --filter @lattice/signals test src/computed.test.ts
-pnpm --filter @lattice/signals test -- "should handle deep dependency"
+pnpm --filter @rimitive/signals test
+pnpm --filter @rimitive/signals test src/computed.test.ts
+pnpm --filter @rimitive/signals test -- "should handle deep dependency"
 
 # Benchmarks
 pnpm bench
@@ -70,18 +72,19 @@ timeout 60 pnpm bench chain-deep
 
 ### Composition
 
-Lattice is built on module composition. `compose()` wires modules together, resolving dependencies automatically:
+Rimitive is built on module composition. `compose()` wires modules together, resolving dependencies automatically:
 
 ```ts
 const svc = compose(SignalModule, ComputedModule, EffectModule);
 const { signal, computed, effect } = svc;
 ```
 
-Modules declare dependencies and provide implementations via `defineModule()`. See `packages/lattice/src/module.ts` for the pattern.
+Modules declare dependencies and provide implementations via `defineModule()`. See `packages/core/src/module.ts` for the pattern.
 
 ### Signal Primitives
 
-Import modules from `@lattice/signals/extend`:
+Import modules from `@rimitive/signals/extend`:
+
 - `SignalModule` - reactive state (`signal(value)`)
 - `ComputedModule` - derived values (`computed(() => ...)`)
 - `EffectModule` - synchronous side effects (`effect(() => ...)`)
@@ -100,7 +103,9 @@ View modules are factory functions that take an adapter:
 ```ts
 const adapter = createDOMAdapter();
 const svc = compose(
-  SignalModule, ComputedModule, EffectModule,
+  SignalModule,
+  ComputedModule,
+  EffectModule,
   createElModule(adapter),
   createMapModule(adapter),
   createMatchModule(adapter)
@@ -108,6 +113,7 @@ const svc = compose(
 ```
 
 Primitives:
+
 - `el(tag).props({...})(...children)` - element specs
 - `map(items, keyFn, render)` - reactive lists
 - `match(reactive, matcher)` - conditional rendering
@@ -120,13 +126,15 @@ Specs are inert blueprints. Call `.create(svc)` or use `mount()` to instantiate.
 Behaviors are portable functions that receive a service and return an API:
 
 ```ts
-const counter = (svc) => (initial = 0) => {
-  const count = svc.signal(initial);
-  return {
-    count,
-    increment: () => count(count() + 1),
+const counter =
+  (svc) =>
+  (initial = 0) => {
+    const count = svc.signal(initial);
+    return {
+      count,
+      increment: () => count(count() + 1),
+    };
   };
-};
 
 const useCounter = svc(counter);
 ```
@@ -137,7 +145,7 @@ Behaviors can compose other behaviors by passing the service through.
 
 ```
 packages/
-├── lattice/     # Core: compose, defineModule, merge
+├── rimitive/     # Core: compose, defineModule, merge
 ├── signals/     # Reactive primitives
 ├── view/        # UI primitives (el, map, match, portal, load)
 ├── router/      # Client-side routing
@@ -151,10 +159,10 @@ packages/
 
 ### Import Conventions
 
-- **Modules**: `import { SignalModule } from '@lattice/signals/extend'`
-- **Types**: `import type { Readable, SignalFunction } from '@lattice/signals'`
-- **View factories**: `import { createElModule } from '@lattice/view/el'`
-- **Adapters**: `import { createDOMAdapter } from '@lattice/view/adapters/dom'`
+- **Modules**: `import { SignalModule } from '@rimitive/signals/extend'`
+- **Types**: `import type { Readable, SignalFunction } from '@rimitive/signals'`
+- **View factories**: `import { createElModule } from '@rimitive/view/el'`
+- **Adapters**: `import { createDOMAdapter } from '@rimitive/view/adapters/dom'`
 
 The `/extend` path exports modules and factory functions for composition. The base path exports types.
 
@@ -167,6 +175,7 @@ When exporting types, ensure all referenced types are also exported. TS2742 ("Th
 ## Testing
 
 Tests are co-located with source files (`*.test.ts`). Key test files:
+
 - `api.test.ts` - integration tests
 - `detached-memory.test.ts` - memory leak tests
 
@@ -174,13 +183,13 @@ Tests are co-located with source files (`*.test.ts`). Key test files:
 
 Project skills in `.claude/skills/` are activated automatically when relevant:
 
-| Skill | Use When |
-|-------|----------|
-| `lattice-behavior` | Creating reusable state logic, headless UI patterns |
-| `lattice-module` | Adding new primitives with `defineModule()` |
-| `lattice-component` | Building UI with `el`, `map`, `match` |
-| `lattice-test` | Writing tests with Vitest |
-| `create-agent` | Creating new sub-agents in `.claude/agents/` |
+| Skill                | Use When                                            |
+| -------------------- | --------------------------------------------------- |
+| `rimitive-behavior`  | Creating reusable state logic, headless UI patterns |
+| `rimitive-module`    | Adding new primitives with `defineModule()`         |
+| `rimitive-component` | Building UI with `el`, `map`, `match`               |
+| `rimitive-test`      | Writing tests with Vitest                           |
+| `create-agent`       | Creating new sub-agents in `.claude/agents/`        |
 
 ## Git Workflow
 
@@ -196,6 +205,7 @@ Create changesets for releases: `pnpm changeset`
 - **Trust-based**: Don't over-explain obvious things.
 
 **Never revert or abandon during implementation.** When blocked:
+
 1. Analyze deeply to understand the fundamental problem
 2. Strategize how to iterate through it
 3. If fundamentally flawed or too ambiguous, stop and consult

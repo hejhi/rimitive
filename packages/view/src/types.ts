@@ -1,8 +1,8 @@
 /**
- * Core types for @lattice/view
+ * Core types for @rimitive/view
  */
 
-// Re-export adapter types so they're available from @lattice/view/types
+// Re-export adapter types so they're available from @rimitive/view/types
 export type { Adapter, AdapterConfig } from './adapter';
 
 // Re-export factory types for public service
@@ -18,7 +18,7 @@ export type { MatchFactory } from './match';
  *
  * @example
  * ```typescript
- * import type { ParentContext } from '@lattice/view/types';
+ * import type { ParentContext } from '@rimitive/view/types';
  *
  * const context: ParentContext<HTMLElement> = {
  *   adapter: domAdapter,
@@ -122,11 +122,11 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import type { RefSpec } from '@lattice/view/types';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import type { RefSpec } from '@rimitive/view/types';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(SignalModule, createElModule(adapter));
@@ -152,21 +152,21 @@ export type RefSpec<TElement> = {
   ): NodeRef<TElement> & TExt;
 };
 
-import type { Reactive } from '@lattice/signals/types';
+import type { Reactive } from '@rimitive/signals/types';
 /**
- * Portable signal types - re-exported from @lattice/signals
+ * Portable signal types - re-exported from @rimitive/signals
  */
-export type { Readable, Writable, Reactive } from '@lattice/signals/types';
+export type { Readable, Writable, Reactive } from '@rimitive/signals/types';
 
 /**
  * Lifecycle callback for element connection/disconnection
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import type { LifecycleCallback } from '@lattice/view/types';
+ * import { compose } from '@rimitive/core';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import type { LifecycleCallback } from '@rimitive/view/types';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(createElModule(adapter));
@@ -203,11 +203,11 @@ export type LifecycleCallback<TElement> = (
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import type { ElRefSpecChild } from '@lattice/view/types';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import type { ElRefSpecChild } from '@rimitive/view/types';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(SignalModule, ComputedModule, createElModule(adapter));

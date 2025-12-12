@@ -1,11 +1,11 @@
 ---
 title: Error Handling
-description: How to handle errors in Lattice applications.
+description: How to handle errors in Rimitive applications.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-React has Error Boundaries. Solid has `<ErrorBoundary>`. You might expect Lattice to have something similar.
+React has Error Boundaries. Solid has `<ErrorBoundary>`. You might expect Rimitive to have something similar.
 
 It doesn't—because it doesn't need one.
 
@@ -15,7 +15,7 @@ It doesn't—because it doesn't need one.
 
 In React and Solid, components are reactive functions that re-run during a render cycle. Errors can happen mid-render, and the framework needs a way to catch them and show fallback UI.
 
-In Lattice, components are just functions that return specs. They run once, produce a data structure, and that's it. Errors are plain JavaScript errors that propagate normally.
+In Rimitive, components are just functions that return specs. They run once, produce a data structure, and that's it. Errors are plain JavaScript errors that propagate normally.
 
 ```typescript
 const RiskyComponent = (svc: Service) => {
@@ -83,8 +83,8 @@ The error state is part of the resource's reactive value.
 Errors in effects propagate normally. If you need to catch them:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, EffectModule } from '@rimitive/signals/extend';
 
 const svc = compose(SignalModule, EffectModule)();
 const { signal, effect } = svc;

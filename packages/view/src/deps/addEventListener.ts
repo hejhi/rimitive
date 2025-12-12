@@ -6,15 +6,15 @@
  * only one re-render happens instead of multiple.
  */
 
-import { defineModule } from '@lattice/lattice';
-import { BatchModule } from '@lattice/signals/batch';
+import { defineModule } from '@rimitive/core';
+import { BatchModule } from '@rimitive/signals/batch';
 
 /**
  * Type of the addEventListener helper returned by createAddEventListener
  *
  * @example
  * ```typescript
- * import type { AddEventListener } from '@lattice/view/deps/addEventListener';
+ * import type { AddEventListener } from '@rimitive/view/deps/addEventListener';
  *
  * const on: AddEventListener = createAddEventListener(batch);
  *
@@ -41,11 +41,11 @@ export type AddEventListener = <K extends keyof HTMLElementEventMap>(
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, EffectModule, BatchModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import { createAddEventListener } from '@lattice/view/deps/addEventListener';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import { createAddEventListener } from '@rimitive/view/deps/addEventListener';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(SignalModule, EffectModule, BatchModule, createElModule(adapter));

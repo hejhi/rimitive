@@ -9,13 +9,13 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   srcDir: '.',
   alias: {
-    '@lattice/signals-store': resolve(
+    '@rimitive/signals-store': resolve(
       __dirname,
       '../signals-store/src/index.ts'
     ),
-    '@lattice/signals/extend': resolve(__dirname, '../signals/src/extend.ts'),
-    '@lattice/signals': resolve(__dirname, '../signals/src/index.ts'),
-    '@lattice/lattice': resolve(__dirname, '../lattice/src/index.ts'),
+    '@rimitive/signals/extend': resolve(__dirname, '../signals/src/extend.ts'),
+    '@rimitive/signals': resolve(__dirname, '../signals/src/index.ts'),
+    '@rimitive/core': resolve(__dirname, '../core/src/index.ts'),
     '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
     '@/components': resolve(__dirname, 'src/components'),
     '@/hooks': resolve(__dirname, 'src/hooks'),
@@ -23,8 +23,8 @@ export default defineConfig({
   },
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: 'Lattice DevTools',
-    description: 'Developer tools for debugging Lattice reactive applications',
+    name: 'Rimitive DevTools',
+    description: 'Developer tools for debugging Rimitive reactive applications',
     version: '0.0.1',
     permissions: ['storage', 'scripting', 'webNavigation'],
     host_permissions: ['<all_urls>'],
@@ -44,9 +44,12 @@ export default defineConfig({
     plugins: [watchWorkspace()],
     resolve: {
       alias: {
-        '@lattice/signals/extend': resolve(__dirname, '../signals/src/extend.ts'),
-        '@lattice/signals': resolve(__dirname, '../signals/src/index.ts'),
-        '@lattice/lattice': resolve(__dirname, '../lattice/src/index.ts'),
+        '@rimitive/signals/extend': resolve(
+          __dirname,
+          '../signals/src/extend.ts'
+        ),
+        '@rimitive/signals': resolve(__dirname, '../signals/src/index.ts'),
+        '@rimitive/core': resolve(__dirname, '../core/src/index.ts'),
         '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
         '@/components': resolve(__dirname, 'src/components'),
         '@/hooks': resolve(__dirname, 'src/hooks'),
@@ -55,12 +58,16 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@lattice/signals-store', '@lattice/signals', '@lattice/lattice'],
+      exclude: [
+        '@rimitive/signals-store',
+        '@rimitive/signals',
+        '@rimitive/core',
+      ],
     },
     server: {
       watch: {
         // Watch the source files of workspace dependencies
-        ignored: ['!**/node_modules/@lattice/**'],
+        ignored: ['!**/node_modules/@rimitive/**'],
       },
       fs: {
         // Allow serving files from outside the project root

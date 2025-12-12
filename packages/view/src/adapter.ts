@@ -16,7 +16,7 @@ import type { NodeRef, ParentContext } from './types';
  *
  * @example
  * ```typescript
- * import type { Node } from '@lattice/view/adapter';
+ * import type { Node } from '@rimitive/view/adapter';
  *
  * // DOM adapter uses HTMLElement as Node
  * type DOMNode = HTMLElement & Node;
@@ -41,7 +41,7 @@ export type Node = object;
  *
  * @example
  * ```typescript
- * import type { AdapterConfig } from '@lattice/view/adapter';
+ * import type { AdapterConfig } from '@rimitive/view/adapter';
  *
  * // DOM adapter config
  * type DOMAdapterConfig = AdapterConfig & {
@@ -95,7 +95,7 @@ export type AdapterConfig = {
  *
  * @example
  * ```typescript
- * import type { Adapter, AdapterConfig } from '@lattice/view/adapter';
+ * import type { Adapter, AdapterConfig } from '@rimitive/view/adapter';
  *
  * const domAdapter: Adapter<DOMAdapterConfig> = {
  *   createNode: (type, props) => {

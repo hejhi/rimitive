@@ -2,7 +2,7 @@
  * Instrumentation wrapper for map primitive
  */
 
-import type { InstrumentationContext } from '@lattice/lattice';
+import type { InstrumentationContext } from '@rimitive/core';
 import type { MapFactory } from '../map';
 import type { RefSpec, FragmentRef, Reactive } from '../types';
 import { STATUS_REF_SPEC } from '../types';

@@ -1,13 +1,13 @@
-# @lattice/devtools-extension
+# @rimitive/devtools-extension
 
 > **Status: In Development**
 > This extension is under active development and not yet published.
 
-Chrome DevTools extension for debugging Lattice reactive applications.
+Chrome DevTools extension for debugging Rimitive reactive applications.
 
 ## Features (Planned)
 
-- **Context Inspector** — View all Lattice contexts in your application
+- **Context Inspector** — View all Rimitive contexts in your application
 - **Signal Logging** — Track signal reads, writes, and computed updates
 - **Dependency Graph** — Visualize reactive dependencies
 - **Timeline View** — See when signals change and effects run
@@ -28,21 +28,23 @@ Chrome DevTools extension for debugging Lattice reactive applications.
 pnpm install
 
 # Start the extension in dev mode
-pnpm --filter @lattice/devtools-extension dev
+pnpm --filter @rimitive/devtools-extension dev
 
 # Or for Firefox
-pnpm --filter @lattice/devtools-extension dev:firefox
+pnpm --filter @rimitive/devtools-extension dev:firefox
 ```
 
 ### Loading the Extension
 
 **Chrome:**
+
 1. Open `chrome://extensions`
 2. Enable "Developer mode"
 3. Click "Load unpacked"
 4. Select `packages/devtools-extension/.output/chrome-mv3`
 
 **Firefox:**
+
 1. Open `about:debugging#/runtime/this-firefox`
 2. Click "Load Temporary Add-on"
 3. Select any file in `packages/devtools-extension/.output/firefox-mv2`
@@ -51,10 +53,10 @@ pnpm --filter @lattice/devtools-extension dev:firefox
 
 ```bash
 # Production build
-pnpm --filter @lattice/devtools-extension build
+pnpm --filter @rimitive/devtools-extension build
 
 # Create distributable zip
-pnpm --filter @lattice/devtools-extension zip
+pnpm --filter @rimitive/devtools-extension zip
 ```
 
 ## Architecture
@@ -69,10 +71,10 @@ entrypoints/
 └── panel/             # DevTools panel UI (React)
     ├── components/    # UI components
     ├── hooks/         # React hooks
-    └── store/         # State management (uses Lattice signals!)
+    └── store/         # State management (uses Rimitive signals!)
 ```
 
-The extension itself uses Lattice signals for its internal state management.
+The extension itself uses Rimitive signals for its internal state management.
 
 ## License
 

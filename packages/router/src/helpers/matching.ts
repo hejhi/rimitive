@@ -13,7 +13,7 @@ import type { RouteMatch } from '../types';
  *
  * @example
  * ```typescript
- * import { composePath } from '@lattice/router';
+ * import { composePath } from '@rimitive/router';
  *
  * composePath('/', 'about');          // '/about'
  * composePath('/products', ':id');    // '/products/:id'
@@ -43,7 +43,7 @@ export const composePath = (parentPath: string, childPath: string): string => {
  *
  * @example
  * ```typescript
- * import { matchPath } from '@lattice/router';
+ * import { matchPath } from '@rimitive/router';
  *
  * // Exact match
  * matchPath('/about', '/about');
@@ -126,7 +126,7 @@ export const matchPath = (pattern: string, path: string): RouteMatch | null => {
  *
  * @example
  * ```typescript
- * import { matchPathPrefix } from '@lattice/router';
+ * import { matchPathPrefix } from '@rimitive/router';
  *
  * // Prefix match for parent routes
  * matchPathPrefix('/products', '/products/123');

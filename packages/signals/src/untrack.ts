@@ -2,7 +2,7 @@
  * Untracked execution - temporarily disable reactive tracking
  */
 
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 import { GraphEdgesModule, type Consumer } from './deps/graph-edges';
 
 /**
@@ -22,8 +22,8 @@ export type UntrackedOpts = {
  *
  * @example Basic usage
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, EffectModule, UntrackModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, EffectModule, UntrackModule } from '@rimitive/signals/extend';
  *
  * const { signal, effect, untrack } = compose(SignalModule, EffectModule, UntrackModule);
  *
@@ -74,8 +74,8 @@ export type UntrackedOpts = {
  *
  * @example Custom composition (advanced)
  * ```ts
- * import { createUntracked } from '@lattice/signals/extend';
- * import { createGraphEdges } from '@lattice/signals/extend';
+ * import { createUntracked } from '@rimitive/signals/extend';
+ * import { createGraphEdges } from '@rimitive/signals/extend';
  *
  * const edges = createGraphEdges();
  * const untrack = createUntracked({ consumer: edges.consumer });
@@ -99,5 +99,6 @@ export function createUntracked(opts: UntrackedOpts) {
 export const UntrackModule = defineModule({
   name: 'untrack',
   dependencies: [GraphEdgesModule],
-  create: ({ graphEdges }) => createUntracked({ consumer: graphEdges.consumer }),
+  create: ({ graphEdges }) =>
+    createUntracked({ consumer: graphEdges.consumer }),
 });

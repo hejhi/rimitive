@@ -40,7 +40,7 @@ export function useDataExport() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `lattice-devtools-export-${Date.now()}.json`;
+    link.download = `rimitive-devtools-export-${Date.now()}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }, []);

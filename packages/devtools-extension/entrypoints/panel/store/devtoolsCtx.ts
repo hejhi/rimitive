@@ -1,13 +1,13 @@
 import type { ContextInfo, LogEntry } from './types';
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
+} from '@rimitive/signals/extend';
 
-// Create a Lattice context for the devtools panel itself
+// Create a Rimitive context for the devtools panel itself
 export const devtoolsContext = compose(
   SignalModule,
   ComputedModule,

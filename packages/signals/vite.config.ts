@@ -90,7 +90,7 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['vitest', /^vitest/, 'node:test', '@lattice/lattice'],
+      external: ['vitest', /^vitest/, 'node:test', '@rimitive/core'],
       output: {
         entryFileNames: '[name].js',
       },

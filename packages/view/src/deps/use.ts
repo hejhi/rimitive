@@ -5,16 +5,16 @@
  * Behaviors are curried functions: (svc) => (...args) => Result
  */
 
-import type { Readable, Writable } from '@lattice/signals/types';
+import type { Readable, Writable } from '@rimitive/signals/types';
 
 /**
  * Type of the use helper returned by createUse
  *
  * @example
  * ```typescript
- * import type { Use } from '@lattice/view/deps/use';
- * import type { Readable, Writable } from '@lattice/signals/types';
- * import type { ElFactory } from '@lattice/view/el';
+ * import type { Use } from '@rimitive/view/deps/use';
+ * import type { Readable, Writable } from '@rimitive/signals/types';
+ * import type { ElFactory } from '@rimitive/view/el';
  *
  * type DOMViewSvc = {
  *   signal: <T>(initialValue: T) => Writable<T>;
@@ -45,11 +45,11 @@ export type Use<TSvc> = <Args extends unknown[], Result>(
  *
  * @example
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import { createUse } from '@lattice/view/deps/use';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import { createUse } from '@rimitive/view/deps/use';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(SignalModule, ComputedModule, EffectModule, createElModule(adapter));

@@ -1,8 +1,15 @@
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
-import { defineModule } from '@lattice/lattice';
-import { GraphEdgesModule, type GraphEdges, type Consumer } from './deps/graph-edges';
-import { PullPropagatorModule, type PullPropagator } from './deps/pull-propagator';
+import { defineModule } from '@rimitive/core';
+import {
+  GraphEdgesModule,
+  type GraphEdges,
+  type Consumer,
+} from './deps/graph-edges';
+import {
+  PullPropagatorModule,
+  type PullPropagator,
+} from './deps/pull-propagator';
 
 /**
  * Computed function type - a callable that derives values from other reactives.
@@ -71,8 +78,8 @@ const COMPUTED_DIRTY = COMPUTED | DIRTY;
  *
  * @example Basic composition
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
  *
  * const svc = compose(SignalModule, ComputedModule);
  * const { signal, computed } = svc;

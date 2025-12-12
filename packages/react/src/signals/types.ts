@@ -1,4 +1,4 @@
-import type { Readable } from '@lattice/signals/types';
+import type { Readable } from '@rimitive/signals/types';
 
 /**
  * Extract the value type from a Readable signal.

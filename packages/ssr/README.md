@@ -1,12 +1,12 @@
-# @lattice/ssr
+# @rimitive/ssr
 
-Server-side rendering and hydration for Lattice applications.
+Server-side rendering and hydration for Rimitive applications.
 
 ## Overview
 
-Lattice SSR renders your components to HTML on the server, waits for async data, then sends complete pages to the browser. The client hydrates the existing DOM instead of recreating it.
+Rimitive SSR renders your components to HTML on the server, waits for async data, then sends complete pages to the browser. The client hydrates the existing DOM instead of recreating it.
 
-**Key insight**: Lattice effects are synchronous and run on the server too. There's no special "client-only" mode—your reactive code works the same in both environments.
+**Key insight**: Rimitive effects are synchronous and run on the server too. There's no special "client-only" mode—your reactive code works the same in both environments.
 
 ---
 
@@ -16,13 +16,17 @@ Lattice SSR renders your components to HTML on the server, waits for async data,
 
 ```typescript
 import { createServer } from 'node:http';
-import { createDOMServerAdapter, renderToStringAsync } from '@lattice/ssr/server';
+import {
+  createDOMServerAdapter,
+  renderToStringAsync,
+} from '@rimitive/ssr/server';
 import { createService } from './service.js';
 import { App } from './App.js';
 
 const server = createServer(async (req, res) => {
   // Create per-request adapter and service
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } =
+    createDOMServerAdapter();
   const service = createService(adapter);
 
   // Render to string, awaiting all load() boundaries
@@ -57,7 +61,7 @@ server.listen(3000);
 ### Client
 
 ```typescript
-import { createClientAdapter } from '@lattice/ssr/client';
+import { createClientAdapter } from '@rimitive/ssr/client';
 import { createService } from './service.js';
 import { App } from './App.js';
 
@@ -90,7 +94,7 @@ SSR requires three pieces working together:
 ### Server Adapter
 
 ```typescript
-import { createDOMServerAdapter } from '@lattice/ssr/server';
+import { createDOMServerAdapter } from '@rimitive/ssr/server';
 
 const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
 ```
@@ -104,7 +108,7 @@ const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
 **Basic SSR** — waits for all data before sending:
 
 ```typescript
-import { renderToStringAsync } from '@lattice/ssr/server';
+import { renderToStringAsync } from '@rimitive/ssr/server';
 
 const html = await renderToStringAsync(appSpec, {
   svc: service,
@@ -117,7 +121,7 @@ const html = await renderToStringAsync(appSpec, {
 **Streaming SSR** — sends HTML immediately, streams data as it loads:
 
 ```typescript
-import { renderToStream, createStreamWriter } from '@lattice/ssr/server';
+import { renderToStream, createStreamWriter } from '@rimitive/ssr/server';
 
 const stream = createStreamWriter('__APP_STREAM__');
 
@@ -137,7 +141,7 @@ await done;
 ### Client Adapter
 
 ```typescript
-import { createClientAdapter } from '@lattice/ssr/client';
+import { createClientAdapter } from '@rimitive/ssr/client';
 
 const adapter = createClientAdapter(document.querySelector('.app')!);
 
@@ -155,14 +159,14 @@ adapter.activate();
 `load()` creates async boundaries that work with SSR:
 
 ```typescript
-import type { LoadState, LoadStatus } from '@lattice/view/load';
+import type { LoadState, LoadStatus } from '@rimitive/view/load';
 
 const UserProfile = (svc: Service) => {
   const { loader, match, el } = svc;
 
   return loader.load(
-    'user-profile',  // ID for hydration
-    () => fetch('/api/user').then(r => r.json()),
+    'user-profile', // ID for hydration
+    () => fetch('/api/user').then((r) => r.json()),
     (state: LoadState<User>) =>
       match(state.status, (status: LoadStatus) => {
         switch (status) {
@@ -196,13 +200,14 @@ import {
   createDOMServerAdapter,
   renderToStream,
   createStreamWriter,
-} from '@lattice/ssr/server';
+} from '@rimitive/ssr/server';
 
 const STREAM_KEY = '__APP_STREAM__';
 const stream = createStreamWriter(STREAM_KEY);
 
 const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } =
+    createDOMServerAdapter();
 
   const service = createService(adapter, {
     onResolve: (id, data) => {
@@ -239,7 +244,7 @@ const server = createServer(async (req, res) => {
 ### Client
 
 ```typescript
-import { createClientAdapter, connectStream } from '@lattice/ssr/client';
+import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
 
 const adapter = createClientAdapter(document.querySelector('.app')!);
 const service = createService(adapter);
@@ -259,13 +264,17 @@ Your service factory takes an adapter, so both server and client use the same co
 
 ```typescript
 // service.ts
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { createLoaderModule } from '@lattice/view/load';
-import type { Adapter } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createLoaderModule } from '@rimitive/view/load';
+import type { Adapter } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 export type ServiceOptions = {
   loaderData?: Record<string, unknown>;
@@ -301,20 +310,22 @@ Since effects and refs run on the server, browser-specific code needs guards:
 el('input').ref((el) => {
   if (typeof window === 'undefined') return;
   el.focus();
-})()
+})();
 
 // Optional chaining for methods that might not exist
 el('div').ref((el) => {
   el.scrollIntoView?.({ behavior: 'smooth' });
-})()
+})();
 ```
 
 **What needs guards:**
+
 - `focus()`, `blur()`, `scrollIntoView()`
 - `getBoundingClientRect()`, `animate()`
 - Browser globals: `window`, `document`, `localStorage`
 
 **What works without guards:**
+
 - Event handlers via `on()` or props (`onclick`) — skipped on server
 - Basic DOM properties: `className`, `textContent`, `id`
 
@@ -322,12 +333,12 @@ el('div').ref((el) => {
 
 ## Import Guide
 
-| Use Case | Import |
-|----------|--------|
-| Server rendering | `import { createDOMServerAdapter, renderToStringAsync } from '@lattice/ssr/server'` |
-| Streaming server | `import { renderToStream, createStreamWriter } from '@lattice/ssr/server'` |
-| Client hydration | `import { createClientAdapter } from '@lattice/ssr/client'` |
-| Streaming client | `import { createClientAdapter, connectStream } from '@lattice/ssr/client'` |
+| Use Case         | Import                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| Server rendering | `import { createDOMServerAdapter, renderToStringAsync } from '@rimitive/ssr/server'` |
+| Streaming server | `import { renderToStream, createStreamWriter } from '@rimitive/ssr/server'`          |
+| Client hydration | `import { createClientAdapter } from '@rimitive/ssr/client'`                         |
+| Streaming client | `import { createClientAdapter, connectStream } from '@rimitive/ssr/client'`          |
 
 ---
 
@@ -378,11 +389,13 @@ connectStream(service, key: string): void
 ## When to Use Each Mode
 
 **Basic SSR (`renderToStringAsync`):**
+
 - All data loads quickly (< 500ms)
 - SEO crawlers need complete HTML
 - Simpler setup
 
 **Streaming SSR (`renderToStream`):**
+
 - Some data sources are slow
 - Users should see content immediately
 - Different parts have different data needs

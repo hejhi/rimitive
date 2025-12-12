@@ -1,13 +1,13 @@
 ---
 title: Composition Over Stores
-description: Why Lattice doesn't have stores, and what to do instead.
+description: Why Rimitive doesn't have stores, and what to do instead.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
 SolidJS has `createStore`. Vue has `reactive()`. These provide "deep reactivity"—you can mutate nested properties and the framework tracks the changes automatically.
 
-Lattice doesn't have stores. This is intentional.
+Rimitive doesn't have stores. This is intentional.
 
 ---
 
@@ -20,7 +20,7 @@ Deep reactivity requires proxies. Proxies have costs:
 - **Complexity**: Edge cases around arrays, Maps, Sets, class instances, etc.
 - **Encourages sprawl**: Big nested state objects instead of focused, composable units.
 
-There's nothing saying you can't create your own primitive—it's just that lattice doesn't ship one by default.
+There's nothing saying you can't create your own primitive—it's just that rimitive doesn't ship one by default.
 
 ---
 
@@ -193,7 +193,7 @@ const nestedSettings = (svc: SignalsSvc) => () => {
 
 ## But I Really Want Proxies
 
-If you're convinced you need proxy-based stores, you can build them on top of Lattice's primitives. The signals are there—wrap them in proxies if you want.
+If you're convinced you need proxy-based stores, you can build them on top of Rimitive's primitives. The signals are there—wrap them in proxies if you want.
 
 Or use an external store library and connect it via effects:
 
@@ -214,7 +214,7 @@ const bridged = (svc: SignalsSvc) => () => {
 };
 ```
 
-But consider: if you're reaching for proxies, you might be fighting the framework. Lattice's composition model works best when you embrace it.
+But consider: if you're reaching for proxies, you might be fighting the framework. Rimitive's composition model works best when you embrace it.
 
 <Aside type="note">
 This isn't about purity—it's about predictability. Every abstraction has a cost. Proxies hide what's happening. Composition makes it visible.

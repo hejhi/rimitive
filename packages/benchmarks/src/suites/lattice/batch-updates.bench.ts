@@ -25,15 +25,15 @@ import {
   endBatch as alienEndBatch,
 } from 'alien-signals';
 import { createSvc } from './deps/signal-computed-batch';
-import { Readable } from '@lattice/signals/types';
+import { Readable } from '@rimitive/signals/types';
 
 const ITERATIONS = 10000;
-const latticeSvc = createSvc();
+const rimitiveSvc = createSvc();
 const {
-  signal: latticeSignal,
-  computed: latticeComputed,
-  batch: latticeBatch,
-} = latticeSvc;
+  signal: rimitiveSignal,
+  computed: rimitiveComputed,
+  batch: rimitiveBatch,
+} = rimitiveSvc;
 
 type BenchState = {
   get(name: 'signals'): number;
@@ -44,11 +44,11 @@ group('Batch Multiple Updates - Scaling', () => {
   summary(() => {
     barplot(() => {
       bench(
-        'Lattice BATCHED - $signals signals',
+        'Rimitive BATCHED - $signals signals',
         function* (state: BenchState) {
           const signalCount = state.get('signals');
           const signals = Array.from({ length: signalCount }, () =>
-            latticeSignal(0)
+            rimitiveSignal(0)
           );
 
           // Multiple layers of computeds to show cascade effects
@@ -56,18 +56,18 @@ group('Batch Multiple Updates - Scaling', () => {
           for (let i = 0; i < signalCount; i += 2) {
             const s1 = signals[i]!;
             const s2 = signals[i + 1] || signals[i]!;
-            partialSums.push(latticeComputed(() => s1() + s2()));
+            partialSums.push(rimitiveComputed(() => s1() + s2()));
           }
 
-          const totalSum = latticeComputed(() =>
+          const totalSum = rimitiveComputed(() =>
             partialSums.reduce((acc, ps) => acc + ps(), 0)
           );
 
-          const final = latticeComputed(() => totalSum() * 2);
+          const final = rimitiveComputed(() => totalSum() * 2);
 
           yield () => {
             for (let i = 0; i < ITERATIONS / signalCount; i++) {
-              latticeBatch(() => {
+              rimitiveBatch(() => {
                 signals.forEach((s, idx) => {
                   s(i * (idx + 1));
                 });
@@ -79,25 +79,25 @@ group('Batch Multiple Updates - Scaling', () => {
       ).args('signals', [10, 20, 40]);
 
       bench(
-        'Lattice UNBATCHED - $signals signals',
+        'Rimitive UNBATCHED - $signals signals',
         function* (state: BenchState) {
           const signalCount = state.get('signals');
           const signals = Array.from({ length: signalCount }, () =>
-            latticeSignal(0)
+            rimitiveSignal(0)
           );
 
           const partialSums: Readable<number>[] = [];
           for (let i = 0; i < signalCount; i += 2) {
             const s1 = signals[i]!;
             const s2 = signals[i + 1] || signals[i]!;
-            partialSums.push(latticeComputed(() => s1() + s2()));
+            partialSums.push(rimitiveComputed(() => s1() + s2()));
           }
 
-          const totalSum = latticeComputed(() =>
+          const totalSum = rimitiveComputed(() =>
             partialSums.reduce((acc, ps) => acc + ps(), 0)
           );
 
-          const final = latticeComputed(() => totalSum() * 2);
+          const final = rimitiveComputed(() => totalSum() * 2);
 
           yield () => {
             for (let i = 0; i < ITERATIONS / signalCount; i++) {

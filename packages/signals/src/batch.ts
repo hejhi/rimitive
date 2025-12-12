@@ -1,5 +1,5 @@
-import type { InstrumentationContext } from '@lattice/lattice';
-import { defineModule } from '@lattice/lattice';
+import type { InstrumentationContext } from '@rimitive/core';
+import { defineModule } from '@rimitive/core';
 import { SchedulerModule, type Scheduler } from './deps/scheduler';
 
 /**
@@ -15,8 +15,8 @@ export type BatchFactory = <T>(fn: () => T) => T;
  *
  * @example Basic composition
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, EffectModule, BatchModule } from '@lattice/signals/extend';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
  *
  * const svc = compose(SignalModule, EffectModule, BatchModule);
  * const { signal, effect, batch } = svc;
@@ -74,7 +74,10 @@ export const BatchModule = defineModule({
       }
     };
   },
-  instrument: (impl: BatchFactory, instr: InstrumentationContext): BatchFactory => {
+  instrument: (
+    impl: BatchFactory,
+    instr: InstrumentationContext
+  ): BatchFactory => {
     return <T>(fn: () => T): T => {
       instr.emit({ type: 'batch:start', timestamp: Date.now(), data: {} });
       const result = impl(fn);

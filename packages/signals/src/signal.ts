@@ -1,6 +1,6 @@
 import type { ProducerNode, Dependency, Writable } from './types';
-import type { InstrumentationContext } from '@lattice/lattice';
-import { defineModule } from '@lattice/lattice';
+import type { InstrumentationContext } from '@rimitive/core';
+import { defineModule } from '@rimitive/core';
 import { CONSTANTS } from './constants';
 import { GraphEdgesModule, type GraphEdges } from './deps/graph-edges';
 import { SchedulerModule, type Scheduler } from './deps/scheduler';

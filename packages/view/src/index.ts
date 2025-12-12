@@ -1,14 +1,14 @@
 /**
- * @lattice/view - Declarative view primitives for Lattice
+ * @rimitive/view - Declarative view primitives for Rimitive
  *
  * ## Quick Start
  * ```typescript
- * import { compose } from '@lattice/lattice';
- * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createElModule } from '@lattice/view/el';
- * import { createMapModule } from '@lattice/view/map';
- * import { MountModule } from '@lattice/view/deps/mount';
+ * import { compose } from '@rimitive/core';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+ * import { createElModule } from '@rimitive/view/el';
+ * import { createMapModule } from '@rimitive/view/map';
+ * import { MountModule } from '@rimitive/view/deps/mount';
  *
  * const adapter = createDOMAdapter();
  * const svc = compose(
@@ -21,9 +21,9 @@
  *
  * | Use Case | Import |
  * |----------|--------|
- * | DOM adapter | `import { createDOMAdapter } from '@lattice/view/adapters/dom'` |
- * | View modules | `import { createElModule } from '@lattice/view/el'` |
- * | Types only | `import type { RefSpec, NodeRef } from '@lattice/view'` |
+ * | DOM adapter | `import { createDOMAdapter } from '@rimitive/view/adapters/dom'` |
+ * | View modules | `import { createElModule } from '@rimitive/view/el'` |
+ * | Types only | `import type { RefSpec, NodeRef } from '@rimitive/view'` |
  */
 
 // =============================================================================

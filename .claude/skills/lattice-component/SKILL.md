@@ -1,11 +1,11 @@
 ---
-name: lattice-component
-description: Create Lattice view components with el, map, and match. Use when building UI components, rendering reactive content, handling events, or creating reusable view elements.
+name: rimitive-component
+description: Create Rimitive view components with el, map, and match. Use when building UI components, rendering reactive content, handling events, or creating reusable view elements.
 ---
 
-# Creating Lattice View Components
+# Creating Rimitive View Components
 
-Lattice components are functions that return element specs. They use `el()` for elements, `map()` for lists, and `match()` for conditionals.
+Rimitive components are functions that return element specs. They use `el()` for elements, `map()` for lists, and `match()` for conditionals.
 
 ## Component Patterns
 
@@ -16,8 +16,12 @@ When the service is shared at module level:
 ```typescript
 // service.ts
 export const { el, signal, computed, map, match, on, mount } = compose(
-  SignalModule, ComputedModule, EffectModule,
-  createElModule(adapter), createMapModule(adapter), createMatchModule(adapter)
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter)
 );
 
 // Counter.ts
@@ -28,7 +32,7 @@ export const Counter = (initial = 0) => {
 
   return el('div')(
     el('span')(computed(() => `Count: ${count()}`)),
-    el('button').props({ onclick: () => count(c => c + 1) })('Increment')
+    el('button').props({ onclick: () => count((c) => c + 1) })('Increment')
   );
 };
 ```
@@ -39,17 +43,16 @@ When components need to work across different contexts:
 
 ```typescript
 // (svc) => (props) => RefSpec
-const Button = (svc: Service) => (props: { label: string; onClick: () => void }) => {
-  const { el } = svc;
-  return el('button').props({ onclick: props.onClick })(props.label);
-};
+const Button =
+  (svc: Service) => (props: { label: string; onClick: () => void }) => {
+    const { el } = svc;
+    return el('button').props({ onclick: props.onClick })(props.label);
+  };
 
 // Usage with use()
 const App = (svc: Service) => {
   const { el, use } = svc;
-  return el('div')(
-    use(Button)({ label: 'Click me', onClick: handleClick })
-  );
+  return el('div')(use(Button)({ label: 'Click me', onClick: handleClick }));
 };
 ```
 
@@ -59,9 +62,10 @@ const App = (svc: Service) => {
 
 ```typescript
 el(tagName)
-  .props({ /* HTML attributes and event handlers */ })
-  .ref(/* lifecycle callbacks */)
-  (...children)
+  .props({
+    /* HTML attributes and event handlers */
+  })
+  .ref(/* lifecycle callbacks */)(...children);
 ```
 
 ### Props
@@ -80,39 +84,38 @@ el('input').props({
   // Event handlers
   onclick: () => handleClick(),
   onchange: (e) => nameSignal((e.target as HTMLInputElement).value),
-})()
+})();
 ```
 
 ### Children
 
 ```typescript
 el('div')(
-  'Static text',                                    // string
-  42,                                               // number
-  el('span')('Nested element'),                     // RefSpec
-  computed(() => `Dynamic: ${value()}`),            // Reactive
-  someCondition ? el('p')('Conditional') : null,    // null renders nothing
-)
+  'Static text', // string
+  42, // number
+  el('span')('Nested element'), // RefSpec
+  computed(() => `Dynamic: ${value()}`), // Reactive
+  someCondition ? el('p')('Conditional') : null // null renders nothing
+);
 ```
 
 ### Lifecycle with ref()
 
 ```typescript
-el('input')
-  .ref(
-    // Autofocus on mount
-    (elem) => elem.focus(),
+el('input').ref(
+  // Autofocus on mount
+  (elem) => elem.focus(),
 
-    // ResizeObserver with cleanup
-    (elem) => {
-      const observer = new ResizeObserver(() => console.log('resized'));
-      observer.observe(elem);
-      return () => observer.disconnect();
-    },
+  // ResizeObserver with cleanup
+  (elem) => {
+    const observer = new ResizeObserver(() => console.log('resized'));
+    observer.observe(elem);
+    return () => observer.disconnect();
+  },
 
-    // Event listener using on() helper
-    on('input', (e) => value((e.target as HTMLInputElement).value))
-  )()
+  // Event listener using on() helper
+  on('input', (e) => value((e.target as HTMLInputElement).value))
+)();
 ```
 
 ## Reactive Lists with map()
@@ -123,10 +126,11 @@ const TodoList = () => {
 
   return el('ul')(
     map(
-      todos,                              // source signal
-      (todo) => todo.id,                  // key function (receives plain value)
-      (todoSignal) =>                     // render function (receives signal)
-        el('li')(computed(() => todoSignal().text))
+      todos, // source signal
+      (todo) => todo.id, // key function (receives plain value)
+      (
+        todoSignal // render function (receives signal)
+      ) => el('li')(computed(() => todoSignal().text))
     )
   );
 };
@@ -139,9 +143,7 @@ The key function receives the plain value; the render function receives a signal
 ### Boolean Matching
 
 ```typescript
-match(isLoading, (loading) =>
-  loading ? Spinner() : Content()
-)
+match(isLoading, (loading) => (loading ? Spinner() : Content()));
 ```
 
 ### Status Matching
@@ -149,11 +151,14 @@ match(isLoading, (loading) =>
 ```typescript
 match(resource, (state) => {
   switch (state.status) {
-    case 'pending': return Spinner();
-    case 'error': return ErrorMessage(state.error);
-    case 'ready': return DataView(state.value);
+    case 'pending':
+      return Spinner();
+    case 'error':
+      return ErrorMessage(state.error);
+    case 'ready':
+      return DataView(state.value);
   }
-})
+});
 ```
 
 ### Inline Conditional (No Match)
@@ -161,9 +166,7 @@ match(resource, (state) => {
 For simple cases, use ternary in children:
 
 ```typescript
-el('div')(
-  showDetails() ? Details() : null
-)
+el('div')(showDetails() ? Details() : null);
 ```
 
 ## Event Handling
@@ -172,23 +175,22 @@ el('div')(
 
 ```typescript
 el('button').props({
-  onclick: () => count(c => c + 1),
+  onclick: () => count((c) => c + 1),
   onmouseenter: () => setHovered(true),
-})('Click')
+})('Click');
 ```
 
 ### Using on() Helper (Auto-Batches)
 
 ```typescript
-el('input')
-  .ref(
-    on('input', (e) => {
-      // Multiple updates are batched automatically
-      value((e.target as HTMLInputElement).value);
-      touched(true);
-    }),
-    on('blur', () => validate())
-  )()
+el('input').ref(
+  on('input', (e) => {
+    // Multiple updates are batched automatically
+    value((e.target as HTMLInputElement).value);
+    touched(true);
+  }),
+  on('blur', () => validate())
+)();
 ```
 
 ### Prevent Default / Stop Propagation
@@ -199,7 +201,7 @@ el('form').props({
     e.preventDefault();
     handleSubmit();
   },
-})( /* ... */ )
+})(/* ... */);
 ```
 
 ## Component Composition
@@ -253,9 +255,7 @@ const input = el('input');
 // Use without repeating tag names
 const Form = () =>
   div.props({ className: 'form' })(
-    div.props({ className: 'field' })(
-      input.props({ type: 'text' })()
-    ),
+    div.props({ className: 'field' })(input.props({ type: 'text' })()),
     button.props({ type: 'submit' })('Submit')
   );
 ```

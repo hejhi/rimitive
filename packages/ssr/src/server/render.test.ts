@@ -5,14 +5,14 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStream } from './render';
 import { createStreamWriter } from './stream';
-import { createLoader } from '@lattice/view/load';
-import type { LoadState } from '@lattice/view/load';
-import { STATUS_REF_SPEC } from '@lattice/view/types';
-import type { RefSpec, NodeRef } from '@lattice/view/types';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createGraphEdges } from '@lattice/signals/deps/graph-edges';
-import { createScheduler } from '@lattice/signals/deps/scheduler';
-import { createGraphTraversal } from '@lattice/signals/deps/graph-traversal';
+import { createLoader } from '@rimitive/view/load';
+import type { LoadState } from '@rimitive/view/load';
+import { STATUS_REF_SPEC } from '@rimitive/view/types';
+import type { RefSpec, NodeRef } from '@rimitive/view/types';
+import { createSignalFactory } from '@rimitive/signals/signal';
+import { createGraphEdges } from '@rimitive/signals/deps/graph-edges';
+import { createScheduler } from '@rimitive/signals/deps/scheduler';
+import { createGraphTraversal } from '@rimitive/signals/deps/graph-traversal';
 import { parseHTML } from 'linkedom';
 import type { Serialize } from './adapter';
 
@@ -20,7 +20,8 @@ import type { Serialize } from './adapter';
 // Test Fixtures
 // ============================================================================
 
-const serialize: Serialize = (el: unknown) => (el as { outerHTML: string }).outerHTML;
+const serialize: Serialize = (el: unknown) =>
+  (el as { outerHTML: string }).outerHTML;
 
 function createMockRefSpec(html: string): RefSpec<unknown> {
   const { document } = parseHTML('<!DOCTYPE html><html></html>');

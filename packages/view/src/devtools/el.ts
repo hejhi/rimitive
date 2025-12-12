@@ -2,7 +2,7 @@
  * Instrumentation wrapper for el primitive
  */
 
-import type { InstrumentationContext } from '@lattice/lattice';
+import type { InstrumentationContext } from '@rimitive/core';
 import type { ElFactory, TagFactory, ElementProps } from '../el';
 import type { RefSpec, ElRefSpecChild } from '../types';
 import type { AdapterConfig } from '../adapter';

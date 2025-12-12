@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
+} from '@rimitive/signals/extend';
 import { createDOMAdapter } from './adapters/dom';
 import { createElModule } from './el';
 import { createMapModule } from './map';

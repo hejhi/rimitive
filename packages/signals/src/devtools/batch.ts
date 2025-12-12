@@ -2,7 +2,7 @@
  * Instrumentation wrapper for batch primitives
  */
 
-import type { InstrumentationContext } from '@lattice/lattice';
+import type { InstrumentationContext } from '@rimitive/core';
 
 /**
  * Instrument a batch factory to emit events

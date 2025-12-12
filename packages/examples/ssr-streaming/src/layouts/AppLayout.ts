@@ -3,8 +3,8 @@
  *
  * Renders navbar and route content based on router.matches().
  */
-import type { RefSpec } from '@lattice/view/types';
-import type { MatchedRoute } from '@lattice/router';
+import type { RefSpec } from '@rimitive/view/types';
+import type { MatchedRoute } from '@rimitive/router';
 import type { Service } from '../service.js';
 import { Navigation } from '../components/Navigation.js';
 import { Home } from '../pages/Home.js';
@@ -41,7 +41,7 @@ export const AppLayout = (svc: Service) => {
     // Navbar with navigation
     el('nav').props({ className: 'navbar' })(
       el('div').props({ className: 'nav-brand' })(
-        el('h1')('🧩 Lattice SSR + Router')
+        el('h1')('🧩 Rimitive SSR + Router')
       ),
       svc(Navigation)()
     ),

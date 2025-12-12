@@ -1,7 +1,7 @@
 import { useMemo, useRef, useSyncExternalStore, useCallback } from 'react';
 import { useSignalSvc } from './context';
 import type { SignalSetter } from './types';
-import type { Reactive, Readable, Writable } from '@lattice/signals/types';
+import type { Reactive, Readable, Writable } from '@rimitive/signals/types';
 
 /**
  * Subscribe to a signal value in React.

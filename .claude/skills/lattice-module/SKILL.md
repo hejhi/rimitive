@@ -1,23 +1,26 @@
 ---
-name: lattice-module
-description: Create Lattice modules with defineModule. Use when adding new primitives, extending the signal system, creating adapters, or building composable functionality that integrates with compose().
+name: rimitive-module
+description: Create Rimitive modules with defineModule. Use when adding new primitives, extending the signal system, creating adapters, or building composable functionality that integrates with compose().
 ---
 
-# Creating Lattice Modules
+# Creating Rimitive Modules
 
-Modules are the fundamental unit of composition in Lattice. They declare dependencies and provide an implementation that becomes available on the composed service.
+Modules are the fundamental unit of composition in Rimitive. They declare dependencies and provide an implementation that becomes available on the composed service.
 
 ## The Pattern
 
 ```typescript
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 
 const MyModule = defineModule({
-  name: 'myFeature',                    // becomes svc.myFeature
-  dependencies: [OtherModule],          // optional, resolved by compose()
-  create: ({ otherModule }) => {        // receives resolved deps
+  name: 'myFeature', // becomes svc.myFeature
+  dependencies: [OtherModule], // optional, resolved by compose()
+  create: ({ otherModule }) => {
+    // receives resolved deps
     // Return the implementation
-    return { /* API */ };
+    return {
+      /* API */
+    };
   },
 });
 ```
@@ -27,7 +30,7 @@ const MyModule = defineModule({
 ### 1. Define the module
 
 ```typescript
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 
 export const LoggerModule = defineModule({
   name: 'logger',
@@ -43,19 +46,21 @@ export const LoggerModule = defineModule({
 Dependencies are other modules. They're resolved automatically by `compose()`.
 
 ```typescript
-import { defineModule } from '@lattice/lattice';
-import { SignalModule } from '@lattice/signals/extend';
+import { defineModule } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/extend';
 
 export const CounterModule = defineModule({
   name: 'counter',
   dependencies: [SignalModule],
-  create: ({ signal }) => (initial = 0) => {
-    const count = signal(initial);
-    return {
-      count,
-      increment: () => count(count() + 1),
-    };
-  },
+  create:
+    ({ signal }) =>
+    (initial = 0) => {
+      const count = signal(initial);
+      return {
+        count,
+        increment: () => count(count() + 1),
+      };
+    },
 });
 ```
 
@@ -85,8 +90,8 @@ export const LoggerModule = defineModule({
 When a module needs configuration, export a factory function:
 
 ```typescript
-import { defineModule } from '@lattice/lattice';
-import type { Adapter } from '@lattice/view/types';
+import { defineModule } from '@rimitive/core';
+import type { Adapter } from '@rimitive/view/types';
 
 export const createElModule = (adapter: Adapter) =>
   defineModule({
@@ -94,7 +99,9 @@ export const createElModule = (adapter: Adapter) =>
     dependencies: [EffectModule],
     create: ({ effect }) => {
       // Use adapter and effect to build el()
-      return (tag: string) => { /* ... */ };
+      return (tag: string) => {
+        /* ... */
+      };
     },
   });
 
@@ -116,7 +123,9 @@ const ConnectionModule = defineModule({
     let conn: Connection | null = null;
     return {
       get: () => conn,
-      connect: (url: string) => { conn = new Connection(url); },
+      connect: (url: string) => {
+        conn = new Connection(url);
+      },
     };
   },
   init: (ctx) => {
@@ -138,7 +147,8 @@ For debugging/profiling support:
 const SignalModule = defineModule({
   name: 'signal',
   dependencies: [GraphEdgesModule, SchedulerModule],
-  create: ({ graphEdges, scheduler }) => createSignalFactory({ graphEdges, scheduler }),
+  create: ({ graphEdges, scheduler }) =>
+    createSignalFactory({ graphEdges, scheduler }),
   instrument: (impl, instr, ctx) => (initialValue) => {
     const sig = impl(initialValue);
     instr.register(sig, 'signal', { initialValue });
@@ -158,11 +168,13 @@ packages/my-package/src/
 ```
 
 **index.ts** (types only):
+
 ```typescript
 export type { MyFeature, MyOptions } from './types';
 ```
 
 **extend.ts** (modules):
+
 ```typescript
 export { MyFeatureModule } from './my-feature';
 ```
@@ -191,7 +203,7 @@ Internal modules are composed automatically when their dependents are used.
 ## Testing Modules
 
 ```typescript
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import { MyModule } from './my-module';
 
 describe('MyModule', () => {

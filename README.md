@@ -1,15 +1,15 @@
-# Lattice
+# Rimitive
 
 > **DISCLAIMER:**
 > This is alpha software—it's heavily tested and benchmarked, but the usual disclaimers apply.
 
 ## The Core Idea
 
-Lattice is built on two core concepts: **modules** and **composition**.
+Rimitive is built on two core concepts: **modules** and **composition**.
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
 
 const svc = compose(SignalModule, ComputedModule);
 
@@ -20,18 +20,18 @@ svc.computed(() => …); // through the composed service
 - A **module** defines a primitive and its dependencies
 - **Composition** resolves the dependency graph and creates a service
 
-At its core, that's it. `compose()` is the backbone of Lattice: a simple, type-safe way to wire modules together. Dependencies are resolved automatically—you pass what you need, and Lattice figures out the rest.
+At its core, that's it. `compose()` is the backbone of Rimitive: a simple, type-safe way to wire modules together. Dependencies are resolved automatically—you pass what you need, and Rimitive figures out the rest.
 
 ---
 
 ## What Does That Unlock?
 
-Lattice provides pre-built modules for **reactivity** and **UI**:
+Rimitive provides pre-built modules for **reactivity** and **UI**:
 
-| Package            | Modules                                           | What they provide        |
-| ------------------ | ------------------------------------------------- | ------------------------ |
-| `@lattice/signals` | `SignalModule`, `ComputedModule`, `EffectModule`  | Reactive state & effects |
-| `@lattice/view`    | `createElModule`, `createMapModule`, `createMatchModule` | UI specs          |
+| Package             | Modules                                                  | What they provide        |
+| ------------------- | -------------------------------------------------------- | ------------------------ |
+| `@rimitive/signals` | `SignalModule`, `ComputedModule`, `EffectModule`         | Reactive state & effects |
+| `@rimitive/view`    | `createElModule`, `createMapModule`, `createMatchModule` | UI specs                 |
 
 These primitives produce different outputs:
 
@@ -48,11 +48,15 @@ These primitives produce different outputs:
 Compose the modules you need, then destructure the primitives:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 const svc = compose(
@@ -77,7 +81,7 @@ const App = () => {
 document.body.appendChild(mount(App()).element!);
 ```
 
-View modules like `createElModule` take an adapter—that's how Lattice stays renderer-agnostic. Swap the DOM adapter for a Canvas adapter, or a test adapter, or your own. You control the composition down to the very base reactive model and renderer itself.
+View modules like `createElModule` take an adapter—that's how Rimitive stays renderer-agnostic. Swap the DOM adapter for a Canvas adapter, or a test adapter, or your own. You control the composition down to the very base reactive model and renderer itself.
 
 ---
 
@@ -86,30 +90,38 @@ View modules like `createElModule` take an adapter—that's how Lattice stays re
 Need to share signals across multiple renderers? Compose them into each service:
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
 
 // Same signal modules, different adapters
 const domAdapter = createDOMAdapter();
 const canvasAdapter = createCanvasAdapter();
 
 const domService = compose(
-  SignalModule, ComputedModule, EffectModule,
+  SignalModule,
+  ComputedModule,
+  EffectModule,
   createElModule(domAdapter)
 );
 
 const canvasService = compose(
-  SignalModule, ComputedModule, EffectModule,
+  SignalModule,
+  ComputedModule,
+  EffectModule,
   createElModule(canvasAdapter)
 );
 ```
 
-That's how Lattice handles SSR—swapping the DOM adapter for a server adapter. Or write your own modules with `defineModule`:
+That's how Rimitive handles SSR—swapping the DOM adapter for a server adapter. Or write your own modules with `defineModule`:
 
 ```typescript
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 
 const Logger = defineModule({
   name: 'logger',
@@ -200,7 +212,7 @@ const dd = useDropdown({ initialOpen: false });
 
 The same `disclosure` behavior could be composed into an accordion, modal, or tooltip—each adding its own semantics on top.
 
-Because behaviors only depend on the service contract (not a specific framework), they're portable. The same behavior works in Lattice views, React (via `@lattice/react`), or any other integration that provides the service.
+Because behaviors only depend on the service contract (not a specific framework), they're portable. The same behavior works in Rimitive views, React (via `@rimitive/react`), or any other integration that provides the service.
 
 ---
 
@@ -234,18 +246,18 @@ Specs don't become real elements until mounted with an adapter. The same spec ca
 
 You own the composition layer. Want to:
 
-- **Create custom modules?** Use `defineModule()` with the same patterns Lattice uses internally
+- **Create custom modules?** Use `defineModule()` with the same patterns Rimitive uses internally
 - **Swap out the reactive system?** Replace the dependency modules with your own (or someone else's)
 - **Build a custom adapter/renderer?** Implement the `Adapter` interface for Canvas, WebGL, or anything tree-based
-- **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in Lattice
+- **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in Rimitive
 
-Lattice provides modules for reactivity and UI out of the box, but they're not special—they're built with the same tools you have access to. In fact, Lattice at its core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just reactive frameworks.
+Rimitive provides modules for reactivity and UI out of the box, but they're not special—they're built with the same tools you have access to. In fact, Rimitive at its core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just reactive frameworks.
 
 ---
 
 ## Inspirations
 
-Lattice draws from libraries that shaped how I think about reactivity and composition:
+Rimitive draws from libraries that shaped how I think about reactivity and composition:
 
 - [alien-signals](https://github.com/stackblitz/alien-signals) and [Reactively](https://github.com/milomg/reactively) — push-pull reactivity, graph coloring
 - [downshift](https://www.downshift-js.com/use-select/) — headless, portable UI behavior

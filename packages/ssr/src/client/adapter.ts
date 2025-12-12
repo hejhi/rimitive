@@ -4,16 +4,16 @@
  * Provides adapters for rehydrating server-rendered content.
  */
 
-import type { Adapter, AdapterConfig, NodeRef } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { STATUS_FRAGMENT } from '@lattice/view/types';
+import type { Adapter, AdapterConfig, NodeRef } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import { STATUS_FRAGMENT } from '@rimitive/view/types';
 import {
   isAsyncFragment,
   triggerAsyncFragment,
   type AsyncFragment,
 } from '../shared/async-fragments';
 
-export type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+export type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 // =============================================================================
 // HydrationMismatch Error

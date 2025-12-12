@@ -1,12 +1,12 @@
-# Lattice - js-framework-benchmark Implementation
+# Rimitive - js-framework-benchmark Implementation
 
-This directory contains the Lattice implementation for the [js-framework-benchmark](https://github.com/krausest/js-framework-benchmark).
+This directory contains the Rimitive implementation for the [js-framework-benchmark](https://github.com/krausest/js-framework-benchmark).
 
 ## Prerequisites
 
 - **Node.js** >= v20.9.0 (tested with v24.8.0)
 - **npm** >= 10.1.0
-- **pnpm** (for Lattice workspace dependencies)
+- **pnpm** (for Rimitive workspace dependencies)
 
 Verify your setup:
 
@@ -20,12 +20,12 @@ pnpm --version
 
 ### 1. Clone Both Repositories
 
-Clone the Lattice repo (if you haven't already):
+Clone the Rimitive repo (if you haven't already):
 
 ```bash
 cd ~/repos  # or wherever you keep your projects
-git clone https://github.com/hejhi/lattice.git
-cd lattice
+git clone https://github.com/rimitive.git
+cd rimitive
 pnpm install
 ```
 
@@ -56,27 +56,27 @@ This installs:
 
 ### 3. Create the Symlink
 
-Link your Lattice implementation into the benchmark directory:
+Link your Rimitive implementation into the benchmark directory:
 
 ```bash
 # From js-framework-benchmark root
 # Adjust paths if your repos are in different locations
-ln -s ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed frameworks/keyed/lattice
+ln -s ~/repos/rimitive/packages/benchmarks/frameworks/rimitive-keyed frameworks/keyed/rimitive
 ```
 
 Verify the symlink works:
 
 ```bash
-ls -la frameworks/keyed/lattice  # Should show the directory contents
+ls -la frameworks/keyed/rimitive  # Should show the directory contents
 ```
 
-### 4. Build Lattice Implementation
+### 4. Build Rimitive Implementation
 
-Since Lattice uses pnpm workspaces, build from the Lattice repo:
+Since Rimitive uses pnpm workspaces, build from the Rimitive repo:
 
 ```bash
-# From the lattice repo root
-cd ~/repos/lattice
+# From the rimitive repo root
+cd ~/repos/rimitive
 pnpm install  # if not already done
 pnpm run build  # or your build command
 ```
@@ -84,7 +84,7 @@ pnpm run build  # or your build command
 Or build just the benchmark package:
 
 ```bash
-cd ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed
+cd ~/repos/rimitive/packages/benchmarks/frameworks/rimitive-keyed
 pnpm run build-prod
 ```
 
@@ -100,17 +100,17 @@ The server will run on http://localhost:8080. Keep it running in this terminal.
 
 ### 6. Verify in Browser
 
-Open http://localhost:8080/frameworks/keyed/lattice/ in your browser to manually test the implementation.
+Open http://localhost:8080/frameworks/keyed/rimitive/ in your browser to manually test the implementation.
 
 ## Running Automated Benchmarks
 
-### Run benchmarks for Lattice only
+### Run benchmarks for Rimitive only
 
 Open a **new terminal** (keep the server running) and run:
 
 ```bash
 cd ~/repos/js-framework-benchmark
-npm run bench -- --framework keyed/lattice
+npm run bench -- --framework keyed/rimitive
 ```
 
 This will:
@@ -124,10 +124,10 @@ This will:
 
 ```bash
 # Run only create and update benchmarks
-npm run bench -- --benchmark 01_ 02_ --framework keyed/lattice
+npm run bench -- --benchmark 01_ 02_ --framework keyed/rimitive
 
 # Run multiple frameworks for comparison
-npm run bench -- --framework keyed/lattice keyed/vanillajs
+npm run bench -- --framework keyed/rimitive keyed/vanillajs
 ```
 
 ### View Results
@@ -142,19 +142,19 @@ Then open http://localhost:8080/webdriver-ts-results/dist/index.html in your bro
 
 ## Development Workflow
 
-When making changes to the Lattice implementation:
+When making changes to the Rimitive implementation:
 
-1. **Edit code** in `~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed/src/`
+1. **Edit code** in `~/repos/rimitive/packages/benchmarks/frameworks/rimitive-keyed/src/`
 
-2. **Rebuild** from the Lattice repo:
+2. **Rebuild** from the Rimitive repo:
 
    ```bash
-   cd ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed
+   cd ~/repos/rimitive/packages/benchmarks/frameworks/rimitive-keyed
    pnpm run build-prod
    # Or use watch mode: pnpm run dev
    ```
 
-3. **Test manually** at http://localhost:8080/frameworks/keyed/lattice/
+3. **Test manually** at http://localhost:8080/frameworks/keyed/rimitive/
 
    - Click buttons to verify functionality
    - Check browser console for errors
@@ -163,7 +163,7 @@ When making changes to the Lattice implementation:
 
    ```bash
    cd ~/repos/js-framework-benchmark
-   npm run bench -- --framework keyed/lattice
+   npm run bench -- --framework keyed/rimitive
    ```
 
 5. **Compare results** at http://localhost:8080/webdriver-ts-results/dist/index.html
@@ -176,16 +176,16 @@ If you see "broken symbolic link" errors:
 
 ```bash
 cd ~/repos/js-framework-benchmark
-rm frameworks/keyed/lattice
-ln -s ~/repos/lattice/packages/benchmarks/frameworks/lattice-keyed frameworks/keyed/lattice
+rm frameworks/keyed/rimitive
+ln -s ~/repos/rimitive/packages/benchmarks/frameworks/rimitive-keyed frameworks/keyed/rimitive
 ```
 
 ### Build Errors
 
-Since Lattice uses workspace dependencies (`workspace:*`), **don't run `npm ci`** in the lattice directory. Instead, build from the Lattice repo root:
+Since Rimitive uses workspace dependencies (`workspace:*`), **don't run `npm ci`** in the rimitive directory. Instead, build from the Rimitive repo root:
 
 ```bash
-cd ~/repos/lattice
+cd ~/repos/rimitive
 pnpm install
 pnpm run build
 ```
@@ -203,7 +203,7 @@ lsof -ti:8080 | xargs kill
 
 ## Implementation Notes
 
-- Uses Lattice's fine-grained reactivity (signals + effects)
+- Uses Rimitive's fine-grained reactivity (signals + effects)
 - Elements created with lifecycle callbacks that run immediately
 - No MutationObserver overhead
 - Explicit cleanup via scope disposal when elements are removed by reconciler

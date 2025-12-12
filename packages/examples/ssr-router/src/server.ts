@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 import {
   createDOMServerAdapter,
   renderToStringAsync,
-} from '@lattice/ssr/server';
-import type { RefSpec } from '@lattice/view/types';
+} from '@rimitive/ssr/server';
+import type { RefSpec } from '@rimitive/view/types';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';

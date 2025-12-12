@@ -8,7 +8,7 @@
  * import {
  *   createClientAdapter,
  *   connectStream,
- * } from '@lattice/ssr/client';
+ * } from '@rimitive/ssr/client';
  *
  * const adapter = createClientAdapter(document.querySelector('.app')!);
  * const service = createService(adapter);
@@ -18,9 +18,9 @@
  * ```
  */
 
-import type { Adapter } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import type { Adapter } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import {
   createDOMHydrationAdapter,
   createHydrationAdapter,

@@ -1,7 +1,7 @@
 import type { Dependency, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { GraphEdges, GraphEdgesModule } from './graph-edges';
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 
 // Re-export types for proper type inference
 export type { DerivedNode } from '../types';

@@ -51,9 +51,10 @@ Structure your response as:
 4. **Be concise** - Your response should be <500 tokens unless the question requires more
 5. **Answer the question** - Don't provide tangential information
 
-## Lattice-Specific Knowledge
+## Rimitive-Specific Knowledge
 
 When exploring this codebase:
+
 - Modules are in `packages/*/src/`
 - Tests are co-located (`*.test.ts`)
 - Entry points are `index.ts` or named exports

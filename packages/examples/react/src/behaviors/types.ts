@@ -1,7 +1,7 @@
 /**
  * Portable Behavior Types
  *
- * These types are equivalent to the centralized types in @lattice/signals/types.
+ * These types are equivalent to the centralized types in @rimitive/signals/types.
  * We inline them here for now due to TypeScript module resolution complexities.
  */
 

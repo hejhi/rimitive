@@ -6,7 +6,7 @@
  * without recreating the element.
  */
 
-import type { Reactive } from '@lattice/view/types';
+import type { Reactive } from '@rimitive/view/types';
 import type { Todo } from '../behaviors/useTodoList';
 import { el, computed } from '../service';
 

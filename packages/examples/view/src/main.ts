@@ -12,7 +12,7 @@ const App = () => {
     el('div').props({ className: 'tag-list-container' })(
       el('h3')('Tag List (Fragment Component)'),
       el('div').props({ className: 'tag-list' })(
-        TagList({ tags: ['React', 'Vue', 'Svelte', 'Solid', 'Lattice'] })
+        TagList({ tags: ['React', 'Vue', 'Svelte', 'Solid', 'Rimitive'] })
       )
     )
   );

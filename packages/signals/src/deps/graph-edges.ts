@@ -6,7 +6,7 @@ import type {
   Dependency,
 } from '../types';
 import { CONSTANTS } from '../constants';
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 
 const { TYPE_MASK, CLEAN } = CONSTANTS;
 

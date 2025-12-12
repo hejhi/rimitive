@@ -10,8 +10,8 @@
 import type { RefSpec, NodeRef, Reactive } from './types';
 import { STATUS_REF_SPEC } from './types';
 import { ScopesModule } from './deps/scope';
-import { defineModule, type Module } from '@lattice/lattice';
-import { SignalModule, type SignalFactory } from '@lattice/signals/signal';
+import { defineModule, type Module } from '@rimitive/core';
+import { SignalModule, type SignalFactory } from '@rimitive/signals/signal';
 
 // =============================================================================
 // Types
@@ -48,7 +48,7 @@ export type LoadState<T> = {
 // =============================================================================
 
 /** Symbol marking async fragments created by load() */
-export const ASYNC_FRAGMENT = Symbol.for('lattice.async-fragment');
+export const ASYNC_FRAGMENT = Symbol.for('rimitive.async-fragment');
 
 /** Async fragment metadata for SSR introspection */
 export type AsyncMeta<T = unknown> = {
@@ -62,7 +62,10 @@ export type AsyncMeta<T = unknown> = {
 };
 
 /** Node with async metadata */
-export type AsyncFragment<TElement = unknown, T = unknown> = NodeRef<TElement> & {
+export type AsyncFragment<
+  TElement = unknown,
+  T = unknown,
+> = NodeRef<TElement> & {
   [ASYNC_FRAGMENT]: AsyncMeta<T>;
 };
 
@@ -72,8 +75,12 @@ export function isAsyncFragment(value: unknown): value is AsyncFragment {
 }
 
 /** Get async metadata from a node */
-export function getAsyncMeta<T>(node: NodeRef<unknown>): AsyncMeta<T> | undefined {
-  return (node as Partial<AsyncFragment>)[ASYNC_FRAGMENT] as AsyncMeta<T> | undefined;
+export function getAsyncMeta<T>(
+  node: NodeRef<unknown>
+): AsyncMeta<T> | undefined {
+  return (node as Partial<AsyncFragment>)[ASYNC_FRAGMENT] as
+    | AsyncMeta<T>
+    | undefined;
 }
 
 // =============================================================================
@@ -121,7 +128,7 @@ export type LoadOpts = {
  *
  * @example
  * ```ts
- * import { createLoadFactory } from '@lattice/view/load';
+ * import { createLoadFactory } from '@rimitive/view/load';
  *
  * const load = createLoadFactory({ signal });
  *
@@ -230,18 +237,22 @@ export function createLoadFactory({ signal }: LoadOpts): LoadFactory {
  *
  * @example
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { LoadModule } from '@lattice/view/load';
+ * import { compose } from '@rimitive/core';
+ * import { LoadModule } from '@rimitive/view/load';
  *
  * const { load, signal } = compose(LoadModule);
  * ```
  */
-export const LoadModule: Module<'load', LoadFactory, { signal: SignalFactory }> =
-  defineModule({
-    name: 'load',
-    dependencies: [SignalModule, ScopesModule],
-    create: ({ signal }: { signal: SignalFactory }) => createLoadFactory({ signal }),
-  });
+export const LoadModule: Module<
+  'load',
+  LoadFactory,
+  { signal: SignalFactory }
+> = defineModule({
+  name: 'load',
+  dependencies: [SignalModule, ScopesModule],
+  create: ({ signal }: { signal: SignalFactory }) =>
+    createLoadFactory({ signal }),
+});
 
 // =============================================================================
 // Loader API - Explicit data management for SSR
@@ -469,10 +480,10 @@ export function createLoader(opts: LoaderOpts): Loader {
  *
  * @example
  * ```typescript
- * import { compose, merge } from '@lattice/lattice';
- * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
- * import { createLoaderModule } from '@lattice/view/load';
- * import { createRouterModule } from '@lattice/router';
+ * import { compose, merge } from '@rimitive/core';
+ * import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+ * import { createLoaderModule } from '@rimitive/view/load';
+ * import { createRouterModule } from '@rimitive/router';
  *
  * const baseSvc = compose(SignalModule, ComputedModule, ElModule);
  *

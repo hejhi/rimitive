@@ -25,8 +25,8 @@ import {
 import { createSvc } from './deps/signal-computed';
 
 const ITERATIONS = 10000;
-const latticeSvc = createSvc();
-const { signal: latticeSignal, computed: latticeComputed } = latticeSvc;
+const rimitiveSvc = createSvc();
+const { signal: rimitiveSignal, computed: rimitiveComputed } = rimitiveSvc;
 
 type BenchState = {
   get(name: 'depth'): number;
@@ -36,16 +36,16 @@ type BenchState = {
 group('Computed Chain - Variable Depth', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice - $depth levels', function* (state: BenchState) {
+      bench('Rimitive - $depth levels', function* (state: BenchState) {
         const depth = state.get('depth');
-        const source = latticeSignal(0);
+        const source = rimitiveSignal(0);
         let last: () => number = source;
 
         // Build chain with non-trivial computations
         for (let i = 0; i < depth; i++) {
           const prev = last;
           const level = i; // Capture for closure
-          last = latticeComputed(() => {
+          last = rimitiveComputed(() => {
             const val = prev();
             // Non-trivial computation at each level
             let result = val;

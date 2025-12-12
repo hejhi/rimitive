@@ -1,7 +1,7 @@
 /**
  * TodoList UI Component
  *
- * Uses @lattice/view primitives (el, map) to create a reactive UI
+ * Uses @rimitive/view primitives (el, map) to create a reactive UI
  * Uses the headless todo-list behavior for logic
  */
 
@@ -55,9 +55,7 @@ export const TodoList = () => {
   })('All');
 
   const activeBtn = button.props({
-    className: computed(() =>
-      todoList.filter() === 'active' ? 'active' : ''
-    ),
+    className: computed(() => (todoList.filter() === 'active' ? 'active' : '')),
     onclick: () => todoList.setFilter('active'),
   })('Active');
 

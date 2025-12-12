@@ -43,11 +43,14 @@ prompt: |
 I fixed [WHAT WAS BROKEN].
 
 Changes made:
+
 - [FILE]: [CHANGE DESCRIPTION]
 
 Verify by running:
 ```
+
 [COMMAND]
+
 ```
 
 Expected result: [WHAT SUCCESS LOOKS LIKE]
@@ -58,58 +61,73 @@ Expected result: [WHAT SUCCESS LOOKS LIKE]
 ## Examples
 
 ### Script Fix
+
 ```markdown
-I added a `bench` script to root package.json that delegates to @lattice/benchmarks:
-"bench": "pnpm --filter @lattice/benchmarks bench"
+I added a `bench` script to root package.json that delegates to @rimitive/benchmarks:
+"bench": "pnpm --filter @rimitive/benchmarks bench"
 
 Verify by running:
 ```
+
 timeout 30 pnpm bench --skip-build diamond-simple
+
 ```
 
 Expected: Command executes successfully with benchmark output (not "Command bench not found").
 ```
 
 ### Type Fix
+
 ```markdown
 I fixed a type error in computed.ts where `ComputedNode` was missing the `status` property.
 
 Changes made:
+
 - `packages/signals/src/computed.ts`: Added `status: number` to ComputedNode type
 
 Verify by running:
 ```
-pnpm --filter @lattice/signals typecheck
+
+pnpm --filter @rimitive/signals typecheck
+
 ```
 
 Expected: No type errors.
 ```
 
 ### Test Fix
+
 ```markdown
 I fixed the failing test "should handle diamond dependencies" by correcting the expected value from 4 to 5.
 
 Changes made:
+
 - `packages/signals/src/computed.test.ts`: Line 142, changed `expect(result()).toBe(4)` to `expect(result()).toBe(5)`
 
 Verify by running:
 ```
-pnpm --filter @lattice/signals test -- "should handle diamond"
+
+pnpm --filter @rimitive/signals test -- "should handle diamond"
+
 ```
 
 Expected: Test passes.
 ```
 
 ### Build Fix
+
 ```markdown
 I fixed the build error by adding the missing export in index.ts.
 
 Changes made:
+
 - `packages/signals/src/index.ts`: Added `export type { ComputedNode } from './computed'`
 
 Verify by running:
 ```
-pnpm --filter @lattice/signals build
+
+pnpm --filter @rimitive/signals build
+
 ```
 
 Expected: Build completes without errors, dist/ files generated.
@@ -125,16 +143,20 @@ Expected: Build completes without errors, dist/ files generated.
 ## Response Interpretation
 
 ### VERIFIED
+
 Fix confirmed working. Safe to tell user it's done.
 
 ### NOT VERIFIED
+
 Something's still broken. Agent will report:
+
 - What was checked
 - What failed
 - Specific error output
 - Suggestions if obvious
 
 ### PARTIAL
+
 Some things work, some don't. Review the details before proceeding.
 
 ## Tips

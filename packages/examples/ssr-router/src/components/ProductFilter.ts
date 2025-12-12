@@ -3,7 +3,7 @@
  *
  * An interactive component that filters products by category.
  */
-import type { Reactive } from '@lattice/view/types';
+import type { Reactive } from '@rimitive/view/types';
 import type { Service } from '../service.js';
 
 type Product = {

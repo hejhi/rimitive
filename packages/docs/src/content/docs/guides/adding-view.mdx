@@ -5,7 +5,7 @@ description: Render reactive UI with el().
 
 You have signals and behaviors. Now render them.
 
-Lattice View provides `el()` — a renderer-agnostic function for creating reactive elements. It works with any adapter (DOM, native, canvas, etc.). In this guide, we'll use the DOM adapter.
+Rimitive View provides `el()` — a renderer-agnostic function for creating reactive elements. It works with any adapter (DOM, native, canvas, etc.). In this guide, we'll use the DOM adapter.
 
 ---
 
@@ -15,11 +15,11 @@ Building on the service from [Creating a Behavior](/guides/creating-a-behavior),
 
 ```typescript
 // service.ts
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { MountModule } from '@lattice/view/deps/mount';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 // Create adapter-bound `el`
 const ElModule = createElModule(createDOMAdapter());
@@ -138,7 +138,7 @@ import { el, computed } from './service';
 const Greeting = (name: string) => {
   return el('div')(
     el('h2')(`Hello, ${name}!`),
-    el('p')('Welcome to Lattice.')
+    el('p')('Welcome to Rimitive.')
   );
 };
 

@@ -1,17 +1,17 @@
 {
-  "name": "js-framework-benchmark-lattice",
+  "name": "js-framework-benchmark-rimitive",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/main.js",
   "js-framework-benchmark": {
     "frameworkVersion": "0.0.1",
-    "frameworkHomeURL": "https://github.com/henryivry/lattice"
+    "frameworkHomeURL": "https://github.com/henryivry/core"
   },
   "scripts": {
     "dev": "rollup -c -w",
     "build-prod": "rollup -c --environment production"
   },
-  "author": "Lattice Team",
+  "author": "Rimitive Team",
   "license": "MIT",
   "homepage": "https://github.com/krausest/js-framework-benchmark",
   "repository": {
@@ -19,9 +19,9 @@
     "url": "https://github.com/krausest/js-framework-benchmark.git"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "@lattice/view": "workspace:*"
+    "@rimitive/core": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "16.0.3",

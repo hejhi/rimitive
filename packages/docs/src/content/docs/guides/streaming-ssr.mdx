@@ -15,7 +15,7 @@ With basic SSR, the server waits for all data before sending anything. Streaming
 4. Client receives data via a streaming receiver and updates signals
 5. UI updates reactively — no DOM manipulation needed
 
-The key insight: signals update the UI. The server streams data, the client pushes it to signals, and Lattice handles the rest.
+The key insight: signals update the UI. The server streams data, the client pushes it to signals, and Rimitive handles the rest.
 
 ---
 
@@ -24,7 +24,7 @@ The key insight: signals update the UI. The server streams data, the client push
 The stream writer generates JavaScript code for the streaming protocol:
 
 ```typescript
-import { createStreamWriter } from '@lattice/ssr/server';
+import { createStreamWriter } from '@rimitive/ssr/server';
 
 // Create writer with a unique key
 const stream = createStreamWriter('__APP_STREAM__');
@@ -53,8 +53,8 @@ import {
   createDOMServerAdapter,
   renderToStream,
   createStreamWriter,
-} from '@lattice/ssr/server';
-import type { RefSpec } from '@lattice/view/types';
+} from '@rimitive/ssr/server';
+import type { RefSpec } from '@rimitive/view/types';
 import { createService } from './service.js';
 import { App } from './App.js';
 
@@ -123,13 +123,13 @@ Your service needs to pass `onResolve` to the loader:
 
 ```typescript
 // service.ts
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { createLoaderModule } from '@lattice/view/load';
-import type { Adapter } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createLoaderModule } from '@rimitive/view/load';
+import type { Adapter } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 export type ServiceOptions = {
   loaderData?: Record<string, unknown>;
@@ -164,7 +164,7 @@ The client connects to the stream after hydration:
 
 ```typescript
 // client.ts
-import { createClientAdapter, connectStream } from '@lattice/ssr/client';
+import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
 import { createService } from './service.js';
 import { App } from './App.js';
 
@@ -197,7 +197,7 @@ connectStream(service, STREAM_KEY);
 Components use `load()` the same way as basic SSR:
 
 ```typescript
-import type { LoadState, LoadStatus } from '@lattice/view/load';
+import type { LoadState, LoadStatus } from '@rimitive/view/load';
 import type { Service } from './service.js';
 
 type Stats = { users: number; views: number };
@@ -317,13 +317,13 @@ const server = createServer(async (req, res) => {
 
 ```typescript
 // service.ts
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
-import { createMatchModule } from '@lattice/view/match';
-import { createLoaderModule } from '@lattice/view/load';
-import type { Adapter } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createLoaderModule } from '@rimitive/view/load';
+import type { Adapter } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 export type ServiceOptions = {
   loaderData?: Record<string, unknown>;
@@ -354,7 +354,7 @@ export type Service = ReturnType<typeof createService>;
 
 ```typescript
 // App.ts
-import type { LoadState, LoadStatus } from '@lattice/view/load';
+import type { LoadState, LoadStatus } from '@rimitive/view/load';
 import type { Service } from './service.js';
 
 type User = { name: string };
@@ -374,7 +374,7 @@ const fetchStats = async (): Promise<Stats> => {
 
 const fetchNews = async (): Promise<News> => {
   await new Promise(r => setTimeout(r, 3000));
-  return { headlines: ['Breaking: Lattice is fast', 'Streaming SSR works'] };
+  return { headlines: ['Breaking: Rimitive is fast', 'Streaming SSR works'] };
 };
 
 export const App = (svc: Service) => {
@@ -448,8 +448,8 @@ import {
   createDOMServerAdapter,
   renderToStream,
   createStreamWriter,
-} from '@lattice/ssr/server';
-import type { RefSpec } from '@lattice/view/types';
+} from '@rimitive/ssr/server';
+import type { RefSpec } from '@rimitive/view/types';
 import { createService } from './service.js';
 import { App } from './App.js';
 
@@ -502,7 +502,7 @@ server.listen(3000);
 
 ```typescript
 // client.ts
-import { createClientAdapter, connectStream } from '@lattice/ssr/client';
+import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
 import { createService } from './service.js';
 import { App } from './App.js';
 

@@ -17,7 +17,7 @@ import { el, computed, batch, mount } from './service';
 const App = () => {
   const counter = useCounter();
   const todoList = useTodoList([
-    { id: 1, text: 'Learn Lattice', completed: false },
+    { id: 1, text: 'Learn Rimitive', completed: false },
     { id: 2, text: 'Build an app', completed: false },
   ]);
   const { todos, activeCount, addTodo, toggleTodo } = todoList;
@@ -27,7 +27,7 @@ const App = () => {
   const todoStats = useTodoStats({ todos, activeCount });
 
   return el('div').props({ className: 'app' })(
-    el('h1')('Lattice DevTools Example'),
+    el('h1')('Rimitive DevTools Example'),
     Counter(),
     TodoList(todoList, filter, filteredTodos, todoStats),
     BatchedUpdates({

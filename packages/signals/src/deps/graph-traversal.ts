@@ -8,7 +8,7 @@
 
 import type { Dependency, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
-import { defineModule } from '@lattice/lattice';
+import { defineModule } from '@rimitive/core';
 
 const { CLEAN, DIRTY, PENDING, STATE_MASK, TYPE_MASK, PRODUCER } = CONSTANTS;
 

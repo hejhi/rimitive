@@ -28,12 +28,12 @@ import {
 import { createSvc } from './deps/signal-computed-effect';
 
 const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
-const latticeSvc = createSvc();
+const rimitiveSvc = createSvc();
 const {
-  signal: latticeSignal,
-  computed: latticeComputed,
-  effect: latticeEffect,
-} = latticeSvc;
+  signal: rimitiveSignal,
+  computed: rimitiveComputed,
+  effect: rimitiveEffect,
+} = rimitiveSvc;
 
 type BenchState = {
   get(name: 'sources'): number;
@@ -43,15 +43,15 @@ type BenchState = {
 group('Fan-out Scaling - Single Source to Many', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice - $sources subscribers', function* (state: BenchState) {
+      bench('Rimitive - $sources subscribers', function* (state: BenchState) {
         const subscriberCount = state.get('sources');
 
         // Single source driving many subscribers
-        const source = latticeSignal(0);
+        const source = rimitiveSignal(0);
 
         // Create subscribers with varying computations
         const computeds = Array.from({ length: subscriberCount }, (_, i) =>
-          latticeComputed(() => {
+          rimitiveComputed(() => {
             const val = source();
             // Different computation per subscriber to prevent optimization
             let result = val;
@@ -67,7 +67,7 @@ group('Fan-out Scaling - Single Source to Many', () => {
           value: 0,
         }));
         const disposers = computeds.map((c, i) =>
-          latticeEffect(() => {
+          rimitiveEffect(() => {
             counters[i]!.value += c();
           })
         );

@@ -1,15 +1,15 @@
 /**
  * Server DOM Adapter
  *
- * Renders Lattice components to HTML strings using linkedom.
+ * Renders Rimitive components to HTML strings using linkedom.
  * Adds fragment markers for hydration support.
  */
 
 import { parseHTML } from 'linkedom';
-import type { Adapter, FragmentRef, NodeRef } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
-import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import { isAsyncFragment } from '@lattice/view/load';
+import type { Adapter, FragmentRef, NodeRef } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@rimitive/view/types';
+import { isAsyncFragment } from '@rimitive/view/load';
 
 // =============================================================================
 // Fragment Marker Utilities
@@ -80,7 +80,7 @@ export type ServerAdapterResult = {
  *
  * @example
  * ```typescript
- * import { createDOMServerAdapter } from '@lattice/ssr/server';
+ * import { createDOMServerAdapter } from '@rimitive/ssr/server';
  *
  * const { adapter, serialize } = createDOMServerAdapter();
  * // Use adapter for mounting, serialize for renderToString

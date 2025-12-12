@@ -1,6 +1,6 @@
-# Lattice Documentation
+# Rimitive Documentation
 
-Documentation site for Lattice, built with [Astro](https://astro.build/) and [Starlight](https://starlight.astro.build/).
+Documentation site for Rimitive, built with [Astro](https://astro.build/) and [Starlight](https://starlight.astro.build/).
 
 ## Development
 
@@ -88,17 +88,11 @@ Use Starlight's aside components for callouts:
 ```mdx
 import { Aside } from '@astrojs/starlight/components';
 
-<Aside type="tip">
-This is a tip.
-</Aside>
+<Aside type="tip">This is a tip.</Aside>
 
-<Aside type="note">
-This is a note.
-</Aside>
+<Aside type="note">This is a note.</Aside>
 
-<Aside type="caution">
-This is a caution.
-</Aside>
+<Aside type="caution">This is a caution.</Aside>
 ```
 
 ## API Reference
@@ -114,7 +108,7 @@ This extracts API metadata from each package and generates markdown files.
 
 ## Configuration
 
-- **Site URL**: Configured in `astro.config.mjs` as `site: 'https://lattice.dev'`
+- **Site URL**: Configured in `astro.config.mjs` as `site: 'https://rimitive.dev'`
 - **Sidebar**: Defined in `astro.config.mjs` under `starlight.sidebar`
 - **Custom CSS**: `src/styles/custom.css`
 

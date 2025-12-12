@@ -6,7 +6,7 @@
  * that gets rendered to an HTML canvas element.
  */
 
-import type { AdapterConfig } from '@lattice/view/types';
+import type { AdapterConfig } from '@rimitive/view/types';
 
 // ============================================================================
 // Runtime types (used internally by adapter)

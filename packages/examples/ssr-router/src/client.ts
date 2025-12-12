@@ -9,12 +9,12 @@
  * - During hydration: data is provided via window.__LATTICE_DATA__ from SSR
  * - After hydration: withAsyncSupport triggers fetching on attach for new content
  */
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import {
   createDOMHydrationAdapter,
   createHydrationAdapter,
   withAsyncSupport,
-} from '@lattice/ssr/client';
+} from '@rimitive/ssr/client';
 
 import { createService } from './service.js';
 import { AppLayout } from './layouts/AppLayout.js';
@@ -32,9 +32,10 @@ const appAdapter = createHydrationAdapter(
 );
 
 // Get loader data from SSR (non-streaming uses object, streaming uses function)
-const loaderData = typeof window.__LATTICE_DATA__ === 'object'
-  ? window.__LATTICE_DATA__
-  : undefined;
+const loaderData =
+  typeof window.__LATTICE_DATA__ === 'object'
+    ? window.__LATTICE_DATA__
+    : undefined;
 
 // Create service with hydrating adapter and loader data from SSR
 const service = createService(appAdapter, {

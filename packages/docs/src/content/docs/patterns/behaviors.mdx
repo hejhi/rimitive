@@ -220,7 +220,7 @@ const pagination = (svc: SignalsSvc) => (options: PaginationOptions) => {
 When options need to be reactive, accept signals:
 
 ```typescript
-import type { Readable } from '@lattice/signals';
+import type { Readable } from '@rimitive/signals';
 
 type SearchOptions = {
   query: Readable<string>;
@@ -266,12 +266,12 @@ const search = (svc: SignalsSvc) => (options: SearchOptions) => {
 
 ## Using Behaviors in React
 
-Behaviors work in React via `@lattice/react`:
+Behaviors work in React via `@rimitive/react`:
 
 ```typescript
-import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { SignalProvider, createHook, useSubscribe } from '@rimitive/react';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 // Create hooks from behaviors
 const useCounter = createHook(counter);
@@ -321,7 +321,7 @@ Same behavior, different framework. The logic stays the same.
 
 ## Naming Conventions
 
-Lattice doesn't enforce naming conventions, but here are some that work:
+Rimitive doesn't enforce naming conventions, but here are some that work:
 
 ```typescript
 // Option 1: Plain names
@@ -364,8 +364,8 @@ Behaviors are trivial to test—no DOM, no framework:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 describe('counter', () => {
   const createTestSvc = () => compose(SignalModule, ComputedModule, EffectModule)();

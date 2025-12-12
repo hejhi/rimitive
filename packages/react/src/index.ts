@@ -8,7 +8,7 @@ export {
   useSignalSvc,
 } from './signals';
 
-export { useLatticeContext } from './lattice';
+export { useRimitiveContext } from './rimitive';
 
 // Types
 export type {
@@ -20,4 +20,4 @@ export type {
   Writable,
 } from './signals';
 
-export type { Module, ComposedContext } from '@lattice/lattice';
+export type { Module, ComposedContext } from '@rimitive/core';

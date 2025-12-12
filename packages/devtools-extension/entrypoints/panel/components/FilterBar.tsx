@@ -1,4 +1,4 @@
-import { useSubscribe } from '@lattice/react';
+import { useSubscribe } from '@rimitive/react';
 import { Input } from '../../../src/components/ui/input';
 import {
   Select,

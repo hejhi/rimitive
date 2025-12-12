@@ -23,7 +23,7 @@
  * ```
  */
 
-import type { Adapter, ParentContext } from '@lattice/view/types';
+import type { Adapter, ParentContext } from '@rimitive/view/types';
 import type {
   CanvasAdapterConfig,
   CanvasNode,

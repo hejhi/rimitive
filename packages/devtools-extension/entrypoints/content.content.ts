@@ -23,14 +23,14 @@ export default defineContentScript({
 
       // Accept messages from either the page directly or the bridge
       if (
-        data.source !== 'lattice-devtools' &&
-        data.source !== 'lattice-devtools-bridge'
+        data.source !== 'rimitive-devtools' &&
+        data.source !== 'rimitive-devtools-bridge'
       )
         return;
 
       // Forward to background script
       void chrome.runtime.sendMessage({
-        source: 'lattice-devtools-content',
+        source: 'rimitive-devtools-content',
         ...data,
       });
     });

@@ -1,7 +1,7 @@
 import { devtoolsState } from './devtoolsCtx';
-import { LatticeEvent } from './messageHandler';
+import { RimitiveEvent } from './messageHandler';
 
-export function updateContextFromEvent(event: LatticeEvent) {
+export function updateContextFromEvent(event: RimitiveEvent) {
   const contexts = [...devtoolsState.contexts()];
   let contextIndex = contexts.findIndex((c) => c.id === event.contextId);
 

@@ -5,11 +5,11 @@ export const About =
   () => {
     const { navigate } = router;
     return el('div').props({ className: 'page' })(
-      el('h2')('About Lattice Router'),
+      el('h2')('About Rimitive Router'),
       el('p')(
         'The ',
-        el('code')('@lattice/router'),
-        ' package provides minimal client-side routing for Lattice applications.'
+        el('code')('@rimitive/router'),
+        ' package provides minimal client-side routing for Rimitive applications.'
       ),
       el('div').props({ className: 'card' })(
         el('h3')('Key Concepts:'),

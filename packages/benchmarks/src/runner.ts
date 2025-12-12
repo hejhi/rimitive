@@ -33,7 +33,7 @@ class BenchmarkRunner {
   private readonly timestamp: string;
 
   constructor(
-    suitesDir: string = './src/suites/lattice',
+    suitesDir: string = './src/suites/rimitive',
     outputDir: string = './dist',
     timeout: number = 300000 // 5 minutes
   ) {

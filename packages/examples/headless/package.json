@@ -1,5 +1,5 @@
 {
-  "name": "@lattice/headless",
+  "name": "@rimitive/headless",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -25,10 +25,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/react": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "@lattice/view": "workspace:*",
+    "@rimitive/core": "workspace:*",
+    "@rimitive/react": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },

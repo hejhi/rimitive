@@ -6,21 +6,21 @@
  *
  * For streaming SSR, the server passes onResolve to stream data chunks.
  */
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { OnModule } from '@lattice/view/deps/addEventListener';
-import { createLoaderModule } from '@lattice/view/load';
-import { createRouterModule, type RouterOptions } from '@lattice/router';
-import type { Adapter, RefSpec } from '@lattice/view/types';
-import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+} from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+import { createLoaderModule } from '@rimitive/view/load';
+import { createRouterModule, type RouterOptions } from '@rimitive/router';
+import type { Adapter, RefSpec } from '@rimitive/view/types';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 import { routes } from './routes.js';
 
 /**

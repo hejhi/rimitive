@@ -1,11 +1,11 @@
 ---
-name: lattice-test
-description: Write tests for Lattice code using Vitest. Use when creating unit tests, integration tests, or test utilities for signals, behaviors, modules, or view components.
+name: rimitive-test
+description: Write tests for Rimitive code using Vitest. Use when creating unit tests, integration tests, or test utilities for signals, behaviors, modules, or view components.
 ---
 
-# Writing Lattice Tests
+# Writing Rimitive Tests
 
-Lattice uses Vitest for testing. Tests are co-located with source files (`*.test.ts`).
+Rimitive uses Vitest for testing. Tests are co-located with source files (`*.test.ts`).
 
 ## Test Structure
 
@@ -139,8 +139,12 @@ Behaviors are pure functions—test without DOM:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
 import { counter } from './counter';
 
 describe('counter behavior', () => {
@@ -185,16 +189,13 @@ For view tests, use the mock adapter:
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { createElFactory } from './el';
-import {
-  createTestEnv,
-  getTextContent,
-  MockElement,
-} from './test-utils';
+import { createTestEnv, getTextContent, MockElement } from './test-utils';
 import type { ElementRef } from './types';
 
 describe('el primitive', () => {
   it('renders static content', () => {
-    const { adapter, scopedEffect, createElementScope, onCleanup } = createTestEnv();
+    const { adapter, scopedEffect, createElementScope, onCleanup } =
+      createTestEnv();
     const el = createElFactory({
       scopedEffect,
       adapter,
@@ -215,8 +216,14 @@ describe('el primitive', () => {
 
 ```typescript
 it('updates props reactively', () => {
-  const { adapter, scopedEffect, createElementScope, onCleanup } = createTestEnv();
-  const el = createElFactory({ scopedEffect, adapter, createElementScope, onCleanup });
+  const { adapter, scopedEffect, createElementScope, onCleanup } =
+    createTestEnv();
+  const el = createElFactory({
+    scopedEffect,
+    adapter,
+    createElementScope,
+    onCleanup,
+  });
   const { signal, computed } = createSignals();
 
   const isDisabled = signal(false);
@@ -238,8 +245,14 @@ it('updates props reactively', () => {
 
 ```typescript
 it('renders reactive children', () => {
-  const { adapter, scopedEffect, createElementScope, onCleanup } = createTestEnv();
-  const el = createElFactory({ scopedEffect, adapter, createElementScope, onCleanup });
+  const { adapter, scopedEffect, createElementScope, onCleanup } =
+    createTestEnv();
+  const el = createElFactory({
+    scopedEffect,
+    adapter,
+    createElementScope,
+    onCleanup,
+  });
   const { signal, computed } = createSignals();
 
   const name = signal('World');
@@ -249,8 +262,8 @@ it('renders reactive children', () => {
 
   expect(getTextContent(element)).toBe('Hello, World!');
 
-  name('Lattice');
-  expect(getTextContent(element)).toBe('Hello, Lattice!');
+  name('Rimitive');
+  expect(getTextContent(element)).toBe('Hello, Rimitive!');
 });
 ```
 
@@ -258,7 +271,7 @@ it('renders reactive children', () => {
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import { MyModule } from './my-module';
 
 describe('MyModule', () => {
@@ -334,16 +347,16 @@ it('handles async operations', async () => {
 pnpm test
 
 # Specific package
-pnpm --filter @lattice/signals test
+pnpm --filter @rimitive/signals test
 
 # Specific file
-pnpm --filter @lattice/signals test src/computed.test.ts
+pnpm --filter @rimitive/signals test src/computed.test.ts
 
 # Specific test name
-pnpm --filter @lattice/signals test -- "should handle diamond"
+pnpm --filter @rimitive/signals test -- "should handle diamond"
 
 # Watch mode
-pnpm --filter @lattice/signals test --watch
+pnpm --filter @rimitive/signals test --watch
 ```
 
 ## File Naming

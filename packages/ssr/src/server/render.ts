@@ -1,15 +1,15 @@
 /**
  * Server Render Functions
  *
- * Renders Lattice components to HTML strings for SSR.
+ * Renders Rimitive components to HTML strings for SSR.
  *
  * - renderToString: Synchronous render
  * - renderToStringAsync: Waits for all async boundaries
  * - renderToStream: Progressive streaming render
  */
 
-import type { NodeRef, FragmentRef, RefSpec } from '@lattice/view/types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
+import type { NodeRef, FragmentRef, RefSpec } from '@rimitive/view/types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@rimitive/view/types';
 import {
   ASYNC_FRAGMENT,
   isAsyncFragment,
@@ -219,7 +219,7 @@ export type StreamResult = {
  *
  * @example
  * ```ts
- * import { createDOMServerAdapter, renderToStream, createStreamWriter } from '@lattice/ssr/server';
+ * import { createDOMServerAdapter, renderToStream, createStreamWriter } from '@rimitive/ssr/server';
  *
  * const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
  * const stream = createStreamWriter('__APP_STREAM__');

@@ -4,7 +4,7 @@
  * Utilities for connecting to server-streamed data.
  */
 
-import type { Loader } from '@lattice/view/load';
+import type { Loader } from '@rimitive/view/load';
 
 /**
  * Stream receiver interface - matches what stream.bootstrap() creates on the server.
@@ -34,7 +34,7 @@ type HasLoader = { loader: Loader };
  * // Server: res.write(bootstrap());
  *
  * // Client
- * import { createClientAdapter, connectStream } from '@lattice/ssr/client';
+ * import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
  *
  * const adapter = createClientAdapter(document.querySelector('.app')!);
  * const service = createService(adapter);

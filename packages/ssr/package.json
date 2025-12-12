@@ -1,16 +1,16 @@
 {
-  "name": "@lattice/ssr",
+  "name": "@rimitive/ssr",
   "version": "0.0.1",
-  "description": "Server-side rendering and hydration for Lattice",
-  "author": "Lattice Team",
+  "description": "Server-side rendering and hydration for Rimitive",
+  "author": "Rimitive Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hejhi/lattice",
+    "url": "https://github.com/rimitive",
     "directory": "packages/ssr"
   },
   "keywords": [
-    "lattice",
+    "rimitive",
     "ssr",
     "server-side-rendering",
     "hydration",
@@ -51,10 +51,10 @@
     "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
   },
   "dependencies": {
-    "@lattice/lattice": "workspace:*",
-    "@lattice/resource": "workspace:*",
-    "@lattice/signals": "workspace:*",
-    "@lattice/view": "workspace:*",
+    "@rimitive/core": "workspace:*",
+    "@rimitive/resource": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*",
     "linkedom": "0.18.12"
   },
   "devDependencies": {
@@ -69,6 +69,7 @@
   },
   "sideEffects": false,
   "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
     "access": "public"
   }
 }

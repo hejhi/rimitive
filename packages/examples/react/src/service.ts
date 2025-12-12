@@ -3,12 +3,12 @@ import {
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
+} from '@rimitive/signals/extend';
 import {
   compose,
   createInstrumentation,
   devtoolsProvider,
-} from '@lattice/lattice';
+} from '@rimitive/core';
 
 // Create instrumented signals service
 const instrumentation = createInstrumentation({

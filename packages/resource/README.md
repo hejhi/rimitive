@@ -1,13 +1,17 @@
-# @lattice/resource
+# @rimitive/resource
 
-Reactive async data fetching for Lattice applications.
+Reactive async data fetching for Rimitive applications.
 
 ## Quick Start
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
-import { ResourceModule } from '@lattice/resource';
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
+import { ResourceModule } from '@rimitive/resource';
 
 const { signal, resource } = compose(
   SignalModule,
@@ -18,14 +22,14 @@ const { signal, resource } = compose(
 
 // Create a resource with a fetcher
 const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
+  fetch('/api/products', { signal }).then((r) => r.json())
 );
 
 // Read state
-products();          // { status: 'pending' | 'ready' | 'error', ... }
-products.loading();  // boolean
-products.data();     // T | undefined
-products.error();    // unknown | undefined
+products(); // { status: 'pending' | 'ready' | 'error', ... }
+products.loading(); // boolean
+products.data(); // T | undefined
+products.error(); // unknown | undefined
 ```
 
 ---
@@ -51,7 +55,7 @@ A resource has multiple ways to read its state:
 
 ```typescript
 const items = resource<Item[]>((signal) =>
-  fetch('/api/items', { signal }).then(r => r.json())
+  fetch('/api/items', { signal }).then((r) => r.json())
 );
 
 // Full state object (discriminated union)
@@ -61,9 +65,9 @@ items();
 // { status: 'error', error: Error }
 
 // Convenience accessors (computed signals)
-items.loading();  // true | false
-items.data();     // Item[] | undefined
-items.error();    // unknown | undefined
+items.loading(); // true | false
+items.data(); // Item[] | undefined
+items.error(); // unknown | undefined
 ```
 
 All accessors are reactive—use them in computeds or effects.
@@ -76,8 +80,9 @@ Read signals inside the fetcher. When they change, the resource refetches automa
 const categoryId = signal(1);
 
 const products = resource((signal) =>
-  fetch(`/api/products?category=${categoryId()}`, { signal })
-    .then(r => r.json())
+  fetch(`/api/products?category=${categoryId()}`, { signal }).then((r) =>
+    r.json()
+  )
 );
 
 // Initial fetch: /api/products?category=1
@@ -98,13 +103,13 @@ const products = resource((signal) =>
   fetch(
     `/api/products?category=${category()}&sort=${sortBy()}&page=${page()}`,
     { signal }
-  ).then(r => r.json())
+  ).then((r) => r.json())
 );
 
 // Any change triggers a refetch
-category('books');  // refetch
-sortBy('rating');   // refetch
-page(2);            // refetch
+category('books'); // refetch
+sortBy('rating'); // refetch
+page(2); // refetch
 ```
 
 ### AbortSignal
@@ -113,7 +118,7 @@ The fetcher receives an `AbortSignal`. Pass it to `fetch()` for automatic cancel
 
 ```typescript
 const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
+  fetch('/api/products', { signal }).then((r) => r.json())
 );
 ```
 
@@ -129,7 +134,7 @@ Trigger a refetch programmatically:
 
 ```typescript
 const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
+  fetch('/api/products', { signal }).then((r) => r.json())
 );
 
 // After a mutation, refresh the data
@@ -143,7 +148,7 @@ Clean up when the resource is no longer needed:
 
 ```typescript
 const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
+  fetch('/api/products', { signal }).then((r) => r.json())
 );
 
 // Aborts in-flight request and stops tracking
@@ -155,15 +160,14 @@ In components, dispose when the element is removed:
 ```typescript
 const ProductList = ({ el, resource }) => {
   const products = resource((signal) =>
-    fetch('/api/products', { signal }).then(r => r.json())
+    fetch('/api/products', { signal }).then((r) => r.json())
   );
 
   return el('div').ref(() => {
     // Cleanup runs when element is removed
     return () => products.dispose();
-  })(
-    // ... render products
-  );
+  })();
+  // ... render products
 };
 ```
 
@@ -186,8 +190,10 @@ const ProductList = () =>
         );
       case 'ready':
         return el('ul')(
-          map(state.value, p => p.id, (product) =>
-            el('li')(computed(() => product().name))
+          map(
+            state.value,
+            (p) => p.id,
+            (product) => el('li')(computed(() => product().name))
           )
         );
     }
@@ -199,18 +205,20 @@ Or use convenience accessors for simpler cases:
 ```typescript
 const ProductList = () =>
   el('div')(
-    match(products.loading, loading =>
+    match(products.loading, (loading) =>
       loading ? el('div')('Loading...') : null
     ),
-    match(products.error, err =>
-      err ? el('div')(`Error: ${err}`) : null
-    ),
-    match(products.data, data =>
-      data ? el('ul')(
-        map(data, p => p.id, (product) =>
-          el('li')(computed(() => product().name))
-        )
-      ) : null
+    match(products.error, (err) => (err ? el('div')(`Error: ${err}`) : null)),
+    match(products.data, (data) =>
+      data
+        ? el('ul')(
+            map(
+              data,
+              (p) => p.id,
+              (product) => el('li')(computed(() => product().name))
+            )
+          )
+        : null
     )
   );
 ```
@@ -220,7 +228,7 @@ const ProductList = () =>
 ## Types
 
 ```typescript
-import type { Resource, ResourceState, Fetcher } from '@lattice/resource';
+import type { Resource, ResourceState, Fetcher } from '@rimitive/resource';
 
 // ResourceState<T> - discriminated union
 type ResourceState<T> =
@@ -246,11 +254,11 @@ type Fetcher<T> = (signal: AbortSignal) => Promise<T>;
 
 ## Import Guide
 
-| Use Case | Import |
-|----------|--------|
-| Module composition | `import { ResourceModule } from '@lattice/resource'` |
-| Factory (advanced) | `import { createResourceFactory } from '@lattice/resource'` |
-| Types only | `import type { Resource, ResourceState, Fetcher } from '@lattice/resource'` |
+| Use Case           | Import                                                                       |
+| ------------------ | ---------------------------------------------------------------------------- |
+| Module composition | `import { ResourceModule } from '@rimitive/resource'`                        |
+| Factory (advanced) | `import { createResourceFactory } from '@rimitive/resource'`                 |
+| Types only         | `import type { Resource, ResourceState, Fetcher } from '@rimitive/resource'` |
 
 ---
 
@@ -259,7 +267,7 @@ type Fetcher<T> = (signal: AbortSignal) => Promise<T>;
 For custom compositions, use the factory function directly:
 
 ```typescript
-import { createResourceFactory } from '@lattice/resource';
+import { createResourceFactory } from '@rimitive/resource';
 
 const resource = createResourceFactory({
   signal: mySignalFactory,
@@ -272,7 +280,7 @@ const resource = createResourceFactory({
 
 ## Related
 
-- **`@lattice/view/load`** — async loading boundaries with Suspense-like UI patterns
+- **`@rimitive/view/load`** — async loading boundaries with Suspense-like UI patterns
 - **Signal Patterns: Async Actions** — for mutations (POST, PUT, DELETE) that need loading/error state but don't refetch on dependency changes
 
 ---

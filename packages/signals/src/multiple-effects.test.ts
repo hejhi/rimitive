@@ -19,7 +19,7 @@ describe('multiple effects on signal change', () => {
     // State setup similar to devtools example
     const count = signal(0);
     const todos = signal([
-      { id: 1, text: 'Learn Lattice', completed: false },
+      { id: 1, text: 'Learn Rimitive', completed: false },
       { id: 2, text: 'Build an app', completed: false },
     ]);
 
@@ -79,7 +79,7 @@ describe('multiple effects on signal change', () => {
   it('should run all effects when count changes after todos was updated', () => {
     const count = signal(0);
     const todos = signal([
-      { id: 1, text: 'Learn Lattice', completed: false },
+      { id: 1, text: 'Learn Rimitive', completed: false },
       { id: 2, text: 'Build an app', completed: false },
     ]);
 

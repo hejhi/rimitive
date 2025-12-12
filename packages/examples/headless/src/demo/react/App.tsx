@@ -2,21 +2,21 @@
  * React Demo - useDialog and useSelect with React rendering
  *
  * Demonstrates how the same headless behaviors work with React
- * using @lattice/react's createHook and useSubscribe.
+ * using @rimitive/react's createHook and useSubscribe.
  */
-import { SignalProvider, createHook, useSubscribe } from '@lattice/react';
-import { compose } from '@lattice/lattice';
+import { SignalProvider, createHook, useSubscribe } from '@rimitive/react';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
   BatchModule,
-} from '@lattice/signals/extend';
+} from '@rimitive/signals/extend';
 import { dialog } from '../../dialog';
 import { select, type SelectOption } from '../../select';
 
 // ============================================================================
-// Create Lattice Signals Service (singleton for the React tree)
+// Create Rimitive Signals Service (singleton for the React tree)
 // ============================================================================
 
 const signalsSvc = compose(

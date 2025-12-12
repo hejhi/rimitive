@@ -1,11 +1,11 @@
 ---
 title: Refs and DOM Access
-description: How to access DOM nodes imperatively in Lattice.
+description: How to access DOM nodes imperatively in Rimitive.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Lattice handles this with the `.ref()` method on elements.
+Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the `.ref()` method on elements.
 
 ---
 
@@ -200,7 +200,7 @@ When using refs with `map`, return a cleanup that removes the ref from the colle
 
 ## Why Not `createRef()`?
 
-Some frameworks have a standalone `createRef()` that returns an object with a `.current` property. Lattice doesn't have this because:
+Some frameworks have a standalone `createRef()` that returns an object with a `.current` property. Rimitive doesn't have this because:
 
 1. The callback pattern is more explicit about timing
 2. A signal holding the node serves the same purpose and integrates with reactivity

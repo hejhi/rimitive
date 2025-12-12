@@ -1,15 +1,15 @@
-import { compose } from '@lattice/lattice';
+import { compose } from '@rimitive/core';
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
-} from '@lattice/signals/extend';
-import { ResourceModule } from '@lattice/resource';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
+} from '@rimitive/signals/extend';
+import { ResourceModule } from '@rimitive/resource';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 // Create the DOM adapter
 const adapter = createDOMAdapter();

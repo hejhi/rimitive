@@ -10,8 +10,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { renderToString } from './render';
-import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@lattice/view/types';
-import type { NodeRef, ElementRef, FragmentRef } from '@lattice/view/types';
+import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@rimitive/view/types';
+import type { NodeRef, ElementRef, FragmentRef } from '@rimitive/view/types';
 import type { Serialize } from './adapter';
 
 // ============================================================================
@@ -24,7 +24,9 @@ import type { Serialize } from './adapter';
 const serialize: Serialize = (el: unknown) => {
   const element = el as { outerHTML?: string };
   if (element.outerHTML === undefined) {
-    throw new Error('Element does not have outerHTML property. Are you using linkedom renderer?');
+    throw new Error(
+      'Element does not have outerHTML property. Are you using linkedom renderer?'
+    );
   }
   return element.outerHTML;
 };
@@ -393,9 +395,9 @@ describe('Rendering Invariants', () => {
 import { renderToStringAsync } from './render';
 import type { AsyncFragment } from '../shared/async-fragments';
 import { ASYNC_FRAGMENT } from '../shared/async-fragments';
-import type { LoadState } from '@lattice/view/load';
-import { STATUS_REF_SPEC } from '@lattice/view/types';
-import type { RefSpec } from '@lattice/view/types';
+import type { LoadState } from '@rimitive/view/load';
+import { STATUS_REF_SPEC } from '@rimitive/view/types';
+import type { RefSpec } from '@rimitive/view/types';
 import { createDOMServerAdapter } from './adapter';
 
 /**
@@ -569,7 +571,8 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
  * Mock service context with adapter
  */
 function createMockService() {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } =
+    createDOMServerAdapter();
   const svc = {
     el: (tag: string) => (content: string) =>
       createMockRefSpec(`<${tag}>${content}</${tag}>`),

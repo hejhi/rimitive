@@ -34,7 +34,7 @@ Description
 </td></tr>
 <tr><td>
 
-[@lattice/react](./react/)
+[@rimitive/core](./core/)
 
 
 </td><td>
@@ -43,7 +43,7 @@ Description
 </td></tr>
 <tr><td>
 
-[@lattice/router](./router/)
+[@rimitive/react](./react/)
 
 
 </td><td>
@@ -52,7 +52,7 @@ Description
 </td></tr>
 <tr><td>
 
-[@lattice/signals](./signals/)
+[@rimitive/router](./router/)
 
 
 </td><td>
@@ -61,7 +61,7 @@ Description
 </td></tr>
 <tr><td>
 
-[@lattice/ssr](./ssr/)
+[@rimitive/signals](./signals/)
 
 
 </td><td>
@@ -70,7 +70,16 @@ Description
 </td></tr>
 <tr><td>
 
-[@lattice/view](./view/)
+[@rimitive/ssr](./ssr/)
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+[@rimitive/view](./view/)
 
 
 </td><td>

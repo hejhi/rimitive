@@ -1,14 +1,14 @@
-# Lattice - Complete LLM Documentation
+# Rimitive - Complete LLM Documentation
 
 > A modular reactive UI framework for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
 
-This document provides complete context for LLMs to write idiomatic Lattice code.
+This document provides complete context for LLMs to write idiomatic Rimitive code.
 
 ---
 
 ## 1. Core Philosophy
 
-Lattice is built on **module composition**. You pick modules you need; `compose()` wires them together into a **reactive service**.
+Rimitive is built on **module composition**. You pick modules you need; `compose()` wires them together into a **reactive service**.
 
 Key principles:
 - **Composition over configuration**: No global state, no magic. Everything is explicitly composed.
@@ -23,8 +23,8 @@ Key principles:
 ### Basic Setup
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 
 const svc = compose(SignalModule, ComputedModule, EffectModule);
 const { signal, computed, effect } = svc;
@@ -47,7 +47,7 @@ const useCounter = svc(counter);
 ### Adding More Modules
 
 ```typescript
-import { BatchModule } from '@lattice/signals/extend';
+import { BatchModule } from '@rimitive/signals/extend';
 
 const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
 const { signal, computed, effect, batch } = svc;
@@ -145,11 +145,11 @@ batch(() => {
 View modules are factories that take an adapter:
 
 ```typescript
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
 
 const adapter = createDOMAdapter();
 
@@ -292,7 +292,7 @@ document.body.appendChild(app.element!);
 Renders to a different DOM location:
 
 ```typescript
-import { createPortalModule } from '@lattice/view/portal';
+import { createPortalModule } from '@rimitive/view/portal';
 
 const svc = compose(..., createPortalModule(adapter));
 const { portal } = svc;
@@ -446,7 +446,7 @@ el('button').props({
 For automatic cleanup and batching:
 
 ```typescript
-import { OnModule } from '@lattice/view/deps/addEventListener';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
 
 const svc = compose(..., OnModule);
 const { on } = svc;
@@ -475,8 +475,8 @@ on('scroll', handler, { passive: true });
 ## 8. Routing
 
 ```typescript
-import { createRouterModule } from '@lattice/router';
-import { Link } from '@lattice/router/link';
+import { createRouterModule } from '@rimitive/router';
+import { Link } from '@rimitive/router/link';
 
 const routes = [
   { id: 'home', path: '' },
@@ -528,7 +528,7 @@ const App = () => el('div')(
 Reactive data fetching with automatic cancellation:
 
 ```typescript
-import { ResourceModule } from '@lattice/resource';
+import { ResourceModule } from '@rimitive/resource';
 
 const svc = compose(..., ResourceModule);
 const { resource, signal } = svc;
@@ -565,8 +565,8 @@ products.dispose();
 
 ```typescript
 // Core composition
-import { compose, merge, defineModule } from '@lattice/lattice';
-import type { Module, Use, ComposedContext } from '@lattice/lattice';
+import { compose, merge, defineModule } from '@rimitive/core';
+import type { Module, Use, ComposedContext } from '@rimitive/core';
 
 // Signal modules
 import {
@@ -576,28 +576,28 @@ import {
   BatchModule,
   SubscribeModule,
   UntrackModule
-} from '@lattice/signals/extend';
+} from '@rimitive/signals/extend';
 
 // Signal types
-import type { Readable, Writable, Reactive, SignalFunction, ComputedFunction } from '@lattice/signals';
+import type { Readable, Writable, Reactive, SignalFunction, ComputedFunction } from '@rimitive/signals';
 
 // View modules (factory pattern)
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { createPortalModule } from '@lattice/view/portal';
-import { MountModule } from '@lattice/view/deps/mount';
-import { OnModule } from '@lattice/view/deps/addEventListener';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { createPortalModule } from '@rimitive/view/portal';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
 
 // Adapters
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 
 // Router
-import { createRouterModule } from '@lattice/router';
-import { Link } from '@lattice/router/link';
+import { createRouterModule } from '@rimitive/router';
+import { Link } from '@rimitive/router/link';
 
 // Resource
-import { ResourceModule } from '@lattice/resource';
+import { ResourceModule } from '@rimitive/resource';
 ```
 
 ---
@@ -605,14 +605,14 @@ import { ResourceModule } from '@lattice/resource';
 ## 11. Complete Example
 
 ```typescript
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
-import { OnModule } from '@lattice/view/deps/addEventListener';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
 
 // Setup
 const adapter = createDOMAdapter();
@@ -703,14 +703,14 @@ document.body.appendChild(app.element!);
 
 ```typescript
 // service.ts
-import { compose } from '@lattice/lattice';
-import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
-import { createDOMAdapter } from '@lattice/view/adapters/dom';
-import { createElModule } from '@lattice/view/el';
-import { createMapModule } from '@lattice/view/map';
-import { createMatchModule } from '@lattice/view/match';
-import { MountModule } from '@lattice/view/deps/mount';
-import { OnModule } from '@lattice/view/deps/addEventListener';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
 
 const adapter = createDOMAdapter();
 

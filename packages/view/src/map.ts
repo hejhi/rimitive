@@ -16,12 +16,12 @@ import { ScopesModule } from './deps/scope';
 import { createReconciler, ReconcileNode } from './deps/reconcile';
 import { createNodeHelpers } from './deps/node-deps';
 import { removeFromFragment } from './deps/fragment-boundaries';
-import { defineModule, type Module } from '@lattice/lattice';
-import { SignalModule, type SignalFactory } from '@lattice/signals/signal';
+import { defineModule, type Module } from '@rimitive/core';
+import { SignalModule, type SignalFactory } from '@rimitive/signals/signal';
 import {
   ComputedModule,
   type ComputedFactory,
-} from '@lattice/signals/computed';
+} from '@rimitive/signals/computed';
 
 /**
  * Map factory type
@@ -92,7 +92,7 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<ItemSignal<T>>;
  * Use this type when building custom view service compositions:
  * @example
  * ```ts
- * import { createMapFactory, type MapService } from '@lattice/view/map';
+ * import { createMapFactory, type MapService } from '@rimitive/view/map';
  *
  * const mapFactory: MapService<DOMAdapterConfig> = createMapFactory<DOMAdapterConfig>(opts);
  * ```
@@ -106,8 +106,8 @@ export type MapService<TConfig extends AdapterConfig> = MapFactory<
  *
  * @example
  * ```ts
- * import { createMapFactory } from '@lattice/view/map';
- * import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+ * import { createMapFactory } from '@rimitive/view/map';
+ * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
  *
  * const mapFactory = createMapFactory<DOMAdapterConfig>({
  *   signal,
@@ -358,9 +358,9 @@ export function createMapFactory<TConfig extends AdapterConfig>({
  *
  * @example
  * ```ts
- * import { compose } from '@lattice/lattice';
- * import { createMapModule } from '@lattice/view/map';
- * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { compose } from '@rimitive/core';
+ * import { createMapModule } from '@rimitive/view/map';
+ * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
  *
  * const adapter = createDOMAdapter();
  * const MapModule = createMapModule(adapter);
