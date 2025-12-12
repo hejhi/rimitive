@@ -7,9 +7,10 @@ import type { Readable, Writable } from '@lattice/signals/types';
  *
  * @example
  * ```tsx
- * import { createSignals } from '@lattice/signals';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
  *
- * const svc: SignalSvc = createSignals()();
+ * const svc: SignalSvc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
  * ```
  */
 export type SignalSvc = {
@@ -28,10 +29,11 @@ const SignalContext = createContext<SignalSvc | null>(null);
  *
  * @example
  * ```tsx
- * import { createSignals } from '@lattice/signals';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
  *
  * const props: SignalProviderProps = {
- *   svc: createSignals()(),
+ *   svc: compose(SignalModule, ComputedModule, EffectModule, BatchModule),
  *   children: <App />
  * };
  * ```
@@ -48,9 +50,10 @@ export type SignalProviderProps = {
  * @example
  * ```tsx
  * import { SignalProvider } from '@lattice/react';
- * import { createSignals } from '@lattice/signals';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
  *
- * const svc = createSignals()();
+ * const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
  *
  * function App() {
  *   return (

@@ -238,7 +238,7 @@ export function createMatchFactory<TConfig extends AdapterConfig>({
  * const adapter = createDOMAdapter();
  * const MatchModule = createMatchModule(adapter);
  *
- * const { match } = compose(MatchModule)();
+ * const { match } = compose(MatchModule);
  * ```
  */
 export const createMatchModule = <TConfig extends AdapterConfig>(

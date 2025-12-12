@@ -29,13 +29,13 @@ export type ComposeOptions = {
 
 ```ts
 import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
-import { Signal, Computed } from '@lattice/signals';
+import { SignalModule, ComputedModule } from '@lattice/signals/extend';
 
 const instrumentation = createInstrumentation({
   enabled: true,
   providers: [devtoolsProvider()],
 });
 
-const use = compose(Signal, Computed, { instrumentation });
+const svc = compose(SignalModule, ComputedModule, { instrumentation });
 ```
 

@@ -70,10 +70,10 @@ Basic usage
 
 ```ts
 import { compose } from '@lattice/lattice';
-import { Signal, Computed, Effect } from '@lattice/signals';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
-const use = compose(Signal, Computed, Effect);
-const { signal, computed, effect } = use();
+const svc = compose(SignalModule, ComputedModule, EffectModule);
+const { signal, computed, effect } = svc;
 
 const count = signal(0);
 const doubled = computed(() => count() * 2);
@@ -86,9 +86,9 @@ With instrumentation
 
 ```ts
 import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
-import { Signal, Computed } from '@lattice/signals';
+import { SignalModule, ComputedModule } from '@lattice/signals/extend';
 
-const use = compose(Signal, Computed, {
+const svc = compose(SignalModule, ComputedModule, {
   instrumentation: createInstrumentation({
     providers: [devtoolsProvider()],
   }),
@@ -97,15 +97,18 @@ const use = compose(Signal, Computed, {
 
 ## Example 3
 
-Component pattern
+Behavior pattern
 
 ```ts
-const Counter = use(({ signal, computed }) => () => {
-  const count = signal(0);
+const counter = (svc) => () => {
+  const count = svc.signal(0);
   return {
-    value: computed(() => count()),
+    value: svc.computed(() => count()),
     increment: () => count(c => c + 1),
   };
-});
+};
+
+const useCounter = svc(counter);
+const myCounter = useCounter();
 ```
 

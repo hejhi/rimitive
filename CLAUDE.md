@@ -1,143 +1,154 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance for working with the Lattice codebase.
 
-## Build and Development Commands
+## LLM Documentation
 
-### Core Development Scripts
+For comprehensive LLM-optimized documentation, see:
+- `llms.txt` - Quick reference index
+- `llms-full.txt` - Complete documentation (recommended for full context)
+
+## Development Commands
 
 ```bash
-# Build all packages
+# Build, test, typecheck, lint
 pnpm build
-
-# Run all tests
 pnpm test
+pnpm typecheck
+pnpm lint
+pnpm check                        # all of the above
 
-# Type checking
-pnpm typecheck                    # All packages
-
-# Linting
-pnpm lint                         # All packages
-
-# Complete check (typecheck + test + lint)
-pnpm check                        # All packages
-
-# pnpm workspace matchers
-# Run tests for specific package
+# Package-specific commands
 pnpm --filter @lattice/signals test
-pnpm --filter @lattice/lattice test
-
-# Run specific test file
 pnpm --filter @lattice/signals test src/computed.test.ts
-
-# Run test matching pattern
 pnpm --filter @lattice/signals test -- "should handle deep dependency"
-```
 
-### Benchmarking
-
-```bash
-# Run all benchmarks
+# Benchmarks
 pnpm bench
-
-# Run specific benchmark
 pnpm bench diamond-simple
-
-# Run benchmarks with timeout
 timeout 60 pnpm bench chain-deep
 ```
 
-## Architecture Overview
+## Core Concepts
 
-### Package Structure
+### Composition
 
-The codebase is organized as a lerna monorepo using pnpm workspaces. The core packages are located in @packages/. Reference packages (such as the source code for `alien-signals` and `preact-signas`) are located in `/reference-packages`.
+Lattice is built on module composition. `compose()` wires modules together, resolving dependencies automatically:
 
-### Testing Strategy
+```ts
+const svc = compose(SignalModule, ComputedModule, EffectModule);
+const { signal, computed, effect } = svc;
+```
 
-Tests are co-located with source files:
+Modules declare dependencies and provide implementations via `defineModule()`. See `packages/lattice/src/module.ts` for the pattern.
 
-- Unit tests: `*.test.ts` files next to implementation
-- Integration tests in `api.test.ts`
-- Memory leak tests in `detached-memory.test.ts`
-- Performance regression prevention via benchmarks
+### Signal Primitives
+
+Import modules from `@lattice/signals/extend`:
+- `SignalModule` - reactive state (`signal(value)`)
+- `ComputedModule` - derived values (`computed(() => ...)`)
+- `EffectModule` - synchronous side effects (`effect(() => ...)`)
+- `BatchModule` - batched updates (`batch(() => ...)`)
+- `SubscribeModule` - external subscriptions
+- `UntrackModule` - untracked reads
+
+Signal API: `sig()` reads, `sig(value)` writes, `sig.peek()` reads without tracking.
+
+Effects are **synchronous** - they run immediately when dependencies change. This is intentional and differs from React's useEffect.
+
+### View Primitives
+
+View modules are factory functions that take an adapter:
+
+```ts
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter)
+);
+```
+
+Primitives:
+- `el(tag).props({...})(...children)` - element specs
+- `map(items, keyFn, render)` - reactive lists
+- `match(reactive, matcher)` - conditional rendering
+- `portal(target)(child)` - render to different DOM location
+
+Specs are inert blueprints. Call `.create(svc)` or use `mount()` to instantiate.
+
+### Behaviors
+
+Behaviors are portable functions that receive a service and return an API:
+
+```ts
+const counter = (svc) => (initial = 0) => {
+  const count = svc.signal(initial);
+  return {
+    count,
+    increment: () => count(count() + 1),
+  };
+};
+
+const useCounter = svc(counter);
+```
+
+Behaviors can compose other behaviors by passing the service through.
+
+## Package Structure
+
+```
+packages/
+├── lattice/     # Core: compose, defineModule, merge
+├── signals/     # Reactive primitives
+├── view/        # UI primitives (el, map, match, portal, load)
+├── router/      # Client-side routing
+├── resource/    # Async data fetching
+├── ssr/         # Server-side rendering
+├── react/       # React bindings
+├── docs/        # Documentation site
+├── benchmarks/  # Performance benchmarks
+└── examples/    # Example applications
+```
+
+### Import Conventions
+
+- **Modules**: `import { SignalModule } from '@lattice/signals/extend'`
+- **Types**: `import type { Readable, SignalFunction } from '@lattice/signals'`
+- **View factories**: `import { createElModule } from '@lattice/view/el'`
+- **Adapters**: `import { createDOMAdapter } from '@lattice/view/adapters/dom'`
+
+The `/extend` path exports modules and factory functions for composition. The base path exports types.
 
 ## Type Export Guidelines
 
-### Portable Types Rule (TS2742)
+When exporting types, ensure all referenced types are also exported. TS2742 ("The inferred type cannot be named...") occurs when a public type references an unexported internal type.
 
-When exporting types from a package, ensure all types referenced by public types are also exported. TypeScript error TS2742 ("The inferred type cannot be named without a reference to...") occurs when:
+**Solution**: Export all constituent types from the same entry point. Users should never need explicit return type annotations.
 
-1. A public type `T` references an internal type `U` (via symbol property, generic parameter, etc.)
-2. `U` is not exported from the package's public API
-3. Consumer code infers `T` but TypeScript can't express it without referencing internal paths
+## Testing
 
-**Solution**: Export all constituent types alongside the public type. For example, if `IslandComponent` has a `[ISLAND_META]` property typed as `IslandMetaData`, both `ISLAND_META` and `IslandMetaData` must be exported from the same entry point as `IslandComponent`.
-
-**Why this matters for Lattice**: Type inference and composition are core to the Lattice DX. Users should never need explicit return type annotations to avoid portability errors. The library must export complete type information so inferred types are always expressible.
+Tests are co-located with source files (`*.test.ts`). Key test files:
+- `api.test.ts` - integration tests
+- `detached-memory.test.ts` - memory leak tests
 
 ## Git Workflow
 
-Follow conventional commits:
+Follow conventional commits: `fix:`, `feat:`, `docs:`, `chore:`, `test:`
 
-- `fix:` - Bug fixes
-- `feat:` - New features
-- `docs:` - Documentation
-- `chore:` - Maintenance
-- `test:` - Test changes
+Create changesets for releases: `pnpm changeset`
 
-Create changesets for releases:
+## Communication Principles
 
-```bash
-pnpm changeset
-```
+- **Direct**: Say what's wrong plainly.
+- **Pragmatic**: Working solutions over elegant theory.
+- **Concise**: Brief explanations.
+- **Trust-based**: Don't over-explain obvious things.
 
-## Workflows
+**Never revert or abandon during implementation.** When blocked:
+1. Analyze deeply to understand the fundamental problem
+2. Strategize how to iterate through it
+3. If fundamentally flawed or too ambiguous, stop and consult
 
-**What workflows are**: Multi-stage task automation sequences in `.claude/workflows/*.md` that orchestrate complex operations through slash commands. Each workflow defines stages with specific commands, providing progress tracking and guided execution.
-
-**Creating a workflow**: Place a markdown file in `.claude/workflows/` with YAML frontmatter defining stages. Each stage specifies a `name`, `command` (slash command to run), and `description`. The workflow runs via `/workflow [workflow-name]` and tracks completion by examining typical outputs from each command.
-
-Example structure:
-
-```yaml
----
-name: 'My Workflow'
-description: 'What this workflow does'
-stages:
-  - name: 'First Stage'
-    command: '/some-command'
-    description: 'What this stage accomplishes'
----
-```
-
-## Communication Style and Principles
-
-When working in this codebase, adopt the following communication style and principles:
-
-- **Direct and honest**: Be straightforward without unnecessary embellishment. If something is wrong, say so plainly.
-- **Pragmatic**: Focus on practical solutions over theoretical perfection. What works is more important than what's elegant.
-- **Jantelov mindset**: Simple, working solutions are valued.
-- **Concise**: Keep explanations brief and to the point.
-- **Trust-based**: Assume good intentions and competence. Don't over-explain obvious things.
-
-An important note on the **direct and honest** principle:
-
-**NEVER REVERT, RESTORE, OR ABANDON DURING AN IMPLEMENTATION**.
-
-When you inevitably run into roadblocks during implementation, and you're considering reverting, restoring, or changing strategies, do one or more of the below:
-
-- **ANALYZE AND THINK DEEPLY**: if you don't explicitly understand the fundamental problem underlying the roadblock, the top priority is to figure it out and synthesize it into detailed, actionable knowledge
-- **THINK HARDER**: re-assess the roadblock with this added knowledge and strategize how you can iterate through it
-
-When all else fails, and you determine that either:
-
-- the approach is fundamentally flawed
-- there's too much ambiguity to continue iterating
-- you can't get to the root of the problem
-
-...then **STOP** and consult the user.
-
-**You should NEVER make the decision to go backwards or change direction unless explicitly instructed to by the user. Doing so comprimises the users trust in your autonomy and ability to follow instructions**.
-
-Remember: implementation "roadblocks" are opportunities to dig deeper and uncover valuable, actionable knowledge **AS PART OF** an iteration, but they are **NEVER** an excuse to abandon it.
+Never change direction without explicit user instruction.

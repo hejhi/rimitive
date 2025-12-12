@@ -272,7 +272,7 @@ export function createPortalFactory<TConfig extends AdapterConfig>({
  * const adapter = createDOMAdapter();
  * const PortalModule = createPortalModule(adapter);
  *
- * const { portal } = compose(PortalModule)();
+ * const { portal } = compose(PortalModule);
  * ```
  */
 export const createPortalModule = <TConfig extends AdapterConfig>(

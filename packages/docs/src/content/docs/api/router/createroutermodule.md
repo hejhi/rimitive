@@ -98,14 +98,14 @@ const routes = [
   ]}
 ];
 
-const use = compose(
+const svc = compose(
   SignalModule,
   ComputedModule,
   createRouterModule(routes, { initialPath: '/' })
 );
 
 // Router is now part of the composed context
-const { router, signal, computed } = use;
+const { router, signal, computed } = svc;
 
 // Use in view layer
 match(router.matches, (matches) => {

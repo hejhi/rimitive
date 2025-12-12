@@ -20,18 +20,12 @@ export type UntrackedOpts = {
  * reactive dependencies. Any signals or computeds read inside the callback
  * will not be tracked.
  *
- * **Most users should get untrack from the deps helper:**
- * ```ts
- * import { deps } from '@lattice/signals';
- * const { untrack } = deps();
- * ```
- *
  * @example Basic usage
  * ```ts
- * import { createSignals, deps } from '@lattice/signals';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, EffectModule, UntrackModule } from '@lattice/signals/extend';
  *
- * const { signal, effect } = createSignals()();
- * const { untrack } = deps();
+ * const { signal, effect, untrack } = compose(SignalModule, EffectModule, UntrackModule);
  *
  * const a = signal(1);
  * const b = signal(2);
@@ -48,8 +42,8 @@ export type UntrackedOpts = {
  *
  * @example Logging without tracking
  * ```ts
- * const { signal, effect } = createSignals()();
- * const { untrack } = deps();
+ * const { signal, effect, untrack } = compose(SignalModule, EffectModule, UntrackModule);
+ *
  * const count = signal(0);
  * const debugSignal = signal('info');
  *
@@ -67,8 +61,8 @@ export type UntrackedOpts = {
  *
  * @example Initial value sampling
  * ```ts
- * const { signal, effect } = createSignals()();
- * const { untrack } = deps();
+ * const { signal, effect, untrack } = compose(SignalModule, EffectModule, UntrackModule);
+ *
  * const threshold = signal(10);
  *
  * effect(() => {

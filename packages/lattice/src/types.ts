@@ -101,27 +101,27 @@ export type InstrumentationContext = {
  * @example
  * ```ts
  * import { compose } from '@lattice/lattice';
- * import { Signal, Computed } from '@lattice/signals';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
  *
- * const use = compose(Signal, Computed);
+ * const svc = compose(SignalModule, ComputedModule);
  *
  * // Access services directly as properties
- * const count = use.signal(0);
- * const doubled = use.computed(() => count() * 2);
+ * const count = svc.signal(0);
+ * const doubled = svc.computed(() => count() * 2);
  *
  * // Or invoke a portable/behavior
- * const Counter = use((svc) => () => {
- *   const count = svc.signal(0);
+ * const Counter = svc((ctx) => () => {
+ *   const count = ctx.signal(0);
  *   return { value: count };
  * });
  *
  * // Inside a portable, you can do both:
- * const MyComponent = use((svc) => {
- *   // Call svc() with another portable (svc is also callable)
- *   const behavior = svc(someBehavior);
+ * const MyComponent = svc((ctx) => {
+ *   // Call ctx() with another portable (ctx is also callable)
+ *   const behavior = ctx(someBehavior);
  *
  *   // Access services directly
- *   const { signal, el } = svc;
+ *   const { signal, el } = ctx;
  *
  *   return () => { ... };
  * });

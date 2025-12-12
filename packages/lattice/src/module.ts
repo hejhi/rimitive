@@ -37,7 +37,7 @@
  * });
  *
  * // Compose modules - dependencies are auto-resolved
- * const { counter, logger } = compose(Counter)();
+ * const { counter, logger } = compose(Counter);
  * counter.increment(); // logs: "Count: 1"
  * ```
  *

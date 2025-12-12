@@ -233,7 +233,7 @@ export function createLoadFactory({ signal }: LoadOpts): LoadFactory {
  * import { compose } from '@lattice/lattice';
  * import { LoadModule } from '@lattice/view/load';
  *
- * const { load, signal } = compose(LoadModule)();
+ * const { load, signal } = compose(LoadModule);
  * ```
  */
 export const LoadModule: Module<'load', LoadFactory, { signal: SignalFactory }> =

@@ -384,7 +384,7 @@ export function createElFactory<TConfig extends AdapterConfig>({
  * const adapter = createDOMAdapter();
  * const ElModule = createElModule(adapter);
  *
- * const { el, scopes, effect } = compose(ElModule)();
+ * const { el, scopes } = compose(ElModule);
  * ```
  */
 export const createElModule = <TConfig extends AdapterConfig>(

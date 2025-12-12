@@ -365,7 +365,7 @@ export function createMapFactory<TConfig extends AdapterConfig>({
  * const adapter = createDOMAdapter();
  * const MapModule = createMapModule(adapter);
  *
- * const { map, signal, computed } = compose(MapModule)();
+ * const { map, signal, computed } = compose(MapModule);
  * ```
  */
 export const createMapModule = <TConfig extends AdapterConfig>(

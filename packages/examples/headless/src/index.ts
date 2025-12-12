@@ -10,12 +10,15 @@
  *
  * @example
  * ```ts
- * import { useDialog, useSelect } from '@lattice/headless';
- * import { signal, computed, effect } from '@lattice/signals';
+ * import { dialog, select } from '@lattice/headless';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
  *
- * // Create behaviors with your signals implementation
- * const dialog = useDialog({ signal, computed, effect })();
- * const select = useSelect({ signal, computed, effect })({ options: [...] });
+ * const svc = compose(SignalModule, ComputedModule, EffectModule);
+ *
+ * // Create behaviors with your signals service
+ * const myDialog = svc(dialog)();
+ * const mySelect = svc(select)({ options: [...] });
  * ```
  */
 

@@ -1,0 +1,47 @@
+# Lattice
+
+> A modular reactive UI framework for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
+
+Lattice uses `compose()` to wire modules together. Modules declare dependencies; compose resolves them automatically. The result is a service with reactive primitives.
+
+## Core Concepts
+
+- [llms-full.txt](llms-full.txt): Complete LLM documentation (recommended for full context)
+
+## Quick Reference
+
+Signal primitives: `signal(value)` creates state; `sig()` reads; `sig(newValue)` writes; `sig.peek()` reads without tracking.
+
+Effects are synchronous - they run immediately when dependencies change.
+
+View elements: `el(tag).props({...})(...children)` - curried pattern. Specs are inert; call `.create(svc)` or `mount()` to instantiate.
+
+Behaviors: `(svc) => (options) => { return api }` - portable reactive logic.
+
+## Import Patterns
+
+```typescript
+// Modules for composition
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+
+// Types only
+import type { Readable, Writable, SignalFunction } from '@lattice/signals';
+
+// View factories
+import { createElModule } from '@lattice/view/el';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+
+// Compose into a service
+import { compose } from '@lattice/lattice';
+const svc = compose(SignalModule, ComputedModule, EffectModule);
+```
+
+## Packages
+
+- [@lattice/lattice](https://github.com/user/lattice/tree/main/packages/lattice): Core composition (`compose`, `defineModule`, `merge`)
+- [@lattice/signals](https://github.com/user/lattice/tree/main/packages/signals): Reactive primitives (`signal`, `computed`, `effect`, `batch`)
+- [@lattice/view](https://github.com/user/lattice/tree/main/packages/view): UI primitives (`el`, `map`, `match`, `portal`)
+- [@lattice/router](https://github.com/user/lattice/tree/main/packages/router): Client-side routing
+- [@lattice/resource](https://github.com/user/lattice/tree/main/packages/resource): Async data fetching
+- [@lattice/ssr](https://github.com/user/lattice/tree/main/packages/ssr): Server-side rendering
+- [@lattice/react](https://github.com/user/lattice/tree/main/packages/react): React bindings

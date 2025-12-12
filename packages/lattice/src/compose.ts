@@ -23,14 +23,14 @@ type ContextState = {
  * @example
  * ```ts
  * import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
- * import { Signal, Computed } from '@lattice/signals';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
  *
  * const instrumentation = createInstrumentation({
  *   enabled: true,
  *   providers: [devtoolsProvider()],
  * });
  *
- * const use = compose(Signal, Computed, { instrumentation });
+ * const svc = compose(SignalModule, ComputedModule, { instrumentation });
  * ```
  */
 export type ComposeOptions = {
@@ -78,10 +78,10 @@ function collectModules(modules: AnyModule[]): AnyModule[] {
  * @example Basic usage
  * ```ts
  * import { compose } from '@lattice/lattice';
- * import { Signal, Computed, Effect } from '@lattice/signals';
+ * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
  *
- * const use = compose(Signal, Computed, Effect);
- * const { signal, computed, effect } = use();
+ * const svc = compose(SignalModule, ComputedModule, EffectModule);
+ * const { signal, computed, effect } = svc;
  *
  * const count = signal(0);
  * const doubled = computed(() => count() * 2);
@@ -91,24 +91,27 @@ function collectModules(modules: AnyModule[]): AnyModule[] {
  * @example With instrumentation
  * ```ts
  * import { compose, createInstrumentation, devtoolsProvider } from '@lattice/lattice';
- * import { Signal, Computed } from '@lattice/signals';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
  *
- * const use = compose(Signal, Computed, {
+ * const svc = compose(SignalModule, ComputedModule, {
  *   instrumentation: createInstrumentation({
  *     providers: [devtoolsProvider()],
  *   }),
  * });
  * ```
  *
- * @example Component pattern
+ * @example Behavior pattern
  * ```ts
- * const Counter = use(({ signal, computed }) => () => {
- *   const count = signal(0);
+ * const counter = (svc) => () => {
+ *   const count = svc.signal(0);
  *   return {
- *     value: computed(() => count()),
+ *     value: svc.computed(() => count()),
  *     increment: () => count(c => c + 1),
  *   };
- * });
+ * };
+ *
+ * const useCounter = svc(counter);
+ * const myCounter = useCounter();
  * ```
  */
 // Overload: modules only
@@ -230,27 +233,27 @@ export function compose(
  * @example
  * ```ts
  * import { compose, merge } from '@lattice/lattice';
- * import { Signal } from '@lattice/signals';
+ * import { SignalModule } from '@lattice/signals/extend';
  *
- * const use = compose(Signal);
+ * const svc = compose(SignalModule);
  *
  * // Add new properties
- * const extended = merge(use, { theme: createTheme() });
+ * const extended = merge(svc, { theme: createTheme() });
  * extended.theme; // available
- * extended.signal; // same instance as use.signal
+ * extended.signal; // same instance as svc.signal
  *
  * // Override existing properties for a subtree
- * const childUse = merge(use, { signal: customSignal });
+ * const childSvc = merge(svc, { signal: customSignal });
  * ```
  *
- * @example Inside a component
+ * @example Inside a behavior
  * ```ts
- * const MyComponent = use((svc) => {
+ * const myBehavior = (svc) => {
  *   // Add router for this subtree
- *   const childUse = merge(use, createRouter(svc));
+ *   const childSvc = merge(svc, createRouter(svc));
  *
- *   return () => childUse(ChildComponent);
- * });
+ *   return () => childSvc(ChildComponent);
+ * };
  * ```
  */
 export function merge<TSvc, TAdditions extends object>(

@@ -80,29 +80,29 @@ TAdditions
 
 ```ts
 import { compose, merge } from '@lattice/lattice';
-import { Signal } from '@lattice/signals';
+import { SignalModule } from '@lattice/signals/extend';
 
-const use = compose(Signal);
+const svc = compose(SignalModule);
 
 // Add new properties
-const extended = merge(use, { theme: createTheme() });
+const extended = merge(svc, { theme: createTheme() });
 extended.theme; // available
-extended.signal; // same instance as use.signal
+extended.signal; // same instance as svc.signal
 
 // Override existing properties for a subtree
-const childUse = merge(use, { signal: customSignal });
+const childSvc = merge(svc, { signal: customSignal });
 ```
 
 ## Example 2
 
-Inside a component
+Inside a behavior
 
 ```ts
-const MyComponent = use((svc) => {
+const myBehavior = (svc) => {
   // Add router for this subtree
-  const childUse = merge(use, createRouter(svc));
+  const childSvc = merge(svc, createRouter(svc));
 
-  return () => childUse(ChildComponent);
-});
+  return () => childSvc(ChildComponent);
+};
 ```
 

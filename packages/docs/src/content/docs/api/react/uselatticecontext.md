@@ -84,18 +84,19 @@ function App() {
 
 
 ```tsx
-// For most use cases, prefer createSignals() instead of useLatticeContext
-import { createSignals } from '@lattice/signals';
+// For simpler cases, you can use compose directly in a ref
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
 function TodoApp() {
-  const use = useRef(createSignals());
-  const { signal } = use.current;
+  const svc = useRef(compose(SignalModule, ComputedModule, EffectModule));
+  const { signal } = svc.current;
 
   const todos = useRef(signal([]));
   const filter = useRef(signal('all'));
 
   // Dispose on unmount
-  useEffect(() => () => use.current.dispose(), []);
+  useEffect(() => () => svc.current.dispose(), []);
 
   return (
     <AppContext.Provider value={{ todos: todos.current, filter: filter.current }}>

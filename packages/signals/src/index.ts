@@ -3,17 +3,17 @@
  *
  * ## Quick Start
  * ```typescript
- * import { createSignals } from '@lattice/signals';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
  *
- * const { signal, computed, effect } = createSignals()();
+ * const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
  * ```
  *
  * ## Import Guide
  *
  * | Use Case | Import |
  * |----------|--------|
- * | Quick start | `import { createSignals } from '@lattice/signals'` |
- * | Custom composition | `import { SignalModule, ComputedModule } from '@lattice/signals/extend'` |
+ * | Modules | `import { SignalModule, ComputedModule } from '@lattice/signals/extend'` |
  * | Types only | `import type { Readable, SignalFunction } from '@lattice/signals'` |
  *
  * ### Without a bundler

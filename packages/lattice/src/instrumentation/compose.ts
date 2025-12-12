@@ -119,7 +119,7 @@ export function composeProviders(
  * @example Basic usage
  * ```ts
  * import { createInstrumentation, devtoolsProvider, compose } from '@lattice/lattice';
- * import { Signal, Computed, deps } from '@lattice/signals/extend';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
  *
  * const instrumentation = createInstrumentation({
  *   enabled: import.meta.env.DEV,
@@ -127,11 +127,7 @@ export function composeProviders(
  * });
  *
  * // Use with compose
- * const use = compose(
- *   { signal: Signal(), computed: Computed() },
- *   deps(),
- *   { instrumentation }
- * );
+ * const svc = compose(SignalModule, ComputedModule, { instrumentation });
  * ```
  *
  * @example Production-safe pattern
