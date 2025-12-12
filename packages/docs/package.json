@@ -13,8 +13,8 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.34.4",
-    "astro": "^5.6.1",
-    "sharp": "^0.32.5"
+    "@astrojs/starlight": "0.37.1",
+    "astro": "5.16.5",
+    "sharp": "0.34.5"
   }
 }

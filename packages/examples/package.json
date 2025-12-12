@@ -17,12 +17,12 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
-    "@lattice/signals": "workspace:*",
     "@lattice/lattice": "workspace:*",
     "@lattice/react": "workspace:*",
+    "@lattice/signals": "workspace:*",
     "@lattice/view": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "5.9.3"
   }
 }

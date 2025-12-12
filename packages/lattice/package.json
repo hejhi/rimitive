@@ -37,13 +37,12 @@
     "test": "vitest run",
     "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
   },
-  "dependencies": {},
   "devDependencies": {
-    "rimraf": "^6.0.1",
-    "typescript": "^5.8.3",
-    "vite": "^7.1.1",
-    "vite-plugin-dts": "^4.5.4",
-    "vitest": "^3.2.4"
+    "rimraf": "6.1.2",
+    "typescript": "5.9.3",
+    "vite": "7.2.7",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.15"
   },
   "files": [
     "dist",

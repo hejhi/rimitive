@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",
+    "@lattice/router": "workspace:*",
     "@lattice/signals": "workspace:*",
-    "@lattice/view": "workspace:*",
-    "@lattice/router": "workspace:*"
+    "@lattice/view": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "vite": "^6.0.5"
+    "typescript": "5.9.3",
+    "vite": "7.2.7"
   }
 }

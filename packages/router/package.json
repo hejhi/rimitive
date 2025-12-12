@@ -60,15 +60,15 @@
     "@lattice/view": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "esbuild": "^0.25.8",
-    "happy-dom": "^15.11.7",
-    "rimraf": "^6.0.1",
-    "terser": "^5.36.0",
-    "typescript": "^5.8.3",
-    "vite": "^7.1.1",
-    "vite-plugin-dts": "^4.5.4",
-    "vitest": "^3.2.4"
+    "@types/node": "25.0.1",
+    "esbuild": "0.27.1",
+    "happy-dom": "20.0.11",
+    "rimraf": "6.1.2",
+    "terser": "5.44.1",
+    "typescript": "5.9.3",
+    "vite": "7.2.7",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.15"
   },
   "sideEffects": false,
   "publishConfig": {
