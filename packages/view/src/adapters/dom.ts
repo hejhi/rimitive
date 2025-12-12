@@ -1,6 +1,21 @@
 import type { Adapter, AdapterConfig } from '../adapter';
 
 /**
+ * Override style property to accept both string and CSSStyleDeclaration.
+ * This matches real DOM behavior where setting element.style = "..." sets cssText.
+ */
+type WithStyleString<T> = T extends { style: CSSStyleDeclaration }
+  ? Omit<T, 'style'> & { style?: string | CSSStyleDeclaration }
+  : T;
+
+/**
+ * DOM props map with style string support for all HTML elements
+ */
+type DOMPropsMap = {
+  [K in keyof HTMLElementTagNameMap]: WithStyleString<HTMLElementTagNameMap[K]>;
+} & { text: Text };
+
+/**
  * DOM adapter configuration type
  *
  * Provides type-safe props and elements for standard HTML tags plus text nodes.
@@ -17,7 +32,7 @@ import type { Adapter, AdapterConfig } from '../adapter';
  * ```
  */
 export type DOMAdapterConfig = AdapterConfig & {
-  props: HTMLElementTagNameMap & { text: Text };
+  props: DOMPropsMap;
   elements: HTMLElementTagNameMap & { text: Text };
   events: HTMLElementEventMap;
   baseElement: Node;

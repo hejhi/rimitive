@@ -195,7 +195,36 @@ Project skills in `.claude/skills/` are activated automatically when relevant:
 
 Follow conventional commits: `fix:`, `feat:`, `docs:`, `chore:`, `test:`
 
-Create changesets for releases: `pnpm changeset`
+## Release Workflow
+
+Packages are published to GitHub Packages (`npm.pkg.github.com`) as private packages.
+
+```bash
+# 1. Create a changeset (describe what changed)
+pnpm changeset
+
+# 2. Apply version bumps
+pnpm run version
+
+# 3. Build and publish
+pnpm release
+
+# 4. Commit and push
+git add .
+git commit -m "chore: release vX.X.X"
+git push && git push --tags
+```
+
+### Consuming packages
+
+Add to `~/.npmrc` (use a read-only token with `read:packages` scope):
+
+```
+@rimitive:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=ghp_YOUR_READ_ONLY_TOKEN
+```
+
+Then install normally: `pnpm add @rimitive/signals`
 
 ## Communication Principles
 
