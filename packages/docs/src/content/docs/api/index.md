@@ -25,15 +25,6 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-[@lattice/lattice](./lattice/)
-
-
-</td><td>
-
-
-</td></tr>
-<tr><td>
-
 [@rimitive/core](./core/)
 
 
