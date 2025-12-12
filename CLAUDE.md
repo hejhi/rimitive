@@ -8,6 +8,42 @@ For comprehensive LLM-optimized documentation, see:
 - `llms.txt` - Quick reference index
 - `llms-full.txt` - Complete documentation (recommended for full context)
 
+## Context Engineering
+
+### Three-Phase Workflow
+
+1. **Research** - Understand the codebase and map the solution space (delegate to explorer)
+2. **Plan** - Create precise implementation steps with file-by-file edits (orchestrator holds this)
+3. **Implement** - Execute plan sequentially, verify each phase (delegate to implementer/verifier)
+
+Bad research cascades into thousands of bad lines. Bad plan cascades into hundreds. Focus human review on research and plans, not implementation code.
+
+### Sub-agents for Context Isolation
+
+Delegate work that drains context: file searching, code analysis, build logs, test output, large diffs.
+
+| Agent | Purpose |
+|-------|---------|
+| **explorer** | Search/read codebase, return only relevant findings |
+| **implementer** | Receive spec + files, implement, return result |
+| **verifier** | Run tests/typecheck/build, return pass/fail + errors |
+| **reader** | Read long files, extract only requested information |
+| **api-explorer** | Search API docs/guides for relevant Lattice APIs |
+
+**Pattern**: Stay in orchestration mode. Hold the plan. Delegate noisy work. Receive compact results.
+
+**Key principle**: Agents return findings, not their search trajectory. No summarization - extraction only.
+
+### Intentional Compaction
+
+Proactively restructure context before hitting limits. Target 40-60% context utilization for complex work.
+
+When compacting (via `/compact` or manually), include:
+- Current goal and overall approach
+- Completed steps with outcomes
+- Current blocking issue or next phase
+- File paths and patterns relevant to continuing
+
 ## Development Commands
 
 ```bash
@@ -132,6 +168,18 @@ When exporting types, ensure all referenced types are also exported. TS2742 ("Th
 Tests are co-located with source files (`*.test.ts`). Key test files:
 - `api.test.ts` - integration tests
 - `detached-memory.test.ts` - memory leak tests
+
+## Skills
+
+Project skills in `.claude/skills/` are activated automatically when relevant:
+
+| Skill | Use When |
+|-------|----------|
+| `lattice-behavior` | Creating reusable state logic, headless UI patterns |
+| `lattice-module` | Adding new primitives with `defineModule()` |
+| `lattice-component` | Building UI with `el`, `map`, `match` |
+| `lattice-test` | Writing tests with Vitest |
+| `create-agent` | Creating new sub-agents in `.claude/agents/` |
 
 ## Git Workflow
 
