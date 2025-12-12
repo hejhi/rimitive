@@ -1,8 +1,75 @@
 ---
-title: Getting Started in 5 Minutes
-description: Build your first portable UI behavior with Lattice in just 5 minutes.
+title: Getting Started
+description: Get up and running with Lattice in minutes.
 ---
 
-import { Tabs, TabItem, Steps, Card, Aside } from '@astrojs/starlight/components';
+## Installation
 
-TODO
+```bash
+npm install @lattice/lattice @lattice/signals @lattice/view
+```
+
+## Your First App
+
+Create a counter with reactive state and DOM rendering:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { MountModule } from '@lattice/view/deps/mount';
+
+// 1. Create the adapter
+const adapter = createDOMAdapter();
+
+// 2. Compose your service
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  MountModule
+);
+
+// 3. Destructure the primitives
+const { signal, computed, el, mount } = svc;
+
+// 4. Create reactive state
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+
+// 5. Build the UI
+const App = () =>
+  el('div')(
+    el('h1')('Counter'),
+    el('p')(computed(() => `Count: ${count()}`)),
+    el('p')(computed(() => `Doubled: ${doubled()}`)),
+    el('button').props({
+      onclick: () => count(count() + 1)
+    })('Increment')
+  );
+
+// 6. Mount it
+const app = mount(App());
+document.body.appendChild(app.element!);
+```
+
+That's it. Click the button, the count updates, the DOM updates automatically.
+
+## What Just Happened?
+
+1. **`compose()`** wires modules together into a service
+2. **`signal()`** creates reactive state — read with `count()`, write with `count(newValue)`
+3. **`computed()`** derives values that update when dependencies change
+4. **`el()`** creates DOM elements with reactive children and props
+5. **`mount()`** attaches the element tree to the DOM
+
+When `count` changes, only the parts that depend on it re-render. No virtual DOM diffing, no re-rendering the whole tree.
+
+## Next Steps
+
+- [Composing Signals](/guides/composing-signals) — Understand the reactive primitives
+- [Creating a Behavior](/guides/creating-a-behavior) — Extract reusable logic
+- [Adding View](/guides/adding-view) — Deep dive into `el()` and rendering
+- [Dynamic Views](/guides/dynamic-views) — Lists with `map()`, conditionals with `match()`

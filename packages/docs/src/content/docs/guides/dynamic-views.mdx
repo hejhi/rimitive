@@ -1,0 +1,391 @@
+---
+title: Dynamic Views
+description: Render lists, conditionals, and portals.
+---
+
+You've got `el()` for creating elements. Now let's make views dynamic: lists that update, content that switches, and elements that render elsewhere.
+
+---
+
+## Rendering Lists with map()
+
+`map()` renders a reactive list efficiently. When items change, it updates only what's necessary.
+
+First, add the map module to your service:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { MountModule } from '@lattice/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  MountModule
+);
+
+const { el, map, signal, mount } = svc;
+```
+
+### Basic Usage
+
+For primitive arrays (strings, numbers), just pass the array and a render function:
+
+```typescript
+const items = signal(['Apple', 'Banana', 'Cherry']);
+
+const list = el('ul')(
+  map(items, (item) => el('li')(item))
+);
+```
+
+The render function receives a reactive signal wrapping each item. You can pass it directly as a child:
+
+```typescript
+map(items, (item) =>
+  el('li')(item)  // item is a signal, passed directly
+)
+```
+
+When `items` updates, `map()` reconciles the DOM efficiently—adding, removing, and reordering elements as needed.
+
+### Keyed Lists
+
+For object arrays, provide a key function so `map()` can track identity:
+
+```typescript
+type Todo = { id: number; text: string; done: boolean };
+
+const todos = signal<Todo[]>([
+  { id: 1, text: 'Learn Lattice', done: false },
+  { id: 2, text: 'Build something', done: false },
+]);
+
+const list = el('ul')(
+  map(
+    todos,
+    (todo) => todo.id,  // key function
+    (todo) => el('li')(
+      el('span')(computed(() => todo().text)),
+      el('input').props({
+        type: 'checkbox',
+        checked: computed(() => todo().done),
+      })()
+    )
+  )
+);
+```
+
+The key function receives the plain item value and returns a unique identifier. This lets `map()` efficiently update items when the array changes.
+
+### Reactive Item Updates
+
+Each item is wrapped in a signal. When you update an item in the source array, the item signal updates too—no element recreation needed:
+
+```typescript
+const toggleTodo = (id: number) => {
+  todos(todos().map(t =>
+    t.id === id ? { ...t, done: !t.done } : t
+  ));
+};
+
+// The checkbox updates reactively without recreating the <li>
+```
+
+---
+
+## Conditional Rendering with match()
+
+`match()` swaps elements based on a reactive value. When the value changes, the old element is disposed and a new one takes its place.
+
+Add the match module:
+
+```typescript
+import { createMatchModule } from '@lattice/view/match';
+
+const svc = compose(
+  // ... other modules
+  createMatchModule(adapter)
+);
+
+const { match } = svc;
+```
+
+### Show/Hide
+
+Toggle visibility by returning `null`:
+
+```typescript
+const showMessage = signal(true);
+
+const message = match(showMessage, (show) =>
+  show
+    ? el('div')('Hello!')
+    : null
+);
+
+const app = el('div')(
+  el('button').props({
+    onclick: () => showMessage(!showMessage())
+  })('Toggle'),
+  message
+);
+```
+
+### Switching Views
+
+Switch between different element types:
+
+```typescript
+const isEditMode = signal(false);
+const text = signal('Click edit to change');
+
+const content = match(isEditMode, (editing) =>
+  editing
+    ? el('input').props({ value: text })()
+    : el('span')(text)
+);
+
+const app = el('div')(
+  content,
+  el('button').props({
+    onclick: () => isEditMode(!isEditMode())
+  })(
+    computed(() => isEditMode() ? 'Save' : 'Edit')
+  )
+);
+```
+
+### Multi-Way Switch
+
+Use a discriminated value for multiple branches:
+
+```typescript
+type Tab = 'home' | 'settings' | 'profile';
+const currentTab = signal<Tab>('home');
+
+const tabContent = match(currentTab, (tab) => {
+  switch (tab) {
+    case 'home': return el('div')('Welcome home');
+    case 'settings': return el('div')('Settings panel');
+    case 'profile': return el('div')('Your profile');
+  }
+});
+```
+
+---
+
+## Portals
+
+`portal()` renders content into a different DOM location—useful for modals, tooltips, and overlays that need to escape their parent's overflow or z-index context.
+
+Add the portal module:
+
+```typescript
+import { createPortalModule } from '@lattice/view/portal';
+
+const svc = compose(
+  // ... other modules
+  createPortalModule(adapter)
+);
+
+const { portal } = svc;
+```
+
+### Basic Portal
+
+Render to `document.body` (the default):
+
+```typescript
+const showModal = signal(false);
+
+const modal = match(showModal, (show) =>
+  show
+    ? portal()(
+        el('div').props({ className: 'modal-backdrop' })(
+          el('div').props({ className: 'modal' })(
+            el('h2')('Modal Title'),
+            el('p')('Modal content here...'),
+            el('button').props({
+              onclick: () => showModal(false)
+            })('Close')
+          )
+        )
+      )
+    : null
+);
+
+const app = el('div')(
+  el('button').props({
+    onclick: () => showModal(true)
+  })('Open Modal'),
+  modal  // Rendered to body, not inside this div
+);
+```
+
+### Custom Target
+
+Portal to a specific element:
+
+```typescript
+// Portal to a getter
+portal(() => document.getElementById('tooltip-root'))(
+  el('div').props({ className: 'tooltip' })('Tooltip content')
+)
+
+// Portal to a signal ref
+const targetRef = signal<HTMLElement | null>(null);
+
+el('div').ref((el) => {
+  targetRef(el);
+  return () => targetRef(null);
+})();
+
+portal(targetRef)(tooltipContent)
+```
+
+---
+
+## Putting It Together
+
+Here's a todo list combining `map()` and `match()`:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { createMatchModule } from '@lattice/view/match';
+import { MountModule } from '@lattice/view/deps/mount';
+
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter),
+  MountModule
+);
+
+const { el, map, match, signal, computed, mount } = svc;
+
+// Types
+type Todo = { id: number; text: string; done: boolean };
+type Filter = 'all' | 'active' | 'done';
+
+// State
+const todos = signal<Todo[]>([]);
+const filter = signal<Filter>('all');
+const inputValue = signal('');
+let nextId = 0;
+
+// Derived state
+const filteredTodos = computed(() => {
+  const f = filter();
+  const items = todos();
+  if (f === 'all') return items;
+  return items.filter(t => f === 'done' ? t.done : !t.done);
+});
+
+const activeCount = computed(() =>
+  todos().filter(t => !t.done).length
+);
+
+// Actions
+const addTodo = () => {
+  const text = inputValue().trim();
+  if (!text) return;
+  todos([...todos(), { id: nextId++, text, done: false }]);
+  inputValue('');
+};
+
+const toggleTodo = (id: number) => {
+  todos(todos().map(t =>
+    t.id === id ? { ...t, done: !t.done } : t
+  ));
+};
+
+const removeTodo = (id: number) => {
+  todos(todos().filter(t => t.id !== id));
+};
+
+// Filter button helper
+const FilterButton = (value: Filter, label: string) =>
+  el('button').props({
+    className: computed(() => filter() === value ? 'active' : ''),
+    onclick: () => filter(value),
+  })(label);
+
+// App
+const App = () => el('div').props({ className: 'todo-app' })(
+  el('h1')('Todos'),
+
+  // Input
+  el('div').props({ className: 'input-row' })(
+    el('input').props({
+      type: 'text',
+      placeholder: 'What needs to be done?',
+      value: inputValue,
+      oninput: (e: Event) => inputValue((e.target as HTMLInputElement).value),
+      onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter') addTodo(); },
+    })(),
+    el('button').props({ onclick: addTodo })('Add')
+  ),
+
+  // Filters
+  el('div').props({ className: 'filters' })(
+    FilterButton('all', 'All'),
+    FilterButton('active', 'Active'),
+    FilterButton('done', 'Done')
+  ),
+
+  // List
+  el('ul')(
+    map(
+      filteredTodos,
+      (t) => t.id,
+      (todo) => el('li').props({
+        className: computed(() => todo().done ? 'done' : '')
+      })(
+        el('input').props({
+          type: 'checkbox',
+          checked: computed(() => todo().done),
+          onclick: () => toggleTodo(todo().id),
+        })(),
+        el('span')(computed(() => todo().text)),
+        el('button').props({
+          onclick: () => removeTodo(todo().id)
+        })('×')
+      )
+    )
+  ),
+
+  // Empty state
+  match(filteredTodos, (items) =>
+    items.length === 0
+      ? el('p').props({ className: 'empty' })('No todos yet')
+      : null
+  ),
+
+  // Stats
+  el('div').props({ className: 'stats' })(
+    computed(() => `${activeCount()} items left`)
+  )
+);
+
+const app = mount(App());
+document.body.appendChild(app.element!);
+```
+
+Lists, conditionals, portals—all reactive, all composable. Next up: [Event Handling](/guides/event-handling) for more complex event patterns, then [Adding Routing](/guides/adding-routing) for navigation.

@@ -11,13 +11,13 @@ The simplest setup is just signals:
 import { compose } from '@lattice/lattice';
 import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
-const useSvc = compose(SignalModule, ComputedModule, EffectModule);
+const svc = compose(SignalModule, ComputedModule, EffectModule);
 ```
 
 `compose()` returns a `use` function with the primitives accessible on it:
 
 ```typescript
-const { signal, computed, effect } = useSvc;
+const { signal, computed, effect } = svc;
 ```
 
 ---
@@ -56,6 +56,8 @@ count(10);
 // logs: "Count is now: 10"
 ```
 
+Effects run **synchronously** — when a signal changes, effects execute immediately, not on the next tick. This makes reasoning about state straightforward: after a write, all effects have already run.
+
 ---
 
 ## A Complete Example
@@ -65,8 +67,8 @@ import { compose } from '@lattice/lattice';
 import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
 
 // Compose the modules
-const useSvc = compose(SignalModule, ComputedModule, EffectModule);
-const { signal, computed, effect } = useSvc;
+const svc = compose(SignalModule, ComputedModule, EffectModule);
+const { signal, computed, effect } = svc;
 
 // Create reactive state
 const firstName = signal('Ada');
@@ -95,8 +97,8 @@ Need batching? Add `BatchModule`:
 ```typescript
 import { BatchModule } from '@lattice/signals/extend';
 
-const useSvc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
-const { signal, effect, batch } = useSvc;
+const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
+const { signal, effect, batch } = svc;
 
 const a = signal(1);
 const b = signal(2);
@@ -110,6 +112,65 @@ batch(() => {
 });
 // logs: 30 (once, not twice)
 ```
+
+---
+
+## A Practical Example
+
+Let's build something real: a todo list with just signals.
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+
+const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
+
+// State
+const items = signal<{ id: number; text: string; done: boolean }[]>([]);
+const filter = signal<'all' | 'active' | 'done'>('all');
+
+// Derived state
+const filteredItems = computed(() => {
+  const f = filter();
+  if (f === 'all') return items();
+  return items().filter(item => f === 'done' ? item.done : !item.done);
+});
+
+const activeCount = computed(() =>
+  items().filter(item => !item.done).length
+);
+
+// Actions
+let nextId = 0;
+const addItem = (text: string) => {
+  items([...items(), { id: nextId++, text, done: false }]);
+};
+
+const toggleItem = (id: number) => {
+  items(items().map(item =>
+    item.id === id ? { ...item, done: !item.done } : item
+  ));
+};
+
+const removeItem = (id: number) => {
+  items(items().filter(item => item.id !== id));
+};
+
+// React to changes
+effect(() => {
+  console.log(`${activeCount()} items left`);
+});
+
+// Use it
+addItem('Learn Lattice');
+addItem('Build something');
+// logs: "2 items left"
+
+toggleItem(0);
+// logs: "1 items left"
+```
+
+State, derived values, actions, and reactions — all with just three primitives. This pattern works, but as your app grows you'll want to extract reusable pieces. That's where [behaviors](/guides/creating-a-behavior) come in.
 
 ---
 

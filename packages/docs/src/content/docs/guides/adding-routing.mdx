@@ -1,0 +1,379 @@
+---
+title: Adding Routing
+description: Navigate between views based on URL.
+---
+
+Routing in Lattice is reactive state. The router tracks the current URL and matches it against your route definitions. You render different views by reacting to those matches.
+
+---
+
+## The Simplest Router
+
+Start with just route definitions and a router:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+import { createRouterModule } from '@lattice/router';
+
+// Define routes - pure data
+const routes = [
+  { id: 'home', path: '' },
+  { id: 'about', path: 'about' },
+];
+
+// Compose with router
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  createRouterModule(routes)
+);
+
+const { router } = svc;
+```
+
+The router gives you reactive signals:
+
+```typescript
+router.currentPath();  // '/' or '/about'
+router.matches();      // [{ id: 'home', pattern: '/', params: {}, path: '/' }]
+```
+
+Navigate programmatically:
+
+```typescript
+router.navigate('/about');
+router.currentPath();  // '/about'
+router.matches();      // [{ id: 'about', pattern: '/about', params: {}, path: '/about' }]
+```
+
+That's the core: routes in, reactive matches out.
+
+---
+
+## Rendering Routes
+
+Use `match()` to render different views based on the current route:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMatchModule } from '@lattice/view/match';
+import { MountModule } from '@lattice/view/deps/mount';
+import { createRouterModule } from '@lattice/router';
+
+const routes = [
+  { id: 'home', path: '' },
+  { id: 'about', path: 'about' },
+];
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  createMatchModule(adapter),
+  MountModule,
+  createRouterModule(routes)
+);
+
+const { el, match, mount, router } = svc;
+```
+
+Now render based on the matched route:
+
+```typescript
+// Page components
+const Home = () => el('div')(
+  el('h1')('Home'),
+  el('p')('Welcome!')
+);
+
+const About = () => el('div')(
+  el('h1')('About'),
+  el('p')('Learn more about us.')
+);
+
+const NotFound = () => el('div')(
+  el('h1')('404'),
+  el('p')('Page not found.')
+);
+
+// Route → component mapping
+const pages = {
+  home: Home,
+  about: About,
+};
+
+// App with routing
+const App = () => el('div')(
+  match(router.matches, (matches) => {
+    const route = matches[0];
+    if (!route) return NotFound();
+
+    const Page = pages[route.id];
+    return Page ? Page() : NotFound();
+  })
+);
+
+const app = mount(App());
+document.body.appendChild(app.element!);
+```
+
+When `router.matches` changes, `match()` swaps the rendered component.
+
+---
+
+## Adding Navigation
+
+Use `Link` for declarative navigation that works with the router:
+
+```typescript
+import { Link } from '@lattice/router/link';
+
+const Nav = () => el('nav')(
+  Link({ href: '/' })('Home'),
+  Link({ href: '/about' })('About')
+);
+
+const App = () => el('div')(
+  Nav(),
+  el('main')(
+    match(router.matches, (matches) => {
+      const route = matches[0];
+      if (!route) return NotFound();
+      const Page = pages[route.id];
+      return Page ? Page() : NotFound();
+    })
+  )
+);
+```
+
+`Link` renders an `<a>` tag that intercepts clicks and calls `router.navigate()` instead of doing a full page reload.
+
+For programmatic navigation, use `router.navigate()` directly:
+
+```typescript
+const Home = () => el('div')(
+  el('h1')('Home'),
+  el('button').props({
+    onclick: () => router.navigate('/about')
+  })('Go to About')
+);
+```
+
+---
+
+## Route Parameters
+
+Capture dynamic segments with `:param` syntax:
+
+```typescript
+const routes = [
+  { id: 'home', path: '' },
+  { id: 'products', path: 'products' },
+  { id: 'product-detail', path: 'products/:id' },
+];
+```
+
+When the URL is `/products/123`, the match includes the parameter:
+
+```typescript
+router.navigate('/products/123');
+router.matches();
+// [{ id: 'product-detail', pattern: '/products/:id', params: { id: '123' }, path: '/products/123' }]
+```
+
+Use the params in your component:
+
+```typescript
+const ProductDetail = (params: { id: string }) => el('div')(
+  el('h1')(`Product ${params.id}`),
+  el('p')('Product details here...')
+);
+
+// In the router match
+match(router.matches, (matches) => {
+  const route = matches[0];
+  if (!route) return NotFound();
+
+  if (route.id === 'product-detail') {
+    return ProductDetail(route.params as { id: string });
+  }
+
+  const Page = pages[route.id];
+  return Page ? Page() : NotFound();
+});
+```
+
+---
+
+## Query Strings
+
+The router parses query strings into reactive signals:
+
+```typescript
+// URL: /products?sort=price&category=electronics
+
+router.search();  // '?sort=price&category=electronics'
+router.query();   // { sort: 'price', category: 'electronics' }
+```
+
+React to query changes:
+
+```typescript
+const Products = () => {
+  const sortOrder = computed(() => router.query().sort || 'name');
+
+  return el('div')(
+    el('h1')('Products'),
+    el('p')(computed(() => `Sorted by: ${sortOrder()}`)),
+    el('button').props({
+      onclick: () => router.navigate('/products?sort=price')
+    })('Sort by Price')
+  );
+};
+```
+
+---
+
+## Active Link Styling
+
+Use `router.currentPath` to style the active link:
+
+```typescript
+const NavLink = (href: string, label: string) => {
+  const isActive = computed(() => router.currentPath() === href);
+
+  return Link({
+    href,
+    className: computed(() => isActive() ? 'nav-link active' : 'nav-link')
+  })(label);
+};
+
+const Nav = () => el('nav')(
+  NavLink('/', 'Home'),
+  NavLink('/about', 'About'),
+  NavLink('/products', 'Products')
+);
+```
+
+---
+
+## A Complete Example
+
+Putting it all together:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMatchModule } from '@lattice/view/match';
+import { MountModule } from '@lattice/view/deps/mount';
+import { createRouterModule } from '@lattice/router';
+import { Link } from '@lattice/router/link';
+
+// Routes
+const routes = [
+  { id: 'home', path: '' },
+  { id: 'about', path: 'about' },
+  { id: 'products', path: 'products' },
+  { id: 'product-detail', path: 'products/:id' },
+];
+
+// Service
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  createMatchModule(adapter),
+  MountModule,
+  createRouterModule(routes)
+);
+
+const { el, match, mount, router, computed } = svc;
+
+// Navigation
+const NavLink = (href: string, label: string) =>
+  Link({
+    href,
+    className: computed(() =>
+      router.currentPath() === href ? 'active' : ''
+    )
+  })(label);
+
+const Nav = () => el('nav')(
+  NavLink('/', 'Home'),
+  NavLink('/about', 'About'),
+  NavLink('/products', 'Products')
+);
+
+// Pages
+const Home = () => el('div')(
+  el('h1')('Home'),
+  el('button').props({
+    onclick: () => router.navigate('/about')
+  })('Learn More')
+);
+
+const About = () => el('div')(
+  el('h1')('About'),
+  el('p')('We build things.')
+);
+
+const Products = () => el('div')(
+  el('h1')('Products'),
+  el('ul')(
+    el('li')(Link({ href: '/products/1' })('Product 1')),
+    el('li')(Link({ href: '/products/2' })('Product 2')),
+    el('li')(Link({ href: '/products/3' })('Product 3'))
+  )
+);
+
+const ProductDetail = (id: string) => el('div')(
+  el('h1')(`Product ${id}`),
+  el('button').props({
+    onclick: () => router.navigate('/products')
+  })('← Back')
+);
+
+const NotFound = () => el('div')(
+  el('h1')('404'),
+  Link({ href: '/' })('Go Home')
+);
+
+// App
+const App = () => el('div')(
+  Nav(),
+  el('main')(
+    match(router.matches, (matches) => {
+      const route = matches[0];
+      if (!route) return NotFound();
+
+      // Just plain old javascript...
+      switch (route.id) {
+        case 'home': return Home();
+        case 'about': return About();
+        case 'products': return Products();
+        case 'product-detail': return ProductDetail(route.params.id);
+        default: return NotFound();
+      }
+    })
+  )
+);
+
+// Mount
+const app = mount(App());
+document.body.appendChild(app.element!);
+```
+
+Routes are data. Matching is reactive. Rendering is just `match()` on `router.matches`. Everything composes with the same patterns you've already learned.
+
+Next: [Server Rendering](/guides/server-rendering) for rendering on the server with data loading.

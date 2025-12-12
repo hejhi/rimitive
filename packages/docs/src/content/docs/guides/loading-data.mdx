@@ -1,0 +1,393 @@
+---
+title: Loading Data
+description: Fetch async data with automatic tracking and cancellation.
+---
+
+Data loading in Lattice is reactive. When dependencies change, data refetches. When requests overlap, stale ones get cancelled. Let's build up to that.
+
+---
+
+## The Manual Way
+
+You could manage async state yourself with signals and effects:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+
+const { signal, effect } = compose(SignalModule, ComputedModule, EffectModule);
+
+// State
+const loading = signal(true);
+const data = signal<string[]>([]);
+const error = signal<Error | null>(null);
+
+// Fetch on mount
+effect(() => {
+  loading(true);
+  fetch('/api/items')
+    .then(r => r.json())
+    .then(items => {
+      data(items);
+      loading(false);
+    })
+    .catch(err => {
+      error(err);
+      loading(false);
+    });
+});
+```
+
+This works, but you're managing three signals, handling errors, and there's no cancellation. When dependencies change mid-flight, you get race conditions.
+
+---
+
+## The resource() Primitive
+
+`resource()` handles all of that. Add the resource module:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { ResourceModule } from '@lattice/resource';
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  ResourceModule
+);
+
+const { signal, resource } = svc;
+```
+
+### Basic Usage
+
+Create a resource with a fetcher function:
+
+```typescript
+const items = resource((signal) =>
+  fetch('/api/items', { signal }).then(r => r.json())
+);
+```
+
+The fetcher receives an `AbortSignal`. Pass it to `fetch()` for automatic cancellation.
+
+### Reading State
+
+A resource has multiple ways to read its state:
+
+```typescript
+// Full state object
+items();
+// { status: 'pending' }
+// { status: 'ready', value: [...] }
+// { status: 'error', error: Error }
+
+// Convenience accessors
+items.loading();  // true | false
+items.data();     // T | undefined
+items.error();    // unknown | undefined
+```
+
+All are reactive—use them in computeds or effects.
+
+---
+
+## Reactive Dependencies
+
+Here's where resources shine. Read signals inside the fetcher, and the resource refetches when they change:
+
+```typescript
+const categoryId = signal(1);
+
+const products = resource((signal) =>
+  fetch(`/api/products?category=${categoryId()}`, { signal })
+    .then(r => r.json())
+);
+
+// Initial fetch: /api/products?category=1
+
+categoryId(2);
+// Aborts previous request
+// New fetch: /api/products?category=2
+```
+
+The previous request is automatically aborted. No race conditions, no stale data.
+
+### Multiple Dependencies
+
+Track as many signals as you need:
+
+```typescript
+const category = signal('electronics');
+const sortBy = signal('price');
+const page = signal(1);
+
+const products = resource((signal) =>
+  fetch(
+    `/api/products?category=${category()}&sort=${sortBy()}&page=${page()}`,
+    { signal }
+  ).then(r => r.json())
+);
+
+// Any change triggers a refetch
+category('books');   // refetch
+sortBy('rating');    // refetch
+page(2);             // refetch
+```
+
+---
+
+## Rendering Resources
+
+Use `match()` to render different states:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { ResourceModule } from '@lattice/resource';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMatchModule } from '@lattice/view/match';
+import { createMapModule } from '@lattice/view/map';
+import { MountModule } from '@lattice/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  ResourceModule,
+  createElModule(adapter),
+  createMatchModule(adapter),
+  createMapModule(adapter),
+  MountModule
+);
+
+const { el, match, map, resource, mount } = svc;
+```
+
+Now render based on resource state:
+
+```typescript
+type Product = { id: number; name: string; price: number };
+
+const products = resource<Product[]>((signal) =>
+  fetch('/api/products', { signal }).then(r => r.json())
+);
+
+const ProductList = () =>
+  match(products, (state) => {
+    switch (state.status) {
+      case 'pending':
+        return el('div')('Loading...');
+      case 'error':
+        return el('div')(`Error: ${state.error}`);
+      case 'ready':
+        return el('ul')(
+          map(state.value, (p) => p.id, (product) =>
+            el('li')(computed(() => product().name))
+          )
+        );
+    }
+  });
+```
+
+### Using Convenience Accessors
+
+For simpler rendering, use the boolean accessors:
+
+```typescript
+const ProductList = () =>
+  el('div')(
+    match(products.loading, (isLoading) =>
+      isLoading ? el('div')('Loading...') : null
+    ),
+    match(products.error, (err) =>
+      err ? el('div')(`Error: ${err}`) : null
+    ),
+    match(products.data, (data) =>
+      data
+        ? el('ul')(
+            map(data, (p) => p.id, (product) =>
+              el('li')(computed(() => product().name))
+            )
+          )
+        : null
+    )
+  );
+```
+
+---
+
+## Refetch and Dispose
+
+### Manual Refetch
+
+Trigger a refetch programmatically:
+
+```typescript
+const products = resource((signal) =>
+  fetch('/api/products', { signal }).then(r => r.json())
+);
+
+// Later...
+products.refetch();
+```
+
+Useful for "refresh" buttons or after mutations.
+
+### Cleanup
+
+When a resource is no longer needed, dispose it to abort any in-flight request and stop tracking:
+
+```typescript
+const products = resource((signal) =>
+  fetch('/api/products', { signal }).then(r => r.json())
+);
+
+// When done
+products.dispose();
+```
+
+In components, clean up when the element is removed:
+
+```typescript
+const ProductList = () => {
+  const products = resource((signal) =>
+    fetch('/api/products', { signal }).then(r => r.json())
+  );
+
+  return el('div').ref(() => {
+    // Cleanup callback runs when element is removed
+    return () => products.dispose();
+  })(
+    // ... render products
+  );
+};
+```
+
+---
+
+## A Complete Example
+
+A product browser with category filtering:
+
+```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import type { Reactive } from '@lattice/signals';
+import { ResourceModule } from '@lattice/resource';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMatchModule } from '@lattice/view/match';
+import { createMapModule } from '@lattice/view/map';
+import { MountModule } from '@lattice/view/deps/mount';
+
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  ResourceModule,
+  createElModule(adapter),
+  createMatchModule(adapter),
+  createMapModule(adapter),
+  MountModule
+);
+
+const { el, match, map, signal, computed, resource, mount } = svc;
+
+// Types
+type Category = { id: number; name: string };
+type Product = { id: number; name: string; price: number };
+
+// State
+const selectedCategory = signal<number | null>(null);
+
+// Resources
+const categories = resource<Category[]>((signal) =>
+  fetch('/api/categories', { signal }).then(r => r.json())
+);
+
+const products = resource<Product[]>((signal) => {
+  const catId = selectedCategory();
+  const url = catId
+    ? `/api/products?category=${catId}`
+    : '/api/products';
+  return fetch(url, { signal }).then(r => r.json());
+});
+
+// Components
+const CategoryButton = (category: Category) =>
+  el('button').props({
+    className: computed(() =>
+      selectedCategory() === category.id ? 'active' : ''
+    ),
+    onclick: () => selectedCategory(category.id),
+  })(category.name);
+
+const ProductCard = (productSignal: Reactive<Product>) =>
+  el('div').props({ className: 'product' })(
+    el('h3')(computed(() => productSignal().name)),
+    el('p')(computed(() => `$${productSignal().price}`))
+  );
+
+const App = () =>
+  el('div').props({ className: 'app' })(
+    el('h1')('Products'),
+
+    // Category filter
+    el('div').props({ className: 'categories' })(
+      el('button').props({
+        className: computed(() =>
+          selectedCategory() === null ? 'active' : ''
+        ),
+        onclick: () => selectedCategory(null),
+      })('All'),
+      match(categories, (state) =>
+        state.status === 'ready'
+          ? el('span')(
+              ...state.value.map(CategoryButton)
+            )
+          : null
+      )
+    ),
+
+    // Products grid
+    match(products, (state) => {
+      switch (state.status) {
+        case 'pending':
+          return el('div').props({ className: 'loading' })('Loading products...');
+        case 'error':
+          return el('div').props({ className: 'error' })(
+            'Failed to load products',
+            el('button').props({
+              onclick: () => products.refetch()
+            })('Retry')
+          );
+        case 'ready':
+          return state.value.length === 0
+            ? el('div')('No products found')
+            : el('div').props({ className: 'grid' })(
+                map(state.value, (p) => p.id, ProductCard)
+              );
+      }
+    })
+  );
+
+const app = mount(App());
+document.body.appendChild(app.element!);
+```
+
+Reactive dependencies, automatic cancellation, clean rendering. The resource handles the complexity; you handle the UI.
+
+---
+
+## What About SSR?
+
+For server-side rendering with data, Lattice provides `load()` which integrates with the SSR system. That's covered in the SSR guide—for now, `resource()` handles client-side data fetching.
+
+Next: [Adding Routing](/guides/adding-routing) for navigation between views.

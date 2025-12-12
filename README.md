@@ -5,56 +5,65 @@
 
 ## The Core Idea
 
-Lattice is built on two core concepts: **primitives** and **services**.
+Lattice is built on two core concepts: **modules** and **composition**.
 
 ```typescript
 import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule } from '@lattice/signals/extend';
 
-const service = compose(
-  { signal: Signal(), computed: Computed() },
-  dependencies
-);
+const svc = compose(SignalModule, ComputedModule);
 
-service.signal(0);         // use the primitives
-service.computed(() => …); // through the service
+svc.signal(0);         // access the primitives
+svc.computed(() => …); // through the composed service
 ```
 
-- A **primitive** is a factory function—a building block
-- A **service** is a composed set of primitives
+- A **module** defines a primitive and its dependencies
+- **Composition** resolves the dependency graph and creates a service
 
-At its core, that's it. `compose()` is the backbone of Lattice: a simple, type-safe way to wire primitives together with their dependencies.
+At its core, that's it. `compose()` is the backbone of Lattice: a simple, type-safe way to wire modules together. Dependencies are resolved automatically—you pass what you need, and Lattice figures out the rest.
 
 ---
 
 ## What Does That Unlock?
 
-Lattice provides (but is not limited to!) pre-built primitives for **reactivity** and **UI**:
+Lattice provides pre-built modules for **reactivity** and **UI**:
 
-| Package            | Primitives                                  | What they produce        |
-| ------------------ | ------------------------------------------- | ------------------------ |
-| `@lattice/signals` | `signal`, `computed`, `effect`, `subscribe` | Reactive state & effects |
-| `@lattice/view`    | `el`, `map`, `match`, `portal`              | UI specs                 |
+| Package            | Modules                                           | What they provide        |
+| ------------------ | ------------------------------------------------- | ------------------------ |
+| `@lattice/signals` | `SignalModule`, `ComputedModule`, `EffectModule`  | Reactive state & effects |
+| `@lattice/view`    | `createElModule`, `createMapModule`, `createMatchModule` | UI specs          |
 
 These primitives produce different outputs:
 
 - `signal(0)` → reactive state (live, tracks dependencies)
 - `computed(() => ...)` → derived reactive value (live, lazy)
-- `effect(() => ...)` → side effect (runs when dependencies change)
-- `el('div')(...)` → spec (inert blueprint, needs hydration)
-- `map(items, ...)` → fragment spec (inert, needs hydration)
+- `effect(() => ...)` → side effect (runs synchronously when dependencies change)
+- `el('div')(...)` → spec (inert blueprint, needs mounting)
+- `map(items, ...)` → fragment spec (inert, needs mounting)
 
 ---
 
 ## Using the Primitives
 
-Most users won't need to call `compose()` directly. Lattice provides **presets**—pre-composed services, with their dependencies, ready to use:
+Compose the modules you need, then destructure the primitives:
 
 ```typescript
-import { createSignals } from '@lattice/signals/presets/core';
-import { createDOMView } from '@lattice/view/presets/dom';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { MountModule } from '@lattice/view/deps/mount';
 
-const use = createDOMView({ signals: createSignals() });
-const { el, signal, computed, mount } = use();
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  MountModule
+);
+
+const { signal, computed, el, mount } = svc;
 
 const App = () => {
   const count = signal(0);
@@ -65,46 +74,55 @@ const App = () => {
   );
 };
 
-document.body.appendChild(mount(App()));
+document.body.appendChild(mount(App()).element!);
 ```
 
-`createDOMView()` bundles signal primitives, view primitives, and a DOM adapter into one service. But it's just a convenience—under the hood, it's using `compose()`. If you want to replace any of them, you totally can. In fact, you can re-use our primitives and replace their underlying dependencies if you want to change their behavior. You have control down to the very base reactive, UI model, and renderer itself.
+View modules like `createElModule` take an adapter—that's how Lattice stays renderer-agnostic. Swap the DOM adapter for a Canvas adapter, or a test adapter, or your own. You control the composition down to the very base reactive model and renderer itself.
 
 ---
 
-## Going Deeper: Compose Services Yourself
+## Going Deeper: Custom Modules
 
-Need to share signals across multiple renderers? Compose services yourself:
-
-```typescript
-import { createSignals } from '@lattice/signals/presets/core';
-import { createDOMView } from '@lattice/view/presets/dom';
-
-// Shared signals - pass the same instance to multiple views
-const signals = createSignals();
-
-// Multiple view services using the same signals instance
-const dom = createDOMView({ signals });
-const canvas = createCanvasView({ signals });
-
-// Same signal, multiple rendering targets
-const { signal } = signals();
-const position = signal({ x: 0, y: 0 });
-```
-
-That's essentially how Lattice does ssr in the `island` package (swapping out the renderer dependency for the `view` primitives). Or go lower and compose individual primitives:
+Need to share signals across multiple renderers? Compose them into each service:
 
 ```typescript
 import { compose } from '@lattice/lattice';
-import { Signal, Computed, Effect, deps } from '@lattice/signals';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
 
-const svc = compose(
-  { signal: Signal(), computed: Computed(), effect: Effect() },
-  deps()
+// Same signal modules, different adapters
+const domAdapter = createDOMAdapter();
+const canvasAdapter = createCanvasAdapter();
+
+const domService = compose(
+  SignalModule, ComputedModule, EffectModule,
+  createElModule(domAdapter)
+);
+
+const canvasService = compose(
+  SignalModule, ComputedModule, EffectModule,
+  createElModule(canvasAdapter)
 );
 ```
 
-Or write your own primitives, and hook directly into the underlying reactive model provided via our dependencies. You control the composition. Use presets for convenience, or compose only what you need. A natural benefit is that everything is fully tree-shakeable. Just need the signals in the vanilla DOM? Compose only that, with its base dependencies, and drop everything else.
+That's how Lattice handles SSR—swapping the DOM adapter for a server adapter. Or write your own modules with `defineModule`:
+
+```typescript
+import { defineModule } from '@lattice/lattice';
+
+const Logger = defineModule({
+  name: 'logger',
+  create: () => ({
+    log: (msg: string) => console.log(msg),
+  }),
+});
+
+const svc = compose(SignalModule, Logger);
+svc.logger.log('hello');
+```
+
+You control the composition. A natural benefit is that everything is fully tree-shakeable. Just need signals without a view layer? Compose only what you need.
 
 ---
 
@@ -174,9 +192,9 @@ export const dropdown = (svc: SignalsSvc) => {
   };
 };
 
-// Usage: the `use` function returned by createSignals() injects the service
-const use = createSignals();
-const useDropdown = use(dropdown);
+// Usage: compose() returns a service that can call behaviors
+const svc = compose(SignalModule, ComputedModule);
+const useDropdown = svc(dropdown);
 const dd = useDropdown({ initialOpen: false });
 ```
 
@@ -186,7 +204,7 @@ Because behaviors only depend on the service contract (not a specific framework)
 
 ---
 
-## Specs and Hydration
+## Specs and Mounting
 
 UI primitives like `el` and `map` produce **specs**—inert data structures that _describe_ UI:
 
@@ -204,11 +222,11 @@ const Button = (label: string) =>
 const save = Button('Save');
 const cancel = Button('Cancel');
 
-// mount() hydrates specs into real DOM elements
-document.body.appendChild(mount(el('div')(save, cancel)));
+// mount() turns specs into real DOM elements
+document.body.appendChild(mount(el('div')(save, cancel)).element!);
 ```
 
-Specs don't become real elements until hydrated with an adapter. The same spec can be hydrated with different adapters (DOM, SSR, test, etc) or composed into larger specs before hydration. A happy side-effect of this design is that it makes SSR much simpler.
+Specs don't become real elements until mounted with an adapter. The same spec can be mounted with different adapters (DOM, SSR, test, etc) or composed into larger specs before mounting. A happy side-effect of this design is that it makes SSR straightforward.
 
 ---
 
@@ -216,12 +234,12 @@ Specs don't become real elements until hydrated with an adapter. The same spec c
 
 You own the composition layer. Want to:
 
-- **Create custom primitives?** Use `defineService()` with the same patterns Lattice uses internally
-- **Swap out our signals?** Replace `deps()` with your own reactive system (or someone elses)
+- **Create custom modules?** Use `defineModule()` with the same patterns Lattice uses internally
+- **Swap out the reactive system?** Replace the dependency modules with your own (or someone else's)
 - **Build a custom adapter/renderer?** Implement the `Adapter` interface for Canvas, WebGL, or anything tree-based
-- **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in lattice
+- **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in Lattice
 
-Lattice provides primitives for reactivity and UI out of the box, but they're not special—they're built with the same tools you have access to. In fact, Lattice at it's core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just Reactive frameworks.
+Lattice provides modules for reactivity and UI out of the box, but they're not special—they're built with the same tools you have access to. In fact, Lattice at its core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just reactive frameworks.
 
 ---
 

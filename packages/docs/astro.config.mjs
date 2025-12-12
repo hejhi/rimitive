@@ -11,7 +11,9 @@ export default defineConfig({
 			sidebar: [
 				{
 					label: 'Start Here',
-					items: [],
+					items: [
+						{ label: 'Getting Started', slug: 'guides/getting-started' },
+					],
 				},
 				{
 					label: 'Guides',
@@ -19,6 +21,12 @@ export default defineConfig({
 						{ label: 'Composing Signals', slug: 'guides/composing-signals' },
 						{ label: 'Creating a Behavior', slug: 'guides/creating-a-behavior' },
 						{ label: 'Adding View', slug: 'guides/adding-view' },
+						{ label: 'Dynamic Views', slug: 'guides/dynamic-views' },
+						{ label: 'Event Handling', slug: 'guides/event-handling' },
+						{ label: 'Loading Data', slug: 'guides/loading-data' },
+						{ label: 'Adding Routing', slug: 'guides/adding-routing' },
+						{ label: 'Server Rendering', slug: 'guides/server-rendering' },
+						{ label: 'Streaming SSR', slug: 'guides/streaming-ssr' },
 					],
 				},
 				{

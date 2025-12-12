@@ -22,11 +22,7 @@ On the client: - Create loader with initial data from the script tag - Same load
 **Signature:**
 
 ```typescript
-export declare function createLoader(opts: {
-    signal: SignalFactory;
-    initialData?: Record<string, unknown>;
-    onResolve?: (id: string, data: unknown) => void;
-}): Loader;
+export declare function createLoader(opts: LoaderOpts): Loader;
 ```
 
 ## Parameters
@@ -54,7 +50,7 @@ opts
 
 </td><td>
 
-{ signal: [SignalFactory](../../signals/signalfactory/)<!-- -->; initialData?: Record&lt;string, unknown&gt;; onResolve?: (id: string, data: unknown) =&gt; void; }
+[LoaderOpts](../loaderopts/)
 
 
 </td><td>

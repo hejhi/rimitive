@@ -349,6 +349,17 @@ Loader instance returned by createLoader
 </td></tr>
 <tr><td>
 
+[LoaderOpts](../loaderopts/)
+
+
+</td><td>
+
+Options for creating a loader module
+
+
+</td></tr>
+<tr><td>
+
 [LoadFactory](../loadfactory/)
 
 

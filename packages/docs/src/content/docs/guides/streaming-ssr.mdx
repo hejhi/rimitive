@@ -1,0 +1,535 @@
+---
+title: Streaming SSR
+description: Send HTML immediately and stream data as it loads.
+---
+
+With basic SSR, the server waits for all data before sending anything. Streaming SSR sends the page shell immediately, then streams data chunks as each `load()` boundary resolves. Users see content faster, especially when some data sources are slow.
+
+---
+
+## How Streaming Works
+
+1. Server renders the app with `pending` states for all `load()` boundaries
+2. Initial HTML is sent immediately — users see the loading UI
+3. As each `load()` boundary resolves, data is streamed as a script tag
+4. Client receives data via a streaming receiver and updates signals
+5. UI updates reactively — no DOM manipulation needed
+
+The key insight: signals update the UI. The server streams data, the client pushes it to signals, and Lattice handles the rest.
+
+---
+
+## Setting Up the Stream Writer
+
+The stream writer generates JavaScript code for the streaming protocol:
+
+```typescript
+import { createStreamWriter } from '@lattice/ssr/server';
+
+// Create writer with a unique key
+const stream = createStreamWriter('__APP_STREAM__');
+
+// Bootstrap code initializes the receiver
+stream.bootstrapCode();
+// Returns: "window.__APP_STREAM__=(function(){...})();"
+
+// Chunk code pushes data to the receiver
+stream.chunkCode('stats', { users: 100 });
+// Returns: "__APP_STREAM__.push("stats",{"users":100});"
+```
+
+The receiver queues data chunks until the client connects, then forwards them to the loader.
+
+---
+
+## Server Setup
+
+Use `renderToStream` instead of `renderToStringAsync`:
+
+```typescript
+// server.ts
+import { createServer } from 'node:http';
+import {
+  createDOMServerAdapter,
+  renderToStream,
+  createStreamWriter,
+} from '@lattice/ssr/server';
+import type { RefSpec } from '@lattice/view/types';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const STREAM_KEY = '__APP_STREAM__';
+const stream = createStreamWriter(STREAM_KEY);
+
+const server = createServer(async (req, res) => {
+  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+
+  // Create service with streaming callback
+  const service = createService(adapter, {
+    onResolve: (id, data) => {
+      // Stream each data chunk as it resolves
+      res.write(`<script>${stream.chunkCode(id, data)}</script>`);
+    },
+  });
+
+  // Render with pending states
+  const { initialHtml, done, pendingCount } = renderToStream(
+    App(service),
+    {
+      mount: (spec: RefSpec<unknown>) => spec.create(service),
+      serialize,
+      insertFragmentMarkers,
+    }
+  );
+
+  // Start response immediately
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+
+  // Write document head with bootstrap script
+  res.write(`<!DOCTYPE html>
+<html>
+<head>
+  <script>${stream.bootstrapCode()}</script>
+</head>
+<body>`);
+
+  // Write initial HTML (with loading states)
+  res.write(`<div class="app">${initialHtml}</div>`);
+
+  // Write client script
+  res.write('<script src="/client.js"></script>');
+
+  // Wait for all data to stream
+  await done;
+
+  // Close document
+  res.write('</body></html>');
+  res.end();
+});
+
+server.listen(3000);
+```
+
+Key differences from basic SSR:
+- `onResolve` callback streams data as each boundary resolves
+- `renderToStream` returns immediately with pending states
+- `done` promise resolves when all data has streamed
+
+---
+
+## Service with Streaming Support
+
+Your service needs to pass `onResolve` to the loader:
+
+```typescript
+// service.ts
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createElModule } from '@lattice/view/el';
+import { createMatchModule } from '@lattice/view/match';
+import { createLoaderModule } from '@lattice/view/load';
+import type { Adapter } from '@lattice/view/types';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+
+export type ServiceOptions = {
+  loaderData?: Record<string, unknown>;
+  onResolve?: (id: string, data: unknown) => void;
+};
+
+export function createService(
+  adapter: Adapter<DOMAdapterConfig>,
+  options?: ServiceOptions
+) {
+  return compose(
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    createElModule(adapter),
+    createMatchModule(adapter),
+    createLoaderModule({
+      initialData: options?.loaderData,
+      onResolve: options?.onResolve,
+    })
+  );
+}
+
+export type Service = ReturnType<typeof createService>;
+```
+
+---
+
+## Client Setup
+
+The client connects to the stream after hydration:
+
+```typescript
+// client.ts
+import { createClientAdapter, connectStream } from '@lattice/ssr/client';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const STREAM_KEY = '__APP_STREAM__';
+
+// Create hydration adapter
+const adapter = createClientAdapter(document.querySelector('.app')!);
+
+// Create service (no loaderData for streaming)
+const service = createService(adapter);
+
+// Hydrate the app
+App(service).create(service);
+
+// Switch to normal DOM mode
+adapter.activate();
+
+// Connect to the stream - receives queued and future data chunks
+connectStream(service, STREAM_KEY);
+```
+
+`connectStream` does two things:
+1. Flushes any data chunks that arrived before hydration completed
+2. Wires up the loader to receive future chunks
+
+---
+
+## Using load() with Streaming
+
+Components use `load()` the same way as basic SSR:
+
+```typescript
+import type { LoadState, LoadStatus } from '@lattice/view/load';
+import type { Service } from './service.js';
+
+type Stats = { users: number; views: number };
+
+async function fetchStats(): Promise<Stats> {
+  // Simulate slow API
+  await new Promise(r => setTimeout(r, 2000));
+  return { users: 1234, views: 56789 };
+}
+
+export const StatsWidget = (svc: Service) => {
+  const { loader, match, el } = svc;
+
+  return loader.load(
+    'stats',
+    fetchStats,
+    (state: LoadState<Stats>) =>
+      match(state.status, (status: LoadStatus) => {
+        switch (status) {
+          case 'pending':
+            return el('div').props({ className: 'skeleton' })('Loading stats...');
+          case 'error':
+            return el('div').props({ className: 'error' })(
+              'Failed to load: ',
+              String(state.error())
+            );
+          case 'ready': {
+            const data = state.data()!;
+            return el('div').props({ className: 'stats' })(
+              el('span')(`${data.users} users`),
+              el('span')(`${data.views} views`)
+            );
+          }
+        }
+      })
+  );
+};
+```
+
+What happens with streaming:
+1. Server renders `pending` state immediately
+2. HTML with skeleton UI is sent to browser
+3. 2 seconds later, `fetchStats` resolves
+4. `onResolve` streams the data chunk
+5. Client receives data, updates the signal
+6. `match()` re-renders with `ready` state
+
+---
+
+## Error Handling
+
+Errors in `load()` boundaries are handled gracefully:
+
+```typescript
+loader.load(
+  'user-data',
+  async () => {
+    const res = await fetch('/api/user');
+    if (!res.ok) {
+      throw new Error(`Failed: ${res.status}`);
+    }
+    return res.json();
+  },
+  (state) =>
+    match(state.status, (status) => {
+      switch (status) {
+        case 'pending':
+          return el('div')('Loading...');
+        case 'error':
+          return el('div').props({ className: 'error' })(
+            el('p')('Something went wrong'),
+            el('pre')(String(state.error())),
+            el('button').props({
+              onclick: () => window.location.reload()
+            })('Retry')
+          );
+        case 'ready':
+          return UserProfile(state.data()!);
+      }
+    })
+)
+```
+
+With streaming, errors still work:
+1. If the fetch fails, `onResolve` isn't called for that boundary
+2. The `done` promise still resolves (errors don't break the stream)
+3. The error state shows in the UI with no data chunk
+
+For server-level errors, wrap the streaming response:
+
+```typescript
+const server = createServer(async (req, res) => {
+  try {
+    // ... streaming setup
+    await done;
+    res.write('</body></html>');
+    res.end();
+  } catch (err) {
+    console.error('Streaming error:', err);
+    // If headers haven't been sent, send error page
+    if (!res.headersSent) {
+      res.writeHead(500);
+      res.end('Server Error');
+    } else {
+      // Headers already sent, try to close gracefully
+      res.end();
+    }
+  }
+});
+```
+
+---
+
+## A Complete Streaming Example
+
+### Service
+
+```typescript
+// service.ts
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+import { createElModule } from '@lattice/view/el';
+import { createMatchModule } from '@lattice/view/match';
+import { createLoaderModule } from '@lattice/view/load';
+import type { Adapter } from '@lattice/view/types';
+import type { DOMAdapterConfig } from '@lattice/view/adapters/dom';
+
+export type ServiceOptions = {
+  loaderData?: Record<string, unknown>;
+  onResolve?: (id: string, data: unknown) => void;
+};
+
+export function createService(
+  adapter: Adapter<DOMAdapterConfig>,
+  options?: ServiceOptions
+) {
+  return compose(
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    createElModule(adapter),
+    createMatchModule(adapter),
+    createLoaderModule({
+      initialData: options?.loaderData,
+      onResolve: options?.onResolve,
+    })
+  );
+}
+
+export type Service = ReturnType<typeof createService>;
+```
+
+### App with Multiple Async Boundaries
+
+```typescript
+// App.ts
+import type { LoadState, LoadStatus } from '@lattice/view/load';
+import type { Service } from './service.js';
+
+type User = { name: string };
+type Stats = { pageViews: number };
+type News = { headlines: string[] };
+
+// Simulate different API speeds
+const fetchUser = async (): Promise<User> => {
+  await new Promise(r => setTimeout(r, 100));
+  return { name: 'Alice' };
+};
+
+const fetchStats = async (): Promise<Stats> => {
+  await new Promise(r => setTimeout(r, 1500));
+  return { pageViews: 12345 };
+};
+
+const fetchNews = async (): Promise<News> => {
+  await new Promise(r => setTimeout(r, 3000));
+  return { headlines: ['Breaking: Lattice is fast', 'Streaming SSR works'] };
+};
+
+export const App = (svc: Service) => {
+  const { loader, match, el } = svc;
+
+  return el('div').props({ className: 'app' })(
+    el('h1')('Streaming SSR Demo'),
+
+    // Fast - loads in 100ms
+    loader.load(
+      'user',
+      fetchUser,
+      (state: LoadState<User>) =>
+        match(state.status, (status: LoadStatus) => {
+          switch (status) {
+            case 'pending':
+              return el('div')('Loading user...');
+            case 'error':
+              return el('div')('Error loading user');
+            case 'ready':
+              return el('div')(`Welcome, ${state.data()!.name}!`);
+          }
+        })
+    ),
+
+    // Medium - loads in 1.5s
+    loader.load(
+      'stats',
+      fetchStats,
+      (state: LoadState<Stats>) =>
+        match(state.status, (status: LoadStatus) => {
+          switch (status) {
+            case 'pending':
+              return el('div').props({ className: 'skeleton' })('Loading stats...');
+            case 'error':
+              return el('div')('Error loading stats');
+            case 'ready':
+              return el('div')(`${state.data()!.pageViews.toLocaleString()} page views`);
+          }
+        })
+    ),
+
+    // Slow - loads in 3s
+    loader.load(
+      'news',
+      fetchNews,
+      (state: LoadState<News>) =>
+        match(state.status, (status: LoadStatus) => {
+          switch (status) {
+            case 'pending':
+              return el('div').props({ className: 'skeleton' })('Loading news...');
+            case 'error':
+              return el('div')('Error loading news');
+            case 'ready':
+              return el('ul')(
+                ...state.data()!.headlines.map(h => el('li')(h))
+              );
+          }
+        })
+    )
+  );
+};
+```
+
+### Server
+
+```typescript
+// server.ts
+import { createServer } from 'node:http';
+import {
+  createDOMServerAdapter,
+  renderToStream,
+  createStreamWriter,
+} from '@lattice/ssr/server';
+import type { RefSpec } from '@lattice/view/types';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const STREAM_KEY = '__APP_STREAM__';
+const stream = createStreamWriter(STREAM_KEY);
+
+const server = createServer(async (req, res) => {
+  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+
+  const service = createService(adapter, {
+    onResolve: (id, data) => {
+      console.log(`Streaming: ${id}`);
+      res.write(`<script>${stream.chunkCode(id, data)}</script>`);
+    },
+  });
+
+  const { initialHtml, done, pendingCount } = renderToStream(
+    App(service),
+    {
+      mount: (spec: RefSpec<unknown>) => spec.create(service),
+      serialize,
+      insertFragmentMarkers,
+    }
+  );
+
+  console.log(`Initial render: ${pendingCount} pending boundaries`);
+
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Streaming SSR</title>
+  <script>${stream.bootstrapCode()}</script>
+</head>
+<body>
+  <div class="app">${initialHtml}</div>
+  <script src="/client.js"></script>`);
+
+  await done;
+
+  console.log('All boundaries resolved');
+  res.write('</body></html>');
+  res.end();
+});
+
+server.listen(3000);
+```
+
+### Client
+
+```typescript
+// client.ts
+import { createClientAdapter, connectStream } from '@lattice/ssr/client';
+import { createService } from './service.js';
+import { App } from './App.js';
+
+const STREAM_KEY = '__APP_STREAM__';
+
+const adapter = createClientAdapter(document.querySelector('.app')!);
+const service = createService(adapter);
+
+App(service).create(service);
+adapter.activate();
+connectStream(service, STREAM_KEY);
+
+console.log('Hydration complete, stream connected');
+```
+
+---
+
+## When to Use Streaming
+
+**Use streaming when:**
+- Some data sources are slow (> 500ms)
+- You want users to see content as fast as possible
+- Different parts of the page have different data needs
+
+**Use basic SSR when:**
+- All data loads quickly
+- You need the complete page for SEO crawlers
+- Simplicity is more important than speed
+
+Both approaches use the same `load()` API in components—only the server setup differs.
