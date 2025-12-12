@@ -4,6 +4,19 @@
   "description": "Reactive primitives for Lattice components",
   "author": "Lattice Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/lattice",
+    "directory": "packages/signals"
+  },
+  "keywords": [
+    "lattice",
+    "signals",
+    "reactive",
+    "state",
+    "computed",
+    "effect"
+  ],
   "type": "module",
   "exports": {
     ".": {

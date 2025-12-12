@@ -4,6 +4,18 @@
   "description": "Minimal client-side routing for Lattice",
   "author": "Lattice Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/lattice",
+    "directory": "packages/router"
+  },
+  "keywords": [
+    "lattice",
+    "router",
+    "routing",
+    "spa",
+    "navigation"
+  ],
   "type": "module",
   "exports": {
     ".": {

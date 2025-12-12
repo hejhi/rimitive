@@ -4,6 +4,19 @@
   "description": "Reactive DOM primitives for Lattice",
   "author": "Lattice Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/lattice",
+    "directory": "packages/view"
+  },
+  "keywords": [
+    "lattice",
+    "view",
+    "dom",
+    "reactive",
+    "ui",
+    "components"
+  ],
   "type": "module",
   "exports": {
     ".": {

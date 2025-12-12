@@ -4,6 +4,18 @@
   "description": "Server-side rendering and hydration for Lattice",
   "author": "Lattice Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/lattice",
+    "directory": "packages/ssr"
+  },
+  "keywords": [
+    "lattice",
+    "ssr",
+    "server-side-rendering",
+    "hydration",
+    "isomorphic"
+  ],
   "type": "module",
   "exports": {
     ".": {

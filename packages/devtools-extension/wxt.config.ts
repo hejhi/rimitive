@@ -13,6 +13,9 @@ export default defineConfig({
       __dirname,
       '../signals-store/src/index.ts'
     ),
+    '@lattice/signals/extend': resolve(__dirname, '../signals/src/extend.ts'),
+    '@lattice/signals': resolve(__dirname, '../signals/src/index.ts'),
+    '@lattice/lattice': resolve(__dirname, '../lattice/src/index.ts'),
     '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
     '@/components': resolve(__dirname, 'src/components'),
     '@/hooks': resolve(__dirname, 'src/hooks'),
@@ -41,6 +44,9 @@ export default defineConfig({
     plugins: [watchWorkspace()],
     resolve: {
       alias: {
+        '@lattice/signals/extend': resolve(__dirname, '../signals/src/extend.ts'),
+        '@lattice/signals': resolve(__dirname, '../signals/src/index.ts'),
+        '@lattice/lattice': resolve(__dirname, '../lattice/src/index.ts'),
         '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
         '@/components': resolve(__dirname, 'src/components'),
         '@/hooks': resolve(__dirname, 'src/hooks'),
@@ -49,7 +55,7 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@lattice/signals-store', '@lattice/signals'],
+      exclude: ['@lattice/signals-store', '@lattice/signals', '@lattice/lattice'],
     },
     server: {
       watch: {
