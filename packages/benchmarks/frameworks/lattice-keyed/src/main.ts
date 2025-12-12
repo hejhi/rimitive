@@ -1,19 +1,24 @@
-import { createView } from '@lattice/view/presets/core';
-import { createAddEventListener } from '@lattice/view/deps/addEventListener';
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@lattice/signals/extend';
 import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
+import { createMapModule } from '@lattice/view/map';
+import { OnModule } from '@lattice/view/deps/addEventListener';
 import type { Reactive, ElRefSpecChild } from '@lattice/view/types';
 
 // Wire up view layer
-
 const adapter = createDOMAdapter();
-const views = createView(adapter)();
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  OnModule
+);
 
-const svc = {
-  ...views,
-  addEventListener: createAddEventListener(views.batch),
-};
-
-const { el, map, addEventListener, signal, computed } = svc;
+const { el, map, on, signal, computed } = svc;
 
 // ============================================================================
 // Benchmark Data
@@ -157,8 +162,8 @@ const Button = (id: string, label: string, onclick: (ev: MouseEvent) => void) =>
       type: 'button',
       id,
     })
-    // Use more performant addEventListener for batching
-    .ref(addEventListener('click', onclick))(label);
+    // Use on() for batching
+    .ref(on('click', onclick))(label);
 
 const Row = (data: Reactive<RowData>, children: ElRefSpecChild[] = []) => {
   const id = data().id;

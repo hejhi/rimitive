@@ -31,15 +31,15 @@ export type DOMAdapterConfig = AdapterConfig & {
  *
  * @example
  * ```typescript
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
  * import { createDOMAdapter } from '@lattice/view/adapters/dom';
- * import { createView } from '@lattice/view/presets/core';
- * import { createSignals } from '@lattice/signals/presets/core';
+ * import { createElModule } from '@lattice/view/el';
  *
  * const adapter = createDOMAdapter();
- * const signals = createSignals();
- * const view = createView({ adapter, signals });
+ * const svc = compose(SignalModule, ComputedModule, EffectModule, createElModule(adapter));
  *
- * const { el } = view();
+ * const { el } = svc;
  * const button = el('button')('Click me');
  * ```
  */

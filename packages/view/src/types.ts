@@ -122,11 +122,15 @@ export type NodeRef<TElement> = ElementRef<TElement> | FragmentRef<TElement>;
  *
  * @example
  * ```typescript
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
  * import type { RefSpec } from '@lattice/view/types';
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, mount } = createDOMView({ signals: createSignals() })();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(SignalModule, createElModule(adapter));
+ * const { el, mount } = svc;
  *
  * // el() returns a RefSpec
  * const buttonSpec: RefSpec<HTMLButtonElement> = el('button')('Click me');
@@ -159,11 +163,14 @@ export type { Readable, Writable, Reactive } from '@lattice/signals/types';
  *
  * @example
  * ```typescript
+ * import { compose } from '@lattice/lattice';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
  * import type { LifecycleCallback } from '@lattice/view/types';
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el } = createDOMView({ signals: createSignals() })();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(createElModule(adapter));
+ * const { el } = svc;
  *
  * // Simple callback
  * const autofocus: LifecycleCallback<HTMLInputElement> = (elem) => {
@@ -196,11 +203,15 @@ export type LifecycleCallback<TElement> = (
  *
  * @example
  * ```typescript
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
  * import type { ElRefSpecChild } from '@lattice/view/types';
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const { el, signal, computed } = createDOMView({ signals: createSignals() })();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(SignalModule, ComputedModule, createElModule(adapter));
+ * const { el, signal, computed } = svc;
  * const name = signal('World');
  *
  * // All valid children types

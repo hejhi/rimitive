@@ -13,7 +13,16 @@ import type { Readable, Writable } from '@lattice/signals/types';
  * @example
  * ```typescript
  * import type { Use } from '@lattice/view/deps/use';
- * import type { DOMViewSvc } from '@lattice/view/presets/dom';
+ * import type { Readable, Writable } from '@lattice/signals/types';
+ * import type { ElFactory } from '@lattice/view/el';
+ *
+ * type DOMViewSvc = {
+ *   signal: <T>(initialValue: T) => Writable<T>;
+ *   computed: <T>(fn: () => T) => Readable<T>;
+ *   effect: (fn: () => void | (() => void)) => () => void;
+ *   batch: <T>(fn: () => T) => T;
+ *   el: ElFactory<DOMAdapterConfig>;
+ * };
  *
  * const useHelper: Use<DOMViewSvc> = createUse(svc);
  *
@@ -36,11 +45,14 @@ export type Use<TSvc> = <Args extends unknown[], Result>(
  *
  * @example
  * ```typescript
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
  * import { createUse } from '@lattice/view/deps/use';
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
  *
- * const svc = createDOMView({ signals: createSignals() })();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(SignalModule, ComputedModule, EffectModule, createElModule(adapter));
  * const use = createUse(svc);
  *
  * // Define a portable behavior that can work with any service

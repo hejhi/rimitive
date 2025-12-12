@@ -29,7 +29,7 @@ export type ComputedFunction<T = unknown> = {
 
 /**
  * Dependencies required by the Computed factory.
- * Wired automatically by presets - only needed for custom compositions.
+ * Wired automatically by modules - only needed for custom compositions.
  * @internal
  */
 export type ComputedDeps = {
@@ -69,15 +69,13 @@ const COMPUTED_DIRTY = COMPUTED | DIRTY;
  * Computeds are derived values that automatically track their dependencies
  * and recompute lazily when those dependencies change.
  *
- * **Most users should use the preset instead:**
+ * @example Basic composition
  * ```ts
- * import { createSignals } from '@lattice/signals/presets/core';
- * const { computed } = createSignals()();
- * ```
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
  *
- * @example Basic derived value
- * ```ts
- * const { signal, computed } = createSignals()();
+ * const svc = compose(SignalModule, ComputedModule);
+ * const { signal, computed } = svc;
  *
  * const firstName = signal('Alice');
  * const lastName = signal('Smith');

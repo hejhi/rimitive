@@ -30,11 +30,15 @@ export type ElRefSpecChild = string | number | boolean | null | RefSpec<unknown>
 
 
 ```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
 import type { ElRefSpecChild } from '@lattice/view/types';
-import { createSignals } from '@lattice/signals/presets/core';
-import { createDOMView } from '@lattice/view/presets/dom';
 
-const { el, signal, computed } = createDOMView({ signals: createSignals() })();
+const adapter = createDOMAdapter();
+const svc = compose(SignalModule, ComputedModule, createElModule(adapter));
+const { el, signal, computed } = svc;
 const name = signal('World');
 
 // All valid children types

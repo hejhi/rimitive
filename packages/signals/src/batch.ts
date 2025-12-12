@@ -13,15 +13,13 @@ export type BatchFactory = <T>(fn: () => T) => T;
  * Batch groups multiple signal writes into a single update cycle,
  * preventing intermediate effect executions.
  *
- * **Most users should use the preset instead:**
+ * @example Basic composition
  * ```ts
- * import { createSignals } from '@lattice/signals/presets/core';
- * const { batch } = createSignals()();
- * ```
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, EffectModule, BatchModule } from '@lattice/signals/extend';
  *
- * @example Avoiding intermediate updates
- * ```ts
- * const { signal, effect, batch } = createSignals()();
+ * const svc = compose(SignalModule, EffectModule, BatchModule);
+ * const { signal, effect, batch } = svc;
  *
  * const a = signal(0);
  * const b = signal(0);

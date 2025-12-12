@@ -2,7 +2,7 @@
  * @lattice/signals/extend - Extension API for custom composition
  *
  * Use this module when you need to:
- * - Create custom signal presets with different deps
+ * - Create custom signal compositions with different deps
  * - Wire signals with custom schedulers or graph implementations
  * - Build instrumented/debuggable signal variants
  */

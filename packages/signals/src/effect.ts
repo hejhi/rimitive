@@ -39,15 +39,13 @@ export type { Scheduler } from './deps/scheduler';
  * Effects are side effects that run when their dependencies change.
  * They run immediately on creation and re-run whenever any dependency changes.
  *
- * **Most users should use the preset instead:**
+ * @example Basic composition
  * ```ts
- * import { createSignals } from '@lattice/signals/presets/core';
- * const { effect } = createSignals()();
- * ```
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, EffectModule } from '@lattice/signals/extend';
  *
- * @example Basic effect
- * ```ts
- * const { signal, effect } = createSignals()();
+ * const svc = compose(SignalModule, EffectModule);
+ * const { signal, effect } = svc;
  *
  * const count = signal(0);
  *

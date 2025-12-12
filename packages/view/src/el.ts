@@ -88,10 +88,15 @@ export type ElOpts<TConfig extends AdapterConfig> = {
  *
  * @example
  * ```typescript
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
+ * import { OnModule } from '@lattice/view/deps/addEventListener';
  *
- * const { el, signal, on } = createDOMView({ signals: createSignals() })();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(SignalModule, createElModule(adapter), OnModule);
+ * const { el, signal, on } = svc;
  * const count = signal(0);
  *
  * // Basic usage - just children
@@ -151,10 +156,15 @@ export type TagFactory<
  *
  * @example
  * ```typescript
- * import { createSignals } from '@lattice/signals/presets/core';
- * import { createDOMView } from '@lattice/view/presets/dom';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule } from '@lattice/signals/extend';
+ * import { createDOMAdapter } from '@lattice/view/adapters/dom';
+ * import { createElModule } from '@lattice/view/el';
+ * import { OnModule } from '@lattice/view/deps/addEventListener';
  *
- * const { el, signal, computed, on } = createDOMView({ signals: createSignals() })();
+ * const adapter = createDOMAdapter();
+ * const svc = compose(SignalModule, ComputedModule, createElModule(adapter), OnModule);
+ * const { el, signal, computed, on } = svc;
  * const count = signal(0);
  *
  * const counter = el('div').props({ className: 'counter' })(

@@ -47,15 +47,13 @@ export type UnsubscribeFunction = () => void;
  * This is useful when you want to react to specific signals without tracking
  * all dependencies used in the callback.
  *
- * **Most users should use the preset instead:**
+ * @example Basic composition
  * ```ts
- * import { createSignals } from '@lattice/signals/presets/core';
- * const { subscribe } = createSignals()();
- * ```
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule, SubscribeModule } from '@lattice/signals/extend';
  *
- * @example Basic subscription
- * ```ts
- * const { signal, subscribe } = createSignals()();
+ * const svc = compose(SignalModule, ComputedModule, EffectModule, SubscribeModule);
+ * const { signal, subscribe } = svc;
  *
  * const count = signal(0);
  *

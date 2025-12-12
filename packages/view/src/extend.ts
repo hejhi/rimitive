@@ -3,17 +3,17 @@
  *
  * Use this module when you need to:
  * - Create custom adapters (Canvas, WebGL, native, etc.)
- * - Build custom view presets with different primitives
+ * - Build custom view compositions with different primitives
  * - Wire view primitives with custom signals implementations
  *
  * ## Example: Custom Adapter
  * ```typescript
- * import { El, Map, Match, createView } from '@lattice/view/extend';
- * import { createSignals } from '@lattice/signals';
+ * import { compose } from '@lattice/lattice';
+ * import { SignalModule, ComputedModule, EffectModule } from '@lattice/signals/extend';
+ * import { createElModule } from '@lattice/view/el';
  * import { myCustomAdapter } from './my-adapter';
  *
- * const signals = createSignals();
- * const svc = createView(myCustomAdapter, signals);
+ * const svc = compose(SignalModule, ComputedModule, EffectModule, createElModule(myCustomAdapter));
  * ```
  */
 
@@ -35,7 +35,7 @@ export { createTestAdapter } from './adapters/test';
 export type { DOMAdapterConfig } from './adapters/dom';
 
 // =============================================================================
-// Helpers - For building custom presets
+// Helpers - For building custom compositions
 // =============================================================================
 
 export { createScopes } from './deps/scope';

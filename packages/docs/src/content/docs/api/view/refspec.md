@@ -29,11 +29,15 @@ export type RefSpec<TElement> = {
 
 
 ```typescript
+import { compose } from '@lattice/lattice';
+import { SignalModule } from '@lattice/signals/extend';
+import { createDOMAdapter } from '@lattice/view/adapters/dom';
+import { createElModule } from '@lattice/view/el';
 import type { RefSpec } from '@lattice/view/types';
-import { createSignals } from '@lattice/signals/presets/core';
-import { createDOMView } from '@lattice/view/presets/dom';
 
-const { el, mount } = createDOMView({ signals: createSignals() })();
+const adapter = createDOMAdapter();
+const svc = compose(SignalModule, createElModule(adapter));
+const { el, mount } = svc;
 
 // el() returns a RefSpec
 const buttonSpec: RefSpec<HTMLButtonElement> = el('button')('Click me');
