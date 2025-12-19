@@ -1,5 +1,8 @@
 import type { Adapter, AdapterConfig } from '../adapter';
 
+/** SVG namespace URI */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
 /**
  * Override style property to accept both string and CSSStyleDeclaration.
  * This matches real DOM behavior where setting element.style = "..." sets cssText.
@@ -9,16 +12,18 @@ type WithStyleString<T> = T extends { style: CSSStyleDeclaration }
   : T;
 
 /**
- * DOM props map with style string support for all HTML elements
+ * DOM props map with style string support for HTML and SVG elements
  */
 type DOMPropsMap = {
   [K in keyof HTMLElementTagNameMap]: WithStyleString<HTMLElementTagNameMap[K]>;
+} & {
+  [K in keyof SVGElementTagNameMap]: SVGElementTagNameMap[K];
 } & { text: Text };
 
 /**
  * DOM adapter configuration type
  *
- * Provides type-safe props and elements for standard HTML tags plus text nodes.
+ * Provides type-safe props and elements for standard HTML/SVG tags plus text nodes.
  *
  * @example
  * ```typescript
@@ -29,12 +34,13 @@ type DOMPropsMap = {
  *
  * // Access element types
  * type ButtonElement = DOMAdapterConfig['elements']['button']; // HTMLButtonElement
+ * type SvgElement = DOMAdapterConfig['elements']['svg']; // SVGSVGElement
  * ```
  */
 export type DOMAdapterConfig = AdapterConfig & {
   props: DOMPropsMap;
-  elements: HTMLElementTagNameMap & { text: Text };
-  events: HTMLElementEventMap;
+  elements: HTMLElementTagNameMap & SVGElementTagNameMap & { text: Text };
+  events: HTMLElementEventMap & SVGElementEventMap;
   baseElement: Node;
 };
 
@@ -60,12 +66,27 @@ export type DOMAdapterConfig = AdapterConfig & {
  */
 export function createDOMAdapter(): Adapter<DOMAdapterConfig> {
   return {
-    createNode: (type, props) => {
+    createNode: (type, props, parentContext) => {
       if (type === 'text') {
         return document.createTextNode(
           props?.value != null ? String(props.value) : ''
         );
       }
+
+      // Determine SVG namespace from parent context
+      const parentElement = parentContext?.element as Element | undefined;
+      const parentIsSvg = parentElement?.namespaceURI === SVG_NS;
+      const parentIsForeignObject =
+        parentElement?.localName === 'foreignObject';
+
+      // Use SVG namespace if:
+      // 1. Creating an <svg> element (root SVG)
+      // 2. Parent is SVG and NOT foreignObject (foreignObject children are HTML)
+      const useSvgNs =
+        type === 'svg' || (parentIsSvg && !parentIsForeignObject);
+
+      if (useSvgNs) return document.createElementNS(SVG_NS, type);
+
       return document.createElement(type);
     },
 
@@ -83,9 +104,14 @@ export function createDOMAdapter(): Adapter<DOMAdapterConfig> {
       // Element nodes (nodeType === 1)
       if (node.nodeType === 1) {
         const element = node as Element;
-        // Hyphenated keys (data-*, aria-*, custom attributes) use setAttribute
-        // Everything else uses property assignment for proper type handling
-        if (key.includes('-')) {
+        const isSvg = element.namespaceURI === SVG_NS;
+        const isEventHandler = key.startsWith('on');
+
+        // SVG elements: use setAttribute for all non-event properties
+        // This preserves case-sensitivity (viewBox, preserveAspectRatio)
+        // HTML hyphenated: use setAttribute (data-*, aria-*, custom)
+        // HTML non-hyphenated: use property assignment
+        if ((isSvg && !isEventHandler) || key.includes('-')) {
           if (value == null) {
             element.removeAttribute(key);
           } else {

@@ -6,10 +6,18 @@
  */
 
 import { parseHTML } from 'linkedom';
-import type { Adapter, FragmentRef, NodeRef } from '@rimitive/view/types';
+import type {
+  Adapter,
+  FragmentRef,
+  NodeRef,
+  ParentContext,
+} from '@rimitive/view/types';
 import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@rimitive/view/types';
 import { isAsyncFragment } from '@rimitive/view/load';
+
+/** SVG namespace URI */
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // =============================================================================
 // Fragment Marker Utilities
@@ -124,13 +132,34 @@ export function createDOMServerAdapter(): ServerAdapterResult {
   };
 
   const adapter: Adapter<DOMAdapterConfig> = {
-    createNode: (type: string, props?: Record<string, unknown>) => {
+    createNode: (
+      type: string,
+      props?: Record<string, unknown>,
+      parentContext?: ParentContext<unknown>
+    ) => {
       if (type === 'text') {
         const textNode = document.createTextNode(
           (props?.value as string) || ''
         );
         return textNode;
       }
+
+      // Determine SVG namespace from parent context
+      const parentElement = parentContext?.element as Element | undefined;
+      const parentIsSvg = parentElement?.namespaceURI === SVG_NS;
+      const parentIsForeignObject =
+        parentElement?.localName === 'foreignObject';
+
+      // Use SVG namespace if:
+      // 1. Creating an <svg> element (root SVG)
+      // 2. Parent is SVG and NOT foreignObject (foreignObject children are HTML)
+      const useSvgNs =
+        type === 'svg' || (parentIsSvg && !parentIsForeignObject);
+
+      if (useSvgNs) {
+        return document.createElementNS(SVG_NS, type);
+      }
+
       return document.createElement(type);
     },
     setProperty: (node: Node, key: string, value: unknown) => {
