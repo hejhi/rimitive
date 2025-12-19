@@ -1,6 +1,6 @@
 {
-  "name": "@rimitive/headless",
-  "version": "0.0.3",
+  "name": "@rimitive/example-headless",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
   "exports": {

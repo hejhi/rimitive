@@ -1,6 +1,6 @@
 {
   "name": "@rimitive/view",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "Reactive DOM primitives for Rimitive",
   "author": "Rimitive Team",
   "license": "MIT",

@@ -12,12 +12,19 @@ type WithStyleString<T> = T extends { style: CSSStyleDeclaration }
   : T;
 
 /**
- * DOM props map with style string support for HTML and SVG elements
+ * Tags that exist in both HTML and SVG with incompatible types.
+ * We prefer HTML types for these since they're more commonly used outside SVG context.
+ */
+type OverlappingTags = keyof HTMLElementTagNameMap & keyof SVGElementTagNameMap;
+
+/**
+ * DOM props map with style string support for HTML and SVG elements.
+ * HTML types take precedence for overlapping tags (a, script, style, title).
  */
 type DOMPropsMap = {
   [K in keyof HTMLElementTagNameMap]: WithStyleString<HTMLElementTagNameMap[K]>;
 } & {
-  [K in keyof SVGElementTagNameMap]: SVGElementTagNameMap[K];
+  [K in Exclude<keyof SVGElementTagNameMap, OverlappingTags>]: SVGElementTagNameMap[K];
 } & { text: Text };
 
 /**
@@ -39,7 +46,8 @@ type DOMPropsMap = {
  */
 export type DOMAdapterConfig = AdapterConfig & {
   props: DOMPropsMap;
-  elements: HTMLElementTagNameMap & SVGElementTagNameMap & { text: Text };
+  elements: HTMLElementTagNameMap &
+    Omit<SVGElementTagNameMap, OverlappingTags> & { text: Text };
   events: HTMLElementEventMap & SVGElementEventMap;
   baseElement: Node;
 };
