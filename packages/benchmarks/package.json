@@ -19,7 +19,7 @@
     "@preact/signals-core": "1.12.1",
     "@reduxjs/toolkit": "2.11.1",
     "@testing-library/react": "16.3.0",
-    "@types/node": "25.0.1",
+    "@types/node": "25.0.2",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "glob": "13.0.0",
