@@ -1,5 +1,15 @@
 # @rimitive/examples
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @rimitive/core@0.1.1
+  - @rimitive/react@0.1.1
+  - @rimitive/signals@0.1.1
+  - @rimitive/view@0.1.1
+
 ## 0.0.4
 
 ### Patch Changes
