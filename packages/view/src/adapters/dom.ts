@@ -1,4 +1,5 @@
 import type { Adapter, AdapterConfig } from '../adapter';
+import type { SVGAttributesFor } from './svg-attributes';
 
 /** SVG namespace URI */
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -18,13 +19,21 @@ type WithStyleString<T> = T extends { style: CSSStyleDeclaration }
 type OverlappingTags = keyof HTMLElementTagNameMap & keyof SVGElementTagNameMap;
 
 /**
+ * SVG-only tags (excluding those that overlap with HTML).
+ */
+type SVGOnlyTags = Exclude<keyof SVGElementTagNameMap, OverlappingTags>;
+
+/**
  * DOM props map with style string support for HTML and SVG elements.
  * HTML types take precedence for overlapping tags (a, script, style, title).
+ * SVG elements use attribute types (string/number) instead of DOM property types.
+ *
+ * @see https://github.com/hejhi/rimitive/issues/41
  */
 type DOMPropsMap = {
   [K in keyof HTMLElementTagNameMap]: WithStyleString<HTMLElementTagNameMap[K]>;
 } & {
-  [K in Exclude<keyof SVGElementTagNameMap, OverlappingTags>]: SVGElementTagNameMap[K];
+  [K in SVGOnlyTags]: SVGAttributesFor<K>;
 } & { text: Text };
 
 /**
