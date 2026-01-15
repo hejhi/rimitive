@@ -27,7 +27,7 @@ import {
 } from 'alien-signals';
 import { createSvc } from './deps/signal-computed-effect';
 
-const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
+const ITERATIONS = 10000;
 const rimitiveSvc = createSvc();
 const {
   signal: rimitiveSignal,
@@ -75,10 +75,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
         // Warmup
         source(1);
 
-        const iterations =
-          ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
         yield () => {
-          for (let i = 0; i < iterations; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             source(i);
           }
           return do_not_optimize(counters[0]!.value);
@@ -119,10 +117,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
         // Warmup
         source.value = 1;
 
-        const iterations =
-          ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
         yield () => {
-          for (let i = 0; i < iterations; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             source.value = i;
           }
           return do_not_optimize(counters[0]!.value);
@@ -163,11 +159,8 @@ group('Fan-out Scaling - Single Source to Many', () => {
         // Warmup
         source(1);
 
-        const iterations =
-          ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
-
         yield () => {
-          for (let i = 0; i < iterations; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             source(i);
           }
           return do_not_optimize(counters[0]!.value);

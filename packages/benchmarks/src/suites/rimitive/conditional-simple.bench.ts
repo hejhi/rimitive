@@ -63,6 +63,10 @@ group('Conditional Dependencies - Branch Pruning', () => {
           return computedBranches[idx]!();
         });
 
+        // Warmup
+        condition(1);
+        void result();
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             // Change active branch periodically
@@ -100,6 +104,10 @@ group('Conditional Dependencies - Branch Pruning', () => {
           return computedBranches[idx]!.value;
         });
 
+        // Warmup
+        condition.value = 1;
+        void result.value;
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             if (i % 100 === 0) {
@@ -134,6 +142,10 @@ group('Conditional Dependencies - Branch Pruning', () => {
           const idx = condition() % branchCount;
           return computedBranches[idx]!();
         });
+
+        // Warmup
+        condition(1);
+        void result();
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {

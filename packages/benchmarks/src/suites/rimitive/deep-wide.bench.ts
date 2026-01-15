@@ -83,6 +83,10 @@ group('Deep & Wide Tree Scaling', () => {
         const bottomNodes = allLevels[allLevels.length - 1];
         const targetNode = bottomNodes![bottomNodes!.length - 1]!;
 
+        // Warmup
+        source(1);
+        void targetNode();
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source(i);
@@ -121,6 +125,10 @@ group('Deep & Wide Tree Scaling', () => {
         const bottomNodes = allLevels[allLevels.length - 1];
         const targetNode = bottomNodes![bottomNodes!.length - 1]!;
 
+        // Warmup
+        source.value = 1;
+        void targetNode.value;
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source.value = i;
@@ -158,6 +166,10 @@ group('Deep & Wide Tree Scaling', () => {
         // Access the bottom-right node (forces traversal through the tree)
         const bottomNodes = allLevels[allLevels.length - 1];
         const targetNode = bottomNodes![bottomNodes!.length - 1]!;
+
+        // Warmup
+        source(1);
+        void targetNode();
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {

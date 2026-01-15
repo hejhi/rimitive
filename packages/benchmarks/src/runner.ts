@@ -186,7 +186,7 @@ class BenchmarkRunner {
       }
 
       // Read JSON data if it was generated
-      let jsonData: MitataBenchmark[] | undefined;
+      let jsonData: MitataRawBenchmark[] | undefined;
       if (jsonOutputPath) {
         try {
           const jsonContent = await fs.readFile(jsonOutputPath, 'utf-8');

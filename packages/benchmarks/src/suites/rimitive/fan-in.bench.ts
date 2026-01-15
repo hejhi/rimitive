@@ -74,6 +74,10 @@ group('Fan-In Convergence Scaling', () => {
           return (total * 17 + sourceCount) % 1000007;
         });
 
+        // Warmup
+        sources[0]!(1);
+        void fanIn();
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             // Update all sources simultaneously (tests batching)
@@ -117,6 +121,10 @@ group('Fan-In Convergence Scaling', () => {
           return (total * 17 + sourceCount) % 1000007;
         });
 
+        // Warmup
+        sources[0]!.value = 1;
+        void fanIn.value;
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             // Update all sources simultaneously (tests batching)
@@ -159,6 +167,10 @@ group('Fan-In Convergence Scaling', () => {
           // Additional work at convergence point
           return (total * 17 + sourceCount) % 1000007;
         });
+
+        // Warmup
+        sources[0]!(1);
+        void fanIn();
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {

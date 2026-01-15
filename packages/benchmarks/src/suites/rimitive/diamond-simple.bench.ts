@@ -77,6 +77,10 @@ group('Diamond Scaling', () => {
           return (l * l + r * r) % 1000007;
         });
 
+        // Warmup
+        source(1);
+        void bottom();
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source(i);
@@ -126,6 +130,10 @@ group('Diamond Scaling', () => {
           return (l * l + r * r) % 1000007;
         });
 
+        // Warmup
+        source.value = 1;
+        void bottom.value;
+
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             source.value = i;
@@ -174,6 +182,10 @@ group('Diamond Scaling', () => {
           const r = currentRight();
           return (l * l + r * r) % 1000007;
         });
+
+        // Warmup
+        source(1);
+        void bottom();
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {

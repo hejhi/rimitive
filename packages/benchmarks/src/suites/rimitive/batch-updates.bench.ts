@@ -9,6 +9,12 @@
  * - 10 signals: Small batch efficiency test
  * - 20 signals: Medium batch complexity
  * - 40 signals: Large batch stress test
+ *
+ * Note on batch APIs:
+ * - Rimitive and Preact use callback-based batching: batch(() => {...})
+ * - Alien uses manual start/end: startBatch() / endBatch()
+ * These reflect each library's actual API design. The callback approach
+ * has slight overhead but provides exception safety guarantees.
  */
 
 import { bench, group, summary, barplot } from 'mitata';
@@ -65,8 +71,12 @@ group('Batch Multiple Updates - Scaling', () => {
 
           const final = rimitiveComputed(() => totalSum() * 2);
 
+          // Warmup
+          rimitiveBatch(() => signals.forEach((s) => s(1)));
+          void final();
+
           yield () => {
-            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+            for (let i = 0; i < ITERATIONS; i++) {
               rimitiveBatch(() => {
                 signals.forEach((s, idx) => {
                   s(i * (idx + 1));
@@ -99,8 +109,12 @@ group('Batch Multiple Updates - Scaling', () => {
 
           const final = rimitiveComputed(() => totalSum() * 2);
 
+          // Warmup
+          signals.forEach((s) => s(1));
+          void final();
+
           yield () => {
-            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+            for (let i = 0; i < ITERATIONS; i++) {
               // NO BATCHING - cascade of recomputations
               signals.forEach((s, idx) => {
                 s(i * (idx + 1));
@@ -130,8 +144,12 @@ group('Batch Multiple Updates - Scaling', () => {
 
         const final = preactComputed(() => totalSum.value * 2);
 
+        // Warmup
+        preactBatch(() => signals.forEach((s) => (s.value = 1)));
+        void final.value;
+
         yield () => {
-          for (let i = 0; i < ITERATIONS / signalCount; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             preactBatch(() => {
               signals.forEach((s, idx) => {
                 s.value = i * (idx + 1);
@@ -163,8 +181,12 @@ group('Batch Multiple Updates - Scaling', () => {
 
           const final = preactComputed(() => totalSum.value * 2);
 
+          // Warmup
+          signals.forEach((s) => (s.value = 1));
+          void final.value;
+
           yield () => {
-            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+            for (let i = 0; i < ITERATIONS; i++) {
               signals.forEach((s, idx) => {
                 s.value = i * (idx + 1);
               });
@@ -193,8 +215,14 @@ group('Batch Multiple Updates - Scaling', () => {
 
         const final = alienComputed(() => totalSum() * 2);
 
+        // Warmup
+        alienStartBatch();
+        signals.forEach((s) => s(1));
+        alienEndBatch();
+        void final();
+
         yield () => {
-          for (let i = 0; i < ITERATIONS / signalCount; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             alienStartBatch();
             signals.forEach((s, idx) => {
               s(i * (idx + 1));
@@ -226,8 +254,12 @@ group('Batch Multiple Updates - Scaling', () => {
 
           const final = alienComputed(() => totalSum() * 2);
 
+          // Warmup
+          signals.forEach((s) => s(1));
+          void final();
+
           yield () => {
-            for (let i = 0; i < ITERATIONS / signalCount; i++) {
+            for (let i = 0; i < ITERATIONS; i++) {
               signals.forEach((s, idx) => {
                 s(i * (idx + 1));
               });
