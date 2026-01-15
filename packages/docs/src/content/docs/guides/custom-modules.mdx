@@ -1,0 +1,172 @@
+---
+title: Custom Modules
+description: Define your own primitives with defineModule.
+---
+
+Rimitive's composition system isn't limited to the built-in primitives. You can define your own modules with `defineModule` and compose them alongside signals, view, or anything else.
+
+---
+
+## Defining a Module
+
+A module needs a `name` and a `create` function:
+
+```typescript
+import { defineModule, compose } from '@rimitive/core';
+
+const LoggerModule = defineModule({
+  name: 'logger',
+  create: () => ({
+    log: (msg: string) => console.log(`[LOG] ${msg}`),
+    error: (msg: string) => console.error(`[ERROR] ${msg}`),
+  }),
+});
+
+const svc = compose(LoggerModule);
+svc.logger.log('hello');
+```
+
+The `name` becomes the key on the composed service. Whatever `create` returns becomes the value.
+
+---
+
+## Modules with Dependencies
+
+Modules can depend on other modules. List them in `dependencies`, and they'll be available in `create`:
+
+```typescript
+import { defineModule, compose } from '@rimitive/core';
+import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+
+const CounterModule = defineModule({
+  name: 'counter',
+  dependencies: [SignalModule, ComputedModule],
+  create: ({ signal, computed }) => (initial = 0) => {
+    const count = signal(initial);
+    const doubled = computed(() => count() * 2);
+    return {
+      count,
+      doubled,
+      increment: () => count(count() + 1),
+      decrement: () => count(count() - 1),
+    };
+  },
+});
+
+const svc = compose(CounterModule);
+const myCounter = svc.counter(10);
+
+myCounter.count();      // 10
+myCounter.increment();
+myCounter.count();      // 11
+myCounter.doubled();    // 22
+```
+
+Dependencies are resolved automatically. You only need to pass the modules you want—`compose()` includes transitive dependencies.
+
+---
+
+## Module Lifecycle
+
+Modules can hook into lifecycle events:
+
+```typescript
+const ConnectionModule = defineModule({
+  name: 'connection',
+  create: () => {
+    const ws = new WebSocket('wss://example.com');
+    return {
+      send: (msg: string) => ws.send(msg),
+      socket: ws,
+    };
+  },
+  init: (ctx) => {
+    // Called before create, useful for setup
+  },
+  destroy: (ctx) => {
+    // Called when svc.dispose() is invoked
+  },
+});
+
+const svc = compose(ConnectionModule);
+// ... use the connection
+svc.dispose(); // triggers destroy hooks
+```
+
+---
+
+## Beyond Reactivity
+
+Here's the thing: `@rimitive/core` has no concept of reactivity. It's just a composition mechanism. You can use it for anything:
+
+```typescript
+import { defineModule, compose } from '@rimitive/core';
+
+const HttpModule = defineModule({
+  name: 'http',
+  create: () => ({
+    get: (url: string) => fetch(url).then(r => r.json()),
+    post: (url: string, data: unknown) =>
+      fetch(url, { method: 'POST', body: JSON.stringify(data) }).then(r => r.json()),
+  }),
+});
+
+const CacheModule = defineModule({
+  name: 'cache',
+  create: () => {
+    const store = new Map<string, unknown>();
+    return {
+      get: <T>(key: string): T | undefined => store.get(key) as T,
+      set: <T>(key: string, value: T): void => { store.set(key, value); },
+      clear: () => store.clear(),
+    };
+  },
+});
+
+const ApiModule = defineModule({
+  name: 'api',
+  dependencies: [HttpModule, CacheModule],
+  create: ({ http, cache }) => ({
+    async getUser(id: string) {
+      const cached = cache.get<User>(`user:${id}`);
+      if (cached) return cached;
+
+      const user = await http.get(`/api/users/${id}`);
+      cache.set(`user:${id}`, user);
+      return user;
+    },
+  }),
+});
+
+const svc = compose(ApiModule);
+await svc.api.getUser('123');
+```
+
+This makes `compose()` useful for any library or application architecture—not just UI frameworks. You control what gets composed.
+
+---
+
+## Tree-Shaking
+
+Because you explicitly compose modules, everything is fully tree-shakeable. If you don't use `EffectModule`, it won't be in your bundle. If you only need signals without a view, just compose signals:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+
+const svc = compose(SignalModule, ComputedModule);
+// No view code bundled
+```
+
+---
+
+## When to Create Modules
+
+Create a module when you want to:
+
+- **Add new primitives** to the composed service
+- **Share infrastructure** (logging, http, storage) across behaviors
+- **Encapsulate setup/teardown** with lifecycle hooks
+- **Build your own libraries** on top of composition
+
+For reusable reactive logic, prefer [behaviors](/guides/creating-a-behavior). Behaviors are simpler and don't require `defineModule`. Use modules when you need something that lives at the composition level.

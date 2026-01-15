@@ -28,6 +28,7 @@ export default defineConfig({
             { label: 'Adding Routing', slug: 'guides/adding-routing' },
             { label: 'Server Rendering', slug: 'guides/server-rendering' },
             { label: 'Streaming SSR', slug: 'guides/streaming-ssr' },
+            { label: 'Custom Modules', slug: 'guides/custom-modules' },
           ],
         },
         {
@@ -49,6 +50,10 @@ export default defineConfig({
         {
           label: 'Benchmarks',
           slug: 'benchmarks',
+        },
+        {
+          label: 'Why Rimitive?',
+          slug: 'why',
         },
         {
           label: 'API Reference',
