@@ -47,14 +47,6 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Examples',
-          items: [],
-        },
-        {
-          label: 'Advanced',
-          items: [],
-        },
-        {
           label: 'Benchmarks',
           slug: 'benchmarks',
         },
