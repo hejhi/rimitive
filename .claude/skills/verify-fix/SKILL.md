@@ -69,7 +69,7 @@ I added a `bench` script to root package.json that delegates to @rimitive/benchm
 Verify by running:
 ```
 
-timeout 30 pnpm bench --skip-build diamond-simple
+timeout 30 pnpm bench --skip-build diamond
 
 ```
 

@@ -89,7 +89,7 @@ The fix works as described. [Brief summary of evidence]
 
 ## Example Prompts
 
-"I added a `bench` script to root package.json that delegates to @rimitive/benchmarks. Verify that `pnpm bench` now works from the root by running `timeout 30 pnpm bench --skip-build computed-diamond-simple`."
+"I added a `bench` script to root package.json that delegates to @rimitive/benchmarks. Verify that `pnpm bench` now works from the root by running `timeout 30 pnpm bench --skip-build diamond`."
 
 "I fixed a type error in computed.ts where the return type was missing. Verify with `pnpm --filter @rimitive/signals typecheck`."
 

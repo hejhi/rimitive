@@ -64,7 +64,7 @@ pnpm --filter @rimitive/signals test -- "should handle deep dependency"
 
 # Benchmarks
 pnpm bench
-pnpm bench diamond-simple
+pnpm bench diamond
 timeout 60 pnpm bench chain-deep
 ```
 

@@ -572,7 +572,7 @@
       ]
     },
     {
-      "name": "conditional-simple",
+      "name": "conditional",
       "benchmarks": [
         {
           "name": "Rimitive - 2 branches",
@@ -816,7 +816,7 @@
       ]
     },
     {
-      "name": "diamond-simple",
+      "name": "diamond",
       "benchmarks": [
         {
           "name": "Rimitive - 1 diamonds",

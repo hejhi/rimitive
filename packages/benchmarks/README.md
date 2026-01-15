@@ -33,13 +33,13 @@ Each benchmark runs the same reactive pattern across all libraries, measuring th
 
 | Suite                | Description                                     |
 | -------------------- | ----------------------------------------------- |
-| `diamond-simple`     | Diamond dependency graphs for glitch prevention |
+| `diamond`     | Diamond dependency graphs for glitch prevention |
 | `chain-deep`         | Deep linear dependency chains                   |
 | `chain-shallow`      | Shallow chains with many updates                |
 | `batch-updates`      | Batched signal updates                          |
 | `fan-in`             | Many signals feeding into one computed          |
 | `fan-out`            | One signal feeding many computeds               |
-| `conditional-simple` | Conditional dependency tracking                 |
+| `conditional` | Conditional dependency tracking                 |
 | `deep-wide`          | Deep and wide dependency graphs                 |
 
 ### Diamond Pattern
@@ -93,7 +93,7 @@ Results are saved to `dist/` as markdown files:
 ```
 dist/
 ├── latest-summary.md           # Overview of all benchmarks
-├── latest-diamond-simple.md    # Individual results
+├── latest-diamond.md    # Individual results
 ├── latest-chain-deep.md
 └── ...
 ```
@@ -182,10 +182,10 @@ Benchmarks run in CI via `pnpm bench`. The runner:
 
 ```bash
 # Run with timeout
-timeout 60 pnpm bench diamond-simple
+timeout 60 pnpm bench diamond
 
 # Check a specific suite directly
-npx tsx --expose-gc src/suites/core/diamond-simple.bench.ts
+npx tsx --expose-gc src/suites/core/diamond.bench.ts
 ```
 
 **Adding new comparisons:**
