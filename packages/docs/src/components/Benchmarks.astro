@@ -3,16 +3,13 @@ import benchmarkData from '../data/benchmarks.json';
 
 type Benchmark = {
   name: string;
-  group: string | null;
   time: number;
-  margin: number;
-  samples: number;
   min: number;
   max: number;
+  avg: number;
   p50: number;
   p75: number;
   p99: number;
-  p999: number;
   args?: Record<string, unknown>;
 };
 
@@ -61,6 +58,7 @@ function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
   const groups = new Map<string, Benchmark[]>();
 
   for (const bench of benchmarks) {
+    if (!bench?.name) continue;
     // Extract framework name (e.g., "Rimitive", "Preact", "Alien")
     const match = bench.name.match(/^(\w+)/);
     const framework = match ? match[1] : 'Other';
@@ -72,6 +70,46 @@ function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
   }
 
   return groups;
+}
+
+const medalColors = ['#D4AF37', '#A8A8A8', '#CD7F32']; // gold, silver, bronze
+const medalEmojis = ['🥇', '🥈', '🥉'];
+
+// Get medal color for a framework at a given row index
+function getMedalColor(
+  frameworks: string[],
+  grouped: Map<string, Benchmark[]>,
+  idx: number,
+  fw: string
+): string {
+  const timesWithFw = frameworks.map(f => {
+    const fwGroup = grouped.get(f) || [];
+    return { fw: f, time: fwGroup[idx]?.time ?? Infinity };
+  }).filter(t => t.time !== Infinity);
+
+  const sorted = [...timesWithFw].sort((a, b) => a.time - b.time);
+  const rank = sorted.findIndex(item => item.fw === fw);
+  return medalColors[rank] || medalColors[2];
+}
+
+// Get overall medal emoji for a framework based on average performance
+function getOverallMedal(
+  frameworks: string[],
+  grouped: Map<string, Benchmark[]>
+): Map<string, string> {
+  const avgTimes = frameworks.map(fw => {
+    const benchmarks = grouped.get(fw) || [];
+    const times = benchmarks.map(b => b.time).filter(t => t != null);
+    const avg = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : Infinity;
+    return { fw, avg };
+  });
+
+  const sorted = [...avgTimes].sort((a, b) => a.avg - b.avg);
+  const result = new Map<string, string>();
+  sorted.forEach((item, i) => {
+    result.set(item.fw, medalEmojis[i] || '');
+  });
+  return result;
 }
 ---
 
@@ -89,9 +127,23 @@ function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
       <p><strong>Node:</strong> {data.system.node} on {data.system.platform}/{data.system.arch}</p>
     </div>
 
+    <div class="note">
+      <p>
+        <span class="medal gold">🥇 Gold</span>,
+        <span class="medal silver">🥈 silver</span>, and
+        <span class="medal bronze">🥉 bronze</span> indicate 1st, 2nd, and 3rd place for each row.
+      </p>
+      <p>
+        These are micro-benchmarks measuring raw signal operations. In practice, all three libraries
+        are extremely fast and nearly neck-and-neck — the margins are small. Rimitive, Preact Signals,
+        and Alien Signals all deliver best-in-class performance suitable for demanding applications.
+      </p>
+    </div>
+
     {data.suites.map((suite) => {
       const grouped = groupByFramework(suite.benchmarks);
       const frameworks = Array.from(grouped.keys());
+      const overallMedals = getOverallMedal(frameworks, grouped);
 
       return (
         <div class="suite">
@@ -101,7 +153,7 @@ function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
             <thead>
               <tr>
                 <th>Variant</th>
-                {frameworks.map(fw => <th>{fw}</th>)}
+                {frameworks.map(fw => <th>{overallMedals.get(fw)} {fw}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -124,11 +176,10 @@ function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
                         const isRimitive = fw === 'Rimitive';
                         const rimTime = rimitiveGroup[idx]?.time || bench.time;
                         const ratio = bench.time / rimTime;
-                        const isFaster = ratio < 1;
-                        const ratioClass = isRimitive ? '' : (isFaster ? 'faster' : (ratio > 1.1 ? 'slower' : ''));
+                        const color = getMedalColor(frameworks, grouped, idx, fw);
 
                         return (
-                          <td class={ratioClass}>
+                          <td style={`color: ${color}`}>
                             {formatTime(bench.time)}
                             {!isRimitive && (
                               <span class="ratio">
@@ -185,6 +236,43 @@ function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
     padding: 0.1rem 0.3rem;
     border-radius: 0.25rem;
     font-size: 0.85em;
+  }
+
+  .note {
+    background: var(--sl-color-gray-6);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    border-left: 3px solid var(--sl-color-accent);
+  }
+
+  .note p {
+    margin: 0.5rem 0;
+  }
+
+  .note p:first-child {
+    margin-top: 0;
+  }
+
+  .note p:last-child {
+    margin-bottom: 0;
+  }
+
+  .medal {
+    font-weight: 600;
+  }
+
+  .medal.gold {
+    color: #D4AF37;
+  }
+
+  .medal.silver {
+    color: #A8A8A8;
+  }
+
+  .medal.bronze {
+    color: #CD7F32;
   }
 
   .suite {

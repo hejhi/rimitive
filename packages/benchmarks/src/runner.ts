@@ -15,22 +15,40 @@ type BenchmarkResult = {
   duration_ms: number;
   formattedOutput?: string; // Formatted output from benchmark
   error?: string;
-  jsonData?: MitataBenchmark[]; // Parsed benchmark data
+  jsonData?: MitataRawBenchmark[]; // Raw benchmark data from mitata
 };
 
-type MitataBenchmark = {
+// Simplified benchmark result for docs (stripped of samples)
+type BenchmarkEntry = {
   name: string;
-  group: string | null;
-  time: number;
-  margin: number;
-  samples: number;
+  time: number; // p50 in nanoseconds
   min: number;
   max: number;
+  avg: number;
   p50: number;
   p75: number;
   p99: number;
-  p999: number;
   args?: Record<string, unknown>;
+};
+
+// Raw mitata output structure
+type MitataRawBenchmark = {
+  runs: Array<{
+    name: string;
+    args?: Record<string, unknown>;
+    stats: {
+      min: number;
+      max: number;
+      avg: number;
+      p50: number;
+      p75: number;
+      p99: number;
+      p999: number;
+      samples?: number[];
+    };
+  }>;
+  alias?: string;
+  group?: number | null;
 };
 
 type SystemInfo = {
@@ -48,7 +66,7 @@ type DocsJsonOutput = {
   system: SystemInfo;
   suites: Array<{
     name: string;
-    benchmarks: MitataBenchmark[];
+    benchmarks: BenchmarkEntry[];
   }>;
 };
 
@@ -210,7 +228,7 @@ class BenchmarkRunner {
       console.log(''); // Add spacing
       const outputChunks: Buffer[] = [];
 
-      const proc = spawn('npx', ['tsx', '--expose-gc', filePath], {
+      const proc = spawn('tsx', ['--expose-gc', filePath], {
         env: {
           ...process.env,
           NODE_ENV: 'production',
@@ -369,6 +387,31 @@ ${results
   private async saveDocsJson(results: BenchmarkResult[]): Promise<void> {
     const system = this.getSystemInfo();
 
+    // Process raw mitata output to extract only summary stats
+    const processRawBenchmarks = (
+      rawBenchmarks: MitataRawBenchmark[]
+    ): BenchmarkEntry[] => {
+      const entries: BenchmarkEntry[] = [];
+
+      for (const bench of rawBenchmarks) {
+        for (const run of bench.runs) {
+          entries.push({
+            name: run.name,
+            time: run.stats.p50,
+            min: run.stats.min,
+            max: run.stats.max,
+            avg: run.stats.avg,
+            p50: run.stats.p50,
+            p75: run.stats.p75,
+            p99: run.stats.p99,
+            args: run.args,
+          });
+        }
+      }
+
+      return entries;
+    };
+
     const docsOutput: DocsJsonOutput = {
       timestamp: new Date().toISOString(),
       commit: this.commitHash,
@@ -377,7 +420,7 @@ ${results
         .filter((r) => !r.error && r.jsonData)
         .map((r) => ({
           name: r.name,
-          benchmarks: r.jsonData!,
+          benchmarks: processRawBenchmarks(r.jsonData!),
         })),
     };
 
