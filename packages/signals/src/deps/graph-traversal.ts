@@ -10,7 +10,16 @@ import type { Dependency, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { defineModule } from '@rimitive/core';
 
-const { CLEAN, DIRTY, PENDING, STATE_MASK, TYPE_MASK, PRODUCER } = CONSTANTS;
+const {
+  CLEAN,
+  DIRTY,
+  PENDING,
+  STATE_MASK,
+  TYPE_MASK,
+  PRODUCER,
+  CONSUMER,
+  SCHEDULED,
+} = CONSTANTS;
 
 // Re-export types for proper type inference
 export type { Dependency, ConsumerNode, DerivedNode } from '../types';
@@ -52,8 +61,26 @@ const withVisitor =
       depTraversal: if (stateStatus === CLEAN || stateStatus === DIRTY) {
         if (visit) visit(dep);
 
-        // Mark as pending (invalidated) - no subscribers to process
-        consumerNode.status = (consumerNode.status & TYPE_MASK) | PENDING;
+        // Mark status based on producer's state:
+        // - If producer is a SIGNAL (not CONSUMER) with DIRTY status AND consumer is not scheduled:
+        //   mark consumer as DIRTY to skip pullUpdates on read
+        // - Otherwise: mark as PENDING (need to verify via pullUpdates)
+        // Only signals guarantee value change when DIRTY; computeds need verification
+        // Scheduled nodes (effects) must stay in a state the scheduler expects
+        if (stateStatus === CLEAN) {
+          const producer = dep.producer;
+          let newState = PENDING;
+          if (producer) {
+            const producerStatus = producer.status;
+            const producerIsSignal = !(producerStatus & CONSUMER);
+            const producerDirty = producerStatus & DIRTY;
+            const isScheduled = status & SCHEDULED;
+            if (producerIsSignal && producerDirty && !isScheduled) {
+              newState = DIRTY;
+            }
+          }
+          consumerNode.status = (status & TYPE_MASK) | newState;
+        }
 
         // Fall through if there's no subscribers (not a producer)
         if (!(status & PRODUCER)) break depTraversal;

@@ -127,7 +127,8 @@ describe('Graph Traversal Algorithm', () => {
       expect(leaves).toHaveLength(0); // Not visited again
     });
 
-    it('should process DIRTY nodes and mark PENDING', () => {
+    it('should preserve DIRTY status during propagation', () => {
+      // DIRTY means "definitely needs recompute" - should not be downgraded to PENDING
       const b = createNode(DIRTY);
       const a = createNode();
 
@@ -136,7 +137,8 @@ describe('Graph Traversal Algorithm', () => {
       const { propagate } = createGraphTraversal();
       propagate(a.subscribers);
 
-      expect(b.status & STATE_MASK).toBe(PENDING);
+      // DIRTY is preserved (not downgraded to PENDING)
+      expect(b.status & STATE_MASK).toBe(DIRTY);
     });
   });
 

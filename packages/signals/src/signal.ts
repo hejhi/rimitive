@@ -85,7 +85,9 @@ export function createSignalFactory(deps: SignalDeps): SignalFactory {
       // Early exit if no subscribers
       if (!subs) return;
 
-      // Mark dirty and propagate
+      // Mark signal as DIRTY before propagating
+      // graph-traversal checks producer's DIRTY bit to mark consumers as DIRTY
+      // This allows consumers to skip pullUpdates on read
       node.status = SIGNAL_DIRTY;
       propagate(subs);
     }
