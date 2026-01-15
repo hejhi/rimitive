@@ -74,41 +74,136 @@ function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
 
 const medalColors = ['#D4AF37', '#A8A8A8', '#CD7F32']; // gold, silver, bronze
 const medalEmojis = ['🥇', '🥈', '🥉'];
+const tieColor = '#6B9F8B'; // muted teal for ties
+const EQUIVALENCE_THRESHOLD = 0.05; // 5% margin - within this is considered equivalent (0.95x to 1.05x)
 
-// Get medal color for a framework at a given row index
-function getMedalColor(
+type RankInfo = {
+  color: string;
+  isTie: boolean;
+};
+
+// Get ranking info for a framework at a given row index
+// Medal assignment rules:
+// 1. Sort all frameworks by time (fastest first)
+// 2. Frameworks within 5% of Rimitive share the same medal position (tie color)
+// 3. Frameworks faster than 5% of Rimitive get better medals
+// 4. Frameworks slower than 5% of Rimitive get worse medals
+function getRankInfo(
   frameworks: string[],
   grouped: Map<string, Benchmark[]>,
   idx: number,
   fw: string
-): string {
+): RankInfo {
+  const rimitiveGroup = grouped.get('Rimitive') || [];
+  const rimitiveTime = rimitiveGroup[idx]?.time;
+
+  if (!rimitiveTime) {
+    return { color: medalColors[2]!, isTie: false };
+  }
+
   const timesWithFw = frameworks.map(f => {
     const fwGroup = grouped.get(f) || [];
-    return { fw: f, time: fwGroup[idx]?.time ?? Infinity };
+    const time = fwGroup[idx]?.time ?? Infinity;
+    const ratio = time / rimitiveTime;
+    return { fw: f, time, ratio };
   }).filter(t => t.time !== Infinity);
 
+  // Sort by time for ranking
   const sorted = [...timesWithFw].sort((a, b) => a.time - b.time);
-  const rank = sorted.findIndex(item => item.fw === fw);
-  return medalColors[rank] || medalColors[2];
+
+  // Separate into three groups based on ratio to Rimitive
+  const fasterThanBaseline = sorted.filter(s => s.ratio < 1 - EQUIVALENCE_THRESHOLD);
+  const tiedWithBaseline = sorted.filter(s => s.ratio >= 1 - EQUIVALENCE_THRESHOLD && s.ratio <= 1 + EQUIVALENCE_THRESHOLD);
+  const slowerThanBaseline = sorted.filter(s => s.ratio > 1 + EQUIVALENCE_THRESHOLD);
+
+  const current = timesWithFw.find(t => t.fw === fw);
+  if (!current) {
+    return { color: medalColors[2]!, isTie: false };
+  }
+
+  // Check if this framework is tied with baseline
+  const isTied = current.ratio >= 1 - EQUIVALENCE_THRESHOLD && current.ratio <= 1 + EQUIVALENCE_THRESHOLD;
+
+  // Calculate medal index based on group membership
+  let medalIdx = 0;
+
+  // Check if in faster group
+  const fasterIdx = fasterThanBaseline.findIndex(s => s.fw === fw);
+  if (fasterIdx !== -1) {
+    medalIdx = fasterIdx;
+    return { color: medalColors[Math.min(medalIdx, 2)]!, isTie: false };
+  }
+
+  // Check if in tied group
+  if (isTied) {
+    medalIdx = fasterThanBaseline.length;
+    // Use tie color if multiple frameworks are tied, otherwise gold
+    if (tiedWithBaseline.length > 1) {
+      return { color: tieColor, isTie: true };
+    }
+    return { color: medalColors[Math.min(medalIdx, 2)]!, isTie: false };
+  }
+
+  // Must be in slower group
+  const slowerIdx = slowerThanBaseline.findIndex(s => s.fw === fw);
+  medalIdx = fasterThanBaseline.length + (tiedWithBaseline.length > 0 ? 1 : 0) + slowerIdx;
+  return { color: medalColors[Math.min(medalIdx, 2)]!, isTie: false };
 }
 
 // Get overall medal emoji for a framework based on average performance
+// Medal assignment rules:
+// 1. Sort all frameworks by time (fastest first)
+// 2. Frameworks within 5% of Rimitive share the same medal position
+// 3. Frameworks faster than 5% of Rimitive get better medals
+// 4. Frameworks slower than 5% of Rimitive get worse medals
 function getOverallMedal(
   frameworks: string[],
   grouped: Map<string, Benchmark[]>
 ): Map<string, string> {
+  const rimitiveGroup = grouped.get('Rimitive') || [];
+  const rimitiveAvg = rimitiveGroup.length > 0
+    ? rimitiveGroup.reduce((sum, b) => sum + b.time, 0) / rimitiveGroup.length
+    : Infinity;
+
   const avgTimes = frameworks.map(fw => {
     const benchmarks = grouped.get(fw) || [];
     const times = benchmarks.map(b => b.time).filter(t => t != null);
     const avg = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : Infinity;
-    return { fw, avg };
+    const ratio = avg / rimitiveAvg;
+    return { fw, avg, ratio };
   });
 
   const sorted = [...avgTimes].sort((a, b) => a.avg - b.avg);
+
+  // Separate into three groups based on ratio to Rimitive
+  const fasterThanBaseline = sorted.filter(s => s.ratio < 1 - EQUIVALENCE_THRESHOLD);
+  const tiedWithBaseline = sorted.filter(s => s.ratio >= 1 - EQUIVALENCE_THRESHOLD && s.ratio <= 1 + EQUIVALENCE_THRESHOLD);
+  const slowerThanBaseline = sorted.filter(s => s.ratio > 1 + EQUIVALENCE_THRESHOLD);
+
   const result = new Map<string, string>();
-  sorted.forEach((item, i) => {
-    result.set(item.fw, medalEmojis[i] || '');
-  });
+  let medalIdx = 0;
+
+  // Faster frameworks each get their own medal (ranked by time)
+  for (const item of fasterThanBaseline) {
+    result.set(item.fw, medalEmojis[medalIdx] || '');
+    medalIdx++;
+  }
+
+  // Tied frameworks all share the same medal
+  const tiedMedal = medalEmojis[medalIdx] || '';
+  for (const item of tiedWithBaseline) {
+    result.set(item.fw, tiedMedal);
+  }
+  if (tiedWithBaseline.length > 0) {
+    medalIdx++;
+  }
+
+  // Slower frameworks each get their own medal (ranked by time)
+  for (const item of slowerThanBaseline) {
+    result.set(item.fw, medalEmojis[medalIdx] || '');
+    medalIdx++;
+  }
+
   return result;
 }
 ---
@@ -130,8 +225,9 @@ function getOverallMedal(
     <div class="note">
       <p>
         <span class="medal gold">🥇 Gold</span>,
-        <span class="medal silver">🥈 silver</span>, and
-        <span class="medal bronze">🥉 bronze</span> indicate 1st, 2nd, and 3rd place for each row.
+        <span class="medal silver">🥈 Silver</span>, and
+        <span class="medal bronze">🥉 Bronze</span> indicate 1st, 2nd, and 3rd place.
+        Results within 5% of each other are considered <span class="medal tie">equivalent (≈1x)</span> and share the ranking.
       </p>
       <p>
         These are micro-benchmarks measuring raw signal operations. In practice, all three libraries
@@ -176,14 +272,17 @@ function getOverallMedal(
                         const isRimitive = fw === 'Rimitive';
                         const rimTime = rimitiveGroup[idx]?.time || bench.time;
                         const ratio = bench.time / rimTime;
-                        const color = getMedalColor(frameworks, grouped, idx, fw);
+                        const { color, isTie } = getRankInfo(frameworks, grouped, idx, fw);
+
+                        // Format ratio: show ≈1x for ties, actual ratio otherwise
+                        const ratioText = isTie ? '≈1x' : `${ratio.toFixed(2)}x`;
 
                         return (
                           <td style={`color: ${color}`}>
                             {formatTime(bench.time)}
                             {!isRimitive && (
-                              <span class="ratio">
-                                ({ratio.toFixed(2)}x)
+                              <span class={`ratio ${isTie ? 'tie' : ''}`}>
+                                ({ratioText})
                               </span>
                             )}
                           </td>
@@ -275,6 +374,10 @@ function getOverallMedal(
     color: #CD7F32;
   }
 
+  .medal.tie {
+    color: #6B9F8B;
+  }
+
   .suite {
     margin-bottom: 2rem;
   }
@@ -313,6 +416,11 @@ function getOverallMedal(
     font-size: 0.8em;
     opacity: 0.7;
     margin-left: 0.5rem;
+  }
+
+  .ratio.tie {
+    opacity: 0.9;
+    font-weight: 500;
   }
 
   tr:hover {
