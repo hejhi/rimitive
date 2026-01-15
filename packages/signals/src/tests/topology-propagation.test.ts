@@ -115,3 +115,61 @@ describe('Computed Propagation', () => {
     expect(d()).toBe(true);
   });
 });
+
+describe('Re-entrance', () => {
+  beforeEach(() => {
+    resetGlobalState();
+  });
+
+  it('should handle re-entrant signal writes during computed evaluation', () => {
+    const a = signal(0);
+    const b = signal(0);
+    const c = computed(() => {
+      // Re-entrant write: reading a triggers a write to b
+      if (a() > 0 && b() === 0) b(1);
+      return a() + b();
+    });
+
+    expect(c()).toBe(0);
+    a(1);
+    expect(c()).toBe(2); // Should see both a=1 and b=1
+  });
+
+  it('should handle re-entrant writes with multiple computeds', () => {
+    const trigger = signal(0);
+    const sideEffect = signal('initial');
+
+    const reader = computed(() => sideEffect());
+    const writer = computed(() => {
+      const t = trigger();
+      if (t > 0) sideEffect('updated');
+      return t;
+    });
+
+    // Establish dependencies
+    expect(reader()).toBe('initial');
+    expect(writer()).toBe(0);
+
+    // Trigger re-entrant write
+    trigger(1);
+    expect(writer()).toBe(1);
+    expect(reader()).toBe('updated');
+  });
+
+  it('should handle cascading re-entrant writes', () => {
+    const a = signal(0);
+    const b = signal(0);
+    const c = signal(0);
+
+    const comp = computed(() => {
+      const aVal = a();
+      if (aVal === 1 && b() === 0) b(1);
+      if (b() === 1 && c() === 0) c(1);
+      return aVal + b() + c();
+    });
+
+    expect(comp()).toBe(0);
+    a(1);
+    expect(comp()).toBe(3); // a=1, b=1, c=1
+  });
+});
