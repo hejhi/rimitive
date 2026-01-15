@@ -116,7 +116,7 @@
   },
   "devDependencies": {
     "@rimitive/signals": "workspace:*",
-    "@types/node": "25.0.2",
+    "@types/node": "25.0.6",
     "esbuild": "0.27.1",
     "happy-dom": "20.0.11",
     "rimraf": "6.1.2",
