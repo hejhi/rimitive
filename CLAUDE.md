@@ -197,34 +197,21 @@ Follow conventional commits: `fix:`, `feat:`, `docs:`, `chore:`, `test:`
 
 ## Release Workflow
 
-Packages are published to GitHub Packages (`npm.pkg.github.com`) as private packages.
+Packages are published to npmjs.org as public packages. Releases are automated via GitHub Actions when changesets are merged.
 
 ```bash
 # 1. Create a changeset (describe what changed)
 pnpm changeset
 
-# 2. Apply version bumps
-pnpm run version
-
-# 3. Build and publish
-pnpm release
-
-# 4. Commit and push
+# 2. Commit and push - CI will create a release PR
 git add .
-git commit -m "chore: release vX.X.X"
-git push && git push --tags
+git commit -m "chore: add changeset"
+git push
+
+# 3. Merge the release PR - CI will publish to npm
 ```
 
-### Consuming packages
-
-Add to `~/.npmrc` (use a read-only token with `read:packages` scope):
-
-```
-@rimitive:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=ghp_YOUR_READ_ONLY_TOKEN
-```
-
-Then install normally: `pnpm add @rimitive/signals`
+Install packages normally: `pnpm add @rimitive/signals`
 
 ## Communication Principles
 
