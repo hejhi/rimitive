@@ -55,6 +55,10 @@ export default defineConfig({
           items: [],
         },
         {
+          label: 'Benchmarks',
+          slug: 'benchmarks',
+        },
+        {
           label: 'API Reference',
           collapsed: true,
           autogenerate: { directory: 'api' },

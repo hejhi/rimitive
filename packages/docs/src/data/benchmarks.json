@@ -1,0 +1,13 @@
+{
+  "timestamp": "",
+  "commit": "",
+  "system": {
+    "node": "",
+    "platform": "",
+    "arch": "",
+    "cpus": 0,
+    "memory_gb": 0,
+    "cpu_model": ""
+  },
+  "suites": []
+}

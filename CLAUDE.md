@@ -197,21 +197,30 @@ Follow conventional commits: `fix:`, `feat:`, `docs:`, `chore:`, `test:`
 
 ## Release Workflow
 
-Packages are published to npmjs.org as public packages. Releases are automated via GitHub Actions when changesets are merged.
+Packages are published to npmjs.org as public packages. Releases are triggered manually or via version tags.
 
 ```bash
-# 1. Create a changeset (describe what changed)
-pnpm changeset
+# Option 1: Manual trigger
+# Go to GitHub Actions → Release → Run workflow
 
-# 2. Commit and push - CI will create a release PR
-git add .
-git commit -m "chore: add changeset"
-git push
-
-# 3. Merge the release PR - CI will publish to npm
+# Option 2: Tag-based release
+git tag v0.1.2
+git push --tags
 ```
 
-Install packages normally: `pnpm add @rimitive/signals`
+Both methods run the same workflow which uses changesets to version and publish packages.
+
+### Creating a Changeset
+
+Before releasing, create changesets for your changes:
+
+```bash
+pnpm changeset              # Interactive changeset creation
+git add .changeset/
+git commit -m "chore: add changeset"
+```
+
+Install packages: `pnpm add @rimitive/signals`
 
 ## Communication Principles
 

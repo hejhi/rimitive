@@ -1,0 +1,32 @@
+---
+title: Benchmarks
+description: Performance benchmarks comparing Rimitive signals to other reactive libraries.
+---
+
+import Benchmarks from '../../components/Benchmarks.astro';
+
+Performance is a core focus of Rimitive. We regularly benchmark against other popular reactive libraries to ensure competitive performance.
+
+## Signal Operations
+
+These benchmarks measure core signal operations like reading, writing, and propagating changes through dependency graphs.
+
+<Benchmarks />
+
+## Methodology
+
+- Benchmarks run using [mitata](https://github.com/evanwashere/mitata) with garbage collection enabled
+- Each benchmark runs multiple iterations to ensure statistical significance
+- Results show median time per operation (lower is better)
+- Ratios compare against Rimitive (1.00x = same speed)
+
+## Running Locally
+
+To run benchmarks on your own machine:
+
+```bash
+cd packages/benchmarks
+pnpm bench              # Run all benchmarks
+pnpm bench diamond      # Run specific benchmark
+pnpm bench --docs       # Run and update docs data
+```

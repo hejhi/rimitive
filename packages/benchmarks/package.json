@@ -9,6 +9,7 @@
   "scripts": {
     "build": "pnpm --filter @rimitive/signals build",
     "bench": "tsx --expose-gc src/runner.ts",
+    "bench:docs": "tsx --expose-gc src/runner.ts --docs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"

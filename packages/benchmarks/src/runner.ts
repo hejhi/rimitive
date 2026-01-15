@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Production benchmark runner with chunked JSON output
+ * Production benchmark runner with JSON output for docs integration
  */
 
 import { spawn, execSync } from 'child_process';
@@ -15,6 +15,22 @@ type BenchmarkResult = {
   duration_ms: number;
   formattedOutput?: string; // Formatted output from benchmark
   error?: string;
+  jsonData?: MitataBenchmark[]; // Parsed benchmark data
+};
+
+type MitataBenchmark = {
+  name: string;
+  group: string | null;
+  time: number;
+  margin: number;
+  samples: number;
+  min: number;
+  max: number;
+  p50: number;
+  p75: number;
+  p99: number;
+  p999: number;
+  args?: Record<string, unknown>;
 };
 
 type SystemInfo = {
@@ -23,6 +39,17 @@ type SystemInfo = {
   arch: string;
   cpus: number;
   memory_gb: number;
+  cpu_model: string;
+};
+
+type DocsJsonOutput = {
+  timestamp: string;
+  commit: string;
+  system: SystemInfo;
+  suites: Array<{
+    name: string;
+    benchmarks: MitataBenchmark[];
+  }>;
 };
 
 class BenchmarkRunner {
@@ -31,11 +58,15 @@ class BenchmarkRunner {
   private readonly timeout: number;
   private readonly commitHash: string;
   private readonly timestamp: string;
+  private readonly outputDocs: boolean;
+  private readonly docsDataDir: string;
+  private readonly tempJsonDir: string;
 
   constructor(
     suitesDir: string = './src/suites/rimitive',
     outputDir: string = './dist',
-    timeout: number = 300000 // 5 minutes
+    timeout: number = 300000, // 5 minutes
+    outputDocs: boolean = false
   ) {
     this.suitesDir = path.resolve(suitesDir);
     this.outputDir = path.resolve(outputDir);
@@ -45,6 +76,9 @@ class BenchmarkRunner {
       .toISOString()
       .replace(/[:.]/g, '-')
       .slice(0, -5); // Remove milliseconds and Z
+    this.outputDocs = outputDocs;
+    this.docsDataDir = path.resolve('../docs/src/data');
+    this.tempJsonDir = path.resolve('./dist/json-temp');
   }
 
   private getGitHash(): string {
@@ -59,8 +93,12 @@ class BenchmarkRunner {
   }
 
   async run(filters?: string[]): Promise<void> {
-    // Ensure output directory exists
+    // Ensure output directories exist
     await fs.mkdir(this.outputDir, { recursive: true });
+    if (this.outputDocs) {
+      await fs.mkdir(this.tempJsonDir, { recursive: true });
+      await fs.mkdir(this.docsDataDir, { recursive: true });
+    }
 
     // Find all benchmark files
     const files = await this.findBenchmarkFiles(filters);
@@ -80,6 +118,11 @@ class BenchmarkRunner {
 
     // Save summary
     await this.saveSummary(results);
+
+    // Save docs JSON if requested
+    if (this.outputDocs) {
+      await this.saveDocsJson(results);
+    }
   }
 
   private async findBenchmarkFiles(filters?: string[]): Promise<string[]> {
@@ -107,15 +150,33 @@ class BenchmarkRunner {
   private async runBenchmark(filePath: string): Promise<BenchmarkResult> {
     const name = path.basename(filePath, '.bench.ts');
     const startTime = Date.now();
+    const jsonOutputPath = this.outputDocs
+      ? path.join(this.tempJsonDir, `${name}.json`)
+      : undefined;
 
     console.log(`Running: ${name}`);
 
     try {
-      const formattedOutput = await this.executeBenchmark(filePath);
+      const formattedOutput = await this.executeBenchmark(
+        filePath,
+        jsonOutputPath
+      );
       const duration_ms = Date.now() - startTime;
 
       if (!formattedOutput.trim()) {
         throw new Error('No output received');
+      }
+
+      // Read JSON data if it was generated
+      let jsonData: MitataBenchmark[] | undefined;
+      if (jsonOutputPath) {
+        try {
+          const jsonContent = await fs.readFile(jsonOutputPath, 'utf-8');
+          const parsed = JSON.parse(jsonContent);
+          jsonData = parsed.benchmarks || parsed;
+        } catch {
+          // JSON parsing failed, continue without it
+        }
       }
 
       console.log(`  ✓ Completed in ${(duration_ms / 1000).toFixed(2)}s\n`);
@@ -125,6 +186,7 @@ class BenchmarkRunner {
         timestamp: new Date().toISOString(),
         duration_ms,
         formattedOutput,
+        jsonData,
       };
     } catch (error: unknown) {
       const duration_ms = Date.now() - startTime;
@@ -139,7 +201,10 @@ class BenchmarkRunner {
     }
   }
 
-  private executeBenchmark(filePath: string): Promise<string> {
+  private executeBenchmark(
+    filePath: string,
+    jsonOutputPath?: string
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       // Run benchmark and capture formatted output
       console.log(''); // Add spacing
@@ -149,6 +214,7 @@ class BenchmarkRunner {
         env: {
           ...process.env,
           NODE_ENV: 'production',
+          ...(jsonOutputPath ? { BENCH_JSON_OUTPUT: jsonOutputPath } : {}),
         },
         timeout: this.timeout,
       });
@@ -289,24 +355,59 @@ ${results
   }
 
   private getSystemInfo(): SystemInfo {
+    const cpuInfo = os.cpus()[0];
     return {
       node: process.version,
       platform: process.platform,
       arch: process.arch,
       cpus: os.cpus().length,
       memory_gb: Math.round(os.totalmem() / (1024 * 1024 * 1024)),
+      cpu_model: cpuInfo?.model || 'Unknown',
     };
+  }
+
+  private async saveDocsJson(results: BenchmarkResult[]): Promise<void> {
+    const system = this.getSystemInfo();
+
+    const docsOutput: DocsJsonOutput = {
+      timestamp: new Date().toISOString(),
+      commit: this.commitHash,
+      system,
+      suites: results
+        .filter((r) => !r.error && r.jsonData)
+        .map((r) => ({
+          name: r.name,
+          benchmarks: r.jsonData!,
+        })),
+    };
+
+    const docsJsonPath = path.join(this.docsDataDir, 'benchmarks.json');
+    await fs.writeFile(docsJsonPath, JSON.stringify(docsOutput, null, 2));
+
+    console.log(`\nDocs JSON saved to: ${docsJsonPath}`);
+
+    // Clean up temp JSON files
+    try {
+      await fs.rm(this.tempJsonDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
   }
 }
 
 // Run if executed directly
 async function main() {
   // Parse command line arguments
-  const { positionals } = parseArgs({
+  const { positionals, values } = parseArgs({
     options: {
       'skip-build': {
         type: 'boolean',
         default: false,
+      },
+      docs: {
+        type: 'boolean',
+        default: false,
+        short: 'd',
       },
     },
     allowPositionals: true,
@@ -314,7 +415,7 @@ async function main() {
   });
 
   // Build if not skipping
-  // For now, igore this. Always build for safety.
+  // For now, ignore this. Always build for safety.
   // if (!values['skip-build']) {
   console.log('Building packages...');
   try {
@@ -329,7 +430,12 @@ async function main() {
   }
   // }
 
-  const runner = new BenchmarkRunner();
+  const runner = new BenchmarkRunner(
+    './src/suites/rimitive',
+    './dist',
+    300000,
+    values.docs
+  );
   // Use positionals as filters (benchmark names)
   await runner.run(positionals.length > 0 ? positionals : undefined);
 }
