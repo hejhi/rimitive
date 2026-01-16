@@ -2,6 +2,7 @@ import { devtoolsState } from './devtoolsCtx';
 import type { LogEntry, SourceLocation } from './types';
 import { RimitiveEvent } from './messageHandler';
 import { inferCategory } from './eventTypeManager';
+import { resolveSourceLocation } from '../utils/sourceMapResolver';
 
 // Track execution depth for indentation
 let executionDepth = 0;
@@ -27,8 +28,25 @@ export function processLogEntry(event: RimitiveEvent) {
   // Track this event
   recentEvents.push({ eventType: event.type, data: event.data, timestamp });
 
-  // Create log entry
+  // Create log entry and resolve source map asynchronously
+  void createLogEntryAsync(event, timestamp);
+}
+
+/**
+ * Create log entry with resolved source location
+ */
+async function createLogEntryAsync(event: RimitiveEvent, timestamp: number) {
   const entry = createLogEntry(event, timestamp);
+
+  // Resolve source map for better line numbers in display
+  if (entry.sourceLocation) {
+    const resolved = await resolveSourceLocation(entry.sourceLocation);
+    entry.sourceLocation = resolved;
+    // Update nodeName to show resolved location
+    if (!entry.nodeName || entry.nodeName === 'anonymous') {
+      entry.nodeName = resolved.display;
+    }
+  }
 
   // Add to log entries
   addLogEntry(entry);
@@ -62,14 +80,11 @@ function extractSourceLocation(data: unknown): SourceLocation | undefined {
   if (!data || typeof data !== 'object') return undefined;
 
   const obj = data as Record<string, unknown>;
-  console.log('[DevTools] extractSourceLocation - data keys:', Object.keys(obj));
   const loc = obj.sourceLocation;
 
   if (!loc || typeof loc !== 'object') {
-    console.log('[DevTools] extractSourceLocation - no sourceLocation found');
     return undefined;
   }
-  console.log('[DevTools] extractSourceLocation - found:', loc);
 
   const location = loc as Record<string, unknown>;
   if (

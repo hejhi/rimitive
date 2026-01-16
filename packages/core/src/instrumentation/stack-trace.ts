@@ -53,7 +53,9 @@ export function getCallerLocationFull(skipFrames = 0): SourceLocation | undefine
 
     // Parse the location from the stack frame
     const location = parseStackFrameFull(line);
-    if (location) return location;
+    if (location) {
+      return location;
+    }
   }
 
   return undefined;

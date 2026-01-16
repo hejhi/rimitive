@@ -53,14 +53,13 @@ function LogEntryComponent({ entry }: { entry: LogEntry }) {
  * Open source file in Chrome DevTools Sources panel
  */
 function openInEditor(location: SourceLocation) {
-  const { filePath, line, column } = location;
-
+  // Source location is already resolved when log entry was created
   // Use Chrome DevTools API to open the resource in Sources panel
-  // This works with URLs from the dev server (http://localhost:...)
+  // openResource uses 0-based line numbers, source maps use 1-based
   chrome.devtools.panels.openResource(
-    filePath,
-    line - 1, // Chrome uses 0-based line numbers
-    column ?? 0,
+    location.filePath,
+    location.line - 1,
+    location.column ?? 0,
     () => {
       // Callback when resource is opened (or fails silently)
     }
@@ -108,11 +107,6 @@ function renderLogEntry(entry: LogEntry): React.ReactNode {
   const category = entry.category;
   const nodeId = entry.nodeId;
   const sourceLocation = entry.sourceLocation;
-
-  // Debug: log source location
-  if (entry.sourceLocation) {
-    console.log('[DevTools] Entry has sourceLocation:', entry.sourceLocation);
-  }
 
   // Get dynamic colors for this category
   const colors = getCategoryColors(category);

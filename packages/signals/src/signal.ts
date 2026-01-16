@@ -122,7 +122,7 @@ export const SignalModule = defineModule({
     instr: InstrumentationContext
   ): SignalFactory {
     return <T>(initialValue: T): SignalFunction<T> => {
-      const location = getCallerLocationFull();
+      const location = getCallerLocationFull(1); // Skip the instrument wrapper
       const sig = impl(initialValue);
       const name = location?.display ?? `Signal<${typeof initialValue}>`;
       const { id } = instr.register(sig, 'signal', name);
