@@ -1,4 +1,4 @@
-import { defineModule } from '@rimitive/core';
+import { defineModule, type InstrumentationContext } from '@rimitive/core';
 import type { ScheduledNode } from './types';
 import { GraphEdgesModule } from './deps/graph-edges';
 import { SchedulerModule } from './deps/scheduler';
@@ -133,5 +133,33 @@ export const EffectModule = defineModule({
       track: graphEdges.track,
       dispose: scheduler.dispose,
     });
+  },
+  instrument(
+    impl: EffectFactory,
+    instr: InstrumentationContext
+  ): EffectFactory {
+    return (run: () => void | (() => void)): (() => void) => {
+      const { id } = instr.register(run, 'effect', 'Effect');
+
+      const wrappedRun = () => {
+        instr.emit({
+          type: 'effect:run',
+          timestamp: Date.now(),
+          data: { effectId: id },
+        });
+        return run();
+      };
+
+      const dispose = impl(wrappedRun);
+
+      return () => {
+        instr.emit({
+          type: 'effect:dispose',
+          timestamp: Date.now(),
+          data: { effectId: id },
+        });
+        dispose();
+      };
+    };
   },
 });

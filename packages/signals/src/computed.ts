@@ -1,6 +1,6 @@
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
-import { defineModule } from '@rimitive/core';
+import { defineModule, type InstrumentationContext } from '@rimitive/core';
 import {
   GraphEdgesModule,
   type GraphEdges,
@@ -213,4 +213,35 @@ export const ComputedModule = defineModule({
       track: graphEdges.track,
       shallowPropagate: pullPropagator.shallowPropagate,
     }),
+  instrument(
+    impl: ComputedFactory,
+    instr: InstrumentationContext
+  ): ComputedFactory {
+    return <T>(compute: () => T): ComputedFunction<T> => {
+      const comp = impl(compute);
+      const { id } = instr.register(comp, 'computed', 'Computed');
+
+      function instrumentedComputed(): T {
+        instr.emit({
+          type: 'computed:read',
+          timestamp: Date.now(),
+          data: { computedId: id },
+        });
+
+        const value = comp();
+
+        instr.emit({
+          type: 'computed:value',
+          timestamp: Date.now(),
+          data: { computedId: id, value },
+        });
+
+        return value;
+      }
+
+      instrumentedComputed.peek = () => comp.peek();
+
+      return instrumentedComputed as ComputedFunction<T>;
+    };
+  },
 });

@@ -1,4 +1,4 @@
-import { Code2, MoreVertical, Download, Upload } from 'lucide-react';
+import { MoreVertical, Download, Upload } from 'lucide-react';
 import { Badge } from '../../../src/components/ui/badge';
 import {
   DropdownMenu,
@@ -19,7 +19,8 @@ export function Header({ contextCount, onExport, onImport }: HeaderProps) {
   return (
     <header className="border-b flex items-center justify-between px-4 py-2">
       <div className="flex items-center gap-2">
-        <Code2 className="w-5 h-5" />
+        <img src="/logo-dark.svg" alt="Rimitive" className="h-4 dark:block hidden" />
+        <img src="/logo.svg" alt="Rimitive" className="h-4 dark:hidden" />
         <h1 className="font-semibold">Rimitive DevTools</h1>
         <Badge variant="secondary" className="text-xs">
           {contextCount} context{contextCount !== 1 ? 's' : ''}

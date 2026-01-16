@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="assets/rimitive-logo.png" alt="Rimitive" width="200" />
+</p>
+
 # Rimitive
 
-_"Primitive" was taken so I dropped the "P", naming is hard, leave me be_
+_"Primitive" was taken so I dropped the "P", naming is hard_
 
 Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, without migrations, without "now we need a real framework."
 

@@ -121,10 +121,33 @@ export const SignalModule = defineModule({
     impl: SignalFactory,
     instr: InstrumentationContext
   ): SignalFactory {
-    return <T>(value: T): SignalFunction<T> => {
-      const sig = impl(value);
-      instr.register(sig, 'signal');
-      return sig;
+    return <T>(initialValue: T): SignalFunction<T> => {
+      const sig = impl(initialValue);
+      const { id } = instr.register(sig, 'signal', `Signal<${typeof initialValue}>`);
+
+      function instrumentedSignal(value?: T): T | void {
+        if (!arguments.length) {
+          const currentValue = sig();
+          instr.emit({
+            type: 'signal:read',
+            timestamp: Date.now(),
+            data: { signalId: id, value: currentValue },
+          });
+          return currentValue;
+        }
+
+        const oldValue = sig.peek();
+        instr.emit({
+          type: 'signal:write',
+          timestamp: Date.now(),
+          data: { signalId: id, oldValue, newValue: value },
+        });
+        sig(value!);
+      }
+
+      instrumentedSignal.peek = () => sig.peek();
+
+      return instrumentedSignal as SignalFunction<T>;
     };
   },
 });

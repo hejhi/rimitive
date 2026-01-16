@@ -92,7 +92,7 @@ export const TodoList = (
       map(
         filteredTodos,
         (todo) => todo.id,
-        (todoSignal) => TodoItem(todoSignal(), toggleTodo)
+        (todoSignal) => TodoItem(todoSignal, toggleTodo)
       )
     ),
 

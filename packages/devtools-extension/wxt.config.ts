@@ -8,6 +8,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   srcDir: '.',
+  outDir: 'dist',
   alias: {
     '@rimitive/signals-store': resolve(
       __dirname,

@@ -8,6 +8,12 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Rimitive',
+      logo: {
+        light: './public/logo.svg',
+        dark: './public/logo-dark.svg',
+        alt: 'Rimitive',
+      },
+      favicon: '/favicon.svg',
       sidebar: [
         {
           label: 'Start Here',

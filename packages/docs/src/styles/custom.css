@@ -1,5 +1,15 @@
 /* Custom styles for Rimitive documentation */
 
+.site-title {
+  gap: 1rem;
+}
+
+/* Logo sizing */
+.site-title img {
+  height: 1.1rem;
+  width: auto;
+}
+
 /* Improve code block readability */
 .expressive-code {
   margin: 1.5rem 0;
