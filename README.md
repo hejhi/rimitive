@@ -4,69 +4,59 @@ _"Primitive" was taken so I dropped the "P", naming is hard, leave me be_
 
 ## The Core Idea
 
-(P)rimitive is about cherry-picking and composing reactive primitives as you need them:
+(P)rimitive allows you to cherry-pick and compose only the reactive primitives and infrastructure you need, when you need it, and roll your own too. For instance, maybe you only need signals and computeds in your lil vanilla ts app...you shouldn't need a whole framework for that! Just a signal and a computed:
 
 ```typescript
 import { compose } from '@rimitive/core';
 import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
 
 const svc = compose(SignalModule, ComputedModule);
+const { signal, computed } = svc;
 
-svc.signal(0);         // access the primitives
-svc.computed(() => …); // through the composed service
+signal(0);
+computed(() => …);
 ```
 
-- A **module** (SignalModule, ComputedModule, etc) defines a primitive and its dependencies
-- **Composition** resolves the dependency graph and creates a service
-- Create as many or as few services as you'd like, with completely independent reactive graphs
+No build, compilation, global state, or transpiling required; the entire reactive service is encapsulated in your `svc`, no global leakage.
 
-`compose()` is the backbone of Rimitive—a type-safe way to wire primitives together.
+A core difference between rimitive and most reactive frameworks is that:
 
-A difference between rimitive and most reactive frameworks is that all reactivity is encapsulted in primitives. Therefore, there is:
+1. ...rimitive isn't a framework, it's a library
+2. you compose only what you need
+3. all reactivity is encapsulted inside primitives. There is:
+   - no over-arching reactive component framework
+   - no VDOM
+   - no concept of framework-level (or even component-level) reconciliation
+   - no concept of component re-renders
 
-- no over-arching reactive component framework
-- no VDOM
-- no concept of framework-level (or even component-level) reconciliation
-- no concept of component re-renders
-
-In fact, "components" in rimitive are just _patterns_. I recommend some component patterns you can try out to see what works best for your use cases, but you are free to improvise your own! 🎶
+Components in rimitive are just _patterns_. There are some recommended component patterns you can try out to see what works best for your use cases, but you are free to improvise your own! 🎶
 
 ---
 
-## Primitive Modules and Services
+## Modules and Services
 
-Here is the simplest, most minimal usage of rimitive:
+Here is the simplest, most minimal setup of rimitive:
 
 ```ts
 import { compose } from '@rimitive/core';
 import { SignalModule } from '@rimitive/signals/extend';
 
-const { signal } = compose(SignalModule);
-const count = signal(0);
-
-count(); // read: 0
-count(1); // write: 1
-count(); // read: 1
+const svc = compose(SignalModule);
 ```
 
-Breaking this down:
+Everything in rimitive is built from the SignalModule. Breaking this down, `compose(SignalModule)` returns a reactive service with only the primitives you provided.
 
-1. `compose(SignalModule)`: create a reactive service with only the primitives you want (just literally signals, in this case)
-2. use whatever primitives you want from the service returned
-3. that's it! Create as many services as you need, or just a single one for your entire app
+That's it! Create services with only the primitives you need to use.
 
-The foundation of rimitive is:
-
-- **Primitives** are exported as "modules" (like `SignalModule`)
-- **Services** are compositions of these modules
-
-Rimitive also provides some higher-level libraries that work and wrap modules and services, like `router` and `ssr`.
+In addition to providing primitives, rimitive also provides higher-level tooling that work with and can help stitch together and orchestrate, like `router` and `ssr`. It's simple to make your own modules as well.
 
 ---
 
 ## Using rimitive Primitives
 
-Here's a slightly larger example, this time with view primitives too!
+Yes, rimitive primitives sounds ridiculous.
+
+Anyway, here's a slightly larger example, this time with view primitives (and a DOM adapter)!
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -83,12 +73,14 @@ const { signal, computed, el, mount } = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  createElModule(createDOMAdapter()), // Provide the adapter to a primitive
+  createElModule(createDOMAdapter()), // Provide the DOM adapter to the view primitive
   MountModule
 );
 ```
 
-Use the service in a component:
+> Note: Rimitive primitives are environment-agnostic, so some modules (like `createElModule`) take an adapter. rimitive provides a DOM adapter, SSR adapter (which uses linkedom under the hood) and a hydration adapter (for SSR).
+
+Now that you have a reactive service, you can use primitives from it however you'd like. For instance, you can create a reactive "component" by returning the `el` primitive from a function and providing the function to the `mount` primitive:
 
 ```typescript
 const App = () => {
@@ -103,11 +95,9 @@ const App = () => {
 document.body.appendChild(mount(App()).element!);
 ```
 
-Rimitive is renderer-agnostic, so some modules (like `createElModule`) take an adapter. Use ours our write your own. rimitive provides a DOM adapter, SSR adapter (which uses linkedom under the hood) and a hydration adapter (for SSR).
+The component itself doesn't re-render, and neither does `el`—the element structure is created **once**. Only reactive props and text children update via fine-grained effects that target exactly one DOM property or text node (for reactive DOM elements, you can use another primitive like `match` instead).
 
-Again, components don't "re-render". rimitive hates magic (but loves factories 🏭). Also, if you hate any/all of our out-of-the-box primitives, you can write your own damn custom modules❤️.
-
-And that's about all there is to using rimitive. The rest of rimitive is all about patterns (we document many) and primitives (explore our packages and documentation).
+That's about all there is to using rimitive! The rest of rimitive is all about choosing the primitives and patterns you want to use (explore other packages and documentation).
 
 ---
 
