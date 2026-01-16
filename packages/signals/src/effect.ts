@@ -145,14 +145,17 @@ export const EffectModule = defineModule({
 
       const sourceLocation: SourceLocation | undefined = location;
 
-      const wrappedRun = () => {
+      const wrappedRun = (() => {
         instr.emit({
           type: 'effect:run',
           timestamp: Date.now(),
           data: { effectId: id, name, sourceLocation },
         });
         return run();
-      };
+      }) as (() => void | (() => void)) & { __instrEffectId?: string };
+
+      // Tag wrappedRun so GraphEdgesModule can associate node with ID in track()
+      wrappedRun.__instrEffectId = id;
 
       const dispose = impl(wrappedRun);
 

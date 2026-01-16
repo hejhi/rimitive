@@ -1,6 +1,8 @@
 import { devtoolsState } from './devtoolsCtx';
 import { updateContextFromEvent } from './contextManager';
 import { processLogEntry } from './logProcessor';
+import { processGraphEvent } from './graphProcessor';
+import { clearGraph } from './graphState';
 
 export type DevToolsMessage = {
   type: string;
@@ -72,6 +74,9 @@ function handleTransaction(data: unknown) {
 
   // Process log entries
   processLogEntry(event);
+
+  // Process graph events
+  processGraphEvent(event);
 }
 
 function handleNavigation() {
@@ -80,4 +85,5 @@ function handleNavigation() {
   devtoolsState.contexts([]);
   devtoolsState.selectedContext(null);
   devtoolsState.logEntries([]);
+  clearGraph();
 }

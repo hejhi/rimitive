@@ -10,6 +10,7 @@ import {
   PullPropagatorModule,
   type PullPropagator,
 } from './deps/pull-propagator';
+import { getInstrState } from './instrumentation-state';
 
 /**
  * Computed function type - a callable that derives values from other reactives.
@@ -219,10 +220,14 @@ export const ComputedModule = defineModule({
   ): ComputedFactory {
     return <T>(compute: () => T): ComputedFunction<T> => {
       const location = getCallerLocationFull();
-      const comp = impl(compute);
       const name = location?.display ?? 'Computed';
-      const { id } = instr.register(comp, 'computed', name);
 
+      // Tag compute function so GraphEdgesModule can associate node with ID in track()
+      const taggedCompute = compute as (() => T) & { __instrComputedId?: string };
+      const { id } = instr.register(taggedCompute, 'computed', name);
+      taggedCompute.__instrComputedId = id;
+
+      const comp = impl(taggedCompute);
       const sourceLocation: SourceLocation | undefined = location;
 
       function instrumentedComputed(): T {
@@ -232,7 +237,11 @@ export const ComputedModule = defineModule({
           data: { computedId: id, name, sourceLocation },
         });
 
+        // Push ID so GraphEdgesModule can associate node with ID when this computed is read as a producer
+        const instrState = getInstrState(instr);
+        instrState.pendingProducerIdStack.push(id);
         const value = comp();
+        instrState.pendingProducerIdStack.pop();
 
         instr.emit({
           type: 'computed:value',

@@ -6,7 +6,8 @@ import type {
   Dependency,
 } from '../types';
 import { CONSTANTS } from '../constants';
-import { defineModule } from '@rimitive/core';
+import { defineModule, type InstrumentationContext } from '@rimitive/core';
+import { getInstrState } from '../instrumentation-state';
 
 const { TYPE_MASK, CLEAN } = CONSTANTS;
 
@@ -174,6 +175,12 @@ export function createGraphEdges(): GraphEdges {
   };
 }
 
+// Type for tagged functions from signal/computed/effect instrument hooks
+type TaggedFn = {
+  __instrComputedId?: string;
+  __instrEffectId?: string;
+};
+
 /**
  * GraphEdges module - provides the core reactive graph infrastructure.
  * No dependencies - this is a foundational module.
@@ -181,4 +188,95 @@ export function createGraphEdges(): GraphEdges {
 export const GraphEdgesModule = defineModule({
   name: 'graphEdges',
   create: createGraphEdges,
+  instrument(impl: GraphEdges, instr: InstrumentationContext): GraphEdges {
+    const { trackDependency: origTrackDep, track: origTrack } = impl;
+    const instrState = getInstrState(instr);
+
+    // Wrap trackDependency to capture producer IDs and emit events
+    const trackDependency = (
+      producer: ProducerNode,
+      consumerNode: ConsumerNode
+    ): void => {
+      // Capture producer ID from pending stack (set by signal/computed instrument hooks)
+      const pendingId = instrState.pendingProducerIdStack.at(-1);
+      if (pendingId && !instrState.nodeIds.has(producer)) {
+        instrState.nodeIds.set(producer, pendingId);
+      }
+
+      // Check if this will create a new dependency
+      const tailBefore = consumerNode.dependencyTail;
+      const depsBefore = consumerNode.dependencies;
+
+      origTrackDep(producer, consumerNode);
+
+      // Detect if new dependency was created
+      const isNewDep =
+        consumerNode.dependencyTail !== tailBefore ||
+        (!tailBefore && consumerNode.dependencies !== depsBefore);
+
+      if (isNewDep) {
+        const producerId = instrState.nodeIds.get(producer);
+        const consumerId = instrState.nodeIds.get(consumerNode);
+        if (producerId && consumerId) {
+          instr.emit({
+            type: 'dependency:tracked',
+            timestamp: Date.now(),
+            data: { producerId, consumerId },
+          });
+        }
+      }
+    };
+
+    // Wrap track to capture consumer IDs and emit prune events
+    const track = <T>(node: ConsumerNode, fn: () => T): T => {
+      // Capture consumer ID from tagged function (set by computed/effect instrument hooks)
+      const tagged = fn as TaggedFn;
+      const consumerId = tagged.__instrComputedId ?? tagged.__instrEffectId;
+      if (consumerId && !instrState.nodeIds.has(node)) {
+        instrState.nodeIds.set(node, consumerId);
+      }
+
+      // Collect producer IDs before tracking
+      const depsBefore: string[] = [];
+      let dep = node.dependencies;
+      while (dep) {
+        const pId = instrState.nodeIds.get(dep.producer);
+        if (pId) depsBefore.push(pId);
+        dep = dep.nextDependency;
+      }
+
+      const result = origTrack(node, fn);
+
+      // Collect producer IDs after tracking
+      const depsAfter = new Set<string>();
+      dep = node.dependencies;
+      while (dep) {
+        const pId = instrState.nodeIds.get(dep.producer);
+        if (pId) depsAfter.add(pId);
+        dep = dep.nextDependency;
+      }
+
+      // Emit prune events for removed dependencies
+      const cId = instrState.nodeIds.get(node);
+      if (cId) {
+        for (const pId of depsBefore) {
+          if (!depsAfter.has(pId)) {
+            instr.emit({
+              type: 'dependency:pruned',
+              timestamp: Date.now(),
+              data: { producerId: pId, consumerId: cId },
+            });
+          }
+        }
+      }
+
+      return result;
+    };
+
+    return {
+      ...impl,
+      trackDependency,
+      track,
+    };
+  },
 });
