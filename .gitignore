@@ -54,3 +54,4 @@ public/
 **/.claude/settings.local.json
 reference-packages/**/*
 packages/signals/.claude/tdd-guard/data/test.json
+.claude/cc-bookmarks/
