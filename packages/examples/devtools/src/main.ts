@@ -19,7 +19,7 @@ const App = () => {
 
   // User effect - updates document title when counter changes
   effect(() => {
-    document.title = `Count: ${counter.count()}`;
+    document.title = `Rimitive Demo (${counter.count()})`;
   });
   const todoList = useTodoList([
     { id: 1, text: 'Learn Rimitive', completed: false },
@@ -33,7 +33,7 @@ const App = () => {
 
   return el('div').props({ className: 'app' })(
     el('h1')('Rimitive DevTools Example'),
-    Counter(),
+    Counter(counter),
     TodoList(todoList, filter, filteredTodos, todoStats),
     BatchedUpdates({
       onBatchedUpdate: () => {

@@ -2,10 +2,15 @@
  * Counter View Component
  */
 import { el, computed } from '../service';
-import { useCounter } from '../behaviors/useCounter';
 
-export const Counter = (initialCount = 0) => {
-  const { count, doubled, isEven, set } = useCounter(initialCount);
+type CounterProps = {
+  count: () => number;
+  doubled: () => number;
+  isEven: () => boolean;
+  set: (value: number) => void;
+};
+
+export const Counter = ({ count, doubled, isEven, set }: CounterProps) => {
 
   return el('section').props({ className: 'counter-section' })(
     el('h2')('Counter Example'),
