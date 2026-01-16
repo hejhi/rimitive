@@ -18,10 +18,12 @@ type FilterBarProps = {
   filterType: string;
   searchValue: string;
   filteredNodeId: string | null;
+  hideInternal: boolean;
   onContextChange: (value: string | null) => void;
   onFilterTypeChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onClearNodeFilter: () => void;
+  onHideInternalChange: (value: boolean) => void;
 };
 
 export function FilterBar({
@@ -30,10 +32,12 @@ export function FilterBar({
   filterType,
   searchValue,
   filteredNodeId,
+  hideInternal,
   onContextChange,
   onFilterTypeChange,
   onSearchChange,
   onClearNodeFilter,
+  onHideInternalChange,
 }: FilterBarProps) {
   const eventTypes = useSubscribe(availableEventTypes);
 
@@ -98,6 +102,16 @@ export function FilterBar({
         value={searchValue}
         onChange={(e) => onSearchChange(e.target.value)}
       />
+
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={hideInternal}
+          onChange={(e) => onHideInternalChange(e.target.checked)}
+          className="rounded border-muted"
+        />
+        Hide internal
+      </label>
     </div>
   );
 }

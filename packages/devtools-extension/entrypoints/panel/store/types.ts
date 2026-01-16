@@ -21,6 +21,7 @@ export type LogEntry = {
   category: string; // Inferred from event type
   summary?: string; // Human-readable summary
   rawData?: unknown; // For TransactionDetail component
+  isInternal: boolean; // True if no user source location (framework-generated)
 };
 
 // Context info

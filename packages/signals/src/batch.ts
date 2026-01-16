@@ -80,7 +80,7 @@ export const BatchModule = defineModule({
   ): BatchFactory => {
     return <T>(fn: () => T): T => {
       const location = getCallerLocationFull(); // No skipFrames - function may be inlined
-      const name = location?.display ?? 'batch';
+      const name = location?.display ?? 'Batch';
       const batchId = crypto.randomUUID();
       const sourceLocation: SourceLocation | undefined = location;
 

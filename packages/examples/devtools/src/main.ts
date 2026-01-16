@@ -12,10 +12,15 @@ import { Counter } from './views/Counter';
 import { TodoList } from './views/TodoList';
 import { BatchedUpdates } from './views/BatchedUpdates';
 
-import { el, computed, batch, mount } from './service';
+import { el, computed, batch, effect, mount } from './service';
 
 const App = () => {
   const counter = useCounter();
+
+  // User effect - updates document title when counter changes
+  effect(() => {
+    document.title = `Count: ${counter.count()}`;
+  });
   const todoList = useTodoList([
     { id: 1, text: 'Learn Rimitive', completed: false },
     { id: 2, text: 'Build an app', completed: false },

@@ -38,7 +38,7 @@ function filterLogs(
     }
 
     // Hide internal events if requested
-    if (filter.hideInternal && log.data.internal === true) {
+    if (filter.hideInternal && log.isInternal) {
       return false;
     }
 

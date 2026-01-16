@@ -52,6 +52,7 @@ export function App() {
           filterType={filter.type}
           searchValue={filter.search}
           filteredNodeId={filter.nodeId}
+          hideInternal={filter.hideInternal}
           onContextChange={(value) => devtoolsState.selectedContext(value)}
           onFilterTypeChange={(value) =>
             devtoolsState.filter({
@@ -69,6 +70,12 @@ export function App() {
             devtoolsState.filter({
               ...devtoolsState.filter(),
               nodeId: null,
+            })
+          }
+          onHideInternalChange={(value) =>
+            devtoolsState.filter({
+              ...devtoolsState.filter(),
+              hideInternal: value,
             })
           }
         />

@@ -55,6 +55,7 @@ async function createLogEntryAsync(event: RimitiveEvent, timestamp: number) {
  */
 function createLogEntry(event: RimitiveEvent, timestamp: number): LogEntry {
   const level = calculateExecutionLevel(event);
+  const sourceLocation = extractSourceLocation(event.data);
 
   return {
     id: `log_${timestamp}_${Math.random()}`,
@@ -66,8 +67,9 @@ function createLogEntry(event: RimitiveEvent, timestamp: number): LogEntry {
     category: inferCategory(event.type),
     nodeId: extractNodeId(event.data),
     nodeName: extractNodeName(event.data),
-    sourceLocation: extractSourceLocation(event.data),
+    sourceLocation,
     summary: generateSummary(event),
+    isInternal: !sourceLocation, // No user source = framework-generated
   };
 }
 
@@ -196,6 +198,8 @@ function generateSummary(event: RimitiveEvent): string {
     'computedId',
     'effectId',
     'batchId',
+    'name',
+    'sourceLocation',
   ];
 
   const fields = Object.entries(data)
