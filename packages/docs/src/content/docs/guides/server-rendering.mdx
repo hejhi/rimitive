@@ -177,7 +177,7 @@ const server = createServer(async (req, res) => {
     <!DOCTYPE html>
     <html>
     <head>
-      <script>window.__LATTICE_DATA__ = ${JSON.stringify(loaderData)}</script>
+      <script>window.__RIMITIVE_DATA__ = ${JSON.stringify(loaderData)}</script>
     </head>
     <body>
       <div class="app">${html}</div>
@@ -212,7 +212,7 @@ import { App } from './App.js';
 const adapter = createClientAdapter(document.querySelector('.app')!);
 
 // Get loader data from SSR
-const loaderData = window.__LATTICE_DATA__;
+const loaderData = window.__RIMITIVE_DATA__;
 
 // Create service with hydrating adapter and loader data
 const service = createService(adapter, { loaderData });
@@ -349,7 +349,7 @@ const server = createServer(async (req, res) => {
 <html>
 <head>
   <title>My App</title>
-  <script>window.__LATTICE_DATA__=${JSON.stringify(loaderData)}</script>
+  <script>window.__RIMITIVE_DATA__=${JSON.stringify(loaderData)}</script>
 </head>
 <body>
   <div class="app">${html}</div>
@@ -376,7 +376,7 @@ import { App } from './App.js';
 
 const adapter = createClientAdapter(document.querySelector('.app')!);
 const service = createService(adapter, {
-  loaderData: window.__LATTICE_DATA__,
+  loaderData: window.__RIMITIVE_DATA__,
 });
 
 App(service).create(service);

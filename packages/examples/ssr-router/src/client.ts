@@ -6,7 +6,7 @@
  * navigations swap content normally.
  *
  * For async fragments (load()):
- * - During hydration: data is provided via window.__LATTICE_DATA__ from SSR
+ * - During hydration: data is provided via window.__RIMITIVE_DATA__ from SSR
  * - After hydration: withAsyncSupport triggers fetching on attach for new content
  */
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
@@ -33,8 +33,8 @@ const appAdapter = createHydrationAdapter(
 
 // Get loader data from SSR (non-streaming uses object, streaming uses function)
 const loaderData =
-  typeof window.__LATTICE_DATA__ === 'object'
-    ? window.__LATTICE_DATA__
+  typeof window.__RIMITIVE_DATA__ === 'object'
+    ? window.__RIMITIVE_DATA__
     : undefined;
 
 // Create service with hydrating adapter and loader data from SSR

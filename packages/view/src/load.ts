@@ -331,7 +331,7 @@ export type LoaderOpts = {
  *   onResolve: (id, data) => {
  *     // Stream chunk to client as each boundary resolves
  *     const html = renderFragment(id);
- *     stream.write(`<script>__LATTICE_HYDRATE__("${id}", ${JSON.stringify(html)})</script>`);
+ *     stream.write(`<script>__RIMITIVE_HYDRATE__("${id}", ${JSON.stringify(html)})</script>`);
  *   }
  * });
  * ```

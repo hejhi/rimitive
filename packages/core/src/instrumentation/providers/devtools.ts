@@ -56,7 +56,7 @@ export function devtoolsProvider(
         window.postMessage(
           {
             source: 'rimitive-devtools',
-            type: 'LATTICE_DETECTED',
+            type: 'RIMITIVE_DETECTED',
             payload: {
               enabled: true,
               version: '1.0.0',
@@ -153,5 +153,5 @@ export function devtoolsProvider(
  * ```
  */
 export function isDevtoolsAvailable(): boolean {
-  return typeof window !== 'undefined' && '__LATTICE_DEVTOOLS__' in window;
+  return typeof window !== 'undefined' && '__RIMITIVE_DEVTOOLS__' in window;
 }

@@ -34,7 +34,7 @@ import {
 /**
  * Window globals for SSR.
  *
- * Non-streaming SSR uses __LATTICE_DATA__ as a static object containing
+ * Non-streaming SSR uses __RIMITIVE_DATA__ as a static object containing
  * loader data serialized by the server.
  *
  * Streaming SSR uses a user-defined stream key (e.g., '__APP_STREAM__')
@@ -43,7 +43,7 @@ import {
 declare global {
   interface Window {
     /** Non-streaming SSR: static data object from server */
-    __LATTICE_DATA__?: Record<string, unknown>;
+    __RIMITIVE_DATA__?: Record<string, unknown>;
   }
 }
 

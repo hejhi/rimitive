@@ -72,7 +72,7 @@ const server = createServer(async (req, res) => {
   // Create hydration script with loader data
   const hydrationScript =
     Object.keys(loaderData).length > 0
-      ? `<script>window.__LATTICE_DATA__=${JSON.stringify(loaderData)}</script>`
+      ? `<script>window.__RIMITIVE_DATA__=${JSON.stringify(loaderData)}</script>`
       : '';
 
   // Send response

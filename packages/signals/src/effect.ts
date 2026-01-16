@@ -139,7 +139,7 @@ export const EffectModule = defineModule({
     instr: InstrumentationContext
   ): EffectFactory {
     return (run: () => void | (() => void)): (() => void) => {
-      const location = getCallerLocationFull();
+      const location = getCallerLocationFull(); // No skipFrames - function may be inlined
       const name = location?.display ?? 'Effect';
       const { id } = instr.register(run, 'effect', name);
 

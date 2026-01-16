@@ -16,7 +16,7 @@ export type RimitiveEvent = {
 
 export function handleDevToolsMessage(message: DevToolsMessage) {
   switch (message.type) {
-    case 'LATTICE_DETECTED':
+    case 'RIMITIVE_DETECTED':
       handleRimitiveDetected(message.data);
       break;
 

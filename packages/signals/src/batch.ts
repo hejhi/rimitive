@@ -1,5 +1,5 @@
-import type { InstrumentationContext } from '@rimitive/core';
-import { defineModule } from '@rimitive/core';
+import type { InstrumentationContext, SourceLocation } from '@rimitive/core';
+import { defineModule, getCallerLocationFull } from '@rimitive/core';
 import { SchedulerModule, type Scheduler } from './deps/scheduler';
 
 /**
@@ -79,9 +79,22 @@ export const BatchModule = defineModule({
     instr: InstrumentationContext
   ): BatchFactory => {
     return <T>(fn: () => T): T => {
-      instr.emit({ type: 'batch:start', timestamp: Date.now(), data: {} });
+      const location = getCallerLocationFull(); // No skipFrames - function may be inlined
+      const name = location?.display ?? 'batch';
+      const batchId = crypto.randomUUID();
+      const sourceLocation: SourceLocation | undefined = location;
+
+      instr.emit({
+        type: 'batch:start',
+        timestamp: Date.now(),
+        data: { batchId, name, sourceLocation },
+      });
       const result = impl(fn);
-      instr.emit({ type: 'batch:end', timestamp: Date.now(), data: {} });
+      instr.emit({
+        type: 'batch:end',
+        timestamp: Date.now(),
+        data: { batchId, name, sourceLocation },
+      });
       return result;
     };
   },
