@@ -72,7 +72,3 @@ Custom adapter example rendering to HTML5 Canvas instead of DOM. Shows how Rimit
 ### devtools
 
 Example app instrumented for the Rimitive DevTools extension. Useful for testing the devtools during development.
-
-## License
-
-MIT

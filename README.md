@@ -2,34 +2,33 @@
 
 _"Primitive" was taken so I dropped the "P", naming is hard, leave me be_
 
-## The Core Idea
+Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, without migrations, without "now we need a real framework."
 
-(P)rimitive allows you to cherry-pick and compose only the reactive primitives and infrastructure you need, when you need it, and roll your own too. For instance, maybe you only need signals and computeds in your lil vanilla ts app...you shouldn't need a whole framework for that! Just a signal and a computed:
+Compose only the primitives you need, opting in as you go, and even create your own reactive primitives that can tap directly into the rimitive reactive graph! 🎶
 
-```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+Rimitive is as much about providing **scalable patterns, conventions, and mental models** for building performant, lean, ergonomic, and scalable reactive applications as it is about providing the actual reactive primitives. Steal the patterns and use a different framework if you don't like rimitive!
 
-const svc = compose(SignalModule, ComputedModule);
-const { signal, computed } = svc;
+Patterns and architectures in rimitive follow **low coupling, high cohesion**—your reactive logic is self-contained and reusable, your UI just consumes it. Test behaviors without rendering. Swap components without touching logic. Share behaviors across frameworks.
 
-signal(0);
-computed(() => …);
-```
+- **It's a reactive library, not a framework** — take only what you need, as you need it
+- **No VDOM** — fine-grained updates directly to the DOM
+- **No global state** — each `compose()` creates an isolated reactive context
 
-No build, compilation, global state, or transpiling required; the entire reactive service is encapsulated in your `svc`, no global leakage.
+📚 **[Full documentation at rimitive.dev](https://rimitive.dev)**
 
-A core difference between rimitive and most reactive frameworks is that:
+---
 
-1. ...rimitive isn't a framework, it's a library
-2. you compose only what you need
-3. all reactivity is encapsulted inside primitives. There is:
-   - no over-arching reactive component framework
-   - no VDOM
-   - no concept of framework-level (or even component-level) reconciliation
-   - no concept of component re-renders
+## Packages
 
-Components in rimitive are just _patterns_. There are some recommended [component patterns](https://rimitive.dev/patterns/) you can try out to see what works best for your use cases, but you are free to improvise your own! 🎶
+| Package                                   | Description                                                   |
+| ----------------------------------------- | ------------------------------------------------------------- |
+| [`@rimitive/core`](packages/core)         | Composition engine — `compose()`, `defineModule()`            |
+| [`@rimitive/signals`](packages/signals)   | Reactive primitives — `signal`, `computed`, `effect`, `batch` |
+| [`@rimitive/view`](packages/view)         | UI primitives — `el`, `map`, `match`, `portal`                |
+| [`@rimitive/router`](packages/router)     | Client-side routing                                           |
+| [`@rimitive/resource`](packages/resource) | Async data fetching with `resource()`                         |
+| [`@rimitive/ssr`](packages/ssr)           | Server-side rendering and streaming                           |
+| [`@rimitive/react`](packages/react)       | React bindings                                                |
 
 ---
 

@@ -1,201 +1,135 @@
 # @rimitive/core
 
-Core composition layer for Rimitive applications.
+A type-safe composition engine for building modular services. Define modules with dependencies, compose them together, get a fully-wired service.
 
-This package provides `compose()` and `defineModule()` — the backbone of Rimitive. Everything else in the ecosystem builds on these primitives.
+This is the backbone of rimitive, but it works entirely on its own! No reactivity required. Use it to build libraries, DI containers, or any system where you want composable, testable modules.
 
 ## Quick Start
 
 ```typescript
-import { compose } from '@rimitive/core';
-import {
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-} from '@rimitive/signals/extend';
-
-const svc = compose(SignalModule, ComputedModule, EffectModule);
-
-// Access primitives directly
-const count = svc.signal(0);
-const doubled = svc.computed(() => count() * 2);
-
-// Or use the behavior pattern
-const counter = svc((ctx) => (initial = 0) => {
-  const value = ctx.signal(initial);
-  return {
-    value,
-    increment: () => value((v) => v + 1),
-  };
-});
-
-const myCounter = counter(0);
-```
-
----
-
-## API
-
-### compose(...modules)
-
-Composes modules into a unified service. Dependencies are resolved automatically — pass what you need, Rimitive figures out the rest.
-
-```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
-
-const svc = compose(SignalModule, ComputedModule);
-```
-
-Returns a `Use<T>` object that is both:
-
-- **Callable**: `svc(behavior)` invokes a behavior with the service
-- **An object**: `svc.signal`, `svc.computed`, etc. are directly accessible
-
-#### Disposal
-
-Every composed service has a `dispose()` method:
-
-```typescript
-const svc = compose(SignalModule, ComputedModule);
-
-// Later, when done
-svc.dispose(); // runs cleanup for all modules
-```
-
-### defineModule(definition)
-
-Creates a module — the fundamental unit of composition.
-
-```typescript
-import { defineModule } from '@rimitive/core';
+import { compose, defineModule } from '@rimitive/core';
 
 const Logger = defineModule({
   name: 'logger',
   create: () => ({
-    log: (msg: string) => console.log(msg),
+    log: (msg: string) => console.log(`[LOG] ${msg}`),
+    error: (msg: string) => console.error(`[ERR] ${msg}`),
   }),
 });
-```
 
-#### With dependencies
-
-Modules declare what they need. Dependencies are resolved by name:
-
-```typescript
-const Counter = defineModule({
-  name: 'counter',
+const Database = defineModule({
+  name: 'db',
   dependencies: [Logger],
-  create: ({ logger }) => {
-    let count = 0;
-    return {
-      increment: () => {
-        count++;
-        logger.log(`Count: ${count}`);
-      },
-    };
-  },
+  create: ({ logger }) => ({
+    query: (sql: string) => {
+      logger.log(`Executing: ${sql}`);
+      return []; // your db logic here
+    },
+  }),
 });
 
-// Compose - Logger is included automatically
-const { counter } = compose(Counter);
-counter.increment(); // logs: "Count: 1"
+const svc = compose(Database);
+
+svc.db.query('SELECT * FROM users');
+// [LOG] Executing: SELECT * FROM users
 ```
 
-#### Module definition options
+Dependencies resolve automatically. Pass what you need, and rimitive figures out the rest.
+
+---
+
+## compose(...modules)
+
+Takes modules, returns a composed service.
 
 ```typescript
-defineModule({
-  // Required
-  name: 'myModule',           // Unique name, becomes property on service
-  create: (deps) => impl,     // Factory function, receives resolved deps
-
-  // Optional
-  dependencies: [OtherModule],      // Modules this depends on
-  init: (ctx) => { ... },           // Called when module is created
-  destroy: (ctx) => { ... },        // Called when service is disposed
-  instrument: (impl, instr) => impl // Wrap impl for debugging
-});
+const svc = compose(Logger, Database, Cache);
 ```
 
-### merge(service, additions)
-
-Extends a service with additional properties. The base service instances are preserved.
+The returned service is an object with all your modules:
 
 ```typescript
-import { compose, merge } from '@rimitive/core';
-import { SignalModule } from '@rimitive/signals/extend';
-
-const svc = compose(SignalModule);
-
-// Add new properties
-const extended = merge(svc, { theme: 'dark' });
-extended.theme; // 'dark'
-extended.signal; // same instance as svc.signal
+svc.logger.log('hi');
+svc.db.query('SELECT 1');
 ```
 
-Useful for passing context through a component tree:
+When you're done, clean up:
 
 ```typescript
-const App = (svc) => {
-  const router = createRouter(svc);
-  const childSvc = merge(svc, { router });
-
-  return childSvc(Layout);
-};
+svc.dispose();
 ```
 
 ---
 
-## Behaviors
+## defineModule(definition)
 
-The behavior pattern is a function that receives a service and returns an API:
+Create a module:
 
 ```typescript
-// Define behavior
-const counter =
-  (svc) =>
-  (initial = 0) => {
-    const count = svc.signal(initial);
+const Cache = defineModule({
+  name: 'cache',
+  create: () => {
+    const store = new Map();
     return {
-      count,
-      increment: () => count((c) => c + 1),
+      get: (key: string) => store.get(key),
+      set: (key: string, value: unknown) => store.set(key, value),
     };
-  };
-
-// Use behavior
-const svc = compose(SignalModule, ComputedModule);
-const useCounter = svc(counter);
-const myCounter = useCounter(0);
-
-myCounter.count(); // 0
-myCounter.increment();
-myCounter.count(); // 1
+  },
+});
 ```
 
-Behaviors can compose other behaviors:
+With dependencies:
 
 ```typescript
-const disclosure =
-  (svc) =>
-  (initialOpen = false) => {
-    const isOpen = svc.signal(initialOpen);
-    return {
-      isOpen,
-      toggle: () => isOpen((v) => !v),
-    };
-  };
-
-const dropdown = (svc) => (options) => {
-  const useDisclosure = disclosure(svc);
-  const d = useDisclosure(options?.initialOpen);
-
-  return {
-    ...d,
-    onKeyDown: (e) => {
-      if (e.key === 'Escape') d.isOpen(false);
+const UserService = defineModule({
+  name: 'users',
+  dependencies: [Database, Cache],
+  create: ({ db, cache }) => ({
+    getUser: (id: string) => {
+      const cached = cache.get(id);
+      if (cached) return cached;
+      const user = db.query(`SELECT * FROM users WHERE id = ${id}`)[0];
+      cache.set(id, user);
+      return user;
     },
-  };
+  }),
+});
+```
+
+Full options:
+
+```typescript
+defineModule({
+  name: 'myModule',              // becomes property on service
+  create: (deps) => impl,        // factory, receives resolved deps
+  dependencies: [OtherModule],   // what this module needs
+  init: (ctx) => { ... },        // called on creation
+  destroy: (ctx) => { ... },     // called on dispose
+  instrument: (impl, instr) => impl  // wrap for debugging
+});
+```
+
+---
+
+## merge(service, additions)
+
+Extend a service with extra properties:
+
+```typescript
+const svc = compose(Logger);
+const extended = merge(svc, { env: 'production' });
+
+extended.env; // 'production'
+extended.logger; // same instance as svc.logger
+```
+
+Handy for passing context through a system:
+
+```typescript
+const App = (svc) => {
+  const config = loadConfig();
+  const childSvc = merge(svc, { config });
+  return childSvc(Router);
 };
 ```
 
@@ -203,7 +137,7 @@ const dropdown = (svc) => (options) => {
 
 ## Instrumentation
 
-Add debugging/profiling to your modules:
+Add debugging to your modules:
 
 ```typescript
 import {
@@ -211,18 +145,15 @@ import {
   createInstrumentation,
   devtoolsProvider,
 } from '@rimitive/core';
-import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
 
-const svc = compose(SignalModule, ComputedModule, {
+const svc = compose(Logger, Database, {
   instrumentation: createInstrumentation({
     providers: [devtoolsProvider()],
   }),
 });
 ```
 
-### Custom instrumentation
-
-Modules can define how they're instrumented:
+Modules define how they're instrumented:
 
 ```typescript
 const MyModule = defineModule({
@@ -235,60 +166,3 @@ const MyModule = defineModule({
   },
 });
 ```
-
----
-
-## Types
-
-```typescript
-import type {
-  Module,
-  ModuleDefinition,
-  Use,
-  ServiceContext,
-  InstrumentationContext,
-  ComposedContext,
-} from '@rimitive/core';
-
-// Module<TName, TImpl, TDeps> - a module type
-// Use<TSvc> - the callable service returned by compose()
-// ServiceContext - passed to init/destroy hooks
-// InstrumentationContext - passed to instrument hook
-```
-
-### Extracting types
-
-```typescript
-import type { ModuleImpl, ModuleName } from '@rimitive/core';
-
-type SignalImpl = ModuleImpl<typeof SignalModule>; // the signal function type
-type SignalName = ModuleName<typeof SignalModule>; // 'signal'
-```
-
----
-
-## Why Composition?
-
-Direct exports would be simpler. Why compose?
-
-1. **Isolation** — Each `compose()` creates an independent reactive context. Perfect for testing, SSR, or embedding multiple apps.
-
-2. **Tree-shaking** — Only bundle what you use. Need signals without views? Compose only signals.
-
-3. **Extensibility** — Swap any module. Replace the scheduler, add custom adapters, instrument for debugging.
-
-4. **Dependency injection** — Modules declare what they need. Testing with mocks is straightforward.
-
-```typescript
-// Production
-const svc = compose(SignalModule, ComputedModule, EffectModule);
-
-// Testing - inject a mock logger
-const testSvc = compose(SignalModule, MockLoggerModule);
-```
-
----
-
-## License
-
-MIT

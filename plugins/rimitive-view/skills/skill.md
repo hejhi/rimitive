@@ -9,6 +9,8 @@ Rimitive components are functions that return element specs. They use `el()` for
 
 **Important:** Components run once. They are not reactive closures—there's no re-rendering or reconciliation at the function level. All reactivity is encapsulated in the primitives (`signal`, `computed`, `effect`). The function builds the element tree once; signals and computeds handle updates from there.
 
+**Important:** computeds CANNOT return an `el`. It will break.
+
 ---
 
 ## Setting Up the Service
@@ -17,7 +19,11 @@ Add view modules to your service:
 
 ```typescript
 import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import { createElModule } from '@rimitive/view/el';
 import { createMapModule } from '@rimitive/view/map';
@@ -56,10 +62,7 @@ const div = el('div')();
 const heading = el('h1')('Hello, World');
 
 // With children
-const container = el('div')(
-  el('h1')('Title'),
-  el('p')('Some text')
-);
+const container = el('div')(el('h1')('Title'), el('p')('Some text'));
 ```
 
 ---
@@ -87,11 +90,9 @@ Pass a computed for reactive text:
 ```typescript
 const count = signal(0);
 
-const display = el('div')(
-  computed(() => `Count: ${count()}`)
-);
+const display = el('div')(computed(() => `Count: ${count()}`));
 
-count(5);  // display updates to "Count: 5"
+count(5); // display updates to "Count: 5"
 ```
 
 ---
@@ -104,11 +105,11 @@ Props can be reactive too:
 const isDisabled = signal(false);
 
 const button = el('button').props({
-  disabled: isDisabled,  // reactive prop
+  disabled: isDisabled, // reactive prop
   onclick: () => console.log('clicked'),
 })('Submit');
 
-isDisabled(true);  // button becomes disabled
+isDisabled(true); // button becomes disabled
 ```
 
 Or use a computed for derived props:
@@ -117,10 +118,8 @@ Or use a computed for derived props:
 const count = signal(0);
 
 const display = el('div').props({
-  className: computed(() => count() > 10 ? 'warning' : 'normal'),
-})(
-  computed(() => `Count: ${count()}`)
-);
+  className: computed(() => (count() > 10 ? 'warning' : 'normal')),
+})(computed(() => `Count: ${count()}`));
 ```
 
 ---
@@ -137,10 +136,7 @@ const Greeting = (name: string) => {
   );
 };
 
-const app = el('div')(
-  Greeting('Ada'),
-  Greeting('Grace')
-);
+const app = el('div')(Greeting('Ada'), Greeting('Grace'));
 ```
 
 ---
@@ -177,9 +173,7 @@ For primitive arrays:
 ```typescript
 const items = signal(['Apple', 'Banana', 'Cherry']);
 
-const list = el('ul')(
-  map(items, (item) => el('li')(item))
-);
+const list = el('ul')(map(items, (item) => el('li')(item)));
 ```
 
 ### Keyed Lists
@@ -197,14 +191,16 @@ const todos = signal<Todo[]>([
 const list = el('ul')(
   map(
     todos,
-    (todo) => todo.id,  // key function (receives plain value)
-    (todo) => el('li')( // render function (receives signal)
-      el('span')(computed(() => todo().text)),
-      el('input').props({
-        type: 'checkbox',
-        checked: computed(() => todo().done),
-      })()
-    )
+    (todo) => todo.id, // key function (receives plain value)
+    (todo) =>
+      el('li')(
+        // render function (receives signal)
+        el('span')(computed(() => todo().text)),
+        el('input').props({
+          type: 'checkbox',
+          checked: computed(() => todo().done),
+        })()
+      )
   )
 );
 ```
@@ -217,9 +213,7 @@ Each item is wrapped in a signal. When you update an item, the item signal updat
 
 ```typescript
 const toggleTodo = (id: number) => {
-  todos(todos().map(t =>
-    t.id === id ? { ...t, done: !t.done } : t
-  ));
+  todos(todos().map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
 };
 // The checkbox updates reactively without recreating the <li>
 ```
@@ -241,7 +235,7 @@ const message = match(showMessage, (show) =>
 
 const app = el('div')(
   el('button').props({
-    onclick: () => showMessage(!showMessage())
+    onclick: () => showMessage(!showMessage()),
   })('Toggle'),
   message
 );
@@ -254,9 +248,7 @@ const isEditMode = signal(false);
 const text = signal('Click edit to change');
 
 const content = match(isEditMode, (editing) =>
-  editing
-    ? el('input').props({ value: text })()
-    : el('span')(text)
+  editing ? el('input').props({ value: text })() : el('span')(text)
 );
 ```
 
@@ -268,9 +260,12 @@ const currentTab = signal<Tab>('home');
 
 const tabContent = match(currentTab, (tab) => {
   switch (tab) {
-    case 'home': return el('div')('Welcome home');
-    case 'settings': return el('div')('Settings panel');
-    case 'profile': return el('div')('Your profile');
+    case 'home':
+      return el('div')('Welcome home');
+    case 'settings':
+      return el('div')('Settings panel');
+    case 'profile':
+      return el('div')('Your profile');
   }
 });
 ```
@@ -300,7 +295,7 @@ const modal = match(showModal, (show) =>
           el('div').props({ className: 'modal' })(
             el('h2')('Modal Title'),
             el('button').props({
-              onclick: () => showModal(false)
+              onclick: () => showModal(false),
             })('Close')
           )
         )
@@ -362,9 +357,7 @@ const Counter = (initial: number) => {
   const { count, doubled, increment, decrement } = useCounter(initial);
 
   return el('div')(
-    el('div')(
-      computed(() => `Count: ${count()} (doubled: ${doubled()})`)
-    ),
+    el('div')(computed(() => `Count: ${count()} (doubled: ${doubled()})`)),
     el('div')(
       el('button').props({ onclick: decrement })('-'),
       el('button').props({ onclick: increment })('+')
@@ -394,10 +387,7 @@ const Counter = (svc: Service) => {
 // Usage
 const App = (svc: Service) => {
   const { el, use } = svc;
-  return el('div')(
-    use(Counter)(0),
-    use(Counter)(100)
-  );
+  return el('div')(use(Counter)(0), use(Counter)(100));
 };
 ```
 
@@ -408,9 +398,7 @@ const App = (svc: Service) => {
 ```typescript
 import { el, mount } from './service';
 
-const App = () => el('div')(
-  el('h1')('My App')
-);
+const App = () => el('div')(el('h1')('My App'));
 
 const app = mount(App());
 document.querySelector('#app')?.appendChild(app.element!);
@@ -433,7 +421,7 @@ const filteredTodos = computed(() => {
   const f = filter();
   const items = todos();
   if (f === 'all') return items;
-  return items.filter(t => f === 'done' ? t.done : !t.done);
+  return items.filter((t) => (f === 'done' ? t.done : !t.done));
 });
 
 const addTodo = () => {
@@ -444,60 +432,62 @@ const addTodo = () => {
 };
 
 const toggleTodo = (id: number) => {
-  todos(todos().map(t =>
-    t.id === id ? { ...t, done: !t.done } : t
-  ));
+  todos(todos().map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
 };
 
 const FilterButton = (value: Filter, label: string) =>
   el('button').props({
-    className: computed(() => filter() === value ? 'active' : ''),
+    className: computed(() => (filter() === value ? 'active' : '')),
     onclick: () => filter(value),
   })(label);
 
-const App = () => el('div')(
-  el('h1')('Todos'),
-
-  // Input
+const App = () =>
   el('div')(
-    el('input').props({
-      type: 'text',
-      placeholder: 'What needs to be done?',
-      value: inputValue,
-      oninput: (e: Event) => inputValue((e.target as HTMLInputElement).value),
-      onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter') addTodo(); },
-    })(),
-    el('button').props({ onclick: addTodo })('Add')
-  ),
+    el('h1')('Todos'),
 
-  // Filters
-  el('div')(
-    FilterButton('all', 'All'),
-    FilterButton('active', 'Active'),
-    FilterButton('done', 'Done')
-  ),
+    // Input
+    el('div')(
+      el('input').props({
+        type: 'text',
+        placeholder: 'What needs to be done?',
+        value: inputValue,
+        oninput: (e: Event) => inputValue((e.target as HTMLInputElement).value),
+        onkeydown: (e: KeyboardEvent) => {
+          if (e.key === 'Enter') addTodo();
+        },
+      })(),
+      el('button').props({ onclick: addTodo })('Add')
+    ),
 
-  // List
-  el('ul')(
-    map(
-      filteredTodos,
-      (t) => t.id,
-      (todo) => el('li')(
-        el('input').props({
-          type: 'checkbox',
-          checked: computed(() => todo().done),
-          onclick: () => toggleTodo(todo().id),
-        })(),
-        el('span')(computed(() => todo().text))
+    // Filters
+    el('div')(
+      FilterButton('all', 'All'),
+      FilterButton('active', 'Active'),
+      FilterButton('done', 'Done')
+    ),
+
+    // List
+    el('ul')(
+      map(
+        filteredTodos,
+        (t) => t.id,
+        (todo) =>
+          el('li')(
+            el('input').props({
+              type: 'checkbox',
+              checked: computed(() => todo().done),
+              onclick: () => toggleTodo(todo().id),
+            })(),
+            el('span')(computed(() => todo().text))
+          )
       )
-    )
-  ),
+    ),
 
-  // Empty state
-  match(filteredTodos, (items) =>
-    items.length === 0 ? el('p')('No todos yet') : null
-  )
-);
+    // Empty state
+    match(filteredTodos, (items) =>
+      items.length === 0 ? el('p')('No todos yet') : null
+    )
+  );
 
 const app = mount(App());
 document.body.appendChild(app.element!);
