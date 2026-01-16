@@ -1,0 +1,100 @@
+---
+title: Rendering Lists
+description: Efficiently render reactive lists with map().
+---
+
+`map()` renders a reactive list efficiently (_very efficiently_). When items change, it updates only what's necessary. `map()` contains ONLY the reconciliation logic required to deal with rendering dynamic lists efficiently, so again, a small bundle addition.
+
+---
+
+## Adding the Module
+
+First, add the map module to your service:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  // map takes an adapter as well
+  createMapModule(adapter),
+  MountModule
+);
+
+const { el, map, signal, mount } = svc;
+```
+
+### Basic Usage
+
+For primitive arrays (strings, numbers), just pass the array and a render function:
+
+```typescript
+const items = signal(['Apple', 'Banana', 'Cherry']);
+
+const list = el('ul')(
+  map(items, (item) => el('li')(item))
+);
+```
+
+The render function receives a **reactive signal** wrapping each item. You can pass it directly as a child:
+
+```typescript
+map(items, (item) =>
+  el('li')(item)  // item is a signal, cool!
+)
+```
+
+When `items` updates, `map()` reconciles the DOM efficiently, adding, removing, and reordering elements as needed.
+
+### Keyed Lists
+
+For object arrays, provide a key function so `map()` can track identity:
+
+```typescript
+type Todo = { id: number; text: string; done: boolean };
+
+const todos = signal<Todo[]>([
+  { id: 1, text: 'Learn Rimitive', done: false },
+  { id: 2, text: 'Build something', done: false },
+]);
+
+const list = el('ul')(
+  map(
+    todos,
+    (todo) => todo.id,  // key function
+    (todo) => el('li')(
+      el('span')(computed(() => todo().text)),
+      el('input').props({
+        type: 'checkbox',
+        checked: computed(() => todo().done),
+      })()
+    )
+  )
+);
+```
+
+The key function receives the plain item value and returns a unique identifier. This lets `map()` efficiently update items when the array changes. I tried so hard to get away without using keys but I'm not smart enough so key functions there shall remain.
+
+### Reactive Item Updates
+
+Each item is wrapped in a signal. When you update an item in the source array, the item signal updates too—no element recreation needed:
+
+```typescript
+const toggleTodo = (id: number) => {
+  todos(todos().map(t =>
+    t.id === id ? { ...t, done: !t.done } : t
+  ));
+};
+
+// The checkbox updates reactively without recreating the <li>
+```

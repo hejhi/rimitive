@@ -3,6 +3,8 @@ title: Adding a UI
 description: Render reactive state to the DOM with el().
 ---
 
+import { Aside } from '@astrojs/starlight/components';
+
 You have signals, and maybe some behaviors, so perhaps now we want to add a reactive UI on top of it.
 
 rimitive provides the `view` package that contains view-specific primitives, with `el()` being the foundation. `el()` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
@@ -56,11 +58,13 @@ const container = el('div')(
 );
 ```
 
-> IM-POR-TANT! Before we proceed, let's again differentiate rimitive from most other reactive frameworks, and understand that `el` itself **never re-renders**. You can pass it reactive children, you can pass it reactive props, and those will all update when they change, but the underlying tag/element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
->
-> There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself is D-U-M-B, it doesn't reconcile or re-render, it _just lives its best lil life_. 
->
-> This is **great for performance**, creates a **much simpler mental model**, and means that if you don't need reconciliation, don't use it, and **save some kbs, yo 📦**.
+<Aside type="note">
+`el` itself **never re-renders**. You can pass it reactive children, reactive props, etc and those will all update when needed, but the underlying element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
+
+There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself is D-U-M-B. It doesn't reconcile or re-render, it _just lives its best lil life_. 
+
+This is **great for performance**, creates a **much simpler mental model**, and means that if you don't need reconciliation, don't use it, and **save some kbs, yo 📦**.
+</Aside>
 
 ---
 
@@ -117,7 +121,9 @@ const app = el('div')(
 );
 ```
 
-> **Important:** Differentiation alert, again! Components in rimitive are not magical reactive closures! They are just functions. Just another pattern. There's no re-rendering, just reactive primitives. You're simply returning an element tree.
+<Aside type="note">
+Again, components in rimitive are not magical reactive closures, and there's no re-rendering of them! They are just functions. Just another pattern. There's no re-rendering, just reactive primitives. You're simply returning an element tree.
+</Aside>
 
 That's it, kind of anticlimactic.
 

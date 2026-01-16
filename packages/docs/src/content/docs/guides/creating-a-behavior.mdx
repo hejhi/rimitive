@@ -3,9 +3,13 @@ title: Creating a Behavior
 description: Encapsulate reusable reactive logic without any UI.
 ---
 
+import { Aside } from '@astrojs/starlight/components';
+
 A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to provide portable reactive logic.
 
-> **Important:** Behaviors are _just functions_. They don't return magical reactive closures despite us prefixing the returns by convention with `use*`, my React peeps. There's no re-rendering. In rimitive, **all reactivity is encapsulated in the primitives**.
+<Aside type="note">
+Behaviors are _just functions_. They don't return magical reactive closures despite us prefixing the returns by convention with `use*`, my React peeps. There's no re-rendering. In rimitive, **all reactivity is encapsulated in the primitives**.
+</Aside>
 
 ---
 

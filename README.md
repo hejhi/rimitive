@@ -95,7 +95,7 @@ const App = () => {
 document.body.appendChild(mount(App()).element!);
 ```
 
-The component itself doesn't re-render, and neither does `el`—the element structure is created **once**. Only reactive props and text children update via fine-grained effects that target exactly one DOM property or text node (for reactive DOM structure, you can use primitives like [`map` and `match`](https://rimitive.dev/guides/dynamic-views/)).
+The component itself doesn't re-render, and neither does `el`—the element structure is created **once**. Only reactive props and text children update via fine-grained effects that target exactly one DOM property or text node (for reactive DOM structure, you can use primitives like [`map` and `match`](https://rimitive.dev/guides/rendering-lists/)).
 
 That's about all there is to using rimitive! The rest is all about choosing the primitives and patterns you want to use—check out the [guides](https://rimitive.dev/guides/getting-started/) and [API reference](https://rimitive.dev/api/).
 
