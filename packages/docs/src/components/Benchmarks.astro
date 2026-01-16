@@ -53,6 +53,17 @@ function formatDate(isoString: string): string {
   });
 }
 
+// Display names for framework columns
+const frameworkDisplayNames: Record<string, string> = {
+  'Rimitive': 'Rimitive Signals',
+  'Preact': 'Preact Signals',
+  'Alien': 'Alien Signals',
+};
+
+function getDisplayName(fw: string): string {
+  return frameworkDisplayNames[fw] || fw;
+}
+
 // Group benchmarks by their base name (framework) for comparison
 function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
   const groups = new Map<string, Benchmark[]>();
@@ -249,7 +260,7 @@ function getOverallMedal(
             <thead>
               <tr>
                 <th>Variant</th>
-                {frameworks.map(fw => <th>{overallMedals.get(fw)} {fw}</th>)}
+                {frameworks.map(fw => <th>{overallMedals.get(fw)} {getDisplayName(fw)}</th>)}
               </tr>
             </thead>
             <tbody>
