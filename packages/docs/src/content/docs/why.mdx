@@ -3,7 +3,7 @@ title: Why Rimitive?
 description: The story behind Rimitive and why it exists.
 ---
 
-You absolutely do not need to read this. I don't write blog posts really, so this is my blog post.
+You absolutely do not need to read this. I don't write blog posts, so this is my blog post.
 
 ---
 
@@ -11,17 +11,15 @@ You absolutely do not need to read this. I don't write blog posts really, so thi
 
 Working with reactive frameworks since time immemorial, I have found myself longing, time and time again, to just have a stupid simple reactive toolkit I could take with me on all my programming adventures.
 
-Like, maybe I want to write a stupid simple little browser app, but does that mean I need to commit to NextJS? Can't I just write a damn reactive component without needing to setup React with a bundler and transpiler and JSX?? And can't it be fast, like really crazy fast??? And why can't it scale from something tiny to something enterprise, with SSR and streaming and all the goodies????
+Don't get me wrong, I love React. I love NextJS. But when I'm building something for myself, I'll be real: I have a strong distaste about making huge infrastructure commitments before I even know exactly what I'm building. I want to start dumb simple and layer on complexity as I need it.
 
-Don't get me wrong, I love React. I love NextJS. But when I'm building something, I'll be real: I have a strong distaste about making huge infrastructure commitments up front. I want to start dumb simple and layer on complexity as I need it. Like "Oh, yeah let's turn this spaghetti prototype I built last weekend into actual components". "Yeah, maybe some routing now". "Ok let's add some SSR".
-
-I don't want to be forced to make those decisions up front. I don't want to have to commit to a React-server-providing SaaS service megalith with caching opinions before I write a flippin "hello world". I don't want to have to rewrite my little app 1000x as I change my opinions to work with NextJS or Solid Start or Whatever. I just (in my free time) like to build shit with no overhead or up-front commitment.
+I don't want to be forced to make those decisions up front. I don't want to have to rewrite my little app 1000x as I change my opinions to work with This or That Framework or Whatever. I just (in my free time) like to build shit with no overhead or up-front commitment.
 
 ---
 
 ## Headless Components
 
-I've also always longed for a truly "headless" component; the most notable execution of this idea to me was `downshift`, which is React-specific, but had some fantastic ideas under the covers, and highlighted some really important things, like it's:
+I've also always longed for a truly headless reactive component pattern; the most notable execution of this idea to me was `downshift`, which is React-specific, but had some universal fantastic concepts under the covers, and highlighted some really important things, like it's:
 
 1. _hard_ to write a fully accessible component
 2. _harder_ if you want to create an abstraction of it for a design system

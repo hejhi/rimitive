@@ -56,6 +56,10 @@ export default defineConfig({
           slug: 'why',
         },
         {
+          label: 'FAQ',
+          slug: 'faq',
+        },
+        {
           label: 'API Reference',
           collapsed: true,
           autogenerate: { directory: 'api' },

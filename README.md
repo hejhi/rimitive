@@ -29,7 +29,7 @@ A core difference between rimitive and most reactive frameworks is that:
    - no concept of framework-level (or even component-level) reconciliation
    - no concept of component re-renders
 
-Components in rimitive are just _patterns_. There are some recommended component patterns you can try out to see what works best for your use cases, but you are free to improvise your own! 🎶
+Components in rimitive are just _patterns_. There are some recommended [component patterns](https://rimitive.dev/patterns/) you can try out to see what works best for your use cases, but you are free to improvise your own! 🎶
 
 ---
 
@@ -48,7 +48,7 @@ Everything in rimitive is built from the SignalModule. Breaking this down, `comp
 
 That's it! Create services with only the primitives you need to use.
 
-In addition to providing primitives, rimitive also provides higher-level tooling that work with and can help stitch together and orchestrate, like `router` and `ssr`. It's simple to make your own modules as well.
+In addition to providing primitives, rimitive also provides higher-level tooling that work with and can help stitch together and orchestrate, like [`router`](https://rimitive.dev/guides/adding-routing/) and [`ssr`](https://rimitive.dev/guides/server-rendering/). It's simple to [make your own modules](https://rimitive.dev/guides/custom-modules/) as well.
 
 ---
 
@@ -95,9 +95,9 @@ const App = () => {
 document.body.appendChild(mount(App()).element!);
 ```
 
-The component itself doesn't re-render, and neither does `el`—the element structure is created **once**. Only reactive props and text children update via fine-grained effects that target exactly one DOM property or text node (for reactive DOM elements, you can use another primitive like `match` instead).
+The component itself doesn't re-render, and neither does `el`—the element structure is created **once**. Only reactive props and text children update via fine-grained effects that target exactly one DOM property or text node (for reactive DOM structure, you can use primitives like [`map` and `match`](https://rimitive.dev/guides/dynamic-views/)).
 
-That's about all there is to using rimitive! The rest of rimitive is all about choosing the primitives and patterns you want to use (explore other packages and documentation).
+That's about all there is to using rimitive! The rest is all about choosing the primitives and patterns you want to use—check out the [guides](https://rimitive.dev/guides/getting-started/) and [API reference](https://rimitive.dev/api/).
 
 ---
 
@@ -105,52 +105,12 @@ That's about all there is to using rimitive! The rest of rimitive is all about c
 
 Want to:
 
-- **Create custom modules?** Use `defineModule()` with the same patterns rimitive uses internally
+- **Create custom modules?** Use [`defineModule()`](https://rimitive.dev/guides/custom-modules/) with the same patterns rimitive uses internally
 - **Swap out the reactive system?** Replace the dependency modules with your own (or someone else's), or even swap out entire primitives for something else
 - **Build a custom adapter/renderer?** Implement the `Adapter` interface for Canvas, WebGL, or anything tree-based
 - **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in rimitive
 
 rimitive provides modules for reactivity and UI out of the box, but they're not special. In fact, they're built with the same tools rimitive provides to you. rimitive at its core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just reactive frameworks.
-
----
-
-## FAQ
-
-1. Why?
-
-See the section at the bottom of this README. It's lengthy but useful if you're seriously considering rimitive to understand why I might embark on such an adventure.
-
-2. Is it fast/tiny/etc?
-
-Yes, here's some emojis to demonstrate:
-
-- ⚡️ performance is on par with preact and alien signals (see our [benchmarks](https://rimitive.dev/benchmarks/))
-- 📦 bundle sizes are tiny and gruesomely tree-shake-able. No compilation required—compose only what you need regardless, and unless a package or module is specifically for the DOM, it's entirely environment agnostic and concurrency safe.
-- 🌝 type-safe all the way down
-
-3. Will it work with [my favorite framework]?
-
-Only react bindings so far, but look at those bindings, it's so simple. Try writing one "yourself" (ie with Claude) with the ergonomics you prefer! No bindings needed for vanilla ts.
-
-4. Are there docs and examples?
-
-Yes, in abundance.
-
-5. Are there devtools?
-
-A bit noisy and perhaps overly granular, but yes (and written entirely with rimitive!).
-
-6. Are there tests?
-
-Many.
-
-7. Concurrency-safe?
-
-Absolutely! No module-level or global state to speak of.
-
-8. rimitive primitives??
-
-I SAID BEFORE. Leave. me. be.
 
 ---
 
@@ -167,7 +127,7 @@ rimitive draws from libraries and ideas by brilliant people that have shaped how
 
 ## Why Rimitive?
 
-The story behind Rimitive—how it started, how it's going: [Why Rimitive?](https://rimitive.dev/why/)
+The story behind Rimitive—the impetus, how it started, how it's going: [Why Rimitive?](https://rimitive.dev/why/)
 
 ---
 
