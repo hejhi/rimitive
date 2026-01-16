@@ -12,6 +12,8 @@ type RimitiveDetectionInfo = {
 };
 
 export default defineBackground(() => {
+  console.log('[DevTools Background] Service worker started');
+
   // Store connections from devtools panels
   const devtoolsConnections = new Map<number, chrome.runtime.Port>();
 
@@ -20,10 +22,14 @@ export default defineBackground(() => {
 
   // Listen for connections from devtools panels
   chrome.runtime.onConnect.addListener((port) => {
+    console.log('[DevTools Background] Port connected:', port.name);
+
     if (port.name === 'devtools-panel') {
       let tabId: number | undefined;
 
       port.onMessage.addListener((msg: DevToolsMessage) => {
+        console.log('[DevTools Background] Received from panel:', msg.type);
+
         if (msg.type === 'INIT' && msg.tabId) {
           tabId = msg.tabId;
           devtoolsConnections.set(tabId, port);
@@ -31,11 +37,13 @@ export default defineBackground(() => {
           // If Rimitive was detected, notify the panel with cached info
           const detectionInfo = rimitiveDetectedTabs.get(tabId);
           if (detectionInfo) {
+            console.log('[DevTools Background] Sending cached LATTICE_DETECTED');
             port.postMessage({
               type: 'LATTICE_DETECTED',
               data: detectionInfo,
             });
           } else {
+            console.log('[DevTools Background] No cached info, requesting re-detection');
             // Request re-detection from the page (in case service worker was restarted)
             chrome.tabs.sendMessage(tabId, {
               source: 'rimitive-devtools-background',
@@ -49,6 +57,7 @@ export default defineBackground(() => {
 
       // Clean up on disconnect
       port.onDisconnect.addListener(() => {
+        console.log('[DevTools Background] Panel disconnected for tab:', tabId);
         if (tabId) {
           devtoolsConnections.delete(tabId);
         }
@@ -72,6 +81,7 @@ export default defineBackground(() => {
         // Handle messages from the page
         switch (message.type) {
           case 'LATTICE_DETECTED': {
+            console.log('[DevTools Background] LATTICE_DETECTED from tab:', tabId);
             // Store full detection info for reconnection
             const payload = message.payload as RimitiveDetectionInfo | undefined;
             rimitiveDetectedTabs.set(tabId, payload ?? { enabled: true });
@@ -79,6 +89,7 @@ export default defineBackground(() => {
             // Forward to devtools if connected
             const port = devtoolsConnections.get(tabId);
             if (port) {
+              console.log('[DevTools Background] Forwarding LATTICE_DETECTED to panel');
               port.postMessage({
                 type: 'LATTICE_DETECTED',
                 data: message.payload,

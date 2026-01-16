@@ -97,12 +97,17 @@ function extractNodeId(data: unknown): string | undefined {
 
   const obj = data as Record<string, unknown>;
 
-  // Common ID fields
+  // Specific ID fields for each primitive type
+  if ('signalId' in obj && typeof obj.signalId === 'string') return obj.signalId;
+  if ('computedId' in obj && typeof obj.computedId === 'string') return obj.computedId;
+  if ('effectId' in obj && typeof obj.effectId === 'string') return obj.effectId;
+  if ('batchId' in obj && typeof obj.batchId === 'string') return obj.batchId;
+
+  // Generic ID fields
   if ('id' in obj && typeof obj.id === 'string') return obj.id;
   if ('nodeId' in obj && typeof obj.nodeId === 'string') return obj.nodeId;
   if ('resourceId' in obj && typeof obj.resourceId === 'string')
     return obj.resourceId;
-  if ('batchId' in obj && typeof obj.batchId === 'string') return obj.batchId;
 
   return undefined;
 }
@@ -132,19 +137,22 @@ function extractNodeName(data: unknown): string | undefined {
 function generateSummary(event: RimitiveEvent): string {
   const data = event.data as Record<string, unknown>;
 
-  // Just show the raw data fields, no special handling
+  // Exclude ID fields (already shown as clickable name) and metadata
+  const excludedFields = [
+    'id',
+    'nodeId',
+    'resourceId',
+    'contextId',
+    'timestamp',
+    'type',
+    'signalId',
+    'computedId',
+    'effectId',
+    'batchId',
+  ];
+
   const fields = Object.entries(data)
-    .filter(
-      ([key]) =>
-        ![
-          'id',
-          'nodeId',
-          'resourceId',
-          'contextId',
-          'timestamp',
-          'type',
-        ].includes(key)
-    )
+    .filter(([key]) => !excludedFields.includes(key))
     .slice(0, 3)
     .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
     .join(', ');

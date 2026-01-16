@@ -31,10 +31,15 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
 }
 
 function handleRimitiveDetected(data?: unknown) {
-  devtoolsState.connected(true);
+  const wasReconnecting = devtoolsState.connectionStatus() === 'reconnecting';
 
-  // Reset state for a fresh start
-  devtoolsState.logEntries([]);
+  devtoolsState.connected(true);
+  devtoolsState.connectionStatus('connected');
+
+  // Only clear logs on fresh connection, not on reconnection
+  if (!wasReconnecting) {
+    devtoolsState.logEntries([]);
+  }
 
   // Create context from the detection payload if contextId is provided
   if (data && typeof data === 'object') {

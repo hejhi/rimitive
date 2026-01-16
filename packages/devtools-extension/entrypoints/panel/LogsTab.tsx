@@ -2,6 +2,7 @@ import { useSubscribe } from '@rimitive/react';
 import type { LogEntry } from './store/types';
 import { filteredLogEntries } from './store/computed';
 import { getCategoryColors } from './store/eventTypeManager';
+import { devtoolsState } from './store/devtoolsCtx';
 
 export function LogsTab() {
   const logs = useSubscribe(filteredLogEntries);
@@ -48,10 +49,21 @@ function LogEntryComponent({ entry }: { entry: LogEntry }) {
   );
 }
 
+function handleNodeClick(nodeId: string | undefined) {
+  if (!nodeId) return;
+
+  const currentFilter = devtoolsState.filter();
+  devtoolsState.filter({
+    ...currentFilter,
+    nodeId,
+  });
+}
+
 function renderLogEntry(entry: LogEntry): React.ReactNode {
   const name = entry.nodeName || entry.nodeId || 'anonymous';
   const eventType = entry.eventType;
   const category = entry.category;
+  const nodeId = entry.nodeId;
 
   // Get dynamic colors for this category
   const colors = getCategoryColors(category);
@@ -59,7 +71,17 @@ function renderLogEntry(entry: LogEntry): React.ReactNode {
   return (
     <>
       <span className={colors.main}>{eventType}</span>{' '}
-      <span className={colors.secondary}>{name}</span>
+      {nodeId ? (
+        <button
+          onClick={() => handleNodeClick(nodeId)}
+          className={`${colors.secondary} hover:underline cursor-pointer`}
+          title={`Click to filter by ${nodeId}`}
+        >
+          {name}
+        </button>
+      ) : (
+        <span className={colors.secondary}>{name}</span>
+      )}
       {entry.summary && (
         <>
           {' '}

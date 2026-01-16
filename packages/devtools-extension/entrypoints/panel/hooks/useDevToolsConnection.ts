@@ -19,6 +19,8 @@ export function useDevToolsConnection() {
     function connect() {
       if (unmountedRef.current) return;
 
+      console.log('[DevTools Panel] Attempting to connect...');
+
       try {
         const port = chrome.runtime.connect({ name: 'devtools-panel' });
         portRef.current = port;
@@ -28,28 +30,42 @@ export function useDevToolsConnection() {
           tabId: chrome.devtools.inspectedWindow.tabId,
         });
 
+        console.log('[DevTools Panel] Connected, sent INIT');
+
         port.onMessage.addListener((message: DevToolsMessage) => {
+          console.log('[DevTools Panel] Received message:', message.type);
           handleDevToolsMessage(message);
         });
 
         port.onDisconnect.addListener(() => {
+          const error = chrome.runtime.lastError;
+          console.log(
+            '[DevTools Panel] Disconnected',
+            error ? `Error: ${error.message}` : '(no error)'
+          );
           portRef.current = null;
-
-          // Reset connection state
-          devtoolsState.connected(false);
 
           // Attempt to reconnect if not unmounted
           if (
             !unmountedRef.current &&
             reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
           ) {
+            // Show reconnecting state instead of disconnected
+            devtoolsState.connectionStatus('reconnecting');
+
             reconnectAttemptsRef.current++;
+            console.log(
+              `[DevTools Panel] Reconnecting (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})...`
+            );
             reconnectTimeoutRef.current = setTimeout(
               connect,
               RECONNECT_DELAY_MS
             );
           } else if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
-            // Clear state after max attempts
+            console.log('[DevTools Panel] Max reconnect attempts reached');
+            // Only now show disconnected state
+            devtoolsState.connected(false);
+            devtoolsState.connectionStatus('disconnected');
             devtoolsState.contexts([]);
             devtoolsState.selectedContext(null);
             devtoolsState.logEntries([]);

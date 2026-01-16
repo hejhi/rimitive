@@ -1,4 +1,4 @@
-import type { ContextInfo, LogEntry } from './types';
+import type { ConnectionStatus, ContextInfo, LogEntry } from './types';
 import { compose } from '@rimitive/core';
 import {
   SignalModule,
@@ -17,6 +17,7 @@ export const devtoolsContext = compose(
 
 export const devtoolsState = {
   connected: devtoolsContext.signal(false),
+  connectionStatus: devtoolsContext.signal<ConnectionStatus>('disconnected'),
   contexts: devtoolsContext.signal<ContextInfo[]>([]),
   selectedContext: devtoolsContext.signal<string | null>(null),
   selectedTransaction: devtoolsContext.signal<string | null>(null),
@@ -24,6 +25,7 @@ export const devtoolsState = {
     type: 'all',
     search: '',
     hideInternal: true,
+    nodeId: null as string | null,
   }),
   logEntries: devtoolsContext.signal<LogEntry[]>([]),
 };

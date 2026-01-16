@@ -12,6 +12,7 @@ type ImportData = {
       type: string;
       search: string;
       hideInternal: boolean;
+      nodeId?: string | null;
     };
     selectedContext?: string | null;
     selectedTransaction?: string | null;
@@ -70,7 +71,10 @@ export function useDataExport() {
         }
 
         if (state.filter) {
-          devtoolsState.filter(state.filter);
+          devtoolsState.filter({
+            ...state.filter,
+            nodeId: state.filter.nodeId ?? null,
+          });
         }
 
         if (state.selectedContext !== undefined) {

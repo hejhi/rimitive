@@ -8,13 +8,16 @@ import { devtoolsState } from './store/devtoolsCtx';
 
 export function App() {
   const connected = useSubscribe(devtoolsState.connected);
+  const connectionStatus = useSubscribe(devtoolsState.connectionStatus);
   const contexts = useSubscribe(devtoolsState.contexts);
   const filter = useSubscribe(devtoolsState.filter);
 
   const { handleExport, handleImport } = useDataExport();
   useDevToolsConnection();
 
-  if (!connected) {
+  // Show ConnectionStatus only if truly disconnected (not reconnecting)
+  // During reconnection, keep showing the main view with existing data
+  if (!connected && connectionStatus !== 'reconnecting') {
     return <ConnectionStatus />;
   }
 
@@ -48,6 +51,7 @@ export function App() {
           selectedContext={devtoolsState.selectedContext()}
           filterType={filter.type}
           searchValue={filter.search}
+          filteredNodeId={filter.nodeId}
           onContextChange={(value) => devtoolsState.selectedContext(value)}
           onFilterTypeChange={(value) =>
             devtoolsState.filter({
@@ -59,6 +63,12 @@ export function App() {
             devtoolsState.filter({
               ...devtoolsState.filter(),
               search: value,
+            })
+          }
+          onClearNodeFilter={() =>
+            devtoolsState.filter({
+              ...devtoolsState.filter(),
+              nodeId: null,
             })
           }
         />

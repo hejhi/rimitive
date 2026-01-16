@@ -4,13 +4,16 @@ import type { LogEntry } from './types';
 // Common log filtering logic
 function filterLogs(
   logs: LogEntry[],
-  filter: { type: string; search: string; hideInternal: boolean },
+  filter: { type: string; search: string; hideInternal: boolean; nodeId: string | null },
   selectedContext: string | null,
   searchIn: string[]
 ) {
   return logs.filter((log) => {
     // Context filter
     if (selectedContext && log.contextId !== selectedContext) return false;
+
+    // Node ID filter (click-to-filter)
+    if (filter.nodeId && log.nodeId !== filter.nodeId) return false;
 
     // Type filter
     if (filter.type !== 'all' && log.category !== filter.type) return false;

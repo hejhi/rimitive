@@ -21,8 +21,11 @@ export type ContextInfo = {
   created?: number;
 };
 
+export type ConnectionStatus = 'disconnected' | 'reconnecting' | 'connected';
+
 export type DevToolsState = {
   connected: boolean;
+  connectionStatus: ConnectionStatus;
   contexts: ContextInfo[];
   selectedContext: string | null;
   selectedTransaction: string | null;
@@ -30,6 +33,7 @@ export type DevToolsState = {
     type: string; // Generic type filter
     search: string;
     hideInternal: boolean;
+    nodeId: string | null; // Filter by specific resource ID
   };
   logEntries: LogEntry[];
 };
