@@ -3,6 +3,7 @@ import type { LogEntry, SourceLocation } from './store/types';
 import { filteredLogEntries } from './store/computed';
 import { getCategoryColors } from './store/eventTypeManager';
 import { devtoolsState } from './store/devtoolsCtx';
+import { selectedNodeId } from './store/graphState';
 
 export function LogsTab() {
   const logs = useSubscribe(filteredLogEntries);
@@ -67,7 +68,7 @@ function openInEditor(location: SourceLocation) {
 }
 
 /**
- * Filter logs by node ID
+ * Filter logs by node ID and select in graph
  */
 function filterByNodeId(nodeId: string) {
   const currentFilter = devtoolsState.filter();
@@ -75,6 +76,8 @@ function filterByNodeId(nodeId: string) {
     ...currentFilter,
     nodeId,
   });
+  // Also select in graph for focused view
+  selectedNodeId(nodeId);
 }
 
 /**
