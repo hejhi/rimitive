@@ -16,11 +16,16 @@ export type {
   ModuleImpl as ServiceImpl,
   ModuleName as ServiceName,
 } from './types';
-export { createInstrumentation } from './instrumentation';
+export {
+  createInstrumentation,
+  getCallerLocation,
+  getCallerLocationFull,
+} from './instrumentation';
 export type {
   InstrumentationEvent,
   InstrumentationProvider,
   InstrumentationConfig,
+  SourceLocation,
 } from './instrumentation';
 export { devtoolsProvider, isDevtoolsAvailable } from './instrumentation/providers';
 export type { DevtoolsProviderOptions } from './instrumentation/providers';

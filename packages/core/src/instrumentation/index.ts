@@ -9,3 +9,5 @@ export type {
 } from './types';
 
 export { composeProviders, createInstrumentation } from './compose';
+export { getCallerLocation, getCallerLocationFull } from './stack-trace';
+export type { SourceLocation } from './stack-trace';

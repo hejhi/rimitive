@@ -1,6 +1,6 @@
 import { CONSTANTS } from './constants';
 import { Dependency, DerivedNode } from './types';
-import { defineModule, type InstrumentationContext } from '@rimitive/core';
+import { defineModule, getCallerLocationFull, type InstrumentationContext, type SourceLocation } from '@rimitive/core';
 import {
   GraphEdgesModule,
   type GraphEdges,
@@ -218,14 +218,18 @@ export const ComputedModule = defineModule({
     instr: InstrumentationContext
   ): ComputedFactory {
     return <T>(compute: () => T): ComputedFunction<T> => {
+      const location = getCallerLocationFull();
       const comp = impl(compute);
-      const { id } = instr.register(comp, 'computed', 'Computed');
+      const name = location?.display ?? 'Computed';
+      const { id } = instr.register(comp, 'computed', name);
+
+      const sourceLocation: SourceLocation | undefined = location;
 
       function instrumentedComputed(): T {
         instr.emit({
           type: 'computed:read',
           timestamp: Date.now(),
-          data: { computedId: id },
+          data: { computedId: id, name, sourceLocation },
         });
 
         const value = comp();
@@ -233,7 +237,7 @@ export const ComputedModule = defineModule({
         instr.emit({
           type: 'computed:value',
           timestamp: Date.now(),
-          data: { computedId: id, value },
+          data: { computedId: id, name, value, sourceLocation },
         });
 
         return value;

@@ -1,3 +1,11 @@
+// Source location for jumping to editor
+export type SourceLocation = {
+  display: string;
+  filePath: string;
+  line: number;
+  column?: number;
+};
+
 // Log entry for any instrumentation event
 export type LogEntry = {
   id: string;
@@ -6,6 +14,7 @@ export type LogEntry = {
   level: number; // indentation level for display
   nodeId?: string; // Resource ID if available
   nodeName?: string; // Resource name if available
+  sourceLocation?: SourceLocation; // For jumping to source
   contextId: string;
   data: Record<string, unknown>; // The raw event data
   // Derived fields for display

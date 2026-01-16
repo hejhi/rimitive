@@ -1,5 +1,5 @@
 import { devtoolsState } from './devtoolsCtx';
-import { LogEntry } from './types';
+import type { LogEntry, SourceLocation } from './types';
 import { RimitiveEvent } from './messageHandler';
 import { inferCategory } from './eventTypeManager';
 
@@ -50,8 +50,42 @@ function createLogEntry(event: RimitiveEvent, timestamp: number): LogEntry {
     category: inferCategory(event.type),
     nodeId: extractNodeId(event.data),
     nodeName: extractNodeName(event.data),
+    sourceLocation: extractSourceLocation(event.data),
     summary: generateSummary(event),
   };
+}
+
+/**
+ * Extract source location from event data
+ */
+function extractSourceLocation(data: unknown): SourceLocation | undefined {
+  if (!data || typeof data !== 'object') return undefined;
+
+  const obj = data as Record<string, unknown>;
+  console.log('[DevTools] extractSourceLocation - data keys:', Object.keys(obj));
+  const loc = obj.sourceLocation;
+
+  if (!loc || typeof loc !== 'object') {
+    console.log('[DevTools] extractSourceLocation - no sourceLocation found');
+    return undefined;
+  }
+  console.log('[DevTools] extractSourceLocation - found:', loc);
+
+  const location = loc as Record<string, unknown>;
+  if (
+    typeof location.display === 'string' &&
+    typeof location.filePath === 'string' &&
+    typeof location.line === 'number'
+  ) {
+    return {
+      display: location.display,
+      filePath: location.filePath,
+      line: location.line,
+      column: typeof location.column === 'number' ? location.column : undefined,
+    };
+  }
+
+  return undefined;
 }
 
 /**

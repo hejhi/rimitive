@@ -1,5 +1,5 @@
 import { useSubscribe } from '@rimitive/react';
-import type { LogEntry } from './store/types';
+import type { LogEntry, SourceLocation } from './store/types';
 import { filteredLogEntries } from './store/computed';
 import { getCategoryColors } from './store/eventTypeManager';
 import { devtoolsState } from './store/devtoolsCtx';
@@ -49,9 +49,28 @@ function LogEntryComponent({ entry }: { entry: LogEntry }) {
   );
 }
 
-function handleNodeClick(nodeId: string | undefined) {
-  if (!nodeId) return;
+/**
+ * Open source file in Chrome DevTools Sources panel
+ */
+function openInEditor(location: SourceLocation) {
+  const { filePath, line, column } = location;
 
+  // Use Chrome DevTools API to open the resource in Sources panel
+  // This works with URLs from the dev server (http://localhost:...)
+  chrome.devtools.panels.openResource(
+    filePath,
+    line - 1, // Chrome uses 0-based line numbers
+    column ?? 0,
+    () => {
+      // Callback when resource is opened (or fails silently)
+    }
+  );
+}
+
+/**
+ * Filter logs by node ID
+ */
+function filterByNodeId(nodeId: string) {
   const currentFilter = devtoolsState.filter();
   devtoolsState.filter({
     ...currentFilter,
@@ -59,23 +78,60 @@ function handleNodeClick(nodeId: string | undefined) {
   });
 }
 
+/**
+ * Handle click on node name
+ * - Click: open source in editor (if source location available)
+ * - Cmd/Ctrl+Click: filter by node ID
+ */
+function handleNodeClick(
+  e: React.MouseEvent,
+  nodeId: string | undefined,
+  sourceLocation: SourceLocation | undefined
+) {
+  // Cmd/Ctrl+Click: filter by node ID
+  if (e.metaKey || e.ctrlKey) {
+    if (nodeId) {
+      filterByNodeId(nodeId);
+    }
+    return;
+  }
+
+  // Regular click: open source in editor
+  if (sourceLocation) {
+    openInEditor(sourceLocation);
+  }
+}
+
 function renderLogEntry(entry: LogEntry): React.ReactNode {
   const name = entry.nodeName || entry.nodeId || 'anonymous';
   const eventType = entry.eventType;
   const category = entry.category;
   const nodeId = entry.nodeId;
+  const sourceLocation = entry.sourceLocation;
+
+  // Debug: log source location
+  if (entry.sourceLocation) {
+    console.log('[DevTools] Entry has sourceLocation:', entry.sourceLocation);
+  }
 
   // Get dynamic colors for this category
   const colors = getCategoryColors(category);
 
+  // Determine if clickable and build title
+  const isClickable = sourceLocation || nodeId;
+  const titleParts: string[] = [];
+  if (sourceLocation) titleParts.push('Click to open in editor');
+  if (nodeId) titleParts.push('⌘+Click to filter');
+  const title = titleParts.join(' · ');
+
   return (
     <>
       <span className={colors.main}>{eventType}</span>{' '}
-      {nodeId ? (
+      {isClickable ? (
         <button
-          onClick={() => handleNodeClick(nodeId)}
+          onClick={(e) => handleNodeClick(e, nodeId, sourceLocation)}
           className={`${colors.secondary} hover:underline cursor-pointer`}
-          title={`Click to filter by ${nodeId}`}
+          title={title}
         >
           {name}
         </button>

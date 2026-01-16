@@ -1,6 +1,6 @@
 import type { ProducerNode, Dependency, Writable } from './types';
-import type { InstrumentationContext } from '@rimitive/core';
-import { defineModule } from '@rimitive/core';
+import type { InstrumentationContext, SourceLocation } from '@rimitive/core';
+import { defineModule, getCallerLocationFull } from '@rimitive/core';
 import { CONSTANTS } from './constants';
 import { GraphEdgesModule, type GraphEdges } from './deps/graph-edges';
 import { SchedulerModule, type Scheduler } from './deps/scheduler';
@@ -122,8 +122,13 @@ export const SignalModule = defineModule({
     instr: InstrumentationContext
   ): SignalFactory {
     return <T>(initialValue: T): SignalFunction<T> => {
+      const location = getCallerLocationFull();
       const sig = impl(initialValue);
-      const { id } = instr.register(sig, 'signal', `Signal<${typeof initialValue}>`);
+      const name = location?.display ?? `Signal<${typeof initialValue}>`;
+      const { id } = instr.register(sig, 'signal', name);
+
+      // Build source location data for events
+      const sourceLocation: SourceLocation | undefined = location;
 
       function instrumentedSignal(value?: T): T | void {
         if (!arguments.length) {
@@ -131,7 +136,7 @@ export const SignalModule = defineModule({
           instr.emit({
             type: 'signal:read',
             timestamp: Date.now(),
-            data: { signalId: id, value: currentValue },
+            data: { signalId: id, name, value: currentValue, sourceLocation },
           });
           return currentValue;
         }
@@ -140,7 +145,7 @@ export const SignalModule = defineModule({
         instr.emit({
           type: 'signal:write',
           timestamp: Date.now(),
-          data: { signalId: id, oldValue, newValue: value },
+          data: { signalId: id, name, oldValue, newValue: value, sourceLocation },
         });
         sig(value!);
       }
