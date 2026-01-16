@@ -4,6 +4,9 @@ import type { SourceLocation } from '../store/types';
 // Cache for parsed source maps
 const sourceMapCache = new Map<string, SourceMapConsumer | null>();
 
+// Cache for in-flight fetch requests (to avoid duplicate fetches)
+const pendingFetches = new Map<string, Promise<SourceMapConsumer | null>>();
+
 /**
  * Resolve a source location through source maps.
  *
@@ -65,11 +68,33 @@ async function getSourceMapConsumer(
     return sourceMapCache.get(url) ?? null;
   }
 
+  // Check if there's already a fetch in progress for this URL
+  const pending = pendingFetches.get(url);
+  if (pending) {
+    return pending;
+  }
+
+  // Start fetch and store promise so concurrent requests share it
+  const fetchPromise = fetchSourceMap(url);
+  pendingFetches.set(url, fetchPromise);
+
+  try {
+    const consumer = await fetchPromise;
+    sourceMapCache.set(url, consumer);
+    return consumer;
+  } finally {
+    pendingFetches.delete(url);
+  }
+}
+
+/**
+ * Actually fetch and parse a source map.
+ */
+async function fetchSourceMap(url: string): Promise<SourceMapConsumer | null> {
   try {
     // Fetch the source file
     const response = await fetch(url);
     if (!response.ok) {
-      sourceMapCache.set(url, null);
       return null;
     }
 
@@ -84,9 +109,7 @@ async function getSourceMapConsumer(
       const base64Data = inlineMatch[1];
       const jsonData = atob(base64Data);
       const sourceMap = JSON.parse(jsonData) as RawSourceMap;
-      const consumer = new SourceMapConsumer(sourceMap);
-      sourceMapCache.set(url, consumer);
-      return consumer;
+      return new SourceMapConsumer(sourceMap);
     }
 
     // Look for external source map URL
@@ -96,18 +119,14 @@ async function getSourceMapConsumer(
       const mapResponse = await fetch(mapUrl);
       if (mapResponse.ok) {
         const sourceMap = (await mapResponse.json()) as RawSourceMap;
-        const consumer = new SourceMapConsumer(sourceMap);
-        sourceMapCache.set(url, consumer);
-        return consumer;
+        return new SourceMapConsumer(sourceMap);
       }
     }
 
     // No source map found
-    sourceMapCache.set(url, null);
     return null;
   } catch (err) {
     console.warn('[DevTools] Error fetching source map:', err);
-    sourceMapCache.set(url, null);
     return null;
   }
 }
@@ -117,4 +136,5 @@ async function getSourceMapConsumer(
  */
 export function clearSourceMapCache(): void {
   sourceMapCache.clear();
+  pendingFetches.clear();
 }

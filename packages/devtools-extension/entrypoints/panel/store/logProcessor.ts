@@ -42,10 +42,8 @@ async function createLogEntryAsync(event: RimitiveEvent, timestamp: number) {
   if (entry.sourceLocation) {
     const resolved = await resolveSourceLocation(entry.sourceLocation);
     entry.sourceLocation = resolved;
-    // Update nodeName to show resolved location
-    if (!entry.nodeName || entry.nodeName === 'anonymous') {
-      entry.nodeName = resolved.display;
-    }
+    // Always use resolved display as nodeName for source-mapped locations
+    entry.nodeName = resolved.display;
   }
 
   // Add to log entries
