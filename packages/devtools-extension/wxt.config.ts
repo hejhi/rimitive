@@ -26,6 +26,11 @@ export default defineConfig({
     name: 'Rimitive DevTools',
     description: 'Developer tools for debugging Rimitive reactive applications',
     version: '0.0.1',
+    icons: {
+      16: 'icon/icon-16.png',
+      48: 'icon/icon-48.png',
+      128: 'icon/icon-128.png',
+    },
     permissions: ['storage', 'scripting', 'webNavigation'],
     host_permissions: ['<all_urls>'],
     web_accessible_resources: [

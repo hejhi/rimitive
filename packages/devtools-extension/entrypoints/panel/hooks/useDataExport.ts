@@ -15,7 +15,6 @@ type ImportData = {
     };
     selectedContext?: string | null;
     selectedTransaction?: string | null;
-    selectedTab?: string;
   };
 };
 
@@ -30,7 +29,6 @@ export function useDataExport() {
         filter: devtoolsState.filter(),
         selectedContext: devtoolsState.selectedContext(),
         selectedTransaction: devtoolsState.selectedTransaction(),
-        selectedTab: devtoolsState.selectedTab(),
       },
     };
 
@@ -80,9 +78,6 @@ export function useDataExport() {
         }
         if (state.selectedTransaction !== undefined) {
           devtoolsState.selectedTransaction(state.selectedTransaction);
-        }
-        if (state.selectedTab) {
-          devtoolsState.selectedTab(state.selectedTab as 'logs' | 'timeline');
         }
 
         devtoolsState.connected(true);

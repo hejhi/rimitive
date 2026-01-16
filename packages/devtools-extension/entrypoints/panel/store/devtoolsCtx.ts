@@ -20,7 +20,6 @@ export const devtoolsState = {
   contexts: devtoolsContext.signal<ContextInfo[]>([]),
   selectedContext: devtoolsContext.signal<string | null>(null),
   selectedTransaction: devtoolsContext.signal<string | null>(null),
-  selectedTab: devtoolsContext.signal<'logs' | 'timeline'>('logs'),
   filter: devtoolsContext.signal({
     type: 'all',
     search: '',

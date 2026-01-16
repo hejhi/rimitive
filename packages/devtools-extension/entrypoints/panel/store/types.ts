@@ -26,7 +26,6 @@ export type DevToolsState = {
   contexts: ContextInfo[];
   selectedContext: string | null;
   selectedTransaction: string | null;
-  selectedTab: 'logs' | 'timeline';
   filter: {
     type: string; // Generic type filter
     search: string;
