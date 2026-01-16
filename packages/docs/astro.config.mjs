@@ -16,12 +16,13 @@ export default defineConfig({
         {
           label: 'Guides',
           items: [
-            { label: 'Composing Signals', slug: 'guides/composing-signals' },
+            { label: 'Creating a Service', slug: 'guides/creating-a-service' },
+            { label: 'Using a Service', slug: 'guides/using-a-service' },
             {
               label: 'Creating a Behavior',
               slug: 'guides/creating-a-behavior',
             },
-            { label: 'Adding View', slug: 'guides/adding-view' },
+            { label: 'Adding a UI', slug: 'guides/adding-a-ui' },
             { label: 'Dynamic Views', slug: 'guides/dynamic-views' },
             { label: 'Event Handling', slug: 'guides/event-handling' },
             { label: 'Loading Data', slug: 'guides/loading-data' },

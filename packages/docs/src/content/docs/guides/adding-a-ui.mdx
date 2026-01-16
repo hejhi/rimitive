@@ -1,0 +1,246 @@
+---
+title: Adding a UI
+description: Render reactive state to the DOM with el().
+---
+
+You have signals, and maybe some behaviors, so perhaps now we want to add a reactive UI on top of it.
+
+rimitive provides the `view` package that contains view-specific primitives, with `el()` being the foundation. `el()` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
+
+---
+
+## Extending the Service
+
+Add the view modules to your service:
+
+```typescript
+// service.ts
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+export const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  // Let's add the `el` and `mount` primitives from the `view` package, and provide the
+  // DOM adapter to make DOM elements
+  createElModule(createDOMAdapter()),
+  MountModule
+);
+export const { signal, computed, effect, el, mount } = svc;
+export type Service = typeof svc;
+```
+
+Same pattern as before, just now with more modules!
+
+---
+
+## Creating Elements
+
+`el()` is curried: `el(tag)(children)`. Don't be scurred, it'll make sense:
+
+```typescript
+// Just a div tag
+const div = el('div')();
+
+// An h1 with text
+const heading = el('h1')('Hello, World');
+
+// a div with children
+const container = el('div')(
+  el('h1')('Title'),
+  el('p')('Some text')
+);
+```
+
+> IM-POR-TANT! Before we proceed, let's again differentiate rimitive from most other reactive frameworks, and understand that `el` itself **never re-renders**. You can pass it reactive children, you can pass it reactive props, and those will all update when they change, but the underlying tag/element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
+>
+> There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself is D-U-M-B, it doesn't reconcile or re-render, it _just lives its best lil life_. 
+>
+> This is **great for performance**, creates a **much simpler mental model**, and means that if you don't need reconciliation, don't use it, and **save some kbs, yo 📦**.
+
+---
+
+## Props
+
+Use `.props()` to set reactive attributes and events:
+
+```typescript
+const isDisabled = signal(false);
+
+const button = el('button').props({
+  className: 'primary',
+  disabled: isDisabled,
+  onclick: () => console.log('clicked'),
+})('Click me');
+
+isDisabled(true);  // button becomes disabled, class changes
+```
+
+Props are typesafe and typed based on the element. `el('button')` knows about `disabled`, `onclick`, `type`, etc. These types are driven by the adapter provided, so for the DOM you get things like `button`, whatever, but swap it out or customize the adapter and then you can get all sorts of other things, like custom elements, svg or canvas abstractions, hydration abstractions...whatever you want really.
+
+---
+
+## Reactive Content
+
+Pass a computed for reactive text:
+
+```typescript
+const count = signal(0);
+
+const display = el('div')(
+  computed(() => `Count: ${count()}`)
+);
+
+count(5);  // display updates to "Count: 5"
+```
+
+---
+
+## UI Components
+
+the star of the show, UI components in rimitive are...just functions that return elements:
+
+```typescript
+const Greeting = (name: string) =>
+  el('div')(
+    el('h2')(`Hello, ${name}!`),
+    el('p')('Welcome to Rimitive.')
+  );
+
+const app = el('div')(
+  Greeting('Ada'),
+  Greeting('Grace')
+);
+```
+
+> **Important:** Differentiation alert, again! Components in rimitive are not magical reactive closures! They are just functions. Just another pattern. There's no re-rendering, just reactive primitives. You're simply returning an element tree.
+
+That's it, kind of anticlimactic.
+
+---
+
+## With Behaviors
+
+Drive UIs with reactive behavior:
+
+```typescript
+import { svc, el, computed } from './service';
+import { useCounter } from './behaviors/counter';
+
+const Counter = (initial: number) => {
+  const { count, doubled, increment, decrement, reset } = useCounter(initial);
+
+  return el('div')(
+    el('div')(computed(() => `Count: ${count()} (doubled: ${doubled()})`)),
+    el('div')(
+      el('button').props({ onclick: decrement })('-'),
+      el('button').props({ onclick: increment })('+'),
+      el('button').props({ onclick: reset })('Reset')
+    )
+  );
+};
+
+const app = el('div')(
+  Counter(0),
+  Counter(100)
+);
+```
+
+Again, `Counter` itself is not a reactive closure. It's not going to re-render. But it's quite nice in a way, isn't it? all your reactive behavior and logic contained in behavior functions, then using the api returned to drive UI specific logic?
+
+But wait, there's more!
+
+---
+
+## Portable Components
+
+Just like behaviors, components can be made portable by wrapping them in a function that receives the service:
+
+```typescript
+import type { Service } from './service';
+import { counter } from './behaviors/counter';
+
+const Counter = (svc: Service) => {
+  const { el, computed } = svc;
+
+  // The service layer is so cyute isn't it??
+  const useCounter = svc(counter);
+
+  return (initial: number) => {
+    const { count, doubled, increment, decrement, reset } = useCounter(initial);
+
+    return el('div')(
+      el('div')(computed(() => `Count: ${count()} (doubled: ${doubled()})`)),
+      el('div')(
+        el('button').props({ onclick: decrement })('-'),
+        el('button').props({ onclick: increment })('+'),
+        el('button').props({ onclick: reset })('Reset')
+      )
+    );
+  };
+};
+```
+
+Same shape as portable behaviors: `(svc) => (args) => result`. The outer function is the service layer, the inner function is the component factory.
+
+```typescript
+import { svc } from './service';
+
+const CounterComponent = svc(Counter);
+
+const app = el('div')(
+  CounterComponent(0),
+  CounterComponent(100)
+);
+```
+
+Can you see what's coming?? Components compose other components in the service layer:
+
+```typescript
+import type { Service } from './service';
+import { counter } from './behaviors/counter';
+import { Counter } from './Counter';
+
+const Dashboard = (svc: Service) => {
+  const { el } = svc;
+
+  // Compose the Counter component in the service layer
+  const CounterComponent = svc(Counter);
+
+  return () =>
+    el('div')(
+      el('h1')('Dashboard'),
+      el('div')(
+        el('label')('Users: '),
+        CounterComponent(0)
+      ),
+      el('div')(
+        el('label')('Sessions: '),
+        CounterComponent(100)
+      )
+    );
+};
+```
+
+The service layer is where you wire up your dependencies—behaviors, other components, whatever you need. Then the inner function just uses them.
+
+This is useful for testing, SSR, or sharing components across different service contexts.
+
+---
+
+## Mounting
+
+Use `mount()` to actually attach to the DOM:
+
+```typescript
+const App = () => el('div')(
+  el('h1')('My App')
+);
+
+const app = mount(App());
+document.body.appendChild(app.element!);
+```

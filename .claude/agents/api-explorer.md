@@ -85,7 +85,7 @@ From `guides/topic.mdx`:
 ### Relevant Files
 
 - `packages/signals/src/signal.ts` - Implementation
-- `packages/docs/src/content/docs/guides/composing-signals.mdx` - Guide
+- `packages/docs/src/content/docs/guides/creating-a-service.mdx` - Guide
 
 ```
 

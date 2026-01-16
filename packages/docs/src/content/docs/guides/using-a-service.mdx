@@ -1,0 +1,62 @@
+---
+title: Using a Service
+description: Different ways to use a reactive service in your code.
+---
+
+Once you've [created a service](/guides/creating-a-service), there are a few ways to use it.
+
+---
+
+## Top-Level
+
+You can safely destructure anything in rimitive from a service, so it's common to do this:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+
+effect(() => {
+  console.log(count(), doubled());
+});
+```
+
+Great for simple scripts or when you only need a single service. In rimitive, it's also common to export the service as well as the service type directly, which comes in handy _a lot_:
+
+```typescript
+// myService.ts
+
+export const svc = compose(SignalModule, ComputedModule, EffectModule);
+export const { signal, computed, effect, batch, el, mount } = svc;
+export type Service = typeof svc;
+```
+
+---
+
+## In a Function
+
+rimitive makes heavy usage of plain factory functions that encapsulate bits of reactive behavior, like:
+
+```typescript
+import { signal } from './myService.ts'
+
+const myCounter = () => {
+  const count = signal(0);
+  const increment = () => count(count() + 1);
+
+  return { count, increment };
+};
+
+const counter = myCounter();
+counter.increment();
+counter.count(); // 1
+```
+
+The above is simply a factory that instantiates reactive state and returns an api to drive it. In rimitive, this pattern is called a ["behavior"](/guides/creating-a-behavior), which is conventionally prefixed with `use*` for clarity (ie `useCounter` instead of `myCounter`).
+
+> Big ole note for people coming from React: prefixing with `use*` in rimitive is **just convention and nice semantics**. You can totally use behaviors in vanilla js, no problem. It doesn't grant the function any magical reactive abilities, or require you to obey any rules in how it's used.
+
+You can stop right here, if that's all you need! But if you want to actually drive a reactive ui with state (a "component"), rimitive has primitives and patterns to help you with that too. Next up though, let's talk about the [behavior pattern](/guides/creating-a-behavior).

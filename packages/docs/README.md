@@ -28,7 +28,7 @@ src/content/docs/
 ├── index.mdx           # Landing page
 ├── guides/             # Step-by-step tutorials
 │   ├── getting-started.mdx
-│   ├── composing-signals.mdx
+│   ├── creating-a-service.mdx
 │   ├── creating-a-behavior.mdx
 │   └── ...
 ├── patterns/           # Best practices and patterns
