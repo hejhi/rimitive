@@ -1,0 +1,7 @@
+{
+  "name": "rimitive-behavior",
+  "version": "1.0.0",
+  "description": "Create headless behaviors - portable reactive logic without UI",
+  "author": { "name": "Rimitive" },
+  "skills": ["./skills/"]
+}

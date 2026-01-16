@@ -1,0 +1,37 @@
+{
+  "name": "rimitive-plugins",
+  "owner": {
+    "name": "Rimitive",
+    "email": "hello@rimitive.dev"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for developing with Rimitive - composable reactive primitives",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "rimitive-compose",
+      "source": "./plugins/rimitive-compose",
+      "description": "Help composing Rimitive services with the right modules and imports",
+      "version": "1.0.0"
+    },
+    {
+      "name": "rimitive-behavior",
+      "source": "./plugins/rimitive-behavior",
+      "description": "Create headless behaviors - portable reactive logic without UI",
+      "version": "1.0.0"
+    },
+    {
+      "name": "rimitive-view",
+      "source": "./plugins/rimitive-view",
+      "description": "Build views with el, map, match, and other view primitives",
+      "version": "1.0.0"
+    },
+    {
+      "name": "rimitive-module",
+      "source": "./plugins/rimitive-module",
+      "description": "Create custom modules with defineModule for extending Rimitive",
+      "version": "1.0.0"
+    }
+  ]
+}

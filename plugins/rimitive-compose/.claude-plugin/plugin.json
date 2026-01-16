@@ -1,0 +1,7 @@
+{
+  "name": "rimitive-compose",
+  "version": "1.0.0",
+  "description": "Help composing Rimitive services with the right modules and imports",
+  "author": { "name": "Rimitive" },
+  "skills": ["./skills/"]
+}
