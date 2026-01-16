@@ -23,7 +23,7 @@ export function Header({ contextCount, onExport, onImport }: HeaderProps) {
         <img src="/logo.svg" alt="Rimitive" className="h-4 dark:hidden" />
         <h1 className="font-semibold">Rimitive DevTools</h1>
         <Badge variant="secondary" className="text-xs">
-          {contextCount} context{contextCount !== 1 ? 's' : ''}
+          {contextCount} service{contextCount !== 1 ? 's' : ''}
         </Badge>
       </div>
       <div className="flex items-center gap-2">

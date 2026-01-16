@@ -25,7 +25,7 @@ import { MountModule } from '@rimitive/view/deps/mount';
 
 // Create instrumentation
 const instrumentation = createInstrumentation({
-  providers: [devtoolsProvider({ debug: true })],
+  providers: [devtoolsProvider()],
   enabled: true,
 });
 

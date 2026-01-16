@@ -52,18 +52,43 @@ export function devtoolsProvider(
     init(contextId: string, contextName: string): void {
       if (typeof window === 'undefined') return;
 
-      // Announce that Rimitive is being used
-      window.postMessage(
-        {
-          source: 'rimitive-devtools',
-          type: 'LATTICE_DETECTED',
-          payload: {
-            enabled: true,
-            version: '1.0.0',
+      const announce = () => {
+        window.postMessage(
+          {
+            source: 'rimitive-devtools',
+            type: 'LATTICE_DETECTED',
+            payload: {
+              enabled: true,
+              version: '1.0.0',
+              contextId,
+              contextName,
+            },
           },
-        },
-        '*'
-      );
+          '*'
+        );
+      };
+
+      // Announce that Rimitive is being used with context info
+      announce();
+
+      // Listen for re-detection requests (from devtools reconnection)
+      window.addEventListener('message', (event) => {
+        if (
+          event.source !== window ||
+          !event.data ||
+          typeof event.data !== 'object'
+        ) {
+          return;
+        }
+
+        const data = event.data as { source?: string; type?: string };
+        if (
+          data.source === 'rimitive-devtools-content' &&
+          data.type === 'REQUEST_DETECTION'
+        ) {
+          announce();
+        }
+      });
 
       if (debug) {
         console.log(

@@ -34,5 +34,22 @@ export default defineContentScript({
         ...data,
       });
     });
+
+    // Listen for messages from background script (e.g., REQUEST_DETECTION)
+    chrome.runtime.onMessage.addListener((message) => {
+      if (
+        message.source === 'rimitive-devtools-background' &&
+        message.type === 'REQUEST_DETECTION'
+      ) {
+        // Forward to page to request re-detection
+        window.postMessage(
+          {
+            source: 'rimitive-devtools-content',
+            type: 'REQUEST_DETECTION',
+          },
+          '*'
+        );
+      }
+    });
   },
 });

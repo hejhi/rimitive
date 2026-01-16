@@ -44,7 +44,7 @@ export function composeProviders(
   }
 
   const contextId = crypto.randomUUID();
-  const contextName = 'Context';
+  const contextName = 'Service';
 
   // Initialize all providers
   providers.forEach((provider) => {

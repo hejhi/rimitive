@@ -17,7 +17,7 @@ export type RimitiveEvent = {
 export function handleDevToolsMessage(message: DevToolsMessage) {
   switch (message.type) {
     case 'LATTICE_DETECTED':
-      handleRimitiveDetected();
+      handleRimitiveDetected(message.data);
       break;
 
     case 'TRANSACTION':
@@ -30,13 +30,31 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
   }
 }
 
-function handleRimitiveDetected() {
+function handleRimitiveDetected(data?: unknown) {
   devtoolsState.connected(true);
 
   // Reset state for a fresh start
+  devtoolsState.logEntries([]);
+
+  // Create context from the detection payload if contextId is provided
+  if (data && typeof data === 'object') {
+    const payload = data as { contextId?: string; contextName?: string };
+    if (payload.contextId) {
+      devtoolsState.contexts([
+        {
+          id: payload.contextId,
+          name: payload.contextName || 'Service 1',
+          created: Date.now(),
+        },
+      ]);
+      devtoolsState.selectedContext(payload.contextId);
+      return;
+    }
+  }
+
+  // Fallback: clear contexts if no contextId in payload
   devtoolsState.contexts([]);
   devtoolsState.selectedContext(null);
-  devtoolsState.logEntries([]);
 }
 
 function handleTransaction(data: unknown) {

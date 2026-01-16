@@ -41,10 +41,10 @@ export function FilterBar({
           }
         >
           <SelectTrigger className="h-8 w-[140px] text-xs">
-            <SelectValue placeholder="Select context" />
+            <SelectValue placeholder="Select service" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Contexts</SelectItem>
+            <SelectItem value="all">All Services</SelectItem>
             {contexts.map((ctx) => (
               <SelectItem key={ctx.id} value={ctx.id}>
                 {ctx.name}

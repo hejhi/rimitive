@@ -10,7 +10,7 @@ export function updateContextFromEvent(event: RimitiveEvent) {
     const contextNumber = contexts.length + 1;
     contexts.push({
       id: event.contextId,
-      name: `Context ${contextNumber}`,
+      name: `Service ${contextNumber}`,
       created: Date.now(),
     });
     contextIndex = contexts.length - 1;

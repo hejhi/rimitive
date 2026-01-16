@@ -4,12 +4,19 @@ type DevToolsMessage = {
   payload?: unknown;
 };
 
+type RimitiveDetectionInfo = {
+  enabled: boolean;
+  version?: string;
+  contextId?: string;
+  contextName?: string;
+};
+
 export default defineBackground(() => {
   // Store connections from devtools panels
   const devtoolsConnections = new Map<number, chrome.runtime.Port>();
 
-  // Track which tabs have Rimitive detected
-  const rimitiveDetectedTabs = new Set<number>();
+  // Track which tabs have Rimitive detected (with full payload)
+  const rimitiveDetectedTabs = new Map<number, RimitiveDetectionInfo>();
 
   // Listen for connections from devtools panels
   chrome.runtime.onConnect.addListener((port) => {
@@ -21,11 +28,20 @@ export default defineBackground(() => {
           tabId = msg.tabId;
           devtoolsConnections.set(tabId, port);
 
-          // If Rimitive was detected, notify the panel
-          if (rimitiveDetectedTabs.has(tabId)) {
+          // If Rimitive was detected, notify the panel with cached info
+          const detectionInfo = rimitiveDetectedTabs.get(tabId);
+          if (detectionInfo) {
             port.postMessage({
               type: 'LATTICE_DETECTED',
-              data: { enabled: true },
+              data: detectionInfo,
+            });
+          } else {
+            // Request re-detection from the page (in case service worker was restarted)
+            chrome.tabs.sendMessage(tabId, {
+              source: 'rimitive-devtools-background',
+              type: 'REQUEST_DETECTION',
+            }).catch(() => {
+              // Tab might not have content script, ignore error
             });
           }
         }
@@ -56,7 +72,9 @@ export default defineBackground(() => {
         // Handle messages from the page
         switch (message.type) {
           case 'LATTICE_DETECTED': {
-            rimitiveDetectedTabs.add(tabId);
+            // Store full detection info for reconnection
+            const payload = message.payload as RimitiveDetectionInfo | undefined;
+            rimitiveDetectedTabs.set(tabId, payload ?? { enabled: true });
 
             // Forward to devtools if connected
             const port = devtoolsConnections.get(tabId);
