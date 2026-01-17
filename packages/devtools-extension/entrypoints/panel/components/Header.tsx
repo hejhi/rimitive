@@ -19,8 +19,12 @@ export function Header({ contextCount, onExport, onImport }: HeaderProps) {
   return (
     <header className="border-b flex items-center justify-between px-4 py-2">
       <div className="flex items-center gap-2">
-        <img src="/logo-dark.svg" alt="Rimitive" className="h-4 dark:block hidden" />
-        <img src="/logo.svg" alt="Rimitive" className="h-4 dark:hidden" />
+        <img
+          src="/logo-dark.svg"
+          alt="Rimitive"
+          className="h-3.5 dark:block hidden"
+        />
+        <img src="/logo.svg" alt="Rimitive" className="h-3.5 dark:hidden" />
         <h1 className="font-semibold">Rimitive DevTools</h1>
         <Badge variant="secondary" className="text-xs">
           {contextCount} service{contextCount !== 1 ? 's' : ''}
