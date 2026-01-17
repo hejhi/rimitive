@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import type { GraphNode, FocusedGraphView, GraphNodeType } from './store/graphTypes';
 import type { SourceLocation } from './store/types';
@@ -87,13 +87,17 @@ export function GraphTab() {
  */
 function NodeSelector() {
   const state = useSubscribe(graphState);
-  const nodes = Array.from(state.nodes.values()).slice(0, 12);
+  const [expanded, setExpanded] = useState(false);
 
-  if (nodes.length === 0) return null;
+  const allNodes = Array.from(state.nodes.values());
+  const visibleNodes = expanded ? allNodes : allNodes.slice(0, 12);
+  const hiddenCount = allNodes.length - 12;
+
+  if (allNodes.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap justify-center gap-2 max-w-md mt-4">
-      {nodes.map((node) => (
+    <div className="flex flex-wrap justify-center gap-2 max-w-lg mt-4">
+      {visibleNodes.map((node) => (
         <button
           key={node.id}
           onClick={() => selectedNodeId(node.id)}
@@ -108,10 +112,13 @@ function NodeSelector() {
           {node.name ?? node.id.slice(0, 8)}
         </button>
       ))}
-      {state.nodes.size > 12 && (
-        <span className="text-xs text-muted-foreground self-center">
-          +{state.nodes.size - 12} more
-        </span>
+      {hiddenCount > 0 && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
+        >
+          {expanded ? 'Show less' : `+${hiddenCount} more`}
+        </button>
       )}
     </div>
   );
