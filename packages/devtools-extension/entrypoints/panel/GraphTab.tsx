@@ -1,48 +1,236 @@
-import { useState, type MouseEvent } from 'react';
+import { useCallback, useEffect } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type Edge,
+  type NodeTypes,
+  Handle,
+  Position,
+  MarkerType,
+} from '@xyflow/react';
+import Dagre from '@dagrejs/dagre';
 import { useSubscribe } from '@rimitive/react';
 import type { GraphNode, FocusedGraphView, GraphNodeType } from './store/graphTypes';
 import type { SourceLocation } from './store/types';
 import { focusedView, selectedNodeId, graphState } from './store/graphState';
-import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+import { Layers } from 'lucide-react';
+
+import '@xyflow/react/dist/style.css';
 
 /**
- * Node type colors - industrial palette with clear distinctions
+ * Node type colors
  */
-const NODE_COLORS: Record<GraphNodeType, { bg: string; border: string; text: string; glow: string }> = {
-  signal: {
-    bg: 'bg-blue-950/80',
-    border: 'border-blue-500',
-    text: 'text-blue-300',
-    glow: 'shadow-blue-500/20',
-  },
-  computed: {
-    bg: 'bg-violet-950/80',
-    border: 'border-violet-500',
-    text: 'text-violet-300',
-    glow: 'shadow-violet-500/20',
-  },
-  effect: {
-    bg: 'bg-emerald-950/80',
-    border: 'border-emerald-500',
-    text: 'text-emerald-300',
-    glow: 'shadow-emerald-500/20',
-  },
-  subscribe: {
-    bg: 'bg-amber-950/80',
-    border: 'border-amber-500',
-    text: 'text-amber-300',
-    glow: 'shadow-amber-500/20',
-  },
+const NODE_COLORS: Record<GraphNodeType, { bg: string; border: string; text: string }> = {
+  signal: { bg: '#172554', border: '#3b82f6', text: '#93c5fd' },
+  computed: { bg: '#2e1065', border: '#8b5cf6', text: '#c4b5fd' },
+  effect: { bg: '#022c22', border: '#10b981', text: '#6ee7b7' },
+  subscribe: { bg: '#451a03', border: '#f59e0b', text: '#fcd34d' },
 };
 
-const EDGE_COLORS = {
-  dependency: 'stroke-blue-400/60',
-  dependent: 'stroke-emerald-400/60',
+/**
+ * Custom node component for React Flow
+ */
+function GraphNodeComponent({ data }: { data: GraphNodeData }) {
+  const { node, isCenter, onNavigate, onOpenSource } = data;
+  const colors = NODE_COLORS[node.type];
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey) {
+      if (!isCenter) onNavigate(node.id);
+    } else if (node.sourceLocation) {
+      onOpenSource(node.sourceLocation);
+    }
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      className="cursor-pointer transition-all hover:brightness-125"
+      style={{
+        background: colors.bg,
+        border: `2px solid ${colors.border}`,
+        borderRadius: 8,
+        padding: '8px 16px',
+        minWidth: 120,
+        textAlign: 'center',
+        boxShadow: isCenter ? `0 0 20px ${colors.border}40` : undefined,
+      }}
+      title={buildNodeTitle(node, isCenter)}
+    >
+      <Handle type="target" position={Position.Left} style={{ background: colors.border }} />
+      <div
+        style={{
+          color: colors.text,
+          fontSize: 12,
+          fontFamily: 'monospace',
+          fontWeight: 500,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: 140,
+        }}
+      >
+        {node.name ?? node.id.slice(0, 12)}
+      </div>
+      <div
+        style={{
+          color: colors.text,
+          fontSize: 9,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          opacity: 0.7,
+          marginTop: 2,
+        }}
+      >
+        {node.type}
+      </div>
+      <Handle type="source" position={Position.Right} style={{ background: colors.border }} />
+    </div>
+  );
+}
+
+type GraphNodeData = {
+  node: GraphNode;
+  isCenter: boolean;
+  onNavigate: (nodeId: string) => void;
+  onOpenSource: (location: SourceLocation) => void;
 };
+
+const nodeTypes: NodeTypes = {
+  graphNode: GraphNodeComponent,
+};
+
+/**
+ * Use dagre to compute layout positions
+ */
+function getLayoutedElements(
+  nodes: Node[],
+  edges: Edge[],
+  direction: 'LR' | 'TB' = 'LR'
+): { nodes: Node[]; edges: Edge[] } {
+  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+
+  g.setGraph({
+    rankdir: direction,
+    nodesep: 50,
+    ranksep: 100,
+    marginx: 50,
+    marginy: 50,
+  });
+
+  nodes.forEach((node) => {
+    g.setNode(node.id, { width: 150, height: 50 });
+  });
+
+  edges.forEach((edge) => {
+    g.setEdge(edge.source, edge.target);
+  });
+
+  Dagre.layout(g);
+
+  const layoutedNodes = nodes.map((node) => {
+    const position = g.node(node.id);
+    return {
+      ...node,
+      position: { x: position.x - 75, y: position.y - 25 },
+    };
+  });
+
+  return { nodes: layoutedNodes, edges };
+}
+
+/**
+ * Convert focused view to React Flow nodes and edges
+ */
+function focusedViewToFlow(
+  view: FocusedGraphView,
+  onNavigate: (nodeId: string) => void,
+  onOpenSource: (location: SourceLocation) => void
+): { nodes: Node[]; edges: Edge[] } {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  // Add dependency nodes
+  view.dependencies.forEach((dep) => {
+    nodes.push({
+      id: dep.id,
+      type: 'graphNode',
+      position: { x: 0, y: 0 },
+      data: { node: dep, isCenter: false, onNavigate, onOpenSource },
+    });
+
+    // Edge from dependency to center (dependency flows into center)
+    edges.push({
+      id: `${dep.id}->${view.center.id}`,
+      source: dep.id,
+      target: view.center.id,
+      animated: false,
+      style: { stroke: '#3b82f6', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
+    });
+  });
+
+  // Add center node
+  nodes.push({
+    id: view.center.id,
+    type: 'graphNode',
+    position: { x: 0, y: 0 },
+    data: { node: view.center, isCenter: true, onNavigate, onOpenSource },
+  });
+
+  // Add dependent nodes
+  view.dependents.forEach((dep) => {
+    nodes.push({
+      id: dep.id,
+      type: 'graphNode',
+      position: { x: 0, y: 0 },
+      data: { node: dep, isCenter: false, onNavigate, onOpenSource },
+    });
+
+    // Edge from center to dependent (center flows into dependent)
+    edges.push({
+      id: `${view.center.id}->${dep.id}`,
+      source: view.center.id,
+      target: dep.id,
+      animated: false,
+      style: { stroke: '#10b981', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#10b981' },
+    });
+  });
+
+  return getLayoutedElements(nodes, edges, 'LR');
+}
 
 export function GraphTab() {
   const view = useSubscribe(focusedView);
   const state = useSubscribe(graphState);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  const onNavigate = useCallback((nodeId: string) => {
+    selectedNodeId(nodeId);
+  }, []);
+
+  const onOpenSource = useCallback((location: SourceLocation) => {
+    chrome.devtools.panels.openResource(location.filePath, location.line - 1, location.column ?? 0, () => {});
+  }, []);
+
+  // Update nodes/edges when view changes
+  useEffect(() => {
+    if (view) {
+      const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(view, onNavigate, onOpenSource);
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+    } else {
+      setNodes([]);
+      setEdges([]);
+    }
+  }, [view, onNavigate, onOpenSource, setNodes, setEdges]);
 
   if (state.nodes.size === 0) {
     return (
@@ -70,7 +258,7 @@ export function GraphTab() {
             Select a node to view its dependencies.
             <br />
             <span className="text-xs text-muted-foreground/60">
-              Click a node name in the logs tab or select from the list below.
+              ⌘+Click a node name in the logs tab to focus it.
             </span>
           </div>
           <NodeSelector />
@@ -79,100 +267,24 @@ export function GraphTab() {
     );
   }
 
-  return <FocusedGraph view={view} />;
-}
-
-/**
- * Check if a node is internal (no source location = framework internals)
- */
-function isInternalNode(node: GraphNode): boolean {
-  return !node.sourceLocation;
-}
-
-/**
- * Quick node selector when nothing is focused
- */
-function NodeSelector() {
-  const state = useSubscribe(graphState);
-  const [expanded, setExpanded] = useState(false);
-  const [hideInternal, setHideInternal] = useState(true);
-
-  const allNodes = Array.from(state.nodes.values());
-  const filteredNodes = hideInternal
-    ? allNodes.filter((n) => !isInternalNode(n))
-    : allNodes;
-  const internalCount = allNodes.length - filteredNodes.length;
-
-  const visibleNodes = expanded ? filteredNodes : filteredNodes.slice(0, 12);
-  const hiddenCount = filteredNodes.length - 12;
-
-  if (allNodes.length === 0) return null;
-
-  return (
-    <div className="flex flex-col items-center gap-3 mt-4">
-      {/* Filter toggle */}
-      {internalCount > 0 && (
-        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={hideInternal}
-            onChange={(e) => setHideInternal(e.target.checked)}
-            className="rounded border-muted-foreground/50"
-          />
-          Hide internal ({internalCount})
-        </label>
-      )}
-
-      {/* Node buttons */}
-      <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-        {visibleNodes.map((node) => (
-          <button
-            key={node.id}
-            onClick={() => selectedNodeId(node.id)}
-            className={`
-              px-2 py-1 text-xs font-mono rounded border
-              ${NODE_COLORS[node.type].bg}
-              ${NODE_COLORS[node.type].border}
-              ${NODE_COLORS[node.type].text}
-              hover:brightness-125 transition-all
-            `}
-          >
-            {node.name ?? node.id.slice(0, 8)}
-          </button>
-        ))}
-        {hiddenCount > 0 && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
-          >
-            {expanded ? 'Show less' : `+${hiddenCount} more`}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * The focused graph visualization
- */
-function FocusedGraph({ view }: { view: FocusedGraphView }) {
-  const { center, dependencies, dependents } = view;
-
   return (
     <div className="h-full flex flex-col">
-      {/* Header showing context */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
         <div className="flex items-center gap-2 text-xs">
           <span className="text-muted-foreground">Focused on:</span>
-          <span className={`font-mono font-medium ${NODE_COLORS[center.type].text}`}>
-            {center.name ?? center.id}
+          <span className="font-mono font-medium" style={{ color: NODE_COLORS[view.center.type].text }}>
+            {view.center.name ?? view.center.id}
           </span>
-          <span className={`
-            px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-medium
-            ${NODE_COLORS[center.type].bg} ${NODE_COLORS[center.type].border} border
-          `}>
-            {center.type}
+          <span
+            className="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-medium"
+            style={{
+              background: NODE_COLORS[view.center.type].bg,
+              border: `1px solid ${NODE_COLORS[view.center.type].border}`,
+              color: NODE_COLORS[view.center.type].text,
+            }}
+          >
+            {view.center.type}
           </span>
         </div>
         <button
@@ -183,260 +295,71 @@ function FocusedGraph({ view }: { view: FocusedGraphView }) {
         </button>
       </div>
 
-      {/* Graph visualization */}
-      <div className="flex-1 relative overflow-hidden">
-        <GraphVisualization view={view} />
+      {/* React Flow */}
+      <div className="flex-1">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.3 }}
+          minZoom={0.5}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background color="#333" gap={20} />
+          <Controls showInteractive={false} />
+          <MiniMap
+            nodeColor={(node) => {
+              const data = node.data as GraphNodeData;
+              return NODE_COLORS[data.node.type].border;
+            }}
+            maskColor="rgba(0, 0, 0, 0.8)"
+            style={{ background: '#1a1a1a' }}
+          />
+        </ReactFlow>
       </div>
 
       {/* Stats footer */}
       <div className="flex items-center justify-center gap-6 px-4 py-2 border-t border-border/50 bg-muted/30 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <ChevronLeft className="w-3 h-3" />
-          {dependencies.length} {dependencies.length === 1 ? 'dependency' : 'dependencies'}
-        </span>
-        <span className="flex items-center gap-1">
-          {dependents.length} {dependents.length === 1 ? 'dependent' : 'dependents'}
-          <ChevronRight className="w-3 h-3" />
-        </span>
+        <span>← {view.dependencies.length} dependencies</span>
+        <span>{view.dependents.length} dependents →</span>
       </div>
     </div>
   );
 }
 
 /**
- * 3-column graph visualization: Dependencies | Center | Dependents
+ * Quick node selector when nothing is focused
  */
-function GraphVisualization({ view }: { view: FocusedGraphView }) {
-  const { center, dependencies, dependents } = view;
+function NodeSelector() {
+  const state = useSubscribe(graphState);
+  const nodes = Array.from(state.nodes.values()).slice(0, 12);
 
-  // Layout constants - 3 column layout
-  const leftColumnX = 18;   // Dependencies column
-  const centerX = 50;       // Center node
-  const centerY = 50;       // Center vertical position
-  const rightColumnX = 82;  // Dependents column
-  const nodeWidth = 140;
-  const nodeHeight = 36;
-
-  // Calculate vertical positions for dependencies (left column)
-  const depPositions = dependencies.map((_, i) => {
-    const total = dependencies.length;
-    // Distribute evenly in vertical space (20% to 80%)
-    const ySpan = 60;
-    const yStart = 50 - (ySpan * (total - 1)) / (2 * Math.max(1, total));
-    const yStep = total > 1 ? ySpan / (total - 1) : 0;
-    return {
-      x: leftColumnX,
-      y: yStart + i * yStep,
-    };
-  });
-
-  // Calculate vertical positions for dependents (right column)
-  const dependentPositions = dependents.map((_, i) => {
-    const total = dependents.length;
-    // Distribute evenly in vertical space (20% to 80%)
-    const ySpan = 60;
-    const yStart = 50 - (ySpan * (total - 1)) / (2 * Math.max(1, total));
-    const yStep = total > 1 ? ySpan / (total - 1) : 0;
-    return {
-      x: rightColumnX,
-      y: yStart + i * yStep,
-    };
-  });
+  if (nodes.length === 0) return null;
 
   return (
-    <div className="absolute inset-0">
-      {/* SVG for edges - viewBox makes percentage coordinates work */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <marker
-            id="arrowhead-dep"
-            markerWidth="3"
-            markerHeight="2"
-            refX="2.5"
-            refY="1"
-            orient="auto"
-          >
-            <polygon points="0 0, 3 1, 0 2" className="fill-blue-400/60" />
-          </marker>
-          <marker
-            id="arrowhead-dependent"
-            markerWidth="3"
-            markerHeight="2"
-            refX="2.5"
-            refY="1"
-            orient="auto"
-          >
-            <polygon points="0 0, 3 1, 0 2" className="fill-emerald-400/60" />
-          </marker>
-        </defs>
-
-        {/* Dependency edges (from center to dependencies - center depends ON these) */}
-        {depPositions.map((pos, i) => (
-          <Edge
-            key={`dep-${dependencies[i].id}`}
-            from={{ x: centerX, y: centerY }}
-            to={pos}
-            type="dependency"
-          />
-        ))}
-
-        {/* Dependent edges (from dependents to center - these depend ON center) */}
-        {dependentPositions.map((pos, i) => (
-          <Edge
-            key={`dependent-${dependents[i].id}`}
-            from={pos}
-            to={{ x: centerX, y: centerY }}
-            type="dependent"
-          />
-        ))}
-      </svg>
-
-      {/* Dependency nodes (left side) */}
-      {dependencies.map((node, i) => (
-        <GraphNodeComponent
+    <div className="flex flex-wrap justify-center gap-2 max-w-md mt-4">
+      {nodes.map((node) => (
+        <button
           key={node.id}
-          node={node}
-          position={depPositions[i]}
-          nodeWidth={nodeWidth}
-          nodeHeight={nodeHeight}
-        />
+          onClick={() => selectedNodeId(node.id)}
+          className="px-2 py-1 text-xs font-mono rounded border hover:brightness-125 transition-all"
+          style={{
+            background: NODE_COLORS[node.type].bg,
+            borderColor: NODE_COLORS[node.type].border,
+            color: NODE_COLORS[node.type].text,
+          }}
+        >
+          {node.name ?? node.id.slice(0, 8)}
+        </button>
       ))}
-
-      {/* Dependent nodes (right side) */}
-      {dependents.map((node, i) => (
-        <GraphNodeComponent
-          key={node.id}
-          node={node}
-          position={dependentPositions[i]}
-          nodeWidth={nodeWidth}
-          nodeHeight={nodeHeight}
-        />
-      ))}
-
-      {/* Center node - larger and more prominent */}
-      <GraphNodeComponent
-        key={center.id}
-        node={center}
-        position={{ x: centerX, y: centerY }}
-        nodeWidth={nodeWidth * 1.2}
-        nodeHeight={nodeHeight * 1.3}
-        isCenter
-      />
-
-      {/* Column labels */}
-      <div className="absolute left-[15%] top-4 text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">
-        Dependencies
-      </div>
-      <div className="absolute right-[15%] top-4 text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">
-        Dependents
-      </div>
+      {state.nodes.size > 12 && (
+        <span className="text-xs text-muted-foreground self-center">+{state.nodes.size - 12} more</span>
+      )}
     </div>
-  );
-}
-
-/**
- * Individual graph node
- */
-function GraphNodeComponent({
-  node,
-  position,
-  nodeWidth,
-  nodeHeight,
-  isCenter = false,
-}: {
-  node: GraphNode;
-  position: { x: number; y: number };
-  nodeWidth: number;
-  nodeHeight: number;
-  isCenter?: boolean;
-}) {
-  const colors = NODE_COLORS[node.type];
-  const displayName = node.name ?? node.id.slice(0, 12);
-
-  const handleClick = (e: MouseEvent) => {
-    // Cmd/Ctrl+Click: navigate to that node (same pattern as LogsTab filter)
-    if (e.metaKey || e.ctrlKey) {
-      if (!isCenter) {
-        selectedNodeId(node.id);
-      }
-      return;
-    }
-
-    // Regular click: open in editor (same pattern as LogsTab)
-    if (node.sourceLocation) {
-      openInEditor(node.sourceLocation);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      style={{
-        left: `calc(${position.x}% - ${nodeWidth / 2}px)`,
-        top: `calc(${position.y}% - ${nodeHeight / 2}px)`,
-        width: nodeWidth,
-        height: nodeHeight,
-      }}
-      className={`
-        absolute flex flex-col items-center justify-center
-        rounded border backdrop-blur-sm
-        ${colors.bg} ${colors.border}
-        ${isCenter ? `shadow-lg ${colors.glow} border-2` : 'hover:brightness-125'}
-        transition-all duration-200 cursor-pointer group
-      `}
-      title={buildNodeTitle(node, isCenter)}
-    >
-      <span
-        className={`
-          text-xs font-mono font-medium truncate max-w-[90%]
-          ${colors.text} ${isCenter ? 'text-sm' : ''}
-        `}
-      >
-        {displayName}
-      </span>
-      <span
-        className={`
-          text-[9px] uppercase tracking-wider opacity-60 mt-0.5
-          ${isCenter ? 'text-[10px]' : ''}
-        `}
-      >
-        {node.type}
-      </span>
-    </button>
-  );
-}
-
-/**
- * SVG edge with curved path
- */
-function Edge({
-  from,
-  to,
-  type,
-}: {
-  from: { x: number; y: number };
-  to: { x: number; y: number };
-  type: 'dependency' | 'dependent';
-}) {
-  // Calculate control point for bezier curve
-  const midX = (from.x + to.x) / 2;
-  const midY = (from.y + to.y) / 2;
-
-  // Use quadratic bezier: from -> control point -> to
-  const d = `M ${from.x} ${from.y} Q ${midX} ${from.y}, ${midX} ${midY} T ${to.x} ${to.y}`;
-
-  return (
-    <path
-      d={d}
-      fill="none"
-      strokeWidth="0.5"
-      className={EDGE_COLORS[type]}
-      markerEnd={`url(#arrowhead-${type})`}
-    />
   );
 }
 
@@ -446,9 +369,7 @@ function Edge({
 function buildNodeTitle(node: GraphNode, isCenter: boolean): string {
   const parts: string[] = [];
 
-  if (node.name) {
-    parts.push(node.name);
-  }
+  if (node.name) parts.push(node.name);
   parts.push(`ID: ${node.id}`);
   parts.push(`Type: ${node.type}`);
 
@@ -462,16 +383,4 @@ function buildNodeTitle(node: GraphNode, isCenter: boolean): string {
   }
 
   return parts.join('\n');
-}
-
-/**
- * Open source file in Chrome DevTools
- */
-function openInEditor(location: SourceLocation) {
-  chrome.devtools.panels.openResource(
-    location.filePath,
-    location.line - 1,
-    location.column ?? 0,
-    () => {}
-  );
 }
