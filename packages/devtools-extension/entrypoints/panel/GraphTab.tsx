@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -18,6 +18,7 @@ import { useSubscribe } from '@rimitive/react';
 import type { GraphNode, FocusedGraphView, GraphNodeType } from './store/graphTypes';
 import type { SourceLocation } from './store/types';
 import { focusedView, selectedNodeId, graphState } from './store/graphState';
+import { devtoolsState } from './store/devtoolsCtx';
 import { Layers } from 'lucide-react';
 
 import '@xyflow/react/dist/style.css';
@@ -372,29 +373,65 @@ export function GraphTab() {
  */
 function NodeSelector() {
   const state = useSubscribe(graphState);
-  const nodes = Array.from(state.nodes.values()).slice(0, 12);
+  const filter = useSubscribe(devtoolsState.filter);
+  const [expanded, setExpanded] = useState(false);
 
-  if (nodes.length === 0) return null;
+  // Filter internal nodes (those without sourceLocation)
+  const allNodes = Array.from(state.nodes.values()).filter(
+    (node) => !filter.hideInternal || node.sourceLocation
+  );
+  const nodes = expanded ? allNodes : allNodes.slice(0, 12);
+  const hiddenCount = allNodes.length - 12;
+
+  if (allNodes.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap justify-center gap-2 max-w-md mt-4">
-      {nodes.map((node) => (
-        <button
-          key={node.id}
-          onClick={() => selectedNodeId(node.id)}
-          className="px-2 py-1 text-xs font-mono rounded border hover:brightness-125 transition-all"
-          style={{
-            background: NODE_COLORS[node.type].bg,
-            borderColor: NODE_COLORS[node.type].border,
-            color: NODE_COLORS[node.type].text,
-          }}
-        >
-          {node.name ?? node.id.slice(0, 8)}
-        </button>
-      ))}
-      {state.nodes.size > 12 && (
-        <span className="text-xs text-muted-foreground self-center">+{state.nodes.size - 12} more</span>
-      )}
+    <div className="flex flex-col items-center gap-4 mt-4">
+      {/* Hide Internal toggle */}
+      <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+        <input
+          type="checkbox"
+          checked={filter.hideInternal}
+          onChange={(e) =>
+            devtoolsState.filter({ ...filter, hideInternal: e.target.checked })
+          }
+          className="rounded border-muted-foreground/50"
+        />
+        Hide internal
+      </label>
+
+      <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+        {nodes.map((node) => (
+          <button
+            key={node.id}
+            onClick={() => selectedNodeId(node.id)}
+            className="px-2 py-1 text-xs font-mono rounded border hover:brightness-125 transition-all"
+            style={{
+              background: NODE_COLORS[node.type].bg,
+              borderColor: NODE_COLORS[node.type].border,
+              color: NODE_COLORS[node.type].text,
+            }}
+          >
+            {node.name ?? node.id.slice(0, 8)}
+          </button>
+        ))}
+        {hiddenCount > 0 && !expanded && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
+          >
+            +{hiddenCount} more
+          </button>
+        )}
+        {expanded && hiddenCount > 0 && (
+          <button
+            onClick={() => setExpanded(false)}
+            className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
+          >
+            Show less
+          </button>
+        )}
+      </div>
     </div>
   );
 }
