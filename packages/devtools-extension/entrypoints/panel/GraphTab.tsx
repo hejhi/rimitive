@@ -71,6 +71,8 @@ function GraphNodeComponent({ data }: { data: GraphNodeData }) {
   const colors = NODE_COLORS[node.type];
 
   const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent React Flow from capturing the click
+
     if (e.metaKey || e.ctrlKey) {
       if (!isCenter) onNavigate(node.id);
     } else if (node.sourceLocation) {
@@ -340,6 +342,9 @@ export function GraphTab() {
           maxZoom={2}
           zoomOnPinch
           panOnDrag
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
           proOptions={{ hideAttribution: true }}
           className="react-flow-dark"
         >
