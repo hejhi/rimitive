@@ -16,7 +16,6 @@ import {
 import Dagre from '@dagrejs/dagre';
 import { useSubscribe } from '@rimitive/react';
 import type { GraphNode, FocusedGraphView } from './store/graphTypes';
-import type { SourceLocation } from './store/types';
 import { focusedView, selectedNodeId, graphState, viewMode } from './store/graphState';
 import { devtoolsState } from './store/devtoolsCtx';
 import { Layers, Grid3X3, Focus } from 'lucide-react';
@@ -60,22 +59,11 @@ if (typeof document !== 'undefined') {
  * Custom node component for React Flow
  */
 function GraphNodeComponent({ data }: { data: GraphNodeData }) {
-  const { node, isCenter, onNavigate, onOpenSource } = data;
+  const { node, isCenter } = data;
   const colors = NODE_COLORS[node.type];
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent React Flow from capturing the click
-
-    if (e.metaKey || e.ctrlKey) {
-      if (!isCenter) onNavigate(node.id);
-    } else if (node.sourceLocation) {
-      onOpenSource(node.sourceLocation);
-    }
-  };
 
   return (
     <div
-      onClick={handleClick}
       className="cursor-pointer transition-all hover:brightness-125"
       style={{
         background: colors.bg,
@@ -123,8 +111,6 @@ function GraphNodeComponent({ data }: { data: GraphNodeData }) {
 type GraphNodeData = {
   node: GraphNode;
   isCenter: boolean;
-  onNavigate: (nodeId: string) => void;
-  onOpenSource: (location: SourceLocation) => void;
 };
 
 const nodeTypes: NodeTypes = {
@@ -173,11 +159,7 @@ function getLayoutedElements(
 /**
  * Convert focused view to React Flow nodes and edges
  */
-function focusedViewToFlow(
-  view: FocusedGraphView,
-  onNavigate: (nodeId: string) => void,
-  onOpenSource: (location: SourceLocation) => void
-): { nodes: Node[]; edges: Edge[] } {
+function focusedViewToFlow(view: FocusedGraphView): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -187,7 +169,7 @@ function focusedViewToFlow(
       id: dep.id,
       type: 'graphNode',
       position: { x: 0, y: 0 },
-      data: { node: dep, isCenter: false, onNavigate, onOpenSource },
+      data: { node: dep, isCenter: false },
     });
 
     // Edge from dependency to center (dependency flows into center)
@@ -206,7 +188,7 @@ function focusedViewToFlow(
     id: view.center.id,
     type: 'graphNode',
     position: { x: 0, y: 0 },
-    data: { node: view.center, isCenter: true, onNavigate, onOpenSource },
+    data: { node: view.center, isCenter: true },
   });
 
   // Add dependent nodes
@@ -215,7 +197,7 @@ function focusedViewToFlow(
       id: dep.id,
       type: 'graphNode',
       position: { x: 0, y: 0 },
-      data: { node: dep, isCenter: false, onNavigate, onOpenSource },
+      data: { node: dep, isCenter: false },
     });
 
     // Edge from center to dependent (center flows into dependent)
@@ -294,26 +276,23 @@ export function GraphTab() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const onNavigate = useCallback((nodeId: string) => {
-    selectedNodeId(nodeId);
-    viewMode('focused');
-  }, []);
-
-  const onOpenSource = useCallback((location: SourceLocation) => {
-    chrome.devtools.panels.openResource(location.filePath, location.line - 1, location.column ?? 0, () => {});
+  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<GraphNodeData>) => {
+    // Don't navigate if clicking the center node
+    if (node.data.isCenter) return;
+    selectedNodeId(node.id);
   }, []);
 
   // Update nodes/edges when view changes (for focused mode)
   useEffect(() => {
     if (view && mode === 'focused') {
-      const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(view, onNavigate, onOpenSource);
+      const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(view);
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
     } else if (mode === 'focused') {
       setNodes([]);
       setEdges([]);
     }
-  }, [view, mode, onNavigate, onOpenSource, setNodes, setEdges]);
+  }, [view, mode, setNodes, setEdges]);
 
   // Empty state
   if (state.nodes.size === 0) {
@@ -418,6 +397,7 @@ export function GraphTab() {
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.5, maxZoom: 0.8 }}

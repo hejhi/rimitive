@@ -9,22 +9,16 @@ import { NODE_COLORS, ORPHAN_COLOR } from '../styles';
  * Yellow glow for orphaned nodes
  */
 export function OverviewNode({ data }: { data: StratifiedNodeData }): React.ReactElement {
-  const { node, metrics, isHovered, onNavigate, onHover } = data;
+  const { node, metrics, isHovered, onHover } = data;
   const colors = NODE_COLORS[node.type];
 
-  // Scale size based on connection count (8-16px)
-  const baseSize = 8;
-  const maxSize = 16;
-  const size = Math.min(baseSize + metrics.connectionCount, maxSize);
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onNavigate(node.id);
-  };
+  // Scale size based on connection count (12-24px)
+  const baseSize = 12;
+  const maxSize = 24;
+  const size = Math.min(baseSize + metrics.connectionCount * 2, maxSize);
 
   return (
     <div
-      onClick={handleClick}
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
       className="cursor-pointer transition-all"

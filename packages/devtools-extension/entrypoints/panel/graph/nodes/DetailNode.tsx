@@ -31,29 +31,14 @@ function buildNodeTitle(data: StratifiedNodeData): string {
 }
 
 /**
- * Detail node - full name, type badge, click handlers
+ * Detail node - full name, type badge
  */
 export function DetailNode({ data }: { data: StratifiedNodeData }): React.ReactElement {
-  const { node, metrics, isHovered, onNavigate, onOpenSource, onHover } = data;
+  const { node, metrics, isHovered, onHover } = data;
   const colors = NODE_COLORS[node.type];
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (e.metaKey || e.ctrlKey) {
-      // Cmd+click opens source
-      if (node.sourceLocation) {
-        onOpenSource(node.sourceLocation);
-      }
-    } else {
-      // Regular click navigates to focused view
-      onNavigate(node.id);
-    }
-  };
 
   return (
     <div
-      onClick={handleClick}
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
       className="cursor-pointer transition-all hover:brightness-125"

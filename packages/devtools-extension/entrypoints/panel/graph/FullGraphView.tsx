@@ -31,8 +31,8 @@ export function FullGraphView(): React.ReactElement {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<StratifiedNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const onNavigate = useCallback((nodeId: string) => {
-    selectedNodeId(nodeId);
+  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<StratifiedNodeData>) => {
+    selectedNodeId(node.id);
     viewMode('focused');
   }, []);
 
@@ -44,18 +44,21 @@ export function FullGraphView(): React.ReactElement {
     hoveredNodeId(nodeId);
   }, []);
 
+  // No-op for onNavigate since clicks are handled at ReactFlow level
+  const noopNavigate = useCallback(() => {}, []);
+
   // Compute layout when state, metrics, or hover changes
   const layoutResult = useMemo(() => {
     return computeStratifiedLayout(
       state,
       metrics,
       hovered,
-      onNavigate,
+      noopNavigate,
       onOpenSource,
       onHover,
       filter.hideInternal
     );
-  }, [state, metrics, hovered, onNavigate, onOpenSource, onHover, filter.hideInternal]);
+  }, [state, metrics, hovered, noopNavigate, onOpenSource, onHover, filter.hideInternal]);
 
   // Update nodes/edges when layout changes
   useEffect(() => {
@@ -69,6 +72,7 @@ export function FullGraphView(): React.ReactElement {
       edges={edges}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
+      onNodeClick={onNodeClick}
       nodeTypes={nodeTypes}
       fitView
       fitViewOptions={{ padding: 0.3, minZoom: 0.5, maxZoom: 1 }}
