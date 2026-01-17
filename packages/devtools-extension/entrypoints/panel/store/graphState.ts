@@ -27,6 +27,114 @@ export const graphState = devtoolsContext.signal<GraphState>(
 export const selectedNodeId = devtoolsContext.signal<string | null>(null);
 
 /**
+ * Add or update a node in the graph
+ */
+export function addNode(node: GraphNode): void {
+  const state = graphState();
+  const newNodes = new Map(state.nodes);
+  newNodes.set(node.id, node);
+
+  graphState({
+    ...state,
+    nodes: newNodes,
+  });
+}
+
+/**
+ * Add an edge to the graph (consumer depends on producer)
+ */
+export function addEdge(edge: GraphEdge): void {
+  const state = graphState();
+  const { id, producerId, consumerId } = edge;
+
+  // Skip if edge already exists
+  if (state.edges.has(id)) return;
+
+  const newEdges = new Map(state.edges);
+  const newDependencies = new Map(state.dependencies);
+  const newDependents = new Map(state.dependents);
+
+  // Add edge
+  newEdges.set(id, edge);
+
+  // Add to consumer's dependencies
+  const deps = newDependencies.get(consumerId);
+  if (deps) {
+    const newSet = new Set(deps);
+    newSet.add(producerId);
+    newDependencies.set(consumerId, newSet);
+  } else {
+    newDependencies.set(consumerId, new Set([producerId]));
+  }
+
+  // Add to producer's dependents
+  const dependentSet = newDependents.get(producerId);
+  if (dependentSet) {
+    const newSet = new Set(dependentSet);
+    newSet.add(consumerId);
+    newDependents.set(producerId, newSet);
+  } else {
+    newDependents.set(producerId, new Set([consumerId]));
+  }
+
+  graphState({
+    ...state,
+    edges: newEdges,
+    dependencies: newDependencies,
+    dependents: newDependents,
+  });
+}
+
+/**
+ * Remove an edge from the graph
+ */
+export function removeEdge(consumerId: string, producerId: string): void {
+  const edgeId = `${consumerId}->${producerId}`;
+  const state = graphState();
+
+  // Skip if edge doesn't exist
+  if (!state.edges.has(edgeId)) return;
+
+  const newEdges = new Map(state.edges);
+  const newDependencies = new Map(state.dependencies);
+  const newDependents = new Map(state.dependents);
+
+  // Remove edge
+  newEdges.delete(edgeId);
+
+  // Remove from consumer's dependencies
+  const deps = newDependencies.get(consumerId);
+  if (deps) {
+    const newSet = new Set(deps);
+    newSet.delete(producerId);
+    if (newSet.size === 0) {
+      newDependencies.delete(consumerId);
+    } else {
+      newDependencies.set(consumerId, newSet);
+    }
+  }
+
+  // Remove from producer's dependents
+  const dependentSet = newDependents.get(producerId);
+  if (dependentSet) {
+    const newSet = new Set(dependentSet);
+    newSet.delete(consumerId);
+    if (newSet.size === 0) {
+      newDependents.delete(producerId);
+    } else {
+      newDependents.set(producerId, newSet);
+    }
+  }
+
+  graphState({
+    ...state,
+    edges: newEdges,
+    dependencies: newDependencies,
+    dependents: newDependents,
+  });
+}
+
+/**
  * Get a focused view of the graph centered on a node
  */
 function getFocusedView(nodeId: string): FocusedGraphView | null {
