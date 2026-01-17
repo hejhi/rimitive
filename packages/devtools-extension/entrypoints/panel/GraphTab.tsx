@@ -83,43 +83,72 @@ export function GraphTab() {
 }
 
 /**
+ * Check if a node is internal (no source location = framework internals)
+ */
+function isInternalNode(node: GraphNode): boolean {
+  return !node.sourceLocation;
+}
+
+/**
  * Quick node selector when nothing is focused
  */
 function NodeSelector() {
   const state = useSubscribe(graphState);
   const [expanded, setExpanded] = useState(false);
+  const [hideInternal, setHideInternal] = useState(true);
 
   const allNodes = Array.from(state.nodes.values());
-  const visibleNodes = expanded ? allNodes : allNodes.slice(0, 12);
-  const hiddenCount = allNodes.length - 12;
+  const filteredNodes = hideInternal
+    ? allNodes.filter((n) => !isInternalNode(n))
+    : allNodes;
+  const internalCount = allNodes.length - filteredNodes.length;
+
+  const visibleNodes = expanded ? filteredNodes : filteredNodes.slice(0, 12);
+  const hiddenCount = filteredNodes.length - 12;
 
   if (allNodes.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap justify-center gap-2 max-w-lg mt-4">
-      {visibleNodes.map((node) => (
-        <button
-          key={node.id}
-          onClick={() => selectedNodeId(node.id)}
-          className={`
-            px-2 py-1 text-xs font-mono rounded border
-            ${NODE_COLORS[node.type].bg}
-            ${NODE_COLORS[node.type].border}
-            ${NODE_COLORS[node.type].text}
-            hover:brightness-125 transition-all
-          `}
-        >
-          {node.name ?? node.id.slice(0, 8)}
-        </button>
-      ))}
-      {hiddenCount > 0 && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
-        >
-          {expanded ? 'Show less' : `+${hiddenCount} more`}
-        </button>
+    <div className="flex flex-col items-center gap-3 mt-4">
+      {/* Filter toggle */}
+      {internalCount > 0 && (
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hideInternal}
+            onChange={(e) => setHideInternal(e.target.checked)}
+            className="rounded border-muted-foreground/50"
+          />
+          Hide internal ({internalCount})
+        </label>
       )}
+
+      {/* Node buttons */}
+      <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+        {visibleNodes.map((node) => (
+          <button
+            key={node.id}
+            onClick={() => selectedNodeId(node.id)}
+            className={`
+              px-2 py-1 text-xs font-mono rounded border
+              ${NODE_COLORS[node.type].bg}
+              ${NODE_COLORS[node.type].border}
+              ${NODE_COLORS[node.type].text}
+              hover:brightness-125 transition-all
+            `}
+          >
+            {node.name ?? node.id.slice(0, 8)}
+          </button>
+        ))}
+        {hiddenCount > 0 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
+          >
+            {expanded ? 'Show less' : `+${hiddenCount} more`}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
