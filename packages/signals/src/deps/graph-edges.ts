@@ -7,7 +7,7 @@ import type {
 } from '../types';
 import { CONSTANTS } from '../constants';
 import { defineModule, type InstrumentationContext } from '@rimitive/core';
-import { getInstrState } from '../instrumentation-state';
+import { getInstrState, scheduleSnapshot } from '../instrumentation-state';
 
 const { TYPE_MASK, CLEAN } = CONSTANTS;
 
@@ -218,11 +218,9 @@ export const GraphEdgesModule = defineModule({
         const producerId = instrState.nodeIds.get(producer);
         const consumerId = instrState.nodeIds.get(consumerNode);
         if (producerId && consumerId) {
-          instr.emit({
-            type: 'dependency:tracked',
-            timestamp: Date.now(),
-            data: { producerId, consumerId },
-          });
+          // Track edge in shared state
+          instrState.edges.add(`${consumerId}->${producerId}`);
+          scheduleSnapshot(instrState, instr);
         }
       }
     };
@@ -256,17 +254,18 @@ export const GraphEdgesModule = defineModule({
         dep = dep.nextDependency;
       }
 
-      // Emit prune events for removed dependencies
+      // Remove pruned edges from shared state
       const cId = instrState.nodeIds.get(node);
       if (cId) {
+        let changed = false;
         for (const pId of depsBefore) {
           if (!depsAfter.has(pId)) {
-            instr.emit({
-              type: 'dependency:pruned',
-              timestamp: Date.now(),
-              data: { producerId: pId, consumerId: cId },
-            });
+            instrState.edges.delete(`${cId}->${pId}`);
+            changed = true;
           }
+        }
+        if (changed) {
+          scheduleSnapshot(instrState, instr);
         }
       }
 

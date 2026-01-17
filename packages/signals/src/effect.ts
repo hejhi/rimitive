@@ -1,4 +1,15 @@
-import { defineModule, getCallerLocationFull, type InstrumentationContext, type SourceLocation } from '@rimitive/core';
+import {
+  defineModule,
+  getCallerLocationFull,
+  type InstrumentationContext,
+  type SourceLocation,
+} from '@rimitive/core';
+import {
+  getInstrState,
+  registerNodeMeta,
+  removeNodeMeta,
+  scheduleSnapshot,
+} from './instrumentation-state';
 import type { ScheduledNode } from './types';
 import { GraphEdgesModule } from './deps/graph-edges';
 import { SchedulerModule } from './deps/scheduler';
@@ -141,9 +152,13 @@ export const EffectModule = defineModule({
     return (run: () => void | (() => void)): (() => void) => {
       const location = getCallerLocationFull(); // No skipFrames - function may be inlined
       const name = location?.display ?? 'Effect';
+      const instrState = getInstrState(instr);
       const { id } = instr.register(run, 'effect', name);
 
       const sourceLocation: SourceLocation | undefined = location;
+
+      // Register node metadata for graph visualization
+      registerNodeMeta(instrState, id, 'effect', name, sourceLocation);
 
       const wrappedRun = (() => {
         instr.emit({
@@ -165,6 +180,9 @@ export const EffectModule = defineModule({
           timestamp: Date.now(),
           data: { effectId: id, name, sourceLocation },
         });
+        // Remove node metadata (also cleans up edges) and schedule snapshot
+        removeNodeMeta(instrState, id);
+        scheduleSnapshot(instrState, instr);
         dispose();
       };
     };

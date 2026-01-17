@@ -4,7 +4,7 @@ import { defineModule, getCallerLocationFull } from '@rimitive/core';
 import { CONSTANTS } from './constants';
 import { GraphEdgesModule, type GraphEdges } from './deps/graph-edges';
 import { SchedulerModule, type Scheduler } from './deps/scheduler';
-import { getInstrState } from './instrumentation-state';
+import { getInstrState, registerNodeMeta } from './instrumentation-state';
 
 const { CLEAN, PRODUCER, DIRTY } = CONSTANTS;
 
@@ -126,15 +126,18 @@ export const SignalModule = defineModule({
       const location = getCallerLocationFull(1); // Skip the instrument wrapper
       const sig = impl(initialValue);
       const name = location?.display ?? `Signal<${typeof initialValue}>`;
+      const instrState = getInstrState(instr);
       const { id } = instr.register(sig, 'signal', name);
 
       // Build source location data for events
       const sourceLocation: SourceLocation | undefined = location;
 
+      // Register node metadata for graph visualization
+      registerNodeMeta(instrState, id, 'signal', name, sourceLocation);
+
       function instrumentedSignal(value?: T): T | void {
         if (!arguments.length) {
           // Push ID so GraphEdgesModule can associate node with ID
-          const instrState = getInstrState(instr);
           instrState.pendingProducerIdStack.push(id);
           const currentValue = sig();
           instrState.pendingProducerIdStack.pop();

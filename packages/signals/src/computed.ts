@@ -10,7 +10,7 @@ import {
   PullPropagatorModule,
   type PullPropagator,
 } from './deps/pull-propagator';
-import { getInstrState } from './instrumentation-state';
+import { getInstrState, registerNodeMeta } from './instrumentation-state';
 
 /**
  * Computed function type - a callable that derives values from other reactives.
@@ -221,6 +221,7 @@ export const ComputedModule = defineModule({
     return <T>(compute: () => T): ComputedFunction<T> => {
       const location = getCallerLocationFull();
       const name = location?.display ?? 'Computed';
+      const instrState = getInstrState(instr);
 
       // Tag compute function so GraphEdgesModule can associate node with ID in track()
       const taggedCompute = compute as (() => T) & { __instrComputedId?: string };
@@ -230,6 +231,9 @@ export const ComputedModule = defineModule({
       const comp = impl(taggedCompute);
       const sourceLocation: SourceLocation | undefined = location;
 
+      // Register node metadata for graph visualization
+      registerNodeMeta(instrState, id, 'computed', name, sourceLocation);
+
       function instrumentedComputed(): T {
         instr.emit({
           type: 'computed:read',
@@ -238,7 +242,6 @@ export const ComputedModule = defineModule({
         });
 
         // Push ID so GraphEdgesModule can associate node with ID when this computed is read as a producer
-        const instrState = getInstrState(instr);
         instrState.pendingProducerIdStack.push(id);
         const value = comp();
         instrState.pendingProducerIdStack.pop();
