@@ -276,9 +276,10 @@ export function GraphTab() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<GraphNodeData>) => {
+  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     // Don't navigate if clicking the center node
-    if (node.data.isCenter) return;
+    const data = node.data as GraphNodeData;
+    if (data.isCenter) return;
     selectedNodeId(node.id);
   }, []);
 

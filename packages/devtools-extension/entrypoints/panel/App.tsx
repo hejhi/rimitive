@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { useSubscribe } from '@rimitive/react';
-import { Trash2, List, Network, Loader2 } from 'lucide-react';
+import { Trash2, List, Network, Loader2, History } from 'lucide-react';
 import { Button } from '../../src/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../src/components/ui/tabs';
 import { LogsTab } from './LogsTab';
@@ -8,9 +8,13 @@ import { ConnectionStatus, FilterBar, Header } from './components';
 import { useDataExport, useDevToolsConnection } from './hooks';
 import { devtoolsState } from './store/devtoolsCtx';
 import { clearGraph } from './store/graphState';
+import { clearTimeline } from './store/timelineState';
 
 // Lazy load GraphTab (includes React Flow ~200KB)
 const GraphTab = lazy(() => import('./GraphTab').then((m) => ({ default: m.GraphTab })));
+
+// Lazy load TimelineTab
+const TimelineTab = lazy(() => import('./TimelineTab').then((m) => ({ default: m.TimelineTab })));
 
 function GraphTabLoading() {
   return (
@@ -58,6 +62,10 @@ export function App() {
               <Network className="h-3.5 w-3.5" />
               Graph
             </TabsTrigger>
+            <TabsTrigger value="timeline" className="text-xs gap-1.5 h-7 px-3">
+              <History className="h-3.5 w-3.5" />
+              Timeline
+            </TabsTrigger>
           </TabsList>
           <Button
             variant="ghost"
@@ -67,6 +75,7 @@ export function App() {
               devtoolsState.logEntries([]);
               devtoolsState.selectedTransaction(null);
               clearGraph();
+              clearTimeline();
             }}
             title="Clear all events and graph"
           >
@@ -119,6 +128,12 @@ export function App() {
         <TabsContent value="graph" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
           <Suspense fallback={<GraphTabLoading />}>
             <GraphTab />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="timeline" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
+          <Suspense fallback={<GraphTabLoading />}>
+            <TimelineTab />
           </Suspense>
         </TabsContent>
       </Tabs>
