@@ -204,35 +204,42 @@ function FocusedGraph({ view }: { view: FocusedGraphView }) {
 }
 
 /**
- * SVG-based graph visualization with arc layout
+ * 3-column graph visualization: Dependencies | Center | Dependents
  */
 function GraphVisualization({ view }: { view: FocusedGraphView }) {
   const { center, dependencies, dependents } = view;
 
-  // Layout constants
-  const centerX = 50; // percentage
-  const centerY = 50;
-  const arcRadius = 35; // percentage from center
+  // Layout constants - 3 column layout
+  const leftColumnX = 18;   // Dependencies column
+  const centerX = 50;       // Center node
+  const centerY = 50;       // Center vertical position
+  const rightColumnX = 82;  // Dependents column
   const nodeWidth = 140;
   const nodeHeight = 36;
 
-  // Calculate positions for dependencies (left arc)
+  // Calculate vertical positions for dependencies (left column)
   const depPositions = dependencies.map((_, i) => {
     const total = dependencies.length;
-    const angle = total === 1 ? Math.PI : Math.PI / 2 + (i / Math.max(1, total - 1)) * Math.PI;
+    // Distribute evenly in vertical space (20% to 80%)
+    const ySpan = 60;
+    const yStart = 50 - (ySpan * (total - 1)) / (2 * Math.max(1, total));
+    const yStep = total > 1 ? ySpan / (total - 1) : 0;
     return {
-      x: centerX + Math.cos(angle) * arcRadius,
-      y: centerY + Math.sin(angle) * (arcRadius * 0.8),
+      x: leftColumnX,
+      y: yStart + i * yStep,
     };
   });
 
-  // Calculate positions for dependents (right arc)
+  // Calculate vertical positions for dependents (right column)
   const dependentPositions = dependents.map((_, i) => {
     const total = dependents.length;
-    const angle = total === 1 ? 0 : -Math.PI / 2 + (i / Math.max(1, total - 1)) * Math.PI;
+    // Distribute evenly in vertical space (20% to 80%)
+    const ySpan = 60;
+    const yStart = 50 - (ySpan * (total - 1)) / (2 * Math.max(1, total));
+    const yStep = total > 1 ? ySpan / (total - 1) : 0;
     return {
-      x: centerX + Math.cos(angle) * arcRadius,
-      y: centerY + Math.sin(angle) * (arcRadius * 0.8),
+      x: rightColumnX,
+      y: yStart + i * yStep,
     };
   });
 
