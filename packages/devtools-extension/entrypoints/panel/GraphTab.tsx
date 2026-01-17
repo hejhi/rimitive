@@ -22,6 +22,36 @@ import { Layers } from 'lucide-react';
 
 import '@xyflow/react/dist/style.css';
 
+// Dark mode styles for React Flow controls
+const darkModeStyles = `
+  .react-flow-controls-dark button {
+    background: #1a1a1a !important;
+    border: 1px solid #333 !important;
+    color: #999 !important;
+  }
+  .react-flow-controls-dark button:hover {
+    background: #2a2a2a !important;
+    color: #fff !important;
+  }
+  .react-flow-controls-dark button svg {
+    fill: currentColor !important;
+  }
+  .react-flow-controls-dark {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+  }
+`;
+
+// Inject styles once
+if (typeof document !== 'undefined') {
+  const styleId = 'react-flow-dark-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = darkModeStyles;
+    document.head.appendChild(style);
+  }
+}
+
 /**
  * Node type colors
  */
@@ -304,13 +334,19 @@ export function GraphTab() {
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.3 }}
-          minZoom={0.5}
+          fitViewOptions={{ padding: 0.5, maxZoom: 0.8 }}
+          minZoom={0.2}
           maxZoom={2}
+          zoomOnPinch
+          panOnDrag
           proOptions={{ hideAttribution: true }}
+          className="react-flow-dark"
         >
           <Background color="#333" gap={20} />
-          <Controls showInteractive={false} />
+          <Controls
+            showInteractive={false}
+            className="react-flow-controls-dark"
+          />
           <MiniMap
             nodeColor={(node) => {
               const data = node.data as GraphNodeData;

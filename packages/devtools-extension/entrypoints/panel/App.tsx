@@ -1,13 +1,27 @@
+import { lazy, Suspense } from 'react';
 import { useSubscribe } from '@rimitive/react';
-import { Trash2, List, Network } from 'lucide-react';
+import { Trash2, List, Network, Loader2 } from 'lucide-react';
 import { Button } from '../../src/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../src/components/ui/tabs';
 import { LogsTab } from './LogsTab';
-import { GraphTab } from './GraphTab';
 import { ConnectionStatus, FilterBar, Header } from './components';
 import { useDataExport, useDevToolsConnection } from './hooks';
 import { devtoolsState } from './store/devtoolsCtx';
 import { clearGraph } from './store/graphState';
+
+// Lazy load GraphTab (includes React Flow ~200KB)
+const GraphTab = lazy(() => import('./GraphTab').then((m) => ({ default: m.GraphTab })));
+
+function GraphTabLoading() {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <Loader2 className="w-8 h-8 text-muted-foreground/40 mx-auto animate-spin" />
+        <div className="text-muted-foreground text-sm">Loading graph...</div>
+      </div>
+    </div>
+  );
+}
 
 export function App() {
   const connected = useSubscribe(devtoolsState.connected);
@@ -103,7 +117,9 @@ export function App() {
         </TabsContent>
 
         <TabsContent value="graph" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
-          <GraphTab />
+          <Suspense fallback={<GraphTabLoading />}>
+            <GraphTab />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
