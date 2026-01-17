@@ -284,17 +284,19 @@ export function GraphTab() {
 
   if (!view) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Layers className="w-12 h-12 text-muted-foreground/40 mx-auto" />
-          <div className="text-muted-foreground text-sm">
-            Select a node to view its dependencies.
-            <br />
-            <span className="text-xs text-muted-foreground/60">
-              ⌘+Click a node name in the logs tab to focus it.
-            </span>
+      <div className="h-full overflow-auto">
+        <div className="min-h-full flex items-center justify-center py-8">
+          <div className="text-center space-y-4">
+            <Layers className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+            <div className="text-muted-foreground text-sm">
+              Select a node to view its dependencies.
+              <br />
+              <span className="text-xs text-muted-foreground/60">
+                ⌘+Click a node name in the logs tab to focus it.
+              </span>
+            </div>
+            <NodeSelector />
           </div>
-          <NodeSelector />
         </div>
       </div>
     );
