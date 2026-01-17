@@ -1,0 +1,107 @@
+import React from 'react';
+import { Handle, Position } from '@xyflow/react';
+import type { StratifiedNodeData } from '../stratifiedLayout';
+import { NODE_COLORS, ORPHAN_COLOR } from '../styles';
+
+/**
+ * Build tooltip title for a node
+ */
+function buildNodeTitle(data: StratifiedNodeData): string {
+  const { node, metrics } = data;
+  const parts: string[] = [];
+
+  if (node.name) parts.push(node.name);
+  parts.push(`ID: ${node.id}`);
+  parts.push(`Type: ${node.type}`);
+  parts.push(`Connections: ${metrics.connectionCount}`);
+
+  if (metrics.isOrphaned) {
+    parts.push('');
+    parts.push('Warning: Orphaned (no dependents)');
+  }
+
+  if (node.sourceLocation) {
+    parts.push('');
+    parts.push('Click to open in editor');
+  }
+
+  parts.push('Click to focus node');
+
+  return parts.join('\n');
+}
+
+/**
+ * Detail node - full name, type badge, click handlers
+ */
+export function DetailNode({ data }: { data: StratifiedNodeData }): React.ReactElement {
+  const { node, metrics, isHovered, onNavigate, onOpenSource, onHover } = data;
+  const colors = NODE_COLORS[node.type];
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (e.metaKey || e.ctrlKey) {
+      // Cmd+click opens source
+      if (node.sourceLocation) {
+        onOpenSource(node.sourceLocation);
+      }
+    } else {
+      // Regular click navigates to focused view
+      onNavigate(node.id);
+    }
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      onMouseEnter={() => onHover(node.id)}
+      onMouseLeave={() => onHover(null)}
+      className="cursor-pointer transition-all hover:brightness-125"
+      style={{
+        background: colors.bg,
+        border: metrics.isOrphaned
+          ? `2px solid ${ORPHAN_COLOR}`
+          : `2px solid ${colors.border}`,
+        borderRadius: 8,
+        padding: '8px 16px',
+        minWidth: 120,
+        textAlign: 'center',
+        boxShadow: metrics.isOrphaned
+          ? `0 0 12px ${ORPHAN_COLOR}40`
+          : isHovered
+            ? `0 0 20px ${colors.border}40`
+            : undefined,
+      }}
+      title={buildNodeTitle(data)}
+    >
+      <Handle type="target" position={Position.Left} style={{ background: colors.border }} />
+      <div
+        style={{
+          color: colors.text,
+          fontSize: 12,
+          fontFamily: 'monospace',
+          fontWeight: 500,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: 140,
+        }}
+      >
+        {node.name ?? node.id.slice(0, 12)}
+      </div>
+      <div
+        style={{
+          color: colors.text,
+          fontSize: 9,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          opacity: 0.7,
+          marginTop: 2,
+        }}
+      >
+        {node.type}
+      </div>
+      <Handle type="source" position={Position.Right} style={{ background: colors.border }} />
+    </div>
+  );
+}

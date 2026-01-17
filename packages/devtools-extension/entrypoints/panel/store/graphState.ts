@@ -1,5 +1,5 @@
 import { devtoolsContext } from './devtoolsCtx';
-import type { GraphState, FocusedGraphView, GraphNode, GraphEdge } from './graphTypes';
+import type { GraphState, FocusedGraphView, GraphNode, GraphEdge, ViewMode, NodeMetrics } from './graphTypes';
 
 /**
  * Initialize empty graph state
@@ -25,6 +25,39 @@ export const graphState = devtoolsContext.signal<GraphState>(
  * Selected node ID for focused view
  */
 export const selectedNodeId = devtoolsContext.signal<string | null>(null);
+
+/**
+ * View mode for the graph tab
+ */
+export const viewMode = devtoolsContext.signal<ViewMode>('full');
+
+/**
+ * Hovered node ID for edge highlighting
+ */
+export const hoveredNodeId = devtoolsContext.signal<string | null>(null);
+
+/**
+ * Computed metrics for each node (connection count, orphan status)
+ */
+export const nodeMetrics = devtoolsContext.computed<Map<string, NodeMetrics>>(() => {
+  const state = graphState();
+  const metrics = new Map<string, NodeMetrics>();
+
+  for (const [nodeId, node] of state.nodes) {
+    const dependencyCount = state.dependencies.get(nodeId)?.size ?? 0;
+    const dependentCount = state.dependents.get(nodeId)?.size ?? 0;
+    const connectionCount = dependencyCount + dependentCount;
+
+    // A node is orphaned if it has no dependents and is not an effect/subscribe
+    // (effects/subscribes are terminal nodes and not considered orphaned)
+    const isTerminal = node.type === 'effect' || node.type === 'subscribe';
+    const isOrphaned = !isTerminal && dependentCount === 0;
+
+    metrics.set(nodeId, { connectionCount, isOrphaned });
+  }
+
+  return metrics;
+});
 
 /**
  * Add or update a node in the graph
@@ -188,4 +221,6 @@ export const focusedView = devtoolsContext.computed(() => {
 export function clearGraph(): void {
   graphState(createEmptyGraphState());
   selectedNodeId(null);
+  viewMode('full');
+  hoveredNodeId(null);
 }

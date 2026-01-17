@@ -54,3 +54,16 @@ export type FocusedGraphView = {
   dependencyEdges: GraphEdge[]; // Edges from center to its dependencies
   dependentEdges: GraphEdge[]; // Edges from dependents to center
 };
+
+/**
+ * View mode for the graph tab
+ */
+export type ViewMode = 'full' | 'focused';
+
+/**
+ * Metrics computed for each node
+ */
+export type NodeMetrics = {
+  connectionCount: number;
+  isOrphaned: boolean; // No dependents and not an effect/subscribe
+};

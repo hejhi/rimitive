@@ -15,11 +15,13 @@ import {
 } from '@xyflow/react';
 import Dagre from '@dagrejs/dagre';
 import { useSubscribe } from '@rimitive/react';
-import type { GraphNode, FocusedGraphView, GraphNodeType } from './store/graphTypes';
+import type { GraphNode, FocusedGraphView } from './store/graphTypes';
 import type { SourceLocation } from './store/types';
-import { focusedView, selectedNodeId, graphState } from './store/graphState';
+import { focusedView, selectedNodeId, graphState, viewMode } from './store/graphState';
 import { devtoolsState } from './store/devtoolsCtx';
-import { Layers } from 'lucide-react';
+import { Layers, Grid3X3, Focus } from 'lucide-react';
+import { NODE_COLORS } from './graph/styles';
+import { FullGraphView } from './graph/FullGraphView';
 
 import '@xyflow/react/dist/style.css';
 
@@ -53,15 +55,6 @@ if (typeof document !== 'undefined') {
   }
 }
 
-/**
- * Node type colors
- */
-const NODE_COLORS: Record<GraphNodeType, { bg: string; border: string; text: string }> = {
-  signal: { bg: '#172554', border: '#3b82f6', text: '#93c5fd' },
-  computed: { bg: '#2e1065', border: '#8b5cf6', text: '#c4b5fd' },
-  effect: { bg: '#022c22', border: '#10b981', text: '#6ee7b7' },
-  subscribe: { bg: '#451a03', border: '#f59e0b', text: '#fcd34d' },
-};
 
 /**
  * Custom node component for React Flow
@@ -239,32 +232,90 @@ function focusedViewToFlow(
   return getLayoutedElements(nodes, edges, 'LR');
 }
 
+/**
+ * View mode toggle button group
+ */
+function ViewModeToggle() {
+  const mode = useSubscribe(viewMode);
+  const filter = useSubscribe(devtoolsState.filter);
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Hide Internal toggle */}
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer mr-2">
+        <input
+          type="checkbox"
+          checked={filter.hideInternal}
+          onChange={(e) =>
+            devtoolsState.filter({ ...filter, hideInternal: e.target.checked })
+          }
+          className="rounded border-muted-foreground/50 w-3 h-3"
+        />
+        Hide internal
+      </label>
+
+      <div className="flex rounded-md border border-border/50 overflow-hidden">
+        <button
+          onClick={() => {
+            viewMode('full');
+            selectedNodeId(null);
+          }}
+          className={`flex items-center gap-1 px-2 py-1 text-xs transition-colors ${
+            mode === 'full'
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+          }`}
+          title="Full graph view"
+        >
+          <Grid3X3 className="w-3 h-3" />
+          Full
+        </button>
+        <button
+          onClick={() => viewMode('focused')}
+          className={`flex items-center gap-1 px-2 py-1 text-xs transition-colors border-l border-border/50 ${
+            mode === 'focused'
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+          }`}
+          title="Focused view"
+        >
+          <Focus className="w-3 h-3" />
+          Focused
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function GraphTab() {
   const view = useSubscribe(focusedView);
   const state = useSubscribe(graphState);
+  const mode = useSubscribe(viewMode);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   const onNavigate = useCallback((nodeId: string) => {
     selectedNodeId(nodeId);
+    viewMode('focused');
   }, []);
 
   const onOpenSource = useCallback((location: SourceLocation) => {
     chrome.devtools.panels.openResource(location.filePath, location.line - 1, location.column ?? 0, () => {});
   }, []);
 
-  // Update nodes/edges when view changes
+  // Update nodes/edges when view changes (for focused mode)
   useEffect(() => {
-    if (view) {
+    if (view && mode === 'focused') {
       const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(view, onNavigate, onOpenSource);
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
-    } else {
+    } else if (mode === 'focused') {
       setNodes([]);
       setEdges([]);
     }
-  }, [view, onNavigate, onOpenSource, setNodes, setEdges]);
+  }, [view, mode, onNavigate, onOpenSource, setNodes, setEdges]);
 
+  // Empty state
   if (state.nodes.size === 0) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -282,26 +333,61 @@ export function GraphTab() {
     );
   }
 
+  // Full view mode
+  if (mode === 'full') {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Grid3X3 className="w-4 h-4" />
+            <span>Full Graph</span>
+            <span className="text-muted-foreground/60">({state.nodes.size} nodes)</span>
+          </div>
+          <ViewModeToggle />
+        </div>
+
+        {/* Full Graph View */}
+        <div className="flex-1">
+          <FullGraphView />
+        </div>
+      </div>
+    );
+  }
+
+  // Focused view mode without selection
   if (!view) {
     return (
-      <div className="h-full overflow-auto">
-        <div className="min-h-full flex items-center justify-center py-8">
-          <div className="text-center space-y-4">
-            <Layers className="w-12 h-12 text-muted-foreground/40 mx-auto" />
-            <div className="text-muted-foreground text-sm">
-              Select a node to view its dependencies.
-              <br />
-              <span className="text-xs text-muted-foreground/60">
-                ⌘+Click a node name in the logs tab to focus it.
-              </span>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Focus className="w-4 h-4" />
+            <span>Focused View</span>
+          </div>
+          <ViewModeToggle />
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <div className="min-h-full flex items-center justify-center py-8">
+            <div className="text-center space-y-4">
+              <Layers className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+              <div className="text-muted-foreground text-sm">
+                Select a node to view its dependencies.
+                <br />
+                <span className="text-xs text-muted-foreground/60">
+                  Click a node in Full view or ⌘+Click a node name in the logs tab.
+                </span>
+              </div>
+              <NodeSelector />
             </div>
-            <NodeSelector />
           </div>
         </div>
       </div>
     );
   }
 
+  // Focused view mode with selection
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -322,12 +408,7 @@ export function GraphTab() {
             {view.center.type}
           </span>
         </div>
-        <button
-          onClick={() => selectedNodeId(null)}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Clear focus
-        </button>
+        <ViewModeToggle />
       </div>
 
       {/* React Flow */}
@@ -392,26 +473,18 @@ function NodeSelector() {
 
   if (allNodes.length === 0) return null;
 
+  const handleSelect = (nodeId: string) => {
+    selectedNodeId(nodeId);
+    viewMode('focused');
+  };
+
   return (
     <div className="flex flex-col items-center gap-4 mt-4">
-      {/* Hide Internal toggle */}
-      <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-        <input
-          type="checkbox"
-          checked={filter.hideInternal}
-          onChange={(e) =>
-            devtoolsState.filter({ ...filter, hideInternal: e.target.checked })
-          }
-          className="rounded border-muted-foreground/50"
-        />
-        Hide internal
-      </label>
-
       <div className="flex flex-wrap justify-center gap-2 max-w-lg">
         {nodes.map((node) => (
           <button
             key={node.id}
-            onClick={() => selectedNodeId(node.id)}
+            onClick={() => handleSelect(node.id)}
             className="px-2 py-1 text-xs font-mono rounded border hover:brightness-125 transition-all"
             style={{
               background: NODE_COLORS[node.type].bg,
