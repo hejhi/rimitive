@@ -189,29 +189,26 @@ export function TimelineChart({
       </div>
 
       {/* Tooltip - positioned below the chart to avoid clipping */}
-      {hoveredCascade && hoverIndex !== null && (
-        <div
-          className="absolute pointer-events-none bg-popover text-popover-foreground text-xs px-2 py-1.5 rounded shadow-lg border border-border/50 z-50 whitespace-nowrap"
-          style={{
-            left: Math.max(
-              8,
-              Math.min(
-                hoverIndex * (barWidth + BAR_GAP) + MARGIN.left + barWidth / 2 - (scrollRef.current?.scrollLeft ?? 0),
-                dimensions.width - 8
-              )
-            ),
-            bottom: 4,
-            transform: 'translateX(-50%)',
-          }}
-        >
-          <div className="font-mono text-muted-foreground">
-            {formatTime(hoveredCascade.startTime)}
+      {hoveredCascade && hoverIndex !== null && (() => {
+        const barCenter = hoverIndex * (barWidth + BAR_GAP) + MARGIN.left + barWidth / 2 - (scrollRef.current?.scrollLeft ?? 0);
+        const tooltipWidth = 180; // Approximate width
+        // Clamp so tooltip stays within bounds
+        const left = Math.max(8, Math.min(barCenter - tooltipWidth / 2, dimensions.width - tooltipWidth - 8));
+
+        return (
+          <div
+            className="absolute pointer-events-none bg-popover text-popover-foreground text-xs px-2 py-1.5 rounded shadow-lg border border-border/50 z-50 whitespace-nowrap"
+            style={{ left, bottom: 4, minWidth: tooltipWidth }}
+          >
+            <div className="font-mono text-muted-foreground">
+              {formatTime(hoveredCascade.startTime)}
+            </div>
+            <div className="text-foreground">
+              {hoveredCascade.rootNode?.name ?? 'signal'} → {hoveredCascade.effects.length} update{hoveredCascade.effects.length !== 1 ? 's' : ''}
+            </div>
           </div>
-          <div className="text-foreground">
-            {hoveredCascade.rootNode?.name ?? 'signal'} → {hoveredCascade.effects.length} reaction{hoveredCascade.effects.length !== 1 ? 's' : ''}
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

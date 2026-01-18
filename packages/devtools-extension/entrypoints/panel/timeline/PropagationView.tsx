@@ -38,7 +38,7 @@ export function PropagationView() {
         <div className="flex-1">
           <div className="text-xs text-muted-foreground/60 mb-3 flex items-center gap-2">
             <ArrowRight className="w-3 h-3" />
-            Propagation ({cascade.effects.length} effect{cascade.effects.length !== 1 ? 's' : ''})
+            Propagation ({cascade.effects.length} update{cascade.effects.length !== 1 ? 's' : ''})
           </div>
           <PropagationFlow cascade={cascade} />
         </div>
@@ -118,80 +118,58 @@ function RootEventCard({ cascade }: { cascade: Cascade }) {
 }
 
 function PropagationFlow({ cascade }: { cascade: Cascade }) {
-  // Group effects by depth for layered display
-  const effectsByDepth = useMemo(() => {
-    const groups = new Map<number, CascadeEffect[]>();
-    for (const effect of cascade.effects) {
-      const depth = effect.depth || 1;
-      const existing = groups.get(depth) ?? [];
-      existing.push(effect);
-      groups.set(depth, existing);
-    }
-    return Array.from(groups.entries()).sort((a, b) => a[0] - b[0]);
-  }, [cascade.effects]);
+  // Sort effects by deltaMs for chronological display
+  const sortedEffects = useMemo(
+    () => [...cascade.effects].sort((a, b) => a.deltaMs - b.deltaMs),
+    [cascade.effects]
+  );
 
   return (
-    <div className="space-y-4">
-      {effectsByDepth.map(([depth, effects]) => (
-        <div key={depth} className="relative">
-          {/* Depth indicator */}
-          <div className="absolute -left-4 top-0 bottom-0 w-px bg-border/30" />
-          <div className="absolute -left-5 top-3 w-2 h-2 rounded-full bg-border/50" />
-
-          {/* Effects at this depth */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {effects.map((effect, i) => (
-              <EffectCard key={`${effect.event.id}-${i}`} effect={effect} />
-            ))}
-          </div>
-        </div>
+    <div className="space-y-1">
+      {sortedEffects.map((effect, i) => (
+        <EffectSlice key={`${effect.event.id}-${i}`} effect={effect} />
       ))}
     </div>
   );
 }
 
-function EffectCard({ effect }: { effect: CascadeEffect }) {
+function EffectSlice({ effect }: { effect: CascadeEffect }) {
   const nodeType = effect.node?.type ?? inferTypeFromEvent(effect.event.eventType);
   const colors = NODE_COLORS[nodeType];
   const name = effect.node?.name ?? effect.event.nodeName ?? 'anonymous';
 
   return (
     <div
-      className="p-3 rounded-md border"
+      className="flex items-center gap-3 px-3 py-1.5 rounded border-l-2"
       style={{
-        background: colors.bg,
-        borderColor: colors.border,
+        background: `${colors.bg}80`,
+        borderLeftColor: colors.border,
       }}
     >
-      {/* Type and timing */}
-      <div className="flex items-center justify-between mb-1">
-        <span
-          className="text-[10px] font-medium uppercase tracking-wider"
-          style={{ color: colors.text }}
-        >
-          {nodeType}
-        </span>
-        <span className="text-[10px] text-muted-foreground font-mono">
-          +{effect.deltaMs.toFixed(1)}ms
-        </span>
-      </div>
+      {/* Type badge */}
+      <span
+        className="text-[9px] font-medium uppercase tracking-wider w-16 shrink-0"
+        style={{ color: colors.text }}
+      >
+        {nodeType}
+      </span>
 
       {/* Name */}
-      <div className="font-mono text-xs truncate" style={{ color: colors.text }}>
+      <span className="font-mono text-xs truncate flex-1" style={{ color: colors.text }}>
         {name}
-      </div>
+      </span>
 
-      {/* Event type */}
-      <div className="text-[10px] text-muted-foreground/60 mt-1 truncate">
-        {effect.event.eventType}
-      </div>
-
-      {/* Summary */}
+      {/* Summary if present */}
       {effect.event.summary && (
-        <div className="text-[10px] text-foreground/70 mt-1 truncate font-mono">
+        <span className="text-[10px] text-foreground/60 truncate max-w-[200px] font-mono hidden sm:block">
           {effect.event.summary}
-        </div>
+        </span>
       )}
+
+      {/* Timing */}
+      <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+        +{effect.deltaMs.toFixed(1)}ms
+      </span>
     </div>
   );
 }
