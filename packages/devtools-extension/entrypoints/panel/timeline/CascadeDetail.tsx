@@ -2,6 +2,7 @@ import { useSubscribe } from '@rimitive/react';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import { currentCascade } from '../store/timelineState';
 import { NODE_COLORS } from '../graph/styles';
+import { ValueDisplay } from '../components/ValueDisplay';
 import type { SourceLocation } from '../store/types';
 import type { CascadeEffect } from '../store/timelineTypes';
 
@@ -148,8 +149,8 @@ function TreeNode({
 
           {/* Summary (value change) */}
           {summary && (
-            <div className="text-foreground/70 text-[10px] mt-0.5 truncate">
-              {summary}
+            <div className="mt-0.5">
+              <ValueDisplay value={summary} mode="collapsed" />
             </div>
           )}
 

@@ -3,7 +3,6 @@ import { useSubscribe } from '@rimitive/react';
 import { History, SkipBack, SkipForward, Zap } from 'lucide-react';
 import {
   timelineState,
-  currentCascade,
   rebuildCascades,
   selectCascade,
   nextCascade,
@@ -12,11 +11,9 @@ import {
 import { devtoolsState } from './store/devtoolsCtx';
 import { TimelineScrubber } from './timeline/TimelineScrubber';
 import { PropagationView } from './timeline/PropagationView';
-import { CascadeDetail } from './timeline/CascadeDetail';
 
 export function TimelineTab() {
   const state = useSubscribe(timelineState);
-  const cascade = useSubscribe(currentCascade);
   const entries = useSubscribe(devtoolsState.logEntries);
   const filter = useSubscribe(devtoolsState.filter);
 
@@ -89,18 +86,8 @@ export function TimelineTab() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex min-h-0">
-        {/* Propagation visualization */}
-        <div className="flex-1 min-w-0">
-          <PropagationView />
-        </div>
-
-        {/* Cascade detail panel */}
-        {cascade && (
-          <div className="w-80 border-l border-border/50 overflow-hidden">
-            <CascadeDetail />
-          </div>
-        )}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <PropagationView />
       </div>
 
       {/* Timeline scrubber */}

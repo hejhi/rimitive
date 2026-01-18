@@ -32,6 +32,7 @@ export function App() {
   const connectionStatus = useSubscribe(devtoolsState.connectionStatus);
   const contexts = useSubscribe(devtoolsState.contexts);
   const filter = useSubscribe(devtoolsState.filter);
+  const activeTab = useSubscribe(devtoolsState.activeTab);
 
   const { handleExport, handleImport } = useDataExport();
   useDevToolsConnection();
@@ -50,7 +51,7 @@ export function App() {
         onImport={handleImport}
       />
 
-      <Tabs defaultValue="logs" className="flex-1 flex flex-col overflow-hidden">
+      <Tabs value={activeTab} onValueChange={(v) => devtoolsState.activeTab(v as 'logs' | 'graph' | 'timeline')} className="flex-1 flex flex-col overflow-hidden">
         {/* Tab list with actions */}
         <div className="flex items-center justify-between px-4 py-2 border-b">
           <TabsList className="h-8">

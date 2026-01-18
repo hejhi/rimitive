@@ -1,4 +1,4 @@
-import { devtoolsContext } from './devtoolsCtx';
+import { devtoolsContext, devtoolsState } from './devtoolsCtx';
 import type { GraphState, FocusedGraphView, GraphNode, GraphEdge, ViewMode, NodeMetrics } from './graphTypes';
 
 /**
@@ -223,4 +223,13 @@ export function clearGraph(): void {
   selectedNodeId(null);
   viewMode('full');
   hoveredNodeId(null);
+}
+
+/**
+ * Navigate to graph tab focused on a specific node
+ */
+export function navigateToGraphNode(nodeId: string): void {
+  selectedNodeId(nodeId);
+  viewMode('focused');
+  devtoolsState.activeTab('graph');
 }

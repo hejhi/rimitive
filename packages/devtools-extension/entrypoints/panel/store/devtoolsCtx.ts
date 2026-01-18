@@ -15,12 +15,15 @@ export const devtoolsContext = compose(
   BatchModule
 );
 
+export type TabId = 'logs' | 'graph' | 'timeline';
+
 export const devtoolsState = {
   connected: devtoolsContext.signal(false),
   connectionStatus: devtoolsContext.signal<ConnectionStatus>('disconnected'),
   contexts: devtoolsContext.signal<ContextInfo[]>([]),
   selectedContext: devtoolsContext.signal<string | null>(null),
   selectedTransaction: devtoolsContext.signal<string | null>(null),
+  activeTab: devtoolsContext.signal<TabId>('logs'),
   filter: devtoolsContext.signal({
     type: 'all',
     search: '',
