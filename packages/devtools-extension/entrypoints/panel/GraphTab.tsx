@@ -159,12 +159,15 @@ function getLayoutedElements(
 /**
  * Convert focused view to React Flow nodes and edges
  */
-function focusedViewToFlow(view: FocusedGraphView): { nodes: Node[]; edges: Edge[] } {
+function focusedViewToFlow(view: FocusedGraphView, hideInternal: boolean): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  // Add dependency nodes
-  view.dependencies.forEach((dep) => {
+  // Filter function for internal nodes
+  const shouldInclude = (node: GraphNode) => !hideInternal || node.sourceLocation;
+
+  // Add dependency nodes (filtered)
+  view.dependencies.filter(shouldInclude).forEach((dep) => {
     nodes.push({
       id: dep.id,
       type: 'graphNode',
@@ -191,8 +194,8 @@ function focusedViewToFlow(view: FocusedGraphView): { nodes: Node[]; edges: Edge
     data: { node: view.center, isCenter: true },
   });
 
-  // Add dependent nodes
-  view.dependents.forEach((dep) => {
+  // Add dependent nodes (filtered)
+  view.dependents.filter(shouldInclude).forEach((dep) => {
     nodes.push({
       id: dep.id,
       type: 'graphNode',
@@ -219,23 +222,9 @@ function focusedViewToFlow(view: FocusedGraphView): { nodes: Node[]; edges: Edge
  */
 function ViewModeToggle() {
   const mode = useSubscribe(viewMode);
-  const filter = useSubscribe(devtoolsState.filter);
 
   return (
     <div className="flex items-center gap-2">
-      {/* Hide Internal toggle */}
-      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer mr-2">
-        <input
-          type="checkbox"
-          checked={filter.hideInternal}
-          onChange={(e) =>
-            devtoolsState.filter({ ...filter, hideInternal: e.target.checked })
-          }
-          className="rounded border-muted-foreground/50 w-3 h-3"
-        />
-        Hide internal
-      </label>
-
       <div className="flex rounded-md border border-border/50 overflow-hidden">
         <button
           onClick={() => {
@@ -273,6 +262,7 @@ export function GraphTab() {
   const view = useSubscribe(focusedView);
   const state = useSubscribe(graphState);
   const mode = useSubscribe(viewMode);
+  const filter = useSubscribe(devtoolsState.filter);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -286,14 +276,14 @@ export function GraphTab() {
   // Update nodes/edges when view changes (for focused mode)
   useEffect(() => {
     if (view && mode === 'focused') {
-      const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(view);
+      const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(view, filter.hideInternal);
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
     } else if (mode === 'focused') {
       setNodes([]);
       setEdges([]);
     }
-  }, [view, mode, setNodes, setEdges]);
+  }, [view, mode, filter.hideInternal, setNodes, setEdges]);
 
   // Empty state
   if (state.nodes.size === 0) {
