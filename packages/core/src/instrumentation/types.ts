@@ -99,4 +99,6 @@ export type InstrumentationConfig = {
   providers: InstrumentationProvider[];
   /** Enable/disable instrumentation. Defaults to true. */
   enabled?: boolean | (() => boolean);
+  /** Name for this instrumentation context. Shows in DevTools. Defaults to 'Service'. */
+  name?: string;
 };

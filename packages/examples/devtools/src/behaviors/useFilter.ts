@@ -4,13 +4,13 @@
  * Provides filtering functionality for a todo list.
  * Demonstrates composition - this behavior works with any todo list.
  */
-import { signal } from '../service';
+import type { Service } from '../service';
 import type { Todo } from './useTodoList';
 
 export type FilterType = 'all' | 'active' | 'completed';
 
-export const useFilter = () => {
-  const currentFilter = signal<FilterType>('all');
+export const useFilter = (svc: Service) => () => {
+  const currentFilter = svc.signal<FilterType>('all');
 
   return {
     // Reactive state - expose signal directly

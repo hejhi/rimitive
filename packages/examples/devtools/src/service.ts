@@ -23,12 +23,6 @@ import { createMatchModule } from '@rimitive/view/match';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
 import { MountModule } from '@rimitive/view/deps/mount';
 
-// Create instrumentation
-const instrumentation = createInstrumentation({
-  providers: [devtoolsProvider()],
-  enabled: true,
-});
-
 // Create the DOM adapter
 const adapter = createDOMAdapter();
 
@@ -37,39 +31,37 @@ const ElModule = createElModule(adapter);
 const MapModule = createMapModule(adapter);
 const MatchModule = createMatchModule(adapter);
 
-// Compose everything together with instrumentation
-const use = compose(
-  // Signals
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  BatchModule,
-  SubscribeModule,
-  // View
-  ElModule,
-  MapModule,
-  MatchModule,
-  // Helpers
-  OnModule,
-  MountModule,
-  // Options
-  { instrumentation }
-);
+/**
+ * Create a named service with instrumentation.
+ * Each service shows up separately in DevTools.
+ */
+export function createService(name: string) {
+  // Create instrumentation with the service name
+  const instrumentation = createInstrumentation({
+    providers: [devtoolsProvider()],
+    enabled: true,
+    name,
+  });
 
-// Export primitives for direct import
-export const {
-  signal,
-  computed,
-  effect,
-  batch,
-  subscribe,
-  el,
-  map,
-  match,
-  on,
-  mount,
-} = use;
-export { use };
+  // Compose everything together with instrumentation
+  return compose(
+    // Signals
+    SignalModule,
+    ComputedModule,
+    EffectModule,
+    BatchModule,
+    SubscribeModule,
+    // View
+    ElModule,
+    MapModule,
+    MatchModule,
+    // Helpers
+    OnModule,
+    MountModule,
+    // Options
+    { instrumentation }
+  );
+}
 
-// Export types
-export type Service = ReturnType<typeof use>;
+// Export the service type
+export type Service = ReturnType<typeof createService>;

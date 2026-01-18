@@ -37,14 +37,15 @@ function isEnabled(config: InstrumentationConfig): boolean {
  * ```
  */
 export function composeProviders(
-  providers: InstrumentationProvider[]
+  providers: InstrumentationProvider[],
+  name?: string
 ): InstrumentationContext {
   if (providers.length === 0) {
     throw new Error('At least one instrumentation provider is required');
   }
 
   const contextId = crypto.randomUUID();
-  const contextName = 'Service';
+  const contextName = name ?? 'Service';
 
   // Initialize all providers
   providers.forEach((provider) => {
@@ -184,5 +185,5 @@ export function createInstrumentation(
 ): InstrumentationContext | undefined {
   if (!isEnabled(config)) return undefined;
 
-  return composeProviders(config.providers);
+  return composeProviders(config.providers, config.name);
 }

@@ -6,31 +6,30 @@
  *
  * This shows composition through dependencies rather than creating everything internally.
  */
-import { computed } from '../service';
+import type { Service } from '../service';
 import type { UseTodoList } from './useTodoList';
 
 /**
  * Create a stats behavior that depends on an existing TodoList
  */
-export const useTodoStats = ({
-  todos,
-  activeCount,
-}: Pick<UseTodoList, 'todos' | 'activeCount'>) => {
-  // These computed values depend on the injected todoList
-  const total = computed(() => todos().length);
-  const active = computed(() => activeCount());
-  const completed = computed(() => {
-    return todos().filter((todo) => todo.completed).length;
-  });
-  const completionRate = computed(() => {
-    const t = total();
-    return t === 0 ? 0 : (completed() / t) * 100;
-  });
+export const useTodoStats =
+  (svc: Service) =>
+  ({ todos, activeCount }: Pick<UseTodoList, 'todos' | 'activeCount'>) => {
+    // These computed values depend on the injected todoList
+    const total = svc.computed(() => todos().length);
+    const active = svc.computed(() => activeCount());
+    const completed = svc.computed(() => {
+      return todos().filter((todo) => todo.completed).length;
+    });
+    const completionRate = svc.computed(() => {
+      const t = total();
+      return t === 0 ? 0 : (completed() / t) * 100;
+    });
 
-  return {
-    total,
-    active,
-    completed,
-    completionRate,
+    return {
+      total,
+      active,
+      completed,
+      completionRate,
+    };
   };
-};

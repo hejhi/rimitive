@@ -43,25 +43,39 @@ function handleRimitiveDetected(data?: unknown) {
     devtoolsState.logEntries([]);
   }
 
-  // Create context from the detection payload if contextId is provided
+  // Add context from the detection payload if contextId is provided
   if (data && typeof data === 'object') {
     const payload = data as { contextId?: string; contextName?: string };
     if (payload.contextId) {
-      devtoolsState.contexts([
-        {
+      const contexts = [...devtoolsState.contexts()];
+      const existingIndex = contexts.findIndex((c) => c.id === payload.contextId);
+
+      if (existingIndex === -1) {
+        // Add new context
+        contexts.push({
           id: payload.contextId,
-          name: payload.contextName || 'Service 1',
+          name: payload.contextName || `Service ${contexts.length + 1}`,
           created: Date.now(),
-        },
-      ]);
-      devtoolsState.selectedContext(payload.contextId);
+        });
+        devtoolsState.contexts(contexts);
+      } else {
+        // Update existing context name if provided
+        if (payload.contextName) {
+          contexts[existingIndex] = {
+            ...contexts[existingIndex],
+            name: payload.contextName,
+          };
+          devtoolsState.contexts(contexts);
+        }
+      }
+
+      // Select first context if none selected
+      if (!devtoolsState.selectedContext()) {
+        devtoolsState.selectedContext(payload.contextId);
+      }
       return;
     }
   }
-
-  // Fallback: clear contexts if no contextId in payload
-  devtoolsState.contexts([]);
-  devtoolsState.selectedContext(null);
 }
 
 function handleTransaction(data: unknown) {

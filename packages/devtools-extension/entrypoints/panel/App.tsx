@@ -31,6 +31,7 @@ export function App() {
   const connected = useSubscribe(devtoolsState.connected);
   const connectionStatus = useSubscribe(devtoolsState.connectionStatus);
   const contexts = useSubscribe(devtoolsState.contexts);
+  const selectedContext = useSubscribe(devtoolsState.selectedContext);
   const filter = useSubscribe(devtoolsState.filter);
   const activeTab = useSubscribe(devtoolsState.activeTab);
 
@@ -89,7 +90,7 @@ export function App() {
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
             <FilterBar
               contexts={contexts}
-              selectedContext={devtoolsState.selectedContext()}
+              selectedContext={selectedContext}
               filterType={filter.type}
               searchValue={filter.search}
               filteredNodeId={filter.nodeId}
