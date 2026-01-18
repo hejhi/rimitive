@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { Loader2 } from 'lucide-react';
-import { timelineState, selectCascade } from '../store/timelineState';
+import { timelineState as globalTimelineState, selectCascade as globalSelectCascade } from '../store/timelineState';
 import { NODE_COLORS } from '../graph/styles';
+import type { TimelineState } from '../store/timelineTypes';
 
 // Lazy load the chart component
 const TimelineChart = lazy(() =>
@@ -17,12 +18,25 @@ function ChartLoading() {
   );
 }
 
-export function TimelineScrubber() {
-  const state = useSubscribe(timelineState);
+type TimelineScrubberProps = {
+  /** Optional timeline state. If not provided, uses global state. */
+  state?: TimelineState;
+  /** Callback when a cascade is selected. Defaults to updating global state. */
+  onSelectCascade?: (index: number | null) => void;
+};
+
+export function TimelineScrubber({ state: propState, onSelectCascade }: TimelineScrubberProps = {}) {
+  // Use provided state or fall back to global
+  const globalState = useSubscribe(globalTimelineState);
+  const state = propState ?? globalState;
 
   const handleCascadeClick = useCallback((index: number) => {
-    selectCascade(index);
-  }, []);
+    if (onSelectCascade) {
+      onSelectCascade(index);
+    } else {
+      globalSelectCascade(index);
+    }
+  }, [onSelectCascade]);
 
   if (state.cascades.length === 0) {
     return (

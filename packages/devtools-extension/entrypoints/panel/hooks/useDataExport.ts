@@ -88,29 +88,19 @@ export function useDataExport() {
 
         const state = importData.state;
 
-        if (state.contexts) {
-          devtoolsState.contexts(state.contexts);
-        }
+        // Open snapshot modal instead of replacing live data
+        devtoolsState.snapshot({
+          contexts: state.contexts ?? [],
+          logEntries: state.logEntries ?? [],
+          exportDate: importData.exportDate,
+        });
 
-        if (state.logEntries) {
-          devtoolsState.logEntries(state.logEntries);
+        // Select the first context if there's only one, or none if multiple
+        if (state.contexts && state.contexts.length === 1) {
+          devtoolsState.snapshotSelectedContext(state.contexts[0].id);
+        } else {
+          devtoolsState.snapshotSelectedContext(null);
         }
-
-        if (state.filter) {
-          devtoolsState.filter({
-            ...state.filter,
-            nodeId: state.filter.nodeId ?? null,
-          });
-        }
-
-        if (state.selectedContext !== undefined) {
-          devtoolsState.selectedContext(state.selectedContext);
-        }
-        if (state.selectedTransaction !== undefined) {
-          devtoolsState.selectedTransaction(state.selectedTransaction);
-        }
-
-        devtoolsState.connected(true);
       } catch (error) {
         console.error('Failed to import data:', error);
         alert('Failed to import data. Please check the file format.');

@@ -1,33 +1,123 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { History, SkipBack, SkipForward, Zap } from 'lucide-react';
 import {
-  timelineState,
+  timelineState as globalTimelineState,
   rebuildCascades,
-  selectCascade,
-  nextCascade,
-  prevCascade,
+  selectCascade as globalSelectCascade,
+  buildCascades,
 } from './store/timelineState';
 import { devtoolsState } from './store/devtoolsCtx';
 import { TimelineScrubber } from './timeline/TimelineScrubber';
 import { PropagationView } from './timeline/PropagationView';
+import type { LogEntry } from './store/types';
+import type { TimelineState, Cascade } from './store/timelineTypes';
 
-export function TimelineTab() {
-  const state = useSubscribe(timelineState);
-  const entries = useSubscribe(devtoolsState.logEntries);
-  const filter = useSubscribe(devtoolsState.filter);
+type TimelineTabProps = {
+  /** Optional mode indicator for snapshot viewing */
+  snapshotMode?: boolean;
+  /** Optional log entries. If not provided, uses global state. */
+  logEntries?: LogEntry[];
+  /** Whether to hide internal entries. Defaults to global filter setting. */
+  hideInternal?: boolean;
+};
 
-  // Rebuild cascades when entries or filter changes
+export function TimelineTab({ snapshotMode, logEntries, hideInternal: propHideInternal }: TimelineTabProps = {}) {
+  // Determine if we're in "controlled" mode (props provided)
+  const isControlled = logEntries !== undefined;
+
+  // Global state
+  const globalState = useSubscribe(globalTimelineState);
+  const globalEntries = useSubscribe(devtoolsState.logEntries);
+  const globalFilter = useSubscribe(devtoolsState.filter);
+
+  // Local state for controlled mode
+  const [localState, setLocalState] = useState<TimelineState>({
+    cascades: [],
+    currentCascadeIndex: null,
+    timeRange: null,
+  });
+
+  // Determine which values to use
+  const entries = logEntries ?? globalEntries;
+  const hideInternal = propHideInternal ?? globalFilter.hideInternal;
+  const state = isControlled ? localState : globalState;
+
+  // Build cascades for controlled mode
   useEffect(() => {
-    rebuildCascades();
-  }, [entries, filter.hideInternal]);
+    if (isControlled) {
+      // Filter entries if needed
+      const filtered = hideInternal ? entries.filter((e) => !e.isInternal) : entries;
+      const cascades = buildCascades(filtered);
+
+      // Compute time range
+      let timeRange: { start: number; end: number } | null = null;
+      if (filtered.length > 0) {
+        let minTime = filtered[0].timestamp;
+        let maxTime = filtered[0].timestamp;
+        for (const entry of filtered) {
+          if (entry.timestamp < minTime) minTime = entry.timestamp;
+          if (entry.timestamp > maxTime) maxTime = entry.timestamp;
+        }
+        timeRange = { start: minTime, end: maxTime };
+      }
+
+      setLocalState((prev) => ({
+        ...prev,
+        cascades,
+        timeRange,
+      }));
+    }
+  }, [isControlled, entries, hideInternal]);
+
+  // Rebuild global cascades when entries or filter changes (non-controlled mode)
+  useEffect(() => {
+    if (!isControlled) {
+      rebuildCascades();
+    }
+  }, [isControlled, globalEntries, globalFilter.hideInternal]);
 
   // Auto-select first cascade when cascades are available but none selected
   useEffect(() => {
     if (state.cascades.length > 0 && state.currentCascadeIndex === null) {
-      selectCascade(0);
+      if (isControlled) {
+        setLocalState((prev) => ({ ...prev, currentCascadeIndex: 0 }));
+      } else {
+        globalSelectCascade(0);
+      }
     }
-  }, [state.cascades.length, state.currentCascadeIndex]);
+  }, [state.cascades.length, state.currentCascadeIndex, isControlled]);
+
+  // Local selection handlers
+  const selectCascade = useCallback((index: number | null) => {
+    if (isControlled) {
+      setLocalState((prev) => ({ ...prev, currentCascadeIndex: index }));
+    } else {
+      globalSelectCascade(index);
+    }
+  }, [isControlled]);
+
+  const nextCascade = useCallback(() => {
+    if (state.cascades.length === 0) return;
+    const nextIndex = state.currentCascadeIndex === null
+      ? 0
+      : Math.min(state.currentCascadeIndex + 1, state.cascades.length - 1);
+    selectCascade(nextIndex);
+  }, [state.cascades.length, state.currentCascadeIndex, selectCascade]);
+
+  const prevCascade = useCallback(() => {
+    if (state.cascades.length === 0) return;
+    const prevIndex = state.currentCascadeIndex === null
+      ? state.cascades.length - 1
+      : Math.max(state.currentCascadeIndex - 1, 0);
+    selectCascade(prevIndex);
+  }, [state.cascades.length, state.currentCascadeIndex, selectCascade]);
+
+  // Current cascade
+  const currentCascade = useMemo(() => {
+    if (state.currentCascadeIndex === null) return null;
+    return state.cascades[state.currentCascadeIndex] ?? null;
+  }, [state.cascades, state.currentCascadeIndex]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -48,7 +138,7 @@ export function TimelineTab() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [nextCascade, prevCascade]);
 
   // Empty state
   if (state.cascades.length === 0) {
@@ -82,27 +172,34 @@ export function TimelineTab() {
           </div>
         </div>
 
-        <CascadeNavigation />
+        <CascadeNavigation state={state} onPrev={prevCascade} onNext={nextCascade} />
       </div>
 
       {/* Main content area */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <PropagationView />
+        <PropagationView cascade={currentCascade} />
       </div>
 
       {/* Timeline scrubber */}
-      <TimelineScrubber />
+      <TimelineScrubber
+        state={state}
+        onSelectCascade={selectCascade}
+      />
     </div>
   );
 }
 
-function CascadeNavigation() {
-  const state = useSubscribe(timelineState);
+type CascadeNavigationProps = {
+  state: TimelineState;
+  onPrev: () => void;
+  onNext: () => void;
+};
 
+function CascadeNavigation({ state, onPrev, onNext }: CascadeNavigationProps) {
   return (
     <div className="flex items-center gap-1">
       <button
-        onClick={prevCascade}
+        onClick={onPrev}
         disabled={state.currentCascadeIndex === null || state.currentCascadeIndex === 0}
         className="p-1.5 rounded hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed"
         title="Previous cascade (←)"
@@ -111,7 +208,7 @@ function CascadeNavigation() {
       </button>
 
       <button
-        onClick={nextCascade}
+        onClick={onNext}
         disabled={
           state.currentCascadeIndex === null ||
           state.currentCascadeIndex === state.cascades.length - 1

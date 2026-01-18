@@ -11,8 +11,15 @@ import {
   type NodeTypes,
 } from '@xyflow/react';
 import { useSubscribe } from '@rimitive/react';
-import { graphState, selectedNodeId, hoveredNodeId, nodeMetrics, viewMode } from '../store/graphState';
+import {
+  graphState as globalGraphState,
+  selectedNodeId as globalSelectedNodeId,
+  hoveredNodeId,
+  nodeMetrics,
+  viewMode as globalViewMode,
+} from '../store/graphState';
 import { devtoolsState } from '../store/devtoolsCtx';
+import type { GraphState } from '../store/graphTypes';
 import type { SourceLocation } from '../store/types';
 import { computeStratifiedLayout, type StratifiedNodeData } from './stratifiedLayout';
 import { StratifiedNode } from './nodes/StratifiedNode';
@@ -22,19 +29,40 @@ const nodeTypes: NodeTypes = {
   stratifiedNode: StratifiedNode,
 };
 
-export function FullGraphView(): React.ReactElement {
-  const state = useSubscribe(graphState);
+type FullGraphViewProps = {
+  /** Optional graph state. If not provided, uses global state. */
+  graphState?: GraphState;
+  /** Whether to hide internal nodes. Defaults to global filter setting. */
+  hideInternal?: boolean;
+  /** Callback when a node is selected. Defaults to updating global state. */
+  onSelectNode?: (nodeId: string | null) => void;
+};
+
+export function FullGraphView({
+  graphState: propGraphState,
+  hideInternal: propHideInternal,
+  onSelectNode,
+}: FullGraphViewProps = {}): React.ReactElement {
+  // Use provided state or fall back to global
+  const globalState = useSubscribe(globalGraphState);
+  const globalFilter = useSubscribe(devtoolsState.filter);
   const metrics = useSubscribe(nodeMetrics);
   const hovered = useSubscribe(hoveredNodeId);
-  const filter = useSubscribe(devtoolsState.filter);
+
+  const state = propGraphState ?? globalState;
+  const hideInternal = propHideInternal ?? globalFilter.hideInternal;
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<StratifiedNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<StratifiedNodeData>) => {
-    selectedNodeId(node.id);
-    viewMode('focused');
-  }, []);
+    if (onSelectNode) {
+      onSelectNode(node.id);
+    } else {
+      globalSelectedNodeId(node.id);
+      globalViewMode('focused');
+    }
+  }, [onSelectNode]);
 
   const onOpenSource = useCallback((location: SourceLocation) => {
     chrome.devtools.panels.openResource(location.filePath, location.line - 1, location.column ?? 0, () => {});
@@ -56,9 +84,9 @@ export function FullGraphView(): React.ReactElement {
       noopNavigate,
       onOpenSource,
       onHover,
-      filter.hideInternal
+      hideInternal
     );
-  }, [state, metrics, hovered, noopNavigate, onOpenSource, onHover, filter.hideInternal]);
+  }, [state, metrics, hovered, noopNavigate, onOpenSource, onHover, hideInternal]);
 
   // Update nodes/edges when layout changes
   useEffect(() => {

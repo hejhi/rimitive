@@ -1,4 +1,4 @@
-import type { ConnectionStatus, ContextInfo, LogEntry } from './types';
+import type { ConnectionStatus, ContextInfo, LogEntry, SnapshotData } from './types';
 import { compose } from '@rimitive/core';
 import {
   SignalModule,
@@ -31,4 +31,15 @@ export const devtoolsState = {
     nodeId: null as string | null,
   }),
   logEntries: devtoolsContext.signal<LogEntry[]>([]),
+  // Snapshot state for imported sessions
+  snapshot: devtoolsContext.signal<SnapshotData>(null),
+  snapshotSelectedContext: devtoolsContext.signal<string | null>(null),
+  snapshotSelectedTransaction: devtoolsContext.signal<string | null>(null),
+  snapshotFilter: devtoolsContext.signal({
+    type: 'all',
+    search: '',
+    hideInternal: true,
+    nodeId: null as string | null,
+  }),
+  snapshotActiveTab: devtoolsContext.signal<TabId>('logs'),
 };

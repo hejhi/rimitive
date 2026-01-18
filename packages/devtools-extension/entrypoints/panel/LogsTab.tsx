@@ -3,8 +3,17 @@ import type { LogEntry } from './store/types';
 import { filteredLogEntries } from './store/computed';
 import { LogLine } from './components/LogLine';
 
-export function LogsTab() {
-  const logs = useSubscribe(filteredLogEntries);
+type LogsTabProps = {
+  /** Optional mode indicator for snapshot viewing */
+  snapshotMode?: boolean;
+  /** Optional log entries to display. If not provided, uses global filtered entries. */
+  logEntries?: LogEntry[];
+};
+
+export function LogsTab({ snapshotMode, logEntries }: LogsTabProps = {}) {
+  // Use provided entries or fall back to global computed
+  const globalLogs = useSubscribe(filteredLogEntries);
+  const logs = logEntries ?? globalLogs;
 
   return (
     <div className="h-full overflow-y-auto">

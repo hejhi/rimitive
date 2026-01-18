@@ -5,6 +5,7 @@ import { Button } from '../../src/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../src/components/ui/tabs';
 import { LogsTab } from './LogsTab';
 import { ConnectionStatus, FilterBar, Header } from './components';
+import { SnapshotModal } from './components/SnapshotModal';
 import { useDataExport, useDevToolsConnection } from './hooks';
 import { devtoolsState } from './store/devtoolsCtx';
 import { clearGraph } from './store/graphState';
@@ -131,6 +132,9 @@ export function App() {
           </Suspense>
         </TabsContent>
       </Tabs>
+
+      {/* Snapshot modal overlay */}
+      <SnapshotModal />
     </div>
   );
 }

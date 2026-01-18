@@ -47,3 +47,10 @@ export type DevToolsState = {
   };
   logEntries: LogEntry[];
 };
+
+// Snapshot data for imported sessions
+export type SnapshotData = {
+  contexts: ContextInfo[];
+  logEntries: LogEntry[];
+  exportDate: string;
+} | null;

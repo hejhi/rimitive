@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -15,8 +15,13 @@ import {
 } from '@xyflow/react';
 import Dagre from '@dagrejs/dagre';
 import { useSubscribe } from '@rimitive/react';
-import type { GraphNode, FocusedGraphView } from './store/graphTypes';
-import { focusedView, selectedNodeId, graphState, viewMode } from './store/graphState';
+import type { GraphState, FocusedGraphView, GraphNode, GraphEdge, ViewMode, NodeMetrics } from './store/graphTypes';
+import {
+  focusedView as globalFocusedView,
+  selectedNodeId as globalSelectedNodeId,
+  graphState as globalGraphState,
+  viewMode as globalViewMode,
+} from './store/graphState';
 import { devtoolsState } from './store/devtoolsCtx';
 import { Layers, Grid3X3, Focus } from 'lucide-react';
 import { NODE_COLORS } from './graph/styles';
@@ -218,72 +223,109 @@ function focusedViewToFlow(view: FocusedGraphView, hideInternal: boolean): { nod
 }
 
 /**
- * View mode toggle button group
+ * Compute focused view from graph state and selected node
  */
-function ViewModeToggle() {
-  const mode = useSubscribe(viewMode);
+function getFocusedViewFromState(state: GraphState, nodeId: string): FocusedGraphView | null {
+  const center = state.nodes.get(nodeId);
+  if (!center) return null;
 
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex rounded-md border border-border/50 overflow-hidden">
-        <button
-          onClick={() => {
-            viewMode('full');
-            selectedNodeId(null);
-          }}
-          className={`flex items-center gap-1 px-2 py-1 text-xs transition-colors ${
-            mode === 'full'
-              ? 'bg-accent text-accent-foreground'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-          }`}
-          title="Full graph view"
-        >
-          <Grid3X3 className="w-3 h-3" />
-          Full
-        </button>
-        <button
-          onClick={() => viewMode('focused')}
-          className={`flex items-center gap-1 px-2 py-1 text-xs transition-colors border-l border-border/50 ${
-            mode === 'focused'
-              ? 'bg-accent text-accent-foreground'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-          }`}
-          title="Focused view"
-        >
-          <Focus className="w-3 h-3" />
-          Focused
-        </button>
-      </div>
-    </div>
-  );
+  const depIds = state.dependencies.get(nodeId) ?? new Set();
+  const dependencies = Array.from(depIds)
+    .map((id) => state.nodes.get(id))
+    .filter((node): node is GraphNode => node !== undefined);
+
+  const dependentIds = state.dependents.get(nodeId) ?? new Set();
+  const dependents = Array.from(dependentIds)
+    .map((id) => state.nodes.get(id))
+    .filter((node): node is GraphNode => node !== undefined);
+
+  const dependencyEdges = Array.from(depIds)
+    .map((producerId) => state.edges.get(`${nodeId}->${producerId}`))
+    .filter((edge): edge is GraphEdge => edge !== undefined);
+
+  const dependentEdges = Array.from(dependentIds)
+    .map((consumerId) => state.edges.get(`${consumerId}->${nodeId}`))
+    .filter((edge): edge is GraphEdge => edge !== undefined);
+
+  return { center, dependencies, dependents, dependencyEdges, dependentEdges };
 }
 
-export function GraphTab() {
-  const view = useSubscribe(focusedView);
-  const state = useSubscribe(graphState);
-  const mode = useSubscribe(viewMode);
-  const filter = useSubscribe(devtoolsState.filter);
+type GraphTabProps = {
+  /** Optional graph state. If not provided, uses global state. */
+  graphState?: GraphState;
+  /** Whether to hide internal nodes. Defaults to global filter setting. */
+  hideInternal?: boolean;
+};
+
+export function GraphTab({ graphState: propGraphState, hideInternal: propHideInternal }: GraphTabProps = {}) {
+  // Use provided state or fall back to global
+  const globalState = useSubscribe(globalGraphState);
+  const globalFilter = useSubscribe(devtoolsState.filter);
+  const globalView = useSubscribe(globalFocusedView);
+  const globalMode = useSubscribe(globalViewMode);
+
+  // Determine if we're in "controlled" mode (props provided)
+  const isControlled = propGraphState !== undefined;
+
+  // Use prop values or global values
+  const state = propGraphState ?? globalState;
+  const hideInternal = propHideInternal ?? globalFilter.hideInternal;
+
+  // Local state for controlled mode
+  const [localSelectedNodeId, setLocalSelectedNodeId] = useState<string | null>(null);
+  const [localViewMode, setLocalViewMode] = useState<ViewMode>('full');
+
+  // Get the effective values based on mode
+  const effectiveSelectedNodeId = isControlled ? localSelectedNodeId : useSubscribe(globalSelectedNodeId);
+  const effectiveViewMode = isControlled ? localViewMode : globalMode;
+
+  // Compute focused view
+  const view = useMemo(() => {
+    if (!effectiveSelectedNodeId) return null;
+    return getFocusedViewFromState(state, effectiveSelectedNodeId);
+  }, [state, effectiveSelectedNodeId]);
+
+  // Use global view for non-controlled mode
+  const effectiveView = isControlled ? view : globalView;
+
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  const handleSelectNode = useCallback((nodeId: string | null) => {
+    if (isControlled) {
+      setLocalSelectedNodeId(nodeId);
+    } else {
+      globalSelectedNodeId(nodeId);
+    }
+  }, [isControlled]);
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    if (isControlled) {
+      setLocalViewMode(mode);
+      if (mode === 'full') setLocalSelectedNodeId(null);
+    } else {
+      globalViewMode(mode);
+      if (mode === 'full') globalSelectedNodeId(null);
+    }
+  }, [isControlled]);
+
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    // Don't navigate if clicking the center node
     const data = node.data as GraphNodeData;
     if (data.isCenter) return;
-    selectedNodeId(node.id);
-  }, []);
+    handleSelectNode(node.id);
+  }, [handleSelectNode]);
 
   // Update nodes/edges when view changes (for focused mode)
   useEffect(() => {
-    if (view && mode === 'focused') {
-      const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(view, filter.hideInternal);
+    if (effectiveView && effectiveViewMode === 'focused') {
+      const { nodes: layoutedNodes, edges: layoutedEdges } = focusedViewToFlow(effectiveView, hideInternal);
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
-    } else if (mode === 'focused') {
+    } else if (effectiveViewMode === 'focused') {
       setNodes([]);
       setEdges([]);
     }
-  }, [view, mode, filter.hideInternal, setNodes, setEdges]);
+  }, [effectiveView, effectiveViewMode, hideInternal, setNodes, setEdges]);
 
   // Empty state
   if (state.nodes.size === 0) {
@@ -303,35 +345,115 @@ export function GraphTab() {
     );
   }
 
+  // View mode toggle
+  const ViewModeToggle = () => (
+    <div className="flex items-center gap-2">
+      <div className="flex rounded-md border border-border/50 overflow-hidden">
+        <button
+          onClick={() => handleViewModeChange('full')}
+          className={`flex items-center gap-1 px-2 py-1 text-xs transition-colors ${
+            effectiveViewMode === 'full'
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+          }`}
+          title="Full graph view"
+        >
+          <Grid3X3 className="w-3 h-3" />
+          Full
+        </button>
+        <button
+          onClick={() => handleViewModeChange('focused')}
+          className={`flex items-center gap-1 px-2 py-1 text-xs transition-colors border-l border-border/50 ${
+            effectiveViewMode === 'focused'
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+          }`}
+          title="Focused view"
+        >
+          <Focus className="w-3 h-3" />
+          Focused
+        </button>
+      </div>
+    </div>
+  );
+
+  // Node selector for focused mode
+  const NodeSelector = () => {
+    const [expanded, setExpanded] = useState(false);
+    const allNodes = Array.from(state.nodes.values()).filter(
+      (node) => !hideInternal || node.sourceLocation
+    );
+    const displayNodes = expanded ? allNodes : allNodes.slice(0, 12);
+    const hiddenCount = allNodes.length - 12;
+
+    if (allNodes.length === 0) return null;
+
+    return (
+      <div className="flex flex-col items-center gap-4 mt-4">
+        <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+          {displayNodes.map((node) => (
+            <button
+              key={node.id}
+              onClick={() => {
+                handleSelectNode(node.id);
+                handleViewModeChange('focused');
+              }}
+              className="px-2 py-1 text-xs font-mono rounded border hover:brightness-125 transition-all"
+              style={{
+                background: NODE_COLORS[node.type].bg,
+                borderColor: NODE_COLORS[node.type].border,
+                color: NODE_COLORS[node.type].text,
+              }}
+            >
+              {node.name ?? node.id.slice(0, 8)}
+            </button>
+          ))}
+          {hiddenCount > 0 && !expanded && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
+            >
+              +{hiddenCount} more
+            </button>
+          )}
+          {expanded && hiddenCount > 0 && (
+            <button
+              onClick={() => setExpanded(false)}
+              className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
+            >
+              Show less
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Full view mode
-  if (mode === 'full') {
+  if (effectiveViewMode === 'full') {
     return (
       <div className="h-full flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Grid3X3 className="w-4 h-4" />
             <span>Full Graph</span>
             <span className="text-muted-foreground/60">
-              ({Array.from(state.nodes.values()).filter(n => !filter.hideInternal || n.sourceLocation).length} nodes)
+              ({Array.from(state.nodes.values()).filter(n => !hideInternal || n.sourceLocation).length} nodes)
             </span>
           </div>
           <ViewModeToggle />
         </div>
-
-        {/* Full Graph View */}
         <div className="flex-1">
-          <FullGraphView />
+          <FullGraphView graphState={state} hideInternal={hideInternal} onSelectNode={handleSelectNode} />
         </div>
       </div>
     );
   }
 
   // Focused view mode without selection
-  if (!view) {
+  if (!effectiveView) {
     return (
       <div className="h-full flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Focus className="w-4 h-4" />
@@ -339,7 +461,6 @@ export function GraphTab() {
           </div>
           <ViewModeToggle />
         </div>
-
         <div className="flex-1 overflow-auto">
           <div className="min-h-full flex items-center justify-center py-8">
             <div className="text-center space-y-4">
@@ -362,28 +483,26 @@ export function GraphTab() {
   // Focused view mode with selection
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
         <div className="flex items-center gap-2 text-xs">
           <span className="text-muted-foreground">Focused on:</span>
-          <span className="font-mono font-medium" style={{ color: NODE_COLORS[view.center.type].text }}>
-            {view.center.name ?? view.center.id}
+          <span className="font-mono font-medium" style={{ color: NODE_COLORS[effectiveView.center.type].text }}>
+            {effectiveView.center.name ?? effectiveView.center.id}
           </span>
           <span
             className="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-medium"
             style={{
-              background: NODE_COLORS[view.center.type].bg,
-              border: `1px solid ${NODE_COLORS[view.center.type].border}`,
-              color: NODE_COLORS[view.center.type].text,
+              background: NODE_COLORS[effectiveView.center.type].bg,
+              border: `1px solid ${NODE_COLORS[effectiveView.center.type].border}`,
+              color: NODE_COLORS[effectiveView.center.type].text,
             }}
           >
-            {view.center.type}
+            {effectiveView.center.type}
           </span>
         </div>
         <ViewModeToggle />
       </div>
 
-      {/* React Flow */}
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
@@ -405,10 +524,7 @@ export function GraphTab() {
           className="react-flow-dark"
         >
           <Background color="#333" gap={20} />
-          <Controls
-            showInteractive={false}
-            className="react-flow-controls-dark"
-          />
+          <Controls showInteractive={false} className="react-flow-controls-dark" />
           <MiniMap
             nodeColor={(node) => {
               const data = node.data as GraphNodeData;
@@ -420,70 +536,9 @@ export function GraphTab() {
         </ReactFlow>
       </div>
 
-      {/* Stats footer */}
       <div className="flex items-center justify-center gap-6 px-4 py-2 border-t border-border/50 bg-muted/30 text-xs text-muted-foreground">
-        <span>← {view.dependencies.length} dependencies</span>
-        <span>{view.dependents.length} dependents →</span>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Quick node selector when nothing is focused
- */
-function NodeSelector() {
-  const state = useSubscribe(graphState);
-  const filter = useSubscribe(devtoolsState.filter);
-  const [expanded, setExpanded] = useState(false);
-
-  // Filter internal nodes (those without sourceLocation)
-  const allNodes = Array.from(state.nodes.values()).filter(
-    (node) => !filter.hideInternal || node.sourceLocation
-  );
-  const nodes = expanded ? allNodes : allNodes.slice(0, 12);
-  const hiddenCount = allNodes.length - 12;
-
-  if (allNodes.length === 0) return null;
-
-  const handleSelect = (nodeId: string) => {
-    selectedNodeId(nodeId);
-    viewMode('focused');
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-4 mt-4">
-      <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-        {nodes.map((node) => (
-          <button
-            key={node.id}
-            onClick={() => handleSelect(node.id)}
-            className="px-2 py-1 text-xs font-mono rounded border hover:brightness-125 transition-all"
-            style={{
-              background: NODE_COLORS[node.type].bg,
-              borderColor: NODE_COLORS[node.type].border,
-              color: NODE_COLORS[node.type].text,
-            }}
-          >
-            {node.name ?? node.id.slice(0, 8)}
-          </button>
-        ))}
-        {hiddenCount > 0 && !expanded && (
-          <button
-            onClick={() => setExpanded(true)}
-            className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
-          >
-            +{hiddenCount} more
-          </button>
-        )}
-        {expanded && hiddenCount > 0 && (
-          <button
-            onClick={() => setExpanded(false)}
-            className="text-xs text-muted-foreground hover:text-foreground self-center transition-colors"
-          >
-            Show less
-          </button>
-        )}
+        <span>← {effectiveView.dependencies.length} dependencies</span>
+        <span>{effectiveView.dependents.length} dependents →</span>
       </div>
     </div>
   );
