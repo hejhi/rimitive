@@ -55,7 +55,7 @@ export const filteredTransactions = devtoolsContext.computed(() => {
   return filterLogs(logEntries, filter, selectedContext, [
     'eventType',
     'nodeName',
-    'data',
+    'summary',
   ]);
 });
 
@@ -81,8 +81,6 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
 
   const filtered = filterLogs(logs, filter, selectedContext, [
     'nodeName',
-    'nodeId',
-    'data',
     'summary',
   ]);
   return filtered.slice(-500); // Keep last 500 logs
