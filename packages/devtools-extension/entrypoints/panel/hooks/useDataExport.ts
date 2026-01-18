@@ -22,32 +22,50 @@ type ImportData = {
 export function useDataExport() {
   const handleExport = useCallback(() => {
     const filter = devtoolsState.filter();
-    const logEntries = devtoolsState.logEntries();
+    const selectedContext = devtoolsState.selectedContext();
+    const allContexts = devtoolsState.contexts();
+    let logEntries = devtoolsState.logEntries();
+
+    // Filter by selected context if one is selected
+    if (selectedContext) {
+      logEntries = logEntries.filter(
+        (entry) => entry.contextId === selectedContext
+      );
+    }
 
     // Filter out internal entries if hideInternal is enabled
-    const filteredEntries = filter.hideInternal
-      ? logEntries.filter((entry) => !entry.isInternal)
-      : logEntries;
+    if (filter.hideInternal) {
+      logEntries = logEntries.filter((entry) => !entry.isInternal);
+    }
+
+    // Export only the selected context, or all contexts if none selected
+    const contexts = selectedContext
+      ? allContexts.filter((c) => c.id === selectedContext)
+      : allContexts;
 
     const exportData = {
       version: '1.0.0',
       exportDate: new Date().toISOString(),
       state: {
-        contexts: devtoolsState.contexts(),
-        logEntries: filteredEntries,
+        contexts,
+        logEntries,
         filter,
-        selectedContext: devtoolsState.selectedContext(),
+        selectedContext,
         selectedTransaction: devtoolsState.selectedTransaction(),
       },
     };
 
+    // Generate filename based on selection
+    const contextName = selectedContext
+      ? contexts[0]?.name?.toLowerCase().replace(/\s+/g, '-') ?? 'service'
+      : 'all';
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `rimitive-devtools-export-${Date.now()}.json`;
+    link.download = `rimitive-${contextName}-${Date.now()}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }, []);

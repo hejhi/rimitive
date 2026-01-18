@@ -47,7 +47,9 @@ export function App() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Header
-        contextCount={contexts.length}
+        contexts={contexts}
+        selectedContext={selectedContext}
+        onContextChange={(value) => devtoolsState.selectedContext(value)}
         onExport={handleExport}
         onImport={handleImport}
       />
@@ -89,12 +91,9 @@ export function App() {
         <TabsContent value="logs" className="flex-1 flex flex-col overflow-hidden mt-0 data-[state=inactive]:hidden">
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
             <FilterBar
-              contexts={contexts}
-              selectedContext={selectedContext}
               filterType={filter.type}
               searchValue={filter.search}
               filteredNodeId={filter.nodeId}
-              onContextChange={(value) => devtoolsState.selectedContext(value)}
               onFilterTypeChange={(value) =>
                 devtoolsState.filter({
                   ...devtoolsState.filter(),

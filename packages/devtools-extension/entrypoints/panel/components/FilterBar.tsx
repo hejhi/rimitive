@@ -9,28 +9,21 @@ import {
   SelectValue,
 } from '../../../src/components/ui/select';
 import { Badge } from '../../../src/components/ui/badge';
-import type { ContextInfo } from '../store/types';
 import { availableEventTypes } from '../store/eventTypeManager';
 
 type FilterBarProps = {
-  contexts: ContextInfo[];
-  selectedContext: string | null;
   filterType: string;
   searchValue: string;
   filteredNodeId: string | null;
-  onContextChange: (value: string | null) => void;
   onFilterTypeChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onClearNodeFilter: () => void;
 };
 
 export function FilterBar({
-  contexts,
-  selectedContext,
   filterType,
   searchValue,
   filteredNodeId,
-  onContextChange,
   onFilterTypeChange,
   onSearchChange,
   onClearNodeFilter,
@@ -55,27 +48,6 @@ export function FilterBar({
             <X className="h-3 w-3" />
           </button>
         </Badge>
-      )}
-
-      {contexts.length > 1 && (
-        <Select
-          value={selectedContext || 'all'}
-          onValueChange={(value) =>
-            onContextChange(value === 'all' ? null : value)
-          }
-        >
-          <SelectTrigger className="h-8 w-[140px] text-xs">
-            <SelectValue placeholder="Select service" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Services</SelectItem>
-            {contexts.map((ctx) => (
-              <SelectItem key={ctx.id} value={ctx.id}>
-                {ctx.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       )}
 
       <Select value={filterType} onValueChange={onFilterTypeChange}>
