@@ -21,13 +21,21 @@ type ImportData = {
 
 export function useDataExport() {
   const handleExport = useCallback(() => {
+    const filter = devtoolsState.filter();
+    const logEntries = devtoolsState.logEntries();
+
+    // Filter out internal entries if hideInternal is enabled
+    const filteredEntries = filter.hideInternal
+      ? logEntries.filter((entry) => !entry.isInternal)
+      : logEntries;
+
     const exportData = {
       version: '1.0.0',
       exportDate: new Date().toISOString(),
       state: {
         contexts: devtoolsState.contexts(),
-        logEntries: devtoolsState.logEntries(),
-        filter: devtoolsState.filter(),
+        logEntries: filteredEntries,
+        filter,
         selectedContext: devtoolsState.selectedContext(),
         selectedTransaction: devtoolsState.selectedTransaction(),
       },
