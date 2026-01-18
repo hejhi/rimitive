@@ -312,7 +312,9 @@ export function GraphTab() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Grid3X3 className="w-4 h-4" />
             <span>Full Graph</span>
-            <span className="text-muted-foreground/60">({state.nodes.size} nodes)</span>
+            <span className="text-muted-foreground/60">
+              ({Array.from(state.nodes.values()).filter(n => !filter.hideInternal || n.sourceLocation).length} nodes)
+            </span>
           </div>
           <ViewModeToggle />
         </div>
