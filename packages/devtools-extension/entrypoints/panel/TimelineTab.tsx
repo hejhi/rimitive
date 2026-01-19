@@ -30,6 +30,7 @@ export function TimelineTab({ snapshotMode, logEntries, hideInternal: propHideIn
   const globalState = useSubscribe(globalTimelineState);
   const globalEntries = useSubscribe(devtoolsState.logEntries);
   const globalFilter = useSubscribe(devtoolsState.filter);
+  const globalSelectedContext = useSubscribe(devtoolsState.selectedContext);
 
   // Local state for controlled mode
   const [localState, setLocalState] = useState<TimelineState>({
@@ -70,12 +71,12 @@ export function TimelineTab({ snapshotMode, logEntries, hideInternal: propHideIn
     }
   }, [isControlled, entries, hideInternal]);
 
-  // Rebuild global cascades when entries or filter changes (non-controlled mode)
+  // Rebuild global cascades when entries, filter, or context changes (non-controlled mode)
   useEffect(() => {
     if (!isControlled) {
       rebuildCascades();
     }
-  }, [isControlled, globalEntries, globalFilter.hideInternal]);
+  }, [isControlled, globalEntries, globalFilter.hideInternal, globalSelectedContext]);
 
   // Auto-select first cascade when cascades are available but none selected
   useEffect(() => {

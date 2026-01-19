@@ -34,6 +34,8 @@ type FullGraphViewProps = {
   graphState?: GraphState;
   /** Whether to hide internal nodes. Defaults to global filter setting. */
   hideInternal?: boolean;
+  /** Selected context ID for filtering. Defaults to global selected context. */
+  selectedContext?: string | null;
   /** Callback when a node is selected. Defaults to updating global state. */
   onSelectNode?: (nodeId: string | null) => void;
 };
@@ -41,16 +43,19 @@ type FullGraphViewProps = {
 export function FullGraphView({
   graphState: propGraphState,
   hideInternal: propHideInternal,
+  selectedContext: propSelectedContext,
   onSelectNode,
 }: FullGraphViewProps = {}): React.ReactElement {
   // Use provided state or fall back to global
   const globalState = useSubscribe(globalGraphState);
   const globalFilter = useSubscribe(devtoolsState.filter);
+  const globalSelectedContext = useSubscribe(devtoolsState.selectedContext);
   const metrics = useSubscribe(nodeMetrics);
   const hovered = useSubscribe(hoveredNodeId);
 
   const state = propGraphState ?? globalState;
   const hideInternal = propHideInternal ?? globalFilter.hideInternal;
+  const selectedContext = propSelectedContext !== undefined ? propSelectedContext : globalSelectedContext;
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<StratifiedNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -75,7 +80,7 @@ export function FullGraphView({
   // No-op for onNavigate since clicks are handled at ReactFlow level
   const noopNavigate = useCallback(() => {}, []);
 
-  // Compute layout when state, metrics, or hover changes
+  // Compute layout when state, metrics, hover, or context changes
   const layoutResult = useMemo(() => {
     return computeStratifiedLayout(
       state,
@@ -84,9 +89,10 @@ export function FullGraphView({
       noopNavigate,
       onOpenSource,
       onHover,
-      hideInternal
+      hideInternal,
+      selectedContext
     );
-  }, [state, metrics, hovered, noopNavigate, onOpenSource, onHover, hideInternal]);
+  }, [state, metrics, hovered, noopNavigate, onOpenSource, onHover, hideInternal, selectedContext]);
 
   // Update nodes/edges when layout changes
   useEffect(() => {

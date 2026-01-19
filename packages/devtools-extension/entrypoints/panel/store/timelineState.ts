@@ -6,11 +6,20 @@ import type { GraphState } from './graphTypes';
 import type { Cascade, CascadeEffect, TimelineState } from './timelineTypes';
 
 /**
- * Filter entries based on hideInternal setting
+ * Filter entries based on context and hideInternal settings
  */
-function filterEntries(entries: LogEntry[], hideInternal: boolean): LogEntry[] {
-  if (!hideInternal) return entries;
-  return entries.filter((entry) => !entry.isInternal);
+function filterEntries(
+  entries: LogEntry[],
+  selectedContext: string | null,
+  hideInternal: boolean
+): LogEntry[] {
+  return entries.filter((entry) => {
+    // Context filter
+    if (selectedContext && entry.contextId !== selectedContext) return false;
+    // Hide internal filter
+    if (hideInternal && entry.isInternal) return false;
+    return true;
+  });
 }
 
 /**
@@ -206,8 +215,9 @@ function getDepthFromRoot(
  */
 export function rebuildCascades(): void {
   const allEntries = devtoolsState.logEntries();
+  const selectedContext = devtoolsState.selectedContext();
   const hideInternal = devtoolsState.filter().hideInternal;
-  const entries = filterEntries(allEntries, hideInternal);
+  const entries = filterEntries(allEntries, selectedContext, hideInternal);
   const cascades = buildCascades(entries);
 
   // Compute time range from actual min/max timestamps (not array order)

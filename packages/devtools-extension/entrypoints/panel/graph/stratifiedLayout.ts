@@ -56,7 +56,8 @@ export function computeStratifiedLayout(
   onNavigate: (nodeId: string) => void,
   onOpenSource: (location: SourceLocation) => void,
   onHover: (nodeId: string | null) => void,
-  hideInternal: boolean
+  hideInternal: boolean,
+  selectedContext: string | null = null
 ): { nodes: Node<StratifiedNodeData>[]; edges: Edge[] } {
   const resultNodes: Node<StratifiedNodeData>[] = [];
   const resultEdges: Edge[] = [];
@@ -64,6 +65,8 @@ export function computeStratifiedLayout(
   // Filter and organize nodes by column
   const columns: GraphNode[][] = [[], [], []];
   for (const node of state.nodes.values()) {
+    // Skip nodes from other contexts if a context is selected
+    if (selectedContext && node.contextId !== selectedContext) continue;
     // Skip internal nodes if hideInternal is true
     if (hideInternal && !node.sourceLocation) continue;
 

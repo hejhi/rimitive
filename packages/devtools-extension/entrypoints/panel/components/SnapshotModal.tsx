@@ -263,7 +263,7 @@ export function SnapshotModal() {
 
         <TabsContent value="graph" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
           <Suspense fallback={<TabLoading />}>
-            <GraphTab graphState={snapshotGraphState} hideInternal={filter.hideInternal} />
+            <GraphTab graphState={snapshotGraphState} hideInternal={filter.hideInternal} selectedContext={null} />
           </Suspense>
         </TabsContent>
 
