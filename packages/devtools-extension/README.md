@@ -4,7 +4,7 @@ Chrome DevTools extension for debugging rimitive applications. Inspect signals, 
 
 ## Install
 
-Download the latest release from [GitHub Releases](https://github.com/rimitive/rimitive/releases), then:
+Download the latest release from [GitHub Releases](https://github.com/hejhi/rimitive/releases), then:
 
 **Chrome / Edge / Brave / Arc:**
 1. Unzip the downloaded file

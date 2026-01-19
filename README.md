@@ -33,7 +33,7 @@ Patterns and architectures in rimitive follow **low coupling, high cohesion**—
 | [`@rimitive/resource`](packages/resource)               | Async data fetching with `resource()`                         |
 | [`@rimitive/ssr`](packages/ssr)                         | Server-side rendering and streaming                           |
 | [`@rimitive/react`](packages/react)                     | React bindings                                                |
-| [`@rimitive/devtools-extension`](packages/devtools-extension) | Chrome DevTools extension ([download](https://github.com/rimitive/rimitive/releases)) |
+| [`@rimitive/devtools-extension`](packages/devtools-extension) | Chrome DevTools extension ([download](https://github.com/hejhi/rimitive/releases)) |
 
 ---
 
