@@ -34,8 +34,16 @@ function buildNodeTitle(data: StratifiedNodeData): string {
  * Detail node - full name, type badge
  */
 export function DetailNode({ data }: { data: StratifiedNodeData }): React.ReactElement {
-  const { node, metrics, isHovered, onHover } = data;
+  const { node, metrics, isHovered, isSelected, onHover } = data;
   const colors = NODE_COLORS[node.type];
+
+  // Determine visual state priority: orphaned > selected > hovered
+  const getBoxShadow = () => {
+    if (metrics.isOrphaned) return `0 0 12px ${ORPHAN_COLOR}40`;
+    if (isSelected) return `0 0 20px ${colors.border}80, 0 0 30px ${colors.border}40`;
+    if (isHovered) return `0 0 20px ${colors.border}40`;
+    return undefined;
+  };
 
   return (
     <div
@@ -46,20 +54,20 @@ export function DetailNode({ data }: { data: StratifiedNodeData }): React.ReactE
         background: colors.bg,
         border: metrics.isOrphaned
           ? `2px solid ${ORPHAN_COLOR}`
-          : `2px solid ${colors.border}`,
+          : isSelected
+            ? `3px solid ${colors.border}`
+            : `2px solid ${colors.border}`,
         borderRadius: 8,
         padding: '8px 16px',
         minWidth: 120,
         textAlign: 'center',
-        boxShadow: metrics.isOrphaned
-          ? `0 0 12px ${ORPHAN_COLOR}40`
-          : isHovered
-            ? `0 0 20px ${colors.border}40`
-            : undefined,
+        boxShadow: getBoxShadow(),
       }}
       title={buildNodeTitle(data)}
     >
-      <Handle type="target" position={Position.Left} style={{ background: colors.border }} />
+      {/* Vertical handles for bottom-to-top flow */}
+      <Handle id="top" type="source" position={Position.Top} style={{ background: colors.border }} />
+      <Handle id="bottom" type="target" position={Position.Bottom} style={{ background: colors.border }} />
       <div
         style={{
           color: colors.text,
@@ -86,7 +94,6 @@ export function DetailNode({ data }: { data: StratifiedNodeData }): React.ReactE
       >
         {node.type}
       </div>
-      <Handle type="source" position={Position.Right} style={{ background: colors.border }} />
     </div>
   );
 }

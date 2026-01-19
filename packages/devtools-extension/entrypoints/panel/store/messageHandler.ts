@@ -69,10 +69,7 @@ function handleRimitiveDetected(data?: unknown) {
         }
       }
 
-      // Select first context if none selected
-      if (!devtoolsState.selectedContext()) {
-        devtoolsState.selectedContext(payload.contextId);
-      }
+      // Keep "All" as default - don't auto-select first context
       return;
     }
   }

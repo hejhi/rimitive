@@ -60,14 +60,18 @@ export function FullGraphView({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<StratifiedNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  // Use global selection so it persists across view mode toggles
+  const selected = useSubscribe(globalSelectedNodeId);
+
+  // Single click: toggle node selection (persists when switching to focused view)
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<StratifiedNodeData>) => {
+    // Toggle selection: click same node to deselect
+    const newSelection = selected === node.id ? null : node.id;
+    globalSelectedNodeId(newSelection);
     if (onSelectNode) {
-      onSelectNode(node.id);
-    } else {
-      globalSelectedNodeId(node.id);
-      globalViewMode('focused');
+      onSelectNode(newSelection);
     }
-  }, [onSelectNode]);
+  }, [onSelectNode, selected]);
 
   const onOpenSource = useCallback((location: SourceLocation) => {
     chrome.devtools.panels.openResource(location.filePath, location.line - 1, location.column ?? 0, () => {});
@@ -80,19 +84,20 @@ export function FullGraphView({
   // No-op for onNavigate since clicks are handled at ReactFlow level
   const noopNavigate = useCallback(() => {}, []);
 
-  // Compute layout when state, metrics, hover, or context changes
+  // Compute layout when state, metrics, hover, selection, or context changes
   const layoutResult = useMemo(() => {
     return computeStratifiedLayout(
       state,
       metrics,
       hovered,
+      selected,
       noopNavigate,
       onOpenSource,
       onHover,
       hideInternal,
       selectedContext
     );
-  }, [state, metrics, hovered, noopNavigate, onOpenSource, onHover, hideInternal, selectedContext]);
+  }, [state, metrics, hovered, selected, noopNavigate, onOpenSource, onHover, hideInternal, selectedContext]);
 
   // Update nodes/edges when layout changes
   useEffect(() => {

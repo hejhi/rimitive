@@ -318,7 +318,7 @@ export function GraphTab({ graphState: propGraphState, hideInternal: propHideInt
       if (mode === 'full') setLocalSelectedNodeId(null);
     } else {
       globalViewMode(mode);
-      if (mode === 'full') globalSelectedNodeId(null);
+      // Don't clear selection when switching to full - preserve it for edge highlighting
     }
   }, [isControlled]);
 
