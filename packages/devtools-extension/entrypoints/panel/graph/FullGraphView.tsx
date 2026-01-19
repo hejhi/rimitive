@@ -146,6 +146,8 @@ export function FullGraphView({
         }}
         maskColor="rgba(0, 0, 0, 0.8)"
         style={{ background: '#1a1a1a' }}
+        pannable
+        zoomable
       />
     </ReactFlow>
   );
