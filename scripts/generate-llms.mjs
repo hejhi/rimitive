@@ -238,6 +238,18 @@ This document contains the complete Rimitive documentation for LLM consumption.
 ---
 `);
 
+  // Add README as project overview
+  try {
+    const readme = await readFile('README.md', 'utf-8');
+    // Strip the logo/title header, keep the content
+    const readmeContent = readme
+      .replace(/^<p align="center">[\s\S]*?<\/p>\s*# Rimitive\s*/m, '')
+      .replace(/^_"Primitive".*_\s*/m, ''); // Remove the naming joke
+    sections.push(`## Project Overview (README)\n\n${readmeContent}\n\n---\n`);
+  } catch {
+    console.warn('Skipping README');
+  }
+
   for (const docPath of DOCS_ORDER) {
     try {
       const fullPath = join(docsDir, docPath);
