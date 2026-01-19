@@ -1,0 +1,7 @@
+{
+  "name": "rimitive-adapter",
+  "version": "1.0.0",
+  "description": "Create custom adapters for Rimitive view primitives",
+  "author": { "name": "Rimitive" },
+  "skills": ["./skills/"]
+}

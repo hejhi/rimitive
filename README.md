@@ -6,17 +6,69 @@
 
 _"Primitive" was taken so I dropped the "P", naming is hard_
 
-Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, migrations, or a "now we need a real framework" moment.
+Rimitive is a set of composable libraries that provide:
 
-Compose only the primitives you need, opting in as you go, and even create your own reactive primitives that can tap directly into the rimitive reactive graph! 🎶
+- **reactive primitives** for state, views, routing, and async data
+- **a composition system** to wire together only what you need
+- **adapters and integrations** for DOM, SSR, React, and more
 
-Rimitive is as much about providing **scalable patterns, conventions, and mental models** for building performant, lean, ergonomic, and scalable reactive applications as it is about providing the actual reactive primitives. Steal the patterns and use a different framework if you don't like rimitive!
+Rimitive uses the primitive construct with a tiny but powerful compositional library so you **avoid as much up-front commitment as possible**. You can start with just signals and computeds in your vanilla js app or reactive framework as you prototype, pulling in more Rimitive as you need (or not). The goal of Rimitive is to blend into your architecture, and allow you to easily package and re-use micro reactive services tailored to your needs.
 
-Patterns and architectures in rimitive follow **low coupling, high cohesion**—your reactive logic is self-contained and reusable, your UI just consumes it. Test behaviors without rendering, swap components without touching logic, and share behaviors across frameworks.
+The primitives:
 
-- **A collection of atomic reactive libraries, not frameworks** — take only what you need, as you need it
-- **No VDOM** — fine-grained updates directly to the DOM
-- **No global state** — each `compose()` creates an isolated reactive context
+- [`@rimitive/signals`](packages/signals): primitives for state management
+- [`@rimitive/view`](packages/view): primitives for composing a reactive UI
+- [`@rimitive/resource`](packages/resource): primitive for async data
+
+The composition core:
+
+- [`@rimitive/core`](packages/core): a strongly typed composition system that can be used outside of rimitive altogether
+
+Additional packages provide [routing](https://rimitive.dev/guides/adding-routing/), [SSR](https://rimitive.dev/guides/server-rendering/), React bindings, and devtools. You can also [design your own modules](https://rimitive.dev/guides/custom-modules/).
+
+No build or transpilation required. Everything tree-shakes.
+
+---
+
+Here is the most basic setup of rimitive:
+
+```ts
+import { compose } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/extend';
+
+// `compose()` returns your reactive service
+const { signal } = compose(SignalModule);
+```
+
+Add a computed to your reactive service:
+
+```ts
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
+
+// All wiring happens under the hood, as part of the module/service system. But you can
+// customize or define your own modules, tapping directly into the reactive graph
+// (or even replacing it if you want!)
+const { signal, computed } = compose(SignalModule, ComputedModule);
+```
+
+Compose your own tiny, performant reactive services tailored to your use cases. This pattern scales all the way to the most complex use cases you can imagine.
+
+With the ability to define your own modules, you can even create your own reactive primitives to work with or replace Rimitives! 🎶
+
+---
+
+In addition to the above, Rimitive does not prescribe ways to use primitives, but rather provides framework-agnostic **patterns, conventions, and mental models** for building performant, lean, ergonomic, and scalable reactive applications.
+
+For instance, Rimitive provides patterns for creating components and headless components (or behaviors), but there's no capital-C components or magical reactive closures like you would find in most reactive frameworks. Reactivity lives entirely within the primitives.
+
+Patterns and architectures in Rimitive focus on **low coupling, high cohesion**—focusing on keeping reactive logic self-contained and portable. Test behaviors without rendering, swap components without touching logic, and share behaviors across frameworks and environments.
+
+Additionally:
+
+- **No VDOM**: fine-grained updates directly to the DOM
+- **Minimal reconciliation**: only primitives that need reconciliation have it
+- **No global state**: each `compose()` creates an isolated reactive context, making it safe for React concurrency or usage on the server.
 
 📚 **[Full documentation at rimitive.dev](https://rimitive.dev)**
 
@@ -28,8 +80,8 @@ Patterns and architectures in rimitive follow **low coupling, high cohesion**—
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | [`@rimitive/core`](packages/core)                             | Composition engine — `compose()`, `defineModule()`                                                                    |
 | [`@rimitive/signals`](packages/signals)                       | Reactive primitives — `signal`, `computed`, `effect`, `batch`                                                         |
-| [`@rimitive/view`](packages/view)                             | UI primitives — `el`, `map`, `match`, `portal`                                                                        |
-| [`@rimitive/router`](packages/router)                         | Routing                                                                                                               |
+| [`@rimitive/view`](packages/view)                             | UI primitives — `el`, `map`, `match`, `portal`, `load`                                                                |
+| [`@rimitive/router`](packages/router)                         | Reactive routing — `matches`, `navigate()`, `query`                                                                   |
 | [`@rimitive/resource`](packages/resource)                     | Async data fetching with `resource()`                                                                                 |
 | [`@rimitive/ssr`](packages/ssr)                               | Server-side rendering and streaming                                                                                   |
 | [`@rimitive/react`](packages/react)                           | React bindings                                                                                                        |
@@ -37,30 +89,11 @@ Patterns and architectures in rimitive follow **low coupling, high cohesion**—
 
 ---
 
-## Modules and Services
+## Using Rimitive Primitives
 
-Here is the simplest, most minimal setup of rimitive:
+Yes, "Rimitive primitive" sounds ridiculous.
 
-```ts
-import { compose } from '@rimitive/core';
-import { SignalModule } from '@rimitive/signals/extend';
-
-const svc = compose(SignalModule);
-```
-
-Everything in rimitive is built from the SignalModule. Breaking this down, `compose(SignalModule)` returns a reactive service with only the primitives you provided.
-
-That's it!
-
-In addition to providing primitives, rimitive also provides higher-level tooling that can work with, help stitch together, and orchestrate them, like [`router`](https://rimitive.dev/guides/adding-routing/) and [`ssr`](https://rimitive.dev/guides/server-rendering/). It's also simple to [make your own modules](https://rimitive.dev/guides/custom-modules/) as well.
-
----
-
-## Using rimitive Primitives
-
-Yes, rimitive primitives sounds ridiculous.
-
-Anyway, here's a slightly larger example, this time with view primitives (and a DOM adapter)!
+Anyway, here's a slightly larger example, with view primitives and a DOM adapter!
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -82,11 +115,13 @@ const { signal, computed, el, mount } = compose(
 );
 ```
 
-> Note: Rimitive primitives are environment-agnostic, so some modules (like `createElModule`) take an adapter. rimitive provides a DOM adapter, SSR adapter (which uses linkedom under the hood) and a hydration adapter (for SSR).
+> Note: primitives are environment-agnostic, so some modules (like `createElModule`) take an adapter. Rimitive provides DOM, SSR, and hydration adapters—or write your own!
 
-Now that you have a reactive service, you can use primitives from it however you'd like. For instance, you can create a reactive "component" by returning the `el` primitive from a function and providing the function to the `mount` primitive:
+Now that you have a reactive service, you can use it however you'd like:
 
 ```typescript
+// Note: this might _look_ like a capital-c Component, but it's not a magically reactive closure!
+// This means no "re-rendering"—it mounts or unmounts. Das it.
 const App = () => {
   const count = signal(0);
 
@@ -128,6 +163,7 @@ If you use [Claude Code](https://claude.ai/code), these plugins teach Claude how
 | [`rimitive-compose`](plugins/rimitive-compose)   | Help composing services with the right modules and imports       |
 | [`rimitive-module`](plugins/rimitive-module)     | Create custom modules with `defineModule()`                      |
 | [`rimitive-view`](plugins/rimitive-view)         | Build views with `el`, `map`, `match`, and other view primitives |
+| [`rimitive-adapter`](plugins/rimitive-adapter)   | Create custom adapters for Canvas, WebGL, or other renderers     |
 
 Install via Claude Code: `/install-plugin github:hejhi/rimitive/plugins/<plugin-name>`
 
@@ -135,7 +171,7 @@ Install via Claude Code: `/install-plugin github:hejhi/rimitive/plugins/<plugin-
 
 ## Inspirations
 
-Rimitive draws from libraries and ideas by brilliant people that have shaped how I think about reactivity and composition, and what I want in my nerd life:
+Rimitive draws from libraries and ideas by _brilliant_ people that have shaped how I think about reactivity and composition, and what I want in my nerd life:
 
 - [alien-signals](https://github.com/stackblitz/alien-signals) and [reactively](https://github.com/milomg/reactively) — push-pull reactivity, graph coloring
 - [downshift](https://www.downshift-js.com/use-select/) — headless, portable UI behavior

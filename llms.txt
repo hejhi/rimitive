@@ -1,6 +1,6 @@
 # Rimitive
 
-> A modular reactive UI framework for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
+> A set of composable libraries for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
 
 Rimitive uses `compose()` to wire modules together. Modules declare dependencies; compose resolves them automatically. The result is a service with reactive primitives.
 
@@ -38,10 +38,10 @@ const svc = compose(SignalModule, ComputedModule, EffectModule);
 
 ## Packages
 
-- [@rimitive/core](https://github.com/user/rimitive/tree/main/packages/rimitive): Core composition (`compose`, `defineModule`, `merge`)
-- [@rimitive/signals](https://github.com/user/rimitive/tree/main/packages/signals): Reactive primitives (`signal`, `computed`, `effect`, `batch`)
-- [@rimitive/view](https://github.com/user/rimitive/tree/main/packages/view): UI primitives (`el`, `map`, `match`, `portal`)
-- [@rimitive/router](https://github.com/user/rimitive/tree/main/packages/router): Client-side routing
-- [@rimitive/resource](https://github.com/user/rimitive/tree/main/packages/resource): Async data fetching
-- [@rimitive/ssr](https://github.com/user/rimitive/tree/main/packages/ssr): Server-side rendering
-- [@rimitive/react](https://github.com/user/rimitive/tree/main/packages/react): React bindings
+- [@rimitive/core](https://github.com/hejhi/rimitive/tree/main/packages/rimitive): Core composition (`compose`, `defineModule`, `merge`)
+- [@rimitive/signals](https://github.com/hejhi/rimitive/tree/main/packages/signals): Reactive primitives (`signal`, `computed`, `effect`, `batch`)
+- [@rimitive/view](https://github.com/hejhi/rimitive/tree/main/packages/view): UI primitives (`el`, `map`, `match`, `portal`, `load`)
+- [@rimitive/router](https://github.com/hejhi/rimitive/tree/main/packages/router): Client-side routing
+- [@rimitive/resource](https://github.com/hejhi/rimitive/tree/main/packages/resource): Async data fetching
+- [@rimitive/ssr](https://github.com/hejhi/rimitive/tree/main/packages/ssr): Server-side rendering
+- [@rimitive/react](https://github.com/hejhi/rimitive/tree/main/packages/react): React bindings
