@@ -4,9 +4,10 @@ Chrome DevTools extension for debugging rimitive applications. Inspect signals, 
 
 ## Install
 
-Download the latest release from [GitHub Releases](https://github.com/hejhi/rimitive/releases), then:
+Download the latest release from [GitHub Releases](https://github.com/hejhi/rimitive/releases?q=devtools-extension&expanded=true), then:
 
 **Chrome / Edge / Brave / Arc:**
+
 1. Unzip the downloaded file
 2. Go to `chrome://extensions` (or `edge://extensions`, etc.)
 3. Enable "Developer mode" (toggle in top right)
@@ -14,6 +15,7 @@ Download the latest release from [GitHub Releases](https://github.com/hejhi/rimi
 5. Select the unzipped folder
 
 **Firefox:**
+
 1. Unzip the downloaded file
 2. Go to `about:debugging#/runtime/this-firefox`
 3. Click "Load Temporary Add-on"
@@ -26,19 +28,22 @@ Download the latest release from [GitHub Releases](https://github.com/hejhi/rimi
 3. Your app must use instrumentation:
 
 ```typescript
-import { compose, createInstrumentation, devtoolsProvider } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-
-const svc = compose(
+import {
+  compose,
+  createInstrumentation,
+  devtoolsProvider,
+} from '@rimitive/core';
+import {
   SignalModule,
   ComputedModule,
   EffectModule,
-  {
-    instrumentation: createInstrumentation({
-      providers: [devtoolsProvider()],
-    }),
-  }
-);
+} from '@rimitive/signals/extend';
+
+const svc = compose(SignalModule, ComputedModule, EffectModule, {
+  instrumentation: createInstrumentation({
+    providers: [devtoolsProvider()],
+  }),
+});
 ```
 
 ## Development
@@ -60,6 +65,7 @@ After running `build`, load the extension from `packages/devtools-extension/dist
 4. Select `packages/devtools-extension/dist/chrome-mv3/`
 
 Test with the example app:
+
 ```bash
 pnpm --filter @rimitive/example-devtools dev
 ```
