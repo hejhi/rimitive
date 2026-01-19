@@ -41,7 +41,7 @@ const svc = compose(SignalModule, ComputedModule, EffectModule);
 - [@rimitive/core](https://github.com/hejhi/rimitive/tree/main/packages/rimitive): Core composition (`compose`, `defineModule`, `merge`)
 - [@rimitive/signals](https://github.com/hejhi/rimitive/tree/main/packages/signals): Reactive primitives (`signal`, `computed`, `effect`, `batch`)
 - [@rimitive/view](https://github.com/hejhi/rimitive/tree/main/packages/view): UI primitives (`el`, `map`, `match`, `portal`, `load`)
-- [@rimitive/router](https://github.com/hejhi/rimitive/tree/main/packages/router): Client-side routing
-- [@rimitive/resource](https://github.com/hejhi/rimitive/tree/main/packages/resource): Async data fetching
-- [@rimitive/ssr](https://github.com/hejhi/rimitive/tree/main/packages/ssr): Server-side rendering
+- [@rimitive/router](https://github.com/hejhi/rimitive/tree/main/packages/router): Reactive routing (`matches`, `navigate()`, `query`)
+- [@rimitive/resource](https://github.com/hejhi/rimitive/tree/main/packages/resource): Async data fetching with `resource()`
+- [@rimitive/ssr](https://github.com/hejhi/rimitive/tree/main/packages/ssr): Server-side rendering and streaming
 - [@rimitive/react](https://github.com/hejhi/rimitive/tree/main/packages/react): React bindings
