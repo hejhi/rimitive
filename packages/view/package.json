@@ -97,7 +97,11 @@
     }
   },
   "files": [
-    "dist",
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.map",
+    "!dist/**/tsconfig.tsbuildinfo",
     "README.md",
     "LICENSE"
   ],

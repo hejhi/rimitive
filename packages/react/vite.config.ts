@@ -29,9 +29,9 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'react',
-        'react-dom',
-        '@rimitive/signals',
-        '@rimitive/signals-store',
+        /^react-dom/,
+        'scheduler',
+        /^@rimitive\//,
         'vitest',
         /^vitest/,
         'node:test',
