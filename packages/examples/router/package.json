@@ -1,0 +1,22 @@
+{
+  "name": "@rimitive/example-router",
+  "version": "0.0.5",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/router": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
+  }
+}

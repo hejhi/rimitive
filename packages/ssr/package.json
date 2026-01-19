@@ -1,0 +1,74 @@
+{
+  "name": "@rimitive/ssr",
+  "version": "0.1.0",
+  "description": "Server-side rendering and hydration for Rimitive",
+  "author": "Rimitive Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/rimitive",
+    "directory": "packages/ssr"
+  },
+  "keywords": [
+    "rimitive",
+    "ssr",
+    "server-side-rendering",
+    "hydration",
+    "isomorphic"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "browser": {
+        "import": "./dist/index.browser.js",
+        "types": "./dist/index.browser.d.ts"
+      },
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "test": "vitest run",
+    "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/resource": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*",
+    "linkedom": "0.18.12"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.6",
+    "esbuild": "0.27.2",
+    "rimraf": "6.1.2",
+    "terser": "5.46.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.17"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

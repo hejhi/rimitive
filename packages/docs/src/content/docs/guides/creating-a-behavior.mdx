@@ -1,0 +1,186 @@
+---
+title: Creating a Behavior
+description: Encapsulate reusable reactive logic without any UI.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to provide portable reactive logic.
+
+<Aside type="note">
+Behaviors are _just functions_. They don't return magical reactive closures despite us prefixing the returns by convention with `use*`, my React peeps. There's no re-rendering. In rimitive, **all reactivity is encapsulated in the primitives**.
+</Aside>
+
+---
+
+## The Simple Approach
+
+The easiest way to create a behavior is to import primitives directly from your service:
+
+```typescript
+// behaviors/useCounter.ts
+import { signal, computed } from '../service';
+
+// Again, use* is just a convention, this is not prescribed and not React!
+export const useCounter = (initial = 0) => {
+  const count = signal(initial);
+  const doubled = computed(() => count() * 2);
+
+  return {
+    count,
+    doubled,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+    reset: () => count(initial),
+  };
+};
+```
+
+Use it anywhere:
+
+```typescript
+import { useCounter } from './behaviors/useCounter';
+
+const counter = useCounter(10);
+counter.increment();
+counter.count();  // 11
+```
+
+This works great for simple cases. The behavior is tied to your service, which is fine when you have a single app context.
+
+---
+
+## The Portable Pattern
+
+When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern.
+
+### The Shape
+
+```typescript
+// Remember how we exported `typeof svc` in the previous guide example?
+import type { Service } from './service';
+
+// The "portable" pattern is...just wrapping your behavior in an outer
+// function that injects the service
+const myPortableBehavior = (svc: Service) => (options?) => {
+  // Create state
+  // Return API
+};
+```
+
+This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. So from now on, we'll be working with portable functions.
+
+### A Counter Example
+
+```typescript
+import type { Service } from './service';
+
+const counter = ({ signal, computed }: Service) => (initial = 0) => {
+  const count = signal(initial);
+  const doubled = computed(() => count() * 2);
+
+  return {
+    count,
+    doubled,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+    reset: () => count(initial),
+  };
+};
+```
+
+### Using It
+
+```typescript
+import { svc } from './service';
+
+// Oh look! svc itself is callable and injects the svc for you! Neat!
+const useCounter = svc(counter);
+const c = useCounter(10);
+
+c.count();
+c.increment();
+c.doubled();
+```
+
+`svc(counter)` provides (or injects) the service (and is totally type safe). Then you have a ready-to-use behavior bound to your service that you can name whatever you want. Again, by convention (NOT prescription) we prefix with `use*` for nice semantics and ergonomics.
+
+---
+
+## Composing Behaviors
+
+The double-function behavior pattern is quite powerful for composition. Behaviors can easily compose other behaviors. To demonstrate this, let's start with a basic portable behavior:
+
+```typescript
+const disclosure = ({ signal }: Service) => (initialOpen = false) => {
+  const isOpen = signal(initialOpen);
+
+  return {
+    isOpen,
+    open: () => isOpen(true),
+    close: () => isOpen(false),
+    toggle: () => isOpen(!isOpen()),
+  };
+};
+```
+
+Now, we can compose it!
+
+```typescript
+const dropdown = (svc: Service) => {
+  // Another convention is to use the outer function as a "service layer", but you could
+  // do this in the return function if you don't mind it running on every mount.
+  const useDisclosure = svc(disclosure);
+
+  return (options?: { initialOpen?: boolean }) => {
+    const disc = useDisclosure(options?.initialOpen ?? false);
+
+    // Add keyboard handling
+    // Look ma, no memoization required!
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      disc.toggle();
+    };
+
+    return {
+      ...disc,
+      onKeyDown,
+    };
+  };
+};
+```
+
+Now `dropdown` composes `disclosure`! They both use the same behavior shape of `(svc) => (args) => api`, but one composes the other. In rimitive, we call the outer function the **service layer**. It's a convenient place to inject services a single time.
+
+---
+
+## Testing
+
+Behaviors are trivial to test. Just import your service:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { svc } from './service';
+
+describe('counter', () => {
+  it('increments', () => {
+    const c = svc(counter)(0);
+
+    c.increment();
+    c.increment();
+
+    expect(c.count()).toBe(2);
+  });
+
+  it('respects initial value', () => {
+    const c = svc(counter)(50);
+
+    expect(c.count()).toBe(50);
+    c.reset();
+    expect(c.count()).toBe(50);
+  });
+});
+```
+
+Pure functions, pure tests. Again, if this is all you need, you can stop here. If you want a reactive UI and UI components, as the kids say, "let's gooooo".

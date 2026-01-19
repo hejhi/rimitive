@@ -1,0 +1,47 @@
+# Rimitive
+
+> A modular reactive UI framework for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
+
+Rimitive uses `compose()` to wire modules together. Modules declare dependencies; compose resolves them automatically. The result is a service with reactive primitives.
+
+## Core Concepts
+
+- [llms-full.txt](llms-full.txt): Complete LLM documentation (recommended for full context)
+
+## Quick Reference
+
+Signal primitives: `signal(value)` creates state; `sig()` reads; `sig(newValue)` writes; `sig.peek()` reads without tracking.
+
+Effects are synchronous - they run immediately when dependencies change.
+
+View elements: `el(tag).props({...})(...children)` - curried pattern. Specs are inert; call `.create(svc)` or `mount()` to instantiate.
+
+Behaviors: `(svc) => (options) => { return api }` - portable reactive logic.
+
+## Import Patterns
+
+```typescript
+// Modules for composition
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+// Types only
+import type { Readable, Writable, SignalFunction } from '@rimitive/signals';
+
+// View factories
+import { createElModule } from '@rimitive/view/el';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+
+// Compose into a service
+import { compose } from '@rimitive/core';
+const svc = compose(SignalModule, ComputedModule, EffectModule);
+```
+
+## Packages
+
+- [@rimitive/core](https://github.com/user/rimitive/tree/main/packages/rimitive): Core composition (`compose`, `defineModule`, `merge`)
+- [@rimitive/signals](https://github.com/user/rimitive/tree/main/packages/signals): Reactive primitives (`signal`, `computed`, `effect`, `batch`)
+- [@rimitive/view](https://github.com/user/rimitive/tree/main/packages/view): UI primitives (`el`, `map`, `match`, `portal`)
+- [@rimitive/router](https://github.com/user/rimitive/tree/main/packages/router): Client-side routing
+- [@rimitive/resource](https://github.com/user/rimitive/tree/main/packages/resource): Async data fetching
+- [@rimitive/ssr](https://github.com/user/rimitive/tree/main/packages/ssr): Server-side rendering
+- [@rimitive/react](https://github.com/user/rimitive/tree/main/packages/react): React bindings

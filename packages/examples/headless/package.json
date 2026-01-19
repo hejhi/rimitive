@@ -1,0 +1,42 @@
+{
+  "name": "@rimitive/example-headless",
+  "version": "0.0.5",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./useDialog": {
+      "types": "./dist/useDialog.d.ts",
+      "import": "./dist/useDialog.js"
+    },
+    "./useSelect": {
+      "types": "./dist/useSelect.d.ts",
+      "import": "./dist/useSelect.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:demo": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/react": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.8",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
+  }
+}

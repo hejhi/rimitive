@@ -1,0 +1,76 @@
+/**
+ * Canvas Example - Service Composition
+ *
+ * Demonstrates how to compose custom adapters with the view system.
+ * This example shows mixing DOM and Canvas rendering in a single tree,
+ * both sharing the same signals service for reactive state.
+ */
+import { compose } from '@rimitive/core';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+} from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { createCanvasViewSvc } from './canvas-adapter';
+
+// Create DOM adapter
+const domAdapter = createDOMAdapter();
+
+// Create adapter-bound view modules for DOM
+const DOMElModule = createElModule(domAdapter);
+const DOMMapModule = createMapModule(domAdapter);
+const DOMMatchModule = createMatchModule(domAdapter);
+
+// Compose DOM view service
+const domSvc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+  DOMElModule,
+  DOMMapModule,
+  DOMMatchModule,
+  OnModule,
+  MountModule
+);
+
+// Canvas view (for scene)
+const canvasSvc = createCanvasViewSvc({ clearColor: '#16213e' });
+
+// Export signals from DOM service (they're shared via compose)
+export const { signal, computed, effect, batch, subscribe } = domSvc;
+
+// Export canvas types
+export type {
+  CanvasNode,
+  CanvasPointerEvent,
+  CanvasBridgeElement,
+} from './canvas-adapter';
+
+// Pre-bound element factories for ergonomic usage
+export const dom = {
+  div: domSvc.el('div'),
+  h1: domSvc.el('h1'),
+  p: domSvc.el('p'),
+  strong: domSvc.el('strong'),
+  code: domSvc.el('code'),
+  button: domSvc.el('button'),
+  ...domSvc,
+};
+
+export const canvas = {
+  canvas: canvasSvc.el('canvas'),
+  rect: canvasSvc.el('rect'),
+  circle: canvasSvc.el('circle'),
+  group: canvasSvc.el('group'),
+  ...canvasSvc,
+};

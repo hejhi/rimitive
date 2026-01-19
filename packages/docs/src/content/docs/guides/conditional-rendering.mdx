@@ -1,0 +1,105 @@
+---
+title: Conditional Rendering
+description: Show, hide, and switch views with match().
+---
+
+`match()` swaps elements based on a reactive value. When the value changes, the old element is disposed and a new one takes its place.
+
+---
+
+## Adding the Module
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  createMatchModule(adapter),
+  MountModule
+);
+
+const { el, match, signal, mount } = svc;
+```
+
+---
+
+## Show/Hide
+
+Toggle visibility by returning `null`:
+
+```typescript
+const showMessage = signal(true);
+
+const message = match(showMessage, (show) =>
+  show ? el('div')('Hello!') : null
+);
+
+const app = el('div')(
+  el('button').props({
+    onclick: () => showMessage(!showMessage())
+  })('Toggle'),
+  message
+);
+```
+
+---
+
+## Switching Views
+
+Switch between different element types:
+
+```typescript
+const isEditMode = signal(false);
+const text = signal('Click edit to change');
+
+const content = match(isEditMode, (editing) =>
+  editing
+    ? el('input').props({ value: text })()
+    : el('span')(text)
+);
+
+const app = el('div')(
+  content,
+  el('button').props({
+    onclick: () => isEditMode(!isEditMode())
+  })(
+    computed(() => isEditMode() ? 'Save' : 'Edit')
+  )
+);
+```
+
+---
+
+## Multi-Way Switch
+
+Use a discriminated value for multiple branches:
+
+```typescript
+type Tab = 'home' | 'settings' | 'profile';
+const currentTab = signal<Tab>('home');
+
+const tabContent = match(currentTab, (tab) => {
+  switch (tab) {
+    case 'home': return el('div')('Welcome home');
+    case 'settings': return el('div')('Settings panel');
+    case 'profile': return el('div')('Your profile');
+  }
+});
+```
+
+---
+
+## Next Steps
+
+- [Rendering Lists](/guides/rendering-lists) — Efficient list rendering with `map()`
+- [Portals](/guides/portals) — Render to different DOM locations

@@ -1,0 +1,20 @@
+{
+  "name": "@rimitive/example-devtools",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
+  }
+}

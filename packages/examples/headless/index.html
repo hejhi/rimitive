@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Headless UI - React + Rimitive Side-by-Side</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f0f0f0;
+        color: #333;
+        min-height: 100vh;
+      }
+
+      header {
+        background: #1a1a2e;
+        color: white;
+        padding: 1.5rem 2rem;
+        text-align: center;
+      }
+
+      header h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      header p {
+        color: #a0a0b0;
+        font-size: 0.9rem;
+      }
+
+      .split-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1px;
+        background: #ccc;
+        min-height: calc(100vh - 100px);
+      }
+
+      .panel {
+        background: white;
+        padding: 2rem;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #eee;
+      }
+
+      .panel-header h2 {
+        font-size: 1.25rem;
+      }
+
+      .panel-header .badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .badge.react {
+        background: #61dafb;
+        color: #1a1a2e;
+      }
+
+      .badge.rimitive {
+        background: #9333ea;
+        color: white;
+      }
+
+      /* Shared component styles */
+      .demo-section {
+        margin-bottom: 2rem;
+      }
+
+      .demo-section h3 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        color: #555;
+      }
+
+      /* Dialog styles */
+      .dialog-trigger {
+        padding: 0.75rem 1.25rem;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+
+      .dialog-trigger:hover {
+        background: #2563eb;
+      }
+
+      .dialog-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+
+      .dialog-content {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+
+      .dialog-content h4 {
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+      }
+
+      .dialog-content p {
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+      }
+
+      .dialog-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+      }
+
+      .dialog-actions button {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      .dialog-close {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      .dialog-close:hover {
+        background: #d1d5db;
+      }
+
+      .dialog-confirm {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .dialog-confirm:hover {
+        background: #2563eb;
+      }
+
+      /* Select styles */
+      .select-wrapper {
+        position: relative;
+        width: 250px;
+      }
+
+      .select-trigger {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .select-trigger:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .select-trigger::after {
+        content: '▼';
+        font-size: 0.6rem;
+        color: #6b7280;
+      }
+
+      .select-listbox {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 4px;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .select-option {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+
+      .select-option:hover,
+      .select-option.highlighted {
+        background: #f3f4f6;
+      }
+
+      .select-option.selected {
+        background: #eff6ff;
+        color: #1d4ed8;
+      }
+
+      .select-option.disabled {
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .demo-description {
+        color: #666;
+        margin-bottom: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>@rimitive/headless Demo</h1>
+      <p>Framework-agnostic accessible UI behaviors - same logic, different renderers</p>
+    </header>
+
+    <div class="split-container">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="badge react">React</span>
+          <h2>React Implementation</h2>
+        </div>
+        <div id="react-root"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="badge rimitive">Rimitive</span>
+          <h2>Rimitive Implementation</h2>
+        </div>
+        <div id="rimitive-root"></div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/demo/main.tsx"></script>
+  </body>
+</html>

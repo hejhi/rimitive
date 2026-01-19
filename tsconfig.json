@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/signals" },
+    { "path": "./packages/view" },
+    { "path": "./packages/router" },
+    { "path": "./packages/react" },
+    { "path": "./packages/devtools-extension" },
+    { "path": "./packages/examples" },
+    { "path": "./packages/benchmarks" },
+    { "path": "./packages/docs" }
+  ]
+}

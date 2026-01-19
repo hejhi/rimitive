@@ -1,0 +1,300 @@
+---
+title: Portability
+description: Write once, run anywhere—Rimitive views, React, custom renderers.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Most UI logic isn't tied to a specific framework. A dropdown's open/close behavior is the same whether you're rendering to DOM, React, or a canvas. A form's validation logic doesn't care about the view layer.
+
+Rimitive is designed around this insight. The same code can run in different contexts without modification.
+
+---
+
+## The Key: Depend on Contracts, Not Frameworks
+
+A portable component depends on a **service contract**—a set of primitives it needs—not a specific framework:
+
+```typescript
+// This component depends on { el, signal, computed }
+// It doesn't know or care where those come from
+const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: ComputedFactory }) => {
+  const { el, signal, computed } = svc;
+  const count = signal(0);
+
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),
+    el('button').props({ onclick: () => count(count() + 1) })('Increment')
+  );
+};
+```
+
+This component works with any service that provides `el`, `signal`, and `computed`—whether that's a DOM view service, a test service, or something custom.
+
+---
+
+## Portable Component Pattern
+
+The standard pattern is a function that receives a service and returns a function that takes props:
+
+```typescript
+// (svc) => (props) => RefSpec
+const Button = (svc: Service) => (props: { label: string; onClick: () => void }) => {
+  const { el } = svc;
+
+  return el('button').props({ onclick: props.onClick })(props.label);
+};
+```
+
+This shape lets you:
+- Partially apply the service once
+- Call the resulting function multiple times with different props
+- Pass the component to `use()` for ergonomic instantiation
+
+```typescript
+const App = (svc: Service) => {
+  const { el, use } = svc;
+
+  return el('div')(
+    use(Button)({ label: 'Save', onClick: handleSave }),
+    use(Button)({ label: 'Cancel', onClick: handleCancel })
+  );
+};
+```
+
+---
+
+## Running in Different Contexts
+
+### Rimitive DOM View
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+// Create adapter and compose service
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule, BatchModule,
+  createElModule(adapter), MountModule
+)();
+
+const app = Counter(svc);
+document.body.appendChild(svc.mount(app).element!);
+```
+
+### Testing Without DOM
+
+For tests, use a mock adapter or compose with test dependencies:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+// Minimal test service - just signals, no view layer
+const testSvc = compose(SignalModule, ComputedModule, EffectModule)();
+
+// Test a behavior directly
+const { count, increment } = counter(testSvc)(0);
+expect(count()).toBe(0);
+increment();
+expect(count()).toBe(1);
+```
+
+### React (via @rimitive/react)
+
+Portable behaviors work in React through `createHook`:
+
+```typescript
+import { SignalProvider, createHook, useSubscribe } from '@rimitive/react';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+// Define a portable behavior
+const counter = (svc: { signal: SignalFactory }) => (initial = 0) => {
+  const count = svc.signal(initial);
+  return {
+    count,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+  };
+};
+
+// Turn it into a React hook
+const useCounter = createHook(counter);
+
+function ReactCounter() {
+  const { count, increment } = useCounter(0);
+  const value = useSubscribe(count); // Subscribe to trigger re-renders
+
+  return <button onClick={increment}>Count: {value}</button>;
+}
+
+// Wrap your app with SignalProvider
+const svc = compose(SignalModule, ComputedModule, EffectModule)();
+
+function App() {
+  return (
+    <SignalProvider svc={svc}>
+      <ReactCounter />
+    </SignalProvider>
+  );
+}
+```
+
+<Aside type="note">
+React doesn't automatically re-render when signals change. Use `useSubscribe(signal)` to read signal values and trigger re-renders when they change.
+</Aside>
+
+### Custom Renderer
+
+The same pattern works with any adapter:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createElModule } from '@rimitive/view/el';
+import { myCanvasAdapter } from './my-canvas-adapter';
+
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule,
+  createElModule(myCanvasAdapter)
+)();
+
+const app = Counter(svc);
+// Renders to canvas instead of DOM
+```
+
+Same component, different targets.
+
+---
+
+## What Makes Code Portable
+
+### Do: Depend on the service contract
+
+```typescript
+const MyComponent = (svc: Service) => {
+  const { el, signal, computed } = svc;
+  // Use primitives from the service
+};
+```
+
+### Don't: Import framework-specific code
+
+```typescript
+// This is NOT portable
+import { signal } from '@rimitive/signals';
+
+const MyComponent = () => {
+  const count = signal(0); // Hardcoded dependency
+};
+```
+
+### Do: Accept dependencies as props or service extensions
+
+```typescript
+const DataList = (svc: Service & { fetchData: () => Promise<Item[]> }) => {
+  const { el, resource, fetchData } = svc;
+  const items = resource(fetchData);
+  // ...
+};
+```
+
+### Don't: Hardcode external dependencies
+
+```typescript
+// This is NOT portable
+const DataList = (svc: Service) => {
+  const items = resource(() => fetch('/api/items')); // Hardcoded URL
+};
+```
+
+---
+
+## Portable Behaviors vs Portable Components
+
+**Portable behaviors** return reactive state and logic—no UI:
+
+```typescript
+const counter = (svc: { signal: SignalFactory }) => (initial = 0) => {
+  const count = svc.signal(initial);
+  return {
+    count,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+  };
+};
+```
+
+**Portable components** return UI specs:
+
+```typescript
+const Counter = (svc: Service) => () => {
+  const { el, signal, computed } = svc;
+  const count = signal(0);
+
+  return el('div')(
+    el('span')(computed(() => count())),
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+```
+
+Behaviors are more portable than components because they have no UI coupling. A behavior can be used in Rimitive views, React, Vue, or anywhere else that can consume signals.
+
+---
+
+## Type Safety
+
+Define your service contracts with TypeScript:
+
+```typescript
+import type { SignalFactory, ComputedFactory } from '@rimitive/signals';
+import type { ElFactory } from '@rimitive/view/el';
+import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+
+// Minimal contract for a component
+type MinimalSvc = {
+  signal: SignalFactory;
+  computed: ComputedFactory;
+  el: ElFactory<DOMAdapterConfig>;
+};
+
+// Component declares exactly what it needs
+const MyComponent = (svc: MinimalSvc) => { /* ... */ };
+```
+
+This makes dependencies explicit and enables better tree-shaking—if a component only needs `signal` and `el`, it doesn't pull in `effect`, `resource`, etc.
+
+---
+
+## Testing Portable Code
+
+Portable code is easy to test because you control the service:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+describe('counter behavior', () => {
+  it('increments count', () => {
+    const svc = compose(SignalModule, ComputedModule, EffectModule)();
+    const { count, increment } = counter(svc)(0);
+
+    expect(count()).toBe(0);
+    increment();
+    expect(count()).toBe(1);
+  });
+});
+```
+
+No DOM mocking, no framework test utilities—just functions and assertions.
+
+<Aside type="tip">
+Portability isn't about running everywhere—it's about **not being locked in**. Even if you only ever use the DOM adapter, portable code is easier to test, easier to refactor, and easier to reason about.
+</Aside>

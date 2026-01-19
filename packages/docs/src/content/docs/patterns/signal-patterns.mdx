@@ -1,0 +1,447 @@
+---
+title: Signal Patterns
+description: Common patterns for working with signals effectively.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Signals are simple—read with `sig()`, write with `sig(value)`. But there are patterns that make them more ergonomic for common use cases.
+
+---
+
+## Updater Functions
+
+Signals accept functions for updates based on the previous value:
+
+```typescript
+const count = signal(0);
+
+// Direct update
+count(5);
+
+// Updater function: receives previous value, returns new value
+count(c => c + 1);  // increment
+count(c => c * 2);  // double
+count(c => Math.max(0, c - 1));  // decrement, minimum 0
+```
+
+This is particularly useful for arrays and objects:
+
+```typescript
+const items = signal<Item[]>([]);
+
+// Append
+items(arr => [...arr, newItem]);
+
+// Remove by id
+items(arr => arr.filter(x => x.id !== id));
+
+// Update one item
+items(arr => arr.map(x => x.id === id ? { ...x, done: true } : x));
+
+// Toggle a property
+items(arr => arr.map(x => x.id === id ? { ...x, done: !x.done } : x));
+```
+
+<Aside type="note">
+Updater functions are synchronous. The signal is updated immediately with the return value.
+</Aside>
+
+---
+
+## Derived Actions
+
+The standard behavior pattern returns an object with state and actions:
+
+```typescript
+const counter = (svc: SignalsSvc) => (initial = 0) => {
+  const count = svc.signal(initial);
+  return {
+    count,
+    increment: () => count(count() + 1),
+    decrement: () => count(count() - 1),
+  };
+};
+
+const { count, increment, decrement } = svc(counter)(0);
+```
+
+An alternative: attach actions directly to the signal:
+
+```typescript
+const counter = (svc: SignalsSvc) => (initial = 0) => {
+  const count = svc.signal(initial);
+
+  return Object.assign(count, {
+    increment: () => count(c => c + 1),
+    decrement: () => count(c => c - 1),
+    reset: () => count(initial),
+  });
+};
+
+// Usage - no destructuring needed
+const count = svc(counter)(0);
+
+count();           // read: 0
+count(5);          // write: 5
+count.increment(); // action: 6
+count.reset();     // action: 0
+```
+
+This works because signals are functions, and functions are objects that can have properties.
+
+<Aside type="tip">
+Use derived actions when you have a single primary signal with helper methods. Use the standard object pattern when you have multiple signals or complex state.
+</Aside>
+
+---
+
+## Toggle
+
+A common case of derived actions—boolean signals with on/off/toggle:
+
+```typescript
+const toggle = (svc: SignalsSvc) => (initial = false) => {
+  const value = svc.signal(initial);
+
+  return Object.assign(value, {
+    on: () => value(true),
+    off: () => value(false),
+    toggle: () => value(v => !v),
+  });
+};
+
+// Usage
+const isOpen = svc(toggle)(false);
+
+isOpen();        // false
+isOpen.toggle(); // true
+isOpen.off();    // false
+
+// Still works as a normal signal
+isOpen(true);    // true
+```
+
+---
+
+## Previous Value
+
+Track the previous value for transitions, animations, or undo:
+
+```typescript
+const withPrevious = <T>(svc: SignalsSvc) => (initial: T) => {
+  const { signal, computed } = svc;
+
+  const current = signal(initial);
+  const previous = signal(initial);
+
+  const set = (value: T) => {
+    previous(current());
+    current(value);
+  };
+
+  const changed = computed(() => current() !== previous());
+
+  return { current, previous, set, changed };
+};
+
+// Usage
+const page = svc(withPrevious)(1);
+
+page.set(2);
+page.current();   // 2
+page.previous();  // 1
+page.changed();   // true
+
+page.set(2);
+page.changed();   // false (same value)
+```
+
+For undo/redo, extend the pattern with a history stack:
+
+```typescript
+const withHistory = <T>(svc: SignalsSvc) => (initial: T, maxHistory = 10) => {
+  const { signal, computed } = svc;
+
+  const current = signal(initial);
+  const past = signal<T[]>([]);
+  const future = signal<T[]>([]);
+
+  const canUndo = computed(() => past().length > 0);
+  const canRedo = computed(() => future().length > 0);
+
+  const set = (value: T) => {
+    past(p => [...p.slice(-(maxHistory - 1)), current()]);
+    future([]);
+    current(value);
+  };
+
+  const undo = () => {
+    if (!canUndo()) return;
+    const prev = past();
+    const last = prev[prev.length - 1];
+    past(prev.slice(0, -1));
+    future(f => [...f, current()]);
+    current(last!);
+  };
+
+  const redo = () => {
+    if (!canRedo()) return;
+    const fut = future();
+    const next = fut[fut.length - 1];
+    future(fut.slice(0, -1));
+    past(p => [...p, current()]);
+    current(next!);
+  };
+
+  return { current, set, undo, redo, canUndo, canRedo };
+};
+```
+
+---
+
+## Debounced Signals
+
+Delay signal updates until input settles:
+
+```typescript
+const debounced = <T>(svc: SignalsSvc) => (
+  source: Readable<T>,
+  ms: number
+) => {
+  const { signal, effect } = svc;
+
+  const value = signal(source.peek());
+  let timeout: number | undefined;
+
+  effect(() => {
+    const v = source();
+    clearTimeout(timeout);
+    timeout = window.setTimeout(() => value(v), ms);
+  });
+
+  return value;
+};
+
+// Usage
+const searchInput = signal('');
+const debouncedSearch = svc(debounced)(searchInput, 300);
+
+// searchInput updates immediately on keystroke
+// debouncedSearch updates 300ms after typing stops
+```
+
+A variant that debounces both reads and writes:
+
+```typescript
+const debouncedSignal = <T>(svc: SignalsSvc) => (initial: T, ms: number) => {
+  const { signal, effect } = svc;
+
+  const immediate = signal(initial);
+  const debounced = signal(initial);
+
+  let timeout: number | undefined;
+
+  effect(() => {
+    const v = immediate();
+    clearTimeout(timeout);
+    timeout = window.setTimeout(() => debounced(v), ms);
+  });
+
+  // Return a signal-like object that writes to immediate, reads from debounced
+  const result = ((value?: T) => {
+    if (arguments.length === 0) return debounced();
+    immediate(value!);
+  }) as Writable<T>;
+
+  result.peek = () => debounced.peek();
+
+  return Object.assign(result, {
+    immediate,  // Access the non-debounced value if needed
+  });
+};
+```
+
+---
+
+## Async Actions
+
+For mutations that need loading and error state:
+
+```typescript
+const asyncAction = <T, Args extends unknown[]>(svc: SignalsSvc) => (
+  action: (...args: Args) => Promise<T>
+) => {
+  const { signal } = svc;
+
+  const pending = signal(false);
+  const error = signal<Error | null>(null);
+  const lastResult = signal<T | null>(null);
+
+  const execute = async (...args: Args): Promise<T> => {
+    pending(true);
+    error(null);
+
+    try {
+      const result = await action(...args);
+      lastResult(result);
+      return result;
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      error(err);
+      throw err;
+    } finally {
+      pending(false);
+    }
+  };
+
+  return { execute, pending, error, lastResult };
+};
+
+// Usage
+const saveUser = svc(asyncAction)(async (user: User) => {
+  const res = await fetch('/api/users', {
+    method: 'POST',
+    body: JSON.stringify(user),
+  });
+  if (!res.ok) throw new Error('Failed to save');
+  return res.json();
+});
+
+// In a component
+el('button')
+  .props({
+    onclick: () => saveUser.execute({ name: 'Alice' }),
+    disabled: saveUser.pending,
+  })(
+    computed(() => saveUser.pending() ? 'Saving...' : 'Save')
+  );
+
+// Show errors
+match(saveUser.error, (err) =>
+  err ? el('div').props({ className: 'error' })(err.message) : null
+);
+```
+
+<Aside type="note">
+`asyncAction` is for mutations (POST, PUT, DELETE). For data fetching (GET), use `resource` which handles refetching on dependency changes.
+</Aside>
+
+---
+
+## Computed Collections
+
+When working with reactive lists, pre-compute common derived views:
+
+```typescript
+const todoList = (svc: SignalsSvc) => () => {
+  const { signal, computed } = svc;
+
+  const items = signal<Todo[]>([]);
+
+  // Pre-computed views - computed once, cached automatically
+  const active = computed(() => items().filter(t => !t.done));
+  const completed = computed(() => items().filter(t => t.done));
+
+  const counts = computed(() => ({
+    total: items().length,
+    active: active().length,
+    completed: completed().length,
+  }));
+
+  const allDone = computed(() =>
+    items().length > 0 && completed().length === items().length
+  );
+
+  return {
+    items,
+    active,
+    completed,
+    counts,
+    allDone,
+    // Actions...
+    add: (text: string) => items(arr => [...arr, { id: crypto.randomUUID(), text, done: false }]),
+    toggle: (id: string) => items(arr => arr.map(t => t.id === id ? { ...t, done: !t.done } : t)),
+    remove: (id: string) => items(arr => arr.filter(t => t.id !== id)),
+    clear: () => items(arr => arr.filter(t => !t.done)),
+  };
+};
+```
+
+Consumers can read whichever view they need:
+
+```typescript
+// Only re-renders when active items change
+const ActiveList = (svc: Service, todos: ReturnType<typeof todoList>) => {
+  const { el, map } = svc;
+  return map(todos.active, t => t.id, TodoItem);
+};
+
+// Only re-renders when counts change
+const Stats = (svc: Service, todos: ReturnType<typeof todoList>) => {
+  const { el, computed } = svc;
+  return el('div')(
+    computed(() => `${todos.counts().active} items left`)
+  );
+};
+```
+
+---
+
+## Element Partial Application
+
+Pre-bind commonly used element tags:
+
+```typescript
+const svc = compose(SignalModule, createElModule(adapter));
+const { el } = svc;
+
+// Partial application - call el() once per tag
+const div = el('div');
+const button = el('button');
+const input = el('input');
+const span = el('span');
+
+// Use without repeating tag names
+const Form = () =>
+  div.props({ className: 'form' })(
+    div.props({ className: 'field' })(
+      input.props({ type: 'text', placeholder: 'Name' })(),
+    ),
+    button.props({ type: 'submit' })('Submit')
+  );
+```
+
+This is especially useful in files with many elements of the same type.
+
+---
+
+## Service Factory
+
+For applications that need multiple isolated instances:
+
+```typescript
+// Define service creation as a factory
+const createService = () => {
+  const adapter = createDOMAdapter();
+  return compose(
+    SignalModule, ComputedModule, EffectModule,
+    createElModule(adapter),
+    createMapModule(adapter),
+    createMatchModule(adapter),
+  );
+};
+
+// Each call creates a fresh service with its own state
+const app1 = createService();
+const app2 = createService();
+
+// Mount separate instances
+mount(App(app1), document.getElementById('app1')!);
+mount(App(app2), document.getElementById('app2')!);
+```
+
+This is useful for:
+- Embedding multiple independent widgets on a page
+- Testing with isolated services
+- SSR where each request needs fresh state

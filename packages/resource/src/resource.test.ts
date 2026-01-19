@@ -1,0 +1,361 @@
+import { describe, it, expect, vi } from 'vitest';
+import { compose } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/signal';
+import { ComputedModule } from '@rimitive/signals/computed';
+import { EffectModule } from '@rimitive/signals/effect';
+import { ResourceModule } from './resource';
+
+// Helper to create a deferred promise for controlled async testing
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+// Helper to flush microtasks
+const flushMicrotasks = () => new Promise((r) => setTimeout(r, 0));
+
+describe('resource', () => {
+  const createTestEnv = () => {
+    const use = compose(
+      SignalModule,
+      ComputedModule,
+      EffectModule,
+      ResourceModule
+    );
+    return use;
+  };
+
+  describe('basic functionality', () => {
+    it('should start in pending state', () => {
+      const { resource } = createTestEnv();
+      const deferred = createDeferred<string>();
+
+      const res = resource(() => deferred.promise);
+
+      expect(res()).toEqual({ status: 'pending' });
+      expect(res.loading()).toBe(true);
+      expect(res.data()).toBe(undefined);
+      expect(res.error()).toBe(undefined);
+    });
+
+    it('should transition to ready state on success', async () => {
+      const { resource } = createTestEnv();
+      const deferred = createDeferred<string>();
+
+      const res = resource(() => deferred.promise);
+
+      deferred.resolve('hello');
+      await flushMicrotasks();
+
+      expect(res()).toEqual({ status: 'ready', value: 'hello' });
+      expect(res.loading()).toBe(false);
+      expect(res.data()).toBe('hello');
+      expect(res.error()).toBe(undefined);
+    });
+
+    it('should transition to error state on failure', async () => {
+      const { resource } = createTestEnv();
+      const deferred = createDeferred<string>();
+
+      const res = resource(() => deferred.promise);
+
+      const error = new Error('failed');
+      deferred.reject(error);
+      await flushMicrotasks();
+
+      expect(res()).toEqual({ status: 'error', error });
+      expect(res.loading()).toBe(false);
+      expect(res.data()).toBe(undefined);
+      expect(res.error()).toBe(error);
+    });
+
+    it('should handle sync errors in fetcher', () => {
+      const { resource } = createTestEnv();
+      const error = new Error('sync error');
+
+      const res = resource(() => {
+        throw error;
+      });
+
+      expect(res()).toEqual({ status: 'error', error });
+      expect(res.loading()).toBe(false);
+      expect(res.error()).toBe(error);
+    });
+  });
+
+  describe('reactive dependency tracking', () => {
+    it('should refetch when dependencies change', async () => {
+      const { signal, resource } = createTestEnv();
+      const fetchCount = vi.fn();
+
+      const id = signal(1);
+      const resolvers: Array<(value: string) => void> = [];
+
+      const res = resource(() => {
+        const currentId = id();
+        fetchCount();
+        return new Promise<string>((resolve) => {
+          resolvers.push((v) => resolve(`${v}-${currentId}`));
+        });
+      });
+
+      // First fetch triggered
+      expect(fetchCount).toHaveBeenCalledTimes(1);
+      expect(res.loading()).toBe(true);
+
+      // Resolve first fetch
+      resolvers[0]!('data');
+      await flushMicrotasks();
+      expect(res.data()).toBe('data-1');
+
+      // Change dependency - should trigger refetch
+      id(2);
+      expect(fetchCount).toHaveBeenCalledTimes(2);
+      expect(res.loading()).toBe(true);
+
+      // Resolve second fetch
+      resolvers[1]!('data');
+      await flushMicrotasks();
+      expect(res.data()).toBe('data-2');
+    });
+
+    it('should track multiple dependencies', async () => {
+      const { signal, resource } = createTestEnv();
+
+      const category = signal('electronics');
+      const page = signal(1);
+
+      let lastFetchArgs: { category: string; page: number } | null = null;
+      resource(() => {
+        lastFetchArgs = { category: category(), page: page() };
+        return Promise.resolve(lastFetchArgs);
+      });
+
+      await flushMicrotasks();
+      expect(lastFetchArgs).toEqual({ category: 'electronics', page: 1 });
+
+      // Change category
+      category('books');
+      await flushMicrotasks();
+      expect(lastFetchArgs).toEqual({ category: 'books', page: 1 });
+
+      // Change page
+      page(2);
+      await flushMicrotasks();
+      expect(lastFetchArgs).toEqual({ category: 'books', page: 2 });
+    });
+  });
+
+  describe('race condition handling', () => {
+    it('should ignore stale responses', async () => {
+      const { signal, resource } = createTestEnv();
+
+      const id = signal(1);
+      const deferreds: Array<ReturnType<typeof createDeferred<string>>> = [];
+
+      const res = resource(() => {
+        const currentId = id();
+        const deferred = createDeferred<string>();
+        deferreds.push(deferred);
+        return deferred.promise.then((v) => `${v}-${currentId}`);
+      });
+
+      // First fetch started
+      expect(deferreds.length).toBe(1);
+
+      // Trigger second fetch before first resolves
+      id(2);
+      expect(deferreds.length).toBe(2);
+
+      // Resolve second fetch first
+      deferreds[1]!.resolve('fast');
+      await flushMicrotasks();
+      expect(res.data()).toBe('fast-2');
+
+      // Resolve first fetch (stale) - should be ignored
+      deferreds[0]!.resolve('slow');
+      await flushMicrotasks();
+      expect(res.data()).toBe('fast-2'); // Still the second result
+    });
+
+    it('should ignore stale errors', async () => {
+      const { signal, resource } = createTestEnv();
+
+      const id = signal(1);
+      const deferreds: Array<ReturnType<typeof createDeferred<string>>> = [];
+
+      const res = resource(() => {
+        id(); // track dependency
+        const deferred = createDeferred<string>();
+        deferreds.push(deferred);
+        return deferred.promise;
+      });
+
+      // Trigger second fetch
+      id(2);
+      expect(deferreds.length).toBe(2);
+
+      // Resolve second fetch
+      deferreds[1]!.resolve('success');
+      await flushMicrotasks();
+      expect(res.data()).toBe('success');
+
+      // First fetch errors (stale) - should be ignored
+      deferreds[0]!.reject(new Error('stale error'));
+      await flushMicrotasks();
+      expect(res().status).toBe('ready'); // Still ready, not error
+    });
+  });
+
+  describe('refetch', () => {
+    it('should manually trigger refetch', async () => {
+      const { resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const res = resource(() => {
+        fetchCount++;
+        return Promise.resolve(`fetch-${fetchCount}`);
+      });
+
+      await flushMicrotasks();
+      expect(res.data()).toBe('fetch-1');
+
+      res.refetch();
+      await flushMicrotasks();
+      expect(res.data()).toBe('fetch-2');
+
+      res.refetch();
+      await flushMicrotasks();
+      expect(res.data()).toBe('fetch-3');
+    });
+  });
+
+  describe('integration with computed', () => {
+    it('should work with derived computations', async () => {
+      const { computed, resource } = createTestEnv();
+
+      const res = resource(() => Promise.resolve([1, 2, 3, 4, 5]));
+
+      const sum = computed(() => {
+        const data = res.data();
+        return data ? data.reduce((a, b) => a + b, 0) : 0;
+      });
+
+      expect(sum()).toBe(0); // Pending
+
+      await flushMicrotasks();
+      expect(sum()).toBe(15); // Ready
+    });
+  });
+
+  describe('abort signal', () => {
+    it('should pass abort signal to fetcher', () => {
+      const { resource } = createTestEnv();
+      let receivedSignal: AbortSignal | undefined;
+
+      resource((signal) => {
+        receivedSignal = signal;
+        return Promise.resolve('data');
+      });
+
+      expect(receivedSignal).toBeInstanceOf(AbortSignal);
+      expect(receivedSignal?.aborted).toBe(false);
+    });
+
+    it('should abort previous request when deps change', async () => {
+      const { signal, resource } = createTestEnv();
+      const signals: AbortSignal[] = [];
+
+      const id = signal(1);
+
+      resource((abortSignal) => {
+        signals.push(abortSignal);
+        id(); // track dependency
+        return new Promise(() => {}); // never resolves
+      });
+
+      expect(signals.length).toBe(1);
+      expect(signals[0]?.aborted).toBe(false);
+
+      // Change dependency - should abort previous and start new
+      id(2);
+
+      expect(signals.length).toBe(2);
+      expect(signals[0]?.aborted).toBe(true); // Previous aborted
+      expect(signals[1]?.aborted).toBe(false); // New one active
+    });
+
+    it('should abort on dispose', async () => {
+      const { resource } = createTestEnv();
+      let receivedSignal: AbortSignal | undefined;
+
+      const res = resource((signal) => {
+        receivedSignal = signal;
+        return new Promise(() => {}); // never resolves
+      });
+
+      expect(receivedSignal?.aborted).toBe(false);
+
+      res.dispose();
+
+      expect(receivedSignal?.aborted).toBe(true);
+    });
+
+    it('should not set error state for abort errors', async () => {
+      const { signal, resource } = createTestEnv();
+
+      const id = signal(1);
+
+      const res = resource((abortSignal) => {
+        id(); // track dependency
+        return new Promise((_, reject) => {
+          abortSignal.addEventListener('abort', () => {
+            const error = new Error('Aborted');
+            error.name = 'AbortError';
+            reject(error);
+          });
+        });
+      });
+
+      expect(res().status).toBe('pending');
+
+      // Change dep - triggers abort of first request
+      id(2);
+      await flushMicrotasks();
+
+      // Should still be pending (new fetch in progress), not error
+      expect(res().status).toBe('pending');
+      expect(res.error()).toBe(undefined);
+    });
+
+    it('should stop reacting after dispose', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const id = signal(1);
+
+      const res = resource(() => {
+        id(); // track dependency
+        fetchCount++;
+        return Promise.resolve(`fetch-${fetchCount}`);
+      });
+
+      expect(fetchCount).toBe(1);
+
+      res.dispose();
+
+      // Changing dep after dispose should not trigger refetch
+      id(2);
+      expect(fetchCount).toBe(1);
+    });
+  });
+});

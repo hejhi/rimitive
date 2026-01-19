@@ -1,0 +1,23 @@
+import { el, mount } from './service';
+import { Counter } from './components/Counter';
+import { TodoList } from './components/TodoList';
+import { ConditionalExample } from './components/ConditionalExample';
+import { TagList } from './components/TagList';
+
+const App = () => {
+  return el('div').props({ className: 'app' })(
+    Counter(10),
+    ConditionalExample(),
+    TodoList(),
+    el('div').props({ className: 'tag-list-container' })(
+      el('h3')('Tag List (Fragment Component)'),
+      el('div').props({ className: 'tag-list' })(
+        TagList({ tags: ['React', 'Vue', 'Svelte', 'Solid', 'Rimitive'] })
+      )
+    )
+  );
+};
+
+const app = mount(App());
+const container = document.querySelector('#app');
+container?.appendChild(app.element!);

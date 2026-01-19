@@ -1,0 +1,129 @@
+{
+  "name": "@rimitive/signals",
+  "version": "0.1.0",
+  "description": "Reactive primitives for Rimitive components",
+  "author": "Rimitive Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/rimitive",
+    "directory": "packages/signals"
+  },
+  "keywords": [
+    "rimitive",
+    "signals",
+    "reactive",
+    "state",
+    "computed",
+    "effect"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./extend": {
+      "import": "./dist/extend.js",
+      "types": "./dist/extend.d.ts"
+    },
+    "./signal": {
+      "import": "./dist/signal.js",
+      "types": "./dist/signal.d.ts"
+    },
+    "./computed": {
+      "import": "./dist/computed.js",
+      "types": "./dist/computed.d.ts"
+    },
+    "./effect": {
+      "import": "./dist/effect.js",
+      "types": "./dist/effect.d.ts"
+    },
+    "./batch": {
+      "import": "./dist/batch.js",
+      "types": "./dist/batch.d.ts"
+    },
+    "./subscribe": {
+      "import": "./dist/subscribe.js",
+      "types": "./dist/subscribe.d.ts"
+    },
+    "./untrack": {
+      "import": "./dist/untrack.js",
+      "types": "./dist/untrack.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    },
+    "./deps/scheduler": {
+      "import": "./dist/deps/scheduler.js",
+      "types": "./dist/deps/scheduler.d.ts"
+    },
+    "./deps/graph-edges": {
+      "import": "./dist/deps/graph-edges.js",
+      "types": "./dist/deps/graph-edges.d.ts"
+    },
+    "./deps/graph-traversal": {
+      "import": "./dist/deps/graph-traversal.js",
+      "types": "./dist/deps/graph-traversal.d.ts"
+    },
+    "./deps/pull-propagator": {
+      "import": "./dist/deps/pull-propagator.js",
+      "types": "./dist/deps/pull-propagator.d.ts"
+    },
+    "./devtools/signal": {
+      "import": "./dist/devtools/signal.js",
+      "types": "./dist/devtools/signal.d.ts"
+    },
+    "./devtools/computed": {
+      "import": "./dist/devtools/computed.js",
+      "types": "./dist/devtools/computed.d.ts"
+    },
+    "./devtools/effect": {
+      "import": "./dist/devtools/effect.js",
+      "types": "./dist/devtools/effect.d.ts"
+    },
+    "./devtools/batch": {
+      "import": "./dist/devtools/batch.js",
+      "types": "./dist/devtools/batch.d.ts"
+    },
+    "./devtools/subscribe": {
+      "import": "./dist/devtools/subscribe.js",
+      "types": "./dist/devtools/subscribe.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "test": "vitest run",
+    "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.6",
+    "alien-signals": "3.1.2",
+    "esbuild": "0.27.2",
+    "rimraf": "6.1.2",
+    "tdd-guard-vitest": "0.1.6",
+    "terser": "5.46.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.17"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

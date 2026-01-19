@@ -1,0 +1,71 @@
+---
+title: Why Rimitive?
+description: The story behind Rimitive and why it exists.
+---
+
+You absolutely do not need to read this. I don't write blog posts, so this is my blog post.
+
+---
+
+## The Longing
+
+Working with reactive frameworks since time immemorial, I have found myself longing, time and time again, to just have a stupid simple reactive toolkit I could take with me on all my programming adventures.
+
+Don't get me wrong, I love React. I love NextJS. But when I'm building something for myself, I'll be real: I have a strong distaste about making huge infrastructure commitments before I even know exactly what I'm building. I want to start dumb simple and layer on complexity as I need it.
+
+I don't want to be forced to make those decisions up front. I don't want to have to rewrite my little app 1000x as I change my opinions to work with This or That Framework or Whatever. I just (in my free time) like to build shit with no overhead or up-front commitment.
+
+---
+
+## Headless Components
+
+I've also always longed for a truly headless reactive component pattern; the most notable execution of this idea to me was `downshift`, which is React-specific, but had some universal fantastic concepts under the covers, and highlighted some really important things, like it's:
+
+1. _hard_ to write a fully accessible component
+2. _harder_ if you want to create an abstraction of it for a design system
+3. _harder-er_ if you want to bridge it across frameworks, or compose/componentize accessible behaviors
+
+There's web component frameworks that help with this, certainly. But I wanted the ergonomics of signals, with the composability provided by a functional API, without the shadow DOM, without compilers, and without bringing a framework with me.
+
+---
+
+## I Have Some Pinions
+
+I want what I want:
+
+- a simple, declarative, predictable, portable, type-safe, framework-and-environment agnostic way to model reactive behavior and UIs in a way that felt familiar to what we use today
+- ergonomic functional composition and extensibility
+- a clear, scalable mental model with no magic
+- no compromising on tree-shaking/bundle size or performance
+- the option to not use a compiler with 0 ergonomic caveats
+
+---
+
+## How It Started
+
+Originally, I didn't even think of primitives. Originally, I started with just the `core` package (which I called `lattice` when I started) as an extensibility and composition layer; nothing to do with reactivity. Just a way to allow myself to compose "plugins" and underlying dependencies in an ultra-light, type-safe manner. Thus, the `core` package is **extremely** minimal and I shan't embarrass myself by telling you how long I spent writing code only to strip it back.
+
+Then one day I was exploring the push-pull, graph-coloring algorithm of alien-signals and I was just completely awe-struck and inspired by how something so utterly powerful, performant, and expressive could be built so minimally.
+
+I saw how primitives could lend themselves naturally to the design of "lattice" (`core`) in terms of modularity. I was inspired to see if I could use the same (or at least similar) algorithm and patterns to build tree-shakeable signal primitives as "modules" with shared dependencies to test the composability/extensibility story of `core`.
+
+---
+
+## How It Grew
+
+Then I got carried away with the idea of extending this model beyond state to the UI itself, with constraints:
+
+- I wanted "components" to be a _pattern_, not a _prescription_, with complete encapsulation of reactivity confined to primitives (I didn't want to build a component framework).
+- I didn't want a virtual DOM, or to worry about "re-renders" of components, I didn't want a framework to "own" the tree.
+- I wanted minimal, scarce reconciliation, encapsulated and specialized to only the primitives that needed it (like the `map` primitive).
+- I wanted to be able to hot-swap renderers on the fly.
+
+Really, I wanted a toolkit where I could take only what I needed when I needed it, and use it the way I wanted. The primitives/services/modules/compose pattern allowed it all to grow organically, and soon I ended up with a reactive view layer (with adapters). From there, I wanted some helpers that I could sprinkle in as needed, and ended up with routing, then SSR, then streaming, async loading, then framework bindings.
+
+The more I built, and the more I used it to build other tools (like the devtools, some examples like a canvas renderer, as well as a lil game on the side) the more it all just felt...fun again!
+
+---
+
+## LLMs Like It
+
+And a nice little side effect: LLMs seem to grok it quite easily despite having 0 training data, as of early 2026; I've been using it a lot for personal projects. They stumble a bit trying to return `el`s in computeds instead of `map`, but after a few examples in the code base and a little note in `CLAUDE.md`, they chill out.

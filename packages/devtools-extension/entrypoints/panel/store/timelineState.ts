@@ -1,0 +1,187 @@
+// Timeline state is now part of DevtoolsState in devtoolsBehavior.ts
+// This file exports utility functions that work with log entries.
+
+import type { LogEntry } from './types';
+import type { GraphState } from './graphTypes';
+import type { Cascade, CascadeEffect } from './timelineTypes';
+
+/**
+ * Time window for grouping related events into a cascade (ms)
+ */
+const CASCADE_WINDOW_MS = 50;
+
+/**
+ * Event types that start a new cascade (root causes)
+ */
+const CASCADE_ROOT_EVENTS = ['signal:write'];
+
+/**
+ * Event types that are effects of a cascade
+ */
+const CASCADE_EFFECT_EVENTS = [
+  'computed:value',
+  'computed:read',
+  'effect:run',
+  'effect:created',
+  'subscribe:notify',
+];
+
+/**
+ * Check if an event type starts a cascade
+ */
+function isCascadeRoot(eventType: string): boolean {
+  return CASCADE_ROOT_EVENTS.some((root) => eventType.includes(root));
+}
+
+/**
+ * Check if an event type is a cascade effect
+ */
+function isCascadeEffect(eventType: string): boolean {
+  return CASCADE_EFFECT_EVENTS.some((effect) => eventType.includes(effect));
+}
+
+/**
+ * Build cascades from log entries
+ * Groups related events into propagation chains
+ */
+export function buildCascadesFromEntries(entries: LogEntry[], graphState: GraphState): Cascade[] {
+  if (entries.length === 0) return [];
+
+  const cascades: Cascade[] = [];
+  let currentCascade: Cascade | null = null;
+
+  // Sort entries by timestamp
+  const sorted = [...entries].sort((a, b) => a.timestamp - b.timestamp);
+
+  for (const entry of sorted) {
+    // Start new cascade on root event
+    if (isCascadeRoot(entry.eventType)) {
+      // Close previous cascade if exists
+      if (currentCascade) {
+        currentCascade.endTime = currentCascade.effects.length > 0
+          ? currentCascade.effects[currentCascade.effects.length - 1].event.timestamp
+          : currentCascade.startTime;
+        cascades.push(currentCascade);
+      }
+
+      const rootNode = entry.nodeId ? graphState.nodes.get(entry.nodeId) ?? null : null;
+
+      currentCascade = {
+        id: `cascade_${entry.timestamp}_${entry.id}`,
+        rootEvent: entry,
+        rootNode,
+        effects: [],
+        startTime: entry.timestamp,
+        endTime: entry.timestamp,
+        affectedNodeIds: new Set(entry.nodeId ? [entry.nodeId] : []),
+      };
+      continue;
+    }
+
+    // Add effect to current cascade if within time window
+    if (currentCascade && isCascadeEffect(entry.eventType)) {
+      const timeDelta = entry.timestamp - currentCascade.startTime;
+
+      // Check if within time window
+      if (timeDelta <= CASCADE_WINDOW_MS) {
+        // Check if this node is connected to the cascade
+        const nodeId = entry.nodeId;
+        const isConnected = nodeId && isNodeConnectedToCascade(nodeId, currentCascade, graphState);
+
+        if (isConnected || !nodeId) {
+          const node = nodeId ? graphState.nodes.get(nodeId) ?? null : null;
+          const depth = nodeId ? getDepthFromRoot(nodeId, currentCascade.rootEvent.nodeId, graphState) : 0;
+
+          const effect: CascadeEffect = {
+            event: entry,
+            node,
+            deltaMs: timeDelta,
+            depth,
+          };
+
+          currentCascade.effects.push(effect);
+          if (nodeId) {
+            currentCascade.affectedNodeIds.add(nodeId);
+          }
+        }
+      }
+    }
+  }
+
+  // Close final cascade
+  if (currentCascade) {
+    currentCascade.endTime = currentCascade.effects.length > 0
+      ? currentCascade.effects[currentCascade.effects.length - 1].event.timestamp
+      : currentCascade.startTime;
+    cascades.push(currentCascade);
+  }
+
+  return cascades;
+}
+
+/**
+ * Check if a node is connected to any node in the cascade
+ */
+function isNodeConnectedToCascade(
+  nodeId: string,
+  cascade: Cascade,
+  state: GraphState
+): boolean {
+  // Check if this node depends on any affected node
+  const dependencies = state.dependencies.get(nodeId);
+  if (dependencies) {
+    for (const depId of dependencies) {
+      if (cascade.affectedNodeIds.has(depId)) {
+        return true;
+      }
+    }
+  }
+
+  // Also check if any affected node depends on this node (reverse direction)
+  for (const affectedId of cascade.affectedNodeIds) {
+    const affectedDeps = state.dependencies.get(affectedId);
+    if (affectedDeps?.has(nodeId)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Get the graph depth from root to target
+ */
+function getDepthFromRoot(
+  targetId: string,
+  rootId: string | undefined,
+  state: GraphState
+): number {
+  if (!rootId || targetId === rootId) return 0;
+
+  // BFS to find shortest path
+  const visited = new Set<string>();
+  const queue: Array<{ id: string; depth: number }> = [{ id: rootId, depth: 0 }];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current.id === targetId) return current.depth;
+
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+
+    // Get dependents of current node
+    const dependents = state.dependents.get(current.id);
+    if (dependents) {
+      for (const depId of dependents) {
+        if (!visited.has(depId)) {
+          queue.push({ id: depId, depth: current.depth + 1 });
+        }
+      }
+    }
+  }
+
+  return 1; // Default depth if not found
+}
+
+// Re-export types for convenience
+export type { TimelineState, Cascade, CascadeEffect } from './timelineTypes';

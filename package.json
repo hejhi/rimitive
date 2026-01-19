@@ -1,0 +1,62 @@
+{
+  "name": "rimitive",
+  "private": true,
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rimitive"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "packages/examples/*"
+  ],
+  "scripts": {
+    "build": "lerna run build",
+    "dev": "lerna run dev --parallel",
+    "clean": "lerna run clean  --parallel",
+    "lint": "lerna run lint",
+    "typecheck": "lerna run typecheck",
+    "check": "lerna run check",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "test": "lerna run test",
+    "bench": "pnpm --filter @rimitive/benchmarks bench",
+    "api-extract": "lerna run api-extract",
+    "api-collect": "mkdir -p temp && cp packages/*/temp/*.api.json temp/",
+    "api-document": "pnpm api-collect && api-documenter markdown -i temp -o packages/docs/src/content/docs/api && node scripts/add-api-frontmatter.mjs",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "2.29.8",
+    "@eslint/js": "9.39.2",
+    "@microsoft/api-documenter": "7.28.2",
+    "@microsoft/api-extractor": "7.55.2",
+    "@typescript-eslint/eslint-plugin": "8.53.0",
+    "@typescript-eslint/parser": "8.53.0",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "lerna": "9.0.3",
+    "prettier": "3.8.0",
+    "tdd-guard-vitest": "0.1.6",
+    "terser": "5.46.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.53.0",
+    "vite": "7.3.1",
+    "vitest": "4.0.17"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "tinypool": "1.0.4"
+    },
+    "ignoredBuiltDependencies": [
+      "nx"
+    ]
+  }
+}

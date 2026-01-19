@@ -1,0 +1,441 @@
+---
+title: Forms
+description: Patterns for building reactive forms with validation.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Forms are one of the most common UI patterns. Rimitive doesn't have a built-in form primitive—you compose form behavior from signals and computeds.
+
+---
+
+## The Field Pattern
+
+A field is state plus metadata: the value, whether it's been touched, and any validation errors.
+
+```typescript
+type FieldOptions<T> = {
+  initial: T;
+  validate?: (value: T) => string | null;
+};
+
+const field = <T>(svc: SignalsSvc) => (opts: FieldOptions<T>) => {
+  const { signal, computed } = svc;
+
+  const value = signal(opts.initial);
+  const touched = signal(false);
+
+  const error = computed(() => {
+    if (!touched()) return null;
+    return opts.validate?.(value()) ?? null;
+  });
+
+  const valid = computed(() => !error());
+
+  return {
+    value,
+    touched,
+    error,
+    valid,
+    touch: () => touched(true),
+    reset: () => {
+      value(opts.initial);
+      touched(false);
+    },
+  };
+};
+```
+
+Usage:
+
+```typescript
+const emailField = svc(field)({
+  initial: '',
+  validate: (v) => {
+    if (!v) return 'Required';
+    if (!v.includes('@')) return 'Invalid email';
+    return null;
+  },
+});
+
+// Read state
+emailField.value();   // ''
+emailField.touched(); // false
+emailField.error();   // null (not touched yet)
+
+// User types and blurs
+emailField.value('bad');
+emailField.touch();
+emailField.error();   // 'Invalid email'
+
+// User fixes it
+emailField.value('user@example.com');
+emailField.error();   // null
+emailField.valid();   // true
+```
+
+---
+
+## Input Binding
+
+Bind the field to an input element:
+
+```typescript
+const EmailInput = (svc: Service) => {
+  const { el, on, signal, computed } = svc;
+
+  const email = svc(field)({
+    initial: '',
+    validate: (v) => v.includes('@') ? null : 'Invalid email',
+  });
+
+  return el('div')(
+    el('input')
+      .props({
+        type: 'email',
+        value: email.value,
+        className: computed(() => email.error() ? 'input-error' : ''),
+      })
+      .ref(
+        on('input', (e) => email.value((e.target as HTMLInputElement).value)),
+        on('blur', () => email.touch())
+      )(),
+    el('span').props({
+      className: 'error-message',
+      hidden: computed(() => !email.error()),
+    })(computed(() => email.error() ?? ''))
+  );
+};
+```
+
+---
+
+## Composing Fields into Forms
+
+A form is a collection of fields with submission logic:
+
+```typescript
+type FormOptions<T> = {
+  fields: T;
+  onSubmit: (values: { [K in keyof T]: T[K] extends { value: Readable<infer V> } ? V : never }) => void | Promise<void>;
+};
+
+const form = <T extends Record<string, { value: Readable<unknown>; valid: Readable<boolean>; touch: () => void }>>(
+  svc: SignalsSvc
+) => (opts: FormOptions<T>) => {
+  const { signal, computed } = svc;
+
+  const submitting = signal(false);
+  const submitError = signal<string | null>(null);
+
+  const valid = computed(() =>
+    Object.values(opts.fields).every((f) => f.valid())
+  );
+
+  const submit = async () => {
+    // Touch all fields to show errors
+    Object.values(opts.fields).forEach((f) => f.touch());
+
+    if (!valid()) return;
+
+    submitting(true);
+    submitError(null);
+
+    try {
+      const values = Object.fromEntries(
+        Object.entries(opts.fields).map(([k, f]) => [k, f.value()])
+      );
+      await opts.onSubmit(values as Parameters<typeof opts.onSubmit>[0]);
+    } catch (e) {
+      submitError(e instanceof Error ? e.message : 'Submission failed');
+    } finally {
+      submitting(false);
+    }
+  };
+
+  return {
+    fields: opts.fields,
+    valid,
+    submitting,
+    submitError,
+    submit,
+  };
+};
+```
+
+---
+
+## Full Form Example
+
+```typescript
+const SignupForm = (svc: Service) => {
+  const { el, on, computed, match } = svc;
+
+  // Create fields
+  const email = svc(field)({
+    initial: '',
+    validate: (v) => {
+      if (!v) return 'Email is required';
+      if (!v.includes('@')) return 'Invalid email';
+      return null;
+    },
+  });
+
+  const password = svc(field)({
+    initial: '',
+    validate: (v) => {
+      if (!v) return 'Password is required';
+      if (v.length < 8) return 'Password must be at least 8 characters';
+      return null;
+    },
+  });
+
+  // Create form
+  const signup = svc(form)({
+    fields: { email, password },
+    onSubmit: async (values) => {
+      await fetch('/api/signup', {
+        method: 'POST',
+        body: JSON.stringify(values),
+      });
+    },
+  });
+
+  // Field renderer helper
+  const renderField = (
+    label: string,
+    type: string,
+    f: ReturnType<ReturnType<typeof field<string>>>
+  ) => el('div').props({ className: 'field' })(
+    el('label')(label),
+    el('input')
+      .props({
+        type,
+        value: f.value,
+        disabled: signup.submitting,
+      })
+      .ref(
+        on('input', (e) => f.value((e.target as HTMLInputElement).value)),
+        on('blur', () => f.touch())
+      )(),
+    match(f.error, (err) =>
+      err ? el('span').props({ className: 'error' })(err) : null
+    )
+  );
+
+  return el('form')
+    .props({
+      onsubmit: (e: Event) => {
+        e.preventDefault();
+        signup.submit();
+      },
+    })(
+      renderField('Email', 'email', email),
+      renderField('Password', 'password', password),
+
+      // Submit error
+      match(signup.submitError, (err) =>
+        err ? el('div').props({ className: 'submit-error' })(err) : null
+      ),
+
+      // Submit button
+      el('button')
+        .props({
+          type: 'submit',
+          disabled: computed(() => signup.submitting() || !signup.valid()),
+        })(
+          computed(() => signup.submitting() ? 'Signing up...' : 'Sign Up')
+        )
+    );
+};
+```
+
+---
+
+## Validation Patterns
+
+### Synchronous Validation
+
+Most validation is synchronous—check the value, return an error or null:
+
+```typescript
+const required = (msg = 'Required') => (v: string) => v ? null : msg;
+
+const minLength = (n: number) => (v: string) =>
+  v.length >= n ? null : `Must be at least ${n} characters`;
+
+const pattern = (re: RegExp, msg: string) => (v: string) =>
+  re.test(v) ? null : msg;
+
+// Compose validators
+const compose = <T>(...validators: ((v: T) => string | null)[]) => (v: T) => {
+  for (const validate of validators) {
+    const error = validate(v);
+    if (error) return error;
+  }
+  return null;
+};
+
+// Usage
+const username = svc(field)({
+  initial: '',
+  validate: compose(
+    required('Username is required'),
+    minLength(3),
+    pattern(/^[a-z0-9_]+$/, 'Only lowercase letters, numbers, and underscores')
+  ),
+});
+```
+
+### Async Validation
+
+For validation that requires a server check (e.g., username availability):
+
+```typescript
+const asyncField = <T>(svc: SignalsSvc) => (opts: {
+  initial: T;
+  validate?: (value: T) => string | null;
+  asyncValidate?: (value: T) => Promise<string | null>;
+  debounceMs?: number;
+}) => {
+  const { signal, computed, effect } = svc;
+
+  const base = field(svc)(opts);
+  const asyncError = signal<string | null>(null);
+  const validating = signal(false);
+
+  let timeout: number | undefined;
+
+  // Run async validation when value changes
+  effect(() => {
+    const v = base.value();
+    const syncError = opts.validate?.(v);
+
+    // Skip async if sync fails
+    if (syncError || !opts.asyncValidate) {
+      asyncError(null);
+      return;
+    }
+
+    clearTimeout(timeout);
+    validating(true);
+
+    timeout = window.setTimeout(async () => {
+      try {
+        const err = await opts.asyncValidate!(v);
+        asyncError(err);
+      } finally {
+        validating(false);
+      }
+    }, opts.debounceMs ?? 300);
+  });
+
+  return {
+    ...base,
+    validating,
+    error: computed(() => base.error() ?? asyncError()),
+    valid: computed(() => !base.error() && !asyncError() && !validating()),
+  };
+};
+
+// Usage
+const username = svc(asyncField)({
+  initial: '',
+  validate: required('Username is required'),
+  asyncValidate: async (v) => {
+    const res = await fetch(`/api/check-username?q=${v}`);
+    const { available } = await res.json();
+    return available ? null : 'Username is taken';
+  },
+  debounceMs: 500,
+});
+```
+
+---
+
+## Dependent Fields
+
+When one field's validation depends on another:
+
+```typescript
+const password = svc(field)({
+  initial: '',
+  validate: minLength(8),
+});
+
+const confirmPassword = svc(field)({
+  initial: '',
+  validate: (v) => {
+    if (!v) return 'Required';
+    if (v !== password.value()) return 'Passwords do not match';
+    return null;
+  },
+});
+```
+
+<Aside type="caution">
+The `confirmPassword` validation reads `password.value()`. This means the validation re-runs whenever either field changes—which is what you want for this case.
+</Aside>
+
+---
+
+## Field Arrays
+
+For dynamic lists of fields (e.g., adding/removing tags):
+
+```typescript
+const fieldArray = <T>(svc: SignalsSvc) => (opts: {
+  initial: T[];
+  validateItem?: (value: T) => string | null;
+}) => {
+  const { signal, computed } = svc;
+
+  const items = signal(
+    opts.initial.map((v) => field(svc)({ initial: v, validate: opts.validateItem }))
+  );
+
+  const values = computed(() => items().map((f) => f.value()));
+  const valid = computed(() => items().every((f) => f.valid()));
+
+  return {
+    items,
+    values,
+    valid,
+    add: (value: T) => {
+      items([...items(), field(svc)({ initial: value, validate: opts.validateItem })]);
+    },
+    remove: (index: number) => {
+      items(items().filter((_, i) => i !== index));
+    },
+  };
+};
+
+// Usage
+const tags = svc(fieldArray)({
+  initial: ['javascript', 'typescript'],
+  validateItem: (v) => v.length > 0 ? null : 'Tag cannot be empty',
+});
+
+tags.add('react');
+tags.remove(0);
+tags.values(); // ['typescript', 'react']
+```
+
+---
+
+## When to Use This Pattern
+
+**Good for:**
+- Login/signup forms
+- Settings pages
+- Any form with validation feedback
+- Multi-step wizards
+
+**Overkill for:**
+- Simple search inputs (just use a signal)
+- Forms without validation
+- One-off inputs that don't need error states
+
+<Aside type="tip">
+Start simple. A signal is often enough for a form field. Add the field behavior when you need validation, touched state, or error display.
+</Aside>

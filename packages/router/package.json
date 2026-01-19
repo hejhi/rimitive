@@ -1,0 +1,77 @@
+{
+  "name": "@rimitive/router",
+  "version": "0.1.0",
+  "description": "Minimal client-side routing for Rimitive",
+  "author": "Rimitive Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/rimitive",
+    "directory": "packages/router"
+  },
+  "keywords": [
+    "rimitive",
+    "router",
+    "routing",
+    "spa",
+    "navigation"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./route": {
+      "import": "./dist/route.js",
+      "types": "./dist/route.d.ts"
+    },
+    "./link": {
+      "import": "./dist/link.js",
+      "types": "./dist/link.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    },
+    "./ssr-context": {
+      "import": "./dist/ssr-context.js",
+      "types": "./dist/ssr-context.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx --ignore-pattern 'src/presets/server.ts'",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "test": "vitest run",
+    "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.6",
+    "esbuild": "0.27.2",
+    "happy-dom": "20.3.3",
+    "rimraf": "6.1.2",
+    "terser": "5.46.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.17"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

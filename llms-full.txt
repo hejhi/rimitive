@@ -1,0 +1,788 @@
+# Rimitive - Complete LLM Documentation
+
+> A modular reactive UI framework for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
+
+This document provides complete context for LLMs to write idiomatic Rimitive code.
+
+---
+
+## 1. Core Philosophy
+
+Rimitive is built on **module composition**. You pick modules you need; `compose()` wires them together into a **reactive service**.
+
+Key principles:
+- **Composition over configuration**: No global state, no magic. Everything is explicitly composed.
+- **Fine-grained reactivity**: Updates propagate to exactly what changed, nothing more.
+- **Synchronous effects**: When a signal changes, effects run immediately (not deferred).
+- **Portability**: Behaviors and components are plain functions that receive the service.
+
+---
+
+## 2. Composition
+
+### Basic Setup
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+const svc = compose(SignalModule, ComputedModule, EffectModule);
+const { signal, computed, effect } = svc;
+```
+
+`compose()` returns a `Use<T>` - a callable object with all module implementations as properties.
+
+### The Use Pattern
+
+The service (`svc`) is both an object with properties AND a callable:
+
+```typescript
+// Access primitives as properties
+const count = svc.signal(0);
+
+// Call with a function to inject the service (behavior pattern)
+const useCounter = svc(counter);
+```
+
+### Adding More Modules
+
+```typescript
+import { BatchModule } from '@rimitive/signals/extend';
+
+const svc = compose(SignalModule, ComputedModule, EffectModule, BatchModule);
+const { signal, computed, effect, batch } = svc;
+```
+
+### Cleanup
+
+Every composed service must be disposed when no longer needed:
+
+```typescript
+const svc = compose(SignalModule, ComputedModule, EffectModule);
+// ... use svc ...
+svc.dispose(); // Cleans up all effects and subscriptions
+```
+
+---
+
+## 3. Signal Primitives
+
+### signal(value)
+
+Creates reactive state:
+
+```typescript
+const count = signal(0);
+
+count();      // Read: 0
+count(1);     // Write: 1
+count();      // Read: 1
+count.peek(); // Read without tracking: 1
+```
+
+### computed(fn)
+
+Derives values from signals:
+
+```typescript
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+
+doubled();    // 0
+count(5);
+doubled();    // 10
+```
+
+Computeds are lazy - they only recompute when read after a dependency changes.
+
+### effect(fn)
+
+Runs side effects when dependencies change:
+
+```typescript
+effect(() => {
+  console.log('Count is now:', count());
+});
+// Logs immediately: "Count is now: 0"
+
+count(10);
+// Logs immediately: "Count is now: 10"
+```
+
+**Important**: Effects are **synchronous**. They run immediately when a dependency changes, not on the next tick.
+
+Effects can return a cleanup function:
+
+```typescript
+effect(() => {
+  const handler = () => console.log('clicked');
+  document.addEventListener('click', handler);
+  return () => document.removeEventListener('click', handler);
+});
+```
+
+### batch(fn)
+
+Groups multiple updates into one notification:
+
+```typescript
+const a = signal(1);
+const b = signal(2);
+
+effect(() => console.log(a() + b())); // Logs: 3
+
+batch(() => {
+  a(10);
+  b(20);
+});
+// Logs once: 30 (not twice)
+```
+
+---
+
+## 4. View Primitives
+
+View modules are factories that take an adapter:
+
+```typescript
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter),
+  MountModule
+);
+
+const { el, map, match, mount } = svc;
+```
+
+### el(tag)
+
+Creates elements with a curried API:
+
+```typescript
+// Basic element
+const div = el('div')();
+
+// With text content
+const heading = el('h1')('Hello, World');
+
+// With children
+const container = el('div')(
+  el('h1')('Title'),
+  el('p')('Content')
+);
+```
+
+### el(tag).props({...})
+
+Sets attributes and event handlers:
+
+```typescript
+const button = el('button').props({
+  className: 'primary',
+  disabled: false,
+  onclick: () => console.log('clicked'),
+})('Click me');
+```
+
+Props can be reactive:
+
+```typescript
+const isDisabled = signal(false);
+
+const button = el('button').props({
+  disabled: isDisabled,  // Reactive prop
+  className: computed(() => isDisabled() ? 'disabled' : 'enabled'),
+})('Submit');
+```
+
+### el(tag).ref(...callbacks)
+
+Attaches lifecycle callbacks:
+
+```typescript
+const input = el('input').ref(
+  (element) => {
+    element.focus();
+    return () => console.log('element removed');
+  }
+)();
+```
+
+### Reactive Content
+
+Pass computeds as children for reactive text:
+
+```typescript
+const count = signal(0);
+
+const display = el('div')(
+  computed(() => `Count: ${count()}`)
+);
+```
+
+### map(items, keyFn?, renderFn)
+
+Renders reactive lists efficiently:
+
+```typescript
+// Primitive arrays (no key needed)
+const names = signal(['Alice', 'Bob']);
+const list = el('ul')(
+  map(names, (name) => el('li')(name))
+);
+
+// Object arrays (provide key function)
+const todos = signal([{ id: 1, text: 'Learn' }]);
+const list = el('ul')(
+  map(
+    todos,
+    (t) => t.id,  // Key function
+    (todo) => el('li')(computed(() => todo().text))
+  )
+);
+```
+
+Each item is wrapped in a signal - use `todo()` to read.
+
+### match(reactive, renderFn)
+
+Conditional rendering:
+
+```typescript
+const showMessage = signal(true);
+
+const content = match(showMessage, (show) =>
+  show ? el('div')('Hello!') : null
+);
+
+// Multi-way switch
+const tab = signal<'home' | 'about'>('home');
+
+const page = match(tab, (t) => {
+  switch (t) {
+    case 'home': return el('div')('Home');
+    case 'about': return el('div')('About');
+  }
+});
+```
+
+### mount(spec)
+
+Instantiates a spec and attaches to DOM:
+
+```typescript
+const App = () => el('div')(el('h1')('My App'));
+
+const app = mount(App());
+document.body.appendChild(app.element!);
+```
+
+### portal(target)(children)
+
+Renders to a different DOM location:
+
+```typescript
+import { createPortalModule } from '@rimitive/view/portal';
+
+const svc = compose(..., createPortalModule(adapter));
+const { portal } = svc;
+
+// Render modal to document.body
+const modal = portal()(
+  el('div').props({ className: 'modal' })('Modal content')
+);
+
+// Render to specific element
+portal(() => document.getElementById('tooltips'))(
+  el('div')('Tooltip')
+);
+```
+
+---
+
+## 5. Behaviors
+
+Behaviors are portable functions that bundle reactive logic without UI.
+
+### Simple Pattern (tied to service)
+
+```typescript
+// behaviors/useCounter.ts
+import { signal, computed } from '../service';
+
+export const useCounter = (initial = 0) => {
+  const count = signal(initial);
+  const doubled = computed(() => count() * 2);
+
+  return {
+    count,
+    doubled,
+    increment: () => count(count() + 1),
+  };
+};
+```
+
+### Portable Pattern (service injection)
+
+```typescript
+const counter = ({ signal, computed }) => (initial = 0) => {
+  const count = signal(initial);
+  const doubled = computed(() => count() * 2);
+
+  return {
+    count,
+    doubled,
+    increment: () => count(count() + 1),
+    reset: () => count(initial),
+  };
+};
+
+// Usage
+const useCounter = svc(counter);
+const c = useCounter(10);
+c.increment();
+c.count(); // 11
+```
+
+Three levels:
+1. `(svc) =>` - Receives service (dependency injection)
+2. `(options) =>` - Factory with arguments
+3. `{ return api }` - The API consumers use
+
+### Composing Behaviors
+
+```typescript
+const disclosure = ({ signal }) => (initialOpen = false) => {
+  const isOpen = signal(initialOpen);
+  return {
+    isOpen,
+    open: () => isOpen(true),
+    close: () => isOpen(false),
+    toggle: () => isOpen(!isOpen()),
+  };
+};
+
+const dropdown = (svc) => {
+  const useDisclosure = svc(disclosure);
+
+  return (opts = {}) => {
+    const disc = useDisclosure(opts.initialOpen ?? false);
+    return {
+      ...disc,
+      onKeyDown: (e) => {
+        if (e.key === 'Escape') disc.close();
+      },
+    };
+  };
+};
+```
+
+---
+
+## 6. Components
+
+Components are functions that return elements. They run once (not re-rendered).
+
+```typescript
+const Counter = (initial: number) => {
+  const { count, increment, decrement } = svc(counter)(initial);
+
+  return el('div')(
+    el('div')(computed(() => `Count: ${count()}`)),
+    el('button').props({ onclick: decrement })('-'),
+    el('button').props({ onclick: increment })('+')
+  );
+};
+
+// Usage
+const app = el('div')(
+  Counter(0),
+  Counter(100)
+);
+```
+
+**Important**: Component functions execute once to build the element tree. All reactivity is in the signals/computeds - there's no re-rendering at the function level.
+
+### Portable Components
+
+```typescript
+const Counter = (svc) => {
+  const { el, computed } = svc;
+  const useCounter = svc(counter);
+
+  return (initial: number) => {
+    const { count, increment, decrement } = useCounter(initial);
+    // ... same as above
+  };
+};
+```
+
+---
+
+## 7. Event Handling
+
+### Props Events
+
+Simple click handlers via props:
+
+```typescript
+el('button').props({
+  onclick: () => count(count() + 1)
+})('Click me');
+```
+
+### on() Helper
+
+For automatic cleanup and batching:
+
+```typescript
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+
+const svc = compose(..., OnModule);
+const { on } = svc;
+
+const button = el('button').ref(
+  on('click', () => count(count() + 1))
+)('Click me');
+
+// Multiple listeners
+const input = el('input').ref(
+  on('focus', () => console.log('focused')),
+  on('blur', () => console.log('blurred')),
+  on('input', (e) => text((e.target as HTMLInputElement).value))
+)();
+```
+
+Event options:
+
+```typescript
+on('click', handler, { capture: true });
+on('scroll', handler, { passive: true });
+```
+
+---
+
+## 8. Routing
+
+```typescript
+import { createRouterModule } from '@rimitive/router';
+import { Link } from '@rimitive/router/link';
+
+const routes = [
+  { id: 'home', path: '' },
+  { id: 'about', path: 'about' },
+  { id: 'product', path: 'products/:id' },
+];
+
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule,
+  createElModule(adapter), createMatchModule(adapter), MountModule,
+  createRouterModule(routes)
+);
+
+const { el, match, mount, router } = svc;
+
+// Read reactive state
+router.currentPath();  // '/about'
+router.matches();      // [{ id: 'about', params: {}, ... }]
+router.query();        // { sort: 'price' }
+
+// Navigate
+router.navigate('/products/123');
+
+// Render based on route
+const App = () => el('div')(
+  el('nav')(
+    Link({ href: '/' })('Home'),
+    Link({ href: '/about' })('About')
+  ),
+  match(router.matches, (matches) => {
+    const route = matches[0];
+    if (!route) return NotFound();
+    switch (route.id) {
+      case 'home': return Home();
+      case 'about': return About();
+      case 'product': return Product(route.params.id);
+      default: return NotFound();
+    }
+  })
+);
+```
+
+---
+
+## 9. Data Loading
+
+### resource()
+
+Reactive data fetching with automatic cancellation:
+
+```typescript
+import { ResourceModule } from '@rimitive/resource';
+
+const svc = compose(..., ResourceModule);
+const { resource, signal } = svc;
+
+// Basic resource
+const items = resource((signal) =>
+  fetch('/api/items', { signal }).then(r => r.json())
+);
+
+// Read state
+items();           // { status: 'pending' | 'ready' | 'error', ... }
+items.loading();   // boolean
+items.data();      // T | undefined
+items.error();     // Error | undefined
+
+// Reactive dependencies
+const categoryId = signal(1);
+
+const products = resource((signal) =>
+  fetch(`/api/products?category=${categoryId()}`, { signal })
+    .then(r => r.json())
+);
+
+categoryId(2); // Auto-cancels previous, fetches new
+
+// Manual control
+products.refetch();
+products.dispose();
+```
+
+---
+
+## 10. Import Reference
+
+```typescript
+// Core composition
+import { compose, merge, defineModule } from '@rimitive/core';
+import type { Module, Use, ComposedContext } from '@rimitive/core';
+
+// Signal modules
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  SubscribeModule,
+  UntrackModule
+} from '@rimitive/signals/extend';
+
+// Signal types
+import type { Readable, Writable, Reactive, SignalFunction, ComputedFunction } from '@rimitive/signals';
+
+// View modules (factory pattern)
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { createPortalModule } from '@rimitive/view/portal';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+
+// Adapters
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+
+// Router
+import { createRouterModule } from '@rimitive/router';
+import { Link } from '@rimitive/router/link';
+
+// Resource
+import { ResourceModule } from '@rimitive/resource';
+```
+
+---
+
+## 11. Complete Example
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+
+// Setup
+const adapter = createDOMAdapter();
+const svc = compose(
+  SignalModule, ComputedModule, EffectModule, BatchModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter),
+  OnModule,
+  MountModule
+);
+
+const { el, map, match, on, signal, computed, mount } = svc;
+
+// Types
+type Todo = { id: number; text: string; done: boolean };
+
+// State
+const todos = signal<Todo[]>([]);
+const filter = signal<'all' | 'active' | 'done'>('all');
+const input = signal('');
+let nextId = 0;
+
+// Derived
+const filtered = computed(() => {
+  const f = filter();
+  return todos().filter(t =>
+    f === 'all' ? true : f === 'done' ? t.done : !t.done
+  );
+});
+
+// Actions
+const add = () => {
+  const text = input().trim();
+  if (!text) return;
+  todos([...todos(), { id: nextId++, text, done: false }]);
+  input('');
+};
+
+const toggle = (id: number) => {
+  todos(todos().map(t =>
+    t.id === id ? { ...t, done: !t.done } : t
+  ));
+};
+
+// App
+const App = () => el('div')(
+  el('h1')('Todos'),
+
+  el('div')(
+    el('input').props({ value: input }).ref(
+      on('input', (e) => input((e.target as HTMLInputElement).value)),
+      on('keydown', (e) => { if (e.key === 'Enter') add(); })
+    )(),
+    el('button').props({ onclick: add })('Add')
+  ),
+
+  el('ul')(
+    map(filtered, (t) => t.id, (todo) =>
+      el('li').props({
+        className: computed(() => todo().done ? 'done' : '')
+      })(
+        el('input').props({
+          type: 'checkbox',
+          checked: computed(() => todo().done),
+          onclick: () => toggle(todo().id)
+        })(),
+        el('span')(computed(() => todo().text))
+      )
+    )
+  ),
+
+  match(filtered, (items) =>
+    items.length === 0 ? el('p')('No todos') : null
+  )
+);
+
+// Mount
+const app = mount(App());
+document.body.appendChild(app.element!);
+```
+
+---
+
+## 12. Common Patterns
+
+### Service Definition File
+
+```typescript
+// service.ts
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule, BatchModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+
+const adapter = createDOMAdapter();
+
+export const svc = compose(
+  SignalModule, ComputedModule, EffectModule, BatchModule,
+  createElModule(adapter),
+  createMapModule(adapter),
+  createMatchModule(adapter),
+  OnModule, MountModule
+);
+
+export const { signal, computed, effect, batch, el, map, match, on, mount } = svc;
+export type Service = typeof svc;
+```
+
+### Controlled Input
+
+```typescript
+const text = signal('');
+
+el('input').props({
+  type: 'text',
+  value: text,
+}).ref(
+  on('input', (e) => text((e.target as HTMLInputElement).value))
+)();
+```
+
+### Conditional Class
+
+```typescript
+el('div').props({
+  className: computed(() => isActive() ? 'active' : '')
+})();
+```
+
+### Cleanup on Unmount
+
+```typescript
+const Component = () => {
+  const interval = setInterval(() => console.log('tick'), 1000);
+
+  return el('div').ref(() => {
+    return () => clearInterval(interval);
+  })('...');
+};
+```
+
+### Testing Behaviors
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { svc } from './service';
+import { counter } from './behaviors/counter';
+
+describe('counter', () => {
+  it('increments', () => {
+    const c = svc(counter)(0);
+    c.increment();
+    c.increment();
+    expect(c.count()).toBe(2);
+  });
+});
+```
+
+---
+
+## 13. Key Differences from React
+
+1. **No Virtual DOM**: Fine-grained updates directly to DOM nodes.
+2. **Synchronous Effects**: Effects run immediately, not deferred.
+3. **Functions Run Once**: Components are not re-rendered; signals handle updates.
+4. **Explicit Service**: Primitives come from composed service, not global imports.
+5. **No JSX Required**: Use `el()` function calls (JSX optional via adapters).
+6. **Curried Element API**: `el(tag).props({...})(...children)` vs `<tag {...props}>{children}</tag>`.

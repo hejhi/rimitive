@@ -1,0 +1,55 @@
+---
+title: Creating a Service
+description: The most basic Rimitive setup—composing modules into a reactive service.
+---
+
+Here's the simplest Rimitive setup:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/extend';
+
+const svc = compose(SignalModule);
+const { signal } = svc;
+```
+
+`compose()` takes primitive modules and returns a reactive service with only the primitives you asked for.
+
+---
+
+## Adding More Primitives
+
+Need more primitives? Add them!
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
+```
+
+Then use them:
+
+```typescript
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+
+effect(() => {
+  console.log('Count is now:', count());
+});
+
+// ...etc
+```
+
+---
+
+## Why Compose?
+
+You might wonder: why not just export these functions directly?
+
+Each `compose()` call creates an independent reactive context with no global leakage. This means:
+
+- **Isolation** — Multiple services don't interfere with each other
+- **Testing** — Fresh contexts per test, no cleanup needed
+- **Tree-shaking** — Only bundle what you use
+- **Extensibility** — Add [view modules](/guides/adding-a-ui), [router](/guides/adding-routing), or [custom modules](/guides/custom-modules) later

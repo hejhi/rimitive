@@ -1,0 +1,21 @@
+{
+  "name": "@rimitive/docs",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm lint"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.37.3",
+    "astro": "5.16.11",
+    "sharp": "0.34.5"
+  }
+}

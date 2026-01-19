@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Build devtools extension zip
+        run: pnpm --filter @rimitive/devtools-extension zip
+
+      - name: Create Release Pull Request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: pnpm changeset publish
+          version: pnpm changeset version
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        if: steps.changesets.outputs.published == 'true'
+        run: echo "🎉 Published to npm!"
+
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const publishedPackages = ${{ steps.changesets.outputs.publishedPackages }};
+
+            for (const pkg of publishedPackages) {
+              const release = await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: `${pkg.name}@${pkg.version}`,
+                name: `${pkg.name}@${pkg.version}`,
+                body: `Published ${pkg.name} version ${pkg.version}`,
+                draft: false,
+                prerelease: false
+              });
+
+              // Upload devtools extension zip if this is the devtools-extension package
+              if (pkg.name === '@rimitive/devtools-extension') {
+                const zipDir = 'packages/devtools-extension/.output';
+                const files = fs.readdirSync(zipDir);
+                const chromeZip = files.find(f => f.endsWith('-chrome.zip'));
+
+                if (chromeZip) {
+                  const zipPath = path.join(zipDir, chromeZip);
+                  const zipContent = fs.readFileSync(zipPath);
+
+                  await github.rest.repos.uploadReleaseAsset({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    release_id: release.data.id,
+                    name: `rimitive-devtools-${pkg.version}-chrome.zip`,
+                    data: zipContent
+                  });
+
+                  console.log(`Uploaded ${chromeZip} to release`);
+                }
+              }
+            }

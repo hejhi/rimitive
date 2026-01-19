@@ -1,0 +1,7 @@
+{
+  "name": "rimitive-module",
+  "version": "1.0.0",
+  "description": "Create custom modules with defineModule for extending Rimitive",
+  "author": { "name": "Rimitive" },
+  "skills": ["./skills/"]
+}

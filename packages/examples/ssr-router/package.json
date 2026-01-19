@@ -1,0 +1,28 @@
+{
+  "name": "@rimitive/example-ssr-router",
+  "version": "0.0.5",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build:server": "tsc --project tsconfig.server.json",
+    "build:client": "vite build",
+    "build": "pnpm build:server && pnpm build:client",
+    "start": "node dist/server/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/resource": "workspace:*",
+    "@rimitive/router": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/ssr": "workspace:*",
+    "@rimitive/view": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.6",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
+  }
+}

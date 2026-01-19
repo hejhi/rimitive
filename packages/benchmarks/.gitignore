@@ -1,0 +1,13 @@
+# Benchmark results
+bench-results*.json
+bench-results*.html
+bench-results*.md
+bench-baseline*.json
+
+# Chunked benchmark output
+dist/
+
+# Temporary files
+*.tmp
+*.log
+.temp-bundle/

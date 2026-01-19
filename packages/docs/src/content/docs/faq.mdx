@@ -1,0 +1,54 @@
+---
+title: FAQ
+description: Frequently asked questions about Rimitive.
+---
+
+## Why?
+
+See [Why Rimitive?](/why/) for the full story.
+
+---
+
+## Is it fast/tiny/etc?
+
+Yes:
+
+- ⚡️ Performance is on par with Preact and alien-signals (see our [benchmarks](/benchmarks/))
+- 📦 Bundle sizes are tiny and gruesomely tree-shake-able. No compilation required—compose only what you need, and unless a package or module is specifically for the DOM, it's entirely environment agnostic with no global state (safe for SSR and React concurrent mode).
+- 🌝 Type-safe all the way down
+
+---
+
+## Will it work with [my favorite framework]?
+
+Only React bindings so far, but look at those bindings—they're simple. Try writing one "yourself" (i.e., with Claude) with the ergonomics you prefer! No bindings needed for vanilla TypeScript.
+
+---
+
+## Are there docs and examples?
+
+You're looking at the docs! And yes, there are [examples](https://github.com/hejhi/rimitive/tree/main/packages/examples).
+
+---
+
+## Are there devtools?
+
+A bit noisy and perhaps overly granular, but yes (and written entirely with Rimitive!).
+
+---
+
+## Are there tests?
+
+Many.
+
+---
+
+## SSR and React concurrent mode?
+
+No module-level or global state—each `compose()` call creates isolated state, so it's safe for SSR (multiple requests) and React concurrent mode (interrupted renders).
+
+---
+
+## "Rimitive primitives"??
+
+I SAID BEFORE. Leave. me. be.

@@ -1,0 +1,1 @@
+# @rimitive/resource

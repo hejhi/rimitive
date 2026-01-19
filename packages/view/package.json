@@ -1,0 +1,133 @@
+{
+  "name": "@rimitive/view",
+  "version": "0.1.0",
+  "description": "Reactive DOM primitives for Rimitive",
+  "author": "Rimitive Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/rimitive",
+    "directory": "packages/view"
+  },
+  "keywords": [
+    "rimitive",
+    "view",
+    "dom",
+    "reactive",
+    "ui",
+    "components"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./extend": {
+      "import": "./dist/extend.js",
+      "types": "./dist/extend.d.ts"
+    },
+    "./adapters/dom": {
+      "import": "./dist/adapters/dom.js",
+      "types": "./dist/adapters/dom.d.ts"
+    },
+    "./adapters/test": {
+      "import": "./dist/adapters/test.js",
+      "types": "./dist/adapters/test.d.ts"
+    },
+    "./el": {
+      "import": "./dist/el.js",
+      "types": "./dist/el.d.ts"
+    },
+    "./match": {
+      "import": "./dist/match.js",
+      "types": "./dist/match.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    },
+    "./deps/scope": {
+      "import": "./dist/deps/scope.js",
+      "types": "./dist/deps/scope.d.ts"
+    },
+    "./deps/processChildren": {
+      "import": "./dist/deps/processChildren.js",
+      "types": "./dist/deps/processChildren.d.ts"
+    },
+    "./deps/addEventListener": {
+      "import": "./dist/deps/addEventListener.js",
+      "types": "./dist/deps/addEventListener.d.ts"
+    },
+    "./deps/mount": {
+      "import": "./dist/deps/mount.js",
+      "types": "./dist/deps/mount.d.ts"
+    },
+    "./deps/use": {
+      "import": "./dist/deps/use.js",
+      "types": "./dist/deps/use.d.ts"
+    },
+    "./deps/node-deps": {
+      "import": "./dist/deps/node-deps.js",
+      "types": "./dist/deps/node-deps.d.ts"
+    },
+    "./deps/fragment-boundaries": {
+      "import": "./dist/deps/fragment-boundaries.js",
+      "types": "./dist/deps/fragment-boundaries.d.ts"
+    },
+    "./adapter": {
+      "import": "./dist/adapter.js",
+      "types": "./dist/adapter.d.ts"
+    },
+    "./map": {
+      "import": "./dist/map.js",
+      "types": "./dist/map.d.ts"
+    },
+    "./load": {
+      "import": "./dist/load.js",
+      "types": "./dist/load.d.ts"
+    },
+    "./portal": {
+      "import": "./dist/portal.js",
+      "types": "./dist/portal.d.ts"
+    },
+    "./devtools": {
+      "import": "./dist/devtools/index.js",
+      "types": "./dist/devtools/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "test": "vitest run",
+    "api-extract": "mkdir -p api-reports temp && api-extractor run --local --verbose"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@rimitive/signals": "workspace:*",
+    "@types/node": "25.0.6",
+    "esbuild": "0.27.2",
+    "happy-dom": "20.3.3",
+    "rimraf": "6.1.2",
+    "terser": "5.46.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.17"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

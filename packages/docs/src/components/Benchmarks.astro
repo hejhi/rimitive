@@ -1,0 +1,440 @@
+---
+import benchmarkData from '../data/benchmarks.json';
+
+type Benchmark = {
+  name: string;
+  time: number;
+  min: number;
+  max: number;
+  avg: number;
+  p50: number;
+  p75: number;
+  p99: number;
+  args?: Record<string, unknown>;
+};
+
+type Suite = {
+  name: string;
+  benchmarks: Benchmark[];
+};
+
+type BenchmarkData = {
+  timestamp: string;
+  commit: string;
+  system: {
+    node: string;
+    platform: string;
+    arch: string;
+    cpus: number;
+    memory_gb: number;
+    cpu_model: string;
+  };
+  suites: Suite[];
+};
+
+const data = benchmarkData as BenchmarkData;
+const hasData = data.suites.length > 0;
+
+function formatTime(ns: number): string {
+  if (ns < 1000) return `${ns.toFixed(2)} ns`;
+  if (ns < 1_000_000) return `${(ns / 1000).toFixed(2)} µs`;
+  if (ns < 1_000_000_000) return `${(ns / 1_000_000).toFixed(2)} ms`;
+  return `${(ns / 1_000_000_000).toFixed(2)} s`;
+}
+
+function formatDate(isoString: string): string {
+  if (!isoString) return 'N/A';
+  return new Date(isoString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+// Display names for framework columns
+const frameworkDisplayNames: Record<string, string> = {
+  'Rimitive': 'Rimitive Signals',
+  'Preact': 'Preact Signals',
+  'Alien': 'Alien Signals',
+};
+
+function getDisplayName(fw: string): string {
+  return frameworkDisplayNames[fw] || fw;
+}
+
+// Group benchmarks by their base name (framework) for comparison
+function groupByFramework(benchmarks: Benchmark[]): Map<string, Benchmark[]> {
+  const groups = new Map<string, Benchmark[]>();
+
+  for (const bench of benchmarks) {
+    if (!bench?.name) continue;
+    // Extract framework name (e.g., "Rimitive", "Preact", "Alien")
+    const match = bench.name.match(/^(\w+)/);
+    const framework = match ? match[1] : 'Other';
+
+    if (!groups.has(framework)) {
+      groups.set(framework, []);
+    }
+    groups.get(framework)!.push(bench);
+  }
+
+  return groups;
+}
+
+const medalColors = ['#D4AF37', '#A8A8A8', '#CD7F32']; // gold, silver, bronze
+const medalEmojis = ['🥇', '🥈', '🥉'];
+const tieColor = '#6B9F8B'; // muted teal for ties
+const EQUIVALENCE_THRESHOLD = 0.05; // 5% margin - within this is considered equivalent (0.95x to 1.05x)
+
+type RankInfo = {
+  color: string;
+  isTie: boolean;
+};
+
+// Get ranking info for a framework at a given row index
+// Medal assignment rules:
+// 1. Sort all frameworks by time (fastest first)
+// 2. Frameworks within 5% of Rimitive share the same medal position (tie color)
+// 3. Frameworks faster than 5% of Rimitive get better medals
+// 4. Frameworks slower than 5% of Rimitive get worse medals
+function getRankInfo(
+  frameworks: string[],
+  grouped: Map<string, Benchmark[]>,
+  idx: number,
+  fw: string
+): RankInfo {
+  const rimitiveGroup = grouped.get('Rimitive') || [];
+  const rimitiveTime = rimitiveGroup[idx]?.time;
+
+  if (!rimitiveTime) {
+    return { color: medalColors[2]!, isTie: false };
+  }
+
+  const timesWithFw = frameworks.map(f => {
+    const fwGroup = grouped.get(f) || [];
+    const time = fwGroup[idx]?.time ?? Infinity;
+    const ratio = time / rimitiveTime;
+    return { fw: f, time, ratio };
+  }).filter(t => t.time !== Infinity);
+
+  // Sort by time for ranking
+  const sorted = [...timesWithFw].sort((a, b) => a.time - b.time);
+
+  // Separate into three groups based on ratio to Rimitive
+  const fasterThanBaseline = sorted.filter(s => s.ratio < 1 - EQUIVALENCE_THRESHOLD);
+  const tiedWithBaseline = sorted.filter(s => s.ratio >= 1 - EQUIVALENCE_THRESHOLD && s.ratio <= 1 + EQUIVALENCE_THRESHOLD);
+  const slowerThanBaseline = sorted.filter(s => s.ratio > 1 + EQUIVALENCE_THRESHOLD);
+
+  const current = timesWithFw.find(t => t.fw === fw);
+  if (!current) {
+    return { color: medalColors[2]!, isTie: false };
+  }
+
+  // Check if this framework is tied with baseline
+  const isTied = current.ratio >= 1 - EQUIVALENCE_THRESHOLD && current.ratio <= 1 + EQUIVALENCE_THRESHOLD;
+
+  // Calculate medal index based on group membership
+  let medalIdx = 0;
+
+  // Check if in faster group
+  const fasterIdx = fasterThanBaseline.findIndex(s => s.fw === fw);
+  if (fasterIdx !== -1) {
+    medalIdx = fasterIdx;
+    return { color: medalColors[Math.min(medalIdx, 2)]!, isTie: false };
+  }
+
+  // Check if in tied group
+  if (isTied) {
+    medalIdx = fasterThanBaseline.length;
+    // Use tie color if multiple frameworks are tied, otherwise gold
+    if (tiedWithBaseline.length > 1) {
+      return { color: tieColor, isTie: true };
+    }
+    return { color: medalColors[Math.min(medalIdx, 2)]!, isTie: false };
+  }
+
+  // Must be in slower group
+  const slowerIdx = slowerThanBaseline.findIndex(s => s.fw === fw);
+  medalIdx = fasterThanBaseline.length + (tiedWithBaseline.length > 0 ? 1 : 0) + slowerIdx;
+  return { color: medalColors[Math.min(medalIdx, 2)]!, isTie: false };
+}
+
+// Get overall medal emoji for a framework based on average performance
+// Medal assignment rules:
+// 1. Sort all frameworks by time (fastest first)
+// 2. Frameworks within 5% of Rimitive share the same medal position
+// 3. Frameworks faster than 5% of Rimitive get better medals
+// 4. Frameworks slower than 5% of Rimitive get worse medals
+function getOverallMedal(
+  frameworks: string[],
+  grouped: Map<string, Benchmark[]>
+): Map<string, string> {
+  const rimitiveGroup = grouped.get('Rimitive') || [];
+  const rimitiveAvg = rimitiveGroup.length > 0
+    ? rimitiveGroup.reduce((sum, b) => sum + b.time, 0) / rimitiveGroup.length
+    : Infinity;
+
+  const avgTimes = frameworks.map(fw => {
+    const benchmarks = grouped.get(fw) || [];
+    const times = benchmarks.map(b => b.time).filter(t => t != null);
+    const avg = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : Infinity;
+    const ratio = avg / rimitiveAvg;
+    return { fw, avg, ratio };
+  });
+
+  const sorted = [...avgTimes].sort((a, b) => a.avg - b.avg);
+
+  // Separate into three groups based on ratio to Rimitive
+  const fasterThanBaseline = sorted.filter(s => s.ratio < 1 - EQUIVALENCE_THRESHOLD);
+  const tiedWithBaseline = sorted.filter(s => s.ratio >= 1 - EQUIVALENCE_THRESHOLD && s.ratio <= 1 + EQUIVALENCE_THRESHOLD);
+  const slowerThanBaseline = sorted.filter(s => s.ratio > 1 + EQUIVALENCE_THRESHOLD);
+
+  const result = new Map<string, string>();
+  let medalIdx = 0;
+
+  // Faster frameworks each get their own medal (ranked by time)
+  for (const item of fasterThanBaseline) {
+    result.set(item.fw, medalEmojis[medalIdx] || '');
+    medalIdx++;
+  }
+
+  // Tied frameworks all share the same medal
+  const tiedMedal = medalEmojis[medalIdx] || '';
+  for (const item of tiedWithBaseline) {
+    result.set(item.fw, tiedMedal);
+  }
+  if (tiedWithBaseline.length > 0) {
+    medalIdx++;
+  }
+
+  // Slower frameworks each get their own medal (ranked by time)
+  for (const item of slowerThanBaseline) {
+    result.set(item.fw, medalEmojis[medalIdx] || '');
+    medalIdx++;
+  }
+
+  return result;
+}
+---
+
+{!hasData ? (
+  <div class="no-data">
+    <p>No benchmark data available yet.</p>
+    <p>Run <code>pnpm bench --docs</code> from the benchmarks package to generate results.</p>
+  </div>
+) : (
+  <div class="benchmarks">
+    <div class="meta">
+      <p><strong>Last run:</strong> {formatDate(data.timestamp)}</p>
+      <p><strong>Commit:</strong> <code>{data.commit}</code></p>
+      <p><strong>System:</strong> {data.system.cpu_model} ({data.system.cpus} cores, {data.system.memory_gb}GB RAM)</p>
+      <p><strong>Node:</strong> {data.system.node} on {data.system.platform}/{data.system.arch}</p>
+    </div>
+
+    <div class="note">
+      <p>
+        <span class="medal gold">🥇 Gold</span>,
+        <span class="medal silver">🥈 Silver</span>, and
+        <span class="medal bronze">🥉 Bronze</span> indicate 1st, 2nd, and 3rd place.
+        Results within 5% of each other are considered <span class="medal tie">equivalent (≈1x)</span> and share the ranking.
+      </p>
+      <p>
+        These are micro-benchmarks measuring raw signal operations. In practice, all three libraries
+        are extremely fast and nearly neck-and-neck — the margins are small. Rimitive, Preact Signals,
+        and Alien Signals all deliver best-in-class performance suitable for demanding applications.
+      </p>
+    </div>
+
+    {data.suites.map((suite) => {
+      const grouped = groupByFramework(suite.benchmarks);
+      const frameworks = Array.from(grouped.keys());
+      const overallMedals = getOverallMedal(frameworks, grouped);
+
+      return (
+        <div class="suite">
+          <h3>{suite.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</h3>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Variant</th>
+                {frameworks.map(fw => <th>{overallMedals.get(fw)} {getDisplayName(fw)}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Get unique variants by args */}
+              {(() => {
+                const rimitiveGroup = grouped.get('Rimitive') || [];
+                return rimitiveGroup.map((rimBench, idx) => {
+                  const argsStr = rimBench.args
+                    ? Object.entries(rimBench.args).map(([k, v]) => `${k}=${v}`).join(', ')
+                    : '';
+
+                  return (
+                    <tr>
+                      <td>{argsStr || 'default'}</td>
+                      {frameworks.map(fw => {
+                        const fwGroup = grouped.get(fw) || [];
+                        const bench = fwGroup[idx];
+                        if (!bench) return <td>-</td>;
+
+                        const isRimitive = fw === 'Rimitive';
+                        const rimTime = rimitiveGroup[idx]?.time || bench.time;
+                        const ratio = bench.time / rimTime;
+                        const { color, isTie } = getRankInfo(frameworks, grouped, idx, fw);
+
+                        // Format ratio: show ≈1x for ties, actual ratio otherwise
+                        const ratioText = isTie ? '≈1x' : `${ratio.toFixed(2)}x`;
+
+                        return (
+                          <td style={`color: ${color}`}>
+                            {formatTime(bench.time)}
+                            {!isRimitive && (
+                              <span class={`ratio ${isTie ? 'tie' : ''}`}>
+                                ({ratioText})
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+      );
+    })}
+  </div>
+)}
+
+<style>
+  .no-data {
+    padding: 2rem;
+    background: var(--sl-color-gray-6);
+    border-radius: 0.5rem;
+    text-align: center;
+  }
+
+  .no-data code {
+    background: var(--sl-color-gray-5);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+
+  .benchmarks {
+    margin-top: 1rem;
+  }
+
+  .meta {
+    background: var(--sl-color-gray-6);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .meta p {
+    margin: 0.25rem 0;
+  }
+
+  .meta code {
+    background: var(--sl-color-gray-5);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    font-size: 0.85em;
+  }
+
+  .note {
+    background: var(--sl-color-gray-6);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    border-left: 3px solid var(--sl-color-accent);
+  }
+
+  .note p {
+    margin: 0.5rem 0;
+  }
+
+  .note p:first-child {
+    margin-top: 0;
+  }
+
+  .note p:last-child {
+    margin-bottom: 0;
+  }
+
+  .medal {
+    font-weight: 600;
+  }
+
+  .medal.gold {
+    color: #D4AF37;
+  }
+
+  .medal.silver {
+    color: #A8A8A8;
+  }
+
+  .medal.bronze {
+    color: #CD7F32;
+  }
+
+  .medal.tie {
+    color: #6B9F8B;
+  }
+
+  .suite {
+    margin-bottom: 2rem;
+  }
+
+  .suite h3 {
+    margin-bottom: 1rem;
+    text-transform: capitalize;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--sl-color-gray-5);
+  }
+
+  th {
+    background: var(--sl-color-gray-6);
+    font-weight: 600;
+  }
+
+  td.faster {
+    color: var(--sl-color-green);
+  }
+
+  td.slower {
+    color: var(--sl-color-orange);
+  }
+
+  .ratio {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-left: 0.5rem;
+  }
+
+  .ratio.tie {
+    opacity: 0.9;
+    font-weight: 500;
+  }
+
+  tr:hover {
+    background: var(--sl-color-gray-7);
+  }
+</style>

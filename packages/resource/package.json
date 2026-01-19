@@ -1,0 +1,66 @@
+{
+  "name": "@rimitive/resource",
+  "version": "0.1.0",
+  "description": "Async data fetching with reactive dependency tracking for Rimitive",
+  "author": "Rimitive Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hejhi/rimitive",
+    "directory": "packages/resource"
+  },
+  "keywords": [
+    "rimitive",
+    "resource",
+    "async",
+    "data-fetching",
+    "reactive"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./extend": {
+      "import": "./dist/extend.js",
+      "types": "./dist/extend.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.2",
+    "rimraf": "6.1.2",
+    "terser": "5.46.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.17"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

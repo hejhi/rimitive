@@ -1,0 +1,51 @@
+---
+title: Rimitive
+description: A composition system for type-safe reactive applications.
+template: splash
+hero:
+  image:
+    file: ../../assets/rimitive-logo.png
+  title: Rimitive
+  tagline: Design your own type-safe reactive stack
+  actions:
+    - text: Get Started
+      link: /guides/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/hejhi/rimitive
+      icon: external
+---
+
+Rimitive isn't a framework—it's a composition system and reactive primitive library. Compose modules into services that provide only the primitives you actually need:
+
+```typescript
+const { signal, computed, el, mount } = compose(
+  SignalModule,
+  ComputedModule,
+  createElModule(domAdapter),
+  MountModule
+);
+```
+
+Need just signals? Compose just signals. Need SSR? Swap the adapter. Want to replace the reactive graph entirely? Swap the modules.
+
+---
+
+## What Makes It Different
+
+**Portable behaviors.** Your reactive logic isn't tied to a component model. Write a `disclosure` behavior once, use it in Rimitive views, React, or anything else that speaks signals.
+
+**No framework boundary.** The same behavior that powers your dropdown can power your accordion, modal, and tooltip—across different apps, different frameworks, same code.
+
+**Transparent architecture.** Every layer is swappable: the reactive graph, the scheduler, the renderer. Rimitive's own primitives are built with `defineModule()`—the same tool you have.
+
+---
+
+## Performance
+
+On par with the fastest reactive libraries. See the [benchmarks](/benchmarks/).
+
+---
+
+Intrigued? [Get started](/guides/getting-started/) or read the [full story](/why/).

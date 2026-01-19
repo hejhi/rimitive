@@ -1,0 +1,227 @@
+---
+title: Refs and DOM Access
+description: How to access DOM nodes imperatively in Rimitive.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the `.ref()` method on elements.
+
+---
+
+## Basic Ref Usage
+
+The `.ref()` method takes a callback that runs when the element is mounted:
+
+```typescript
+const AutofocusInput = ({ el }: Service) => {
+  return el('input').ref((node) => {
+    node.focus();
+  })();
+};
+```
+
+---
+
+## Cleanup
+
+Return a cleanup function from the callback:
+
+```typescript
+const ResizeObserved = (svc: Service) => {
+  const { el, signal } = svc;
+  const dimensions = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      dimensions({ width, height });
+    });
+
+    observer.observe(node);
+
+    // Return cleanup function
+    return () => observer.disconnect();
+  })(
+    // ... children
+  );
+};
+```
+
+The cleanup runs when the element is removed from the DOM.
+
+---
+
+## Using Refs in Effects
+
+If you need to access a DOM node from an effect, store it in a signal:
+
+```typescript
+const FocusOnCondition = ({ el, signal, effect }: Service) => {
+  const inputRef = signal<HTMLInputElement | null>(null);
+  const shouldFocus = signal(false);
+
+  effect(() => {
+    const node = inputRef();
+    if (shouldFocus() && node) {
+      node.focus();
+    }
+  });
+
+  return el('div')(
+    el('input').ref((node) => inputRef(node))(),
+    el('button').props({
+      onclick: () => shouldFocus(true)
+    })('Focus Input')
+  );
+};
+```
+
+The signal-as-ref pattern works because:
+- The signal holds the node reference
+- Effects track the signal
+- When the condition changes, the effect runs and has access to the node
+
+<Aside type="note">
+The effect runs immediately, before the ref callback (which runs at mount time). So on first run, `inputRef()` is null. The effect re-runs when `shouldFocus` changes, and by then the ref is populated.
+</Aside>
+
+---
+
+## Passing Refs to Children
+
+If a parent needs access to a child's DOM node, pass a callback:
+
+```typescript
+const Input = ({ el }: Service, props: { onRef?: (node: HTMLInputElement) => void }) => {
+  return el('input').ref((node) => {
+    props.onRef?.(node);
+  })();
+};
+
+const Form = ({ el, use }: Service) => {
+  let inputNode: HTMLInputElement | null = null;
+
+  return el('form')(
+    use(Input)({ onRef: (node) => { inputNode = node; } }),
+    el('button').props({
+      onclick: () => inputNode?.focus()
+    })('Focus Input')
+  );
+};
+```
+
+Or with signals for reactive access:
+
+```typescript
+const Form = (svc: Service) => {
+  const { el, signal, use } = svc;
+  const inputRef = signal<HTMLInputElement | null>(null);
+
+  return el('form')(
+    use(Input)({ onRef: (node) => inputRef(node) }),
+    el('button').props({
+      onclick: () => inputRef()?.focus()
+    })('Focus Input')
+  );
+};
+```
+
+---
+
+## Third-Party Library Integration
+
+Use refs to integrate non-reactive libraries:
+
+```typescript
+const Chart = (svc: Service, props: { data: Readable<ChartData> }) => {
+  const { el, effect } = svc;
+
+  return el('canvas').ref((canvas) => {
+    // Initialize chart library
+    const chart = new ChartLibrary(canvas, {
+      data: props.data()
+    });
+
+    // Update chart when data changes
+    const disposeEffect = effect(() => {
+      chart.update(props.data());
+    });
+
+    // Return cleanup
+    return () => {
+      disposeEffect();
+      chart.destroy();
+    };
+  })();
+};
+```
+
+---
+
+## Multiple Refs
+
+For collections, store refs in a map:
+
+```typescript
+const ScrollableList = (svc: Service) => {
+  const { el, signal, map } = svc;
+
+  const items = signal(['a', 'b', 'c', 'd', 'e']);
+  const itemRefs = new Map<string, HTMLElement>();
+
+  const scrollToItem = (id: string) => {
+    itemRefs.get(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return el('div')(
+    el('div')(
+      ...['a', 'b', 'c', 'd', 'e'].map(id =>
+        el('button').props({ onclick: () => scrollToItem(id) })(`Go to ${id}`)
+      )
+    ),
+    el('div').props({ style: 'height: 200px; overflow: auto' })(
+      map(items, (item) =>
+        el('div').props({ style: 'height: 100px' }).ref((node) => {
+          itemRefs.set(item(), node);
+          return () => itemRefs.delete(item());
+        })(item)
+      )
+    )
+  );
+};
+```
+
+<Aside type="tip">
+When using refs with `map`, return a cleanup that removes the ref from the collection. Otherwise refs to removed items accumulate.
+</Aside>
+
+---
+
+## Why Not `createRef()`?
+
+Some frameworks have a standalone `createRef()` that returns an object with a `.current` property. Rimitive doesn't have this because:
+
+1. The callback pattern is more explicit about timing
+2. A signal holding the node serves the same purpose and integrates with reactivity
+3. It's one less API to learn
+
+If you want the `.current` pattern, it's trivial to create:
+
+```typescript
+const createRef = <T>() => {
+  let current: T | null = null;
+  return {
+    get current() { return current; },
+    set current(v: T | null) { current = v; },
+    callback: (node: T) => { current = node; }
+  };
+};
+
+// Usage
+const ref = createRef<HTMLInputElement>();
+el('input').ref(ref.callback)();
+// later: ref.current?.focus()
+```
+
+But the signal pattern is usually better because it's reactive.

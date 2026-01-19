@@ -1,0 +1,121 @@
+/**
+ * TodoList View Component
+ *
+ * Main todo list type with input, filters, and stats.
+ */
+import type { Service } from '../service';
+import type { Todo, UseTodoList } from '../behaviors/useTodoList';
+import type { FilterType } from '../behaviors/useFilter';
+import { TodoItem } from './TodoItem';
+
+type FilterInstance = {
+  currentFilter: () => FilterType;
+  setFilter: (filter: FilterType) => void;
+};
+
+type TodoStatsInstance = {
+  total: () => number;
+  active: () => number;
+  completed: () => number;
+  completionRate: () => number;
+};
+
+type TodoListProps = {
+  todoList: Pick<UseTodoList, 'addTodo' | 'toggleTodo'>;
+  filter: FilterInstance;
+  filteredTodos: () => Todo[];
+  stats: TodoStatsInstance;
+};
+
+export const TodoList =
+  (svc: Service) =>
+  ({ todoList, filter, filteredTodos, stats }: TodoListProps) => {
+    const { addTodo, toggleTodo } = todoList;
+    const { currentFilter, setFilter } = filter;
+    const { total, active, completed, completionRate } = stats;
+    const { el, map, on, signal, computed } = svc;
+
+    const inputValue = signal('');
+
+    const handleAddTodo = () => {
+      const text = inputValue();
+      if (text.trim()) {
+        addTodo(text.trim());
+        inputValue('');
+      }
+    };
+
+    // Create input and attach events
+    const todoInput = el('input')
+      .props({
+        type: 'text',
+        placeholder: 'What needs to be done?',
+        value: inputValue,
+      })
+      .ref(
+        on('input', (e) => inputValue((e.target as HTMLInputElement).value)),
+        on('keydown', (e) => {
+          if (e.key === 'Enter') handleAddTodo();
+        })
+      )();
+
+    const addBtn = el('button').props({ onclick: handleAddTodo })('Add Todo');
+
+    // Filter buttons
+    const allBtn = el('button').props({
+      className: computed(() =>
+        currentFilter() === 'all' ? 'filter active' : 'filter'
+      ),
+      onclick: () => setFilter('all'),
+    })('All');
+
+    const activeBtn = el('button').props({
+      className: computed(() =>
+        currentFilter() === 'active' ? 'filter active' : 'filter'
+      ),
+      onclick: () => setFilter('active'),
+    })('Active');
+
+    const completedBtn = el('button').props({
+      className: computed(() =>
+        currentFilter() === 'completed' ? 'filter active' : 'filter'
+      ),
+      onclick: () => setFilter('completed'),
+    })('Completed');
+
+    return el('section').props({ className: 'todo-section' })(
+      el('h2')('Todo List Example'),
+
+      // Input section
+      el('div').props({ className: 'todo-input' })(todoInput, addBtn),
+
+      // Filter buttons
+      el('div').props({ className: 'filter-buttons' })(
+        allBtn,
+        activeBtn,
+        completedBtn
+      ),
+
+      // Todo list
+      el('ul').props({ id: 'todoList' })(
+        map(
+          filteredTodos,
+          (todo) => todo.id,
+          (todoSignal) => svc(TodoItem)({ todo: todoSignal, toggleTodo })
+        )
+      ),
+
+      // Stats
+      el('div').props({ id: 'todoStats' })(
+        el('strong')('Stats:'),
+        el('br')(),
+        computed(
+          () =>
+            `Total: ${total()} | ` +
+            `Active: ${active()} | ` +
+            `Completed: ${completed()} | ` +
+            `Completion: ${completionRate().toFixed(1)}%`
+        )
+      )
+    );
+  };

@@ -1,0 +1,28 @@
+{
+  "name": "@rimitive/examples",
+  "version": "0.0.5",
+  "private": true,
+  "description": "Example applications demonstrating Rimitive features",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm dev:react",
+    "dev:devtools": "cd ./devtools && pnpm dev",
+    "dev:react": "cd ./react && pnpm dev",
+    "build:devtools": "pnpm --filter ./devtools build",
+    "build:react": "pnpm --filter ./react build",
+    "preview:devtools": "pnpm --filter ./devtools preview",
+    "preview:react": "pnpm --filter ./react preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm lint"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/react": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
