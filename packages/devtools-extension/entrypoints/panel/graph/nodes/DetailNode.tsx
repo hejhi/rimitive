@@ -45,6 +45,10 @@ export function DetailNode({ data }: { data: StratifiedNodeData }): React.ReactE
     return undefined;
   };
 
+  // Show underline when selected and has source (hint that click will open source)
+  const hasSource = !!node.sourceLocation;
+  const showAsLink = isSelected && hasSource;
+
   return (
     <div
       onMouseEnter={() => onHover(node.id)}
@@ -78,6 +82,7 @@ export function DetailNode({ data }: { data: StratifiedNodeData }): React.ReactE
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           maxWidth: 140,
+          textDecoration: showAsLink ? 'underline' : undefined,
         }}
       >
         {node.name ?? node.id.slice(0, 12)}

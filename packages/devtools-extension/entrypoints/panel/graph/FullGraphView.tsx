@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,6 +6,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Node,
   type Edge,
   type NodeTypes,
@@ -63,13 +64,20 @@ export function FullGraphView({
   // Use global selection so it persists across view mode toggles
   const selected = useSubscribe(globalSelectedNodeId);
 
-  // Single click: toggle node selection (persists when switching to focused view)
+  // Single click: select node, or open source if already selected
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node<StratifiedNodeData>) => {
-    // Toggle selection: click same node to deselect
-    const newSelection = selected === node.id ? null : node.id;
-    globalSelectedNodeId(newSelection);
-    if (onSelectNode) {
-      onSelectNode(newSelection);
+    if (selected === node.id) {
+      // Already selected - open source if available
+      const sourceLocation = node.data.node.sourceLocation;
+      if (sourceLocation) {
+        chrome.devtools.panels.openResource(sourceLocation.filePath, sourceLocation.line - 1, sourceLocation.column ?? 0, () => {});
+      }
+    } else {
+      // Select the node
+      globalSelectedNodeId(node.id);
+      if (onSelectNode) {
+        onSelectNode(node.id);
+      }
     }
   }, [onSelectNode, selected]);
 
@@ -105,6 +113,9 @@ export function FullGraphView({
     setEdges(layoutResult.edges);
   }, [layoutResult, setNodes, setEdges]);
 
+  // Track if we should center on selected node (on mount)
+  const shouldCenterOnMount = useRef(!!selected);
+
   return (
     <ReactFlow
       nodes={nodes}
@@ -113,7 +124,7 @@ export function FullGraphView({
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
       nodeTypes={nodeTypes}
-      fitView
+      fitView={!shouldCenterOnMount.current}
       fitViewOptions={{ padding: 0.3, minZoom: 0.5, maxZoom: 1 }}
       minZoom={0.2}
       maxZoom={2}
@@ -125,6 +136,7 @@ export function FullGraphView({
       proOptions={{ hideAttribution: true }}
       className="react-flow-dark"
     >
+      <CenterOnSelected selectedNodeId={selected} shouldCenter={shouldCenterOnMount.current} />
       <Background color="#333" gap={20} />
       <Controls showInteractive={false} className="react-flow-controls-dark" />
       <MiniMap
@@ -137,4 +149,31 @@ export function FullGraphView({
       />
     </ReactFlow>
   );
+}
+
+/**
+ * Helper component to center on selected node when mounting.
+ * Must be inside ReactFlow to use useReactFlow hook.
+ */
+function CenterOnSelected({ selectedNodeId, shouldCenter }: { selectedNodeId: string | null; shouldCenter: boolean }) {
+  const { fitView } = useReactFlow();
+  const hasCentered = useRef(false);
+
+  useEffect(() => {
+    if (shouldCenter && selectedNodeId && !hasCentered.current) {
+      // Small delay to ensure nodes are rendered
+      const timer = setTimeout(() => {
+        fitView({
+          nodes: [{ id: selectedNodeId }],
+          padding: 1.5,
+          maxZoom: 0.8,
+          duration: 200,
+        });
+        hasCentered.current = true;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedNodeId, shouldCenter, fitView]);
+
+  return null;
 }
