@@ -42,7 +42,9 @@ jobs:
         run: pnpm build
 
       - name: Build devtools extension zip
-        run: pnpm --filter @rimitive/devtools-extension zip
+        run: |
+          pnpm --filter @rimitive/devtools-extension build || echo "Devtools build failed"
+          pnpm --filter @rimitive/devtools-extension zip || echo "Devtools zip failed"
 
       - name: Create Release Pull Request
         id: changesets
@@ -88,13 +90,19 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
+            // Check if devtools output exists
+            const zipDir = 'packages/devtools-extension/.output';
+            if (!fs.existsSync(zipDir)) {
+              console.log('No devtools output directory, skipping');
+              return;
+            }
+
             // Get devtools version from package.json
             const pkgPath = 'packages/devtools-extension/package.json';
             const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
             const version = pkg.version;
 
             // Find the zip file
-            const zipDir = 'packages/devtools-extension/.output';
             const files = fs.readdirSync(zipDir);
             const chromeZip = files.find(f => f.endsWith('-chrome.zip'));
 
