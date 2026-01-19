@@ -24,15 +24,16 @@ Patterns and architectures in rimitive follow **low coupling, high cohesion**—
 
 ## Packages
 
-| Package                                   | Description                                                   |
-| ----------------------------------------- | ------------------------------------------------------------- |
-| [`@rimitive/core`](packages/core)         | Composition engine — `compose()`, `defineModule()`            |
-| [`@rimitive/signals`](packages/signals)   | Reactive primitives — `signal`, `computed`, `effect`, `batch` |
-| [`@rimitive/view`](packages/view)         | UI primitives — `el`, `map`, `match`, `portal`                |
-| [`@rimitive/router`](packages/router)     | Client-side routing                                           |
-| [`@rimitive/resource`](packages/resource) | Async data fetching with `resource()`                         |
-| [`@rimitive/ssr`](packages/ssr)           | Server-side rendering and streaming                           |
-| [`@rimitive/react`](packages/react)       | React bindings                                                |
+| Package                                                 | Description                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------- |
+| [`@rimitive/core`](packages/core)                       | Composition engine — `compose()`, `defineModule()`            |
+| [`@rimitive/signals`](packages/signals)                 | Reactive primitives — `signal`, `computed`, `effect`, `batch` |
+| [`@rimitive/view`](packages/view)                       | UI primitives — `el`, `map`, `match`, `portal`                |
+| [`@rimitive/router`](packages/router)                   | Client-side routing                                           |
+| [`@rimitive/resource`](packages/resource)               | Async data fetching with `resource()`                         |
+| [`@rimitive/ssr`](packages/ssr)                         | Server-side rendering and streaming                           |
+| [`@rimitive/react`](packages/react)                     | React bindings                                                |
+| [`@rimitive/devtools-extension`](packages/devtools-extension) | Chrome DevTools extension ([download](https://github.com/rimitive/rimitive/releases)) |
 
 ---
 
