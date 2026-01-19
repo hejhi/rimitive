@@ -51,6 +51,16 @@ const PACKAGES = [
   },
 ];
 
+// Package READMEs to include in llms-full.txt (API reference style)
+const PACKAGE_READMES = [
+  { folder: 'core', name: '@rimitive/core' },
+  { folder: 'signals', name: '@rimitive/signals' },
+  { folder: 'view', name: '@rimitive/view' },
+  { folder: 'router', name: '@rimitive/router' },
+  { folder: 'resource', name: '@rimitive/resource' },
+  { folder: 'ssr', name: '@rimitive/ssr' },
+];
+
 // Docs to include in llms-full.txt, in order
 const DOCS_ORDER = [
   // Guides - core concepts first
@@ -264,6 +274,28 @@ This document contains the complete Rimitive documentation for LLM consumption.
     } catch (err) {
       // File doesn't exist, skip it
       console.warn(`Skipping missing doc: ${docPath}`);
+    }
+  }
+
+  // Add package READMEs as API reference
+  sections.push(`## Package API Reference
+
+The following sections contain API documentation from each package's README.
+
+---
+`);
+
+  for (const pkg of PACKAGE_READMES) {
+    try {
+      const readmePath = join('packages', pkg.folder, 'README.md');
+      const content = await readFile(readmePath, 'utf-8');
+      // Strip the # title line, we'll use our own heading
+      const body = content.replace(/^#\s+.*\n+/, '').trim();
+      if (body.length > 0) {
+        sections.push(`### ${pkg.name}\n\n${body}\n\n---\n`);
+      }
+    } catch {
+      console.warn(`Skipping missing package README: ${pkg.folder}`);
     }
   }
 
