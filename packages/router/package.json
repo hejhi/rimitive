@@ -56,7 +56,7 @@
     "@rimitive/view": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "25.0.6",
+    "@types/node": "25.0.9",
     "esbuild": "0.27.2",
     "happy-dom": "20.3.3",
     "rimraf": "6.1.2",
