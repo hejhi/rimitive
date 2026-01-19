@@ -39,15 +39,26 @@ export async function resolveSourceLocation(
       return location;
     }
 
-    // Get the original source file name
+    // Get the original source file name for display
     const originalSource = originalPos.source;
     const fileName = originalSource
       ? originalSource.split('/').pop()?.split('\\').pop() ?? location.display.split(':')[0]
       : location.display.split(':')[0];
 
+    // Try to construct the full URL to the original source file
+    let resolvedFilePath = location.filePath;
+    if (originalSource) {
+      try {
+        // Resolve the original source path relative to the bundled file URL
+        resolvedFilePath = new URL(originalSource, location.filePath).href;
+      } catch {
+        // If URL construction fails, keep the bundled URL
+      }
+    }
+
     return {
       display: `${fileName}:${originalPos.line}`,
-      filePath: location.filePath, // Keep original URL for openResource
+      filePath: resolvedFilePath,
       line: originalPos.line,
       column: originalPos.column ?? undefined,
     };
