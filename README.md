@@ -2,6 +2,13 @@
   <img src="assets/rimitive-logo.png" alt="Rimitive" width="200" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/hejhi/rimitive/actions/workflows/ci.yml"><img src="https://github.com/hejhi/rimitive/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/@rimitive/signals"><img src="https://img.shields.io/npm/v/@rimitive/signals" alt="npm"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0+-blue" alt="TypeScript"></a>
+</p>
+
 # Rimitive
 
 _"Primitive" was taken so I dropped the "P", naming is hard_
