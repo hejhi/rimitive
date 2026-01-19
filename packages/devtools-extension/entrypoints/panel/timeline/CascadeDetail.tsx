@@ -1,20 +1,19 @@
 import { useSubscribe } from '@rimitive/react';
-import { ChevronRight, ExternalLink } from 'lucide-react';
-import { currentCascade } from '../store/timelineState';
+import { ExternalLink } from 'lucide-react';
+import { useDevtools } from '../store/DevtoolsProvider';
 import { NODE_COLORS } from '../graph/styles';
 import { ValueDisplay } from '../components/ValueDisplay';
 import type { SourceLocation } from '../store/types';
-import type { CascadeEffect } from '../store/timelineTypes';
 
 export function CascadeDetail() {
-  const cascade = useSubscribe(currentCascade);
+  const devtools = useDevtools();
+  const cascade = useSubscribe(devtools.currentCascade);
 
   if (!cascade) {
     return null;
   }
 
   const rootType = cascade.rootNode?.type ?? 'signal';
-  const rootColors = NODE_COLORS[rootType];
   const rootName = cascade.rootNode?.name ?? cascade.rootEvent.nodeName ?? 'anonymous';
 
   return (

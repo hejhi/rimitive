@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { handleDevToolsMessage, type DevToolsMessage } from '../store/store';
-import { devtoolsState } from '../store/devtoolsCtx';
+import { useDevtools } from '../store/DevtoolsProvider';
+import { createMessageHandler, type DevToolsMessage } from '../store/messageHandler';
 
 const RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
 export function useDevToolsConnection() {
+  const devtools = useDevtools();
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -15,6 +16,9 @@ export function useDevToolsConnection() {
 
   useEffect(() => {
     unmountedRef.current = false;
+
+    // Create message handler for this devtools instance
+    const handleDevToolsMessage = createMessageHandler(devtools);
 
     function connect() {
       if (unmountedRef.current) return;
@@ -51,7 +55,7 @@ export function useDevToolsConnection() {
             reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
           ) {
             // Show reconnecting state instead of disconnected
-            devtoolsState.connectionStatus('reconnecting');
+            devtools.connectionStatus('reconnecting');
 
             reconnectAttemptsRef.current++;
             console.log(
@@ -64,11 +68,11 @@ export function useDevToolsConnection() {
           } else if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
             console.log('[DevTools Panel] Max reconnect attempts reached');
             // Only now show disconnected state
-            devtoolsState.connected(false);
-            devtoolsState.connectionStatus('disconnected');
-            devtoolsState.contexts([]);
-            devtoolsState.selectedContext(null);
-            devtoolsState.logEntries([]);
+            devtools.connected(false);
+            devtools.connectionStatus('disconnected');
+            devtools.contexts([]);
+            devtools.selectedContext(null);
+            devtools.logEntries([]);
           }
         });
 
@@ -97,5 +101,5 @@ export function useDevToolsConnection() {
       }
       portRef.current?.disconnect();
     };
-  }, []);
+  }, [devtools]);
 }

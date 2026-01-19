@@ -1,54 +1,46 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { History, SkipBack, SkipForward, Zap } from 'lucide-react';
-import {
-  timelineState as globalTimelineState,
-  rebuildCascades,
-  selectCascade as globalSelectCascade,
-  buildCascades,
-} from './store/timelineState';
-import { devtoolsState } from './store/devtoolsCtx';
+import { useDevtools } from './store/DevtoolsProvider';
+import { buildCascadesFromEntries } from './store/timelineState';
 import { TimelineScrubber } from './timeline/TimelineScrubber';
 import { PropagationView } from './timeline/PropagationView';
-import type { LogEntry } from './store/types';
-import type { TimelineState, Cascade } from './store/timelineTypes';
+import type { TimelineState } from './store/timelineTypes';
 
 type TimelineTabProps = {
-  /** Optional mode indicator for snapshot viewing */
+  /** Whether viewing a snapshot (uses snapshot state) */
   snapshotMode?: boolean;
-  /** Optional log entries. If not provided, uses global state. */
-  logEntries?: LogEntry[];
   /** Whether to hide internal entries. Defaults to global filter setting. */
   hideInternal?: boolean;
 };
 
-export function TimelineTab({ snapshotMode, logEntries, hideInternal: propHideInternal }: TimelineTabProps = {}) {
-  // Determine if we're in "controlled" mode (props provided)
-  const isControlled = logEntries !== undefined;
+export function TimelineTab({ snapshotMode = false, hideInternal: propHideInternal }: TimelineTabProps = {}) {
+  const devtools = useDevtools();
 
-  // Global state
-  const globalState = useSubscribe(globalTimelineState);
-  const globalEntries = useSubscribe(devtoolsState.logEntries);
-  const globalFilter = useSubscribe(devtoolsState.filter);
+  // Subscribe to the appropriate state based on mode
+  const globalState = useSubscribe(devtools.timelineState);
+  const snapshotState = useSubscribe(devtools.snapshotTimelineState);
+  const snapshotEntries = useSubscribe(devtools.snapshotContextFilteredEntries);
+  const globalEntries = useSubscribe(devtools.logEntries);
+  const globalFilter = useSubscribe(devtools.filter);
+  const globalSelectedContext = useSubscribe(devtools.selectedContext);
+  const snapshotFilter = useSubscribe(devtools.snapshotFilter);
+  const graphState = useSubscribe(devtools.graphState);
 
-  // Local state for controlled mode
-  const [localState, setLocalState] = useState<TimelineState>({
-    cascades: [],
-    currentCascadeIndex: null,
-    timeRange: null,
-  });
+  // Subscribe to current cascade computed
+  const globalCurrent = useSubscribe(devtools.currentCascade);
+  const snapshotCurrent = useSubscribe(devtools.currentSnapshotCascade);
 
-  // Determine which values to use
-  const entries = logEntries ?? globalEntries;
-  const hideInternal = propHideInternal ?? globalFilter.hideInternal;
-  const state = isControlled ? localState : globalState;
+  // Use snapshot or global state based on mode
+  const state = snapshotMode ? snapshotState : globalState;
+  const currentCascade = snapshotMode ? snapshotCurrent : globalCurrent;
+  const hideInternal = propHideInternal ?? (snapshotMode ? snapshotFilter.hideInternal : globalFilter.hideInternal);
 
-  // Build cascades for controlled mode
+  // Build/rebuild cascades when dependencies change
   useEffect(() => {
-    if (isControlled) {
-      // Filter entries if needed
-      const filtered = hideInternal ? entries.filter((e) => !e.isInternal) : entries;
-      const cascades = buildCascades(filtered);
+    if (snapshotMode) {
+      const filtered = hideInternal ? snapshotEntries.filter((e) => !e.isInternal) : snapshotEntries;
+      const cascades = buildCascadesFromEntries(filtered, graphState);
 
       // Compute time range
       let timeRange: { start: number; end: number } | null = null;
@@ -62,40 +54,55 @@ export function TimelineTab({ snapshotMode, logEntries, hideInternal: propHideIn
         timeRange = { start: minTime, end: maxTime };
       }
 
-      setLocalState((prev) => ({
-        ...prev,
+      devtools.snapshotTimelineState({
+        cascades,
+        currentCascadeIndex: cascades.length > 0 ? 0 : null,
+        timeRange,
+      });
+    } else {
+      // Rebuild global cascades
+      const selectedContext = globalSelectedContext;
+      const entries = globalEntries.filter((entry) => {
+        if (selectedContext && entry.contextId !== selectedContext) return false;
+        if (globalFilter.hideInternal && entry.isInternal) return false;
+        return true;
+      });
+      const cascades = buildCascadesFromEntries(entries, graphState);
+
+      // Compute time range
+      let timeRange: { start: number; end: number } | null = null;
+      if (entries.length > 0) {
+        let minTime = entries[0].timestamp;
+        let maxTime = entries[0].timestamp;
+        for (const entry of entries) {
+          if (entry.timestamp < minTime) minTime = entry.timestamp;
+          if (entry.timestamp > maxTime) maxTime = entry.timestamp;
+        }
+        timeRange = { start: minTime, end: maxTime };
+      }
+
+      devtools.timelineState({
+        ...devtools.timelineState.peek(),
         cascades,
         timeRange,
-      }));
+      });
     }
-  }, [isControlled, entries, hideInternal]);
+  }, [snapshotMode, snapshotEntries, globalEntries, globalFilter.hideInternal, globalSelectedContext, hideInternal, graphState, devtools]);
 
-  // Rebuild global cascades when entries or filter changes (non-controlled mode)
-  useEffect(() => {
-    if (!isControlled) {
-      rebuildCascades();
-    }
-  }, [isControlled, globalEntries, globalFilter.hideInternal]);
-
-  // Auto-select first cascade when cascades are available but none selected
-  useEffect(() => {
-    if (state.cascades.length > 0 && state.currentCascadeIndex === null) {
-      if (isControlled) {
-        setLocalState((prev) => ({ ...prev, currentCascadeIndex: 0 }));
-      } else {
-        globalSelectCascade(0);
-      }
-    }
-  }, [state.cascades.length, state.currentCascadeIndex, isControlled]);
-
-  // Local selection handlers
+  // Selection handlers
   const selectCascade = useCallback((index: number | null) => {
-    if (isControlled) {
-      setLocalState((prev) => ({ ...prev, currentCascadeIndex: index }));
+    if (snapshotMode) {
+      devtools.snapshotTimelineState({
+        ...devtools.snapshotTimelineState.peek(),
+        currentCascadeIndex: index,
+      });
     } else {
-      globalSelectCascade(index);
+      devtools.timelineState({
+        ...devtools.timelineState.peek(),
+        currentCascadeIndex: index,
+      });
     }
-  }, [isControlled]);
+  }, [snapshotMode, devtools]);
 
   const nextCascade = useCallback(() => {
     if (state.cascades.length === 0) return;
@@ -112,12 +119,6 @@ export function TimelineTab({ snapshotMode, logEntries, hideInternal: propHideIn
       : Math.max(state.currentCascadeIndex - 1, 0);
     selectCascade(prevIndex);
   }, [state.cascades.length, state.currentCascadeIndex, selectCascade]);
-
-  // Current cascade
-  const currentCascade = useMemo(() => {
-    if (state.currentCascadeIndex === null) return null;
-    return state.cascades[state.currentCascadeIndex] ?? null;
-  }, [state.cascades, state.currentCascadeIndex]);
 
   // Keyboard navigation
   useEffect(() => {

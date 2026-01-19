@@ -1,26 +1,9 @@
-import { devtoolsContext } from './devtoolsCtx';
-import { devtoolsState } from './devtoolsCtx';
-import { graphState } from './graphState';
+// Timeline state is now part of DevtoolsState in devtoolsBehavior.ts
+// This file exports utility functions that work with log entries.
+
 import type { LogEntry } from './types';
 import type { GraphState } from './graphTypes';
-import type { Cascade, CascadeEffect, TimelineState } from './timelineTypes';
-
-/**
- * Filter entries based on hideInternal setting
- */
-function filterEntries(entries: LogEntry[], hideInternal: boolean): LogEntry[] {
-  if (!hideInternal) return entries;
-  return entries.filter((entry) => !entry.isInternal);
-}
-
-/**
- * Timeline state signal
- */
-export const timelineState = devtoolsContext.signal<TimelineState>({
-  cascades: [],
-  currentCascadeIndex: null,
-  timeRange: null,
-});
+import type { Cascade, CascadeEffect } from './timelineTypes';
 
 /**
  * Time window for grouping related events into a cascade (ms)
@@ -61,10 +44,9 @@ function isCascadeEffect(eventType: string): boolean {
  * Build cascades from log entries
  * Groups related events into propagation chains
  */
-export function buildCascades(entries: LogEntry[]): Cascade[] {
+export function buildCascadesFromEntries(entries: LogEntry[], graphState: GraphState): Cascade[] {
   if (entries.length === 0) return [];
 
-  const state = graphState();
   const cascades: Cascade[] = [];
   let currentCascade: Cascade | null = null;
 
@@ -82,7 +64,7 @@ export function buildCascades(entries: LogEntry[]): Cascade[] {
         cascades.push(currentCascade);
       }
 
-      const rootNode = entry.nodeId ? state.nodes.get(entry.nodeId) ?? null : null;
+      const rootNode = entry.nodeId ? graphState.nodes.get(entry.nodeId) ?? null : null;
 
       currentCascade = {
         id: `cascade_${entry.timestamp}_${entry.id}`,
@@ -104,11 +86,11 @@ export function buildCascades(entries: LogEntry[]): Cascade[] {
       if (timeDelta <= CASCADE_WINDOW_MS) {
         // Check if this node is connected to the cascade
         const nodeId = entry.nodeId;
-        const isConnected = nodeId && isNodeConnectedToCascade(nodeId, currentCascade, state);
+        const isConnected = nodeId && isNodeConnectedToCascade(nodeId, currentCascade, graphState);
 
         if (isConnected || !nodeId) {
-          const node = nodeId ? state.nodes.get(nodeId) ?? null : null;
-          const depth = nodeId ? getDepthFromRoot(nodeId, currentCascade.rootEvent.nodeId, state) : 0;
+          const node = nodeId ? graphState.nodes.get(nodeId) ?? null : null;
+          const depth = nodeId ? getDepthFromRoot(nodeId, currentCascade.rootEvent.nodeId, graphState) : 0;
 
           const effect: CascadeEffect = {
             event: entry,
@@ -201,88 +183,5 @@ function getDepthFromRoot(
   return 1; // Default depth if not found
 }
 
-/**
- * Rebuild cascades from current log entries
- */
-export function rebuildCascades(): void {
-  const allEntries = devtoolsState.logEntries();
-  const hideInternal = devtoolsState.filter().hideInternal;
-  const entries = filterEntries(allEntries, hideInternal);
-  const cascades = buildCascades(entries);
-
-  // Compute time range from actual min/max timestamps (not array order)
-  let timeRange: { start: number; end: number } | null = null;
-  if (entries.length > 0) {
-    let minTime = entries[0].timestamp;
-    let maxTime = entries[0].timestamp;
-    for (const entry of entries) {
-      if (entry.timestamp < minTime) minTime = entry.timestamp;
-      if (entry.timestamp > maxTime) maxTime = entry.timestamp;
-    }
-    timeRange = { start: minTime, end: maxTime };
-  }
-
-  timelineState({
-    ...timelineState(),
-    cascades,
-    timeRange,
-  });
-}
-
-/**
- * Select a cascade by index
- */
-export function selectCascade(index: number | null): void {
-  timelineState({
-    ...timelineState(),
-    currentCascadeIndex: index,
-  });
-}
-
-/**
- * Step to next cascade
- */
-export function nextCascade(): void {
-  const state = timelineState();
-  if (state.cascades.length === 0) return;
-
-  const nextIndex = state.currentCascadeIndex === null
-    ? 0
-    : Math.min(state.currentCascadeIndex + 1, state.cascades.length - 1);
-
-  selectCascade(nextIndex);
-}
-
-/**
- * Step to previous cascade
- */
-export function prevCascade(): void {
-  const state = timelineState();
-  if (state.cascades.length === 0) return;
-
-  const prevIndex = state.currentCascadeIndex === null
-    ? state.cascades.length - 1
-    : Math.max(state.currentCascadeIndex - 1, 0);
-
-  selectCascade(prevIndex);
-}
-
-/**
- * Get current cascade
- */
-export const currentCascade = devtoolsContext.computed(() => {
-  const state = timelineState();
-  if (state.currentCascadeIndex === null) return null;
-  return state.cascades[state.currentCascadeIndex] ?? null;
-});
-
-/**
- * Clear timeline state
- */
-export function clearTimeline(): void {
-  timelineState({
-    cascades: [],
-    currentCascadeIndex: null,
-    timeRange: null,
-  });
-}
+// Re-export types for convenience
+export type { TimelineState, Cascade, CascadeEffect } from './timelineTypes';

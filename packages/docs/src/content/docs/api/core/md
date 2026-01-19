@@ -120,6 +120,32 @@ Sends instrumentation events to the Rimitive DevTools browser extension via `win
 </td></tr>
 <tr><td>
 
+[getCallerLocation(skipFrames)](../getcallerlocation/)
+
+
+</td><td>
+
+Parse a stack trace to extract the caller's source location.
+
+Returns a short, readable location like "TodoList.ts:23" or "service.ts:15". Skips internal frames (node\_modules, rimitive internals) to find the user's code.
+
+
+</td></tr>
+<tr><td>
+
+[getCallerLocationFull(skipFrames)](../getcallerlocationfull/)
+
+
+</td><td>
+
+Parse a stack trace to extract full source location info.
+
+Returns both a short display name and the full file path for editor integration. Skips internal frames (node\_modules, rimitive internals) to find the user's code.
+
+
+</td></tr>
+<tr><td>
+
 [isDevtoolsAvailable()](../isdevtoolsavailable/)
 
 
@@ -392,6 +418,17 @@ Extract the implementation type from a Module.
 </td><td>
 
 Extract the name from a Module.
+
+
+</td></tr>
+<tr><td>
+
+[SourceLocation](../sourcelocation/)
+
+
+</td><td>
+
+Source location info with both display name and full path for editor jumping.
 
 
 </td></tr>

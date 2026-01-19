@@ -44,11 +44,20 @@ const svc = compose(
 ## Development
 
 ```bash
-pnpm --filter @rimitive/devtools-extension dev          # Chrome
-pnpm --filter @rimitive/devtools-extension dev:firefox  # Firefox
-pnpm --filter @rimitive/devtools-extension build
+pnpm --filter @rimitive/devtools-extension dev          # Chrome (hot reload)
+pnpm --filter @rimitive/devtools-extension dev:firefox  # Firefox (hot reload)
+pnpm --filter @rimitive/devtools-extension build        # Production build
 pnpm --filter @rimitive/devtools-extension zip          # Create distributable
 ```
+
+### Loading the built extension locally
+
+After running `build`, load the extension from `packages/devtools-extension/dist/chrome-mv3/`:
+
+1. Go to `chrome://extensions`
+2. Enable "Developer mode" (toggle in top right)
+3. Click "Load unpacked"
+4. Select `packages/devtools-extension/dist/chrome-mv3/`
 
 Test with the example app:
 ```bash

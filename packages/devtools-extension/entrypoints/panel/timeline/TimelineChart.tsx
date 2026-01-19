@@ -93,7 +93,7 @@ export function TimelineChart({
               const isCurrent = currentIndex === i;
 
               // Count effects by type
-              let signalCount = 1; // Root signal
+              const signalCount = 1; // Root signal
               let computedCount = 0;
               let effectCount = 0;
 

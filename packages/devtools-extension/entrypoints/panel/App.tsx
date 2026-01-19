@@ -7,9 +7,7 @@ import { LogsTab } from './LogsTab';
 import { ConnectionStatus, FilterBar, Header } from './components';
 import { SnapshotModal } from './components/SnapshotModal';
 import { useDataExport, useDevToolsConnection } from './hooks';
-import { devtoolsState } from './store/devtoolsCtx';
-import { clearGraph } from './store/graphState';
-import { clearTimeline } from './store/timelineState';
+import { useDevtools } from './store/DevtoolsProvider';
 
 // Lazy load GraphTab (includes React Flow ~200KB)
 const GraphTab = lazy(() => import('./GraphTab').then((m) => ({ default: m.GraphTab })));
@@ -29,12 +27,13 @@ function GraphTabLoading() {
 }
 
 export function App() {
-  const connected = useSubscribe(devtoolsState.connected);
-  const connectionStatus = useSubscribe(devtoolsState.connectionStatus);
-  const contexts = useSubscribe(devtoolsState.contexts);
-  const selectedContext = useSubscribe(devtoolsState.selectedContext);
-  const filter = useSubscribe(devtoolsState.filter);
-  const activeTab = useSubscribe(devtoolsState.activeTab);
+  const devtools = useDevtools();
+  const connected = useSubscribe(devtools.connected);
+  const connectionStatus = useSubscribe(devtools.connectionStatus);
+  const contexts = useSubscribe(devtools.contexts);
+  const selectedContext = useSubscribe(devtools.selectedContext);
+  const filter = useSubscribe(devtools.filter);
+  const activeTab = useSubscribe(devtools.activeTab);
 
   const { handleExport, handleImport } = useDataExport();
   useDevToolsConnection();
@@ -50,12 +49,12 @@ export function App() {
       <Header
         contexts={contexts}
         selectedContext={selectedContext}
-        onContextChange={(value) => devtoolsState.selectedContext(value)}
+        onContextChange={(value) => devtools.selectedContext(value)}
         onExport={handleExport}
         onImport={handleImport}
       />
 
-      <Tabs value={activeTab} onValueChange={(v) => devtoolsState.activeTab(v as 'logs' | 'graph' | 'timeline')} className="flex-1 flex flex-col overflow-hidden">
+      <Tabs value={activeTab} onValueChange={(v) => devtools.activeTab(v as 'logs' | 'graph' | 'timeline')} className="flex-1 flex flex-col overflow-hidden">
         {/* Tab list with actions */}
         <div className="flex items-center justify-between px-4 py-2 border-b">
           <TabsList className="h-8">
@@ -77,10 +76,22 @@ export function App() {
             size="icon"
             className="h-8 w-8"
             onClick={() => {
-              devtoolsState.logEntries([]);
-              devtoolsState.selectedTransaction(null);
-              clearGraph();
-              clearTimeline();
+              devtools.logEntries([]);
+              devtools.selectedTransaction(null);
+              // Reset graph state
+              devtools.graphNodes(new Map());
+              devtools.graphEdges(new Map());
+              devtools.graphDependencies(new Map());
+              devtools.graphDependents(new Map());
+              devtools.selectedNodeId(null);
+              devtools.viewMode('full');
+              devtools.hoveredNodeId(null);
+              // Reset timeline state
+              devtools.timelineState({
+                cascades: [],
+                currentCascadeIndex: null,
+                timeRange: null,
+              });
             }}
             title="Clear all events and graph"
           >
@@ -96,20 +107,20 @@ export function App() {
               searchValue={filter.search}
               filteredNodeId={filter.nodeId}
               onFilterTypeChange={(value) =>
-                devtoolsState.filter({
-                  ...devtoolsState.filter(),
+                devtools.filter({
+                  ...devtools.filter.peek(),
                   type: value,
                 })
               }
               onSearchChange={(value) =>
-                devtoolsState.filter({
-                  ...devtoolsState.filter(),
+                devtools.filter({
+                  ...devtools.filter.peek(),
                   search: value,
                 })
               }
               onClearNodeFilter={() =>
-                devtoolsState.filter({
-                  ...devtoolsState.filter(),
+                devtools.filter({
+                  ...devtools.filter.peek(),
                   nodeId: null,
                 })
               }

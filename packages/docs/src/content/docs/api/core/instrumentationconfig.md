@@ -21,6 +21,7 @@ Configuration for creating an instrumentation context.
 export type InstrumentationConfig = {
     providers: InstrumentationProvider[];
     enabled?: boolean | (() => boolean);
+    name?: string;
 };
 ```
 **References:** [InstrumentationProvider](../instrumentationprovider/)

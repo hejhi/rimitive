@@ -1,7 +1,7 @@
-import { devtoolsState } from './devtoolsCtx';
+import type { DevtoolsState } from './devtoolsBehavior';
 import type { LogEntry, SourceLocation } from './types';
-import { RimitiveEvent } from './messageHandler';
-import { inferCategory } from './eventTypeManager';
+import type { RimitiveEvent } from './messageHandler';
+import { createEventTypeManager } from './eventTypeManager';
 import { resolveSourceLocation } from '../utils/sourceMapResolver';
 
 // Track execution depth for indentation
@@ -14,46 +14,65 @@ const recentEvents: { eventType: string; data: unknown; timestamp: number }[] =
 const RECENT_EVENT_WINDOW = 100; // ms
 
 /**
- * Process any instrumentation event
+ * Create a log processor bound to a specific devtools state instance
  */
-export function processLogEntry(event: RimitiveEvent) {
-  const timestamp = event.timestamp || Date.now();
+export function createLogProcessor(devtools: DevtoolsState) {
+  const eventTypeManager = createEventTypeManager(devtools);
 
-  // Clean up old recent events
-  const cutoff = timestamp - RECENT_EVENT_WINDOW;
-  while (recentEvents.length > 0 && recentEvents[0].timestamp < cutoff) {
-    recentEvents.shift();
+  /**
+   * Add log entry to the store
+   */
+  function addLogEntry(entry: LogEntry) {
+    // Keep last 1000 log entries
+    devtools.logEntries([...devtools.logEntries.peek().slice(-999), entry]);
   }
 
-  // Track this event
-  recentEvents.push({ eventType: event.type, data: event.data, timestamp });
+  /**
+   * Create log entry with resolved source location
+   */
+  async function createLogEntryAsync(event: RimitiveEvent, timestamp: number) {
+    const entry = createLogEntry(event, timestamp, eventTypeManager.inferCategory);
 
-  // Create log entry and resolve source map asynchronously
-  void createLogEntryAsync(event, timestamp);
-}
+    // Resolve source map for better line numbers in display
+    if (entry.sourceLocation) {
+      const resolved = await resolveSourceLocation(entry.sourceLocation);
+      entry.sourceLocation = resolved;
+      // Always use resolved display as nodeName for source-mapped locations
+      entry.nodeName = resolved.display;
+    }
 
-/**
- * Create log entry with resolved source location
- */
-async function createLogEntryAsync(event: RimitiveEvent, timestamp: number) {
-  const entry = createLogEntry(event, timestamp);
-
-  // Resolve source map for better line numbers in display
-  if (entry.sourceLocation) {
-    const resolved = await resolveSourceLocation(entry.sourceLocation);
-    entry.sourceLocation = resolved;
-    // Always use resolved display as nodeName for source-mapped locations
-    entry.nodeName = resolved.display;
+    // Add to log entries
+    addLogEntry(entry);
   }
 
-  // Add to log entries
-  addLogEntry(entry);
+  /**
+   * Process any instrumentation event
+   */
+  return function processLogEntry(event: RimitiveEvent) {
+    const timestamp = event.timestamp || Date.now();
+
+    // Clean up old recent events
+    const cutoff = timestamp - RECENT_EVENT_WINDOW;
+    while (recentEvents.length > 0 && recentEvents[0].timestamp < cutoff) {
+      recentEvents.shift();
+    }
+
+    // Track this event
+    recentEvents.push({ eventType: event.type, data: event.data, timestamp });
+
+    // Create log entry and resolve source map asynchronously
+    void createLogEntryAsync(event, timestamp);
+  };
 }
 
 /**
  * Create a log entry from an instrumentation event
  */
-function createLogEntry(event: RimitiveEvent, timestamp: number): LogEntry {
+function createLogEntry(
+  event: RimitiveEvent,
+  timestamp: number,
+  inferCategory: (eventType: string) => string
+): LogEntry {
   const level = calculateExecutionLevel(event);
   const sourceLocation = extractSourceLocation(event.data);
 
@@ -212,19 +231,11 @@ function generateSummary(event: RimitiveEvent): string {
 }
 
 /**
- * Add log entry to the store
- */
-function addLogEntry(entry: LogEntry) {
-  // Keep last 1000 log entries
-  devtoolsState.logEntries([...devtoolsState.logEntries().slice(-999), entry]);
-}
-
-/**
  * Find related events for causality analysis
  */
-export function findRelatedEvents(entry: LogEntry): LogEntry[] {
+export function findRelatedEvents(devtools: DevtoolsState, entry: LogEntry): LogEntry[] {
   const related: LogEntry[] = [];
-  const logs = devtoolsState.logEntries();
+  const logs = devtools.logEntries.peek();
 
   // Find events that might have triggered this one
   if (entry.nodeId) {

@@ -1,7 +1,7 @@
 import type { RimitiveEvent } from './messageHandler';
-import type { GraphNode, GraphEdge, GraphNodeType } from './graphTypes';
+import type { GraphNode, GraphEdge, GraphNodeType, GraphState } from './graphTypes';
 import type { SourceLocation } from './types';
-import { graphState, addNode, addEdge, removeEdge, selectedNodeId } from './graphState';
+import type { DevtoolsState } from './devtoolsBehavior';
 import { resolveSourceLocation } from '../utils/sourceMapResolver';
 
 /**
@@ -18,278 +18,430 @@ type GraphSnapshot = {
 };
 
 /**
- * Process graph-related events to maintain dependency graph state
+ * Create a graph processor bound to a specific devtools state instance
  */
-export function processGraphEvent(event: RimitiveEvent): void {
-  switch (event.type) {
-    case 'graph:snapshot':
-      handleGraphSnapshot(event);
-      break;
-
-    case 'signal:read':
-    case 'signal:write':
-      handleSignalEvent(event);
-      break;
-
-    case 'computed:read':
-    case 'computed:value':
-      handleComputedEvent(event);
-      break;
-
-    case 'effect:run':
-    case 'effect:created':
-      handleEffectEvent(event);
-      break;
-
-    case 'dependency:tracked':
-      handleDependencyTracked(event);
-      break;
-
-    case 'dependency:pruned':
-      handleDependencyPruned(event);
-      break;
-
-    case 'effect:dispose':
-      handleEffectDispose(event);
-      break;
-  }
-}
-
-/**
- * Handle signal events - ensure node exists with source location
- */
-async function handleSignalEvent(event: RimitiveEvent): Promise<void> {
-  const data = event.data as {
-    signalId?: string;
-    name?: string;
-    sourceLocation?: SourceLocation;
-  } | undefined;
-
-  if (!data?.signalId) return;
-
-  const state = graphState();
-  const existingNode = state.nodes.get(data.signalId);
-
-  // Only update if we don't have source location yet, or if this event has one
-  if (existingNode?.sourceLocation && !data.sourceLocation) return;
-
-  // Resolve source location if present
-  let resolvedLocation = data.sourceLocation;
-  if (resolvedLocation) {
-    resolvedLocation = await resolveSourceLocation(resolvedLocation);
+export function createGraphProcessor(devtools: DevtoolsState) {
+  /**
+   * Get current graph state
+   */
+  function getGraphState(): GraphState {
+    return devtools.graphState();
   }
 
-  addNode({
-    id: data.signalId,
-    type: 'signal',
-    name: resolvedLocation?.display ?? data.name,
-    contextId: event.contextId,
-    sourceLocation: resolvedLocation,
-    created: existingNode?.created ?? event.timestamp ?? Date.now(),
-  });
-}
+  /**
+   * Add or update a node in the graph
+   */
+  function addNode(node: GraphNode): void {
+    const state = getGraphState();
+    const newNodes = new Map(state.nodes);
+    newNodes.set(node.id, node);
 
-/**
- * Handle computed events - ensure node exists with source location
- */
-async function handleComputedEvent(event: RimitiveEvent): Promise<void> {
-  const data = event.data as {
-    computedId?: string;
-    name?: string;
-    sourceLocation?: SourceLocation;
-  } | undefined;
-
-  if (!data?.computedId) return;
-
-  const state = graphState();
-  const existingNode = state.nodes.get(data.computedId);
-
-  // Only update if we don't have source location yet, or if this event has one
-  if (existingNode?.sourceLocation && !data.sourceLocation) return;
-
-  // Resolve source location if present
-  let resolvedLocation = data.sourceLocation;
-  if (resolvedLocation) {
-    resolvedLocation = await resolveSourceLocation(resolvedLocation);
+    devtools.graphNodes(newNodes);
   }
 
-  addNode({
-    id: data.computedId,
-    type: 'computed',
-    name: resolvedLocation?.display ?? data.name,
-    contextId: event.contextId,
-    sourceLocation: resolvedLocation,
-    created: existingNode?.created ?? event.timestamp ?? Date.now(),
-  });
-}
+  /**
+   * Add an edge to the graph (consumer depends on producer)
+   */
+  function addEdge(edge: GraphEdge): void {
+    const state = getGraphState();
+    const { id, producerId, consumerId } = edge;
 
-/**
- * Handle effect events - ensure node exists with source location
- */
-async function handleEffectEvent(event: RimitiveEvent): Promise<void> {
-  const data = event.data as {
-    effectId?: string;
-    name?: string;
-    sourceLocation?: SourceLocation;
-  } | undefined;
+    // Skip if edge already exists
+    if (state.edges.has(id)) return;
 
-  if (!data?.effectId) return;
+    const newEdges = new Map(state.edges);
+    const newDependencies = new Map(state.dependencies);
+    const newDependents = new Map(state.dependents);
 
-  const state = graphState();
-  const existingNode = state.nodes.get(data.effectId);
+    // Add edge
+    newEdges.set(id, edge);
 
-  // Only update if we don't have source location yet, or if this event has one
-  if (existingNode?.sourceLocation && !data.sourceLocation) return;
+    // Add to consumer's dependencies
+    const deps = newDependencies.get(consumerId);
+    if (deps) {
+      const newSet = new Set(deps);
+      newSet.add(producerId);
+      newDependencies.set(consumerId, newSet);
+    } else {
+      newDependencies.set(consumerId, new Set([producerId]));
+    }
 
-  // Resolve source location if present
-  let resolvedLocation = data.sourceLocation;
-  if (resolvedLocation) {
-    resolvedLocation = await resolveSourceLocation(resolvedLocation);
+    // Add to producer's dependents
+    const dependentSet = newDependents.get(producerId);
+    if (dependentSet) {
+      const newSet = new Set(dependentSet);
+      newSet.add(consumerId);
+      newDependents.set(producerId, newSet);
+    } else {
+      newDependents.set(producerId, new Set([consumerId]));
+    }
+
+    devtools.graphEdges(newEdges);
+    devtools.graphDependencies(newDependencies);
+    devtools.graphDependents(newDependents);
   }
 
-  addNode({
-    id: data.effectId,
-    type: 'effect',
-    name: resolvedLocation?.display ?? data.name,
-    contextId: event.contextId,
-    sourceLocation: resolvedLocation,
-    created: existingNode?.created ?? event.timestamp ?? Date.now(),
-  });
-}
+  /**
+   * Remove an edge from the graph
+   */
+  function removeEdge(consumerId: string, producerId: string): void {
+    const edgeId = `${consumerId}->${producerId}`;
+    const state = getGraphState();
 
-/**
- * Handle dependency:tracked event - create edge between producer and consumer
- */
-function handleDependencyTracked(event: RimitiveEvent): void {
-  const data = event.data as {
-    producerId?: string;
-    consumerId?: string;
-  } | undefined;
+    // Skip if edge doesn't exist
+    if (!state.edges.has(edgeId)) return;
 
-  if (!data?.producerId || !data?.consumerId) return;
+    const newEdges = new Map(state.edges);
+    const newDependencies = new Map(state.dependencies);
+    const newDependents = new Map(state.dependents);
 
-  const timestamp = event.timestamp ?? Date.now();
+    // Remove edge
+    newEdges.delete(edgeId);
 
-  // Ensure both nodes exist (with minimal info if we haven't seen them yet)
-  ensureNodeExists(data.producerId, event.contextId, timestamp);
-  ensureNodeExists(data.consumerId, event.contextId, timestamp);
+    // Remove from consumer's dependencies
+    const deps = newDependencies.get(consumerId);
+    if (deps) {
+      const newSet = new Set(deps);
+      newSet.delete(producerId);
+      if (newSet.size === 0) {
+        newDependencies.delete(consumerId);
+      } else {
+        newDependencies.set(consumerId, newSet);
+      }
+    }
 
-  // Add the edge
-  addEdge({
-    id: `${data.consumerId}->${data.producerId}`,
-    producerId: data.producerId,
-    consumerId: data.consumerId,
-    tracked: timestamp,
-  });
-}
+    // Remove from producer's dependents
+    const dependentSet = newDependents.get(producerId);
+    if (dependentSet) {
+      const newSet = new Set(dependentSet);
+      newSet.delete(consumerId);
+      if (newSet.size === 0) {
+        newDependents.delete(producerId);
+      } else {
+        newDependents.set(producerId, newSet);
+      }
+    }
 
-/**
- * Handle dependency:pruned event - remove edge between producer and consumer
- */
-function handleDependencyPruned(event: RimitiveEvent): void {
-  const data = event.data as {
-    producerId?: string;
-    consumerId?: string;
-  } | undefined;
-
-  if (!data?.producerId || !data?.consumerId) return;
-
-  removeEdge(data.consumerId, data.producerId);
-}
-
-/**
- * Handle effect:dispose event - could remove the node
- */
-function handleEffectDispose(event: RimitiveEvent): void {
-  // For now, we keep disposed nodes in the graph
-  // They'll just have no edges
-  // Could optionally remove them: removeNode(data.effectId)
-}
-
-/**
- * Ensure a node exists in the graph (with minimal info if we haven't seen full event yet)
- */
-function ensureNodeExists(nodeId: string, contextId: string, timestamp: number): void {
-  const state = graphState();
-  if (state.nodes.has(nodeId)) return;
-
-  // Infer type from ID prefix if possible
-  let type: GraphNodeType = 'signal';
-  if (nodeId.includes('computed') || nodeId.includes('Computed')) {
-    type = 'computed';
-  } else if (nodeId.includes('effect') || nodeId.includes('Effect')) {
-    type = 'effect';
+    devtools.graphEdges(newEdges);
+    devtools.graphDependencies(newDependencies);
+    devtools.graphDependents(newDependents);
   }
 
-  addNode({
-    id: nodeId,
-    type,
-    name: undefined,
-    contextId,
-    sourceLocation: undefined,
-    created: timestamp,
-  });
-}
+  /**
+   * Ensure a node exists in the graph (with minimal info if we haven't seen full event yet)
+   */
+  function ensureNodeExists(nodeId: string, contextId: string, timestamp: number): void {
+    const state = getGraphState();
+    if (state.nodes.has(nodeId)) return;
 
-/**
- * Handle graph:snapshot event - replace entire graph state with snapshot
- */
-function handleGraphSnapshot(event: RimitiveEvent): void {
-  const data = event.data as GraphSnapshot | undefined;
-  if (!data) return;
+    // Infer type from ID prefix if possible
+    let type: GraphNodeType = 'signal';
+    if (nodeId.includes('computed') || nodeId.includes('Computed')) {
+      type = 'computed';
+    } else if (nodeId.includes('effect') || nodeId.includes('Effect')) {
+      type = 'effect';
+    }
 
-  const timestamp = event.timestamp ?? Date.now();
-
-  // Build nodes map
-  const nodes = new Map<string, GraphNode>();
-  for (const node of data.nodes) {
-    nodes.set(node.id, {
-      id: node.id,
-      type: node.type,
-      name: node.name,
-      contextId: event.contextId,
-      sourceLocation: node.sourceLocation,
+    addNode({
+      id: nodeId,
+      type,
+      name: undefined,
+      contextId,
+      sourceLocation: undefined,
       created: timestamp,
     });
   }
 
-  // Build edges map and adjacency lists
-  const edges = new Map<string, GraphEdge>();
-  const dependencies = new Map<string, Set<string>>();
-  const dependents = new Map<string, Set<string>>();
+  /**
+   * Handle signal events - ensure node exists with source location
+   */
+  async function handleSignalEvent(event: RimitiveEvent): Promise<void> {
+    const data = event.data as {
+      signalId?: string;
+      name?: string;
+      sourceLocation?: SourceLocation;
+    } | undefined;
 
-  for (const edge of data.edges) {
-    const edgeId = `${edge.consumerId}->${edge.producerId}`;
-    edges.set(edgeId, {
-      id: edgeId,
-      producerId: edge.producerId,
-      consumerId: edge.consumerId,
+    if (!data?.signalId) return;
+
+    const state = getGraphState();
+    const existingNode = state.nodes.get(data.signalId);
+
+    // Only update if we don't have source location yet, or if this event has one
+    if (existingNode?.sourceLocation && !data.sourceLocation) return;
+
+    // Resolve source location if present
+    let resolvedLocation = data.sourceLocation;
+    if (resolvedLocation) {
+      resolvedLocation = await resolveSourceLocation(resolvedLocation);
+    }
+
+    addNode({
+      id: data.signalId,
+      type: 'signal',
+      name: resolvedLocation?.display ?? data.name,
+      contextId: event.contextId,
+      sourceLocation: resolvedLocation,
+      created: existingNode?.created ?? event.timestamp ?? Date.now(),
+    });
+  }
+
+  /**
+   * Handle computed events - ensure node exists with source location
+   */
+  async function handleComputedEvent(event: RimitiveEvent): Promise<void> {
+    const data = event.data as {
+      computedId?: string;
+      name?: string;
+      sourceLocation?: SourceLocation;
+    } | undefined;
+
+    if (!data?.computedId) return;
+
+    const state = getGraphState();
+    const existingNode = state.nodes.get(data.computedId);
+
+    // Only update if we don't have source location yet, or if this event has one
+    if (existingNode?.sourceLocation && !data.sourceLocation) return;
+
+    // Resolve source location if present
+    let resolvedLocation = data.sourceLocation;
+    if (resolvedLocation) {
+      resolvedLocation = await resolveSourceLocation(resolvedLocation);
+    }
+
+    addNode({
+      id: data.computedId,
+      type: 'computed',
+      name: resolvedLocation?.display ?? data.name,
+      contextId: event.contextId,
+      sourceLocation: resolvedLocation,
+      created: existingNode?.created ?? event.timestamp ?? Date.now(),
+    });
+  }
+
+  /**
+   * Handle effect events - ensure node exists with source location
+   */
+  async function handleEffectEvent(event: RimitiveEvent): Promise<void> {
+    const data = event.data as {
+      effectId?: string;
+      name?: string;
+      sourceLocation?: SourceLocation;
+    } | undefined;
+
+    if (!data?.effectId) return;
+
+    const state = getGraphState();
+    const existingNode = state.nodes.get(data.effectId);
+
+    // Only update if we don't have source location yet, or if this event has one
+    if (existingNode?.sourceLocation && !data.sourceLocation) return;
+
+    // Resolve source location if present
+    let resolvedLocation = data.sourceLocation;
+    if (resolvedLocation) {
+      resolvedLocation = await resolveSourceLocation(resolvedLocation);
+    }
+
+    addNode({
+      id: data.effectId,
+      type: 'effect',
+      name: resolvedLocation?.display ?? data.name,
+      contextId: event.contextId,
+      sourceLocation: resolvedLocation,
+      created: existingNode?.created ?? event.timestamp ?? Date.now(),
+    });
+  }
+
+  /**
+   * Handle dependency:tracked event - create edge between producer and consumer
+   */
+  function handleDependencyTracked(event: RimitiveEvent): void {
+    const data = event.data as {
+      producerId?: string;
+      consumerId?: string;
+    } | undefined;
+
+    if (!data?.producerId || !data?.consumerId) return;
+
+    const timestamp = event.timestamp ?? Date.now();
+
+    // Ensure both nodes exist (with minimal info if we haven't seen them yet)
+    ensureNodeExists(data.producerId, event.contextId, timestamp);
+    ensureNodeExists(data.consumerId, event.contextId, timestamp);
+
+    // Add the edge
+    addEdge({
+      id: `${data.consumerId}->${data.producerId}`,
+      producerId: data.producerId,
+      consumerId: data.consumerId,
       tracked: timestamp,
     });
-
-    // Add to consumer's dependencies
-    let deps = dependencies.get(edge.consumerId);
-    if (!deps) {
-      deps = new Set();
-      dependencies.set(edge.consumerId, deps);
-    }
-    deps.add(edge.producerId);
-
-    // Add to producer's dependents
-    let depnts = dependents.get(edge.producerId);
-    if (!depnts) {
-      depnts = new Set();
-      dependents.set(edge.producerId, depnts);
-    }
-    depnts.add(edge.consumerId);
   }
 
-  // Update state atomically
-  graphState({ nodes, edges, dependencies, dependents });
+  /**
+   * Handle dependency:pruned event - remove edge between producer and consumer
+   */
+  function handleDependencyPruned(event: RimitiveEvent): void {
+    const data = event.data as {
+      producerId?: string;
+      consumerId?: string;
+    } | undefined;
 
-  // Clear selection if the selected node no longer exists
-  const selected = selectedNodeId();
-  if (selected && !nodes.has(selected)) {
-    selectedNodeId(null);
+    if (!data?.producerId || !data?.consumerId) return;
+
+    removeEdge(data.consumerId, data.producerId);
   }
+
+  /**
+   * Handle effect:dispose event - could remove the node
+   */
+  function handleEffectDispose(): void {
+    // For now, we keep disposed nodes in the graph
+    // They'll just have no edges
+    // Could optionally remove them: removeNode(data.effectId)
+  }
+
+  /**
+   * Handle graph:snapshot event - merge snapshot data for this context into graph state
+   */
+  function handleGraphSnapshot(event: RimitiveEvent): void {
+    const data = event.data as GraphSnapshot | undefined;
+    if (!data) return;
+
+    const timestamp = event.timestamp ?? Date.now();
+    const contextId = event.contextId;
+    const currentState = getGraphState();
+
+    // Start with existing state, removing nodes/edges from this context
+    const nodes = new Map<string, GraphNode>();
+    const edges = new Map<string, GraphEdge>();
+    const dependencies = new Map<string, Set<string>>();
+    const dependents = new Map<string, Set<string>>();
+
+    // Copy nodes from other contexts
+    for (const [id, node] of currentState.nodes) {
+      if (node.contextId !== contextId) {
+        nodes.set(id, node);
+      }
+    }
+
+    // Copy edges where both nodes are from other contexts
+    for (const [id, edge] of currentState.edges) {
+      const producerNode = currentState.nodes.get(edge.producerId);
+      const consumerNode = currentState.nodes.get(edge.consumerId);
+      if (producerNode?.contextId !== contextId && consumerNode?.contextId !== contextId) {
+        edges.set(id, edge);
+      }
+    }
+
+    // Rebuild dependencies/dependents from remaining edges
+    for (const edge of edges.values()) {
+      // Add to consumer's dependencies
+      let deps = dependencies.get(edge.consumerId);
+      if (!deps) {
+        deps = new Set();
+        dependencies.set(edge.consumerId, deps);
+      }
+      deps.add(edge.producerId);
+
+      // Add to producer's dependents
+      let depnts = dependents.get(edge.producerId);
+      if (!depnts) {
+        depnts = new Set();
+        dependents.set(edge.producerId, depnts);
+      }
+      depnts.add(edge.consumerId);
+    }
+
+    // Add nodes from this context's snapshot
+    for (const node of data.nodes) {
+      nodes.set(node.id, {
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        contextId,
+        sourceLocation: node.sourceLocation,
+        created: timestamp,
+      });
+    }
+
+    // Add edges from this context's snapshot
+    for (const edge of data.edges) {
+      const edgeId = `${edge.consumerId}->${edge.producerId}`;
+      edges.set(edgeId, {
+        id: edgeId,
+        producerId: edge.producerId,
+        consumerId: edge.consumerId,
+        tracked: timestamp,
+      });
+
+      // Add to consumer's dependencies
+      let deps = dependencies.get(edge.consumerId);
+      if (!deps) {
+        deps = new Set();
+        dependencies.set(edge.consumerId, deps);
+      }
+      deps.add(edge.producerId);
+
+      // Add to producer's dependents
+      let depnts = dependents.get(edge.producerId);
+      if (!depnts) {
+        depnts = new Set();
+        dependents.set(edge.producerId, depnts);
+      }
+      depnts.add(edge.consumerId);
+    }
+
+    // Update state atomically
+    devtools.graphNodes(nodes);
+    devtools.graphEdges(edges);
+    devtools.graphDependencies(dependencies);
+    devtools.graphDependents(dependents);
+
+    // Clear selection if the selected node no longer exists
+    const selected = devtools.selectedNodeId.peek();
+    if (selected && !nodes.has(selected)) {
+      devtools.selectedNodeId(null);
+    }
+  }
+
+  /**
+   * Process graph-related events to maintain dependency graph state
+   */
+  return function processGraphEvent(event: RimitiveEvent): void {
+    switch (event.type) {
+      case 'graph:snapshot':
+        handleGraphSnapshot(event);
+        break;
+
+      case 'signal:read':
+      case 'signal:write':
+        void handleSignalEvent(event);
+        break;
+
+      case 'computed:read':
+      case 'computed:value':
+        void handleComputedEvent(event);
+        break;
+
+      case 'effect:run':
+      case 'effect:created':
+        void handleEffectEvent(event);
+        break;
+
+      case 'dependency:tracked':
+        handleDependencyTracked(event);
+        break;
+
+      case 'dependency:pruned':
+        handleDependencyPruned(event);
+        break;
+
+      case 'effect:dispose':
+        handleEffectDispose();
+        break;
+    }
+  };
 }

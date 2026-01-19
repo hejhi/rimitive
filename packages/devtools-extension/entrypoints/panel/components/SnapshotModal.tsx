@@ -1,7 +1,12 @@
-import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { List, Network, Loader2, History, X, Camera } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../src/components/ui/tabs';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../../src/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -9,16 +14,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../src/components/ui/select';
-import { devtoolsState, type TabId } from '../store/devtoolsCtx';
+import { useDevtools } from '../store/DevtoolsProvider';
+import type { TabId } from '../store/devtoolsBehavior';
 import { LogsTab } from '../LogsTab';
 import { FilterBar } from './FilterBar';
-import { buildGraphStateFromLogEntries } from '../store/snapshotGraphBuilder';
 
 // Lazy load GraphTab
-const GraphTab = lazy(() => import('../GraphTab').then((m) => ({ default: m.GraphTab })));
+const GraphTab = lazy(() =>
+  import('../GraphTab').then((m) => ({ default: m.GraphTab }))
+);
 
 // Lazy load TimelineTab
-const TimelineTab = lazy(() => import('../TimelineTab').then((m) => ({ default: m.TimelineTab })));
+const TimelineTab = lazy(() =>
+  import('../TimelineTab').then((m) => ({ default: m.TimelineTab }))
+);
 
 const ANIMATION_DURATION = 200;
 
@@ -34,14 +43,19 @@ function TabLoading() {
 }
 
 export function SnapshotModal() {
-  const snapshot = useSubscribe(devtoolsState.snapshot);
-  const selectedContext = useSubscribe(devtoolsState.snapshotSelectedContext);
-  const filter = useSubscribe(devtoolsState.snapshotFilter);
-  const activeTab = useSubscribe(devtoolsState.snapshotActiveTab);
+  const devtools = useDevtools();
+  const snapshot = useSubscribe(devtools.snapshot);
+  const selectedContext = useSubscribe(devtools.snapshotSelectedContext);
+  const filter = useSubscribe(devtools.snapshotFilter);
+  const activeTab = useSubscribe(devtools.snapshotActiveTab);
 
   // Animation state
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+
+  // Use computed values from store
+  const filteredLogEntries = useSubscribe(devtools.snapshotFilteredLogEntries);
+  const graphState = useSubscribe(devtools.snapshotGraphState);
 
   // Trigger enter animation when snapshot becomes available
   useEffect(() => {
@@ -53,64 +67,13 @@ export function SnapshotModal() {
     }
   }, [snapshot, isClosing]);
 
-  // Base entries filtered by context only (for graph and timeline)
-  const contextFilteredEntries = useMemo(() => {
-    if (!snapshot) return [];
-    let entries = snapshot.logEntries;
-
-    // Filter by selected context
-    if (selectedContext) {
-      entries = entries.filter((e) => e.contextId === selectedContext);
-    }
-
-    return entries;
-  }, [snapshot, selectedContext]);
-
-  // Filter log entries for the logs view (all filters applied)
-  const filteredLogEntries = useMemo(() => {
-    let entries = contextFilteredEntries;
-
-    // Filter by hideInternal
-    if (filter.hideInternal) {
-      entries = entries.filter((e) => !e.isInternal);
-    }
-
-    // Filter by type
-    if (filter.type !== 'all') {
-      entries = entries.filter((e) => e.eventType === filter.type);
-    }
-
-    // Filter by search
-    if (filter.search) {
-      const search = filter.search.toLowerCase();
-      entries = entries.filter(
-        (e) =>
-          e.nodeName?.toLowerCase().includes(search) ||
-          e.summary?.toLowerCase().includes(search) ||
-          e.nodeId?.toLowerCase().includes(search)
-      );
-    }
-
-    // Filter by nodeId
-    if (filter.nodeId) {
-      entries = entries.filter((e) => e.nodeId === filter.nodeId);
-    }
-
-    return entries;
-  }, [contextFilteredEntries, filter]);
-
-  // Build graph state from context-filtered entries
-  const snapshotGraphState = useMemo(() => {
-    return buildGraphStateFromLogEntries(contextFilteredEntries);
-  }, [contextFilteredEntries]);
-
   if (!snapshot) return null;
 
   const contexts = snapshot.contexts;
 
   // Get display name for current selection
   const selectedName = selectedContext
-    ? contexts.find((c) => c.id === selectedContext)?.name ?? 'Unknown'
+    ? (contexts.find((c) => c.id === selectedContext)?.name ?? 'Unknown')
     : `All (${contexts.length})`;
 
   const handleClose = () => {
@@ -120,16 +83,16 @@ export function SnapshotModal() {
 
     // Wait for animation to complete before clearing state
     setTimeout(() => {
-      devtoolsState.snapshot(null);
-      devtoolsState.snapshotSelectedContext(null);
-      devtoolsState.snapshotSelectedTransaction(null);
-      devtoolsState.snapshotFilter({
+      devtools.snapshot(null);
+      devtools.snapshotSelectedContext(null);
+      devtools.snapshotSelectedTransaction(null);
+      devtools.snapshotFilter({
         type: 'all',
         search: '',
         hideInternal: true,
         nodeId: null,
       });
-      devtoolsState.snapshotActiveTab('logs');
+      devtools.snapshotActiveTab('logs');
       setIsClosing(false);
     }, ANIMATION_DURATION);
   };
@@ -148,7 +111,11 @@ export function SnapshotModal() {
           <Camera className="h-3.5 w-3.5" />
           <span className="font-medium">Viewing Snapshot</span>
           <span className="text-amber-200/60">
-            {new Date(snapshot.exportDate).toLocaleDateString()} at {new Date(snapshot.exportDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(snapshot.exportDate).toLocaleDateString()} at{' '}
+            {new Date(snapshot.exportDate).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </span>
         </div>
         <button
@@ -173,10 +140,12 @@ export function SnapshotModal() {
           <Select
             value={selectedContext || 'all'}
             onValueChange={(value) =>
-              devtoolsState.snapshotSelectedContext(value === 'all' ? null : value)
+              devtools.snapshotSelectedContext(
+                value === 'all' ? null : value
+              )
             }
           >
-            <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs gap-1.5">
+            <SelectTrigger className="h-7 w-auto min-w-25 text-xs gap-1.5">
               <SelectValue>{selectedName}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -194,7 +163,10 @@ export function SnapshotModal() {
             type="checkbox"
             checked={filter.hideInternal}
             onChange={(e) =>
-              devtoolsState.snapshotFilter({ ...filter, hideInternal: e.target.checked })
+              devtools.snapshotFilter({
+                ...filter,
+                hideInternal: e.target.checked,
+              })
             }
             className="rounded border-muted-foreground/50 w-3 h-3"
           />
@@ -205,7 +177,7 @@ export function SnapshotModal() {
       {/* Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(v) => devtoolsState.snapshotActiveTab(v as TabId)}
+        onValueChange={(v) => devtools.snapshotActiveTab(v as TabId)}
         className="flex-1 flex flex-col overflow-hidden"
       >
         {/* Tab list with actions */}
@@ -230,26 +202,29 @@ export function SnapshotModal() {
         </div>
 
         {/* Filter bar (shown for logs tab) */}
-        <TabsContent value="logs" className="flex-1 flex flex-col overflow-hidden mt-0 data-[state=inactive]:hidden">
+        <TabsContent
+          value="logs"
+          className="flex-1 flex flex-col overflow-hidden mt-0 data-[state=inactive]:hidden"
+        >
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
             <FilterBar
               filterType={filter.type}
               searchValue={filter.search}
               filteredNodeId={filter.nodeId}
               onFilterTypeChange={(value) =>
-                devtoolsState.snapshotFilter({
+                devtools.snapshotFilter({
                   ...filter,
                   type: value,
                 })
               }
               onSearchChange={(value) =>
-                devtoolsState.snapshotFilter({
+                devtools.snapshotFilter({
                   ...filter,
                   search: value,
                 })
               }
               onClearNodeFilter={() =>
-                devtoolsState.snapshotFilter({
+                devtools.snapshotFilter({
                   ...filter,
                   nodeId: null,
                 })
@@ -261,15 +236,25 @@ export function SnapshotModal() {
           </div>
         </TabsContent>
 
-        <TabsContent value="graph" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
+        <TabsContent
+          value="graph"
+          className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden"
+        >
           <Suspense fallback={<TabLoading />}>
-            <GraphTab graphState={snapshotGraphState} hideInternal={filter.hideInternal} />
+            <GraphTab
+              graphState={graphState}
+              hideInternal={filter.hideInternal}
+              selectedContext={null}
+            />
           </Suspense>
         </TabsContent>
 
-        <TabsContent value="timeline" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
+        <TabsContent
+          value="timeline"
+          className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden"
+        >
           <Suspense fallback={<TabLoading />}>
-            <TimelineTab snapshotMode logEntries={contextFilteredEntries} hideInternal={filter.hideInternal} />
+            <TimelineTab snapshotMode hideInternal={filter.hideInternal} />
           </Suspense>
         </TabsContent>
       </Tabs>

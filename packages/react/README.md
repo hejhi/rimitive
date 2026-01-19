@@ -122,3 +122,58 @@ function Counter() {
 ```
 
 The behavior is instantiated once at mount (like useRef's initial value).
+
+---
+
+## React Bridge
+
+Embed React components inside a Rimitive application. Useful for gradual migration or when you need React-specific libraries (like `@xyflow/react`).
+
+### createReactBridge
+
+Mount a React component with reactive props. Returns a ref callback for use with `el().ref()`.
+
+```tsx
+import { createReactBridge } from '@rimitive/react';
+import { ReactFlow } from '@xyflow/react';
+
+const GraphView = (svc) => {
+  const { el, signal, effect } = svc;
+  const nodes = signal([]);
+  const edges = signal([]);
+
+  // Create a ref that mounts ReactFlow with reactive props
+  const graphRef = createReactBridge(effect, ReactFlow, () => ({
+    nodes: nodes(),
+    edges: edges(),
+    onNodesChange: (changes) => { /* handle changes */ },
+  }));
+
+  return el('div').props({ className: 'graph-container' }).ref(graphRef)();
+};
+```
+
+The component re-renders automatically when signal dependencies in `getProps` change.
+
+### renderReact
+
+Render arbitrary JSX with reactive dependencies. Lower-level alternative for more control.
+
+```tsx
+import { renderReact } from '@rimitive/react';
+
+const StatusIndicator = (svc) => {
+  const { el, signal, effect } = svc;
+  const status = signal<'idle' | 'loading' | 'error'>('idle');
+
+  const statusRef = renderReact(effect, () => (
+    <Badge variant={status() === 'error' ? 'destructive' : 'default'}>
+      {status()}
+    </Badge>
+  ));
+
+  return el('div').ref(statusRef)();
+};
+```
+
+Both functions handle cleanup automatically—the React component unmounts and the effect stops when the Rimitive element is removed.
