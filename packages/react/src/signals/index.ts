@@ -2,6 +2,8 @@ export { useSubscribe, useSignal, useSelector, createHook } from './hooks';
 
 export { SignalProvider, useSignalSvc } from './context';
 
+export { createReactBridge, renderReact } from './bridge';
+
 export type { SignalValue, SignalSetter } from './types';
 
 export type { SignalProviderProps, SignalSvc } from './context';
