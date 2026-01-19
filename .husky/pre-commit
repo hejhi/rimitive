@@ -1,0 +1,2 @@
+# Run typecheck on staged files (optional, remove if too slow)
+# pnpm typecheck

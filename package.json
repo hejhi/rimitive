@@ -24,9 +24,13 @@
     "api-extract": "lerna run api-extract",
     "api-collect": "mkdir -p temp && cp packages/*/temp/*.api.json temp/",
     "api-document": "pnpm api-collect && api-documenter markdown -i temp -o packages/docs/src/content/docs/api && node scripts/add-api-frontmatter.mjs",
+    "generate-llms": "node scripts/generate-llms.mjs",
+    "docs": "pnpm build && pnpm api-extract && pnpm api-document && pnpm generate-llms",
+    "prechangeset": "node scripts/commit-llms.mjs",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@changesets/cli": "2.29.8",
@@ -39,6 +43,7 @@
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
+    "husky": "9.1.7",
     "lerna": "9.0.3",
     "prettier": "3.8.0",
     "tdd-guard-vitest": "0.1.6",
