@@ -1,4 +1,5 @@
 import { devtoolsContext, devtoolsState } from './devtoolsCtx';
+import { buildGraphStateFromLogEntries } from './snapshotGraphBuilder';
 import type { LogEntry } from './types';
 
 // Common log filtering logic
@@ -84,4 +85,62 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
     'summary',
   ]);
   return filtered.slice(-500); // Keep last 500 logs
+});
+
+// Snapshot computed values
+
+/** Snapshot entries filtered by context only (for graph and timeline) */
+export const snapshotContextFilteredEntries = devtoolsContext.computed(() => {
+  const snapshot = devtoolsState.snapshot();
+  const selectedContext = devtoolsState.snapshotSelectedContext();
+
+  if (!snapshot) return [];
+
+  let entries = snapshot.logEntries;
+  if (selectedContext) {
+    entries = entries.filter((e) => e.contextId === selectedContext);
+  }
+  return entries;
+});
+
+/** Snapshot entries with all filters applied (for logs view) */
+export const snapshotFilteredLogEntries = devtoolsContext.computed(() => {
+  const entries = snapshotContextFilteredEntries();
+  const filter = devtoolsState.snapshotFilter();
+
+  let filtered = entries;
+
+  // Filter by hideInternal
+  if (filter.hideInternal) {
+    filtered = filtered.filter((e) => !e.isInternal);
+  }
+
+  // Filter by type
+  if (filter.type !== 'all') {
+    filtered = filtered.filter((e) => e.eventType === filter.type);
+  }
+
+  // Filter by search
+  if (filter.search) {
+    const search = filter.search.toLowerCase();
+    filtered = filtered.filter(
+      (e) =>
+        e.nodeName?.toLowerCase().includes(search) ||
+        e.summary?.toLowerCase().includes(search) ||
+        e.nodeId?.toLowerCase().includes(search)
+    );
+  }
+
+  // Filter by nodeId
+  if (filter.nodeId) {
+    filtered = filtered.filter((e) => e.nodeId === filter.nodeId);
+  }
+
+  return filtered;
+});
+
+/** Graph state built from snapshot context-filtered entries */
+export const snapshotGraphState = devtoolsContext.computed(() => {
+  const entries = snapshotContextFilteredEntries();
+  return buildGraphStateFromLogEntries(entries);
 });

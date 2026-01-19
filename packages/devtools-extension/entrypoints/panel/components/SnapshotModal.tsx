@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { List, Network, Loader2, History, X, Camera } from 'lucide-react';
 import {
@@ -15,9 +15,12 @@ import {
   SelectValue,
 } from '../../../src/components/ui/select';
 import { devtoolsState, type TabId } from '../store/devtoolsCtx';
+import {
+  snapshotFilteredLogEntries,
+  snapshotGraphState,
+} from '../store/computed';
 import { LogsTab } from '../LogsTab';
 import { FilterBar } from './FilterBar';
-import { buildGraphStateFromLogEntries } from '../store/snapshotGraphBuilder';
 
 // Lazy load GraphTab
 const GraphTab = lazy(() =>
@@ -52,6 +55,10 @@ export function SnapshotModal() {
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
+  // Use computed values from store
+  const filteredLogEntries = useSubscribe(snapshotFilteredLogEntries);
+  const graphState = useSubscribe(snapshotGraphState);
+
   // Trigger enter animation when snapshot becomes available
   useEffect(() => {
     if (snapshot && !isClosing) {
@@ -61,57 +68,6 @@ export function SnapshotModal() {
       });
     }
   }, [snapshot, isClosing]);
-
-  // Base entries filtered by context only (for graph and timeline)
-  const contextFilteredEntries = useMemo(() => {
-    if (!snapshot) return [];
-    let entries = snapshot.logEntries;
-
-    // Filter by selected context
-    if (selectedContext) {
-      entries = entries.filter((e) => e.contextId === selectedContext);
-    }
-
-    return entries;
-  }, [snapshot, selectedContext]);
-
-  // Filter log entries for the logs view (all filters applied)
-  const filteredLogEntries = useMemo(() => {
-    let entries = contextFilteredEntries;
-
-    // Filter by hideInternal
-    if (filter.hideInternal) {
-      entries = entries.filter((e) => !e.isInternal);
-    }
-
-    // Filter by type
-    if (filter.type !== 'all') {
-      entries = entries.filter((e) => e.eventType === filter.type);
-    }
-
-    // Filter by search
-    if (filter.search) {
-      const search = filter.search.toLowerCase();
-      entries = entries.filter(
-        (e) =>
-          e.nodeName?.toLowerCase().includes(search) ||
-          e.summary?.toLowerCase().includes(search) ||
-          e.nodeId?.toLowerCase().includes(search)
-      );
-    }
-
-    // Filter by nodeId
-    if (filter.nodeId) {
-      entries = entries.filter((e) => e.nodeId === filter.nodeId);
-    }
-
-    return entries;
-  }, [contextFilteredEntries, filter]);
-
-  // Build graph state from context-filtered entries
-  const snapshotGraphState = useMemo(() => {
-    return buildGraphStateFromLogEntries(contextFilteredEntries);
-  }, [contextFilteredEntries]);
 
   if (!snapshot) return null;
 
@@ -288,7 +244,7 @@ export function SnapshotModal() {
         >
           <Suspense fallback={<TabLoading />}>
             <GraphTab
-              graphState={snapshotGraphState}
+              graphState={graphState}
               hideInternal={filter.hideInternal}
               selectedContext={null}
             />
@@ -300,11 +256,7 @@ export function SnapshotModal() {
           className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden"
         >
           <Suspense fallback={<TabLoading />}>
-            <TimelineTab
-              snapshotMode
-              logEntries={contextFilteredEntries}
-              hideInternal={filter.hideInternal}
-            />
+            <TimelineTab snapshotMode hideInternal={filter.hideInternal} />
           </Suspense>
         </TabsContent>
       </Tabs>

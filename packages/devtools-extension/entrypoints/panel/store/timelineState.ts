@@ -296,3 +296,66 @@ export function clearTimeline(): void {
     timeRange: null,
   });
 }
+
+// Snapshot timeline state (for viewing imported snapshots)
+export const snapshotTimelineState = devtoolsContext.signal<TimelineState>({
+  cascades: [],
+  currentCascadeIndex: null,
+  timeRange: null,
+});
+
+/**
+ * Rebuild snapshot cascades from snapshot entries
+ */
+export function rebuildSnapshotCascades(entries: LogEntry[], hideInternal: boolean): void {
+  const filtered = hideInternal ? entries.filter((e) => !e.isInternal) : entries;
+  const cascades = buildCascades(filtered);
+
+  // Compute time range
+  let timeRange: { start: number; end: number } | null = null;
+  if (filtered.length > 0) {
+    let minTime = filtered[0].timestamp;
+    let maxTime = filtered[0].timestamp;
+    for (const entry of filtered) {
+      if (entry.timestamp < minTime) minTime = entry.timestamp;
+      if (entry.timestamp > maxTime) maxTime = entry.timestamp;
+    }
+    timeRange = { start: minTime, end: maxTime };
+  }
+
+  snapshotTimelineState({
+    cascades,
+    currentCascadeIndex: cascades.length > 0 ? 0 : null,
+    timeRange,
+  });
+}
+
+/**
+ * Select a snapshot cascade by index
+ */
+export function selectSnapshotCascade(index: number | null): void {
+  snapshotTimelineState({
+    ...snapshotTimelineState(),
+    currentCascadeIndex: index,
+  });
+}
+
+/**
+ * Get current snapshot cascade
+ */
+export const currentSnapshotCascade = devtoolsContext.computed(() => {
+  const state = snapshotTimelineState();
+  if (state.currentCascadeIndex === null) return null;
+  return state.cascades[state.currentCascadeIndex] ?? null;
+});
+
+/**
+ * Clear snapshot timeline state
+ */
+export function clearSnapshotTimeline(): void {
+  snapshotTimelineState({
+    cascades: [],
+    currentCascadeIndex: null,
+    timeRange: null,
+  });
+}
