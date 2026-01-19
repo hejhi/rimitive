@@ -1,5 +1,16 @@
 # @rimitive/ssr
 
+## 0.2.1
+
+### Patch Changes
+
+- Reduce npm package size by excluding source maps and build artifacts
+- Updated dependencies
+  - @rimitive/core@0.2.1
+  - @rimitive/resource@0.2.1
+  - @rimitive/signals@0.2.1
+  - @rimitive/view@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

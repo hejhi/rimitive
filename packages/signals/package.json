@@ -1,6 +1,6 @@
 {
   "name": "@rimitive/signals",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Reactive primitives for Rimitive components",
   "author": "Rimitive Team",
   "license": "MIT",

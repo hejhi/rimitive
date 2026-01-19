@@ -1,5 +1,17 @@
 # @rimitive/example-ssr-streaming
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies
+  - @rimitive/core@0.2.1
+  - @rimitive/resource@0.2.1
+  - @rimitive/router@0.2.1
+  - @rimitive/signals@0.2.1
+  - @rimitive/ssr@0.2.1
+  - @rimitive/view@0.2.1
+
 ## 0.0.6
 
 ### Patch Changes
