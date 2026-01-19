@@ -1,7 +1,7 @@
 {
   "name": "@rimitive/router",
   "version": "0.2.0",
-  "description": "Minimal client-side routing for Rimitive",
+  "description": "Routing for Rimitive",
   "author": "Rimitive Team",
   "license": "MIT",
   "repository": {
@@ -33,10 +33,6 @@
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
-    },
-    "./ssr-context": {
-      "import": "./dist/ssr-context.js",
-      "types": "./dist/ssr-context.d.ts"
     }
   },
   "files": [

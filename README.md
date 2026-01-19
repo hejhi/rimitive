@@ -6,15 +6,15 @@
 
 _"Primitive" was taken so I dropped the "P", naming is hard_
 
-Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, without migrations, without "now we need a real framework."
+Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, migrations, or a "now we need a real framework" moment.
 
 Compose only the primitives you need, opting in as you go, and even create your own reactive primitives that can tap directly into the rimitive reactive graph! 🎶
 
 Rimitive is as much about providing **scalable patterns, conventions, and mental models** for building performant, lean, ergonomic, and scalable reactive applications as it is about providing the actual reactive primitives. Steal the patterns and use a different framework if you don't like rimitive!
 
-Patterns and architectures in rimitive follow **low coupling, high cohesion**—your reactive logic is self-contained and reusable, your UI just consumes it. Test behaviors without rendering. Swap components without touching logic. Share behaviors across frameworks.
+Patterns and architectures in rimitive follow **low coupling, high cohesion**—your reactive logic is self-contained and reusable, your UI just consumes it. Test behaviors without rendering, swap components without touching logic, and share behaviors across frameworks.
 
-- **It's a reactive library, not a framework** — take only what you need, as you need it
+- **A collection of atomic reactive libraries, not frameworks** — take only what you need, as you need it
 - **No VDOM** — fine-grained updates directly to the DOM
 - **No global state** — each `compose()` creates an isolated reactive context
 
@@ -29,7 +29,7 @@ Patterns and architectures in rimitive follow **low coupling, high cohesion**—
 | [`@rimitive/core`](packages/core)                             | Composition engine — `compose()`, `defineModule()`                                                                    |
 | [`@rimitive/signals`](packages/signals)                       | Reactive primitives — `signal`, `computed`, `effect`, `batch`                                                         |
 | [`@rimitive/view`](packages/view)                             | UI primitives — `el`, `map`, `match`, `portal`                                                                        |
-| [`@rimitive/router`](packages/router)                         | Client-side routing                                                                                                   |
+| [`@rimitive/router`](packages/router)                         | Routing                                                                                                               |
 | [`@rimitive/resource`](packages/resource)                     | Async data fetching with `resource()`                                                                                 |
 | [`@rimitive/ssr`](packages/ssr)                               | Server-side rendering and streaming                                                                                   |
 | [`@rimitive/react`](packages/react)                           | React bindings                                                                                                        |
@@ -50,9 +50,9 @@ const svc = compose(SignalModule);
 
 Everything in rimitive is built from the SignalModule. Breaking this down, `compose(SignalModule)` returns a reactive service with only the primitives you provided.
 
-That's it! Create services with only the primitives you need to use.
+That's it!
 
-In addition to providing primitives, rimitive also provides higher-level tooling that work with and can help stitch together and orchestrate, like [`router`](https://rimitive.dev/guides/adding-routing/) and [`ssr`](https://rimitive.dev/guides/server-rendering/). It's simple to [make your own modules](https://rimitive.dev/guides/custom-modules/) as well.
+In addition to providing primitives, rimitive also provides higher-level tooling that can work with, help stitch together, and orchestrate them, like [`router`](https://rimitive.dev/guides/adding-routing/) and [`ssr`](https://rimitive.dev/guides/server-rendering/). It's also simple to [make your own modules](https://rimitive.dev/guides/custom-modules/) as well.
 
 ---
 
@@ -114,13 +114,28 @@ Want to:
 - **Build a custom adapter/renderer?** Implement the `Adapter` interface for Canvas, WebGL, or anything tree-based
 - **Add instrumentation?** Compose with `createInstrumentation()` for debugging; instrumentation is first-class in rimitive
 
-rimitive provides modules for reactivity and UI out of the box, but they're not special. In fact, they're built with the same tools rimitive provides to you. rimitive at its core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just reactive frameworks.
+Rimitive provides modules for reactivity and UI out of the box, but they're not special. In fact, they're built with the same tools rimitive provides to you. Rimitive at its core is a simple, type-safe composition pattern, so it can be used for creating lots of tools, not just reactive frameworks.
+
+---
+
+## Claude Code Plugins
+
+If you use [Claude Code](https://claude.ai/code), these plugins teach Claude how to write idiomatic rimitive code:
+
+| Plugin                                           | Description                                                      |
+| ------------------------------------------------ | ---------------------------------------------------------------- |
+| [`rimitive-behavior`](plugins/rimitive-behavior) | Create headless behaviors — portable reactive logic without UI   |
+| [`rimitive-compose`](plugins/rimitive-compose)   | Help composing services with the right modules and imports       |
+| [`rimitive-module`](plugins/rimitive-module)     | Create custom modules with `defineModule()`                      |
+| [`rimitive-view`](plugins/rimitive-view)         | Build views with `el`, `map`, `match`, and other view primitives |
+
+Install via Claude Code: `/install-plugin github:hejhi/rimitive/plugins/<plugin-name>`
 
 ---
 
 ## Inspirations
 
-rimitive draws from libraries and ideas by brilliant people that have shaped how I think about reactivity and composition, and what I want in my nerd life:
+Rimitive draws from libraries and ideas by brilliant people that have shaped how I think about reactivity and composition, and what I want in my nerd life:
 
 - [alien-signals](https://github.com/stackblitz/alien-signals) and [reactively](https://github.com/milomg/reactively) — push-pull reactivity, graph coloring
 - [downshift](https://www.downshift-js.com/use-select/) — headless, portable UI behavior

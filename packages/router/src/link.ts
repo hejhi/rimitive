@@ -13,7 +13,6 @@ import type {
 import { STATUS_REF_SPEC } from '@rimitive/view/types';
 import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 import type { ElementProps, ElFactory } from '@rimitive/view/el';
-import { getActiveRouterContext } from './ssr-context';
 
 /**
  * Link builder function
@@ -66,18 +65,7 @@ export function Link(
       // Get navigate from router module
       const navigate = svc.router?.navigate ?? null;
 
-      const ssrContext = getActiveRouterContext();
-      if (ssrContext) {
-        // SERVER: Plain anchor, no click interception
-        const anchorSpec = el('a').props({
-          ...restProps,
-          href,
-          onclick: userOnClick,
-        })(...children);
-        return anchorSpec.create(svc);
-      }
-
-      // CLIENT: Check if we have navigate function
+      // If no navigate function available, render plain anchor
       if (!navigate) {
         // No navigate function available, render plain anchor
         const anchorSpec = el('a').props({

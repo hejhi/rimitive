@@ -1,6 +1,6 @@
 # @rimitive/router
 
-Client-side routing as reactive state. The router provides signals (`matches`, `currentPath`), not rendering—use `match()` from `@rimitive/view` to render.
+Routing as reactive state. The router provides signals (`matches`, `currentPath`), not rendering—use `match()` from `@rimitive/view` to render.
 
 ## Quick Start
 

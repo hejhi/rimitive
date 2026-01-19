@@ -64,7 +64,6 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         link: resolve(__dirname, 'src/link.ts'),
         types: resolve(__dirname, 'src/types.ts'),
-        'ssr-context': resolve(__dirname, 'src/ssr-context.ts'),
       },
       formats: ['es'],
     },
