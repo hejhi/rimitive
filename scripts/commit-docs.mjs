@@ -29,24 +29,30 @@ function hasStagedChanges(files) {
 
 const LLMS_FILES = ['llms.txt', 'llms-full.txt'];
 const BENCH_FILES = ['packages/docs/src/data/benchmarks.json'];
+const isCI = process.env.CI === 'true';
 
 // Regenerate llms docs
 console.log('Regenerating llms docs...');
 execSync('node scripts/generate-llms.mjs', { stdio: 'inherit' });
 
-// Regenerate benchmarks
-console.log('\nRegenerating benchmarks...');
-execSync('pnpm bench:docs', { stdio: 'inherit' });
+// Regenerate benchmarks (skip in CI - results aren't meaningful on shared runners)
+if (!isCI) {
+  console.log('\nRegenerating benchmarks...');
+  execSync('pnpm bench:docs', { stdio: 'inherit' });
+} else {
+  console.log('\nSkipping benchmarks in CI environment');
+}
 
-// Check and commit llms changes
-const allFiles = [...LLMS_FILES, ...BENCH_FILES];
+// Check and commit changes
+const filesToCheck = isCI ? LLMS_FILES : [...LLMS_FILES, ...BENCH_FILES];
 
-if (hasChanges(allFiles) || hasStagedChanges(allFiles)) {
+if (hasChanges(filesToCheck) || hasStagedChanges(filesToCheck)) {
   console.log('\nChanges detected, committing...');
-  run(`git add ${allFiles.join(' ')}`);
+  run(`git add ${filesToCheck.join(' ')}`);
 
-  if (hasStagedChanges(allFiles)) {
-    run(`git commit -m "chore: regenerate docs (llms + benchmarks)"`);
+  if (hasStagedChanges(filesToCheck)) {
+    const msg = isCI ? 'chore: regenerate llms docs' : 'chore: regenerate docs (llms + benchmarks)';
+    run(`git commit -m "${msg}"`);
     console.log('Committed docs update.');
   } else {
     console.log('Files already staged, skipping commit.');
