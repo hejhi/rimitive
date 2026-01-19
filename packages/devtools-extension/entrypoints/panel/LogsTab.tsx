@@ -1,6 +1,6 @@
 import { useSubscribe } from '@rimitive/react';
 import type { LogEntry } from './store/types';
-import { filteredLogEntries } from './store/computed';
+import { useDevtools } from './store/DevtoolsProvider';
 import { LogLine } from './components/LogLine';
 
 type LogsTabProps = {
@@ -11,8 +11,9 @@ type LogsTabProps = {
 };
 
 export function LogsTab({ logEntries }: LogsTabProps = {}) {
+  const devtools = useDevtools();
   // Use provided entries or fall back to global computed
-  const globalLogs = useSubscribe(filteredLogEntries);
+  const globalLogs = useSubscribe(devtools.filteredLogEntries);
   const logs = logEntries ?? globalLogs;
 
   return (

@@ -1,12 +1,13 @@
 import { useSubscribe } from '@rimitive/react';
 import { ExternalLink } from 'lucide-react';
-import { currentCascade } from '../store/timelineState';
+import { useDevtools } from '../store/DevtoolsProvider';
 import { NODE_COLORS } from '../graph/styles';
 import { ValueDisplay } from '../components/ValueDisplay';
 import type { SourceLocation } from '../store/types';
 
 export function CascadeDetail() {
-  const cascade = useSubscribe(currentCascade);
+  const devtools = useDevtools();
+  const cascade = useSubscribe(devtools.currentCascade);
 
   if (!cascade) {
     return null;

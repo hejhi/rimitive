@@ -14,11 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../src/components/ui/select';
-import { devtoolsState, type TabId } from '../store/devtoolsCtx';
-import {
-  snapshotFilteredLogEntries,
-  snapshotGraphState,
-} from '../store/computed';
+import { useDevtools } from '../store/DevtoolsProvider';
+import type { TabId } from '../store/devtoolsBehavior';
 import { LogsTab } from '../LogsTab';
 import { FilterBar } from './FilterBar';
 
@@ -46,18 +43,19 @@ function TabLoading() {
 }
 
 export function SnapshotModal() {
-  const snapshot = useSubscribe(devtoolsState.snapshot);
-  const selectedContext = useSubscribe(devtoolsState.snapshotSelectedContext);
-  const filter = useSubscribe(devtoolsState.snapshotFilter);
-  const activeTab = useSubscribe(devtoolsState.snapshotActiveTab);
+  const devtools = useDevtools();
+  const snapshot = useSubscribe(devtools.snapshot);
+  const selectedContext = useSubscribe(devtools.snapshotSelectedContext);
+  const filter = useSubscribe(devtools.snapshotFilter);
+  const activeTab = useSubscribe(devtools.snapshotActiveTab);
 
   // Animation state
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   // Use computed values from store
-  const filteredLogEntries = useSubscribe(snapshotFilteredLogEntries);
-  const graphState = useSubscribe(snapshotGraphState);
+  const filteredLogEntries = useSubscribe(devtools.snapshotFilteredLogEntries);
+  const graphState = useSubscribe(devtools.snapshotGraphState);
 
   // Trigger enter animation when snapshot becomes available
   useEffect(() => {
@@ -85,16 +83,16 @@ export function SnapshotModal() {
 
     // Wait for animation to complete before clearing state
     setTimeout(() => {
-      devtoolsState.snapshot(null);
-      devtoolsState.snapshotSelectedContext(null);
-      devtoolsState.snapshotSelectedTransaction(null);
-      devtoolsState.snapshotFilter({
+      devtools.snapshot(null);
+      devtools.snapshotSelectedContext(null);
+      devtools.snapshotSelectedTransaction(null);
+      devtools.snapshotFilter({
         type: 'all',
         search: '',
         hideInternal: true,
         nodeId: null,
       });
-      devtoolsState.snapshotActiveTab('logs');
+      devtools.snapshotActiveTab('logs');
       setIsClosing(false);
     }, ANIMATION_DURATION);
   };
@@ -142,7 +140,7 @@ export function SnapshotModal() {
           <Select
             value={selectedContext || 'all'}
             onValueChange={(value) =>
-              devtoolsState.snapshotSelectedContext(
+              devtools.snapshotSelectedContext(
                 value === 'all' ? null : value
               )
             }
@@ -165,7 +163,7 @@ export function SnapshotModal() {
             type="checkbox"
             checked={filter.hideInternal}
             onChange={(e) =>
-              devtoolsState.snapshotFilter({
+              devtools.snapshotFilter({
                 ...filter,
                 hideInternal: e.target.checked,
               })
@@ -179,7 +177,7 @@ export function SnapshotModal() {
       {/* Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(v) => devtoolsState.snapshotActiveTab(v as TabId)}
+        onValueChange={(v) => devtools.snapshotActiveTab(v as TabId)}
         className="flex-1 flex flex-col overflow-hidden"
       >
         {/* Tab list with actions */}
@@ -214,19 +212,19 @@ export function SnapshotModal() {
               searchValue={filter.search}
               filteredNodeId={filter.nodeId}
               onFilterTypeChange={(value) =>
-                devtoolsState.snapshotFilter({
+                devtools.snapshotFilter({
                   ...filter,
                   type: value,
                 })
               }
               onSearchChange={(value) =>
-                devtoolsState.snapshotFilter({
+                devtools.snapshotFilter({
                   ...filter,
                   search: value,
                 })
               }
               onClearNodeFilter={() =>
-                devtoolsState.snapshotFilter({
+                devtools.snapshotFilter({
                   ...filter,
                   nodeId: null,
                 })

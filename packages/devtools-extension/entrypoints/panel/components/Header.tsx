@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../src/components/ui/dropdown-menu';
-import { devtoolsState } from '../store/devtoolsCtx';
+import { useDevtools } from '../store/DevtoolsProvider';
 import type { ContextInfo } from '../store/types';
 
 type HeaderProps = {
@@ -33,7 +33,8 @@ export function Header({
   onExport,
   onImport,
 }: HeaderProps) {
-  const filter = useSubscribe(devtoolsState.filter);
+  const devtools = useDevtools();
+  const filter = useSubscribe(devtools.filter);
 
   // Get the display name for the current selection
   const selectedName = selectedContext
@@ -75,7 +76,7 @@ export function Header({
             type="checkbox"
             checked={filter.hideInternal}
             onChange={(e) =>
-              devtoolsState.filter({
+              devtools.filter({
                 ...filter,
                 hideInternal: e.target.checked,
               })

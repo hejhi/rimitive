@@ -12,13 +12,7 @@ import {
   type NodeTypes,
 } from '@xyflow/react';
 import { useSubscribe } from '@rimitive/react';
-import {
-  graphState as globalGraphState,
-  selectedNodeId as globalSelectedNodeId,
-  hoveredNodeId,
-  nodeMetrics,
-} from '../store/graphState';
-import { devtoolsState } from '../store/devtoolsCtx';
+import { useDevtools } from '../store/DevtoolsProvider';
 import type { GraphState } from '../store/graphTypes';
 import type { SourceLocation } from '../store/types';
 import {
@@ -49,12 +43,14 @@ export function FullGraphView({
   selectedContext: propSelectedContext,
   onSelectNode,
 }: FullGraphViewProps = {}): React.ReactElement {
+  const devtools = useDevtools();
+
   // Use provided state or fall back to global
-  const globalState = useSubscribe(globalGraphState);
-  const globalFilter = useSubscribe(devtoolsState.filter);
-  const globalSelectedContext = useSubscribe(devtoolsState.selectedContext);
-  const metrics = useSubscribe(nodeMetrics);
-  const hovered = useSubscribe(hoveredNodeId);
+  const globalState = useSubscribe(devtools.graphState);
+  const globalFilter = useSubscribe(devtools.filter);
+  const globalSelectedContext = useSubscribe(devtools.selectedContext);
+  const metrics = useSubscribe(devtools.nodeMetrics);
+  const hovered = useSubscribe(devtools.hoveredNodeId);
 
   const state = propGraphState ?? globalState;
   const hideInternal = propHideInternal ?? globalFilter.hideInternal;
@@ -69,7 +65,7 @@ export function FullGraphView({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Use global selection so it persists across view mode toggles
-  const selected = useSubscribe(globalSelectedNodeId);
+  const selected = useSubscribe(devtools.selectedNodeId);
 
   // Single click: select node, or open source if already selected
   const onNodeClick = useCallback(
@@ -87,13 +83,13 @@ export function FullGraphView({
         }
       } else {
         // Select the node
-        globalSelectedNodeId(node.id);
+        devtools.selectedNodeId(node.id);
         if (onSelectNode) {
           onSelectNode(node.id);
         }
       }
     },
-    [onSelectNode, selected]
+    [onSelectNode, selected, devtools]
   );
 
   const onOpenSource = useCallback((location: SourceLocation) => {
@@ -106,8 +102,8 @@ export function FullGraphView({
   }, []);
 
   const onHover = useCallback((nodeId: string | null) => {
-    hoveredNodeId(nodeId);
-  }, []);
+    devtools.hoveredNodeId(nodeId);
+  }, [devtools]);
 
   // No-op for onNavigate since clicks are handled at ReactFlow level
   const noopNavigate = useCallback(() => {}, []);

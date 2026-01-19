@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { Zap, ArrowRight } from 'lucide-react';
-import { currentCascade as globalCurrentCascade } from '../store/timelineState';
+import { useDevtools } from '../store/DevtoolsProvider';
 import { LogLine } from '../components/LogLine';
 import type { Cascade } from '../store/timelineTypes';
 
@@ -11,8 +11,9 @@ type PropagationViewProps = {
 };
 
 export function PropagationView({ cascade: propCascade }: PropagationViewProps = {}) {
+  const devtools = useDevtools();
   // Use provided cascade or fall back to global
-  const globalCascade = useSubscribe(globalCurrentCascade);
+  const globalCascade = useSubscribe(devtools.currentCascade);
   const cascade = propCascade !== undefined ? propCascade : globalCascade;
 
   // Sort effects by deltaMs for chronological display

@@ -1,9 +1,10 @@
 import { Activity, RefreshCw } from 'lucide-react';
 import { useSubscribe } from '@rimitive/react';
-import { devtoolsState } from '../store/devtoolsCtx';
+import { useDevtools } from '../store/DevtoolsProvider';
 
 export function ConnectionStatus() {
-  const status = useSubscribe(devtoolsState.connectionStatus);
+  const devtools = useDevtools();
+  const status = useSubscribe(devtools.connectionStatus);
   const isReconnecting = status === 'reconnecting';
 
   return (

@@ -1,20 +1,25 @@
-import { devtoolsState } from './devtoolsCtx';
-import { RimitiveEvent } from './messageHandler';
+import type { DevtoolsState } from './devtoolsBehavior';
+import type { RimitiveEvent } from './messageHandler';
 
-export function updateContextFromEvent(event: RimitiveEvent) {
-  const contexts = [...devtoolsState.contexts()];
-  let contextIndex = contexts.findIndex((c) => c.id === event.contextId);
+/**
+ * Create a context updater bound to a specific devtools state instance
+ */
+export function createContextUpdater(devtools: DevtoolsState) {
+  return function updateContextFromEvent(event: RimitiveEvent) {
+    const contexts = [...devtools.contexts.peek()];
+    let contextIndex = contexts.findIndex((c) => c.id === event.contextId);
 
-  // Create context if it doesn't exist yet
-  if (contextIndex === -1 && event.contextId) {
-    const contextNumber = contexts.length + 1;
-    contexts.push({
-      id: event.contextId,
-      name: `Service ${contextNumber}`,
-      created: Date.now(),
-    });
-    contextIndex = contexts.length - 1;
-  }
+    // Create context if it doesn't exist yet
+    if (contextIndex === -1 && event.contextId) {
+      const contextNumber = contexts.length + 1;
+      contexts.push({
+        id: event.contextId,
+        name: `Service ${contextNumber}`,
+        created: Date.now(),
+      });
+      contextIndex = contexts.length - 1;
+    }
 
-  devtoolsState.contexts(contexts);
+    devtools.contexts(contexts);
+  };
 }

@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '../../../src/components/ui/select';
 import { Badge } from '../../../src/components/ui/badge';
-import { availableEventTypes } from '../store/eventTypeManager';
+import { useDevtools } from '../store/DevtoolsProvider';
 
 type FilterBarProps = {
   filterType: string;
@@ -28,7 +28,8 @@ export function FilterBar({
   onSearchChange,
   onClearNodeFilter,
 }: FilterBarProps) {
-  const eventTypes = useSubscribe(availableEventTypes);
+  const devtools = useDevtools();
+  const eventTypes = useSubscribe(devtools.availableEventTypes);
 
   return (
     <div className="flex flex-wrap items-center gap-2">

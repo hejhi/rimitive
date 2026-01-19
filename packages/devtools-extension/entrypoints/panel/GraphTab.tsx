@@ -16,13 +16,7 @@ import {
 import Dagre from '@dagrejs/dagre';
 import { useSubscribe } from '@rimitive/react';
 import type { GraphState, FocusedGraphView, GraphNode, GraphEdge, ViewMode } from './store/graphTypes';
-import {
-  focusedView as globalFocusedView,
-  selectedNodeId as globalSelectedNodeId,
-  graphState as globalGraphState,
-  viewMode as globalViewMode,
-} from './store/graphState';
-import { devtoolsState } from './store/devtoolsCtx';
+import { useDevtools } from './store/DevtoolsProvider';
 import { Layers, Grid3X3, Focus } from 'lucide-react';
 import { NODE_COLORS } from './graph/styles';
 import { FullGraphView } from './graph/FullGraphView';
@@ -260,12 +254,14 @@ type GraphTabProps = {
 };
 
 export function GraphTab({ graphState: propGraphState, hideInternal: propHideInternal, selectedContext: propSelectedContext }: GraphTabProps = {}) {
+  const devtools = useDevtools();
+
   // Use provided state or fall back to global
-  const globalState = useSubscribe(globalGraphState);
-  const globalFilter = useSubscribe(devtoolsState.filter);
-  const globalView = useSubscribe(globalFocusedView);
-  const globalMode = useSubscribe(globalViewMode);
-  const globalSelectedContext = useSubscribe(devtoolsState.selectedContext);
+  const globalState = useSubscribe(devtools.graphState);
+  const globalFilter = useSubscribe(devtools.filter);
+  const globalView = useSubscribe(devtools.focusedView);
+  const globalMode = useSubscribe(devtools.viewMode);
+  const globalSelectedContext = useSubscribe(devtools.selectedContext);
 
   // Determine if we're in "controlled" mode (props provided)
   const isControlled = propGraphState !== undefined;
@@ -289,7 +285,7 @@ export function GraphTab({ graphState: propGraphState, hideInternal: propHideInt
   const [localViewMode, setLocalViewMode] = useState<ViewMode>('full');
 
   // Always call useSubscribe (hooks must be called unconditionally)
-  const subscribedSelectedNodeId = useSubscribe(globalSelectedNodeId);
+  const subscribedSelectedNodeId = useSubscribe(devtools.selectedNodeId);
 
   // Get the effective values based on mode
   const effectiveSelectedNodeId = isControlled ? localSelectedNodeId : subscribedSelectedNodeId;
@@ -311,19 +307,19 @@ export function GraphTab({ graphState: propGraphState, hideInternal: propHideInt
     if (isControlled) {
       setLocalSelectedNodeId(nodeId);
     } else {
-      globalSelectedNodeId(nodeId);
+      devtools.selectedNodeId(nodeId);
     }
-  }, [isControlled]);
+  }, [isControlled, devtools]);
 
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     if (isControlled) {
       setLocalViewMode(mode);
       if (mode === 'full') setLocalSelectedNodeId(null);
     } else {
-      globalViewMode(mode);
+      devtools.viewMode(mode);
       // Don't clear selection when switching to full - preserve it for edge highlighting
     }
-  }, [isControlled]);
+  }, [isControlled, devtools]);
 
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     const data = node.data as GraphNodeData;

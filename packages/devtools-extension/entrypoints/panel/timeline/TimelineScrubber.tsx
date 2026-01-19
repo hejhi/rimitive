@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { Loader2 } from 'lucide-react';
-import { timelineState as globalTimelineState, selectCascade as globalSelectCascade } from '../store/timelineState';
+import { useDevtools } from '../store/DevtoolsProvider';
 import { NODE_COLORS } from '../graph/styles';
 import type { TimelineState } from '../store/timelineTypes';
 
@@ -26,17 +26,21 @@ type TimelineScrubberProps = {
 };
 
 export function TimelineScrubber({ state: propState, onSelectCascade }: TimelineScrubberProps = {}) {
+  const devtools = useDevtools();
   // Use provided state or fall back to global
-  const globalState = useSubscribe(globalTimelineState);
+  const globalState = useSubscribe(devtools.timelineState);
   const state = propState ?? globalState;
 
   const handleCascadeClick = useCallback((index: number) => {
     if (onSelectCascade) {
       onSelectCascade(index);
     } else {
-      globalSelectCascade(index);
+      devtools.timelineState({
+        ...devtools.timelineState.peek(),
+        currentCascadeIndex: index,
+      });
     }
-  }, [onSelectCascade]);
+  }, [onSelectCascade, devtools]);
 
   if (state.cascades.length === 0) {
     return (

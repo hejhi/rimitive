@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { ContextInfo, LogEntry } from '../store/types';
-import { devtoolsState } from '../store/devtoolsCtx';
+import { useDevtools } from '../store/DevtoolsProvider';
 
 type ImportData = {
   version: string;
@@ -20,11 +20,13 @@ type ImportData = {
 };
 
 export function useDataExport() {
+  const devtools = useDevtools();
+
   const handleExport = useCallback(() => {
-    const filter = devtoolsState.filter();
-    const selectedContext = devtoolsState.selectedContext();
-    const allContexts = devtoolsState.contexts();
-    let logEntries = devtoolsState.logEntries();
+    const filter = devtools.filter.peek();
+    const selectedContext = devtools.selectedContext.peek();
+    const allContexts = devtools.contexts.peek();
+    let logEntries = devtools.logEntries.peek();
 
     // Filter by selected context if one is selected
     if (selectedContext) {
@@ -51,7 +53,7 @@ export function useDataExport() {
         logEntries,
         filter,
         selectedContext,
-        selectedTransaction: devtoolsState.selectedTransaction(),
+        selectedTransaction: devtools.selectedTransaction.peek(),
       },
     };
 
@@ -68,7 +70,7 @@ export function useDataExport() {
     link.download = `rimitive-${contextName}-${Date.now()}.json`;
     link.click();
     URL.revokeObjectURL(url);
-  }, []);
+  }, [devtools]);
 
   const handleImport = useCallback(() => {
     const input = document.createElement('input');
@@ -89,7 +91,7 @@ export function useDataExport() {
         const state = importData.state;
 
         // Open snapshot modal instead of replacing live data
-        devtoolsState.snapshot({
+        devtools.snapshot({
           contexts: state.contexts ?? [],
           logEntries: state.logEntries ?? [],
           exportDate: importData.exportDate,
@@ -97,9 +99,9 @@ export function useDataExport() {
 
         // Select the first context if there's only one, or none if multiple
         if (state.contexts && state.contexts.length === 1) {
-          devtoolsState.snapshotSelectedContext(state.contexts[0].id);
+          devtools.snapshotSelectedContext(state.contexts[0].id);
         } else {
-          devtoolsState.snapshotSelectedContext(null);
+          devtools.snapshotSelectedContext(null);
         }
       } catch (error) {
         console.error('Failed to import data:', error);
@@ -107,7 +109,7 @@ export function useDataExport() {
       }
     };
     input.click();
-  }, []);
+  }, [devtools]);
 
   return { handleExport, handleImport };
 }

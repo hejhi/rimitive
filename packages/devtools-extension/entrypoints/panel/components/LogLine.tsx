@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { ChevronRight, ChevronDown, Network } from 'lucide-react';
 import type { LogEntry, SourceLocation } from '../store/types';
 import { getCategoryColors } from '../store/eventTypeManager';
-import { devtoolsState } from '../store/devtoolsCtx';
-import { selectedNodeId, navigateToGraphNode } from '../store/graphState';
+import { useDevtools } from '../store/DevtoolsProvider';
+import type { DevtoolsState } from '../store/devtoolsBehavior';
 import { ValueDisplay, isExpandableValue } from './ValueDisplay';
 
 type LogLineProps = {
@@ -13,6 +13,7 @@ type LogLineProps = {
 };
 
 export function LogLine({ entry, leftColumn, indent = 0 }: LogLineProps) {
+  const devtools = useDevtools();
   const [expanded, setExpanded] = useState(false);
   const indentPx = indent * 12;
 
@@ -43,7 +44,7 @@ export function LogLine({ entry, leftColumn, indent = 0 }: LogLineProps) {
           <span className="inline-block w-4" />
         )}
 
-        <LogContent entry={entry} expanded={expanded} />
+        <LogContent entry={entry} expanded={expanded} devtools={devtools} />
       </div>
 
       {/* Expanded content - spans both columns, below main row */}
@@ -62,9 +63,10 @@ export function LogLine({ entry, leftColumn, indent = 0 }: LogLineProps) {
 type LogContentProps = {
   entry: LogEntry;
   expanded: boolean;
+  devtools: DevtoolsState;
 };
 
-function LogContent({ entry, expanded }: LogContentProps) {
+function LogContent({ entry, expanded, devtools }: LogContentProps) {
   const name = entry.nodeName || entry.nodeId || 'anonymous';
   const eventType = entry.eventType;
   const category = entry.category;
@@ -78,6 +80,29 @@ function LogContent({ entry, expanded }: LogContentProps) {
   if (sourceLocation) titleParts.push('Click to open in editor');
   if (nodeId) titleParts.push('⌘+Click to filter');
   const title = titleParts.join(' · ');
+
+  const handleNodeClick = (
+    e: React.MouseEvent,
+    clickNodeId: string | undefined,
+    clickSourceLocation: SourceLocation | undefined
+  ) => {
+    if (e.metaKey || e.ctrlKey) {
+      if (clickNodeId) {
+        filterByNodeId(devtools, clickNodeId);
+      }
+      return;
+    }
+
+    if (clickSourceLocation) {
+      openInEditor(clickSourceLocation);
+    }
+  };
+
+  const handleNavigateToGraph = (navNodeId: string) => {
+    devtools.selectedNodeId(navNodeId);
+    devtools.viewMode('focused');
+    devtools.activeTab('graph');
+  };
 
   return (
     <>
@@ -95,7 +120,7 @@ function LogContent({ entry, expanded }: LogContentProps) {
       )}
       {nodeId && (
         <button
-          onClick={() => navigateToGraphNode(nodeId)}
+          onClick={() => handleNavigateToGraph(nodeId)}
           className="inline-flex items-center justify-center w-4 h-4 ml-1 align-middle text-muted-foreground/40 hover:text-accent transition-colors"
           title="View in graph"
         >
@@ -121,28 +146,11 @@ function openInEditor(location: SourceLocation) {
   );
 }
 
-function filterByNodeId(nodeId: string) {
-  const currentFilter = devtoolsState.filter();
-  devtoolsState.filter({
+function filterByNodeId(devtools: DevtoolsState, nodeId: string) {
+  const currentFilter = devtools.filter.peek();
+  devtools.filter({
     ...currentFilter,
     nodeId,
   });
-  selectedNodeId(nodeId);
-}
-
-function handleNodeClick(
-  e: React.MouseEvent,
-  nodeId: string | undefined,
-  sourceLocation: SourceLocation | undefined
-) {
-  if (e.metaKey || e.ctrlKey) {
-    if (nodeId) {
-      filterByNodeId(nodeId);
-    }
-    return;
-  }
-
-  if (sourceLocation) {
-    openInEditor(sourceLocation);
-  }
+  devtools.selectedNodeId(nodeId);
 }
