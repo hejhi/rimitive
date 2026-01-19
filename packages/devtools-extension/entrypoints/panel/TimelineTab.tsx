@@ -11,7 +11,7 @@ import { devtoolsState } from './store/devtoolsCtx';
 import { TimelineScrubber } from './timeline/TimelineScrubber';
 import { PropagationView } from './timeline/PropagationView';
 import type { LogEntry } from './store/types';
-import type { TimelineState, Cascade } from './store/timelineTypes';
+import type { TimelineState } from './store/timelineTypes';
 
 type TimelineTabProps = {
   /** Optional mode indicator for snapshot viewing */
@@ -22,7 +22,7 @@ type TimelineTabProps = {
   hideInternal?: boolean;
 };
 
-export function TimelineTab({ snapshotMode, logEntries, hideInternal: propHideInternal }: TimelineTabProps = {}) {
+export function TimelineTab({ logEntries, hideInternal: propHideInternal }: TimelineTabProps = {}) {
   // Determine if we're in "controlled" mode (props provided)
   const isControlled = logEntries !== undefined;
 

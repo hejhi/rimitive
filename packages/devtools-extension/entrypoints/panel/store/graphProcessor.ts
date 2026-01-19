@@ -28,17 +28,17 @@ export function processGraphEvent(event: RimitiveEvent): void {
 
     case 'signal:read':
     case 'signal:write':
-      handleSignalEvent(event);
+      void handleSignalEvent(event);
       break;
 
     case 'computed:read':
     case 'computed:value':
-      handleComputedEvent(event);
+      void handleComputedEvent(event);
       break;
 
     case 'effect:run':
     case 'effect:created':
-      handleEffectEvent(event);
+      void handleEffectEvent(event);
       break;
 
     case 'dependency:tracked':
@@ -50,7 +50,7 @@ export function processGraphEvent(event: RimitiveEvent): void {
       break;
 
     case 'effect:dispose':
-      handleEffectDispose(event);
+      handleEffectDispose();
       break;
   }
 }
@@ -200,7 +200,7 @@ function handleDependencyPruned(event: RimitiveEvent): void {
 /**
  * Handle effect:dispose event - could remove the node
  */
-function handleEffectDispose(event: RimitiveEvent): void {
+function handleEffectDispose(): void {
   // For now, we keep disposed nodes in the graph
   // They'll just have no edges
   // Could optionally remove them: removeNode(data.effectId)

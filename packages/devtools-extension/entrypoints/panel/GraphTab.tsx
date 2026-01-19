@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react';
 import Dagre from '@dagrejs/dagre';
 import { useSubscribe } from '@rimitive/react';
-import type { GraphState, FocusedGraphView, GraphNode, GraphEdge, ViewMode, NodeMetrics } from './store/graphTypes';
+import type { GraphState, FocusedGraphView, GraphNode, GraphEdge, ViewMode } from './store/graphTypes';
 import {
   focusedView as globalFocusedView,
   selectedNodeId as globalSelectedNodeId,
@@ -288,8 +288,11 @@ export function GraphTab({ graphState: propGraphState, hideInternal: propHideInt
   const [localSelectedNodeId, setLocalSelectedNodeId] = useState<string | null>(null);
   const [localViewMode, setLocalViewMode] = useState<ViewMode>('full');
 
+  // Always call useSubscribe (hooks must be called unconditionally)
+  const subscribedSelectedNodeId = useSubscribe(globalSelectedNodeId);
+
   // Get the effective values based on mode
-  const effectiveSelectedNodeId = isControlled ? localSelectedNodeId : useSubscribe(globalSelectedNodeId);
+  const effectiveSelectedNodeId = isControlled ? localSelectedNodeId : subscribedSelectedNodeId;
   const effectiveViewMode = isControlled ? localViewMode : globalMode;
 
   // Compute focused view

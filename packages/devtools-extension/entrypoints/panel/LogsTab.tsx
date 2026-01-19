@@ -10,7 +10,7 @@ type LogsTabProps = {
   logEntries?: LogEntry[];
 };
 
-export function LogsTab({ snapshotMode, logEntries }: LogsTabProps = {}) {
+export function LogsTab({ logEntries }: LogsTabProps = {}) {
   // Use provided entries or fall back to global computed
   const globalLogs = useSubscribe(filteredLogEntries);
   const logs = logEntries ?? globalLogs;

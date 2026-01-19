@@ -36,7 +36,7 @@ export default defineContentScript({
     });
 
     // Listen for messages from background script (e.g., REQUEST_DETECTION)
-    chrome.runtime.onMessage.addListener((message) => {
+    chrome.runtime.onMessage.addListener((message: { source?: string; type?: string }) => {
       if (
         message.source === 'rimitive-devtools-background' &&
         message.type === 'REQUEST_DETECTION'

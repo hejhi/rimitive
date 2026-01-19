@@ -1,7 +1,12 @@
 import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
 import { useSubscribe } from '@rimitive/react';
 import { List, Network, Loader2, History, X, Camera } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../src/components/ui/tabs';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../../src/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -15,10 +20,14 @@ import { FilterBar } from './FilterBar';
 import { buildGraphStateFromLogEntries } from '../store/snapshotGraphBuilder';
 
 // Lazy load GraphTab
-const GraphTab = lazy(() => import('../GraphTab').then((m) => ({ default: m.GraphTab })));
+const GraphTab = lazy(() =>
+  import('../GraphTab').then((m) => ({ default: m.GraphTab }))
+);
 
 // Lazy load TimelineTab
-const TimelineTab = lazy(() => import('../TimelineTab').then((m) => ({ default: m.TimelineTab })));
+const TimelineTab = lazy(() =>
+  import('../TimelineTab').then((m) => ({ default: m.TimelineTab }))
+);
 
 const ANIMATION_DURATION = 200;
 
@@ -110,7 +119,7 @@ export function SnapshotModal() {
 
   // Get display name for current selection
   const selectedName = selectedContext
-    ? contexts.find((c) => c.id === selectedContext)?.name ?? 'Unknown'
+    ? (contexts.find((c) => c.id === selectedContext)?.name ?? 'Unknown')
     : `All (${contexts.length})`;
 
   const handleClose = () => {
@@ -148,7 +157,11 @@ export function SnapshotModal() {
           <Camera className="h-3.5 w-3.5" />
           <span className="font-medium">Viewing Snapshot</span>
           <span className="text-amber-200/60">
-            {new Date(snapshot.exportDate).toLocaleDateString()} at {new Date(snapshot.exportDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(snapshot.exportDate).toLocaleDateString()} at{' '}
+            {new Date(snapshot.exportDate).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </span>
         </div>
         <button
@@ -173,10 +186,12 @@ export function SnapshotModal() {
           <Select
             value={selectedContext || 'all'}
             onValueChange={(value) =>
-              devtoolsState.snapshotSelectedContext(value === 'all' ? null : value)
+              devtoolsState.snapshotSelectedContext(
+                value === 'all' ? null : value
+              )
             }
           >
-            <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs gap-1.5">
+            <SelectTrigger className="h-7 w-auto min-w-25 text-xs gap-1.5">
               <SelectValue>{selectedName}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -194,7 +209,10 @@ export function SnapshotModal() {
             type="checkbox"
             checked={filter.hideInternal}
             onChange={(e) =>
-              devtoolsState.snapshotFilter({ ...filter, hideInternal: e.target.checked })
+              devtoolsState.snapshotFilter({
+                ...filter,
+                hideInternal: e.target.checked,
+              })
             }
             className="rounded border-muted-foreground/50 w-3 h-3"
           />
@@ -230,7 +248,10 @@ export function SnapshotModal() {
         </div>
 
         {/* Filter bar (shown for logs tab) */}
-        <TabsContent value="logs" className="flex-1 flex flex-col overflow-hidden mt-0 data-[state=inactive]:hidden">
+        <TabsContent
+          value="logs"
+          className="flex-1 flex flex-col overflow-hidden mt-0 data-[state=inactive]:hidden"
+        >
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
             <FilterBar
               filterType={filter.type}
@@ -261,15 +282,29 @@ export function SnapshotModal() {
           </div>
         </TabsContent>
 
-        <TabsContent value="graph" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
+        <TabsContent
+          value="graph"
+          className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden"
+        >
           <Suspense fallback={<TabLoading />}>
-            <GraphTab graphState={snapshotGraphState} hideInternal={filter.hideInternal} selectedContext={null} />
+            <GraphTab
+              graphState={snapshotGraphState}
+              hideInternal={filter.hideInternal}
+              selectedContext={null}
+            />
           </Suspense>
         </TabsContent>
 
-        <TabsContent value="timeline" className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden">
+        <TabsContent
+          value="timeline"
+          className="flex-1 overflow-hidden mt-0 data-[state=inactive]:hidden"
+        >
           <Suspense fallback={<TabLoading />}>
-            <TimelineTab snapshotMode logEntries={contextFilteredEntries} hideInternal={filter.hideInternal} />
+            <TimelineTab
+              snapshotMode
+              logEntries={contextFilteredEntries}
+              hideInternal={filter.hideInternal}
+            />
           </Suspense>
         </TabsContent>
       </Tabs>
