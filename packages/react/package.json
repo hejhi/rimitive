@@ -44,7 +44,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm typecheck && vite build && tsc -b",
+    "build": "pnpm typecheck && vite build && tsc -b tsconfig.build.json",
     "dev": "vite build --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",

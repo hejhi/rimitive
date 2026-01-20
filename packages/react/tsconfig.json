@@ -10,6 +10,5 @@
     "types": ["vitest/importMeta", "@testing-library/jest-dom"]
   },
   "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.*", "src/test-setup.ts"],
   "references": [{ "path": "../core" }, { "path": "../signals" }]
 }
