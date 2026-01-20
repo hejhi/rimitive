@@ -4,6 +4,9 @@ description: Encapsulate reusable reactive logic without any UI.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["behavior", "hook", "reusable-logic", "headless", "state-management", "portable"]} />
 
 A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to provide portable reactive logic.
 
@@ -49,6 +52,8 @@ counter.count();  // 11
 This works great for simple cases. The behavior is tied to your service, which is fine when you have a single app context.
 
 ---
+
+<SearchTags tags={["portable", "service-injection", "testable", "ssr", "dependency-injection"]} />
 
 ## The Portable Pattern
 
@@ -107,6 +112,8 @@ c.doubled();
 
 ---
 
+<SearchTags tags={["compose-behaviors", "disclosure", "dropdown", "service-layer", "reuse"]} />
+
 ## Composing Behaviors
 
 The double-function behavior pattern is quite powerful for composition. Behaviors can easily compose other behaviors. To demonstrate this, let's start with a basic portable behavior:
@@ -154,6 +161,8 @@ const dropdown = (svc: Service) => {
 Now `dropdown` composes `disclosure`! They both use the same behavior shape of `(svc) => (args) => api`, but one composes the other. In rimitive, we call the outer function the **service layer**. It's a convenient place to inject services a single time.
 
 ---
+
+<SearchTags tags={["testing", "vitest", "unit-test", "behavior-test"]} />
 
 ## Testing
 

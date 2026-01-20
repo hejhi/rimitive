@@ -4,6 +4,9 @@ description: Headless, reusable UI logic without the UI.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["behavior", "headless", "disclosure", "dropdown", "modal", "pagination", "composition"]} />
 
 A **behavior** is a portable function that encapsulates reactive logic without any UI. It receives a service, returns a factory, and that factory returns an API of signals, computeds, and actions.
 
@@ -397,3 +400,154 @@ describe('counter', () => {
 ```
 
 Pure functions, pure tests.
+
+---
+
+## Anti-patterns
+
+### Don't Mix UI into Behaviors
+
+Behaviors should be headless—state and logic only, no DOM:
+
+```typescript
+// ❌ WRONG - behavior creates DOM elements
+const dropdown = (svc: SignalsSvc) => () => {
+  const isOpen = svc.signal(false);
+
+  return {
+    isOpen,
+    toggle: () => isOpen(!isOpen()),
+    // Don't do this! Behaviors shouldn't create elements
+    render: () => el('div')(
+      el('button').props({ onclick: () => isOpen(!isOpen()) })('Toggle'),
+      match(isOpen, (open) => open ? el('div')('Content') : null)
+    ),
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - behavior returns props, component renders
+const dropdown = (svc: SignalsSvc) => () => {
+  const isOpen = svc.signal(false);
+
+  return {
+    isOpen,
+    toggle: () => isOpen(!isOpen()),
+    triggerProps: svc.computed(() => ({
+      'aria-expanded': String(isOpen()),
+    })),
+    contentProps: svc.computed(() => ({
+      hidden: !isOpen(),
+    })),
+  };
+};
+
+// Component uses the behavior
+const Dropdown = (svc: Service) => {
+  const disc = svc.use(dropdown)();
+  return el('div')(
+    el('button').props({ ...disc.triggerProps(), onclick: disc.toggle })('Toggle'),
+    match(disc.isOpen, (open) => open ? el('div').props(disc.contentProps())('Content') : null)
+  );
+};
+```
+
+### Don't Skip the Service Injection Layer
+
+The double-function pattern exists for portability. Skipping it couples your behavior to a specific service:
+
+```typescript
+// ❌ WRONG - hardcoded service, not portable
+import { svc } from './myService';
+
+const counter = (initial = 0) => {
+  const count = svc.signal(initial);  // Tied to this specific service
+  return {
+    count,
+    increment: () => count(count() + 1),
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - service injected, portable
+const counter = (svc: SignalsSvc) => (initial = 0) => {
+  const count = svc.signal(initial);
+  return {
+    count,
+    increment: () => count(count() + 1),
+  };
+};
+
+// Now works with any compatible service
+const c1 = counter(productionSvc)(0);
+const c2 = counter(testSvc)(0);  // Easy to test with mocks
+```
+
+### Don't Confuse Service Layer vs Factory
+
+The service layer `(svc) =>` runs once when you call `svc.use(behavior)`. The factory `(options) =>` runs each time you create an instance. Put code in the right place:
+
+```typescript
+// ❌ WRONG - composing behaviors in the factory (runs every mount)
+const dropdown = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
+  // This creates a new disclosure every time dropdown is instantiated
+  const useDisclosure = svc.use(disclosure);  // Should be in service layer!
+  const disc = useDisclosure(options?.initialOpen ?? false);
+
+  return { ...disc };
+};
+```
+
+```typescript
+// ✅ CORRECT - compose in service layer, instantiate in factory
+const dropdown = (svc: SignalsSvc) => {
+  // Service layer: runs once, sets up composed behaviors
+  const useDisclosure = svc.use(disclosure);
+
+  return (options?: { initialOpen?: boolean }) => {
+    // Factory: runs per instance, creates state
+    const disc = useDisclosure(options?.initialOpen ?? false);
+
+    return { ...disc };
+  };
+};
+```
+
+<Aside type="tip">
+Rule of thumb: Use the service layer for `svc.use()` calls and setup. Use the factory for creating signals and instance-specific state.
+</Aside>
+
+### Don't Create Side Effects Outside effect()
+
+Side effects outside `effect()` won't be cleaned up when the behavior is disposed:
+
+```typescript
+// ❌ WRONG - side effect not tracked, never cleaned up
+const keyboard = (svc: SignalsSvc) => () => {
+  const pressed = svc.signal<string | null>(null);
+
+  // This listener is never removed!
+  window.addEventListener('keydown', (e) => pressed(e.key));
+
+  return { pressed };
+};
+```
+
+```typescript
+// ✅ CORRECT - effect handles cleanup
+const keyboard = (svc: SignalsSvc) => () => {
+  const pressed = svc.signal<string | null>(null);
+
+  svc.effect(() => {
+    const handler = (e: KeyboardEvent) => pressed(e.key);
+    window.addEventListener('keydown', handler);
+
+    // Cleanup function - runs when effect re-runs or disposes
+    return () => window.removeEventListener('keydown', handler);
+  });
+
+  return { pressed };
+};
+```

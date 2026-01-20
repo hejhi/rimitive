@@ -1,0 +1,21 @@
+---
+/**
+ * SearchTags - Invisible metadata tags for MCP search indexing.
+ *
+ * Renders as an HTML comment that can be parsed by the MCP doc parser
+ * for better search relevance without affecting the visible documentation.
+ *
+ * Usage in MDX:
+ *   import SearchTags from '../../components/SearchTags.astro';
+ *
+ *   <SearchTags tags={["forms", "validation", "anti-pattern"]} />
+ *   ### Don't Validate Before Touched
+ */
+interface Props {
+  tags: string[];
+}
+
+const { tags } = Astro.props;
+const tagString = tags.join(', ');
+---
+<Fragment set:html={`<!-- @tags: ${tagString} -->`} />

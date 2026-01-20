@@ -4,6 +4,9 @@ description: Common patterns for working with signals effectively.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["signal", "updater", "toggle", "previous-value", "debounce", "async-action", "derived-state"]} />
 
 Signals are simple—read with `sig()`, write with `sig(value)`. But there are patterns that make them more ergonomic for common use cases.
 
@@ -445,3 +448,148 @@ This is useful for:
 - Embedding multiple independent widgets on a page
 - Testing with isolated services
 - SSR where each request needs fresh state
+
+---
+
+## Anti-patterns
+
+### Don't Create Module-Level Signals
+
+Signals created at module scope are shared across your entire application. This causes state to leak between components and makes testing difficult:
+
+```typescript
+// ❌ WRONG - module-level signal is global shared state
+const count = signal(0);  // Created once when module loads
+
+const Counter = () => {
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+// Every Counter instance shares the same count!
+```
+
+```typescript
+// ✅ CORRECT - state created per instance
+const Counter = () => {
+  const count = signal(0);  // Fresh state each time
+
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+```
+
+<Aside type="note">
+**Exception:** Intentional global state (like a theme or auth state) can be module-level, but should be explicit and documented as such. See [Shared State](/patterns/shared-state) for the proper approach.
+</Aside>
+
+### Don't Mutate Signal Values Directly
+
+Signals hold values by reference. Mutating the value directly bypasses reactivity:
+
+```typescript
+// ❌ WRONG - mutation doesn't trigger updates
+const items = signal<string[]>([]);
+
+items().push('new item');  // Mutates the array, but signal doesn't know
+items();  // Still returns the same reference - no reactive update!
+```
+
+```typescript
+// ✅ CORRECT - use updater functions to create new values
+const items = signal<string[]>([]);
+
+items(arr => [...arr, 'new item']);  // New array, signal updates
+```
+
+The same applies to objects:
+
+```typescript
+// ❌ WRONG
+const user = signal({ name: 'Alice', age: 30 });
+user().age = 31;  // Mutation - no reactive update
+
+// ✅ CORRECT
+user(u => ({ ...u, age: 31 }));  // New object - reactive update
+```
+
+### Don't Read Signals Outside Reactive Context
+
+Reading a signal outside of `computed` or `effect` won't track dependencies:
+
+```typescript
+// ❌ WRONG - this value won't update
+const name = signal('Alice');
+const greeting = `Hello, ${name()}!`;  // Read once, never updates
+
+el('div')(greeting);  // Always shows "Hello, Alice!"
+```
+
+```typescript
+// ✅ CORRECT - wrap in computed for reactive updates
+const name = signal('Alice');
+const greeting = computed(() => `Hello, ${name()}!`);
+
+el('div')(greeting);  // Updates when name changes
+```
+
+<Aside type="tip">
+Use `signal.peek()` when you intentionally want to read without tracking—for example, in event handlers where you need the current value but don't want to create a dependency.
+</Aside>
+
+### Don't Create Circular Dependencies in Computeds
+
+Computeds that depend on each other create infinite loops:
+
+```typescript
+// ❌ WRONG - circular dependency
+const a = computed(() => b() + 1);
+const b = computed(() => a() + 1);  // Boom! Infinite loop
+```
+
+If you need derived values that reference each other, use signals with explicit updates:
+
+```typescript
+// ✅ CORRECT - use signals with controlled updates
+const a = signal(0);
+const b = signal(0);
+
+const updateA = (value: number) => {
+  a(value);
+  b(value + 1);  // Explicitly update b when a changes
+};
+```
+
+### Don't Return Elements from Computeds
+
+Computeds are for deriving primitive values—strings, numbers, booleans, objects. They can't return element specs:
+
+```typescript
+// ❌ WRONG - computed can't return elements
+const content = computed(() => {
+  if (showDetails()) {
+    return el('div')('Details here');  // Won't work!
+  }
+  return el('span')('Summary');
+});
+
+return el('div')(content);  // Broken
+```
+
+For conditional rendering, use `match` instead:
+
+```typescript
+// ✅ CORRECT - use match for conditional elements
+return el('div')(
+  match(showDetails, (show) =>
+    show
+      ? el('div')('Details here')
+      : el('span')('Summary')
+  )
+);
+```
+
+Computeds are for values. `match` is for conditional UI.

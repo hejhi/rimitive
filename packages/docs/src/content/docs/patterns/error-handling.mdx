@@ -4,6 +4,9 @@ description: How to handle errors in Rimitive applications.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["error", "error-boundary", "try-catch", "error-handling", "async-error", "effect-error", "result-type"]} />
 
 React has Error Boundaries. Solid has `<ErrorBoundary>`. You might expect Rimitive to have something similar.
 
@@ -156,3 +159,179 @@ const App = (svc: Service) => {
 ```
 
 But honestly? Just use try/catch. It's JavaScript. It works.
+
+---
+
+## Anti-patterns
+
+### Don't Swallow Errors Silently
+
+Catching errors without logging or re-throwing hides bugs:
+
+```typescript
+// ❌ WRONG - error silently disappears
+const LoadData = (svc: Service) => {
+  const { el, signal, effect } = svc;
+  const data = signal<Data | null>(null);
+
+  effect(() => {
+    try {
+      data(fetchData());
+    } catch (e) {
+      // Silently swallowed - you'll never know it failed!
+    }
+  });
+
+  return el('div')(/* ... */);
+};
+```
+
+```typescript
+// ✅ CORRECT - track error state, show it to users, log it
+const LoadData = (svc: Service) => {
+  const { el, signal, effect, match } = svc;
+  const data = signal<Data | null>(null);
+  const error = signal<Error | null>(null);
+
+  effect(() => {
+    try {
+      error(null);
+      data(fetchData());
+    } catch (e) {
+      console.error('Failed to load data:', e);
+      error(e instanceof Error ? e : new Error(String(e)));
+    }
+  });
+
+  return match(error, (err) =>
+    err
+      ? el('div').props({ className: 'error' })(err.message)
+      : el('div')(/* render data */)
+  );
+};
+```
+
+### Don't Throw in Computeds Without Handling
+
+A throwing computed breaks any effect or computed that depends on it:
+
+```typescript
+// ❌ WRONG - throws in computed, breaks dependent computations
+const derived = computed(() => {
+  const value = source();
+  if (value < 0) {
+    throw new Error('Invalid value');  // Breaks everything downstream
+  }
+  return value * 2;
+});
+```
+
+```typescript
+// ✅ CORRECT - return error state instead of throwing
+type ComputedResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+const derived = computed((): ComputedResult<number> => {
+  const value = source();
+  if (value < 0) {
+    return { ok: false, error: 'Value must be non-negative' };
+  }
+  return { ok: true, value: value * 2 };
+});
+
+// Usage
+match(derived, (result) =>
+  result.ok
+    ? el('span')(result.value)
+    : el('span').props({ className: 'error' })(result.error)
+);
+```
+
+### Don't Ignore Resource Error State
+
+Resources track errors automatically. Ignoring them causes crashes:
+
+```typescript
+// ❌ WRONG - assumes data is always available
+const ProductList = (svc: Service) => {
+  const { el, resource, map } = svc;
+  const products = resource((s) => fetchProducts(s));
+
+  // Crashes when in error state!
+  return el('ul')(
+    map(products.data()!, (p) => el('li')(p.name))
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - handle error state explicitly
+const ProductList = (svc: Service) => {
+  const { el, resource, match, map } = svc;
+  const products = resource((s) => fetchProducts(s));
+
+  return match(products, (state) => {
+    switch (state.status) {
+      case 'pending':
+        return el('div')('Loading...');
+      case 'error':
+        return el('div').props({ className: 'error' })(
+          `Failed to load: ${state.error.message}`
+        );
+      case 'ready':
+        return el('ul')(map(state.value, (p) => el('li')(p.name)));
+    }
+  });
+};
+```
+
+### Don't Catch and Continue Without Recovery
+
+Catching an error but continuing as if nothing happened leads to inconsistent state:
+
+```typescript
+// ❌ WRONG - catches error but leaves state in limbo
+const SaveForm = (svc: Service) => {
+  const { el, signal } = svc;
+  const saving = signal(false);
+
+  const save = async () => {
+    saving(true);
+    try {
+      await submitForm();
+    } catch (e) {
+      // Error caught, but saving is still true!
+      console.error(e);
+    }
+    // Only resets if no error - state is inconsistent
+    saving(false);
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - always reset state in finally, track error separately
+const SaveForm = (svc: Service) => {
+  const { el, signal } = svc;
+  const saving = signal(false);
+  const saveError = signal<Error | null>(null);
+
+  const save = async () => {
+    saving(true);
+    saveError(null);
+    try {
+      await submitForm();
+    } catch (e) {
+      saveError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      saving(false);  // Always resets, regardless of success/failure
+    }
+  };
+
+  return el('form')(
+    match(saveError, (err) =>
+      err ? el('div').props({ className: 'error' })(err.message) : null
+    ),
+    el('button').props({ disabled: saving })('Save')
+  );
+};
+```

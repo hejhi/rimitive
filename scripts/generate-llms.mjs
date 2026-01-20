@@ -195,10 +195,32 @@ function extractTitle(content) {
 }
 
 /**
+ * Convert SearchTags JSX to HTML comments
+ * <SearchTags tags={["a", "b"]} /> -> <!-- @tags: a, b -->
+ */
+function convertSearchTags(content) {
+  // Match <SearchTags tags={["tag1", "tag2", ...]} />
+  return content.replace(
+    /<SearchTags\s+tags=\{?\[([^\]]+)\]\}?\s*\/>/g,
+    (_, tagList) => {
+      // Extract tag strings from the array notation
+      const tags = tagList
+        .split(',')
+        .map((t) => t.trim().replace(/^["']|["']$/g, ''))
+        .join(', ');
+      return `<!-- @tags: ${tags} -->`;
+    }
+  );
+}
+
+/**
  * Convert MDX to plain markdown (basic conversion)
  */
 function mdxToMarkdown(content) {
   let result = content;
+
+  // Convert SearchTags to HTML comments BEFORE removing other JSX
+  result = convertSearchTags(result);
 
   // Remove import statements that are NOT inside code blocks
   // Split by code blocks, process non-code sections, rejoin

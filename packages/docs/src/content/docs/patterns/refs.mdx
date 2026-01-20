@@ -4,6 +4,9 @@ description: How to access DOM nodes imperatively in Rimitive.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["ref", "dom-access", "focus", "imperative", "third-party", "canvas", "resize-observer", "cleanup"]} />
 
 Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the `.ref()` method on elements.
 
@@ -225,3 +228,126 @@ el('input').ref(ref.callback)();
 ```
 
 But the signal pattern is usually better because it's reactive.
+
+---
+
+## Anti-patterns
+
+### Don't Access Refs Before Mount
+
+Ref callbacks run at mount time. If you try to access the node synchronously or in an effect's first run, it won't exist yet:
+
+```typescript
+// ❌ WRONG - ref is null on first effect run
+const FocusInput = (svc: Service) => {
+  const { el, signal, effect } = svc;
+  const inputRef = signal<HTMLInputElement | null>(null);
+
+  // This runs immediately, before the ref callback
+  effect(() => {
+    inputRef()!.focus();  // Error! inputRef() is null
+  });
+
+  return el('input').ref((node) => inputRef(node))();
+};
+```
+
+```typescript
+// ✅ CORRECT - guard against null, or trigger focus differently
+const FocusInput = (svc: Service) => {
+  const { el, signal, effect } = svc;
+  const inputRef = signal<HTMLInputElement | null>(null);
+
+  effect(() => {
+    const node = inputRef();
+    if (node) {  // Guard against null
+      node.focus();
+    }
+  });
+
+  return el('input').ref((node) => inputRef(node))();
+};
+
+// Or focus directly in the ref callback
+const FocusInput = (svc: Service) => {
+  return svc.el('input').ref((node) => node.focus())();
+};
+```
+
+### Don't Forget Cleanup
+
+Refs that set up observers, listeners, or other subscriptions need cleanup to avoid memory leaks:
+
+```typescript
+// ❌ WRONG - observer never disconnected
+const Measured = (svc: Service) => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+    // Missing cleanup! Observer lives forever
+  })();
+};
+```
+
+```typescript
+// ✅ CORRECT - return cleanup function
+const Measured = (svc: Service) => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+
+    return () => observer.disconnect();  // Cleanup when unmounted
+  })();
+};
+```
+
+### Don't Use Refs for Declarative Updates
+
+Refs are for imperative DOM access. If you're using refs to update content that could be reactive, you're fighting the framework:
+
+```typescript
+// ❌ WRONG - imperatively updating text content via ref
+const Counter = (svc: Service) => {
+  const { el, signal } = svc;
+  const count = signal(0);
+
+  return el('div')(
+    el('span').ref((node) => {
+      // Don't do this! Manually syncing signal to DOM
+      svc.effect(() => {
+        node.textContent = `Count: ${count()}`;
+      });
+    })(),
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - let reactivity handle it
+const Counter = (svc: Service) => {
+  const { el, signal, computed } = svc;
+  const count = signal(0);
+
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),  // Reactive!
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+```
+
+<Aside type="tip">
+Use refs for things that *can't* be declarative: focus management, scroll position, canvas drawing, third-party library integration. For everything else, use reactive props and children.
+</Aside>

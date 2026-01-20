@@ -92,6 +92,7 @@ Additionally:
 | [`@rimitive/resource`](packages/resource)                     | Async data fetching with `resource()`                                                                                 |
 | [`@rimitive/ssr`](packages/ssr)                               | Server-side rendering and streaming                                                                                   |
 | [`@rimitive/react`](packages/react)                           | React bindings                                                                                                        |
+| [`@rimitive/mcp`](packages/mcp)                               | MCP server exposing Rimitive docs to LLMs                                                                             |
 | [`@rimitive/devtools-extension`](packages/devtools-extension) | Chrome DevTools extension ([download](https://github.com/hejhi/rimitive/releases?q=devtools-extension&expanded=true)) |
 
 ---
@@ -173,6 +174,23 @@ If you use [Claude Code](https://claude.ai/code), these plugins teach Claude how
 | [`rimitive-adapter`](plugins/rimitive-adapter)   | Create custom adapters for Canvas, WebGL, or other renderers     |
 
 Install via Claude Code: `/install-plugin github:hejhi/rimitive/plugins/<plugin-name>`
+
+### MCP Server
+
+For deeper integration, [`@rimitive/mcp`](packages/mcp) provides an MCP server that exposes Rimitive documentation as searchable tools:
+
+```json
+{
+  "mcpServers": {
+    "rimitive": {
+      "command": "npx",
+      "args": ["@rimitive/mcp"]
+    }
+  }
+}
+```
+
+This gives Claude access to `search_api`, `get_module`, and `get_example` tools for looking up Rimitive documentation on demand.
 
 ---
 

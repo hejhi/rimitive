@@ -4,6 +4,7 @@ description: Patterns for building reactive forms with validation.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
 
 Forms are one of the most common UI patterns. Rimitive doesn't have a built-in form primitive—you compose form behavior from signals and computeds.
 
@@ -439,3 +440,74 @@ tags.values(); // ['typescript', 'react']
 <Aside type="tip">
 Start simple. A signal is often enough for a form field. Add the field behavior when you need validation, touched state, or error display.
 </Aside>
+
+---
+
+## Anti-patterns
+
+<SearchTags tags={["forms", "validation", "anti-pattern", "touched", "ux"]} />
+
+### Don't Validate Before Touched
+
+Showing errors immediately—before the user has interacted—creates a poor experience:
+
+```typescript
+// ❌ WRONG - error shows immediately, even on empty form load
+const field = <T>(svc: SignalsSvc) => (opts: { initial: T; validate: (v: T) => string | null }) => {
+  const value = svc.signal(opts.initial);
+  const error = svc.computed(() => opts.validate(value()));  // Always validates!
+
+  return { value, error };
+};
+
+// User sees "Email is required" before they've even clicked the field
+```
+
+```typescript
+// ✅ CORRECT - only show errors after user interaction
+const field = <T>(svc: SignalsSvc) => (opts: { initial: T; validate: (v: T) => string | null }) => {
+  const value = svc.signal(opts.initial);
+  const touched = svc.signal(false);
+
+  const error = svc.computed(() => {
+    if (!touched()) return null;  // Don't validate until touched
+    return opts.validate(value());
+  });
+
+  return {
+    value,
+    touched,
+    error,
+    touch: () => touched(true),
+  };
+};
+```
+
+<Aside type="tip">
+Touch fields on `blur`, not on `input`. This lets users finish typing before seeing validation errors.
+</Aside>
+
+<SearchTags tags={["forms", "field-array", "anti-pattern", "mutation", "reactivity"]} />
+
+### Don't Mutate Field Arrays Directly
+
+Field arrays are signals—mutating them directly bypasses reactivity:
+
+```typescript
+// ❌ WRONG - direct mutation doesn't trigger updates
+const tags = svc(fieldArray)({ initial: ['a', 'b'] });
+
+tags.items().push(newField);  // Mutates array, no reactive update
+tags.items().splice(0, 1);    // Same problem
+```
+
+```typescript
+// ✅ CORRECT - use the provided methods
+const tags = svc(fieldArray)({ initial: ['a', 'b'] });
+
+tags.add('c');     // Proper reactive update
+tags.remove(0);    // Proper reactive update
+
+// Or if you need custom operations, create a new array:
+tags.items(items => items.filter(f => f.valid()));
+```

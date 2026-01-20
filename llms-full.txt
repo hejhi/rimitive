@@ -87,6 +87,7 @@ Additionally:
 | [`@rimitive/resource`](packages/resource)                     | Async data fetching with `resource()`                                                                                 |
 | [`@rimitive/ssr`](packages/ssr)                               | Server-side rendering and streaming                                                                                   |
 | [`@rimitive/react`](packages/react)                           | React bindings                                                                                                        |
+| [`@rimitive/mcp`](packages/mcp)                               | MCP server exposing Rimitive docs to LLMs                                                                             |
 | [`@rimitive/devtools-extension`](packages/devtools-extension) | Chrome DevTools extension ([download](https://github.com/hejhi/rimitive/releases?q=devtools-extension&expanded=true)) |
 
 ---
@@ -169,6 +170,23 @@ If you use [Claude Code](https://claude.ai/code), these plugins teach Claude how
 
 Install via Claude Code: `/install-plugin github:hejhi/rimitive/plugins/<plugin-name>`
 
+### MCP Server
+
+For deeper integration, [`@rimitive/mcp`](packages/mcp) provides an MCP server that exposes Rimitive documentation as searchable tools:
+
+```json
+{
+  "mcpServers": {
+    "rimitive": {
+      "command": "npx",
+      "args": ["@rimitive/mcp"]
+    }
+  }
+}
+```
+
+This gives Claude access to `search_api`, `get_module`, and `get_example` tools for looking up Rimitive documentation on demand.
+
 ---
 
 ## Inspirations
@@ -197,6 +215,8 @@ Alpha. Tested, benchmarked, used in personal projects, _not_ battle-tested in pr
 
 ## Getting Started
 
+<!-- @tags: getting-started, installation, setup, quickstart, hello-world, first-app -->
+
 Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, migrations, or a "now we need a real framework" moment.
 
 Compose only the primitives you need, opting in as you go!
@@ -218,6 +238,8 @@ Patterns and architectures in rimitive are designed for **low coupling, high coh
 ```bash
 npm install @rimitive/core @rimitive/signals @rimitive/view
 ```
+
+<!-- @tags: counter, example, tutorial, reactive-state, dom-rendering -->
 
 ## Your First App
 
@@ -278,6 +300,8 @@ That's it. Click the button, the count updates, the DOM updates automatically.
 ---
 
 ## Creating a Service
+
+<!-- @tags: service, compose, setup, configuration, modules, dependency-injection -->
 
 Here's the simplest Rimitive setup:
 
@@ -632,6 +656,8 @@ document.body.appendChild(app.element!);
 
 ## Conditional Rendering
 
+<!-- @tags: match, conditional, show-hide, toggle, switch, if-else, visibility -->
+
 `match()` swaps elements based on a reactive value. When the value changes, the old element is disposed and a new one takes its place.
 
 ---
@@ -736,6 +762,8 @@ const tabContent = match(currentTab, (tab) => {
 ---
 
 ## Rendering Lists
+
+<!-- @tags: map, list, array, foreach, loop, keyed-list, reconciliation, todo-list -->
 
 `map()` renders a reactive list efficiently (_very efficiently_). When items change, it updates only what's necessary. `map()` contains ONLY the reconciliation logic required to deal with rendering dynamic lists efficiently, so again, a small bundle addition.
 
@@ -1254,6 +1282,8 @@ Event handling, batching, cleanup—all handled. Next: [Loading Data](/guides/lo
 
 ## Creating a Behavior
 
+<!-- @tags: behavior, hook, reusable-logic, headless, state-management, portable -->
+
 A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to provide portable reactive logic.
 
 ---
@@ -1294,6 +1324,8 @@ counter.count();  // 11
 This works great for simple cases. The behavior is tied to your service, which is fine when you have a single app context.
 
 ---
+
+<!-- @tags: portable, service-injection, testable, ssr, dependency-injection -->
 
 ## The Portable Pattern
 
@@ -1352,6 +1384,8 @@ c.doubled();
 
 ---
 
+<!-- @tags: compose-behaviors, disclosure, dropdown, service-layer, reuse -->
+
 ## Composing Behaviors
 
 The double-function behavior pattern is quite powerful for composition. Behaviors can easily compose other behaviors. To demonstrate this, let's start with a basic portable behavior:
@@ -1399,6 +1433,8 @@ const dropdown = (svc: Service) => {
 Now `dropdown` composes `disclosure`! They both use the same behavior shape of `(svc) => (args) => api`, but one composes the other. In rimitive, we call the outer function the **service layer**. It's a convenient place to inject services a single time.
 
 ---
+
+<!-- @tags: testing, vitest, unit-test, behavior-test -->
 
 ## Testing
 
@@ -1813,6 +1849,8 @@ Next: [Server Rendering](/guides/server-rendering) for rendering on the server w
 
 ## Loading Data
 
+<!-- @tags: resource, fetch, async, data-loading, api, http, loading-state, error-state -->
+
 Data loading in Rimitive is reactive. When dependencies change, data refetches. When requests overlap, stale ones get cancelled. Let's build up to that.
 
 ---
@@ -1904,6 +1942,8 @@ All are reactive—use them in computeds or effects.
 
 ---
 
+<!-- @tags: reactive-fetch, auto-refetch, dependency-tracking, abort-controller, cancellation -->
+
 ## Reactive Dependencies
 
 Here's where resources shine. Read signals inside the fetcher, and the resource refetches when they change:
@@ -1948,6 +1988,8 @@ page(2);             // refetch
 ```
 
 ---
+
+<!-- @tags: loading-ui, error-ui, loading-spinner, skeleton, status -->
 
 ## Rendering Resources
 
@@ -3371,6 +3413,8 @@ For reusable reactive logic, prefer [behaviors](/guides/creating-a-behavior). Be
 
 ## Signal Patterns
 
+<!-- @tags: signal, updater, toggle, previous-value, debounce, async-action, derived-state -->
+
 Signals are simple—read with `sig()`, write with `sig(value)`. But there are patterns that make them more ergonomic for common use cases.
 
 ---
@@ -3802,7 +3846,146 @@ This is useful for:
 
 ---
 
+## Anti-patterns
+
+### Don't Create Module-Level Signals
+
+Signals created at module scope are shared across your entire application. This causes state to leak between components and makes testing difficult:
+
+```typescript
+// ❌ WRONG - module-level signal is global shared state
+const count = signal(0);  // Created once when module loads
+
+const Counter = () => {
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+// Every Counter instance shares the same count!
+```
+
+```typescript
+// ✅ CORRECT - state created per instance
+const Counter = () => {
+  const count = signal(0);  // Fresh state each time
+
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+```
+
+### Don't Mutate Signal Values Directly
+
+Signals hold values by reference. Mutating the value directly bypasses reactivity:
+
+```typescript
+// ❌ WRONG - mutation doesn't trigger updates
+const items = signal<string[]>([]);
+
+items().push('new item');  // Mutates the array, but signal doesn't know
+items();  // Still returns the same reference - no reactive update!
+```
+
+```typescript
+// ✅ CORRECT - use updater functions to create new values
+const items = signal<string[]>([]);
+
+items(arr => [...arr, 'new item']);  // New array, signal updates
+```
+
+The same applies to objects:
+
+```typescript
+// ❌ WRONG
+const user = signal({ name: 'Alice', age: 30 });
+user().age = 31;  // Mutation - no reactive update
+
+// ✅ CORRECT
+user(u => ({ ...u, age: 31 }));  // New object - reactive update
+```
+
+### Don't Read Signals Outside Reactive Context
+
+Reading a signal outside of `computed` or `effect` won't track dependencies:
+
+```typescript
+// ❌ WRONG - this value won't update
+const name = signal('Alice');
+const greeting = `Hello, ${name()}!`;  // Read once, never updates
+
+el('div')(greeting);  // Always shows "Hello, Alice!"
+```
+
+```typescript
+// ✅ CORRECT - wrap in computed for reactive updates
+const name = signal('Alice');
+const greeting = computed(() => `Hello, ${name()}!`);
+
+el('div')(greeting);  // Updates when name changes
+```
+
+### Don't Create Circular Dependencies in Computeds
+
+Computeds that depend on each other create infinite loops:
+
+```typescript
+// ❌ WRONG - circular dependency
+const a = computed(() => b() + 1);
+const b = computed(() => a() + 1);  // Boom! Infinite loop
+```
+
+If you need derived values that reference each other, use signals with explicit updates:
+
+```typescript
+// ✅ CORRECT - use signals with controlled updates
+const a = signal(0);
+const b = signal(0);
+
+const updateA = (value: number) => {
+  a(value);
+  b(value + 1);  // Explicitly update b when a changes
+};
+```
+
+### Don't Return Elements from Computeds
+
+Computeds are for deriving primitive values—strings, numbers, booleans, objects. They can't return element specs:
+
+```typescript
+// ❌ WRONG - computed can't return elements
+const content = computed(() => {
+  if (showDetails()) {
+    return el('div')('Details here');  // Won't work!
+  }
+  return el('span')('Summary');
+});
+
+return el('div')(content);  // Broken
+```
+
+For conditional rendering, use `match` instead:
+
+```typescript
+// ✅ CORRECT - use match for conditional elements
+return el('div')(
+  match(showDetails, (show) =>
+    show
+      ? el('div')('Details here')
+      : el('span')('Summary')
+  )
+);
+```
+
+Computeds are for values. `match` is for conditional UI.
+
+---
+
 ## Behaviors
+
+<!-- @tags: behavior, headless, disclosure, dropdown, modal, pagination, composition -->
 
 A **behavior** is a portable function that encapsulates reactive logic without any UI. It receives a service, returns a factory, and that factory returns an API of signals, computeds, and actions.
 
@@ -4191,7 +4374,156 @@ Pure functions, pure tests.
 
 ---
 
+## Anti-patterns
+
+### Don't Mix UI into Behaviors
+
+Behaviors should be headless—state and logic only, no DOM:
+
+```typescript
+// ❌ WRONG - behavior creates DOM elements
+const dropdown = (svc: SignalsSvc) => () => {
+  const isOpen = svc.signal(false);
+
+  return {
+    isOpen,
+    toggle: () => isOpen(!isOpen()),
+    // Don't do this! Behaviors shouldn't create elements
+    render: () => el('div')(
+      el('button').props({ onclick: () => isOpen(!isOpen()) })('Toggle'),
+      match(isOpen, (open) => open ? el('div')('Content') : null)
+    ),
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - behavior returns props, component renders
+const dropdown = (svc: SignalsSvc) => () => {
+  const isOpen = svc.signal(false);
+
+  return {
+    isOpen,
+    toggle: () => isOpen(!isOpen()),
+    triggerProps: svc.computed(() => ({
+      'aria-expanded': String(isOpen()),
+    })),
+    contentProps: svc.computed(() => ({
+      hidden: !isOpen(),
+    })),
+  };
+};
+
+// Component uses the behavior
+const Dropdown = (svc: Service) => {
+  const disc = svc.use(dropdown)();
+  return el('div')(
+    el('button').props({ ...disc.triggerProps(), onclick: disc.toggle })('Toggle'),
+    match(disc.isOpen, (open) => open ? el('div').props(disc.contentProps())('Content') : null)
+  );
+};
+```
+
+### Don't Skip the Service Injection Layer
+
+The double-function pattern exists for portability. Skipping it couples your behavior to a specific service:
+
+```typescript
+// ❌ WRONG - hardcoded service, not portable
+import { svc } from './myService';
+
+const counter = (initial = 0) => {
+  const count = svc.signal(initial);  // Tied to this specific service
+  return {
+    count,
+    increment: () => count(count() + 1),
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - service injected, portable
+const counter = (svc: SignalsSvc) => (initial = 0) => {
+  const count = svc.signal(initial);
+  return {
+    count,
+    increment: () => count(count() + 1),
+  };
+};
+
+// Now works with any compatible service
+const c1 = counter(productionSvc)(0);
+const c2 = counter(testSvc)(0);  // Easy to test with mocks
+```
+
+### Don't Confuse Service Layer vs Factory
+
+The service layer `(svc) =>` runs once when you call `svc.use(behavior)`. The factory `(options) =>` runs each time you create an instance. Put code in the right place:
+
+```typescript
+// ❌ WRONG - composing behaviors in the factory (runs every mount)
+const dropdown = (svc: SignalsSvc) => (options?: { initialOpen?: boolean }) => {
+  // This creates a new disclosure every time dropdown is instantiated
+  const useDisclosure = svc.use(disclosure);  // Should be in service layer!
+  const disc = useDisclosure(options?.initialOpen ?? false);
+
+  return { ...disc };
+};
+```
+
+```typescript
+// ✅ CORRECT - compose in service layer, instantiate in factory
+const dropdown = (svc: SignalsSvc) => {
+  // Service layer: runs once, sets up composed behaviors
+  const useDisclosure = svc.use(disclosure);
+
+  return (options?: { initialOpen?: boolean }) => {
+    // Factory: runs per instance, creates state
+    const disc = useDisclosure(options?.initialOpen ?? false);
+
+    return { ...disc };
+  };
+};
+```
+
+### Don't Create Side Effects Outside effect()
+
+Side effects outside `effect()` won't be cleaned up when the behavior is disposed:
+
+```typescript
+// ❌ WRONG - side effect not tracked, never cleaned up
+const keyboard = (svc: SignalsSvc) => () => {
+  const pressed = svc.signal<string | null>(null);
+
+  // This listener is never removed!
+  window.addEventListener('keydown', (e) => pressed(e.key));
+
+  return { pressed };
+};
+```
+
+```typescript
+// ✅ CORRECT - effect handles cleanup
+const keyboard = (svc: SignalsSvc) => () => {
+  const pressed = svc.signal<string | null>(null);
+
+  svc.effect(() => {
+    const handler = (e: KeyboardEvent) => pressed(e.key);
+    window.addEventListener('keydown', handler);
+
+    // Cleanup function - runs when effect re-runs or disposes
+    return () => window.removeEventListener('keydown', handler);
+  });
+
+  return { pressed };
+};
+```
+
+---
+
 ## Portability
+
+<!-- @tags: portable, framework-agnostic, react, testing, ssr, adapter, cross-platform -->
 
 Most UI logic isn't tied to a specific framework. A dropdown's open/close behavior is the same whether you're rendering to DOM, React, or a canvas. A form's validation logic doesn't care about the view layer.
 
@@ -4356,44 +4688,58 @@ Same component, different targets.
 
 ---
 
-## What Makes Code Portable
+## Anti-patterns
 
-### Do: Depend on the service contract
+### Don't Import Framework-Specific Code Directly
 
-```typescript
-const MyComponent = (svc: Service) => {
-  const { el, signal, computed } = svc;
-  // Use primitives from the service
-};
-```
-
-### Don't: Import framework-specific code
+Importing primitives directly couples your code to a specific setup:
 
 ```typescript
-// This is NOT portable
+// ❌ WRONG - hardcoded dependency, not portable
 import { signal } from '@rimitive/signals';
 
 const MyComponent = () => {
-  const count = signal(0); // Hardcoded dependency
+  const count = signal(0);  // Can't swap this out for testing
 };
 ```
 
-### Do: Accept dependencies as props or service extensions
-
 ```typescript
-const DataList = (svc: Service & { fetchData: () => Promise<Item[]> }) => {
-  const { el, resource, fetchData } = svc;
-  const items = resource(fetchData);
-  // ...
+// ✅ CORRECT - depend on the service contract
+const MyComponent = (svc: Service) => {
+  const { signal } = svc;
+  const count = signal(0);  // Works with any compatible service
 };
 ```
 
-### Don't: Hardcode external dependencies
+### Don't Hardcode External Dependencies
+
+Hardcoding URLs, API calls, or other external dependencies makes code untestable and inflexible:
 
 ```typescript
-// This is NOT portable
+// ❌ WRONG - hardcoded URL, can't test without network
 const DataList = (svc: Service) => {
-  const items = resource(() => fetch('/api/items')); // Hardcoded URL
+  const items = svc.resource(() => fetch('/api/items'));
+};
+```
+
+```typescript
+// ✅ CORRECT - accept dependencies via service or props
+const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => {
+  const items = svc.resource(svc.fetchItems);
+};
+
+// Or via props
+const DataList = (svc: Service) => (props: { fetchItems: () => Promise<Item[]> }) => {
+  const items = svc.resource(props.fetchItems);
+};
+```
+
+This lets you inject a mock fetcher in tests:
+
+```typescript
+const mockSvc = {
+  ...testSvc,
+  fetchItems: async () => [{ id: 1, name: 'Test' }],
 };
 ```
 
@@ -4482,6 +4828,8 @@ No DOM mocking, no framework test utilities—just functions and assertions.
 ---
 
 ## Shared State
+
+<!-- @tags: context, shared-state, global-state, service-threading, theme, user, prop-drilling -->
 
 Other frameworks have "context"—a way to pass values down the component tree without threading them through every intermediate component. In React, it's `createContext` and `useContext`. In Solid, it's similar.
 
@@ -4627,7 +4975,131 @@ The service threading pattern is explicit, type-safe, and composes naturally. It
 
 ---
 
+## Anti-patterns
+
+### Don't Use Module-Level Signals for Shared State
+
+Creating signals at module scope seems convenient, but it causes state to leak across your entire application and makes testing nearly impossible:
+
+```typescript
+// ❌ WRONG - module-level signal is global singleton
+const theme = signal<'light' | 'dark'>('light');
+const user = signal<User | null>(null);
+
+const Header = (svc: Service) => {
+  // Reads global state - can't test in isolation
+  return svc.el('header')(theme());
+};
+```
+
+```typescript
+// ✅ CORRECT - state lives in the service, threaded explicitly
+const App = (svc: Service) => {
+  const theme = svc.signal<'light' | 'dark'>('light');
+  const user = svc.signal<User | null>(null);
+
+  const appSvc = { ...svc, theme, user };
+
+  return svc.el('div')(Header(appSvc));
+};
+```
+
+The service threading pattern keeps state local to component trees and enables testing with isolated services.
+
+### Don't Mutate the Service Object
+
+Mutating the service directly instead of creating a new one causes subtle bugs—all components sharing that service see the mutation:
+
+```typescript
+// ❌ WRONG - mutates shared service object
+const DarkSection = (svc: AppService) => {
+  svc.theme = svc.signal('dark');  // Mutates the original!
+  return svc.el('section')(/* ... */);
+};
+```
+
+```typescript
+// ✅ CORRECT - create a new extended service
+const DarkSection = (svc: AppService) => {
+  const darkSvc = { ...svc, theme: svc.signal('dark') };
+  return svc.el('section')(Child(darkSvc));
+};
+```
+
+### Don't Skip Type Annotations for Extended Services
+
+Without proper types, you lose the main benefit of explicit service threading—knowing exactly what's available:
+
+```typescript
+// ❌ WRONG - untyped extension loses type safety
+const App = (svc: Service) => {
+  const theme = svc.signal('light');
+  const appSvc = { ...svc, theme };  // Type is just Service & { theme: ... }
+
+  // Later components have no idea what's in the service
+  return svc.el('div')(Header(appSvc));  // Header type is unclear
+};
+```
+
+```typescript
+// ✅ CORRECT - explicit service types
+type AppService = Service & {
+  theme: Readable<'light' | 'dark'>;
+};
+
+const App = (svc: Service) => {
+  const theme = svc.signal<'light' | 'dark'>('light');
+  const appSvc: AppService = { ...svc, theme };
+
+  // Header explicitly declares what it needs
+  return svc.el('div')(Header(appSvc));
+};
+
+const Header = (svc: AppService) => {
+  // TypeScript knows exactly what's available
+  const { el, theme } = svc;
+  return el('header')(/* ... */);
+};
+```
+
+### Don't Create Shared State Inside Render
+
+Shared state should be created once and threaded through. Creating it inside component bodies means it's recreated on each instantiation:
+
+```typescript
+// ❌ WRONG - creates new signal every time component is instantiated
+const ThemedSection = (svc: Service) => (props: { children: RefSpec }) => {
+  // This creates a NEW theme signal for every ThemedSection instance!
+  const theme = svc.signal<'light' | 'dark'>('light');
+  const themedSvc = { ...svc, theme };
+
+  return svc.el('section')(props.children);
+};
+```
+
+```typescript
+// ✅ CORRECT - shared state created at app level, threaded down
+const App = (svc: Service) => {
+  // Created once at the app level
+  const theme = svc.signal<'light' | 'dark'>('light');
+  const appSvc: AppService = { ...svc, theme };
+
+  return svc.el('div')(
+    ThemedSection(appSvc)({ children: /* ... */ })
+  );
+};
+
+const ThemedSection = (svc: AppService) => (props: { children: RefSpec }) => {
+  // Uses existing theme from service, doesn't create new one
+  return svc.el('section')(props.children);
+};
+```
+
+---
+
 ## Error Handling
+
+<!-- @tags: error, error-boundary, try-catch, error-handling, async-error, effect-error, result-type -->
 
 React has Error Boundaries. Solid has `<ErrorBoundary>`. You might expect Rimitive to have something similar.
 
@@ -4780,6 +5252,182 @@ const App = (svc: Service) => {
 ```
 
 But honestly? Just use try/catch. It's JavaScript. It works.
+
+---
+
+## Anti-patterns
+
+### Don't Swallow Errors Silently
+
+Catching errors without logging or re-throwing hides bugs:
+
+```typescript
+// ❌ WRONG - error silently disappears
+const LoadData = (svc: Service) => {
+  const { el, signal, effect } = svc;
+  const data = signal<Data | null>(null);
+
+  effect(() => {
+    try {
+      data(fetchData());
+    } catch (e) {
+      // Silently swallowed - you'll never know it failed!
+    }
+  });
+
+  return el('div')(/* ... */);
+};
+```
+
+```typescript
+// ✅ CORRECT - track error state, show it to users, log it
+const LoadData = (svc: Service) => {
+  const { el, signal, effect, match } = svc;
+  const data = signal<Data | null>(null);
+  const error = signal<Error | null>(null);
+
+  effect(() => {
+    try {
+      error(null);
+      data(fetchData());
+    } catch (e) {
+      console.error('Failed to load data:', e);
+      error(e instanceof Error ? e : new Error(String(e)));
+    }
+  });
+
+  return match(error, (err) =>
+    err
+      ? el('div').props({ className: 'error' })(err.message)
+      : el('div')(/* render data */)
+  );
+};
+```
+
+### Don't Throw in Computeds Without Handling
+
+A throwing computed breaks any effect or computed that depends on it:
+
+```typescript
+// ❌ WRONG - throws in computed, breaks dependent computations
+const derived = computed(() => {
+  const value = source();
+  if (value < 0) {
+    throw new Error('Invalid value');  // Breaks everything downstream
+  }
+  return value * 2;
+});
+```
+
+```typescript
+// ✅ CORRECT - return error state instead of throwing
+type ComputedResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+const derived = computed((): ComputedResult<number> => {
+  const value = source();
+  if (value < 0) {
+    return { ok: false, error: 'Value must be non-negative' };
+  }
+  return { ok: true, value: value * 2 };
+});
+
+// Usage
+match(derived, (result) =>
+  result.ok
+    ? el('span')(result.value)
+    : el('span').props({ className: 'error' })(result.error)
+);
+```
+
+### Don't Ignore Resource Error State
+
+Resources track errors automatically. Ignoring them causes crashes:
+
+```typescript
+// ❌ WRONG - assumes data is always available
+const ProductList = (svc: Service) => {
+  const { el, resource, map } = svc;
+  const products = resource((s) => fetchProducts(s));
+
+  // Crashes when in error state!
+  return el('ul')(
+    map(products.data()!, (p) => el('li')(p.name))
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - handle error state explicitly
+const ProductList = (svc: Service) => {
+  const { el, resource, match, map } = svc;
+  const products = resource((s) => fetchProducts(s));
+
+  return match(products, (state) => {
+    switch (state.status) {
+      case 'pending':
+        return el('div')('Loading...');
+      case 'error':
+        return el('div').props({ className: 'error' })(
+          `Failed to load: ${state.error.message}`
+        );
+      case 'ready':
+        return el('ul')(map(state.value, (p) => el('li')(p.name)));
+    }
+  });
+};
+```
+
+### Don't Catch and Continue Without Recovery
+
+Catching an error but continuing as if nothing happened leads to inconsistent state:
+
+```typescript
+// ❌ WRONG - catches error but leaves state in limbo
+const SaveForm = (svc: Service) => {
+  const { el, signal } = svc;
+  const saving = signal(false);
+
+  const save = async () => {
+    saving(true);
+    try {
+      await submitForm();
+    } catch (e) {
+      // Error caught, but saving is still true!
+      console.error(e);
+    }
+    // Only resets if no error - state is inconsistent
+    saving(false);
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - always reset state in finally, track error separately
+const SaveForm = (svc: Service) => {
+  const { el, signal } = svc;
+  const saving = signal(false);
+  const saveError = signal<Error | null>(null);
+
+  const save = async () => {
+    saving(true);
+    saveError(null);
+    try {
+      await submitForm();
+    } catch (e) {
+      saveError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      saving(false);  // Always resets, regardless of success/failure
+    }
+  };
+
+  return el('form')(
+    match(saveError, (err) =>
+      err ? el('div').props({ className: 'error' })(err.message) : null
+    ),
+    el('button').props({ disabled: saving })('Save')
+  );
+};
+```
 
 ---
 
@@ -5214,7 +5862,76 @@ tags.values(); // ['typescript', 'react']
 
 ---
 
+## Anti-patterns
+
+<!-- @tags: forms, validation, anti-pattern, touched, ux -->
+
+### Don't Validate Before Touched
+
+Showing errors immediately—before the user has interacted—creates a poor experience:
+
+```typescript
+// ❌ WRONG - error shows immediately, even on empty form load
+const field = <T>(svc: SignalsSvc) => (opts: { initial: T; validate: (v: T) => string | null }) => {
+  const value = svc.signal(opts.initial);
+  const error = svc.computed(() => opts.validate(value()));  // Always validates!
+
+  return { value, error };
+};
+
+// User sees "Email is required" before they've even clicked the field
+```
+
+```typescript
+// ✅ CORRECT - only show errors after user interaction
+const field = <T>(svc: SignalsSvc) => (opts: { initial: T; validate: (v: T) => string | null }) => {
+  const value = svc.signal(opts.initial);
+  const touched = svc.signal(false);
+
+  const error = svc.computed(() => {
+    if (!touched()) return null;  // Don't validate until touched
+    return opts.validate(value());
+  });
+
+  return {
+    value,
+    touched,
+    error,
+    touch: () => touched(true),
+  };
+};
+```
+
+<!-- @tags: forms, field-array, anti-pattern, mutation, reactivity -->
+
+### Don't Mutate Field Arrays Directly
+
+Field arrays are signals—mutating them directly bypasses reactivity:
+
+```typescript
+// ❌ WRONG - direct mutation doesn't trigger updates
+const tags = svc(fieldArray)({ initial: ['a', 'b'] });
+
+tags.items().push(newField);  // Mutates array, no reactive update
+tags.items().splice(0, 1);    // Same problem
+```
+
+```typescript
+// ✅ CORRECT - use the provided methods
+const tags = svc(fieldArray)({ initial: ['a', 'b'] });
+
+tags.add('c');     // Proper reactive update
+tags.remove(0);    // Proper reactive update
+
+// Or if you need custom operations, create a new array:
+tags.items(items => items.filter(f => f.valid()));
+```
+
+---
+
 ## Refs and DOM Access
+
+<!-- @tags: ref, dom-access, focus, imperative, third-party, canvas, resize-observer, cleanup -->
 
 Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the `.ref()` method on elements.
 
@@ -5431,7 +6148,128 @@ But the signal pattern is usually better because it's reactive.
 
 ---
 
+## Anti-patterns
+
+### Don't Access Refs Before Mount
+
+Ref callbacks run at mount time. If you try to access the node synchronously or in an effect's first run, it won't exist yet:
+
+```typescript
+// ❌ WRONG - ref is null on first effect run
+const FocusInput = (svc: Service) => {
+  const { el, signal, effect } = svc;
+  const inputRef = signal<HTMLInputElement | null>(null);
+
+  // This runs immediately, before the ref callback
+  effect(() => {
+    inputRef()!.focus();  // Error! inputRef() is null
+  });
+
+  return el('input').ref((node) => inputRef(node))();
+};
+```
+
+```typescript
+// ✅ CORRECT - guard against null, or trigger focus differently
+const FocusInput = (svc: Service) => {
+  const { el, signal, effect } = svc;
+  const inputRef = signal<HTMLInputElement | null>(null);
+
+  effect(() => {
+    const node = inputRef();
+    if (node) {  // Guard against null
+      node.focus();
+    }
+  });
+
+  return el('input').ref((node) => inputRef(node))();
+};
+
+// Or focus directly in the ref callback
+const FocusInput = (svc: Service) => {
+  return svc.el('input').ref((node) => node.focus())();
+};
+```
+
+### Don't Forget Cleanup
+
+Refs that set up observers, listeners, or other subscriptions need cleanup to avoid memory leaks:
+
+```typescript
+// ❌ WRONG - observer never disconnected
+const Measured = (svc: Service) => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+    // Missing cleanup! Observer lives forever
+  })();
+};
+```
+
+```typescript
+// ✅ CORRECT - return cleanup function
+const Measured = (svc: Service) => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+
+    return () => observer.disconnect();  // Cleanup when unmounted
+  })();
+};
+```
+
+### Don't Use Refs for Declarative Updates
+
+Refs are for imperative DOM access. If you're using refs to update content that could be reactive, you're fighting the framework:
+
+```typescript
+// ❌ WRONG - imperatively updating text content via ref
+const Counter = (svc: Service) => {
+  const { el, signal } = svc;
+  const count = signal(0);
+
+  return el('div')(
+    el('span').ref((node) => {
+      // Don't do this! Manually syncing signal to DOM
+      svc.effect(() => {
+        node.textContent = `Count: ${count()}`;
+      });
+    })(),
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - let reactivity handle it
+const Counter = (svc: Service) => {
+  const { el, signal, computed } = svc;
+  const count = signal(0);
+
+  return el('div')(
+    el('span')(computed(() => `Count: ${count()}`)),  // Reactive!
+    el('button').props({ onclick: () => count(count() + 1) })('+')
+  );
+};
+```
+
+---
+
 ## Composition Over Stores
+
+<!-- @tags: store, proxy, deep-reactivity, immutable, composition, state-management, nested-state -->
 
 SolidJS has `createStore`. Vue has `reactive()`. These provide "deep reactivity"—you can mutate nested properties and the framework tracks the changes automatically.
 
@@ -5646,7 +6484,157 @@ But consider: if you're reaching for proxies, you might be fighting the framewor
 
 ---
 
+## Anti-patterns
+
+### Don't Create Monolithic State Objects
+
+Putting everything in one big signal defeats the purpose of composition:
+
+```typescript
+// ❌ WRONG - monolithic state, hard to test and maintain
+const appState = signal({
+  user: { name: '', avatar: '', settings: { theme: 'light', notifications: true } },
+  cart: { items: [], total: 0 },
+  ui: { sidebarOpen: false, modal: null },
+});
+
+// Updates become awkward
+appState(s => ({
+  ...s,
+  user: { ...s.user, settings: { ...s.user.settings, theme: 'dark' } }
+}));
+```
+
+```typescript
+// ✅ CORRECT - composed behaviors with focused responsibilities
+const userSettings = (svc: SignalsSvc) => () => {
+  const theme = svc.signal<'light' | 'dark'>('light');
+  return {
+    theme,
+    toggleTheme: () => theme(t => t === 'light' ? 'dark' : 'light'),
+  };
+};
+
+const cart = (svc: SignalsSvc) => () => {
+  const items = svc.signal<CartItem[]>([]);
+  const total = svc.computed(() => items().reduce((sum, i) => sum + i.price, 0));
+  return { items, total, /* actions */ };
+};
+
+// Each behavior is focused, testable, and composable
+```
+
+### Don't Manually Sync Derived State
+
+Using signals for values that should be computed causes bugs when you forget to update them:
+
+```typescript
+// ❌ WRONG - manually tracking derived state
+const cart = (svc: SignalsSvc) => () => {
+  const items = svc.signal<CartItem[]>([]);
+  const total = svc.signal(0);  // Manually maintained!
+
+  const addItem = (item: CartItem) => {
+    items([...items(), item]);
+    total(total() + item.price);  // Must remember to update
+  };
+
+  const removeItem = (id: string) => {
+    const item = items().find(i => i.id === id);
+    items(items().filter(i => i.id !== id));
+    // Oops! Forgot to update total
+  };
+
+  return { items, total, addItem, removeItem };
+};
+```
+
+```typescript
+// ✅ CORRECT - compute derived values automatically
+const cart = (svc: SignalsSvc) => () => {
+  const items = svc.signal<CartItem[]>([]);
+
+  // Automatically stays in sync
+  const total = svc.computed(() =>
+    items().reduce((sum, item) => sum + item.price, 0)
+  );
+
+  return {
+    items,
+    total,  // Always correct, can't get out of sync
+    addItem: (item: CartItem) => items([...items(), item]),
+    removeItem: (id: string) => items(items().filter(i => i.id !== id)),
+  };
+};
+```
+
+### Don't Expose Raw Signals Without Actions
+
+Exposing signals directly allows uncontrolled mutations from anywhere:
+
+```typescript
+// ❌ WRONG - raw signal exposure, no controlled updates
+const counter = (svc: SignalsSvc) => () => {
+  const count = svc.signal(0);
+  return { count };  // Anyone can write anything!
+};
+
+// Elsewhere:
+counter.count(-999);  // No validation, no control
+counter.count('oops'); // Type error, but conceptually wrong
+```
+
+```typescript
+// ✅ CORRECT - expose signals with controlled actions
+const counter = (svc: SignalsSvc) => () => {
+  const count = svc.signal(0);
+
+  return {
+    count,  // Read access
+    increment: () => count(c => c + 1),
+    decrement: () => count(c => Math.max(0, c - 1)),  // Validated
+    reset: () => count(0),
+  };
+};
+```
+
+### Don't Tightly Couple Composed Behaviors
+
+Behaviors should receive dependencies, not import them directly:
+
+```typescript
+// ❌ WRONG - hard dependency on specific cart implementation
+import { cart } from './cart';
+
+const checkout = (svc: SignalsSvc) => () => {
+  const c = cart(svc)();  // Always uses this specific cart
+
+  return {
+    submit: () => submitOrder(c.items()),
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - receive the cart as a parameter
+type CartLike = { items: Readable<CartItem[]> };
+
+const checkout = (svc: SignalsSvc) => (cart: CartLike) => {
+  return {
+    submit: () => submitOrder(cart.items()),
+  };
+};
+
+// Can inject any cart implementation, including mocks for testing
+const c = cart(svc)();
+const ch = checkout(svc)(c);
+```
+
+---
+
 ## Async Loading States
+
+<!-- @tags: async, loading, suspense, pending, error-state, resource, load, ssr -->
 
 React has Suspense. Solid has `<Suspense>` and `<Show>`. These handle async loading states declaratively.
 
@@ -5919,6 +6907,173 @@ const ProductPanel = (svc: Service) => {
   // Cleanup when element is removed
   return el('div').ref(() => products.dispose)(
     // ... content
+  );
+};
+```
+
+---
+
+## Anti-patterns
+
+### Don't Ignore Loading and Error States
+
+Only rendering the "ready" case leads to a broken UI during loading or when errors occur:
+
+```typescript
+// ❌ WRONG - crashes when data isn't ready, no error handling
+const ProductList = (svc: Service) => {
+  const { el, resource, map } = svc;
+
+  const products = resource((s) => fetchProducts(s));
+
+  // products.data() is undefined while loading!
+  return el('div')(
+    map(products.data()!, (p) => ProductCard(svc, p))
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - handle all states explicitly
+const ProductList = (svc: Service) => {
+  const { el, resource, match, map } = svc;
+
+  const products = resource((s) => fetchProducts(s));
+
+  return match(products, (state) => {
+    switch (state.status) {
+      case 'pending':
+        return Spinner(svc);
+      case 'error':
+        return ErrorMessage(svc, state.error);
+      case 'ready':
+        return el('div')(
+          map(state.value, (p) => ProductCard(svc, p))
+        );
+    }
+  });
+};
+```
+
+### Don't Forget Resource Cleanup
+
+Resources keep fetching and updating until disposed. Without cleanup, they leak memory:
+
+```typescript
+// ❌ WRONG - resource lives forever, even after component unmounts
+const ProductPanel = (svc: Service) => {
+  const products = svc.resource((s) => fetchProducts(s));
+
+  return svc.el('div')(/* ... */);
+  // Resource never disposed!
+};
+```
+
+```typescript
+// ✅ CORRECT - dispose when element unmounts
+const ProductPanel = (svc: Service) => {
+  const products = svc.resource((s) => fetchProducts(s));
+
+  return svc.el('div').ref(() => products.dispose)(/* ... */);
+};
+```
+
+### Don't Ignore the AbortSignal
+
+Resources pass an AbortSignal to cancel in-flight requests. Ignoring it causes race conditions when dependencies change rapidly:
+
+```typescript
+// ❌ WRONG - ignores signal, old requests may resolve after new ones
+const Search = (svc: Service) => {
+  const query = svc.signal('');
+
+  const results = svc.resource(() =>  // No signal parameter!
+    fetch(`/api/search?q=${query()}`).then(r => r.json())
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - pass signal to fetch for automatic cancellation
+const Search = (svc: Service) => {
+  const query = svc.signal('');
+
+  const results = svc.resource((signal) =>
+    fetch(`/api/search?q=${query()}`, { signal }).then(r => r.json())
+  );
+};
+```
+
+When `query` changes, the previous fetch is automatically aborted.
+
+### Don't Use Resource for Mutations
+
+Resources are for reactive data fetching (GET). For mutations (POST, PUT, DELETE), use the `asyncAction` pattern:
+
+```typescript
+// ❌ WRONG - resource for a mutation doesn't make sense
+const DeleteButton = (svc: Service) => {
+  const deletion = svc.resource((s) =>
+    fetch('/api/item', { method: 'DELETE', signal: s })
+  );  // This fetches immediately on mount!
+
+  return svc.el('button')(/* ??? */);
+};
+```
+
+```typescript
+// ✅ CORRECT - use asyncAction for imperative mutations
+const DeleteButton = (svc: Service) => {
+  const { el, signal } = svc;
+
+  const pending = signal(false);
+  const error = signal<Error | null>(null);
+
+  const deleteItem = async () => {
+    pending(true);
+    error(null);
+    try {
+      await fetch('/api/item', { method: 'DELETE' });
+    } catch (e) {
+      error(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      pending(false);
+    }
+  };
+
+  return el('button').props({
+    onclick: deleteItem,
+    disabled: pending,
+  })('Delete');
+};
+```
+
+### Don't Access .data() Without Checking Status
+
+The `data()` accessor returns `undefined` until the resource is ready. Using it directly without guards causes runtime errors:
+
+```typescript
+// ❌ WRONG - data() is undefined until ready
+const UserProfile = (svc: Service) => {
+  const user = svc.resource((s) => fetchUser(s));
+
+  // This crashes during loading!
+  return svc.el('div')(user.data()!.name);
+};
+```
+
+```typescript
+// ✅ CORRECT - use match to ensure data exists
+const UserProfile = (svc: Service) => {
+  const { el, resource, match } = svc;
+  const user = resource((s) => fetchUser(s));
+
+  return match(user, (state) =>
+    state.status === 'ready'
+      ? el('div')(state.value.name)
+      : state.status === 'error'
+        ? el('div')('Error loading user')
+        : el('div')('Loading...')
   );
 };
 ```

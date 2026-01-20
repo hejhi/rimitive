@@ -3,6 +3,10 @@ title: Loading Data
 description: Fetch async data with automatic tracking and cancellation.
 ---
 
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["resource", "fetch", "async", "data-loading", "api", "http", "loading-state", "error-state"]} />
+
 Data loading in Rimitive is reactive. When dependencies change, data refetches. When requests overlap, stale ones get cancelled. Let's build up to that.
 
 ---
@@ -94,6 +98,8 @@ All are reactive—use them in computeds or effects.
 
 ---
 
+<SearchTags tags={["reactive-fetch", "auto-refetch", "dependency-tracking", "abort-controller", "cancellation"]} />
+
 ## Reactive Dependencies
 
 Here's where resources shine. Read signals inside the fetcher, and the resource refetches when they change:
@@ -138,6 +144,8 @@ page(2);             // refetch
 ```
 
 ---
+
+<SearchTags tags={["loading-ui", "error-ui", "loading-spinner", "skeleton", "status"]} />
 
 ## Rendering Resources
 

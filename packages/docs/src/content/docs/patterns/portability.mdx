@@ -4,6 +4,9 @@ description: Write once, run anywhere—Rimitive views, React, custom renderers.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["portable", "framework-agnostic", "react", "testing", "ssr", "adapter", "cross-platform"]} />
 
 Most UI logic isn't tied to a specific framework. A dropdown's open/close behavior is the same whether you're rendering to DOM, React, or a canvas. A form's validation logic doesn't care about the view layer.
 
@@ -172,44 +175,58 @@ Same component, different targets.
 
 ---
 
-## What Makes Code Portable
+## Anti-patterns
 
-### Do: Depend on the service contract
+### Don't Import Framework-Specific Code Directly
 
-```typescript
-const MyComponent = (svc: Service) => {
-  const { el, signal, computed } = svc;
-  // Use primitives from the service
-};
-```
-
-### Don't: Import framework-specific code
+Importing primitives directly couples your code to a specific setup:
 
 ```typescript
-// This is NOT portable
+// ❌ WRONG - hardcoded dependency, not portable
 import { signal } from '@rimitive/signals';
 
 const MyComponent = () => {
-  const count = signal(0); // Hardcoded dependency
+  const count = signal(0);  // Can't swap this out for testing
 };
 ```
 
-### Do: Accept dependencies as props or service extensions
-
 ```typescript
-const DataList = (svc: Service & { fetchData: () => Promise<Item[]> }) => {
-  const { el, resource, fetchData } = svc;
-  const items = resource(fetchData);
-  // ...
+// ✅ CORRECT - depend on the service contract
+const MyComponent = (svc: Service) => {
+  const { signal } = svc;
+  const count = signal(0);  // Works with any compatible service
 };
 ```
 
-### Don't: Hardcode external dependencies
+### Don't Hardcode External Dependencies
+
+Hardcoding URLs, API calls, or other external dependencies makes code untestable and inflexible:
 
 ```typescript
-// This is NOT portable
+// ❌ WRONG - hardcoded URL, can't test without network
 const DataList = (svc: Service) => {
-  const items = resource(() => fetch('/api/items')); // Hardcoded URL
+  const items = svc.resource(() => fetch('/api/items'));
+};
+```
+
+```typescript
+// ✅ CORRECT - accept dependencies via service or props
+const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => {
+  const items = svc.resource(svc.fetchItems);
+};
+
+// Or via props
+const DataList = (svc: Service) => (props: { fetchItems: () => Promise<Item[]> }) => {
+  const items = svc.resource(props.fetchItems);
+};
+```
+
+This lets you inject a mock fetcher in tests:
+
+```typescript
+const mockSvc = {
+  ...testSvc,
+  fetchItems: async () => [{ id: 1, name: 'Test' }],
 };
 ```
 

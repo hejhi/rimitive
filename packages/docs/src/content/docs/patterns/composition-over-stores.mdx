@@ -4,6 +4,9 @@ description: Why Rimitive doesn't have stores, and what to do instead.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["store", "proxy", "deep-reactivity", "immutable", "composition", "state-management", "nested-state"]} />
 
 SolidJS has `createStore`. Vue has `reactive()`. These provide "deep reactivity"—you can mutate nested properties and the framework tracks the changes automatically.
 
@@ -219,3 +222,155 @@ But consider: if you're reaching for proxies, you might be fighting the framewor
 <Aside type="note">
 This isn't about purity—it's about predictability. Every abstraction has a cost. Proxies hide what's happening. Composition makes it visible.
 </Aside>
+
+---
+
+## Anti-patterns
+
+### Don't Create Monolithic State Objects
+
+Putting everything in one big signal defeats the purpose of composition:
+
+```typescript
+// ❌ WRONG - monolithic state, hard to test and maintain
+const appState = signal({
+  user: { name: '', avatar: '', settings: { theme: 'light', notifications: true } },
+  cart: { items: [], total: 0 },
+  ui: { sidebarOpen: false, modal: null },
+});
+
+// Updates become awkward
+appState(s => ({
+  ...s,
+  user: { ...s.user, settings: { ...s.user.settings, theme: 'dark' } }
+}));
+```
+
+```typescript
+// ✅ CORRECT - composed behaviors with focused responsibilities
+const userSettings = (svc: SignalsSvc) => () => {
+  const theme = svc.signal<'light' | 'dark'>('light');
+  return {
+    theme,
+    toggleTheme: () => theme(t => t === 'light' ? 'dark' : 'light'),
+  };
+};
+
+const cart = (svc: SignalsSvc) => () => {
+  const items = svc.signal<CartItem[]>([]);
+  const total = svc.computed(() => items().reduce((sum, i) => sum + i.price, 0));
+  return { items, total, /* actions */ };
+};
+
+// Each behavior is focused, testable, and composable
+```
+
+### Don't Manually Sync Derived State
+
+Using signals for values that should be computed causes bugs when you forget to update them:
+
+```typescript
+// ❌ WRONG - manually tracking derived state
+const cart = (svc: SignalsSvc) => () => {
+  const items = svc.signal<CartItem[]>([]);
+  const total = svc.signal(0);  // Manually maintained!
+
+  const addItem = (item: CartItem) => {
+    items([...items(), item]);
+    total(total() + item.price);  // Must remember to update
+  };
+
+  const removeItem = (id: string) => {
+    const item = items().find(i => i.id === id);
+    items(items().filter(i => i.id !== id));
+    // Oops! Forgot to update total
+  };
+
+  return { items, total, addItem, removeItem };
+};
+```
+
+```typescript
+// ✅ CORRECT - compute derived values automatically
+const cart = (svc: SignalsSvc) => () => {
+  const items = svc.signal<CartItem[]>([]);
+
+  // Automatically stays in sync
+  const total = svc.computed(() =>
+    items().reduce((sum, item) => sum + item.price, 0)
+  );
+
+  return {
+    items,
+    total,  // Always correct, can't get out of sync
+    addItem: (item: CartItem) => items([...items(), item]),
+    removeItem: (id: string) => items(items().filter(i => i.id !== id)),
+  };
+};
+```
+
+### Don't Expose Raw Signals Without Actions
+
+Exposing signals directly allows uncontrolled mutations from anywhere:
+
+```typescript
+// ❌ WRONG - raw signal exposure, no controlled updates
+const counter = (svc: SignalsSvc) => () => {
+  const count = svc.signal(0);
+  return { count };  // Anyone can write anything!
+};
+
+// Elsewhere:
+counter.count(-999);  // No validation, no control
+counter.count('oops'); // Type error, but conceptually wrong
+```
+
+```typescript
+// ✅ CORRECT - expose signals with controlled actions
+const counter = (svc: SignalsSvc) => () => {
+  const count = svc.signal(0);
+
+  return {
+    count,  // Read access
+    increment: () => count(c => c + 1),
+    decrement: () => count(c => Math.max(0, c - 1)),  // Validated
+    reset: () => count(0),
+  };
+};
+```
+
+<Aside type="tip">
+You can still expose writable signals for simple cases where any value is valid. The point is to be intentional about your API—if there are constraints or side effects, encapsulate them in actions.
+</Aside>
+
+### Don't Tightly Couple Composed Behaviors
+
+Behaviors should receive dependencies, not import them directly:
+
+```typescript
+// ❌ WRONG - hard dependency on specific cart implementation
+import { cart } from './cart';
+
+const checkout = (svc: SignalsSvc) => () => {
+  const c = cart(svc)();  // Always uses this specific cart
+
+  return {
+    submit: () => submitOrder(c.items()),
+  };
+};
+```
+
+```typescript
+// ✅ CORRECT - receive the cart as a parameter
+type CartLike = { items: Readable<CartItem[]> };
+
+const checkout = (svc: SignalsSvc) => (cart: CartLike) => {
+  return {
+    submit: () => submitOrder(cart.items()),
+  };
+};
+
+// Can inject any cart implementation, including mocks for testing
+const c = cart(svc)();
+const ch = checkout(svc)(c);
+```

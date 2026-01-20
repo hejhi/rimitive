@@ -4,6 +4,9 @@ description: How to handle loading, error, and ready states for async data.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["async", "loading", "suspense", "pending", "error-state", "resource", "load", "ssr"]} />
 
 React has Suspense. Solid has `<Suspense>` and `<Show>`. These handle async loading states declaratively.
 
@@ -283,3 +286,170 @@ const ProductPanel = (svc: Service) => {
 <Aside type="tip">
 The explicit state handling might feel verbose compared to Suspense. But it's also more predictable—you always know exactly what renders when, with no framework magic deciding for you.
 </Aside>
+
+---
+
+## Anti-patterns
+
+### Don't Ignore Loading and Error States
+
+Only rendering the "ready" case leads to a broken UI during loading or when errors occur:
+
+```typescript
+// ❌ WRONG - crashes when data isn't ready, no error handling
+const ProductList = (svc: Service) => {
+  const { el, resource, map } = svc;
+
+  const products = resource((s) => fetchProducts(s));
+
+  // products.data() is undefined while loading!
+  return el('div')(
+    map(products.data()!, (p) => ProductCard(svc, p))
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - handle all states explicitly
+const ProductList = (svc: Service) => {
+  const { el, resource, match, map } = svc;
+
+  const products = resource((s) => fetchProducts(s));
+
+  return match(products, (state) => {
+    switch (state.status) {
+      case 'pending':
+        return Spinner(svc);
+      case 'error':
+        return ErrorMessage(svc, state.error);
+      case 'ready':
+        return el('div')(
+          map(state.value, (p) => ProductCard(svc, p))
+        );
+    }
+  });
+};
+```
+
+### Don't Forget Resource Cleanup
+
+Resources keep fetching and updating until disposed. Without cleanup, they leak memory:
+
+```typescript
+// ❌ WRONG - resource lives forever, even after component unmounts
+const ProductPanel = (svc: Service) => {
+  const products = svc.resource((s) => fetchProducts(s));
+
+  return svc.el('div')(/* ... */);
+  // Resource never disposed!
+};
+```
+
+```typescript
+// ✅ CORRECT - dispose when element unmounts
+const ProductPanel = (svc: Service) => {
+  const products = svc.resource((s) => fetchProducts(s));
+
+  return svc.el('div').ref(() => products.dispose)(/* ... */);
+};
+```
+
+### Don't Ignore the AbortSignal
+
+Resources pass an AbortSignal to cancel in-flight requests. Ignoring it causes race conditions when dependencies change rapidly:
+
+```typescript
+// ❌ WRONG - ignores signal, old requests may resolve after new ones
+const Search = (svc: Service) => {
+  const query = svc.signal('');
+
+  const results = svc.resource(() =>  // No signal parameter!
+    fetch(`/api/search?q=${query()}`).then(r => r.json())
+  );
+};
+```
+
+```typescript
+// ✅ CORRECT - pass signal to fetch for automatic cancellation
+const Search = (svc: Service) => {
+  const query = svc.signal('');
+
+  const results = svc.resource((signal) =>
+    fetch(`/api/search?q=${query()}`, { signal }).then(r => r.json())
+  );
+};
+```
+
+When `query` changes, the previous fetch is automatically aborted.
+
+### Don't Use Resource for Mutations
+
+Resources are for reactive data fetching (GET). For mutations (POST, PUT, DELETE), use the `asyncAction` pattern:
+
+```typescript
+// ❌ WRONG - resource for a mutation doesn't make sense
+const DeleteButton = (svc: Service) => {
+  const deletion = svc.resource((s) =>
+    fetch('/api/item', { method: 'DELETE', signal: s })
+  );  // This fetches immediately on mount!
+
+  return svc.el('button')(/* ??? */);
+};
+```
+
+```typescript
+// ✅ CORRECT - use asyncAction for imperative mutations
+const DeleteButton = (svc: Service) => {
+  const { el, signal } = svc;
+
+  const pending = signal(false);
+  const error = signal<Error | null>(null);
+
+  const deleteItem = async () => {
+    pending(true);
+    error(null);
+    try {
+      await fetch('/api/item', { method: 'DELETE' });
+    } catch (e) {
+      error(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      pending(false);
+    }
+  };
+
+  return el('button').props({
+    onclick: deleteItem,
+    disabled: pending,
+  })('Delete');
+};
+```
+
+### Don't Access .data() Without Checking Status
+
+The `data()` accessor returns `undefined` until the resource is ready. Using it directly without guards causes runtime errors:
+
+```typescript
+// ❌ WRONG - data() is undefined until ready
+const UserProfile = (svc: Service) => {
+  const user = svc.resource((s) => fetchUser(s));
+
+  // This crashes during loading!
+  return svc.el('div')(user.data()!.name);
+};
+```
+
+```typescript
+// ✅ CORRECT - use match to ensure data exists
+const UserProfile = (svc: Service) => {
+  const { el, resource, match } = svc;
+  const user = resource((s) => fetchUser(s));
+
+  return match(user, (state) =>
+    state.status === 'ready'
+      ? el('div')(state.value.name)
+      : state.status === 'error'
+        ? el('div')('Error loading user')
+        : el('div')('Loading...')
+  );
+};
+```

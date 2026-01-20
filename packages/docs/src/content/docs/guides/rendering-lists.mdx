@@ -3,6 +3,10 @@ title: Rendering Lists
 description: Efficiently render reactive lists with map().
 ---
 
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["map", "list", "array", "foreach", "loop", "keyed-list", "reconciliation", "todo-list"]} />
+
 `map()` renders a reactive list efficiently (_very efficiently_). When items change, it updates only what's necessary. `map()` contains ONLY the reconciliation logic required to deal with rendering dynamic lists efficiently, so again, a small bundle addition.
 
 ---
