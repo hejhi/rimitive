@@ -1,0 +1,60 @@
+{
+  "name": "@rimitive/mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing Rimitive documentation to coding LLMs",
+  "author": "Rimitive Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hejhi/rimitive.git",
+    "directory": "packages/mcp"
+  },
+  "keywords": [
+    "rimitive",
+    "mcp",
+    "llm",
+    "documentation",
+    "model-context-protocol"
+  ],
+  "type": "module",
+  "bin": {
+    "rimitive-mcp": "./bin/rimitive-mcp.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "bin/**/*.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prebuild": "node scripts/embed-docs.js",
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm lint"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.9",
+    "rimraf": "6.1.2",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}
