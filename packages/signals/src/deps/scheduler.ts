@@ -83,7 +83,7 @@ export function createScheduler({
         if (stateStatus & (PENDING | DIRTY)) {
           current.status = SCHEDULED_CLEAN;
           try {
-            current.flush();
+            current.flush(current);
           } catch (e) {
             console.error(
               '[Scheduler] Unhandled error in scheduled effect:',

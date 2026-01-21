@@ -17,19 +17,66 @@ import { CONSTANTS } from './constants';
 
 const { CLEAN, CONSUMER, SCHEDULED } = CONSTANTS;
 
+/**
+ * Synchronous flush strategy (default).
+ *
+ * Executes effect re-runs immediately when dependencies change.
+ * This is the default behavior when no strategy is specified.
+ */
+const sync = (run: () => void | (() => void)): FlushStrategy => ({
+  run,
+  create: (track) => (node) => {
+    if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+    node.cleanup = track(node, run);
+  },
+});
+
 // Predefined status combinations for effect nodes
 const EFFECT_CLEAN = CONSUMER | SCHEDULED | CLEAN;
 
 // Effect node type
-type EffectNode = ScheduledNode & {
+export type EffectNode = ScheduledNode & {
   __type: 'effect';
-  cleanup?: void | (() => void);
+  cleanup: void | (() => void);
 };
 
 /**
- * The effect factory function type
+ * A flush strategy that controls when effect re-runs execute.
+ *
+ * Strategies allow deferring effect execution to microtasks, animation frames,
+ * or custom timing. The initial run is always synchronous; strategies only
+ * control subsequent re-runs when dependencies change.
+ *
+ * @example
+ * ```ts
+ * // Defer updates to microtask queue
+ * effect(mt(() => expensiveWork(mySignal())));
+ *
+ * // Defer to animation frame (for visual updates)
+ * effect(raf(() => updateCanvas(mySignal())));
+ *
+ * // Debounce rapid updates
+ * effect(debounce(300, () => search(query())));
+ * ```
  */
-export type EffectFactory = (fn: () => void | (() => void)) => () => void;
+/**
+ * A flush strategy controls when effect re-runs execute.
+ */
+export type FlushStrategy = {
+  /** The effect function to run */
+  run: () => void | (() => void);
+  /** Create the flush function bound to track */
+  create: (track: EffectDeps['track']) => (node: EffectNode) => void;
+};
+
+/** Input type for effect - either a plain function or a flush strategy */
+type EffectRun = (() => void | (() => void)) | FlushStrategy;
+
+/**
+ * The effect factory function type.
+ * Accepts either a plain function or a FlushStrategy for deferred execution.
+ */
+export type EffectFactory = (run: EffectRun) => () => void;
 
 /**
  * Dependencies required by the Effect module.
@@ -102,7 +149,10 @@ export type { Scheduler } from './deps/scheduler';
 export function createEffectFactory(deps: EffectDeps): EffectFactory {
   const { track, dispose: disposeNode } = deps;
 
-  return function effect(run: () => void | (() => void)): () => void {
+  return function effect(run: EffectRun): () => void {
+    // Normalize to strategy - use sync as default
+    const { create, run: effectRun } = 'create' in run ? run : sync(run);
+
     const node: EffectNode = {
       __type: 'effect' as const,
       status: EFFECT_CLEAN,
@@ -111,14 +161,11 @@ export function createEffectFactory(deps: EffectDeps): EffectFactory {
       nextScheduled: undefined,
       trackingVersion: 0,
       cleanup: undefined,
-      flush(): void {
-        if (node.cleanup !== undefined) node.cleanup = node.cleanup();
-        node.cleanup = track(node, run);
-      },
+      flush: create(track),
     };
 
-    // Run a single time on creation
-    node.cleanup = track(node, run);
+    // Initial run is always synchronous (no flash of stale content)
+    node.cleanup = track(node, effectRun);
 
     // Return dispose function
     return () => {
@@ -149,11 +196,14 @@ export const EffectModule = defineModule({
     impl: EffectFactory,
     instr: InstrumentationContext
   ): EffectFactory {
-    return (run: () => void | (() => void)): (() => void) => {
+    return (run: EffectRun): (() => void) => {
+      // Extract the actual function from strategy or use directly
+      const actualRun = 'run' in run ? run.run : run;
+
       const location = getCallerLocationFull(); // No skipFrames - function may be inlined
       const name = location?.display ?? 'Effect';
       const instrState = getInstrState(instr);
-      const { id } = instr.register(run, 'effect', name);
+      const { id } = instr.register(actualRun, 'effect', name);
 
       const sourceLocation: SourceLocation | undefined = location;
 
@@ -166,13 +216,17 @@ export const EffectModule = defineModule({
           timestamp: Date.now(),
           data: { effectId: id, name, sourceLocation },
         });
-        return run();
+        return actualRun();
       }) as (() => void | (() => void)) & { __instrEffectId?: string };
 
       // Tag wrappedRun so GraphEdgesModule can associate node with ID in track()
       wrappedRun.__instrEffectId = id;
 
-      const dispose = impl(wrappedRun);
+      // Reconstruct the run argument with wrapped function
+      const wrappedStrategy: EffectRun =
+        'run' in run ? { run: wrappedRun, create: run.create } : wrappedRun;
+
+      const dispose = impl(wrappedStrategy);
 
       return () => {
         instr.emit({

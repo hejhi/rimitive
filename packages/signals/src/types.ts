@@ -142,7 +142,7 @@ export type ScheduledNode = ConsumerNode & {
   /** Next node in the scheduling queue (intrusive linked list) */
   nextScheduled: ScheduledNode | undefined;
   /** Execute the scheduled work */
-  flush(): void;
+  flush(node: ScheduledNode): void;
 };
 
 /** @internal */

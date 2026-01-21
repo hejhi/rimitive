@@ -14,6 +14,7 @@
 export { SignalModule, createSignalFactory } from './signal';
 export { ComputedModule } from './computed';
 export { EffectModule } from './effect';
+export { mt, raf, debounce } from './strategies';
 export { BatchModule } from './batch';
 export { SubscribeModule, createSubscribeFactory } from './subscribe';
 export { UntrackModule, createUntracked } from './untrack';
@@ -39,7 +40,7 @@ export { SchedulerModule, createScheduler } from './deps/scheduler';
 
 export type { SignalFactory, SignalDeps } from './signal';
 export type { ComputedFactory, ComputedDeps } from './computed';
-export type { EffectFactory, EffectDeps } from './effect';
+export type { EffectFactory, EffectDeps, FlushStrategy } from './effect';
 export type { BatchFactory } from './batch';
 export type { SubscribeFunction, SubscribeDeps } from './subscribe';
 
