@@ -401,5 +401,158 @@ describe('el primitive', () => {
 
       expect(callCount.value).toBe(2);
     });
+
+    it('disposes effect returned from .ref() when scope is disposed', () => {
+      const {
+        adapter,
+        scopedEffect,
+        createElementScope,
+        onCleanup,
+        signal,
+        effect,
+        disposeScope,
+        getElementScope,
+      } = createTestEnv();
+      const el = createElFactory<MockAdapterConfig>({
+        scopedEffect,
+        adapter,
+        createElementScope,
+        onCleanup,
+      });
+
+      const count = signal(0);
+      let effectRunCount = 0;
+
+      // Create element with effect returned from ref
+      const ref = el('div')
+        .ref(() =>
+          effect(() => {
+            count(); // Track signal
+            effectRunCount++;
+          })
+        )();
+
+      const nodeRef = ref.create();
+      const element = asElement(nodeRef);
+
+      // Effect ran once on creation
+      expect(effectRunCount).toBe(1);
+
+      // Signal change triggers effect
+      count(1);
+      expect(effectRunCount).toBe(2);
+
+      // Get the scope for the element and dispose it
+      const scope = getElementScope(element);
+      expect(scope).toBeDefined();
+      disposeScope(scope!);
+
+      // Effect should NOT run after disposal
+      count(2);
+      expect(effectRunCount).toBe(2); // Still 2, not 3
+    });
+
+    it('allows signals created in .ref() with returned effect', () => {
+      const {
+        adapter,
+        scopedEffect,
+        createElementScope,
+        onCleanup,
+        signal,
+        effect,
+        disposeScope,
+        getElementScope,
+      } = createTestEnv();
+      const el = createElFactory<MockAdapterConfig>({
+        scopedEffect,
+        adapter,
+        createElementScope,
+        onCleanup,
+      });
+
+      let effectRunCount = 0;
+      let localSignalRef: ReturnType<typeof signal<number>> | null = null;
+
+      // Create element with signal AND effect in ref
+      const ref = el('div')
+        .ref(() => {
+          const localCount = signal(0);
+          localSignalRef = localCount; // Capture reference for testing
+          return effect(() => {
+            localCount(); // Track local signal
+            effectRunCount++;
+          });
+        })();
+
+      const nodeRef = ref.create();
+      const element = asElement(nodeRef);
+
+      // Effect ran once on creation
+      expect(effectRunCount).toBe(1);
+
+      // Local signal changes trigger effect
+      localSignalRef!(1);
+      expect(effectRunCount).toBe(2);
+
+      localSignalRef!(2);
+      expect(effectRunCount).toBe(3);
+
+      // Dispose scope
+      const scope = getElementScope(element);
+      expect(scope).toBeDefined();
+      disposeScope(scope!);
+
+      // Effect should NOT run after disposal
+      localSignalRef!(3);
+      expect(effectRunCount).toBe(3); // Still 3, not 4
+    });
+
+    it('leaks effect if not returned from .ref()', () => {
+      const {
+        adapter,
+        scopedEffect,
+        createElementScope,
+        onCleanup,
+        signal,
+        effect,
+        disposeScope,
+        getElementScope,
+      } = createTestEnv();
+      const el = createElFactory<MockAdapterConfig>({
+        scopedEffect,
+        adapter,
+        createElementScope,
+        onCleanup,
+      });
+
+      const count = signal(0);
+      let effectRunCount = 0;
+
+      // Create element with effect NOT returned from ref (leak!)
+      const ref = el('div')
+        .ref(() => {
+          effect(() => {
+            count();
+            effectRunCount++;
+          });
+          // No return - effect not cleaned up!
+        })();
+
+      const nodeRef = ref.create();
+      const element = asElement(nodeRef);
+
+      expect(effectRunCount).toBe(1);
+
+      count(1);
+      expect(effectRunCount).toBe(2);
+
+      // Get and dispose scope
+      const scope = getElementScope(element);
+      if (scope) disposeScope(scope);
+
+      // Effect STILL runs - it leaked!
+      count(2);
+      expect(effectRunCount).toBe(3); // Leaked: 3, not 2
+    });
   });
 });
