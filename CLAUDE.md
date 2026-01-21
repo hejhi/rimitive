@@ -220,6 +220,25 @@ git add .changeset/
 git commit -m "chore: add changeset"
 ```
 
+### First-Time Publishing (New Packages)
+
+OIDC trusted publishing cannot create new packages on npm - it can only publish to existing ones. For a brand new package:
+
+```bash
+# 1. Log in to npm (opens browser for auth)
+npm login
+
+# 2. Publish manually from the package directory
+cd packages/new-package
+npm publish --access public
+
+# 3. Configure Trusted Publisher on npmjs.com
+#    Go to: npmjs.com → @rimitive/new-package → Settings → Trusted Publishers
+#    Add GitHub Actions: org=hejhi, repo=rimitive, workflow=release.yml
+```
+
+After the first publish, subsequent releases will work via the normal OIDC workflow.
+
 Install packages: `pnpm add @rimitive/signals`
 
 ## Communication Principles
