@@ -1,8 +1,37 @@
 # @rimitive/core
 
-A type-safe composition engine for building modular services. Define modules with dependencies, compose them together, get a fully-wired service.
+Simple, minimal Dependency Injection through module composition. Modules declare dependencies and `compose()` wires them together.
 
-This is the backbone of rimitive, but it works entirely on its own! No reactivity required. Use it to build libraries, DI containers, or any system where you want composable, testable modules.
+Additional features:
+
+- [**fork**](#forkbase-freshmodules) - fresh instances of selected modules, shares everything else
+- [**transient**](#transientmodule) - fresh instance per dependent instead of shared singleton
+- [**lazy**](#lazymodule) - async module initialization
+- [**override**](#overridemodule-replacements) - swap dependencies for testing or configuration
+- [**merge**](#mergeservice-additions) - extend context with additional properties
+
+Works standalone or as the foundation for rimitive's reactive system.
+
+## Architecture
+
+This is a **Dependency Injection (DI)** system using the **Composition Root** pattern:
+
+| Concept                   | In @rimitive/core                                                |
+| ------------------------- | ---------------------------------------------------------------- |
+| **Inversion of Control**  | Modules declare dependencies; they don't instantiate them        |
+| **Constructor Injection** | `create(deps)` receives resolved dependencies                    |
+| **Composition Root**      | `compose()` is the single place where the object graph is wired  |
+| **Scopes**                | Singleton (default), transient, or lazy (async)                  |
+| **Transitive Resolution** | Pass only what you need; dependencies are included automatically |
+| **Async Support**         | `lazy()` wrapper for modules with async `create()`               |
+
+Think of it like npm for runtime:
+
+```
+package.json "dependencies"  →  Module declares dependencies
+npm install / node_modules   →  compose() resolves the graph
+import X from 'x'            →  deps available by name in create()
+```
 
 ## Quick Start
 
@@ -34,19 +63,17 @@ svc.db.query('SELECT * FROM users');
 // [LOG] Executing: SELECT * FROM users
 ```
 
-Dependencies resolve automatically. Pass what you need, and rimitive figures out the rest.
-
 ---
 
 ## compose(...modules)
 
-Takes modules, returns a composed service.
+Resolves the dependency graph and returns a composed service. Each module is instantiated once and shared (singleton by default).
 
 ```typescript
 const svc = compose(Logger, Database, Cache);
 ```
 
-The returned service is an object with all your modules:
+Access modules as properties:
 
 ```typescript
 svc.logger.log('hi');
@@ -132,6 +159,166 @@ const App = (svc) => {
   return childSvc(Router);
 };
 ```
+
+---
+
+## override(module, replacements)
+
+Swap dependencies without changing the original module. Useful for testing or environment-specific configurations.
+
+```typescript
+import { compose, override } from '@rimitive/core';
+
+// Production uses real database
+const prodSvc = compose(UserService);
+
+// Testing uses mock database
+const MockDB = defineModule({
+  name: 'db',
+  create: () => ({ query: () => mockData }),
+});
+
+const testSvc = compose(override(UserService, { db: MockDB }));
+```
+
+Replacements are matched by name. If the replacement has a different name, it's aliased automatically:
+
+```typescript
+const FileLogger = defineModule({
+  name: 'fileLogger', // Different name
+  create: () => ({ log: writeToFile }),
+});
+
+// FileLogger is aliased to 'logger' for this composition
+compose(override(App, { logger: FileLogger }));
+```
+
+---
+
+## transient(module)
+
+Mark a module as transient - each dependent gets a fresh instance instead of sharing a singleton.
+
+```typescript
+import { compose, defineModule, transient } from '@rimitive/core';
+
+const Logger = transient(
+  defineModule({
+    name: 'logger',
+    create: () => new Logger(),
+  })
+);
+
+const ServiceA = defineModule({
+  name: 'serviceA',
+  dependencies: [Logger],
+  create: ({ logger }) => {
+    /* unique logger instance */
+  },
+});
+
+const ServiceB = defineModule({
+  name: 'serviceB',
+  dependencies: [Logger],
+  create: ({ logger }) => {
+    /* different logger instance */
+  },
+});
+
+const svc = compose(ServiceA, ServiceB);
+```
+
+Transient modules still share their singleton dependencies:
+
+```typescript
+const Config = defineModule({ name: 'config', create: () => loadConfig() });
+
+const Logger = transient(
+  defineModule({
+    name: 'logger',
+    dependencies: [Config],
+    create: ({ config }) => new Logger(config),
+  })
+);
+
+// Each Logger instance shares the same Config
+```
+
+---
+
+## fork(base, freshModules)
+
+Create a new composition that shares instances from an existing one, but with fresh instances of specified modules. Useful for per-request contexts, test isolation, or scoped state.
+
+```typescript
+import { compose, fork, defineModule } from '@rimitive/core';
+
+const Config = defineModule({ name: 'config', create: () => loadConfig() });
+const DbPool = defineModule({ name: 'dbPool', create: () => createPool() });
+const DbConnection = defineModule({
+  name: 'dbConnection',
+  dependencies: [DbPool],
+  create: ({ dbPool }) => dbPool.getConnection(),
+});
+
+// Long-lived root composition
+const root = compose(Config, DbPool, DbConnection);
+
+// Per-request: fresh DbConnection, inherited Config and DbPool
+const requestCtx = fork(root, [DbConnection]);
+
+requestCtx.config; // Same instance (inherited from root)
+requestCtx.dbPool; // Same instance (inherited from root)
+requestCtx.dbConnection; // Fresh instance (not shared with root)
+
+// Cleanup when done - only disposes fresh instances
+requestCtx.dispose();
+// root is unaffected
+```
+
+Fresh modules are:
+
+- **Re-instantiated** - new instance, not shared with the base
+- **Singleton within the fork** - shared by dependents in the forked context
+- **Independently disposable** - disposing the fork only cleans up its fresh instances
+
+**Rebinding dependencies:** Pass a replacement module with the same name to swap implementations:
+
+```typescript
+const MockDb = defineModule({ name: 'db', create: () => mockDb });
+
+// UserService now receives MockDb instead of the original
+const testCtx = fork(root, [MockDb, UserService]);
+```
+
+---
+
+## lazy(module)
+
+Mark a module with async `create()` as lazy. Lazy modules are awaited during composition, allowing async initialization like database connections or remote config loading.
+
+```typescript
+import { compose, defineModule, lazy } from '@rimitive/core';
+
+const DbPool = lazy(
+  defineModule({
+    name: 'dbPool',
+    create: async () => {
+      const pool = await createPool();
+      await pool.connect();
+      return pool;
+    },
+  })
+);
+
+// compose() returns a Promise when lazy modules are present
+const svc = await compose(DbPool, UserService);
+
+// After await, everything is resolved - sync access
+svc.dbPool.query('SELECT 1');
+```
+
+Async modules **must** be wrapped with `lazy()` - you'll get both a type error and runtime error otherwise.
 
 ---
 
