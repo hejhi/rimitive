@@ -1,12 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { compose } from '@rimitive/core';
-import type { Module, Use, ComposedContext } from '@rimitive/core';
+import type { Module, Use, ComposedContext, ContainsLazy } from '@rimitive/core';
+
+/**
+ * Type error message for lazy modules in React hooks
+ */
+type LazyModuleError =
+  'Error: Lazy modules are not supported in useRimitiveContext. Use compose() with await outside the component.';
 
 /**
  * Create a Rimitive context with modules that is scoped to the component lifecycle.
  * The context will be automatically disposed when the component unmounts.
  *
- * @param modules - The Rimitive modules to include in the context
+ * Note: Lazy modules (async create) are not supported. For async modules,
+ * use `compose()` with `await` outside the component and pass the result via props or context.
+ *
+ * @param modules - The Rimitive modules to include in the context (must be sync)
  * @returns A Use context with implementations from all provided modules
  *
  * @example
@@ -49,12 +58,20 @@ import type { Module, Use, ComposedContext } from '@rimitive/core';
  * ```
  */
 export function useRimitiveContext<M extends Module[]>(
-  ...modules: M
+  ...modules: ContainsLazy<M> extends true ? [LazyModuleError] : M
 ): Use<ComposedContext<M>> {
   // Create context only once, using ref to ensure stability
   const contextRef = useRef<Use<ComposedContext<M>> | null>(null);
 
-  if (!contextRef.current) contextRef.current = compose(...modules);
+  if (!contextRef.current) {
+    // Type assertion is safe here because:
+    // 1. HasLazyModule constraint prevents lazy modules at the type level
+    // 2. If lazy modules slip through, compose() would return a Promise
+    //    which would cause a runtime error (intentional fail-fast behavior)
+    contextRef.current = compose(
+      ...(modules as Module[])
+    ) as Use<ComposedContext<M>>;
+  }
 
   const context = contextRef.current;
 

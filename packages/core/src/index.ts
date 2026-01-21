@@ -1,5 +1,10 @@
-export { compose, merge, type ComposeOptions } from './compose';
-export { defineModule, isModule, STATUS_MODULE } from './module';
+export { compose, type ComposeOptions } from './compose';
+export { merge } from './merge';
+export { override, isOverriddenModule } from './override';
+export type { OverriddenModule } from './override';
+export { fork, type ForkOptions } from './fork';
+export { defineModule, isModule, transient, isTransient, lazy, isLazy, STATUS_MODULE } from './module';
+export type { LazyModule, TransientModule } from './module';
 export type {
   Module,
   ModuleDefinition,
@@ -15,6 +20,7 @@ export type {
   UnionToIntersection,
   ModuleImpl as ServiceImpl,
   ModuleName as ServiceName,
+  ContainsLazy,
 } from './types';
 export {
   createInstrumentation,

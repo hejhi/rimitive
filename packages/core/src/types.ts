@@ -155,9 +155,46 @@ export type ModuleName<T> =
   T extends Module<infer TName, unknown, unknown> ? TName : never;
 
 /**
+ * Extract replacement modules from an overridden module.
+ */
+type ExtractReplacements<M> = M extends { __replacements: infer R }
+  ? R extends readonly Module[]
+    ? R[number]
+    : never
+  : never;
+
+/**
+ * Extract the deps object type from a module's deps.
+ * The keys are module names, values are their impls.
+ */
+type ExtractDepsFromModule<M> =
+  M extends Module<string, unknown, infer TDeps>
+    ? TDeps extends Record<string, unknown>
+      ? TDeps
+      : never
+    : never;
+
+/**
+ * Extract deps from all replacement modules and merge them.
+ */
+type ExtractReplacementDeps<M> = ExtractDepsFromModule<ExtractReplacements<M>>;
+
+/**
+ * Flatten a module and its replacements into a union of all modules.
+ */
+type FlattenModule<M> = M | ExtractReplacements<M>;
+
+/**
+ * Merge all replacement deps from a tuple of modules into a single object type.
+ */
+type AllReplacementDeps<TModules extends readonly Module[]> =
+  UnionToIntersection<ExtractReplacementDeps<TModules[number]>>;
+
+/**
  * The composed context type from a tuple of Modules.
  *
  * Maps module names to their implementations and adds a `dispose()` method.
+ * For overridden modules, also includes the replacement modules' dependencies.
  *
  * @example
  * ```ts
@@ -167,9 +204,57 @@ export type ModuleName<T> =
  * type Ctx = ComposedContext<[SignalModule, ComputedModule]>;
  * // Ctx = { signal: SignalImpl; computed: ComputedImpl; dispose(): void }
  * ```
+ *
+ * @example With override
+ * ```ts
+ * const OverriddenService = override(Service, { logger: ConfigurableLogger });
+ * type Ctx = ComposedContext<[typeof OverriddenService]>;
+ * // Ctx includes 'service', 'logger', AND 'config' (from ConfigurableLogger's deps)
+ * ```
  */
 export type ComposedContext<TModules extends readonly Module[]> = {
-  [M in TModules[number] as ModuleName<M>]: ModuleImpl<M>;
-} & {
-  dispose(): void;
+  [M in FlattenModule<TModules[number]> as ModuleName<M>]: ModuleImpl<M>;
+} & AllReplacementDeps<TModules> & {
+    dispose(): void;
+  };
+
+// ============================================================================
+// Compose validation
+// ============================================================================
+
+/** Module types that cannot be passed directly to compose() */
+type Transient = { __scope: 'transient' };
+type UnwrappedAsync = Module<string, Promise<unknown>, unknown> & {
+  __lazy?: never;
 };
+type InvalidModule = Transient | UnwrappedAsync;
+
+/** Error messages */
+type TransientError =
+  'Error: Transient modules cannot be passed directly to compose(). Use as dependency only.';
+type AsyncError =
+  'Error: Async create() requires lazy() wrapper. Use: lazy(YourAsyncModule)';
+
+/** Get error message for an invalid module type */
+type ErrorFor<T> = T extends Transient ? TransientError : AsyncError;
+
+/** Check if T matches any invalid module type */
+type IsInvalid<T> = [Extract<T, InvalidModule>] extends [never] ? false : true;
+
+/** Validate a module: return T if valid, error message if not */
+type Validated<T> = IsInvalid<T> extends true ? ErrorFor<T> : T;
+
+/** Validate all modules in tuple */
+export type ValidatedModules<T extends readonly Module[]> = {
+  [K in keyof T]: Validated<T[K]>;
+};
+
+/** Check if array contains any lazy modules */
+export type ContainsLazy<T extends readonly Module[]> =
+  Extract<T[number], { __lazy: true }> extends never ? false : true;
+
+/** Return type: Promise if lazy modules present */
+export type ComposeReturn<T extends readonly Module[]> =
+  ContainsLazy<T> extends true
+    ? Promise<Use<ComposedContext<T>>>
+    : Use<ComposedContext<T>>;

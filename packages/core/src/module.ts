@@ -52,29 +52,17 @@ import type { InstrumentationContext, ServiceContext } from './types';
 export const STATUS_MODULE = 8; // 1000
 
 /**
- * A module definition - the unit of composition in Rimitive.
- *
- * Modules declare their dependencies and provide a create function
- * that receives resolved dependencies and returns the implementation.
- *
- * @example
- * ```ts
- * const MyModule: Module<'myModule', MyImpl> = {
- *   status: STATUS_MODULE,
- *   name: 'myModule',
- *   dependencies: [OtherModule],
- *   create: ({ otherModule }) => createMyImpl(otherModule),
- * };
- * ```
+ * Module scope - controls instance lifetime
+ * - 'singleton': One instance shared by all dependents (default)
+ * - 'transient': Fresh instance for each dependent
  */
-/**
- * Base module interface for dependency arrays.
- * Uses interface + method syntax for bivariant function parameters.
- * This allows Module<specific> to be assignable to AnyModule.
- */
+export type ModuleScope = 'singleton' | 'transient';
+
 export interface AnyModule {
   status: typeof STATUS_MODULE;
   name: string;
+  /** @internal */
+  __scope?: ModuleScope;
   dependencies: AnyModule[];
   create(deps: unknown): unknown;
   instrument?(
@@ -103,6 +91,9 @@ export interface Module<
   /** Unique name - becomes the property name on the composed context */
   name: TName;
 
+  /** @internal Instance scope - 'singleton' (default) or 'transient' */
+  __scope?: ModuleScope;
+
   /** Modules this module depends on (resolved by compose) */
   dependencies: AnyModule[];
 
@@ -124,18 +115,58 @@ export interface Module<
 }
 
 /**
+ * Helper type to extract the implementation type from a Module
+ */
+export type ModuleImpl<T> =
+  T extends Module<string, infer TImpl, unknown> ? TImpl : never;
+
+/**
+ * Helper type to extract the name from a Module
+ */
+export type ModuleName<T> =
+  T extends Module<infer TName, unknown, unknown> ? TName : never;
+
+/**
+ * Helper type to extract the deps type from a Module
+ */
+export type ModuleDeps<T> =
+  T extends Module<string, unknown, infer TDeps> ? TDeps : never;
+
+/**
+ * Convert a tuple of modules to an object type with module names as keys
+ * and implementations as values.
+ *
+ * @example
+ * ```ts
+ * type Deps = DepsFromModules<[typeof LoggerModule, typeof DatabaseModule]>;
+ * // { logger: LoggerImpl, database: DatabaseImpl }
+ * ```
+ */
+export type DepsFromModules<T extends readonly AnyModule[]> =
+  T extends readonly []
+    ? Record<string, never>
+    : { [M in T[number] as ModuleName<M>]: ModuleImpl<M> };
+
+/**
  * Input type for defineModule - same as Module but without status
  * and with optional dependencies.
+ *
+ * The TModules type parameter captures the dependencies tuple, allowing
+ * TypeScript to infer the correct types for the create function's deps parameter.
  */
-export interface ModuleDefinition<TName extends string, TImpl, TDeps> {
+export interface ModuleDefinition<
+  TName extends string,
+  TImpl,
+  TModules extends readonly AnyModule[] = readonly [],
+> {
   /** Unique name - becomes the property name on the composed context */
   name: TName;
 
   /** Modules this module depends on (resolved by compose) */
-  dependencies?: AnyModule[];
+  dependencies?: TModules;
 
   /** Create the implementation with resolved dependencies */
-  create(deps: TDeps): TImpl;
+  create(deps: DepsFromModules<TModules>): TImpl;
 
   /** Optional: wrap impl for debugging/profiling when instrumentation is enabled */
   instrument?(
@@ -159,7 +190,7 @@ export function isModule(value: unknown): value is Module {
     value !== null &&
     typeof value === 'object' &&
     'status' in value &&
-    (value as Module).status === STATUS_MODULE
+    value.status === STATUS_MODULE
   );
 }
 
@@ -209,14 +240,18 @@ export function isModule(value: unknown): value is Module {
  * });
  * ```
  */
-export function defineModule<TName extends string, TImpl, TDeps>(
-  definition: ModuleDefinition<TName, TImpl, TDeps>
-): Module<TName, TImpl, TDeps> {
+export function defineModule<
+  const TName extends string,
+  TImpl,
+  const TModules extends readonly AnyModule[] = readonly [],
+>(
+  definition: ModuleDefinition<TName, TImpl, TModules>
+): Module<TName, TImpl, DepsFromModules<TModules>> {
   return {
     status: STATUS_MODULE,
     name: definition.name,
-    dependencies: definition.dependencies ?? [],
-    create: definition.create,
+    dependencies: (definition.dependencies ?? []) as AnyModule[],
+    create: definition.create as (deps: DepsFromModules<TModules>) => TImpl,
     ...(definition.instrument && { instrument: definition.instrument }),
     ...(definition.init && { init: definition.init }),
     ...(definition.destroy && { destroy: definition.destroy }),
@@ -224,19 +259,120 @@ export function defineModule<TName extends string, TImpl, TDeps>(
 }
 
 /**
- * Helper type to extract the implementation type from a Module
+ * Mark a module as transient - each dependent gets a fresh instance.
+ *
+ * By default, modules are singletons: one instance shared by all dependents.
+ * Transient modules create a new instance for each module that depends on them.
+ *
+ * Transient modules cannot be passed directly to compose() - they are only
+ * available as injected dependencies.
+ *
+ * @example
+ * ```ts
+ * const Logger = defineModule({
+ *   name: 'logger',
+ *   create: () => new Logger(),
+ * });
+ *
+ * // Each dependent gets its own Logger instance
+ * const TransientLogger = transient(Logger);
+ *
+ * const ServiceA = defineModule({
+ *   name: 'serviceA',
+ *   dependencies: [TransientLogger],
+ *   create: ({ logger }) => {
+ *     // This logger is unique to ServiceA
+ *   },
+ * });
+ *
+ * const ServiceB = defineModule({
+ *   name: 'serviceB',
+ *   dependencies: [TransientLogger],
+ *   create: ({ logger }) => {
+ *     // This logger is a DIFFERENT instance, unique to ServiceB
+ *   },
+ * });
+ *
+ * // Use: pass modules that depend on transients
+ * const svc = compose(ServiceA, ServiceB);
+ * // NOT: compose(TransientLogger) - will throw error
+ * ```
  */
-export type ModuleImpl<T> =
-  T extends Module<string, infer TImpl, unknown> ? TImpl : never;
+export function transient<TName extends string, TImpl, TDeps>(
+  module: Module<TName, TImpl, TDeps>
+): TransientModule<TName, TImpl, TDeps> {
+  return {
+    ...module,
+    __scope: 'transient',
+  } as TransientModule<TName, TImpl, TDeps>;
+}
 
 /**
- * Helper type to extract the name from a Module
+ * Check if a module is transient scoped
  */
-export type ModuleName<T> =
-  T extends Module<infer TName, unknown, unknown> ? TName : never;
+export function isTransient(module: AnyModule): module is TransientModule {
+  return module.__scope === 'transient';
+}
 
 /**
- * Helper type to extract the deps type from a Module
+ * Marker for transient modules - creates fresh instance per dependent
  */
-export type ModuleDeps<T> =
-  T extends Module<string, unknown, infer TDeps> ? TDeps : never;
+export interface TransientModule<
+  TName extends string = string,
+  TImpl = unknown,
+  TDeps = unknown,
+> extends Module<TName, TImpl, TDeps> {
+  __scope: 'transient';
+}
+
+/**
+ * Marker for lazy (async) modules
+ */
+export interface LazyModule<
+  TName extends string = string,
+  TImpl = unknown,
+  TDeps = unknown,
+> extends Module<TName, TImpl, TDeps> {
+  __lazy: true;
+}
+
+/**
+ * Check if a module is lazy (async)
+ */
+export function isLazy(module: AnyModule): module is LazyModule {
+  return '__lazy' in module && (module as LazyModule).__lazy === true;
+}
+
+/**
+ * Mark a module with async create() as lazy.
+ *
+ * Lazy modules are awaited during composition. When compose() includes lazy
+ * modules, it returns a Promise that resolves after all async modules are
+ * initialized.
+ *
+ * @example
+ * ```ts
+ * const DbModule = defineModule({
+ *   name: 'db',
+ *   create: async () => {
+ *     const pool = await createPool();
+ *     await pool.connect();
+ *     return pool;
+ *   },
+ * });
+ *
+ * // Must wrap async modules with lazy()
+ * const svc = await compose(lazy(DbModule), CacheModule);
+ *
+ * // After await, db is fully resolved - sync access
+ * svc.db.query('SELECT 1');
+ * ```
+ */
+export function lazy<TName extends string, TImpl, TDeps>(
+  module: Module<TName, Promise<TImpl>, TDeps>
+): LazyModule<TName, TImpl, TDeps> {
+  return {
+    ...module,
+    __lazy: true,
+  } as LazyModule<TName, TImpl, TDeps>;
+}

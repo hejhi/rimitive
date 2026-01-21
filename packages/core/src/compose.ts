@@ -8,9 +8,11 @@ import type {
   InstrumentationContext,
   ServiceContext,
   Use,
-  ComposedContext,
+  ValidatedModules,
+  ComposeReturn,
 } from './types';
-import { type AnyModule, isModule } from './module';
+import { type AnyModule, isModule, isTransient, isLazy } from './module';
+import { tryDispose } from './utils';
 
 type ContextState = {
   disposed: boolean;
@@ -19,50 +21,47 @@ type ContextState = {
 
 /**
  * Options for composing modules
- *
- * @example
- * ```ts
- * import { compose, createInstrumentation, devtoolsProvider } from '@rimitive/core';
- * import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
- *
- * const instrumentation = createInstrumentation({
- *   enabled: true,
- *   providers: [devtoolsProvider()],
- * });
- *
- * const svc = compose(SignalModule, ComputedModule, { instrumentation });
- * ```
  */
 export type ComposeOptions = {
   /** Optional instrumentation context for debugging/profiling */
   instrumentation?: InstrumentationContext;
 };
 
-/**
- * Collect all modules including transitive dependencies
- * Returns modules in dependency order (dependencies before dependents)
- */
-function collectModules(modules: AnyModule[]): AnyModule[] {
-  const visited = new Set<string>();
-  const result: AnyModule[] = [];
+/** Check if any module in the dependency graph is lazy (async) */
+function hasLazyInGraph(modules: AnyModule[]): boolean {
+  const visited = new Set<AnyModule>();
+  const check = (mod: AnyModule): boolean => {
+    if (visited.has(mod)) return false;
+    visited.add(mod);
+    return isLazy(mod) || mod.dependencies.some(check);
+  };
+  return modules.some(check);
+}
 
-  function visit(mod: AnyModule) {
-    if (visited.has(mod.name)) return;
-    visited.add(mod.name);
-
-    // Visit dependencies first (ensures they're created before dependents)
-    for (const dep of mod.dependencies) {
-      visit(dep);
-    }
-
-    result.push(mod);
+/** Throw if module returns Promise but isn't marked lazy */
+function assertNotAsync(mod: AnyModule, impl: unknown): void {
+  if (impl instanceof Promise && !isLazy(mod)) {
+    throw new Error(
+      `Async create() in module "${mod.name}" requires lazy() wrapper`
+    );
   }
+}
 
+/** Validate modules passed to compose() */
+function validateInputModules(modules: AnyModule[]): void {
+  const seenNames = new Map<string, AnyModule>();
   for (const mod of modules) {
-    visit(mod);
+    if (isTransient(mod)) {
+      throw new Error(
+        `Transient module "${mod.name}" cannot be passed directly to compose().`
+      );
+    }
+    const existing = seenNames.get(mod.name);
+    if (existing && existing !== mod) {
+      throw new Error(`Duplicate module name: ${mod.name}`);
+    }
+    seenNames.set(mod.name, mod);
   }
-
-  return result;
 }
 
 /**
@@ -116,39 +115,35 @@ function collectModules(modules: AnyModule[]): AnyModule[] {
  */
 // Overload: modules only
 export function compose<TModules extends AnyModule[]>(
-  ...modules: TModules
-): Use<ComposedContext<TModules>>;
+  ...modules: ValidatedModules<TModules>
+): ComposeReturn<TModules>;
 
 // Overload: modules + options (options must be last)
 export function compose<TModules extends AnyModule[]>(
-  ...args: [...TModules, ComposeOptions]
-): Use<ComposedContext<TModules>>;
+  ...args: [...ValidatedModules<TModules>, ComposeOptions]
+): ComposeReturn<TModules>;
 
-// Implementation
+// Implementation (signature must be broader than overloads)
 export function compose(
-  ...args: (AnyModule | ComposeOptions)[]
-): Use<Record<string, unknown> & { dispose(): void }> {
-  // Separate modules from options
-  const lastArg = args[args.length - 1];
+  ...args: unknown[]
+):
+  | Use<Record<string, unknown> & { dispose(): void }>
+  | Promise<Use<Record<string, unknown> & { dispose(): void }>> {
+  // Separate modules from options (cast to expected types - validated by overloads)
+  const typedArgs = args as (AnyModule | ComposeOptions)[];
+  const lastArg = typedArgs[typedArgs.length - 1];
   const hasOptions = lastArg && !isModule(lastArg);
 
-  const modules = (hasOptions ? args.slice(0, -1) : args) as AnyModule[];
-  const options = hasOptions ? (lastArg as ComposeOptions) : undefined;
+  const modules = (
+    hasOptions ? typedArgs.slice(0, -1) : typedArgs
+  ) as AnyModule[];
+  const options = hasOptions ? lastArg : undefined;
 
-  // Validate no duplicate names in input modules (different instances with same name)
-  const seenNames = new Map<string, AnyModule>();
-  for (const mod of modules) {
-    const existing = seenNames.get(mod.name);
-    if (existing && existing !== mod) {
-      throw new Error(`Duplicate module name: ${mod.name}`);
-    }
-    seenNames.set(mod.name, mod);
-  }
+  validateInputModules(modules);
 
-  // Collect all modules including transitive dependencies
-  const allModules = collectModules(modules);
+  const hasLazyModules = hasLazyInGraph(modules);
 
-  // State management
+  // Shared state
   const state: ContextState = {
     disposed: false,
     disposers: new Set(),
@@ -163,115 +158,147 @@ export function compose(
     },
   };
 
-  // Build the context - resolved deps namespace
-  const resolvedDeps: Record<string, unknown> = {};
+  // Keyed by MODULE REFERENCE, not name - enables localized overrides
+  const instanceCache = new Map<AnyModule, unknown>();
+  const transientModules = new Set<AnyModule>();
+  const transientInstances: unknown[] = [];
+  const resolvedModules: AnyModule[] = [];
 
-  // Context object that will be returned
+  // Get cache key for a module - use original if this is an aliased module
+  const getCacheKey = (mod: AnyModule): AnyModule => {
+    const aliasOf = (mod as { __aliasOf?: AnyModule }).__aliasOf;
+    return aliasOf ?? mod;
+  };
+
   const context: Record<string, unknown> & { dispose(): void } = {
     dispose(): void {
       if (state.disposed) return;
       state.disposed = true;
 
-      // Call destroy hooks in reverse order
-      for (let i = allModules.length - 1; i >= 0; i--) {
-        const mod = allModules[i];
-        if (mod) mod.destroy?.(serviceCtx);
+      // Dispose in reverse order: transients, then singletons, then destroy hooks, then registered disposers
+      for (let i = transientInstances.length - 1; i >= 0; i--)
+        tryDispose(transientInstances[i]);
+      transientInstances.length = 0;
+      for (let i = resolvedModules.length - 1; i >= 0; i--) {
+        const mod = resolvedModules[i]!;
+        tryDispose(instanceCache.get(getCacheKey(mod)));
+        mod.destroy?.(serviceCtx);
       }
-
-      // Run registered disposers
-      for (const disposer of state.disposers) {
-        disposer();
-      }
+      instanceCache.clear();
+      state.disposers.forEach((d) => d());
       state.disposers.clear();
     },
   };
 
-  // Create each module in dependency order
-  for (const mod of allModules) {
-    // Call init hook
+  // === Shared helpers ===
+
+  const instrument = (mod: AnyModule, impl: unknown): unknown => {
+    if (!options?.instrumentation || !mod.instrument) return impl;
+    return mod.instrument(impl, options.instrumentation, serviceCtx);
+  };
+
+  const initModule = (mod: AnyModule): void => {
     mod.init?.(serviceCtx);
+    resolvedModules.push(mod);
+  };
 
-    // Create the implementation with resolved deps
-    let impl = mod.create(resolvedDeps);
+  const initTransient = (mod: AnyModule): void => {
+    if (transientModules.has(mod)) return;
+    initModule(mod);
+    transientModules.add(mod);
+  };
 
-    // Apply instrumentation if enabled
-    if (options?.instrumentation && mod.instrument) {
-      impl = mod.instrument(impl, options.instrumentation, serviceCtx);
+  const cacheAndExpose = (mod: AnyModule, impl: unknown): unknown => {
+    const final = instrument(mod, impl);
+    instanceCache.set(getCacheKey(mod), final);
+    if (!(mod.name in context)) context[mod.name] = final;
+    return final;
+  };
+
+  // === Sync resolver ===
+
+  const resolveSync = (mod: AnyModule): unknown => {
+    if (isTransient(mod)) {
+      initTransient(mod);
+      return undefined;
     }
+    const cacheKey = getCacheKey(mod);
+    if (instanceCache.has(cacheKey)) return instanceCache.get(cacheKey);
 
-    // Add to resolved deps (for other modules to use)
-    resolvedDeps[mod.name] = impl;
+    initModule(mod);
+    const deps = buildDepsSync(mod);
+    const impl = mod.create(deps);
+    assertNotAsync(mod, impl);
+    return cacheAndExpose(mod, impl);
+  };
 
-    // Add to context (for user access)
-    context[mod.name] = impl;
+  const createTransientSync = (mod: AnyModule): unknown => {
+    const impl = instrument(mod, mod.create(buildDepsSync(mod)));
+    transientInstances.push(impl);
+    return impl;
+  };
+
+  const buildDepsSync = (mod: AnyModule): Record<string, unknown> => {
+    const deps: Record<string, unknown> = {};
+    for (const dep of mod.dependencies) {
+      const isT = isTransient(dep);
+      if (isT) initTransient(dep);
+      deps[dep.name] = isT ? createTransientSync(dep) : resolveSync(dep);
+    }
+    return deps;
+  };
+
+  // === Async resolver ===
+  const createTransientAsync = async (mod: AnyModule): Promise<unknown> => {
+    let impl = mod.create(await buildDepsAsync(mod));
+    if (isLazy(mod) && impl instanceof Promise) impl = await impl;
+    impl = instrument(mod, impl);
+    transientInstances.push(impl);
+    return impl;
+  };
+
+  const resolveAsync = async (mod: AnyModule): Promise<unknown> => {
+    if (isTransient(mod)) {
+      initTransient(mod);
+      return undefined;
+    }
+    const cacheKey = getCacheKey(mod);
+    if (instanceCache.has(cacheKey)) return instanceCache.get(cacheKey);
+
+    initModule(mod);
+    const deps = await buildDepsAsync(mod);
+    let impl = mod.create(deps);
+    assertNotAsync(mod, impl);
+    if (isLazy(mod) && impl instanceof Promise) impl = await impl;
+    return cacheAndExpose(mod, impl);
+  };
+
+  const buildDepsAsync = async (
+    mod: AnyModule
+  ): Promise<Record<string, unknown>> => {
+    const deps: Record<string, unknown> = {};
+    for (const dep of mod.dependencies) {
+      const isT = isTransient(dep);
+      if (isT) initTransient(dep);
+      deps[dep.name] = isT
+        ? await createTransientAsync(dep)
+        : await resolveAsync(dep);
+    }
+    return deps;
+  };
+
+  const createUse = (): Use<Record<string, unknown> & { dispose(): void }> => {
+    const use = ((fn: (ctx: typeof context) => unknown) =>
+      fn(use as typeof context)) as Use<typeof context>;
+    return Object.assign(use, context);
+  };
+
+  if (hasLazyModules) {
+    return (async () => {
+      for (const mod of modules) await resolveAsync(mod);
+      return createUse();
+    })();
   }
-
-  // Create a callable that also has all context properties
-  // The callable passes ITSELF (with call signature) to the callback,
-  // not just the plain context object. This allows portables to call
-  // other portables using the same Use object.
-  type ContextType = Record<string, unknown> & { dispose(): void };
-
-  const use = (<TResult>(fn: (ctx: ContextType) => TResult): TResult => {
-    // Pass `use` itself (the callable with properties) to the callback
-    return fn(use as ContextType);
-  }) as Use<ContextType>;
-
-  // Copy all context properties onto the function
-  Object.assign(use, context);
-
-  return use;
-}
-
-/**
- * Merge additional properties into a Use context.
- *
- * Creates a new `Use` that has all properties from the base plus the additions.
- * The base service instances are preserved (not cloned), so you stay on the
- * same reactive graph.
- *
- * @example
- * ```ts
- * import { compose, merge } from '@rimitive/core';
- * import { SignalModule } from '@rimitive/signals/extend';
- *
- * const svc = compose(SignalModule);
- *
- * // Add new properties
- * const extended = merge(svc, { theme: createTheme() });
- * extended.theme; // available
- * extended.signal; // same instance as svc.signal
- *
- * // Override existing properties for a subtree
- * const childSvc = merge(svc, { signal: customSignal });
- * ```
- *
- * @example Inside a behavior
- * ```ts
- * const myBehavior = (svc) => {
- *   // Add router for this subtree
- *   const childSvc = merge(svc, createRouter(svc));
- *
- *   return () => childSvc(ChildComponent);
- * };
- * ```
- */
-export function merge<TSvc, TAdditions extends object>(
-  base: Use<TSvc>,
-  additions: TAdditions
-): Use<Omit<TSvc, keyof TAdditions> & TAdditions> {
-  const merged = { ...base, ...additions };
-
-  type MergedType = typeof merged;
-
-  // Create a new callable that passes ITSELF to the callback
-  // This allows portables to call other portables using the same Use object
-  const mergedUse = (<TResult>(fn: (svc: MergedType) => TResult) =>
-    fn(mergedUse)) as Use<MergedType>;
-
-  // Merge base properties with additions (additions override base)
-  // Copy merged properties onto the function
-  Object.assign(mergedUse, merged);
-
-  return mergedUse;
+  for (const mod of modules) resolveSync(mod);
+  return createUse();
 }
