@@ -63,9 +63,9 @@ If you provided a different adapter, then you'd pass different (strongly typed!)
 <Aside type="note">
 `el` itself also **never re-renders**. You can pass it reactive children, reactive props, etc and those will all update when needed, but the underlying element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
 
-There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself is D-U-M-B. It doesn't reconcile or re-render, it _just lives its best lil life_. 
+There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself is dumb. It doesn't reconcile or re-render. 
 
-This is **great for performance**, creates a **much simpler mental model**, and means that if you don't need reconciliation, don't use it, and **save some kbs, yo 📦**.
+This is **great for performance**, creates a **much simpler mental model**, and means that if you don't need reconciliation, don't use it, and **save some kBs 📦**.
 </Aside>
 
 ---

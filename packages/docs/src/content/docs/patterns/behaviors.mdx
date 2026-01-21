@@ -401,6 +401,95 @@ describe('counter', () => {
 
 Pure functions, pure tests.
 
+### Testing Behaviors with Dependencies
+
+When a behavior depends on external services, compose with mock modules:
+
+```typescript
+import { compose, defineModule } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+// A storage module your behavior depends on
+const StorageModule = defineModule({
+  name: 'storage',
+  create: () => ({
+    get: (key: string) => localStorage.getItem(key),
+    set: (key: string, value: string) => localStorage.setItem(key, value),
+  }),
+});
+
+type StorageImpl = { get: (key: string) => string | null; set: (key: string, value: string) => void };
+
+// Behavior that uses storage
+const persistedCounter = (svc: SignalsSvc & { storage: StorageImpl }) => (key: string) => {
+  const { signal, effect, storage } = svc;
+
+  const saved = storage.get(key);
+  const count = signal(saved ? parseInt(saved, 10) : 0);
+
+  effect(() => storage.set(key, String(count())));
+
+  return {
+    count,
+    increment: () => count(count() + 1),
+  };
+};
+
+// Test with mocked storage
+describe('persistedCounter', () => {
+  it('persists to storage', () => {
+    const stored: Record<string, string> = {};
+
+    // Create mock storage module
+    const MockStorageModule = defineModule({
+      name: 'storage',
+      create: (): StorageImpl => ({
+        get: (key: string) => stored[key] ?? null,
+        set: (key: string, value: string) => { stored[key] = value; },
+      }),
+    });
+
+    // Compose with mock instead of real storage
+    const testSvc = compose(
+      SignalModule,
+      ComputedModule,
+      EffectModule,
+      MockStorageModule
+    );
+
+    const c = persistedCounter(testSvc)('count');
+    c.increment();
+    c.increment();
+
+    expect(stored['count']).toBe('2');
+  });
+});
+```
+
+For module dependency chains, use `override()` to swap nested dependencies:
+
+```typescript
+const DbModule = defineModule({
+  name: 'db',
+  create: () => ({ query: () => fetchFromDatabase() }),
+});
+
+const UserModule = defineModule({
+  name: 'user',
+  dependencies: [DbModule],
+  create: ({ db }) => ({ getUser: (id: string) => db.query() }),
+});
+
+// Test: swap DbModule for a mock inside UserModule
+const MockDb = defineModule({
+  name: 'db',
+  create: () => ({ query: () => ({ id: '1', name: 'Test' }) }),
+});
+
+const testSvc = compose(override(UserModule, { db: MockDb }));
+expect(testSvc.user.getUser('1').name).toBe('Test');
+```
+
 ---
 
 ## Anti-patterns
