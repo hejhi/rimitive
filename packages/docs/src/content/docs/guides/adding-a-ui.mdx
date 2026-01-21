@@ -7,7 +7,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 You have signals, and maybe some behaviors, so perhaps now we want to add a reactive UI on top of it.
 
-rimitive provides the `view` package that contains view-specific primitives, with `el()` being the foundation. `el()` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
+Rimitive provides the `view` package that contains view-specific primitives, with `el()` being the foundation: `el()` is a function for creating elements. It's renderer-agnostic (DOM, native, canvas, whatever), but we'll use the DOM adapter here since that's probably the most common use case.
 
 ---
 
@@ -28,7 +28,7 @@ export const svc = compose(
   ComputedModule,
   EffectModule,
   // Let's add the `el` and `mount` primitives from the `view` package, and provide the
-  // DOM adapter to make DOM elements
+  // DOM adapter to make DOM elements 👇
   createElModule(createDOMAdapter()),
   MountModule
 );
@@ -36,30 +36,32 @@ export const { signal, computed, effect, el, mount } = svc;
 export type Service = typeof svc;
 ```
 
-Same pattern as before, just now with more modules!
+Notice it's the same compose/service pattern as before, just now with more modules!
 
 ---
 
 ## Creating Elements
 
-`el()` is curried: `el(tag)(children)`. Don't be scurred, it'll make sense:
+`el()` is curried: `el(tag)(children)`. Don't be scurred, it'll make sense, it's all just factories:
 
 ```typescript
 // Just a div tag
 const div = el('div')();
 
-// An h1 with text
+// An h1 with text ("Hello, World" are children)
 const heading = el('h1')('Hello, World');
 
-// a div with children
+// a div with other `el` children
 const container = el('div')(
   el('h1')('Title'),
   el('p')('Some text')
 );
 ```
 
+If you provided a different adapter, then you'd pass different (strongly typed!) strings (like `el('mySpecialElement')`).
+
 <Aside type="note">
-`el` itself **never re-renders**. You can pass it reactive children, reactive props, etc and those will all update when needed, but the underlying element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
+`el` itself also **never re-renders**. You can pass it reactive children, reactive props, etc and those will all update when needed, but the underlying element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
 
 There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself is D-U-M-B. It doesn't reconcile or re-render, it _just lives its best lil life_. 
 

@@ -1,12 +1,12 @@
 ---
 title: Rimitive
-description: A composition system for type-safe reactive applications.
+description: Composable reactive primitives for TypeScript.
 template: splash
 hero:
   image:
     file: ../../assets/rimitive-logo.png
   title: Rimitive
-  tagline: Design your own type-safe reactive services
+  tagline: Composable reactive primitives with an awkward name but a lot of personality 🌝
   actions:
     - text: Get Started
       link: /guides/getting-started/
@@ -17,35 +17,99 @@ hero:
       icon: external
 ---
 
-Rimitive isn't a framework—it's a composition system and reactive primitive library. Compose modules into services that provide only the primitives you actually need:
+import { LinkCard } from '@astrojs/starlight/components';
+
+## Primitives With Pizzazz
+
+Rimitive grows with you:
+- from your most simple state management use cases
+- to your UI
+- to SSR with streaming and beyond
+
+...without forcing you commit to any framework, build, or transpilation up-front. Everything is opt-in, swappable, and fully customizable 🛠️.
+
+## Start with Simple State
 
 ```typescript
+const { signal, computed, effect } = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule
+);
+
+const you = signal('🫸');
+const rimitive = signal('🫷');
+const highFive = computed(() => `${you()}💥${rimitive()}`);
+
+effect(() => console.log(highFive())); // 🫸💥🫷
+```
+
+## Add a UI
+
+```ts
 const { signal, computed, el, mount } = compose(
   SignalModule,
   ComputedModule,
-  createElModule(domAdapter),
+  EffectModule,
+  // Add these 👇
+  createElModule(createDOMAdapter()),
   MountModule
 );
+
+const App = () => {
+  const together = signal(false);
+
+  return el('div')(
+    el('p').props({
+      textContent: computed(() => (together() ? '🫸💥🫷' : '🫸   🫷')),
+    }),
+    el('button').props({ onclick: () => together(!together()) })('High five!')
+  );
+};
+
+document.body.appendChild(mount(App()).element!);
 ```
 
-Need just signals? Compose just signals. Need SSR? Swap the adapter. Want to replace the reactive graph entirely? Swap the modules.
+## Indulge in Tooling
 
----
+```ts
+const { router, el, match } = compose(
+  // ... signal modules, view modules, and 👇
+  createRouterModule([
+    { id: 'ready', path: '' },
+    { id: 'high-five', path: 'high-five' },
+    { id: 'celebrate', path: 'celebrate/:style' },
+  ])
+);
+
+// Routes are reactive and pair nicely with the `match` primitive
+match(router.matches, (routes) => {
+  const route = routes[0];
+  switch (route?.id) {
+    case 'ready': return Ready();        // 🫸   🫷
+    case 'high-five': return HighFive(); // 🫸💥🫷
+    case 'celebrate': return Celebrate({ style: route.params.style }); // 🎉
+    default: return Lost();              // 🤷
+  }
+});
+
+// Navigate programmatically
+router.navigate('/celebrate/reactively');
+```
+
+Routing, async resources, SSR, streaming—all opt-in modules, building on the same primitives.
 
 ## What Makes It Different
 
-**Portable behaviors.** Your reactive logic isn't tied to a component model. Write a `disclosure` behavior once, use it in Rimitive views, React, or anything else that speaks signals.
+**Reactivity lives in the primitives, not in components.** No re-renders, no magic closures. Component functions run once. When state changes, only the specific thing bound to it updates.
 
-**No framework boundary.** The same behavior that powers your dropdown can power your accordion, modal, and tooltip—across different apps, different frameworks, same code.
+**Portable behaviors.** Your reactive logic isn't tied to a component model. Write a `disclosure` behavior once, use it in Rimitive views, React, or anything else that speaks signals.
 
 **Transparent architecture.** Every layer is swappable: the reactive graph, the scheduler, the renderer. Rimitive's own primitives are built with `defineModule()`—the same tool you have.
 
 ---
 
-## Performance
-
-On par with the fastest reactive libraries. See the [benchmarks](/benchmarks/).
-
----
-
-Intrigued? [Get started](/guides/getting-started/) or read the [full story](/why/).
+<LinkCard
+  title="Getting Started"
+  href="/guides/getting-started/"
+/>

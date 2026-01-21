@@ -7,33 +7,23 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["getting-started", "installation", "setup", "quickstart", "hello-world", "first-app"]} />
 
-Rimitive is built for **progressive complexity** and **low up-front commitment**. Start with just signals in a vanilla TS file. Months later, you might have a full app with routing, SSR, and streaming—without rewrites, migrations, or a "now we need a real framework" moment.
-
-Compose only the primitives you need, opting in as you go!
-
-In fact, rimitive is as much about providing **scalable patterns, conventions, and mental models** for building performant, lean, ergonomic, and scalable reactive applications as it is about providing the actual reactive primitives and tooling you need to do it.
-
-Rimitive also has a transparent architecture. You can literally replace or extend any part of it with your own custom-built tooling, at any point in time, down to the core reactive graph if you really wanted to.
-
-Patterns and architectures in rimitive are designed for **low coupling, high cohesion**—your reactive logic is self-contained and reusable, your UI just consumes it and has its own ui-specific logic if needed. Test behaviors without rendering, swap components without touching logic, share behaviors across frameworks, compose and share accessible patterns across your UIs.
-
-- **It's a collection of reactive libraries, not a framework** — take only what you need, as you need it!
-- **No VDOM** — fine-grained updates directly to the DOM
-- **No global state** — each `compose()` creates an isolated reactive context
-
----
-
 ## Installation
 
 ```bash
-npm install @rimitive/core @rimitive/signals @rimitive/view
+npm install @rimitive/core @rimitive/signals
 ```
 
 <SearchTags tags={["counter", "example", "tutorial", "reactive-state", "dom-rendering"]} />
 
 ## Your First App
 
-Create a counter with reactive state and DOM rendering:
+Create a counter with reactive state and DOM rendering. Start by installing the deps:
+
+```bash
+npm install @rimitive/core @rimitive/signals @rimitive/view
+```
+
+Then, create the app:
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -42,28 +32,21 @@ import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import { createElModule } from '@rimitive/view/el';
 import { MountModule } from '@rimitive/view/deps/mount';
 
-// 1. Create the adapter
-const adapter = createDOMAdapter();
-
-// 2. Compose your service
 const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  createElModule(adapter),
+  createElModule(createDOMAdapter()),
   MountModule
 );
 
-// 3. Destructure the primitives
 const { signal, computed, el, mount } = svc;
 
-// 4. Create reactive state
-const count = signal(0);
-const doubled = computed(() => count() * 2);
+const App = () => {
+  const count = signal(0);
+  const doubled = computed(() => count() * 2);
 
-// 5. Build the UI
-const App = () =>
-  el('div')(
+  return el('div')(
     el('h1')('Counter'),
     el('p')(computed(() => `Count: ${count()}`)),
     el('p')(computed(() => `Doubled: ${doubled()}`)),
@@ -71,13 +54,13 @@ const App = () =>
       onclick: () => count(count() + 1)
     })('Increment')
   );
+}
 
-// 6. Mount it
 const app = mount(App());
 document.body.appendChild(app.element!);
 ```
 
-That's it. Click the button, the count updates, the DOM updates automatically.
+That's it! Click the button, the count updates, the DOM updates automatically.
 
 ## What Just Happened?
 
@@ -86,3 +69,7 @@ That's it. Click the button, the count updates, the DOM updates automatically.
 3. **`computed()`** derives values that update when dependencies change
 4. **`el()`** creates DOM elements with reactive children and props
 5. **`mount()`** attaches the element tree to the DOM
+
+If you're lost already, don't worry. We'll start from the very basics. These docs also cover reactive patterns in-depth, so you can jump around if you get confused at any time.
+
+Rimitive is as much about patterns as it is about reactive primitives and tooling, so if at any point you hate it, you can always take any patterns that inspired you elsewhere!

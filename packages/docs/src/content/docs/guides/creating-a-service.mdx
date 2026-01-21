@@ -7,7 +7,11 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["service", "compose", "setup", "configuration", "modules", "dependency-injection"]} />
 
-Here's the simplest Rimitive setup:
+In Rimitive:
+- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context—no globals, no shared state between services. Think of it as a self-contained reactive toolkit.
+- A **module** is what you provide to `compose()`. Each module provides one or more primitives—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
+
+A simple example:
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -17,13 +21,19 @@ const svc = compose(SignalModule);
 const { signal } = svc;
 ```
 
-`compose()` takes primitive modules and returns a reactive service with only the primitives you asked for.
+This example demonstrates `compose()`, which:
+- takes primitive modules
+- returns a reactive service with only the primitives you asked for wired up to it (in this case, the signal primitive)
+
+Each service has an encapsulated reactive graph inside of it. Using `svc` to represent the service is a convention you'll see used throughout these docs.
+
+This service wouldn't do much on its own—nothing is connected to react to signal changes yet.
 
 ---
 
 ## Adding More Primitives
 
-Need more primitives? Add them!
+We can add some more primitives that _would_ react to signal updates:
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -45,9 +55,11 @@ effect(() => {
 // ...etc
 ```
 
+Dependencies are automatically tracked in Rimitive, so you don't need to worry about it.
+
 ---
 
-## Why Compose?
+## Why `compose()`?
 
 You might wonder: why not just export these functions directly?
 

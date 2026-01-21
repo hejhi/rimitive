@@ -16,7 +16,7 @@ export default defineConfig({
       favicon: '/favicon.svg',
       sidebar: [
         {
-          label: 'Start Here',
+          label: '⭐️ Start Here',
           items: [{ label: 'Getting Started', slug: 'guides/getting-started' }],
         },
         {
@@ -30,7 +30,10 @@ export default defineConfig({
             },
             { label: 'Adding a UI', slug: 'guides/adding-a-ui' },
             { label: 'Rendering Lists', slug: 'guides/rendering-lists' },
-            { label: 'Conditional Rendering', slug: 'guides/conditional-rendering' },
+            {
+              label: 'Conditional Rendering',
+              slug: 'guides/conditional-rendering',
+            },
             { label: 'Portals', slug: 'guides/portals' },
             { label: 'Event Handling', slug: 'guides/event-handling' },
             { label: 'Loading Data', slug: 'guides/loading-data' },

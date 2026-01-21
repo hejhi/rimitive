@@ -8,10 +8,10 @@ import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["behavior", "hook", "reusable-logic", "headless", "state-management", "portable"]} />
 
-A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to provide portable reactive logic.
+A **behavior** is, like many things in rimitive, simply a pattern. It's a function that encapsulates reactive state, with actions to drive that state, into a reusable unit. Again, no UI or component framework, just a nice convention to encapsulate reactive logic.
 
 <Aside type="note">
-Behaviors are _just functions_. They don't return magical reactive closures despite us prefixing the returns by convention with `use*`, my React peeps. There's no re-rendering. In rimitive, **all reactivity is encapsulated in the primitives**.
+As mentioned in the previous section, behaviors are _just functions_. They aren't themselves reactive, despite us prefixing with `use*`, my React peeps. There's no re-rendering. In rimitive, **all reactivity is encapsulated in primitives**.
 </Aside>
 
 ---
@@ -49,15 +49,13 @@ counter.increment();
 counter.count();  // 11
 ```
 
-This works great for simple cases. The behavior is tied to your service, which is fine when you have a single app context.
-
 ---
 
 <SearchTags tags={["portable", "service-injection", "testable", "ssr", "dependency-injection"]} />
 
 ## The Portable Pattern
 
-When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern.
+When you need behaviors that work across different contexts—testing with mocks, sharing between apps, or SSR—use the portable pattern. This is, generally speaking, the preferred pattern.
 
 ### The Shape
 
@@ -73,7 +71,7 @@ const myPortableBehavior = (svc: Service) => (options?) => {
 };
 ```
 
-This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. So from now on, we'll be working with portable functions.
+This silly little pattern doesn't look like much but opens up a whole world of fun possibilities. It also decouples your function from Rimitive! you could pass in whatever you want for `svc` later, as long as it matches the Service type. So from now on, we'll be working with portable functions.
 
 ### A Counter Example
 
@@ -108,7 +106,7 @@ c.increment();
 c.doubled();
 ```
 
-`svc(counter)` provides (or injects) the service (and is totally type safe). Then you have a ready-to-use behavior bound to your service that you can name whatever you want. Again, by convention (NOT prescription) we prefix with `use*` for nice semantics and ergonomics.
+`svc(counter)` provides (or injects) the service (and is type safe). Then you have a ready-to-use behavior bound to your service that you can name whatever you want. Again, by convention (NOT prescription) we prefix with `use*` for nice semantics and ergonomics.
 
 ---
 
@@ -131,7 +129,7 @@ const disclosure = ({ signal }: Service) => (initialOpen = false) => {
 };
 ```
 
-Now, we can compose it!
+Now, we can compose it:
 
 ```typescript
 const dropdown = (svc: Service) => {

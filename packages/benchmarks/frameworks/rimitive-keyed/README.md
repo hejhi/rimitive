@@ -24,7 +24,7 @@ Clone the Rimitive repo (if you haven't already):
 
 ```bash
 cd ~/repos  # or wherever you keep your projects
-git clone https://github.com/rimitive.git
+git clone https://github.com/hejhi/rimitive.git
 cd rimitive
 pnpm install
 ```
