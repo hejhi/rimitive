@@ -95,6 +95,31 @@ const dispose = effect(() => console.log(count()));
 dispose(); // stops tracking
 ```
 
+### Flush Strategies
+
+By default, effects run synchronously—the moment a dependency changes, the effect runs. Sometimes you want to defer execution. That's what flush strategies are for.
+
+```typescript
+import { mt, raf, debounce } from '@rimitive/signals/extend';
+
+// Run on next microtask (coalesces rapid updates)
+effect(mt(() => console.log(count())));
+
+// Run on requestAnimationFrame (ideal for DOM reads/writes)
+effect(raf(() => updateCanvas(data())));
+
+// Run after 300ms of no changes
+effect(debounce(300, () => search(query())));
+```
+
+| Strategy | Use case |
+|----------|----------|
+| `mt(fn)` | Batch multiple synchronous signal updates into one effect run |
+| `raf(fn)` | DOM measurements, canvas rendering, animations |
+| `debounce(ms, fn)` | User input, search boxes, expensive operations |
+
+Without a strategy, effects are synchronous. Wrap your effect function in a strategy to control timing.
+
 ---
 
 ## batch

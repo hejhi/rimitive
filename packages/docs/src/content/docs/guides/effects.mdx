@@ -1,0 +1,426 @@
+---
+title: Effects
+description: Run side effects when reactive state changes.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import SearchTags from '../../../components/SearchTags.astro';
+
+<SearchTags tags={["effect", "side-effect", "cleanup", "flush-strategy", "microtask", "raf", "debounce", "synchronous"]} />
+
+Effects run code when their dependencies change. Unlike React's `useEffect`, rimitive effects are **synchronous**—they run immediately, not on the next tick. This makes them predictable and easy to reason about.
+
+---
+
+## Basic Usage
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+
+const { signal, effect } = compose(SignalModule, ComputedModule, EffectModule);
+
+const count = signal(0);
+
+effect(() => {
+  console.log('Count is:', count());
+});
+// logs: "Count is: 0"
+
+count(1);
+// logs: "Count is: 1"
+```
+
+The effect runs once immediately, then re-runs whenever `count` changes. No dependency arrays to maintain—rimitive tracks what you read.
+
+---
+
+## Cleanup
+
+Return a function from your effect to clean up before the next run:
+
+```typescript
+const userId = signal(1);
+
+effect(() => {
+  const id = userId();
+  const controller = new AbortController();
+
+  fetch(`/api/user/${id}`, { signal: controller.signal })
+    .then(r => r.json())
+    .then(user => console.log(user));
+
+  // Cleanup: abort the fetch if userId changes before it completes
+  return () => controller.abort();
+});
+```
+
+The cleanup runs:
+- Before each re-run (when dependencies change)
+- When the effect is disposed
+
+This is how you avoid race conditions, clear timers, close connections, etc.
+
+<Aside type="tip">
+If you're using the view layer, prefer `.ref()` with `on()` for DOM event listeners—cleanup is automatic. Effect cleanup is for non-DOM side effects like fetch requests, timers, WebSocket connections, or external subscriptions.
+</Aside>
+
+<Aside type="note">
+For reactive data fetching, use [`resource()`](/guides/loading-data) which handles cancellation, loading states, and refetching automatically. The example above demonstrates the cleanup pattern, not the recommended approach for data loading.
+</Aside>
+
+---
+
+## Disposal
+
+Effects return a dispose function:
+
+```typescript
+const dispose = effect(() => {
+  console.log('Running:', count());
+});
+
+// Later, when you're done
+dispose();
+```
+
+After disposal, the effect won't run again. Its cleanup (if any) runs one final time.
+
+---
+
+## Effects with Elements
+
+When you need an effect tied to an element's lifecycle, return the effect from `.ref()`. Since `effect()` returns a dispose function and `.ref()` accepts cleanup functions, they compose naturally:
+
+```typescript
+el('canvas')
+  .ref((canvas) =>
+    effect(() => {
+      // This effect runs when dependencies change
+      // and disposes automatically when the element is removed
+      const ctx = canvas.getContext('2d');
+      drawScene(ctx, sceneData());
+    })
+  )()
+```
+
+The effect starts when the element is created and stops when the element is removed from the DOM. No manual cleanup required.
+
+This is useful when you need reactive behavior scoped to an element:
+
+```typescript
+// Resize observer tied to element lifecycle
+el('div')
+  .ref((element) =>
+    effect(() => {
+      const observer = new ResizeObserver((entries) => {
+        dimensions({ width: entries[0].contentRect.width });
+      });
+      observer.observe(element);
+      return () => observer.disconnect();
+    })
+  )()
+
+// Sync element position to signal
+el('div')
+  .ref((element) =>
+    effect(raf(() => {
+      element.style.transform = `translate(${x()}px, ${y()}px)`;
+    }))
+  )()
+```
+
+### Element-Local State
+
+You can create signals inside `.ref()` for state that's scoped to a single element. Combined with direct DOM access, this is powerful:
+
+```typescript
+el('input')
+  .ref((input) => {
+    const focused = signal(false);
+    const touched = signal(false);
+
+    input.onfocus = () => focused(true);
+    input.onblur = () => {
+      focused(false);
+      touched(true);
+    };
+
+    return effect(() => {
+      // Direct DOM manipulation based on local state
+      input.classList.toggle('focused', focused());
+      input.classList.toggle('touched', touched());
+    });
+  })()
+```
+
+When the element is removed, the effect is disposed and the signals become unreachable—garbage collected naturally. No manual cleanup needed.
+
+This pattern gives you:
+- **Direct DOM access** — no refs, no `useEffect`, just the element
+- **Local reactive state** — signals scoped to the element's lifetime
+- **Automatic cleanup** — effect disposed when element removed
+
+A more complete example—a draggable element with all state local:
+
+```typescript
+el('div')
+  .props({ className: 'draggable' })
+  .ref((element) => {
+    const dragging = signal(false);
+    const offset = signal({ x: 0, y: 0 });
+    const position = signal({ x: 100, y: 100 });
+
+    element.onpointerdown = (e) => {
+      dragging(true);
+      offset({ x: e.clientX - position().x, y: e.clientY - position().y });
+      element.setPointerCapture(e.pointerId);
+    };
+
+    element.onpointermove = (e) => {
+      if (!dragging()) return;
+      position({ x: e.clientX - offset().x, y: e.clientY - offset().y });
+    };
+
+    element.onpointerup = () => dragging(false);
+
+    return effect(raf(() => {
+      const pos = position();
+      element.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+      element.classList.toggle('dragging', dragging());
+    }));
+  })()
+```
+
+No component state, no hooks, no re-renders—just signals, effects, and the DOM.
+
+<Aside type="caution">
+If you create an effect inside `.ref()` but forget to return it, the effect leaks—it keeps running after the element is removed:
+
+```typescript
+// ❌ WRONG - effect leaks
+el('div').ref(() => {
+  effect(() => console.log(count()));
+})()
+
+// ✅ CORRECT - effect disposed with element
+el('div').ref(() =>
+  effect(() => console.log(count()))
+)()
+```
+
+The difference is subtle: braces `{ }` vs no braces. With braces you need an explicit `return`.
+</Aside>
+
+---
+
+<SearchTags tags={["flush-strategy", "mt", "raf", "debounce", "deferred", "batching"]} />
+
+## Flush Strategies
+
+By default, effects run synchronously—the moment a dependency changes, the effect runs. Sometimes that's too eager. Maybe you're updating five signals in a row and only want one effect run. Maybe you're doing DOM work and want to batch reads/writes. That's what flush strategies are for.
+
+```typescript
+import { mt, raf, debounce } from '@rimitive/signals/extend';
+```
+
+### mt (microtask)
+
+Defers execution to the next microtask. If multiple updates happen synchronously, the effect runs once after they all settle.
+
+```typescript
+const a = signal(1);
+const b = signal(2);
+
+effect(mt(() => {
+  console.log('Sum:', a() + b());
+}));
+// logs: "Sum: 3"
+
+// These happen synchronously
+a(10);
+b(20);
+// logs: "Sum: 30" (once, not twice)
+```
+
+Use `mt` when you're updating multiple signals and want to avoid redundant effect runs.
+
+### raf (requestAnimationFrame)
+
+Defers execution to the next animation frame. Perfect for DOM work where you want to batch reads and writes to avoid layout thrashing.
+
+```typescript
+const width = signal(100);
+const height = signal(100);
+
+effect(raf(() => {
+  // All DOM reads/writes happen together, once per frame
+  canvas.width = width();
+  canvas.height = height();
+  ctx.fillRect(0, 0, width(), height());
+}));
+```
+
+Use `raf` for canvas rendering, animations, or any effect that touches the DOM frequently.
+
+### debounce(ms, fn)
+
+Waits until dependencies stop changing for the specified duration.
+
+```typescript
+const searchQuery = signal('');
+
+effect(debounce(300, () => {
+  // Only runs 300ms after the user stops typing
+  performSearch(searchQuery());
+}));
+```
+
+Use `debounce` for search inputs, auto-save, or any effect where you want to wait for a "pause" in activity.
+
+---
+
+## When to Use Each
+
+| Strategy | When to use |
+|----------|-------------|
+| (none) | Immediate response needed, single dependency, or you want predictable synchronous behavior |
+| `mt(fn)` | Multiple signals updating together, want to coalesce into one run |
+| `raf(fn)` | DOM measurements, canvas, animations—anything frame-rate sensitive |
+| `debounce(ms, fn)` | User input, search, expensive operations where you want to wait for idle |
+
+Most effects don't need a strategy. Synchronous is the default for a reason—it's simple and predictable. Reach for strategies when you have a specific timing need.
+
+---
+
+## Custom Strategies
+
+If the built-in strategies don't fit your use case, you can create your own. A `FlushStrategy` is an object with two properties:
+
+```typescript
+import type { FlushStrategy } from '@rimitive/signals/extend';
+
+const throttle = (ms: number, run: () => void | (() => void)): FlushStrategy => {
+  let lastRun = 0;
+  let scheduled = false;
+
+  return {
+    run,
+    create: (track) => (node) => {
+      const now = Date.now();
+      const elapsed = now - lastRun;
+
+      if (elapsed >= ms) {
+        // Enough time has passed, run immediately
+        lastRun = now;
+        if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+        node.cleanup = track(node, run);
+      } else if (!scheduled) {
+        // Schedule for later
+        scheduled = true;
+        setTimeout(() => {
+          scheduled = false;
+          lastRun = Date.now();
+          if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+          node.cleanup = track(node, run);
+        }, ms - elapsed);
+      }
+    },
+  };
+};
+
+// Usage
+effect(throttle(100, () => {
+  handleMouseMove(x(), y());
+}));
+```
+
+The `create` function receives `track` (which wires up dependency tracking) and returns a function that receives the effect `node`. Call `track(node, run)` to execute the effect with tracking enabled.
+
+<Aside type="tip">
+You probably don't need custom strategies. The built-in ones cover most cases. But if you're building something like a game loop or have specific scheduling requirements, the option is there.
+</Aside>
+
+---
+
+## Effects vs. Computeds
+
+A common question: when do you use an effect vs. a computed?
+
+**Computed**: Derives a value from other reactive state. Pure, no side effects.
+
+```typescript
+const firstName = signal('Ada');
+const lastName = signal('Lovelace');
+const fullName = computed(() => `${firstName()} ${lastName()}`);
+```
+
+**Effect**: Performs side effects when state changes. Logging, DOM updates, API calls, etc.
+
+```typescript
+effect(() => {
+  document.title = `Hello, ${fullName()}`;
+});
+```
+
+If you're computing a value, use computed. If you're doing something *because* a value changed, use effect.
+
+---
+
+## Anti-patterns
+
+### Don't Mutate Signals in Effects That Read Them
+
+This creates infinite loops:
+
+```typescript
+// ❌ WRONG - infinite loop
+effect(() => {
+  count(count() + 1);  // reads count, writes count, triggers re-run...
+});
+```
+
+If you need to transform a signal based on changes to another, use a computed or derive the value separately.
+
+### Don't Ignore Cleanup
+
+If your effect sets up subscriptions, timers, or connections, clean them up:
+
+```typescript
+// ❌ WRONG - leaks WebSocket connections
+effect(() => {
+  const ws = new WebSocket(`wss://api.example.com/feed/${feedId()}`);
+  ws.onmessage = (e) => messages(m => [...m, JSON.parse(e.data)]);
+});
+
+// ✅ CORRECT - cleans up
+effect(() => {
+  const ws = new WebSocket(`wss://api.example.com/feed/${feedId()}`);
+  ws.onmessage = (e) => messages(m => [...m, JSON.parse(e.data)]);
+  return () => ws.close();
+});
+```
+
+### Don't Use Effects for Derived State
+
+If you're using an effect to update a signal based on other signals, you probably want a computed:
+
+```typescript
+// ❌ WRONG - effect for derived state
+const items = signal([1, 2, 3]);
+const total = signal(0);
+
+effect(() => {
+  total(items().reduce((a, b) => a + b, 0));
+});
+
+// ✅ CORRECT - use computed
+const items = signal([1, 2, 3]);
+const total = computed(() => items().reduce((a, b) => a + b, 0));
+```
+
+Computeds are lazy, cached, and don't require manual wiring. Effects are for side effects, not derived values.
+
+---
+
+Next up: [Event Handling](/guides/event-handling) for managing DOM events with automatic cleanup and batching.

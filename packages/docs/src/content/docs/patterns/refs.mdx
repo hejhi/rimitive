@@ -231,6 +231,94 @@ But the signal pattern is usually better because it's reactive.
 
 ---
 
+<SearchTags tags={["react", "useRef", "migration", "local-state", "element-scoped"]} />
+
+## Coming from React
+
+If you're used to React's `useRef`, here's how patterns translate:
+
+### DOM Element Access
+
+```tsx
+// React
+const inputRef = useRef<HTMLInputElement>(null);
+<input ref={inputRef} />
+inputRef.current?.focus();  // Might be null
+
+// Rimitive - callback receives element directly
+el('input').ref((input) => input.focus())()  // Element guaranteed to exist
+```
+
+No wrapper object, no null checking. The callback only runs when the element exists.
+
+### Accessing Element Later
+
+```tsx
+// React
+const inputRef = useRef<HTMLInputElement>(null);
+const handleClick = () => inputRef.current?.focus();
+
+// Rimitive - capture in closure
+let inputEl: HTMLInputElement;
+el('input').ref((el) => { inputEl = el })()
+const handleClick = () => inputEl.focus();  // No null check needed
+```
+
+### Mutable Values (Non-Reactive State)
+
+React's `useRef` is often used for values that shouldn't trigger re-renders. In Rimitive, there's no re-rendering to worry about—just use variables:
+
+```tsx
+// React
+const renderCount = useRef(0);
+useEffect(() => { renderCount.current++; });
+
+// Rimitive - just a variable
+let callCount = 0;
+effect(() => { callCount++; });
+```
+
+### Forwarding Refs
+
+```tsx
+// React
+const Input = forwardRef<HTMLInputElement>((props, ref) => (
+  <input ref={ref} {...props} />
+));
+
+// Rimitive - pass a callback
+const Input = (svc: Service, onRef?: (el: HTMLInputElement) => void) =>
+  svc.el('input').ref((el) => onRef?.(el))();
+```
+
+### Element-Scoped State
+
+A powerful pattern: create signals inside `.ref()` and return an effect. The state is scoped to the element's lifecycle:
+
+```typescript
+el('div').ref((element) => {
+  // Local state - created when element mounts
+  const hovered = signal(false);
+
+  element.onmouseenter = () => hovered(true);
+  element.onmouseleave = () => hovered(false);
+
+  // Effect tied to element - disposed when element unmounts
+  return effect(() => {
+    element.style.backgroundColor = hovered() ? 'lightblue' : 'white';
+  });
+})()
+```
+
+When the element is removed:
+1. The effect is disposed (stops running)
+2. The signal has no readers (gets garbage collected)
+3. Event handlers are cleaned up with the element
+
+This is useful for self-contained interactive elements that manage their own state.
+
+---
+
 ## Anti-patterns
 
 ### Don't Access Refs Before Mount
