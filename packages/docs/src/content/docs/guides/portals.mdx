@@ -26,6 +26,7 @@ const svc = compose(
   EffectModule,
   createElModule(adapter),
   createMatchModule(adapter),
+  // Add this module 👇
   createPortalModule(adapter),
   MountModule
 );
@@ -91,10 +92,3 @@ el('div').ref((el) => {
 
 portal(targetRef)(tooltipContent)
 ```
-
----
-
-## Next Steps
-
-- [Rendering Lists](/guides/rendering-lists) — Efficient list rendering with `map()`
-- [Conditional Rendering](/guides/conditional-rendering) — Show/hide and switch views with `match()`

@@ -28,6 +28,7 @@ const svc = compose(
   ComputedModule,
   EffectModule,
   createElModule(adapter),
+  // Add this 👇
   createMatchModule(adapter),
   MountModule
 );
@@ -100,10 +101,3 @@ const tabContent = match(currentTab, (tab) => {
   }
 });
 ```
-
----
-
-## Next Steps
-
-- [Rendering Lists](/guides/rendering-lists) — Efficient list rendering with `map()`
-- [Portals](/guides/portals) — Render to different DOM locations

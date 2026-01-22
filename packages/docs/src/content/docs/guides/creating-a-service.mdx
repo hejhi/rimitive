@@ -4,12 +4,17 @@ description: The most basic Rimitive setup—composing modules into a reactive s
 ---
 
 import SearchTags from '../../../components/SearchTags.astro';
+import { Aside } from '@astrojs/starlight/components';
 
 <SearchTags tags={["service", "compose", "setup", "configuration", "modules", "dependency-injection"]} />
 
 In Rimitive:
-- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context—no globals, no shared state between services. Think of it as a self-contained reactive toolkit.
+- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context.
 - A **module** is what you provide to `compose()`. Each module provides one or more primitives—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
+
+<Aside type="note">
+Services and modules are constructs of our lightweight dependency injection (DI) system in `core`, which is its own standalone package, if you want to learn more about it. It's the backbone of Rimitive.
+</Aside>
 
 A simple example:
 
@@ -22,10 +27,10 @@ const { signal } = svc;
 ```
 
 This example demonstrates `compose()`, which:
-- takes primitive modules
-- returns a reactive service with only the primitives you asked for wired up to it (in this case, the signal primitive)
+- takes modules (usually primitive modules in Rimitive)
+- returns a fully reactive service with only the modules you provided (in this case, the signal primitive)
 
-Each service has an encapsulated reactive graph inside of it. Using `svc` to represent the service is a convention you'll see used throughout these docs.
+Each service has an encapsulated reactive graph inside of it. Using `svc` to represent a service is a convention you'll see used throughout these docs.
 
 This service wouldn't do much on its own—nothing is connected to react to signal changes yet.
 
@@ -55,7 +60,7 @@ effect(() => {
 // ...etc
 ```
 
-Dependencies are automatically tracked in Rimitive, so you don't need to worry about it.
+Reactive dependencies are automatically tracked in Rimitive, so you don't need to worry about it.
 
 ---
 
@@ -65,7 +70,7 @@ You might wonder: why not just export these functions directly?
 
 Each `compose()` call creates an independent reactive context with no global leakage. This means:
 
-- **Isolation** — Multiple services don't interfere with each other
-- **Testing** — Fresh contexts per test, no cleanup needed
-- **Tree-shaking** — Only bundle what you use
-- **Extensibility** — Add [view modules](/guides/adding-a-ui), [router](/guides/adding-routing), or [custom modules](/guides/custom-modules) later
+- **Isolation**: Multiple services don't interfere with each other
+- **Testing**: Fresh contexts per test, no cleanup needed
+- **Tree-shaking**: Only bundle what you use
+- **Extensibility**: Add [view modules](/guides/adding-a-ui), [router](/guides/adding-routing), or [custom modules](/guides/custom-modules) later

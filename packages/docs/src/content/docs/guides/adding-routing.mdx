@@ -3,7 +3,7 @@ title: Adding Routing
 description: Navigate between views based on URL.
 ---
 
-Routing in Rimitive is reactive state. The router tracks the current URL and matches it against your route definitions. You render different views by reacting to those matches.
+Routing in Rimitive is simply reactive state. The router tracks the provided URL and matches it against your route definitions. You render different views by reacting to those matches.
 
 ---
 
@@ -26,6 +26,7 @@ const routes = [
 const svc = compose(
   SignalModule,
   ComputedModule,
+  // Add this 👇
   createRouterModule(routes)
 );
 
@@ -53,38 +54,7 @@ That's the core: routes in, reactive matches out.
 
 ## Rendering Routes
 
-Use `match()` to render different views based on the current route:
-
-```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { MountModule } from '@rimitive/view/deps/mount';
-import { createRouterModule } from '@rimitive/router';
-
-const routes = [
-  { id: 'home', path: '' },
-  { id: 'about', path: 'about' },
-];
-
-const adapter = createDOMAdapter();
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  MountModule,
-  createRouterModule(routes)
-);
-
-const { el, match, mount, router } = svc;
-```
-
-Now render based on the matched route:
+Use `match()` to render based on the matched route:
 
 ```typescript
 // Page components
@@ -262,118 +232,4 @@ const Nav = () => el('nav')(
 );
 ```
 
----
-
-## A Complete Example
-
-Putting it all together:
-
-```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { MountModule } from '@rimitive/view/deps/mount';
-import { createRouterModule } from '@rimitive/router';
-import { Link } from '@rimitive/router/link';
-
-// Routes
-const routes = [
-  { id: 'home', path: '' },
-  { id: 'about', path: 'about' },
-  { id: 'products', path: 'products' },
-  { id: 'product-detail', path: 'products/:id' },
-];
-
-// Service
-const adapter = createDOMAdapter();
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  MountModule,
-  createRouterModule(routes)
-);
-
-const { el, match, mount, router, computed } = svc;
-
-// Navigation
-const NavLink = (href: string, label: string) =>
-  Link({
-    href,
-    className: computed(() =>
-      router.currentPath() === href ? 'active' : ''
-    )
-  })(label);
-
-const Nav = () => el('nav')(
-  NavLink('/', 'Home'),
-  NavLink('/about', 'About'),
-  NavLink('/products', 'Products')
-);
-
-// Pages
-const Home = () => el('div')(
-  el('h1')('Home'),
-  el('button').props({
-    onclick: () => router.navigate('/about')
-  })('Learn More')
-);
-
-const About = () => el('div')(
-  el('h1')('About'),
-  el('p')('We build things.')
-);
-
-const Products = () => el('div')(
-  el('h1')('Products'),
-  el('ul')(
-    el('li')(Link({ href: '/products/1' })('Product 1')),
-    el('li')(Link({ href: '/products/2' })('Product 2')),
-    el('li')(Link({ href: '/products/3' })('Product 3'))
-  )
-);
-
-const ProductDetail = (id: string) => el('div')(
-  el('h1')(`Product ${id}`),
-  el('button').props({
-    onclick: () => router.navigate('/products')
-  })('← Back')
-);
-
-const NotFound = () => el('div')(
-  el('h1')('404'),
-  Link({ href: '/' })('Go Home')
-);
-
-// App
-const App = () => el('div')(
-  Nav(),
-  el('main')(
-    match(router.matches, (matches) => {
-      const route = matches[0];
-      if (!route) return NotFound();
-
-      // Just plain old javascript...
-      switch (route.id) {
-        case 'home': return Home();
-        case 'about': return About();
-        case 'products': return Products();
-        case 'product-detail': return ProductDetail(route.params.id);
-        default: return NotFound();
-      }
-    })
-  )
-);
-
-// Mount
-const app = mount(App());
-document.body.appendChild(app.element!);
-```
-
-Routes are data. Matching is reactive. Rendering is just `match()` on `router.matches`. Everything composes with the same patterns you've already learned.
-
-Next: [Server Rendering](/guides/server-rendering) for rendering on the server with data loading.
+Routes are data, and matching is reactive. Rendering is just `match()` on `router.matches`, and everything composes with the same patterns you've already learned!

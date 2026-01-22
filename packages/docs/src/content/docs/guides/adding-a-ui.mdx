@@ -108,7 +108,7 @@ count(5);  // display updates to "Count: 5"
 
 ## UI Components
 
-the star of the show, UI components in rimitive are...just functions that return elements:
+The star of the show, UI components in rimitive are...just functions that return elements:
 
 ```typescript
 const Greeting = (name: string) =>
@@ -206,7 +206,7 @@ const app = el('div')(
 );
 ```
 
-Can you see what's coming?? Components compose other components in the service layer:
+Can you see what's coming? Components compose other components (or behaviors) in the service layer, just like we saw before:
 
 ```typescript
 import type { Service } from './service';
