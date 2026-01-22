@@ -11,7 +11,7 @@
  * - Serialization to string for snapshot testing
  */
 
-import type { Adapter, AdapterConfig } from '../adapter';
+import type { Adapter, TreeConfig } from '../adapter';
 
 /**
  * A mock node in the test tree
@@ -24,12 +24,11 @@ export type TestNode = {
 };
 
 /**
- * Adapter config for test adapter
+ * Tree config for test adapter
  */
-export type TestAdapterConfig = AdapterConfig & {
-  elements: Record<string, TestNode> & { text: TestNode };
-  events: Record<string, Event>;
-  baseElement: TestNode;
+export type TestTreeConfig = TreeConfig & {
+  attributes: Record<string, Record<string, unknown>>;
+  nodes: Record<string, TestNode> & { text: TestNode };
 };
 
 /**
@@ -55,7 +54,7 @@ export type TestAdapterOperation =
 /**
  * Test adapter instance with additional utilities
  */
-export type TestAdapter = Adapter<TestAdapterConfig> & {
+export type TestAdapter = Adapter<TestTreeConfig> & {
   /** All operations performed, in order */
   operations: TestAdapterOperation[];
 

@@ -10,7 +10,7 @@ import type {
   Writable,
 } from './types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
-import type { Adapter, AdapterConfig } from './adapter';
+import type { Adapter, TreeConfig, NodeOf } from './adapter';
 import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createReconciler, ReconcileNode } from './deps/reconcile';
@@ -73,7 +73,7 @@ export type MapFactory<TBaseElement> = {
   ): RefSpec<TBaseElement>;
 };
 
-export type MapOpts<TConfig extends AdapterConfig> = {
+export type MapOpts<TConfig extends TreeConfig> = {
   signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
   computed: <T>(fn: () => T) => Reactive<T>;
   scopedEffect: (fn: () => void | (() => void)) => () => void;
@@ -94,11 +94,11 @@ type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<ItemSignal<T>>;
  * ```ts
  * import { createMapFactory, type MapService } from '@rimitive/view/map';
  *
- * const mapFactory: MapService<DOMAdapterConfig> = createMapFactory<DOMAdapterConfig>(opts);
+ * const mapFactory: MapService<DOMTreeConfig> = createMapFactory<DOMTreeConfig>(opts);
  * ```
  */
-export type MapService<TConfig extends AdapterConfig> = MapFactory<
-  TConfig['baseElement']
+export type MapService<TConfig extends TreeConfig> = MapFactory<
+  NodeOf<TConfig>
 >;
 
 /**
@@ -107,9 +107,9 @@ export type MapService<TConfig extends AdapterConfig> = MapFactory<
  * @example
  * ```ts
  * import { createMapFactory } from '@rimitive/view/map';
- * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+ * import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
  *
- * const mapFactory = createMapFactory<DOMAdapterConfig>({
+ * const mapFactory = createMapFactory<DOMTreeConfig>({
  *   signal,
  *   computed,
  *   scopedEffect,
@@ -122,15 +122,15 @@ export type MapService<TConfig extends AdapterConfig> = MapFactory<
  * const list = mapFactory(items, (item) => el('li')(item()));
  * ```
  */
-export function createMapFactory<TConfig extends AdapterConfig>({
+export function createMapFactory<TConfig extends TreeConfig>({
   signal,
   computed,
   scopedEffect,
   adapter,
   disposeScope,
   getElementScope,
-}: MapOpts<TConfig>): MapFactory<TConfig['baseElement']> {
-  type TBaseElement = TConfig['baseElement'];
+}: MapOpts<TConfig>): MapFactory<NodeOf<TConfig>> {
+  type TBaseElement = NodeOf<TConfig>;
   type TFragRef = FragmentRef<TBaseElement>;
 
   const { insertNodeBefore, removeNode } = createNodeHelpers({
@@ -368,11 +368,11 @@ export function createMapFactory<TConfig extends AdapterConfig>({
  * const { map, signal, computed } = compose(MapModule);
  * ```
  */
-export const createMapModule = <TConfig extends AdapterConfig>(
+export const createMapModule = <TConfig extends TreeConfig>(
   adapter: Adapter<TConfig>
 ): Module<
   'map',
-  MapFactory<TConfig['baseElement']>,
+  MapFactory<NodeOf<TConfig>>,
   { signal: SignalFactory; computed: ComputedFactory; scopes: CreateScopes }
 > =>
   defineModule({

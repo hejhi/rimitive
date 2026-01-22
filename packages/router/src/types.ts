@@ -1,12 +1,13 @@
 import type {
-  AdapterConfig,
+  TreeConfig,
+  NodeOf,
   RefSpec,
   Reactive,
   ElRefSpecChild,
   Readable,
   Writable,
 } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
 import type { ElementProps, ElFactory } from '@rimitive/view/el';
 
 /**
@@ -26,9 +27,9 @@ export type RouteMatch = {
 /**
  * Route-specific metadata
  */
-export type RouteMetadata<TConfig extends AdapterConfig> = {
+export type RouteMetadata<TConfig extends TreeConfig> = {
   relativePath: string;
-  rebuild: (parentPath: string) => Route<TConfig['baseElement']>;
+  rebuild: (parentPath: string) => Route<NodeOf<TConfig>>;
 };
 
 /**
@@ -36,7 +37,7 @@ export type RouteMetadata<TConfig extends AdapterConfig> = {
  * Delegates to internal RefSpec via closure.
  */
 export type Route<TElement> = {
-  routeMetadata: RouteMetadata<AdapterConfig>;
+  routeMetadata: RouteMetadata<TreeConfig>;
   /** Get the inner RefSpec for the adapter */
   unwrap(): RefSpec<TElement>;
   create<TExt = Record<string, unknown>>(
@@ -61,7 +62,7 @@ export type MatchFunction<TBaseElement> = {
  * Link is DOM-only - routing with window.history is a web browser concept
  */
 export type LinkOpts = {
-  el: ElFactory<DOMAdapterConfig>;
+  el: ElFactory<DOMTreeConfig>;
   navigate: (path: string) => void;
 };
 
@@ -71,7 +72,7 @@ export type LinkOpts = {
  * Link is DOM-only - no need for generic adapter abstraction
  */
 export type LinkFunction = (
-  props: ElementProps<DOMAdapterConfig, 'a'> & { href: string }
+  props: ElementProps<DOMTreeConfig, 'a'> & { href: string }
 ) => (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
 
 /**

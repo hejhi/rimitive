@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { Adapter, AdapterConfig } from './adapter';
+import type { Adapter, TreeConfig } from './adapter';
 import type { Reactive, RefSpec, NodeRef } from './types';
 import { STATUS_REF_SPEC } from './types';
 import { createScopes } from './deps/scope';
@@ -131,10 +131,10 @@ export type MockTextProps = {
 };
 
 /**
- * Mock adapter configuration - maps tag names to MockElement and events to MockEvent
+ * Mock tree configuration - maps tag names to MockElement types
  */
-export type MockAdapterConfig = AdapterConfig & {
-  props: {
+export type MockTreeConfig = TreeConfig & {
+  attributes: {
     div: MockElementProps;
     span: MockElementProps;
     button: MockElementProps;
@@ -162,7 +162,7 @@ export type MockAdapterConfig = AdapterConfig & {
     text: MockTextProps;
     [key: string]: MockElementProps | MockTextProps;
   };
-  elements: {
+  nodes: {
     div: MockElement;
     span: MockElement;
     button: MockElement;
@@ -190,21 +190,13 @@ export type MockAdapterConfig = AdapterConfig & {
     text: MockText;
     [key: string]: MockElement | MockText;
   };
-  events: {
-    click: MockEvent;
-    change: MockEvent;
-    input: MockEvent;
-    submit: MockEvent;
-    [key: string]: MockEvent;
-  };
-  baseElement: MockElement | MockText;
 };
 
 /**
  * Creates a mock adapter for testing
  */
 export function createMockAdapter() {
-  const adapter: Adapter<MockAdapterConfig> = {
+  const adapter: Adapter<MockTreeConfig> = {
     createNode: vi.fn((type: string, props?: Record<string, unknown>) => {
       if (type === 'text') {
         return new MockText(

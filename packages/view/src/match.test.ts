@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestEnv, MockAdapterConfig, MockElement } from './test-utils';
+import { createTestEnv, MockTreeConfig, MockElement } from './test-utils';
 import { createMatchFactory } from './match';
 import { createElFactory } from './el';
 import type { FragmentRef, ElementRef } from './types';
@@ -12,14 +12,14 @@ import { STATUS_ELEMENT } from './types';
 describe('match() - reactive element switching', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const match = createMatchFactory<MockAdapterConfig>({
+    const match = createMatchFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       disposeScope: env.disposeScope,

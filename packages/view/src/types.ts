@@ -3,7 +3,7 @@
  */
 
 // Re-export adapter types so they're available from @rimitive/view/types
-export type { Adapter, AdapterConfig } from './adapter';
+export type { Adapter, TreeConfig, NodeOf, NodeType } from './adapter';
 
 // Re-export factory types for public service
 export type { PortalFactory, PortalTarget, PortalOpts } from './portal';

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Link } from './link';
 import {
   createTestEnv,
-  type MockAdapterConfig,
+  type MockTreeConfig,
   type MockElement,
   type MockText,
   getTextContent,
@@ -14,7 +14,7 @@ import { STATUS_ELEMENT } from '@rimitive/view/types';
 describe('Link component - basic rendering', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
@@ -109,7 +109,7 @@ describe('Link component - basic rendering', () => {
 describe('Link component - click handling', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
@@ -344,7 +344,7 @@ describe('Link component - click handling', () => {
 describe('Link component - lifecycle callbacks', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,

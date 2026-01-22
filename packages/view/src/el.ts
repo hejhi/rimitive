@@ -7,7 +7,7 @@ import type {
   ParentContext,
 } from './types';
 import { STATUS_REF_SPEC, STATUS_ELEMENT } from './types';
-import type { Adapter, AdapterConfig } from './adapter';
+import type { Adapter, TreeConfig, NodeOf } from './adapter';
 import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createProcessChildren } from './deps/processChildren';
@@ -41,14 +41,14 @@ type ReactiveProps<T> = {
  *
  * Generic over:
  * - TConfig: The renderer configuration
- * - Tag: The element tag name (must be a key in TConfig['props'])
+ * - Tag: The element tag name (must be a key in TConfig['attributes'])
  *
  * @example
  * ```typescript
  * import type { ElementProps } from '@rimitive/view/el';
- * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+ * import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
  *
- * const buttonProps: ElementProps<DOMAdapterConfig, 'button'> = {
+ * const buttonProps: ElementProps<DOMTreeConfig, 'button'> = {
  *   disabled: computed(() => loading()),
  *   textContent: 'Submit',
  *   'data-testid': 'submit-btn'
@@ -56,9 +56,9 @@ type ReactiveProps<T> = {
  * ```
  */
 export type ElementProps<
-  TConfig extends AdapterConfig,
-  Tag extends keyof TConfig['props'],
-> = ReactiveProps<TConfig['props'][Tag]> & {
+  TConfig extends TreeConfig,
+  Tag extends keyof TConfig['attributes'],
+> = ReactiveProps<TConfig['attributes'][Tag]> & {
   status?: never; // Discriminant to prevent overlap with FragmentRef/ElementRef
   [key: string]: unknown; // Allow arbitrary attributes (data-*, aria-*, custom)
 };
@@ -71,7 +71,7 @@ export type ElementProps<
  * - TElement: Base element type
  * - TText: Text node type
  */
-export type ElOpts<TConfig extends AdapterConfig> = {
+export type ElOpts<TConfig extends TreeConfig> = {
   createElementScope: CreateScopes['createElementScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   onCleanup: CreateScopes['onCleanup'];
@@ -115,13 +115,13 @@ export type ElOpts<TConfig extends AdapterConfig> = {
  * ```
  */
 export type TagFactory<
-  TConfig extends AdapterConfig,
-  Tag extends keyof TConfig['props'] & keyof TConfig['elements'],
+  TConfig extends TreeConfig,
+  Tag extends keyof TConfig['attributes'] & keyof TConfig['nodes'],
 > = {
   /**
    * Apply children to create a RefSpec
    */
-  (...children: ElRefSpecChild[]): RefSpec<TConfig['elements'][Tag]>;
+  (...children: ElRefSpecChild[]): RefSpec<TConfig['nodes'][Tag]>;
 
   /**
    * Add properties to the element, returning a new TagFactory
@@ -138,7 +138,7 @@ export type TagFactory<
    * Callbacks receive the element when created and can return cleanup functions
    */
   ref(
-    ...callbacks: LifecycleCallback<TConfig['elements'][Tag]>[]
+    ...callbacks: LifecycleCallback<TConfig['nodes'][Tag]>[]
   ): TagFactory<TConfig, Tag>;
 };
 
@@ -175,9 +175,9 @@ export type TagFactory<
  * );
  * ```
  */
-export type ElFactory<TConfig extends AdapterConfig> = {
+export type ElFactory<TConfig extends TreeConfig> = {
   // Tag selector - returns a TagFactory
-  <Tag extends string & keyof TConfig['props'] & keyof TConfig['elements']>(
+  <Tag extends string & keyof TConfig['attributes'] & keyof TConfig['nodes']>(
     tag: Tag
   ): TagFactory<TConfig, Tag>;
 };
@@ -190,10 +190,10 @@ export type ElFactory<TConfig extends AdapterConfig> = {
  * ```ts
  * import { createElFactory, type ElService } from '@rimitive/view/el';
  *
- * const el: ElService<DOMAdapterConfig> = createElFactory(opts);
+ * const el: ElService<DOMTreeConfig> = createElFactory(opts);
  * ```
  */
-export type ElService<TConfig extends AdapterConfig> = ElFactory<TConfig>;
+export type ElService<TConfig extends TreeConfig> = ElFactory<TConfig>;
 
 /**
  * Create an el factory with the given dependencies.
@@ -207,9 +207,9 @@ export type ElService<TConfig extends AdapterConfig> = ElFactory<TConfig>;
  * ```typescript
  * import { createElFactory } from '@rimitive/view/el';
  * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
- * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+ * import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
  *
- * const el = createElFactory<DOMAdapterConfig>({
+ * const el = createElFactory<DOMTreeConfig>({
  *   adapter,
  *   scopedEffect,
  *   createElementScope,
@@ -221,15 +221,15 @@ export type ElService<TConfig extends AdapterConfig> = ElFactory<TConfig>;
  *   ();
  * ```
  */
-export function createElFactory<TConfig extends AdapterConfig>({
+export function createElFactory<TConfig extends TreeConfig>({
   scopedEffect,
   adapter,
   createElementScope,
   onCleanup,
 }: ElOpts<TConfig>): ElFactory<TConfig> {
-  type TBaseElement = TConfig['baseElement'];
-  type TProps = TConfig['props'];
-  type TElements = TConfig['elements'];
+  type TBaseElement = NodeOf<TConfig>;
+  type TProps = TConfig['attributes'];
+  type TElements = TConfig['nodes'];
   type TElementKeys = keyof TProps & keyof TElements;
 
   const { processChildren } = createProcessChildren<TConfig>({
@@ -387,7 +387,7 @@ export function createElFactory<TConfig extends AdapterConfig>({
  * const { el, scopes } = compose(ElModule);
  * ```
  */
-export const createElModule = <TConfig extends AdapterConfig>(
+export const createElModule = <TConfig extends TreeConfig>(
   adapter: Adapter<TConfig>
 ): Module<'el', ElFactory<TConfig>, { scopes: CreateScopes }> =>
   defineModule({

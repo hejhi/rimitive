@@ -58,7 +58,7 @@ export {
   STATUS_SPEC_MASK,
 } from './types';
 
-export type { Adapter, AdapterConfig } from './adapter';
+export type { Adapter, TreeConfig, NodeOf, NodeType } from './adapter';
 
 // =============================================================================
 // Load - Async data loading boundaries

@@ -25,10 +25,9 @@
 
 import type { Adapter, ParentContext } from '@rimitive/view/types';
 import type {
-  CanvasAdapterConfig,
+  CanvasTreeConfig,
   CanvasNode,
   CanvasBridgeElement,
-  CanvasElement,
 } from './types';
 
 /**
@@ -322,14 +321,14 @@ function renderNode(ctx: CanvasRenderingContext2D, node: CanvasNode): void {
 /**
  * Check if a node is a canvas bridge element (HTMLCanvasElement with scene graph)
  */
-function isBridgeElement(node: CanvasElement): node is CanvasBridgeElement {
+function isBridgeElement(node: object): node is CanvasBridgeElement {
   return node instanceof HTMLCanvasElement && '__sceneRoot' in node;
 }
 
 /**
  * Check if a node is a scene graph node
  */
-function isSceneNode(node: CanvasElement): node is CanvasNode {
+function isSceneNode(node: object): node is CanvasNode {
   return 'type' in node && 'children' in node && !('__sceneRoot' in node);
 }
 
@@ -366,11 +365,11 @@ export type HitTestFn = (
  * canvas primitives (circle, rect, etc.) that render to the 2D context.
  *
  * Returns an object with:
- * - adapter: The Adapter<CanvasAdapterConfig> for use with createView
+ * - adapter: The Adapter<CanvasTreeConfig> for use with createView
  * - hitTest: Function for hit testing canvas elements (used by event listeners)
  */
 export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
-  adapter: Adapter<CanvasAdapterConfig>;
+  adapter: Adapter<CanvasTreeConfig>;
   hitTest: HitTestFn;
 } {
   const { autoClear = true, clearColor } = options;
@@ -540,7 +539,7 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
   }
 
   // Store adapter reference for identity checks
-  const adapter: Adapter<CanvasAdapterConfig> = {
+  const adapter: Adapter<CanvasTreeConfig> = {
     createNode: (
       type: string,
       props?: Record<string, unknown>,

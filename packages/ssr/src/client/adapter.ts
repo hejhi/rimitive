@@ -4,8 +4,8 @@
  * Provides adapters for rehydrating server-rendered content.
  */
 
-import type { Adapter, AdapterConfig, NodeRef } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type { Adapter, TreeConfig, NodeRef, NodeOf } from '@rimitive/view/types';
+import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
 import { STATUS_FRAGMENT } from '@rimitive/view/types';
 import {
   isAsyncFragment,
@@ -13,7 +13,7 @@ import {
   type AsyncFragment,
 } from '../shared/async-fragments';
 
-export type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+export type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
 
 // =============================================================================
 // HydrationMismatch Error
@@ -145,7 +145,7 @@ function countFragmentItems(startMarker: Node): number {
 
 export function createDOMHydrationAdapter(
   containerEl: HTMLElement
-): Adapter<DOMAdapterConfig> {
+): Adapter<DOMTreeConfig> {
   // Mutable position - path[i] is child index at depth i
   const path: number[] = [];
 
@@ -180,21 +180,18 @@ export function createDOMHydrationAdapter(
     },
 
     setProperty: (node, key, value) => {
-      if (node.nodeType === 3 && key === 'value') {
-        node.textContent = String(value);
+      const n = node as Node;
+      if (n.nodeType === 3 && key === 'value') {
+        n.textContent = String(value);
         return;
       }
       Reflect.set(node, key, value);
     },
 
     appendChild: (parent, child) => {
+      const c = child as Node;
       // Element already attached = exit signal
-      if (
-        child &&
-        'nodeType' in child &&
-        child.nodeType === 1 &&
-        child.parentNode === parent
-      ) {
+      if (c && c.nodeType === 1 && c.parentNode === parent) {
         path.pop();
         path[path.length - 1] = (path[path.length - 1] ?? 0) + 1;
       }
@@ -203,13 +200,9 @@ export function createDOMHydrationAdapter(
     removeChild: () => {}, // No-op during hydration
 
     insertBefore: (parent, child) => {
+      const c = child as Node;
       // Same exit signal as appendChild
-      if (
-        child &&
-        'nodeType' in child &&
-        child.nodeType === 1 &&
-        child.parentNode === parent
-      ) {
+      if (c && c.nodeType === 1 && c.parentNode === parent) {
         path.pop();
         path[path.length - 1] = (path[path.length - 1] ?? 0) + 1;
       }
@@ -222,8 +215,9 @@ export function createDOMHydrationAdapter(
       if (childIndex === undefined) return;
 
       // Find node at current position
+      const parent = parentElement as Node;
       let count = 0;
-      let node = parentElement.firstChild;
+      let node = parent.firstChild;
       while (node && count < childIndex) {
         if (!isMarker(node)) count++;
         node = node.nextSibling;
@@ -262,9 +256,9 @@ export function createDOMHydrationAdapter(
 // =============================================================================
 
 export function createHydrationAdapter(
-  hydrateAdapter: Adapter<DOMAdapterConfig>,
-  fallbackAdapter: Adapter<DOMAdapterConfig>
-): Adapter<DOMAdapterConfig> & { switchToFallback: () => void } {
+  hydrateAdapter: Adapter<DOMTreeConfig>,
+  fallbackAdapter: Adapter<DOMTreeConfig>
+): Adapter<DOMTreeConfig> & { switchToFallback: () => void } {
   let a = hydrateAdapter;
   return {
     createNode: (type, props) => a.createNode(type, props),
@@ -289,16 +283,16 @@ export function createHydrationAdapter(
 // Async Support Wrapper
 // =============================================================================
 
-export function withAsyncSupport<TConfig extends AdapterConfig>(
+export function withAsyncSupport<TConfig extends TreeConfig>(
   adapter: Adapter<TConfig>
 ): Adapter<TConfig> {
   const originalOnAttach = adapter.onAttach;
   return {
     ...adapter,
-    onAttach: (ref: NodeRef<TConfig['baseElement']>, parent) => {
+    onAttach: (ref: NodeRef<NodeOf<TConfig>>, parent) => {
       originalOnAttach?.(ref, parent);
       if (isAsyncFragment(ref)) {
-        triggerAsyncFragment(ref as AsyncFragment<TConfig['baseElement']>);
+        triggerAsyncFragment(ref as AsyncFragment<NodeOf<TConfig>>);
       }
     },
   };

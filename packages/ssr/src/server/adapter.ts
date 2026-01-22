@@ -12,9 +12,22 @@ import type {
   NodeRef,
   ParentContext,
 } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type {
+  DOMTreeConfig,
+  DOMPropsMap,
+  OverlappingTags,
+} from '@rimitive/view/adapters/dom';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '@rimitive/view/types';
 import { isAsyncFragment } from '@rimitive/view/load';
+
+/**
+ * Linkedom tree configuration for server-side rendering
+ */
+export type LinkedomTreeConfig = DOMTreeConfig & {
+  attributes: DOMPropsMap;
+  nodes: HTMLElementTagNameMap &
+    Omit<SVGElementTagNameMap, OverlappingTags> & { text: Text };
+};
 
 /** SVG namespace URI */
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -73,7 +86,7 @@ export type Serialize = (element: unknown) => string;
  */
 export type ServerAdapterResult = {
   /** The adapter for mounting components */
-  adapter: Adapter<DOMAdapterConfig>;
+  adapter: Adapter<DOMTreeConfig>;
   /** Serialize an element to HTML string */
   serialize: Serialize;
   /** Insert fragment markers for a fragment (used by render functions) */
@@ -116,11 +129,11 @@ export function createDOMServerAdapter(): ServerAdapterResult {
     if (!firstNode || !lastNode) return;
 
     // Derive parentElement from the DOM tree - content is already attached
-    const parentElement = firstNode.parentNode as HTMLElement | null;
+    const parentElement = firstNode.parentNode;
     if (!parentElement) return;
 
     // Get document from parent element
-    const doc = parentElement.ownerDocument;
+    const doc = parentElement.ownerDocument!;
 
     // Insert fragment-start comment before first child
     const startComment = doc.createComment('fragment-start');
@@ -131,7 +144,7 @@ export function createDOMServerAdapter(): ServerAdapterResult {
     parentElement.insertBefore(endComment, lastNode.nextSibling);
   };
 
-  const adapter: Adapter<DOMAdapterConfig> = {
+  const adapter: Adapter<DOMTreeConfig> = {
     createNode: (
       type: string,
       props?: Record<string, unknown>,
@@ -162,14 +175,15 @@ export function createDOMServerAdapter(): ServerAdapterResult {
 
       return document.createElement(type);
     },
-    setProperty: (node: Node, key: string, value: unknown) => {
+    setProperty: (node, key, value) => {
+      const n = node as Node;
       // Handle text nodes
-      if (node.nodeType === 3 && key === 'value') {
-        node.textContent = String(value);
+      if (n.nodeType === 3 && key === 'value') {
+        n.textContent = String(value);
         return;
       }
 
-      const element = node as HTMLElement;
+      const element = n as HTMLElement;
       // Skip event handlers during SSR (no interactivity on server)
       if (key.startsWith('on')) return;
 
@@ -188,10 +202,12 @@ export function createDOMServerAdapter(): ServerAdapterResult {
         }
       }
     },
-    appendChild: (parent, child) => parent.appendChild(child),
-    removeChild: (parent, child) => parent.removeChild(child),
+    appendChild: (parent, child) =>
+      (parent as Node).appendChild(child as Node),
+    removeChild: (parent, child) =>
+      (parent as Node).removeChild(child as Node),
     insertBefore: (parent, child, reference) =>
-      parent.insertBefore(child, reference),
+      (parent as Node).insertBefore(child as Node, reference as Node | null),
 
     /**
      * Lifecycle: onAttach

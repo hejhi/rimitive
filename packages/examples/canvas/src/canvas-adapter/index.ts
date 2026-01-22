@@ -40,7 +40,7 @@ export type {
   CanvasNode,
   CanvasBridgeElement,
   CanvasElement,
-  CanvasAdapterConfig,
+  CanvasTreeConfig,
   CanvasPointerEvent,
   // Props types
   CanvasProps,

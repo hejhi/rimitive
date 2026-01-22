@@ -7,11 +7,11 @@
 
 import type { NodeRef, ElementRef, LinkedNode } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT } from '../types';
-import type { Adapter, AdapterConfig } from '../adapter';
+import type { Adapter, TreeConfig, NodeOf } from '../adapter';
 import type { CreateScopes } from './scope';
 import { linkBefore, unlink } from './linked-list';
 
-export type NodeHelperOpts<TConfig extends AdapterConfig> = {
+export type NodeHelperOpts<TConfig extends TreeConfig> = {
   adapter: Adapter<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
@@ -28,10 +28,10 @@ export type NodeHelpers<TElement> = {
   removeNode: (parentElement: TElement, node: NodeRef<TElement>) => void;
 };
 
-export function createNodeHelpers<TConfig extends AdapterConfig>(
+export function createNodeHelpers<TConfig extends TreeConfig>(
   opts: NodeHelperOpts<TConfig>
-): NodeHelpers<TConfig['baseElement']> {
-  type TElement = TConfig['baseElement'];
+): NodeHelpers<NodeOf<TConfig>> {
+  type TElement = NodeOf<TConfig>;
   const { adapter, disposeScope, getElementScope } = opts;
 
   /**

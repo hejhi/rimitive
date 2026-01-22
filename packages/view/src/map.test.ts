@@ -12,7 +12,7 @@ import {
   createTestEnv,
   MockElement,
   getTextContent,
-  MockAdapterConfig,
+  MockTreeConfig,
 } from './test-utils';
 import { createMapFactory } from './map';
 import { createElFactory } from './el';
@@ -22,14 +22,14 @@ describe('map() - User-facing behavior', () => {
   // Helper to set up test environment
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const map = createMapFactory<MockAdapterConfig>({
+    const map = createMapFactory<MockTreeConfig>({
       signal: env.signal,
       computed: env.computed,
       scopedEffect: env.scopedEffect,

@@ -15,7 +15,7 @@ import {
   createTestEnv,
   MockElement,
   getTextContent,
-  MockAdapterConfig,
+  MockTreeConfig,
 } from '../test-utils';
 import { createElFactory } from '../el';
 import { createMapFactory } from '../map';
@@ -24,14 +24,14 @@ import type { RefSpec, Reactive } from '../types';
 describe('List reconciliation - Complex reorderings', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const map = createMapFactory<MockAdapterConfig>({
+    const map = createMapFactory<MockTreeConfig>({
       signal: env.signal,
       computed: env.computed,
       scopedEffect: env.scopedEffect,
@@ -455,14 +455,14 @@ describe('List reconciliation - Complex reorderings', () => {
 describe('List reconciliation - Edge cases', () => {
   function setup() {
     const env = createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       createElementScope: env.createElementScope,
       onCleanup: env.onCleanup,
     });
 
-    const map = createMapFactory<MockAdapterConfig>({
+    const map = createMapFactory<MockTreeConfig>({
       signal: env.signal,
       computed: env.computed,
       scopedEffect: env.scopedEffect,

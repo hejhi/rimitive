@@ -5,17 +5,17 @@
 import type { InstrumentationContext } from '@rimitive/core';
 import type { ElFactory, TagFactory, ElementProps } from '../el';
 import type { RefSpec, ElRefSpecChild } from '../types';
-import type { AdapterConfig } from '../adapter';
+import type { TreeConfig } from '../adapter';
 
 /**
  * Instrument an el factory to emit events
  */
-export function instrumentEl<TConfig extends AdapterConfig>(
+export function instrumentEl<TConfig extends TreeConfig>(
   impl: ElFactory<TConfig>,
   instrumentation: InstrumentationContext
 ): ElFactory<TConfig> {
   // Static element instrumentation matching ElFactory signature
-  function instrumentedEl<Tag extends string & keyof TConfig['elements']>(
+  function instrumentedEl<Tag extends string & keyof TConfig['nodes']>(
     tag: Tag
   ): TagFactory<TConfig, Tag> {
     const elId = crypto.randomUUID();
@@ -36,7 +36,7 @@ export function instrumentEl<TConfig extends AdapterConfig>(
     // Wrap the tag factory to intercept props and children
     const wrappedFactory = (
       ...children: ElRefSpecChild[]
-    ): RefSpec<TConfig['elements'][Tag]> => {
+    ): RefSpec<TConfig['nodes'][Tag]> => {
       instrumentation.emit({
         type: 'EL_CHILDREN_APPLIED',
         timestamp: Date.now(),

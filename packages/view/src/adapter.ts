@@ -28,51 +28,75 @@ import type { NodeRef, ParentContext } from './types';
 export type Node = object;
 
 /**
- * AdapterConfig defines the type-level contract for a tree adapter:
- * - props: Maps tag names to their prop types for el() autocomplete
- * - elements: Maps tag names to their node types for RefSpec\<T\> (e.g., 'div' -\> HTMLDivElement)
- * - events: Maps event names to their event object types (e.g., 'click' -\> MouseEvent)
- * - baseElement: Base node type for this adapter (e.g., Node for DOM)
+ * TreeConfig defines the type-level contract for a tree adapter:
+ * - attributes: Maps tag names to their attribute types for el() autocomplete
+ * - nodes: Maps tag names to their node types for RefSpec\<T\> (e.g., 'div' -\> HTMLDivElement)
  *
- * Separating `props` from `elements` allows adapters to have clean prop autocomplete
+ * The base node type is derived automatically as the union of all node types in `nodes`.
+ * Use `NodeOf<TConfig>` to access it.
+ *
+ * Separating `attributes` from `nodes` allows adapters to have clean attribute autocomplete
  * without exposing internal node properties (like canvas's bounds, dirty, etc).
  *
  * Note: Text is just another node type created via createNode('text', \{ value: '...' \})
  *
  * @example
  * ```typescript
- * import type { AdapterConfig } from '@rimitive/view/adapter';
+ * import type { TreeConfig, NodeOf } from '@rimitive/view/adapter';
  *
- * // DOM adapter config
- * type DOMAdapterConfig = AdapterConfig & {
- *   props: {
+ * // DOM tree config
+ * type DOMTreeConfig = TreeConfig & {
+ *   attributes: {
  *     div: { className?: string; id?: string };
  *     button: { disabled?: boolean; textContent?: string };
  *   };
- *   elements: {
+ *   nodes: {
  *     div: HTMLDivElement;
  *     button: HTMLButtonElement;
+ *     text: Text;
  *   };
- *   events: {
- *     click: MouseEvent;
- *     input: InputEvent;
- *   };
- *   baseElement: HTMLElement;
  * };
+ *
+ * // Base node type is derived: HTMLDivElement | HTMLButtonElement | Text
+ * type DOMNode = NodeOf<DOMTreeConfig>;
  * ```
  */
-export type AdapterConfig = {
-  props: object;
-  elements: object;
-  events: object;
-  baseElement: object;
+export type TreeConfig = {
+  attributes: Record<string, object>;
+  nodes: Record<string, object>;
 };
+
+/**
+ * Get a specific node type from the config's nodes map.
+ *
+ * @example
+ * ```typescript
+ * type DivElement = NodeType<DOMTreeConfig, 'div'>; // HTMLDivElement
+ * type TextNode = NodeType<DOMTreeConfig, 'text'>; // Text
+ * ```
+ */
+export type NodeType<
+  TConfig extends TreeConfig,
+  K extends keyof TConfig['nodes'],
+> = TConfig['nodes'][K];
+
+/**
+ * Union of all node types in the config.
+ * Used for adapter method parameters where any node type is accepted.
+ *
+ * @example
+ * ```typescript
+ * type AnyDOMNode = NodeOf<DOMTreeConfig>; // HTMLDivElement | HTMLSpanElement | ... | Text
+ * ```
+ */
+export type NodeOf<TConfig extends TreeConfig> =
+  TConfig['nodes'][keyof TConfig['nodes']];
 
 /**
  * Adapter type - core tree operations
  *
  * Generic over:
- * - TConfig: The adapter configuration (elements, events, baseElement)
+ * - TConfig: The tree configuration (nodes, attributes, node)
  *
  * ## Lifecycle Hooks
  *
@@ -85,8 +109,8 @@ export type AdapterConfig = {
  * | Destroy | beforeDestroy  | onDestroy  |
  *
  * Node type (element vs fragment) is determined by `ref.status`:
- * - STATUS_ELEMENT (1): Element node with actual DOM element
- * - STATUS_FRAGMENT (2): Fragment node (logical container, no DOM element)
+ * - STATUS_ELEMENT (1): Element node with actual tree node
+ * - STATUS_FRAGMENT (2): Fragment node (logical container, no tree node)
  *
  * ### Hydration
  *
@@ -95,9 +119,9 @@ export type AdapterConfig = {
  *
  * @example
  * ```typescript
- * import type { Adapter, AdapterConfig } from '@rimitive/view/adapter';
+ * import type { Adapter, TreeConfig } from '@rimitive/view/adapter';
  *
- * const domAdapter: Adapter<DOMAdapterConfig> = {
+ * const domAdapter: Adapter<DOMTreeConfig> = {
  *   createNode: (type, props) => {
  *     if (type === 'text') return document.createTextNode(props?.value as string || '');
  *     return document.createElement(type);
@@ -112,7 +136,7 @@ export type AdapterConfig = {
  * };
  * ```
  */
-export type Adapter<TConfig extends AdapterConfig> = {
+export type Adapter<TConfig extends TreeConfig> = {
   // ============================================================================
   // Core Tree Operations
   // ============================================================================
@@ -128,12 +152,15 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * For cross-renderer composition, parentContext provides the parent's renderer
    * and element, enabling renderers to make boundary decisions (e.g., canvas
    * renderer creating an HTMLCanvasElement when nested under a DOM parent).
+   *
+   * Returns the specific node type for the given tag (e.g., 'div' -> HTMLDivElement).
+   * Implementations should cast their return values to satisfy the type.
    */
-  createNode: (
-    type: string,
+  createNode: <K extends keyof TConfig['nodes'] & string>(
+    type: K,
     props?: Record<string, unknown>,
     parentContext?: ParentContext<unknown>
-  ) => TConfig['baseElement'];
+  ) => TConfig['nodes'][K];
 
   /**
    * Set a property on a node
@@ -141,7 +168,7 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * For text nodes, setting 'value' updates the text content
    */
   setProperty: (
-    node: TConfig['baseElement'],
+    node: NodeOf<TConfig>,
     key: string,
     value: unknown
   ) => void;
@@ -150,25 +177,25 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * Append a child to a parent node
    */
   appendChild: (
-    parent: TConfig['baseElement'],
-    child: TConfig['baseElement']
+    parent: NodeOf<TConfig>,
+    child: NodeOf<TConfig>
   ) => void;
 
   /**
    * Remove a child from a parent node
    */
   removeChild: (
-    parent: TConfig['baseElement'],
-    child: TConfig['baseElement']
+    parent: NodeOf<TConfig>,
+    child: NodeOf<TConfig>
   ) => void;
 
   /**
    * Insert a child before a reference node
    */
   insertBefore: (
-    parent: TConfig['baseElement'],
-    child: TConfig['baseElement'],
-    reference: TConfig['baseElement'] | null
+    parent: NodeOf<TConfig>,
+    child: NodeOf<TConfig>,
+    reference: NodeOf<TConfig> | null
   ) => void;
 
   // ============================================================================
@@ -200,8 +227,8 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * @param parent - The parent element
    */
   onCreate?: (
-    ref: NodeRef<TConfig['baseElement']>,
-    parent: TConfig['baseElement']
+    ref: NodeRef<NodeOf<TConfig>>,
+    parent: NodeOf<TConfig>
   ) => void;
 
   /**
@@ -218,9 +245,9 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * @param nextSibling - The next sibling element (or null if last)
    */
   beforeAttach?: (
-    ref: NodeRef<TConfig['baseElement']>,
-    parent: TConfig['baseElement'],
-    nextSibling: TConfig['baseElement'] | null
+    ref: NodeRef<NodeOf<TConfig>>,
+    parent: NodeOf<TConfig>,
+    nextSibling: NodeOf<TConfig> | null
   ) => void;
 
   /**
@@ -237,8 +264,8 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * @param parent - The parent element
    */
   onAttach?: (
-    ref: NodeRef<TConfig['baseElement']>,
-    parent: TConfig['baseElement']
+    ref: NodeRef<NodeOf<TConfig>>,
+    parent: NodeOf<TConfig>
   ) => void;
 
   /**
@@ -252,8 +279,8 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * @param parent - The parent element
    */
   beforeDestroy?: (
-    ref: NodeRef<TConfig['baseElement']>,
-    parent: TConfig['baseElement']
+    ref: NodeRef<NodeOf<TConfig>>,
+    parent: NodeOf<TConfig>
   ) => void;
 
   /**
@@ -267,7 +294,7 @@ export type Adapter<TConfig extends AdapterConfig> = {
    * @param parent - The parent element (may no longer contain node)
    */
   onDestroy?: (
-    ref: NodeRef<TConfig['baseElement']>,
-    parent: TConfig['baseElement']
+    ref: NodeRef<NodeOf<TConfig>>,
+    parent: NodeOf<TConfig>
   ) => void;
 };

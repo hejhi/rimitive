@@ -32,7 +32,7 @@ export { createPortalFactory } from './portal';
 
 export { createDOMAdapter } from './adapters/dom';
 export { createTestAdapter } from './adapters/test';
-export type { DOMAdapterConfig } from './adapters/dom';
+export type { DOMTreeConfig } from './adapters/dom';
 
 // =============================================================================
 // Helpers - For building custom compositions
@@ -65,7 +65,9 @@ export type { Use } from './deps/use';
 
 export type {
   Adapter,
-  AdapterConfig,
+  TreeConfig,
+  NodeOf,
+  NodeType,
   RefSpec,
   NodeRef,
   ElementRef,

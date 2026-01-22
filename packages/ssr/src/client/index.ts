@@ -19,7 +19,7 @@
  */
 
 import type { Adapter } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import {
   createDOMHydrationAdapter,
@@ -60,9 +60,9 @@ export type ClientAdapter = ReturnType<typeof createHydrationAdapter> & {
 /** Options for createClientAdapter */
 export type ClientAdapterOptions = {
   /** Custom adapter for walking SSR DOM during hydration */
-  hydration?: Adapter<DOMAdapterConfig>;
+  hydration?: Adapter<DOMTreeConfig>;
   /** Custom adapter for post-hydration client rendering */
-  client?: Adapter<DOMAdapterConfig>;
+  client?: Adapter<DOMTreeConfig>;
 };
 
 /**

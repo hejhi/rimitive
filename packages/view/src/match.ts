@@ -1,6 +1,6 @@
 import type { RefSpec, Writable, FragmentRef, ElementRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
-import type { Adapter, AdapterConfig } from './adapter';
+import type { Adapter, TreeConfig, NodeOf } from './adapter';
 import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createNodeHelpers } from './deps/node-deps';
@@ -10,7 +10,7 @@ import { defineModule, type Module } from '@rimitive/core';
 /**
  * Options passed to Match factory
  */
-export type MatchOpts<TConfig extends AdapterConfig> = {
+export type MatchOpts<TConfig extends TreeConfig> = {
   disposeScope: CreateScopes['disposeScope'];
   scopedEffect: CreateScopes['scopedEffect'];
   getElementScope: CreateScopes['getElementScope'];
@@ -64,11 +64,11 @@ export interface MatchFactory<TBaseElement> {
  * ```ts
  * import { createMatchFactory, type MatchService } from '@rimitive/view/match';
  *
- * const matchFactory: MatchService<DOMAdapterConfig> = createMatchFactory(opts);
+ * const matchFactory: MatchService<DOMTreeConfig> = createMatchFactory(opts);
  * ```
  */
-export type MatchService<TConfig extends AdapterConfig> = MatchFactory<
-  TConfig['baseElement']
+export type MatchService<TConfig extends TreeConfig> = MatchFactory<
+  NodeOf<TConfig>
 >;
 
 /**
@@ -107,13 +107,13 @@ export type MatchService<TConfig extends AdapterConfig> = MatchFactory<
  * The matcher function is called with the current reactive value and must return
  * a RefSpec. It is NOT a reactive tracking scope - it's a pure mapping function.
  */
-export function createMatchFactory<TConfig extends AdapterConfig>({
+export function createMatchFactory<TConfig extends TreeConfig>({
   scopedEffect,
   adapter,
   disposeScope,
   getElementScope,
-}: MatchOpts<TConfig>): MatchFactory<TConfig['baseElement']> {
-  type TBaseElement = TConfig['baseElement'];
+}: MatchOpts<TConfig>): MatchFactory<NodeOf<TConfig>> {
+  type TBaseElement = NodeOf<TConfig>;
   type TFragRef = FragmentRef<TBaseElement>;
 
   const { insertNodeBefore, removeNode } = createNodeHelpers({
@@ -241,11 +241,11 @@ export function createMatchFactory<TConfig extends AdapterConfig>({
  * const { match } = compose(MatchModule);
  * ```
  */
-export const createMatchModule = <TConfig extends AdapterConfig>(
+export const createMatchModule = <TConfig extends TreeConfig>(
   adapter: Adapter<TConfig>
 ): Module<
   'match',
-  MatchFactory<TConfig['baseElement']>,
+  MatchFactory<NodeOf<TConfig>>,
   { scopes: CreateScopes }
 > =>
   defineModule({

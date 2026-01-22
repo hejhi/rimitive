@@ -28,7 +28,7 @@
 
 import type { RefSpec, FragmentRef } from './types';
 import { STATUS_REF_SPEC, STATUS_FRAGMENT } from './types';
-import type { Adapter, AdapterConfig } from './adapter';
+import type { Adapter, TreeConfig, NodeOf } from './adapter';
 import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
 import { createNodeHelpers } from './deps/node-deps';
@@ -49,7 +49,7 @@ export type PortalTarget<TElement> =
 /**
  * Options passed to Portal factory
  */
-export type PortalOpts<TConfig extends AdapterConfig> = {
+export type PortalOpts<TConfig extends TreeConfig> = {
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
   scopedEffect: CreateScopes['scopedEffect'];
@@ -86,9 +86,9 @@ export type PortalFactory<TBaseElement> = <TElement extends TBaseElement>(
  * @example
  * ```ts
  * import { createPortalFactory, type PortalService } from '@rimitive/view/portal';
- * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+ * import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
  *
- * const portal: PortalService<DOMAdapterConfig> = createPortalFactory({
+ * const portal: PortalService<DOMTreeConfig> = createPortalFactory({
  *   adapter,
  *   disposeScope,
  *   getElementScope,
@@ -96,8 +96,8 @@ export type PortalFactory<TBaseElement> = <TElement extends TBaseElement>(
  * })();
  * ```
  */
-export type PortalService<TConfig extends AdapterConfig> = PortalFactory<
-  TConfig['baseElement']
+export type PortalService<TConfig extends TreeConfig> = PortalFactory<
+  NodeOf<TConfig>
 >;
 
 /**
@@ -125,16 +125,16 @@ export type PortalService<TConfig extends AdapterConfig> = PortalFactory<
  * portal(modalRoot)(tooltipContent)
  * ```
  */
-export function createPortalFactory<TConfig extends AdapterConfig>({
+export function createPortalFactory<TConfig extends TreeConfig>({
   adapter,
   disposeScope,
   getElementScope,
   scopedEffect,
 }: PortalOpts<TConfig>): (
-  props?: PortalProps<TConfig['baseElement']>
-) => PortalFactory<TConfig['baseElement']> {
-  return (props?: PortalProps<TConfig['baseElement']>) => {
-    type TBaseElement = TConfig['baseElement'];
+  props?: PortalProps<NodeOf<TConfig>>
+) => PortalFactory<NodeOf<TConfig>> {
+  return (props?: PortalProps<NodeOf<TConfig>>) => {
+    type TBaseElement = NodeOf<TConfig>;
     type TFragRef = FragmentRef<TBaseElement>;
 
     const { getDefaultTarget: customGetDefaultTarget } = props ?? {};
@@ -275,12 +275,12 @@ export function createPortalFactory<TConfig extends AdapterConfig>({
  * const { portal } = compose(PortalModule);
  * ```
  */
-export const createPortalModule = <TConfig extends AdapterConfig>(
+export const createPortalModule = <TConfig extends TreeConfig>(
   adapter: Adapter<TConfig>,
-  props?: PortalProps<TConfig['baseElement']>
+  props?: PortalProps<NodeOf<TConfig>>
 ): Module<
   'portal',
-  PortalFactory<TConfig['baseElement']>,
+  PortalFactory<NodeOf<TConfig>>,
   { scopes: CreateScopes }
 > =>
   defineModule({

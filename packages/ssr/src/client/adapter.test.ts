@@ -814,10 +814,10 @@ import {
   type ElementRef,
   type Adapter,
 } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from './adapter';
+import type { DOMTreeConfig } from './adapter';
 
 /** Create a view service with compose pattern for testing */
-function createTestViewSvc(adapter: Adapter<DOMAdapterConfig>) {
+function createTestViewSvc(adapter: Adapter<DOMTreeConfig>) {
   const ElModule = createElModule(adapter);
   const MapModule = createMapModule(adapter);
   const MatchModule = createMatchModule(adapter);

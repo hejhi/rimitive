@@ -4,7 +4,7 @@ import {
   createMockAdapter,
   createSignal,
   MockElement,
-  MockAdapterConfig,
+  MockTreeConfig,
 } from './test-utils';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
@@ -50,7 +50,7 @@ describe('el primitive - lazy scope creation', () => {
   it('creates scope for fully static elements (always creates scopes)', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect,
       adapter,
       createElementScope,
@@ -74,7 +74,7 @@ describe('el primitive - lazy scope creation', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect,
       adapter,
       createElementScope,
@@ -98,7 +98,7 @@ describe('el primitive - lazy scope creation', () => {
         fn();
         return () => subscribers.delete(fn);
       });
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect,
       adapter,
       createElementScope,
@@ -117,7 +117,7 @@ describe('el primitive - lazy scope creation', () => {
   it('creates scope for elements with lifecycle cleanup via .ref()', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect,
       adapter,
       createElementScope,
@@ -139,7 +139,7 @@ describe('el primitive - lazy scope creation', () => {
   it('does not register scope when lifecycle callback returns undefined (no disposables)', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect,
       adapter,
       createElementScope,
@@ -161,7 +161,7 @@ describe('el primitive - lazy scope creation', () => {
   it('nested static elements do not register scopes (no disposables)', () => {
     const { adapter, scopedEffect, createElementScope, onCleanup } =
       createTestEnv();
-    const el = createElFactory<MockAdapterConfig>({
+    const el = createElFactory<MockTreeConfig>({
       scopedEffect,
       adapter,
       createElementScope,

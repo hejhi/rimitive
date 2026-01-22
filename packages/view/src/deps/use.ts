@@ -21,7 +21,7 @@ import type { Readable, Writable } from '@rimitive/signals/types';
  *   computed: <T>(fn: () => T) => Readable<T>;
  *   effect: (fn: () => void | (() => void)) => () => void;
  *   batch: <T>(fn: () => T) => T;
- *   el: ElFactory<DOMAdapterConfig>;
+ *   el: ElFactory<DOMTreeConfig>;
  * };
  *
  * const useHelper: Use<DOMViewSvc> = createUse(svc);

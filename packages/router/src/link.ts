@@ -11,7 +11,7 @@ import type {
   LifecycleCallback,
 } from '@rimitive/view/types';
 import { STATUS_REF_SPEC } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
 import type { ElementProps, ElFactory } from '@rimitive/view/el';
 
 /**
@@ -42,7 +42,7 @@ import type { ElementProps, ElFactory } from '@rimitive/view/el';
  * ```
  */
 export function Link(
-  props: ElementProps<DOMAdapterConfig, 'a'> & { href: string }
+  props: ElementProps<DOMTreeConfig, 'a'> & { href: string }
 ): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement> {
   return (...children: ElRefSpecChild[]): RefSpec<HTMLAnchorElement> => {
     const lifecycleCallbacks: LifecycleCallback<HTMLAnchorElement>[] = [];
@@ -56,7 +56,7 @@ export function Link(
 
     refSpec.status = STATUS_REF_SPEC;
     refSpec.create = (svc: {
-      el: ElFactory<DOMAdapterConfig>;
+      el: ElFactory<DOMTreeConfig>;
       router?: { navigate: (path: string) => void };
     }) => {
       const { el } = svc;

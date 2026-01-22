@@ -6,7 +6,7 @@ import {
   createMockAdapter,
   createSignal,
   MockElement,
-  MockAdapterConfig,
+  MockTreeConfig,
 } from './test-utils';
 import type { ElementRef, NodeRef, RefSpec } from './types';
 import { createTestScopes } from './test-helpers';
@@ -47,7 +47,7 @@ describe('el primitive', () => {
     it('renders static content', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -65,7 +65,7 @@ describe('el primitive', () => {
     it('coalesces adjacent text children into single text node (SSR hydration compatibility)', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -86,7 +86,7 @@ describe('el primitive', () => {
     it('nests elements', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -121,7 +121,7 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -151,7 +151,7 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -177,7 +177,7 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -208,7 +208,7 @@ describe('el primitive', () => {
           fn();
           return () => subscribers.delete(fn);
         });
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -232,7 +232,7 @@ describe('el primitive', () => {
     it('calls lifecycle cleanup function via .ref()', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -256,7 +256,7 @@ describe('el primitive', () => {
     it('allows chaining multiple .props() calls', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -275,7 +275,7 @@ describe('el primitive', () => {
     it('allows props callback to access and extend current props', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -295,7 +295,7 @@ describe('el primitive', () => {
     it('creates reusable element factories', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -323,7 +323,7 @@ describe('el primitive', () => {
     it('allows .ref() to add lifecycle callbacks', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -340,7 +340,7 @@ describe('el primitive', () => {
     it('allows chaining multiple .ref() calls', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -359,7 +359,7 @@ describe('el primitive', () => {
     it('allows mixing .props() and .ref() in any order', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -381,7 +381,7 @@ describe('el primitive', () => {
     it('creates reusable factories with baked-in lifecycle', () => {
       const { adapter, scopedEffect, createElementScope, onCleanup } =
         createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -413,7 +413,7 @@ describe('el primitive', () => {
         disposeScope,
         getElementScope,
       } = createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -463,7 +463,7 @@ describe('el primitive', () => {
         disposeScope,
         getElementScope,
       } = createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,
@@ -518,7 +518,7 @@ describe('el primitive', () => {
         disposeScope,
         getElementScope,
       } = createTestEnv();
-      const el = createElFactory<MockAdapterConfig>({
+      const el = createElFactory<MockTreeConfig>({
         scopedEffect,
         adapter,
         createElementScope,

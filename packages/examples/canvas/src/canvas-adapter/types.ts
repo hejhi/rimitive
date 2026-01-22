@@ -6,7 +6,7 @@
  * that gets rendered to an HTML canvas element.
  */
 
-import type { AdapterConfig } from '@rimitive/view/types';
+import type { TreeConfig } from '@rimitive/view/types';
 
 // ============================================================================
 // Runtime types (used internally by adapter)
@@ -246,8 +246,11 @@ export type ImageElement = CanvasNode & ImageProps;
 // Adapter config
 // ============================================================================
 
-export type CanvasAdapterConfig = AdapterConfig & {
-  props: {
+/**
+ * Canvas tree configuration
+ */
+export type CanvasTreeConfig = TreeConfig & {
+  attributes: {
     canvas: CanvasProps;
     group: GroupProps;
     rect: RectProps;
@@ -257,7 +260,7 @@ export type CanvasAdapterConfig = AdapterConfig & {
     text: TextProps;
     image: ImageProps;
   };
-  elements: {
+  nodes: {
     canvas: CanvasBridgeElement;
     group: GroupElement;
     rect: RectElement;
@@ -267,13 +270,6 @@ export type CanvasAdapterConfig = AdapterConfig & {
     text: TextElement;
     image: ImageElement;
   };
-  events: {
-    click: CanvasPointerEvent;
-    pointerdown: CanvasPointerEvent;
-    pointermove: CanvasPointerEvent;
-    pointerup: CanvasPointerEvent;
-  };
-  baseElement: CanvasElement;
 };
 
 export type CanvasPointerEvent<T extends CanvasNode = CanvasNode> = {

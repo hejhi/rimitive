@@ -1,4 +1,5 @@
-import type { Adapter, AdapterConfig } from '../adapter';
+import type { Adapter, TreeConfig } from '../adapter';
+import type { ParentContext } from '../types';
 import type { SVGAttributesFor } from './svg-attributes';
 
 /** SVG namespace URI */
@@ -16,7 +17,8 @@ type WithStyleString<T> = T extends { style: CSSStyleDeclaration }
  * Tags that exist in both HTML and SVG with incompatible types.
  * We prefer HTML types for these since they're more commonly used outside SVG context.
  */
-type OverlappingTags = keyof HTMLElementTagNameMap & keyof SVGElementTagNameMap;
+export type OverlappingTags = keyof HTMLElementTagNameMap &
+  keyof SVGElementTagNameMap;
 
 /**
  * SVG-only tags (excluding those that overlap with HTML).
@@ -30,35 +32,33 @@ type SVGOnlyTags = Exclude<keyof SVGElementTagNameMap, OverlappingTags>;
  *
  * @see https://github.com/hejhi/rimitive/issues/41
  */
-type DOMPropsMap = {
+export type DOMPropsMap = {
   [K in keyof HTMLElementTagNameMap]: WithStyleString<HTMLElementTagNameMap[K]>;
 } & {
   [K in SVGOnlyTags]: SVGAttributesFor<K>;
 } & { text: Text };
 
 /**
- * DOM adapter configuration type
+ * DOM tree configuration type
  *
- * Provides type-safe props and elements for standard HTML/SVG tags plus text nodes.
+ * Provides type-safe attributes and nodes for standard HTML/SVG tags plus text nodes.
  *
  * @example
  * ```typescript
- * import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+ * import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
  *
  * // Use in generic view types
- * type MyViewSvc = ViewSvc<DOMAdapterConfig>;
+ * type MyViewSvc = ViewSvc<DOMTreeConfig>;
  *
- * // Access element types
- * type ButtonElement = DOMAdapterConfig['elements']['button']; // HTMLButtonElement
- * type SvgElement = DOMAdapterConfig['elements']['svg']; // SVGSVGElement
+ * // Access node types
+ * type ButtonNode = DOMTreeConfig['nodes']['button']; // HTMLButtonElement
+ * type SvgNode = DOMTreeConfig['nodes']['svg']; // SVGSVGElement
  * ```
  */
-export type DOMAdapterConfig = AdapterConfig & {
-  props: DOMPropsMap;
-  elements: HTMLElementTagNameMap &
+export type DOMTreeConfig = TreeConfig & {
+  attributes: DOMPropsMap;
+  nodes: HTMLElementTagNameMap &
     Omit<SVGElementTagNameMap, OverlappingTags> & { text: Text };
-  events: HTMLElementEventMap & SVGElementEventMap;
-  baseElement: Node;
 };
 
 /**
@@ -81,13 +81,17 @@ export type DOMAdapterConfig = AdapterConfig & {
  * const button = el('button')('Click me');
  * ```
  */
-export function createDOMAdapter(): Adapter<DOMAdapterConfig> {
+export function createDOMAdapter(): Adapter<DOMTreeConfig> {
   return {
-    createNode: (type, props, parentContext) => {
+    createNode: <K extends keyof DOMTreeConfig['nodes'] & string>(
+      type: K,
+      props?: Record<string, unknown>,
+      parentContext?: ParentContext<unknown>
+    ): DOMTreeConfig['nodes'][K] => {
       if (type === 'text') {
         return document.createTextNode(
           props?.value != null ? String(props.value) : ''
-        );
+        ) as DOMTreeConfig['nodes'][K];
       }
 
       // Determine SVG namespace from parent context
@@ -102,25 +106,27 @@ export function createDOMAdapter(): Adapter<DOMAdapterConfig> {
       const useSvgNs =
         type === 'svg' || (parentIsSvg && !parentIsForeignObject);
 
-      if (useSvgNs) return document.createElementNS(SVG_NS, type);
+      if (useSvgNs)
+        return document.createElementNS(SVG_NS, type) as DOMTreeConfig['nodes'][K];
 
-      return document.createElement(type);
+      return document.createElement(type) as DOMTreeConfig['nodes'][K];
     },
 
     setProperty: (node, key, value) => {
+      const n = node as Node;
       // Text nodes only support 'value' -> textContent
       // Use nodeType check instead of instanceof for test environment compatibility
       // (happy-dom's Text class is different from global Text)
-      if (node.nodeType === 3) {
+      if (n.nodeType === 3) {
         if (key === 'value') {
-          (node as Text).textContent = value != null ? String(value) : '';
+          (n as Text).textContent = value != null ? String(value) : '';
         }
         return;
       }
 
       // Element nodes (nodeType === 1)
-      if (node.nodeType === 1) {
-        const element = node as Element;
+      if (n.nodeType === 1) {
+        const element = n as Element;
         const isSvg = element.namespaceURI === SVG_NS;
         const isEventHandler = key.startsWith('on');
 
@@ -140,9 +146,11 @@ export function createDOMAdapter(): Adapter<DOMAdapterConfig> {
       }
     },
 
-    appendChild: (parent, child) => parent.appendChild(child),
-    removeChild: (parent, child) => parent.removeChild(child),
+    appendChild: (parent, child) =>
+      (parent as Node).appendChild(child as Node),
+    removeChild: (parent, child) =>
+      (parent as Node).removeChild(child as Node),
     insertBefore: (parent, child, reference) =>
-      parent.insertBefore(child, reference),
+      (parent as Node).insertBefore(child as Node, reference as Node | null),
   };
 }

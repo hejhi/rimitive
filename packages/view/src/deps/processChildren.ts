@@ -20,7 +20,7 @@ import type {
   ParentContext,
 } from '../types';
 import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_SPEC_MASK } from '../types';
-import type { Adapter, AdapterConfig } from '../adapter';
+import type { Adapter, TreeConfig, NodeOf } from '../adapter';
 
 /**
  * Check if a child is text-like (string, number, or bare reactive function).
@@ -116,11 +116,11 @@ export type ProcessChildren<TElement> = {
   ) => NodeRef<TElement> | null;
 };
 
-export function createProcessChildren<TConfig extends AdapterConfig>(opts: {
+export function createProcessChildren<TConfig extends TreeConfig>(opts: {
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   adapter: Adapter<TConfig>;
-}): ProcessChildren<TConfig['baseElement']> {
-  type TNode = TConfig['baseElement'];
+}): ProcessChildren<NodeOf<TConfig>> {
+  type TNode = NodeOf<TConfig>;
   type ViewChild = RefSpec<TNode> | FragmentRef<TNode>;
 
   const { scopedEffect, adapter } = opts;
