@@ -29,7 +29,7 @@ export { createDOMServerAdapter } from './adapter';
 export type { Serialize, ServerAdapterResult } from './adapter';
 
 // Streaming
-export { createStreamWriter } from './stream';
+export { createStreamWriter, safeJsonStringify } from './stream';
 export type { StreamWriter } from './stream';
 
 // Async fragment utilities (server-side)

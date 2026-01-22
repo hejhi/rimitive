@@ -67,12 +67,35 @@ export type StreamWriter = {
  * res.write(`<script>${stream.chunkCode('stats', { users: 100 })}</script>`);
  * ```
  */
+/**
+ * Safely serialize a value for embedding in a script tag.
+ * Escapes characters that could break out of the script context:
+ * - < and > to prevent </script> breakout and XHTML compatibility
+ * - & to prevent HTML entity interpretation
+ * - U+2028/U+2029 line separators which are valid JSON but invalid in JS strings (pre-ES2019)
+ *
+ * @example
+ * ```ts
+ * const data = { user: '</script><script>alert("xss")</script>' };
+ * res.write(`<script>window.DATA = ${safeJsonStringify(data)}</script>`);
+ * // Safe: </script> is escaped as \u003c/script\u003e
+ * ```
+ */
+export function safeJsonStringify(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
 export function createStreamWriter(streamKey: string): StreamWriter {
   return {
     key: streamKey,
     bootstrapCode: () =>
       `window.${streamKey}=(${createStreamingReceiver.toString()})();`,
     chunkCode: (id, data) =>
-      `${streamKey}.push(${JSON.stringify(id)},${JSON.stringify(data)});`,
+      `${streamKey}.push(${safeJsonStringify(id)},${safeJsonStringify(data)});`,
   };
 }

@@ -3,7 +3,9 @@ title: Streaming SSR
 description: Send HTML immediately and stream data as it loads.
 ---
 
-With basic SSR, the server waits for all data before sending anything. Streaming SSR sends the page shell immediately, then streams data chunks as each `load()` boundary resolves. Users see content faster, especially when some data sources are slow.
+This guide builds on [SSR with Data Loading](/guides/ssr-loading). Make sure you understand `load()` and basic SSR setup first.
+
+With `renderToStringAsync`, the server waits for all data before sending anything. **Streaming SSR** sends the page shell immediately, then streams data chunks as each `load()` boundary resolves. Users see content faster, especially when some data sources are slow.
 
 ---
 

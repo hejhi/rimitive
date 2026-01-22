@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createDOMServerAdapter,
   renderToStringAsync,
+  safeJsonStringify,
 } from '@rimitive/ssr/server';
 import type { RefSpec } from '@rimitive/view/types';
 
@@ -69,10 +70,10 @@ const server = createServer(async (req, res) => {
   // Get collected loader data for hydration
   const loaderData = service.loader.getData();
 
-  // Create hydration script with loader data
+  // Create hydration script with loader data (using safeJsonStringify to prevent XSS)
   const hydrationScript =
     Object.keys(loaderData).length > 0
-      ? `<script>window.__RIMITIVE_DATA__=${JSON.stringify(loaderData)}</script>`
+      ? `<script>window.__RIMITIVE_DATA__=${safeJsonStringify(loaderData)}</script>`
       : '';
 
   // Send response

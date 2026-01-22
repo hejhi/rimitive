@@ -1,32 +1,54 @@
 ---
 title: Server Rendering
-description: Render Rimitive apps on the server with data loading.
+description: Render Rimitive apps on the server for faster first paint.
 ---
 
-Server-side rendering in Rimitive renders your components to HTML on the server, waits for async data to load, then sends the complete page to the browser. The client hydrates the existing DOM instead of recreating it.
+import { Aside } from '@astrojs/starlight/components';
 
-Unlike many frameworks, Rimitive effects are synchronous and run on the server too. There's no special "client-only" mode — your reactive code works the same way in both environments. This makes SSR predictable: signals update, effects run, DOM changes, all synchronously.
+Server-side rendering (SSR) renders your app to HTML on the server before sending it to the browser. Instead of shipping an empty `<div id="app">` and waiting for JavaScript to build the page, users see content immediately.
 
 ---
 
-## The Basic Setup
+## Why SSR?
 
-You need three pieces:
-1. A server adapter (uses linkedom instead of the real DOM)
-2. A render function that awaits async boundaries
-3. A client that hydrates the SSR HTML
+**Faster first paint.** Users see content before JavaScript loads. On slow connections or devices, this difference is significant.
+
+**SEO.** Search engines index the HTML you send. Client-rendered apps require crawlers to execute JavaScript, which not all do well.
+
+**Social sharing.** Link previews (OpenGraph, Twitter cards) scrape your HTML. SSR ensures they get real content.
+
+**When to skip SSR:** Internal tools, dashboards, and apps behind auth often don't need SSR. The added complexity isn't worth it if SEO and initial load time aren't priorities.
+
+---
+
+## What is Hydration?
+
+When the browser receives SSR HTML, it displays it immediately...but it's static. Buttons don't work, inputs don't respond. The page needs JavaScript to become interactive.
+
+**Hydration** is the process of making that SSR HTML interactive. Instead of throwing away the static HTML and rebuilding the DOM from scratch (which would cause a flash), hydration walks the existing DOM and attaches event listeners and reactive bindings.
+
+Think of it as "reanimating" the static HTML rather than replacing it.
+
+---
+
+## Basic Setup
+
+For basic SSR, you need:
+1. A **server adapter** that creates elements using linkedom instead of the real DOM
+2. A **client hydration adapter** that walks existing DOM instead of creating new elements
 
 ### Server Adapter
 
 ```typescript
 import { createDOMServerAdapter } from '@rimitive/ssr/server';
 
-const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+const { adapter, serialize } = createDOMServerAdapter();
 ```
 
-The server adapter creates elements using linkedom (a lightweight DOM implementation). `serialize` converts elements to HTML strings. `insertFragmentMarkers` adds comment markers for hydration.
+- The server adapter creates elements using linkedom (a lightweight DOM implementation)
+- `serialize` converts elements to HTML strings
 
-### Creating a Service
+### Shared Service
 
 Your service factory takes an adapter, so both server and client can use the same components:
 
@@ -36,285 +58,20 @@ import { compose } from '@rimitive/core';
 import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 import { createElModule } from '@rimitive/view/el';
 import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
 import type { Adapter } from '@rimitive/view/types';
 import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
-export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-};
-
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
+export function createService(adapter: Adapter<DOMAdapterConfig>) {
   return compose(
     SignalModule,
     ComputedModule,
     EffectModule,
     createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({
-      initialData: options?.loaderData,
-    })
+    createMatchModule(adapter)
   );
 }
 
 export type Service = ReturnType<typeof createService>;
-```
-
----
-
-## Loading Data with load()
-
-`load()` creates async boundaries that work with SSR. It takes three arguments:
-
-1. **id** — A unique string for data lookup during hydration
-2. **fetcher** — An async function that returns data
-3. **renderer** — A function that receives state and returns UI
-
-```typescript
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-
-type UserData = { name: string; email: string };
-
-const UserProfile = (svc: Service) => {
-  const { loader, match, el } = svc;
-
-  return loader.load(
-    'user-profile',  // ID for hydration
-    () => fetch('/api/user').then(r => r.json()),
-    (state: LoadState<UserData>) =>
-      match(state.status, (status: LoadStatus) => {
-        switch (status) {
-          case 'pending':
-            return el('div')('Loading...');
-          case 'error':
-            return el('div')(`Error: ${state.error()}`);
-          case 'ready':
-            return el('div')(
-              el('h1')(state.data()!.name),
-              el('p')(state.data()!.email)
-            );
-        }
-      })
-  );
-};
-```
-
-The state object has reactive properties:
-- `state.status` — `'pending' | 'ready' | 'error'`
-- `state.data()` — The loaded data (undefined until ready)
-- `state.error()` — The error (undefined unless error)
-
-### Error Handling
-
-Always handle errors in your renderer. The `error` state catches exceptions from your fetcher:
-
-```typescript
-loader.load(
-  'stats',
-  async () => {
-    const res = await fetch('/api/stats');
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-    return res.json();
-  },
-  (state) =>
-    match(state.status, (status) => {
-      switch (status) {
-        case 'pending':
-          return Loading();
-        case 'error':
-          return ErrorDisplay(state.error());
-        case 'ready':
-          return StatsView(state.data()!);
-      }
-    })
-)
-```
-
----
-
-## Rendering on the Server
-
-Use `renderToStringAsync` to render your app and wait for all `load()` boundaries:
-
-```typescript
-// server.ts
-import { createServer } from 'node:http';
-import {
-  createDOMServerAdapter,
-  renderToStringAsync,
-} from '@rimitive/ssr/server';
-import type { RefSpec } from '@rimitive/view/types';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-const server = createServer(async (req, res) => {
-  // Create per-request adapter and service
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
-  const service = createService(adapter);
-
-  // Create the app RefSpec
-  const appSpec = App(service);
-
-  // Render to string, awaiting all load() boundaries
-  const html = await renderToStringAsync(appSpec, {
-    svc: service,
-    mount: (spec: RefSpec<unknown>) => spec.create(service),
-    serialize,
-    insertFragmentMarkers,
-  });
-
-  // Get loader data for hydration
-  const loaderData = service.loader.getData();
-
-  // Send HTML with embedded data
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script>window.__RIMITIVE_DATA__ = ${JSON.stringify(loaderData)}</script>
-    </head>
-    <body>
-      <div class="app">${html}</div>
-      <script src="/client.js"></script>
-    </body>
-    </html>
-  `);
-});
-
-server.listen(3000);
-```
-
-Key points:
-- Create a fresh adapter and service per request (no shared state)
-- `renderToStringAsync` awaits all `load()` boundaries before returning
-- `service.loader.getData()` collects all resolved data
-- Embed the data in a script tag for client hydration
-
----
-
-## Hydrating on the Client
-
-The client hydrates the existing DOM instead of creating new elements:
-
-```typescript
-// client.ts
-import { createClientAdapter } from '@rimitive/ssr/client';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-// Create hydration adapter for the SSR root element
-const adapter = createClientAdapter(document.querySelector('.app')!);
-
-// Get loader data from SSR
-const loaderData = window.__RIMITIVE_DATA__;
-
-// Create service with hydrating adapter and loader data
-const service = createService(adapter, { loaderData });
-
-// Hydrate - walks existing DOM, wires up reactivity
-App(service).create(service);
-
-// Switch to normal DOM mode for future updates
-adapter.activate();
-```
-
-What happens:
-1. `createClientAdapter` creates an adapter that walks existing DOM
-2. `loaderData` provides pre-fetched data so `load()` doesn't refetch
-3. `.create(service)` hydrates the app, connecting signals to existing elements
-4. `adapter.activate()` switches to normal DOM mode for subsequent updates
-
----
-
-## A Complete Example
-
-Here's a minimal but complete SSR setup:
-
-### Shared Service
-
-```typescript
-// service.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
-import type { Adapter } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
-
-export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-};
-
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
-  return compose(
-    SignalModule,
-    ComputedModule,
-    EffectModule,
-    createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({ initialData: options?.loaderData })
-  );
-}
-
-export type Service = ReturnType<typeof createService>;
-```
-
-### App Component
-
-```typescript
-// App.ts
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-import type { Service } from './service.js';
-
-type Stats = { users: number; views: number };
-
-async function fetchStats(): Promise<Stats> {
-  const res = await fetch('https://api.example.com/stats');
-  if (!res.ok) throw new Error('Failed to fetch stats');
-  return res.json();
-}
-
-export const App = (svc: Service) => {
-  const { loader, match, el } = svc;
-
-  return el('div').props({ className: 'app' })(
-    el('h1')('My App'),
-
-    loader.load(
-      'stats',
-      fetchStats,
-      (state: LoadState<Stats>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div').props({ className: 'loading' })('Loading stats...');
-            case 'error':
-              return el('div').props({ className: 'error' })(
-                'Failed to load stats: ',
-                String(state.error())
-              );
-            case 'ready': {
-              const data = state.data()!;
-              return el('div').props({ className: 'stats' })(
-                el('p')(`Users: ${data.users}`),
-                el('p')(`Views: ${data.views}`)
-              );
-            }
-          }
-        })
-    )
-  );
-};
 ```
 
 ### Server
@@ -322,137 +79,90 @@ export const App = (svc: Service) => {
 ```typescript
 // server.ts
 import { createServer } from 'node:http';
-import {
-  createDOMServerAdapter,
-  renderToStringAsync,
-} from '@rimitive/ssr/server';
-import type { RefSpec } from '@rimitive/view/types';
+import { createDOMServerAdapter } from '@rimitive/ssr/server';
 import { createService } from './service.js';
 import { App } from './App.js';
 
-const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+const server = createServer((req, res) => {
+  // Create per-request adapter and service
+  const { adapter, serialize } = createDOMServerAdapter();
   const service = createService(adapter);
 
-  try {
-    const html = await renderToStringAsync(App(service), {
-      svc: service,
-      mount: (spec: RefSpec<unknown>) => spec.create(service),
-      serialize,
-      insertFragmentMarkers,
-    });
+  // Create and render the app
+  const root = App(service).create(service);
+  const html = serialize(root);
 
-    const loaderData = service.loader.getData();
-
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(`<!DOCTYPE html>
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.end(`<!DOCTYPE html>
 <html>
-<head>
-  <title>My App</title>
-  <script>window.__RIMITIVE_DATA__=${JSON.stringify(loaderData)}</script>
-</head>
 <body>
   <div class="app">${html}</div>
   <script src="/client.js"></script>
 </body>
 </html>`);
-  } catch (err) {
-    console.error('SSR Error:', err);
-    res.writeHead(500);
-    res.end('Server Error');
-  }
 });
 
 server.listen(3000);
 ```
 
+Key point: Create a fresh adapter and service per request—no shared state between requests.
+
 ### Client
 
 ```typescript
 // client.ts
-import { createClientAdapter } from '@rimitive/ssr/client';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import {
+  createDOMHydrationAdapter,
+  createHydrationAdapter,
+} from '@rimitive/ssr/client';
 import { createService } from './service.js';
 import { App } from './App.js';
 
-const adapter = createClientAdapter(document.querySelector('.app')!);
-const service = createService(adapter, {
-  loaderData: window.__RIMITIVE_DATA__,
-});
+// Create hydration adapter that walks existing DOM
+const hydrationAdapter = createHydrationAdapter(
+  createDOMHydrationAdapter(document.querySelector('.app')!),
+  createDOMAdapter()
+);
 
+const service = createService(hydrationAdapter);
+
+// Hydrate - walks existing DOM, wires up reactivity
 App(service).create(service);
-adapter.activate();
+
+// Switch to normal DOM mode for future updates
+hydrationAdapter.switchToFallback();
 ```
+
+What happens:
+1. `createDOMHydrationAdapter` creates an adapter that walks existing DOM elements
+2. `createHydrationAdapter` wraps it with a fallback for post-hydration updates
+3. `.create(service)` hydrates the app, connecting signals to existing elements
+4. `.switchToFallback()` switches to normal DOM mode for subsequent updates
 
 ---
 
-## When Data Fetching Fails
+## Browser-Only Code
 
-Server-side errors are caught and rendered as the error state. The client receives the error UI, and the error is preserved in the loader data.
+<Aside type="note">
+Unlike many frameworks, Rimitive effects are synchronous _by default_, and synchronous effects will run on the server.
 
-For server-level errors (outside of `load()` boundaries), wrap `renderToStringAsync` in a try/catch:
+**However!** Client-specific or async flush strategies (like `mt`, `raf`, etc) are server safe but will be **noops** on the server. All of the flush strategies Rimitive provides out of the box (other than default) wouldn't run on the server, but if you're using a 3rd party or writing your own flush strategy, _you_ can decide whether it should or shouldn't.
+</Aside>
 
-```typescript
-try {
-  const html = await renderToStringAsync(appSpec, options);
-  // ... send HTML
-} catch (err) {
-  console.error('SSR failed:', err);
-  res.writeHead(500);
-  res.end('Internal Server Error');
-}
-```
-
----
-
-## Browser-Only Code in Refs
-
-Since effects and refs run on the server, code that relies on browser APIs needs guards. The server uses linkedom, which implements core DOM operations but not browser-specific features like `focus()`, `scrollIntoView()`, or `getBoundingClientRect()`.
-
-### Common Patterns
-
-**Guard with environment check:**
+Default effects and refs run on the server. So, if you have browser-specific code that might break on the server (focus, scroll, animate, etc) or a provided server adapter, add guards:
 
 ```typescript
 el('input').ref((el) => {
-  if (typeof window === 'undefined') return;
-  el.focus();
+  if (typeof window !== 'undefined') el.focus();
 })()
 ```
-
-**Use optional chaining for methods that might not exist:**
-
-```typescript
-el('div').ref((el) => {
-  el.scrollIntoView?.({ behavior: 'smooth' });
-})()
-```
-
-**Feature detection:**
-
-```typescript
-el('div').ref((el) => {
-  if ('animate' in el) {
-    el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
-  }
-})()
-```
-
-### What Works Without Guards
-
-- **Event handlers via `on()`** — The server adapter skips these automatically
-- **Event handlers via props** (`onclick`, `oninput`) — Also skipped on server
-- **Basic DOM properties** — `className`, `textContent`, `id`, etc. work fine
-
-### What Needs Guards
-
-- `focus()`, `blur()`
-- `scrollIntoView()`, `scrollTo()`
-- `getBoundingClientRect()`, `getClientRects()`
-- `animate()`
-- Browser globals: `window`, `document`, `localStorage`, `navigator`
 
 ---
 
 ## Next Steps
 
-This covers basic SSR where the server waits for all data before sending HTML. For pages with slow data sources, you might want to send HTML immediately and stream data as it loads. That's covered in [Streaming SSR](/guides/streaming-ssr).
+This covers basic SSR with synchronous rendering. For async data loading:
+
+- **[SSR with Data Loading](/guides/ssr-loading)** — Fetch data during SSR with `load()`
+- **[Streaming SSR](/guides/streaming-ssr)** — Send HTML progressively as data loads

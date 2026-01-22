@@ -39,6 +39,7 @@ export default defineConfig({
             { label: 'Loading Data', slug: 'guides/loading-data' },
             { label: 'Adding Routing', slug: 'guides/adding-routing' },
             { label: 'Server Rendering', slug: 'guides/server-rendering' },
+            { label: 'SSR with Data Loading', slug: 'guides/ssr-loading' },
             { label: 'Streaming SSR', slug: 'guides/streaming-ssr' },
             { label: 'Custom Modules', slug: 'guides/custom-modules' },
           ],

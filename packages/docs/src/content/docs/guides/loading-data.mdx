@@ -13,7 +13,7 @@ Data loading in Rimitive is reactive. When dependencies change, data refetches. 
 
 ## The Manual Way
 
-You could manage async state yourself with signals and effects:
+You _could_ manage async state yourself with signals and effects:
 
 ```typescript
 import { compose } from '@rimitive/core';
@@ -59,6 +59,7 @@ const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
+  // Add this 👇
   ResourceModule
 );
 
@@ -149,35 +150,7 @@ page(2);             // refetch
 
 ## Rendering Resources
 
-Use `match()` to render different states:
-
-```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { ResourceModule } from '@rimitive/resource';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createMapModule } from '@rimitive/view/map';
-import { MountModule } from '@rimitive/view/deps/mount';
-
-const adapter = createDOMAdapter();
-
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  ResourceModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  createMapModule(adapter),
-  MountModule
-);
-
-const { el, match, map, resource, mount } = svc;
-```
-
-Now render based on resource state:
+Use `match()` to render based on resource state:
 
 ```typescript
 type Product = { id: number; name: string; price: number };
@@ -201,31 +174,6 @@ const ProductList = () =>
         );
     }
   });
-```
-
-### Using Convenience Accessors
-
-For simpler rendering, use the boolean accessors:
-
-```typescript
-const ProductList = () =>
-  el('div')(
-    match(products.loading, (isLoading) =>
-      isLoading ? el('div')('Loading...') : null
-    ),
-    match(products.error, (err) =>
-      err ? el('div')(`Error: ${err}`) : null
-    ),
-    match(products.data, (data) =>
-      data
-        ? el('ul')(
-            map(data, (p) => p.id, (product) =>
-              el('li')(computed(() => product().name))
-            )
-          )
-        : null
-    )
-  );
 ```
 
 ---
@@ -279,123 +227,28 @@ const ProductList = () => {
 
 ---
 
-## A Complete Example
+## resource() vs load()
 
-A product browser with category filtering:
+Rimitive has two primitives for async data:
 
-```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import type { Reactive } from '@rimitive/signals';
-import { ResourceModule } from '@rimitive/resource';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createMapModule } from '@rimitive/view/map';
-import { MountModule } from '@rimitive/view/deps/mount';
+| | `resource()` | `load()` |
+|---|---|---|
+| **Use case** | Client-side data fetching | Server-rendered data with hydration |
+| **Reactive deps** | Yes—refetches when signals change | No—fetches once |
+| **Cancellation** | Automatic via AbortSignal | No |
+| **SSR support** | No | Yes—data serializes for hydration |
 
-const adapter = createDOMAdapter();
-const svc = compose(
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-  ResourceModule,
-  createElModule(adapter),
-  createMatchModule(adapter),
-  createMapModule(adapter),
-  MountModule
-);
+**Use `resource()` when:**
+- Building a client-only app
+- Data depends on user interaction (filters, pagination, search)
+- You need automatic refetching and cancellation
 
-const { el, match, map, signal, computed, resource, mount } = svc;
+**Use `load()` when:**
+- You're doing SSR and want data in the initial HTML
+- The data should be fetched on the server and reused on the client
+- SEO or first-paint performance matters for this data
 
-// Types
-type Category = { id: number; name: string };
-type Product = { id: number; name: string; price: number };
+In an SSR app, you might use both: `load()` for the initial page data that should be server-rendered, and `resource()` for dynamic data that loads after user interaction.
 
-// State
-const selectedCategory = signal<number | null>(null);
+See the [Server Rendering guide](/guides/server-rendering) for `load()` usage.
 
-// Resources
-const categories = resource<Category[]>((signal) =>
-  fetch('/api/categories', { signal }).then(r => r.json())
-);
-
-const products = resource<Product[]>((signal) => {
-  const catId = selectedCategory();
-  const url = catId
-    ? `/api/products?category=${catId}`
-    : '/api/products';
-  return fetch(url, { signal }).then(r => r.json());
-});
-
-// Components
-const CategoryButton = (category: Category) =>
-  el('button').props({
-    className: computed(() =>
-      selectedCategory() === category.id ? 'active' : ''
-    ),
-    onclick: () => selectedCategory(category.id),
-  })(category.name);
-
-const ProductCard = (productSignal: Reactive<Product>) =>
-  el('div').props({ className: 'product' })(
-    el('h3')(computed(() => productSignal().name)),
-    el('p')(computed(() => `$${productSignal().price}`))
-  );
-
-const App = () =>
-  el('div').props({ className: 'app' })(
-    el('h1')('Products'),
-
-    // Category filter
-    el('div').props({ className: 'categories' })(
-      el('button').props({
-        className: computed(() =>
-          selectedCategory() === null ? 'active' : ''
-        ),
-        onclick: () => selectedCategory(null),
-      })('All'),
-      match(categories, (state) =>
-        state.status === 'ready'
-          ? el('span')(
-              ...state.value.map(CategoryButton)
-            )
-          : null
-      )
-    ),
-
-    // Products grid
-    match(products, (state) => {
-      switch (state.status) {
-        case 'pending':
-          return el('div').props({ className: 'loading' })('Loading products...');
-        case 'error':
-          return el('div').props({ className: 'error' })(
-            'Failed to load products',
-            el('button').props({
-              onclick: () => products.refetch()
-            })('Retry')
-          );
-        case 'ready':
-          return state.value.length === 0
-            ? el('div')('No products found')
-            : el('div').props({ className: 'grid' })(
-                map(state.value, (p) => p.id, ProductCard)
-              );
-      }
-    })
-  );
-
-const app = mount(App());
-document.body.appendChild(app.element!);
-```
-
-Reactive dependencies, automatic cancellation, clean rendering. The resource handles the complexity; you handle the UI.
-
----
-
-## What About SSR?
-
-For server-side rendering with data, Rimitive provides `load()` which integrates with the SSR system. That's covered in the SSR guide—for now, `resource()` handles client-side data fetching.
-
-Next: [Adding Routing](/guides/adding-routing) for navigation between views.
