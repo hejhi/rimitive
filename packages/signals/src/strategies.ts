@@ -4,12 +4,27 @@
  * Strategies allow deferring effect execution to microtasks, animation frames,
  * or custom timing. The initial run is always synchronous; strategies only
  * control subsequent re-runs when dependencies change.
+ *
+ * On the server, async strategies are skipped (effects using them become
+ * no-ops) since deferred execution won't complete before SSR renders.
+ * Use regular synchronous effects for server-side logic.
  */
 
 import type { FlushStrategy } from './effect';
 import { CONSTANTS } from './constants';
 
 const { DISPOSED, STATE_MASK } = CONSTANTS;
+
+/** Detect server environment - no window or no requestAnimationFrame */
+const isServer = (): boolean =>
+  typeof window === 'undefined' ||
+  typeof requestAnimationFrame === 'undefined';
+
+/** No-op strategy for server - effect is skipped entirely */
+const noopStrategy: FlushStrategy = {
+  run: () => {},
+  create: () => () => {},
+};
 
 /**
  * Microtask flush strategy.
@@ -30,6 +45,8 @@ const { DISPOSED, STATE_MASK } = CONSTANTS;
  * ```
  */
 export const mt = (run: () => void | (() => void)): FlushStrategy => {
+  if (isServer()) return noopStrategy;
+
   let version = 0;
   return {
     run,
@@ -60,6 +77,8 @@ export const mt = (run: () => void | (() => void)): FlushStrategy => {
  * ```
  */
 export const raf = (run: () => void | (() => void)): FlushStrategy => {
+  if (isServer()) return noopStrategy;
+
   let frameId: number | null = null;
   return {
     run,
@@ -95,6 +114,8 @@ export const debounce = (
   ms: number,
   run: () => void | (() => void)
 ): FlushStrategy => {
+  if (isServer()) return noopStrategy;
+
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   return {
     run,
