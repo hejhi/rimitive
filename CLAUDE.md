@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-This file provides guidance for working with the Rimitive codebase.
+This file provides guidance for working with the Rimitive codebase. 
+
+Make sure web searches use the ACTUAL current year. IGNORE YOUR TRAINING CUT-OFF which is NOT the current year.
 
 ## LLM Documentation
 
@@ -8,44 +10,6 @@ For comprehensive LLM-optimized documentation, see:
 
 - `llms.txt` - Quick reference index
 - `llms-full.txt` - Complete documentation (recommended for full context)
-
-## Context Engineering
-
-### Three-Phase Workflow
-
-1. **Research** - Understand the codebase and map the solution space (delegate to explorer)
-2. **Plan** - Create precise implementation steps with file-by-file edits (orchestrator holds this)
-3. **Implement** - Execute plan sequentially, verify each phase (delegate to implementer/verifier)
-
-Bad research cascades into thousands of bad lines. Bad plan cascades into hundreds. Focus human review on research and plans, not implementation code.
-
-### Sub-agents for Context Isolation
-
-Delegate work that drains context: file searching, code analysis, build logs, test output, large diffs.
-
-| Agent            | Purpose                                                            |
-| ---------------- | ------------------------------------------------------------------ |
-| **explorer**     | Search/read codebase, return only relevant findings                |
-| **implementer**  | Receive spec + files, implement, return result                     |
-| **verifier**     | Run tests/typecheck/build, return pass/fail + errors               |
-| **qa**           | End-to-end fix verification - describe what was fixed, it confirms |
-| **reader**       | Read long files, extract only requested information                |
-| **api-explorer** | Search API docs/guides for relevant Rimitive APIs                  |
-
-**Pattern**: Stay in orchestration mode. Hold the plan. Delegate noisy work. Receive compact results.
-
-**Key principle**: Agents return findings, not their search trajectory. No summarization - extraction only.
-
-### Intentional Compaction
-
-Proactively restructure context before hitting limits. Target 40-60% context utilization for complex work.
-
-When compacting (via `/compact` or manually), include:
-
-- Current goal and overall approach
-- Completed steps with outcomes
-- Current blocking issue or next phase
-- File paths and patterns relevant to continuing
 
 ## Development Commands
 
@@ -81,6 +45,20 @@ const { signal, computed, effect } = svc;
 
 Modules declare dependencies and provide implementations via `defineModule()`. See `packages/core/src/module.ts` for the pattern.
 
+### Core APIs
+
+The `@rimitive/core` package provides these composition utilities:
+
+| API | Purpose |
+|-----|---------|
+| `compose(...modules)` | Wire modules together into a service |
+| `defineModule({ name, deps, create })` | Define a new module |
+| `merge(moduleA, moduleB)` | Combine two modules into one |
+| `override(module, { dep: replacement })` | Replace a module's dependency |
+| `fork(service)` | Create an isolated copy of a service |
+| `transient(module)` | Mark module to create fresh instance per `fork()` |
+| `lazy(module)` | Defer module creation until first access |
+
 ### Signal Primitives
 
 Import modules from `@rimitive/signals/extend`:
@@ -95,6 +73,8 @@ Import modules from `@rimitive/signals/extend`:
 Signal API: `sig()` reads, `sig(value)` writes, `sig.peek()` reads without tracking.
 
 Effects are **synchronous** - they run immediately when dependencies change. This is intentional and differs from React's useEffect.
+
+**Flush strategies** for effects: `mt` (microtask), `raf` (requestAnimationFrame), `timeout`, or custom. These are no-ops on the server for SSR compatibility.
 
 ### View Primitives
 
@@ -118,6 +98,7 @@ Primitives:
 - `map(items, keyFn, render)` - reactive lists
 - `match(reactive, matcher)` - conditional rendering
 - `portal(target)(child)` - render to different DOM location
+- `load(id, fetcher, render)` - async data loading for SSR
 
 Specs are inert blueprints. Call `.create(svc)` or use `mount()` to instantiate.
 
@@ -145,16 +126,18 @@ Behaviors can compose other behaviors by passing the service through.
 
 ```
 packages/
-├── rimitive/     # Core: compose, defineModule, merge
-├── signals/     # Reactive primitives
-├── view/        # UI primitives (el, map, match, portal, load)
-├── router/      # Client-side routing
-├── resource/    # Async data fetching
-├── ssr/         # Server-side rendering
-├── react/       # React bindings
-├── docs/        # Documentation site
-├── benchmarks/  # Performance benchmarks
-└── examples/    # Example applications
+├── core/              # Composition: compose, defineModule, merge, override, fork
+├── signals/           # Reactive primitives
+├── view/              # UI primitives (el, map, match, portal, load)
+├── router/            # Client-side routing
+├── resource/          # Async data fetching with resource()
+├── ssr/               # Server-side rendering and hydration
+├── react/             # React bindings
+├── mcp/               # MCP server for LLM documentation
+├── devtools-extension/ # Browser devtools
+├── docs/              # Documentation site (Astro/Starlight)
+├── benchmarks/        # Performance benchmarks
+└── examples/          # Example applications
 ```
 
 ### Import Conventions
@@ -163,8 +146,25 @@ packages/
 - **Types**: `import type { Readable, SignalFunction } from '@rimitive/signals'`
 - **View factories**: `import { createElModule } from '@rimitive/view/el'`
 - **Adapters**: `import { createDOMAdapter } from '@rimitive/view/adapters/dom'`
+- **SSR**: `import { createLinkedomAdapter, renderToStringAsync } from '@rimitive/ssr/server'`
 
 The `/extend` path exports modules and factory functions for composition. The base path exports types.
+
+## SSR Overview
+
+Three render modes:
+
+| Function | Use Case |
+|----------|----------|
+| `renderToString` | Sync SSR, no async data |
+| `renderToStringAsync` | Wait for all `load()` boundaries |
+| `renderToStream` | Send shell immediately, stream data chunks |
+
+Key patterns:
+- Create fresh adapter/service per request (no cross-request leakage)
+- Use `load(id, fetcher, render)` for async data boundaries
+- Use `safeJsonStringify()` when embedding data in script tags
+- Client hydration: `createHydrationAdapter()` + `switchToFallback()`
 
 ## Type Export Guidelines
 
@@ -179,21 +179,21 @@ Tests are co-located with source files (`*.test.ts`). Key test files:
 - `api.test.ts` - integration tests
 - `detached-memory.test.ts` - memory leak tests
 
-## Skills
+## Plugins
 
-Project skills in `.claude/skills/` are activated automatically when relevant:
+Project plugins in `plugins/` provide skills that activate when relevant:
 
-| Skill                | Use When                                            |
-| -------------------- | --------------------------------------------------- |
-| `rimitive-behavior`  | Creating reusable state logic, headless UI patterns |
-| `rimitive-module`    | Adding new primitives with `defineModule()`         |
-| `rimitive-component` | Building UI with `el`, `map`, `match`               |
-| `rimitive-test`      | Writing tests with Vitest                           |
-| `create-agent`       | Creating new sub-agents in `.claude/agents/`        |
+| Plugin | Use When |
+|--------|----------|
+| `rimitive-behavior` | Creating reusable state logic, headless UI patterns |
+| `rimitive-module` | Adding new primitives with `defineModule()` |
+| `rimitive-view` | Building UI with `el`, `map`, `match` |
+| `rimitive-compose` | Working with compose, fork, override |
+| `rimitive-adapter` | Creating custom adapters |
 
 ## Git Workflow
 
-Follow conventional commits: `fix:`, `feat:`, `docs:`, `chore:`, `test:`
+Follow conventional commits: `fix:`, `feat:`, `docs:`, `chore:`, `test:`, `refactor:`
 
 ## Release Workflow
 
