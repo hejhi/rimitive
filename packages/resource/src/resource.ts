@@ -166,9 +166,8 @@ export function createResourceFactory(deps: ResourceDeps): ResourceFactory {
       );
     };
 
-    // Effect tracks reactive deps in fetcher and re-runs on change
-    // Also tracks enabled option for reactive enabling/disabling
-    const disposeEffect = effect(() => {
+    // The effect callback - checks enabled and fetches
+    const effectCallback = () => {
       // Check enabled - this is reactive if enabled is a Readable
       if (!isEnabled()) {
         // Abort any in-flight request when disabled
@@ -177,7 +176,14 @@ export function createResourceFactory(deps: ResourceDeps): ResourceFactory {
         return;
       }
       doFetch();
-    });
+    };
+
+    // Effect tracks reactive deps in fetcher and re-runs on change
+    // If flush strategy provided, wrap the callback with it
+    const flushOpt = options?.flush;
+    const disposeEffect = effect(
+      flushOpt ? flushOpt(effectCallback) : effectCallback
+    );
 
     // Dispose function - aborts in-flight request and stops tracking
     const dispose = (): void => {

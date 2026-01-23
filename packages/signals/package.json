@@ -47,6 +47,10 @@
       "import": "./dist/subscribe.js",
       "types": "./dist/subscribe.d.ts"
     },
+    "./strategies": {
+      "import": "./dist/strategies.js",
+      "types": "./dist/strategies.d.ts"
+    },
     "./untrack": {
       "import": "./dist/untrack.js",
       "types": "./dist/untrack.d.ts"

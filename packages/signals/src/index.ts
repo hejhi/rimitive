@@ -35,7 +35,7 @@
 // Factory types
 export type { SignalFactory } from './signal';
 export type { ComputedFactory } from './computed';
-export type { EffectFactory } from './effect';
+export type { EffectFactory, FlushStrategy } from './effect';
 export type { BatchFactory } from './batch';
 export type {
   SubscribeFunction,

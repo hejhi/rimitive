@@ -534,4 +534,233 @@ describe('resource', () => {
       expect(res.data()).toBe('data');
     });
   });
+
+  describe('flush option', () => {
+    it('should use sync strategy by default', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const id = signal(1);
+
+      resource(() => {
+        id();
+        fetchCount++;
+        return Promise.resolve('data');
+      });
+
+      expect(fetchCount).toBe(1);
+
+      // Change dependency - should fetch synchronously
+      id(2);
+      expect(fetchCount).toBe(2); // Immediate, not deferred
+    });
+
+    it('should defer refetch with microtask strategy', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const id = signal(1);
+
+      // Test-specific microtask strategy (mt uses serverStrategy in Node)
+      const testMt = (run: () => void) => {
+        let version = 0;
+        return {
+          run,
+          create:
+            (track: (node: { cleanup?: () => void }, fn: () => void) => void) =>
+            (node: { cleanup?: () => void }) => {
+              const thisVersion = ++version;
+              queueMicrotask(() => {
+                if (thisVersion !== version) return;
+                if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+                node.cleanup = track(node, run) as (() => void) | undefined;
+              });
+            },
+        };
+      };
+
+      resource(
+        () => {
+          id();
+          fetchCount++;
+          return Promise.resolve('data');
+        },
+        { flush: testMt }
+      );
+
+      // Initial fetch is always sync
+      expect(fetchCount).toBe(1);
+
+      // Change dependency - should not fetch immediately
+      id(2);
+      expect(fetchCount).toBe(1); // Still 1, deferred
+
+      // Flush microtasks
+      await flushMicrotasks();
+      expect(fetchCount).toBe(2); // Now fetched
+    });
+
+    it('should coalesce rapid updates with microtask strategy', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const id = signal(1);
+
+      // Test-specific microtask strategy (mt uses serverStrategy in Node)
+      const testMt = (run: () => void) => {
+        let version = 0;
+        return {
+          run,
+          create:
+            (track: (node: { cleanup?: () => void }, fn: () => void) => void) =>
+            (node: { cleanup?: () => void }) => {
+              const thisVersion = ++version;
+              queueMicrotask(() => {
+                if (thisVersion !== version) return;
+                if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+                node.cleanup = track(node, run) as (() => void) | undefined;
+              });
+            },
+        };
+      };
+
+      resource(
+        () => {
+          id();
+          fetchCount++;
+          return Promise.resolve(`data-${id()}`);
+        },
+        { flush: testMt }
+      );
+
+      expect(fetchCount).toBe(1);
+
+      // Rapid updates
+      id(2);
+      id(3);
+      id(4);
+
+      // Still only initial fetch
+      expect(fetchCount).toBe(1);
+
+      // After microtask, only one additional fetch
+      await flushMicrotasks();
+      expect(fetchCount).toBe(2); // Coalesced to single fetch
+    });
+
+    it('should work with enabled option', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const enabled = signal(false);
+      const id = signal(1);
+
+      // Test-specific microtask strategy (mt uses serverStrategy in Node)
+      const testMt = (run: () => void) => {
+        let version = 0;
+        return {
+          run,
+          create:
+            (track: (node: { cleanup?: () => void }, fn: () => void) => void) =>
+            (node: { cleanup?: () => void }) => {
+              const thisVersion = ++version;
+              queueMicrotask(() => {
+                if (thisVersion !== version) return;
+                if (node.cleanup !== undefined) node.cleanup = node.cleanup();
+                node.cleanup = track(node, run) as (() => void) | undefined;
+              });
+            },
+        };
+      };
+
+      const res = resource(
+        () => {
+          id();
+          fetchCount++;
+          return Promise.resolve('data');
+        },
+        { enabled, flush: testMt }
+      );
+
+      // Disabled - no fetch
+      expect(fetchCount).toBe(0);
+      expect(res().status).toBe('idle');
+
+      // Enable - triggers effect re-run (deferred by testMt)
+      enabled(true);
+      expect(fetchCount).toBe(0); // Deferred
+
+      await flushMicrotasks();
+      expect(fetchCount).toBe(1);
+
+      // Change dependency - deferred
+      id(2);
+      expect(fetchCount).toBe(1);
+
+      await flushMicrotasks();
+      expect(fetchCount).toBe(2);
+    });
+
+    it('should run once on server with mt (re-runs skipped)', async () => {
+      // In Node (no window), mt uses serverStrategy: initial run executes,
+      // subsequent re-runs are skipped. This makes resources effectively
+      // client-only when using async strategies.
+      const { signal, resource } = createTestEnv();
+      const { mt } = await import('@rimitive/signals/strategies');
+      let fetchCount = 0;
+
+      const id = signal(1);
+
+      resource(
+        () => {
+          id();
+          fetchCount++;
+          return Promise.resolve('data');
+        },
+        { flush: mt }
+      );
+
+      // Initial fetch runs (serverStrategy preserves initial run)
+      expect(fetchCount).toBe(1);
+
+      // Re-runs are skipped on server
+      id(2);
+      await flushMicrotasks();
+      expect(fetchCount).toBe(1); // Still 1, re-run skipped
+    });
+
+    it('should accept custom flush strategy', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+      let flushCalls = 0;
+
+      const id = signal(1);
+
+      // Custom strategy that tracks calls
+      const customStrategy = (run: () => void) => ({
+        run,
+        create: (track: (node: unknown, fn: () => void) => void) => (node: unknown) => {
+          flushCalls++;
+          // Execute synchronously for testing
+          track(node, run);
+        },
+      });
+
+      resource(
+        () => {
+          id();
+          fetchCount++;
+          return Promise.resolve('data');
+        },
+        { flush: customStrategy }
+      );
+
+      expect(fetchCount).toBe(1);
+      expect(flushCalls).toBe(0); // Not called for initial run
+
+      id(2);
+      expect(flushCalls).toBe(1); // Called on dependency change
+      expect(fetchCount).toBe(2);
+    });
+  });
 });

@@ -120,12 +120,14 @@ A resource has multiple ways to read its state:
 ```typescript
 // Full state object
 products();
+// { status: 'idle' }     // when enabled=false
 // { status: 'pending' }
 // { status: 'ready', value: [...] }
 // { status: 'error', error: Error }
 
 // Convenience accessors
-products.loading();  // true | false
+products.idle();     // true when disabled
+products.loading();  // true when pending
 products.data();     // T | undefined
 products.error();    // unknown | undefined
 ```
@@ -222,6 +224,8 @@ const UserProfile = (svc: Service) => {
     return el('div').ref(() => () => user.dispose())(
       match(user, (state) => {
         switch (state.status) {
+          case 'idle':
+            return null; // Resource disabled
           case 'pending':
             return el('div').props({ className: 'skeleton' })('Loading profile...');
           case 'error':
@@ -284,6 +288,96 @@ This aborts any in-flight request and stops dependency tracking.
 
 ---
 
+## Options
+
+### enabled
+
+Control whether the resource fetches with the `enabled` option:
+
+```typescript
+const ProductList = (svc: Service) => {
+  const { signal, resource, el } = svc;
+
+  return (selectedId: string | null) => {
+    const id = signal(selectedId);
+
+    // Only fetch when we have an ID
+    const product = resource<Product>(
+      (s) => fetch(`/api/products/${id()}`, { signal: s }).then(r => r.json()),
+      { enabled: () => id() !== null }
+    );
+
+    // product.idle() is true when disabled
+    return el('div').ref(() => () => product.dispose())(
+      product.idle()
+        ? el('p')('Select a product')
+        : el('p')(product.data()?.name ?? 'Loading...')
+    );
+  };
+};
+```
+
+`enabled` accepts a boolean or a reactive function. When false, the resource stays in `idle` state. When it becomes true, fetching begins.
+
+#### Lazy Fetching
+
+Use `enabled` to defer fetching until a user action:
+
+```typescript
+const ReportViewer = (svc: Service) => {
+  const { signal, resource, el, match } = svc;
+
+  return (reportId: string) => {
+    const shouldLoad = signal(false);
+
+    const report = resource<Report>(
+      (s) => fetch(`/api/reports/${reportId}`, { signal: s }).then(r => r.json()),
+      { enabled: shouldLoad }
+    );
+
+    return el('div').ref(() => () => report.dispose())(
+      match(report, (state) => {
+        if (state.status === 'idle') {
+          return el('button').props({ onclick: () => shouldLoad(true) })(
+            'Load Report'
+          );
+        }
+        if (state.status === 'pending') return el('p')('Loading...');
+        if (state.status === 'error') return el('p')(`Error: ${state.error}`);
+        return el('div')(/* render report */);
+      })
+    );
+  };
+};
+```
+
+The resource stays idle until the user clicks "Load Report", then fetches.
+
+### flush
+
+Control when refetches execute with the `flush` option:
+
+```typescript
+import { mt, debounce } from '@rimitive/signals/strategies';
+
+// Defer refetches to microtask (coalesces rapid updates)
+const products = resource(fetcher, { flush: mt });
+
+// Debounce refetches (useful for search-as-you-type)
+const results = resource(
+  (s) => fetch(`/api/search?q=${query()}`, { signal: s }).then(r => r.json()),
+  { flush: (run) => debounce(300, run) }
+);
+```
+
+Without `flush`, refetches are synchronous—each dependency change triggers an immediate fetch. With a flush strategy, rapid updates are coalesced.
+
+<Aside type="note">
+On the server, async flush strategies (`mt`, `raf`, `debounce`) execute once and skip subsequent re-runs. This makes resources with flush strategies effectively client-only—useful for SSR apps where you want the initial fetch but no reactive refetching during render.
+</Aside>
+
+---
+
 ## resource() vs load()
 
 Rimitive has two primitives for async data:
@@ -306,16 +400,20 @@ Rimitive has two primitives for async data:
 - SEO or first-paint performance matters for this data
 
 <Aside type="caution" title="SSR Note">
-`resource()` starts fetching immediately when created—it doesn't wait for hydration or know about server vs client. In SSR apps:
+`resource()` starts fetching immediately when created. In SSR apps:
 
 - Use `load()` for data that should be server-rendered
-- Use `resource()` only for client-side dynamic data (filters, search, user interactions)
-- If you need a resource that only runs on the client, guard its creation:
+- Use `resource()` for client-side dynamic data (filters, search, user interactions)
+- For client-only resources, use the `enabled` option or a flush strategy:
 
 ```typescript
-const data = typeof window !== 'undefined'
-  ? resource((s) => fetch('/api/data', { signal: s }).then(r => r.json()))
-  : null;
+// Option 1: enabled (resource stays idle on server)
+const data = resource(fetcher, {
+  enabled: () => typeof window !== 'undefined'
+});
+
+// Option 2: flush strategy (runs once on server, no re-runs)
+const data = resource(fetcher, { flush: mt });
 ```
 </Aside>
 

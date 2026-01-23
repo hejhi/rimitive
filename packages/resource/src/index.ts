@@ -23,7 +23,7 @@
  * );
  *
  * // Read state reactively
- * products();        // { status: 'pending' | 'ready' | 'error', ... }
+ * products();        // { status: 'idle' | 'pending' | 'ready' | 'error', ... }
  * products.loading(); // boolean
  * products.data();    // T | undefined
  * products.error();   // unknown | undefined
@@ -60,6 +60,7 @@ export type {
   Resource,
   ResourceState,
   ResourceOptions,
+  FlushStrategyFactory,
   Fetcher,
   ResourceFactory,
 } from './types';

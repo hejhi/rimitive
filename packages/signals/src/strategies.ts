@@ -20,11 +20,15 @@ const isServer = (): boolean =>
   typeof window === 'undefined' ||
   typeof requestAnimationFrame === 'undefined';
 
-/** No-op strategy for server - effect is skipped entirely */
-const noopStrategy: FlushStrategy = {
-  run: () => {},
-  create: () => () => {},
-};
+/**
+ * Server-side strategy - runs once synchronously, skips re-runs.
+ * Initial execution happens normally; subsequent dependency changes are ignored.
+ * This makes the effect effectively "run once" on the server.
+ */
+const serverStrategy = (run: () => void | (() => void)): FlushStrategy => ({
+  run, // Initial execution happens normally
+  create: () => () => {}, // Re-runs are skipped
+});
 
 /**
  * Microtask flush strategy.
@@ -45,7 +49,7 @@ const noopStrategy: FlushStrategy = {
  * ```
  */
 export const mt = (run: () => void | (() => void)): FlushStrategy => {
-  if (isServer()) return noopStrategy;
+  if (isServer()) return serverStrategy(run);
 
   let version = 0;
   return {
@@ -77,7 +81,7 @@ export const mt = (run: () => void | (() => void)): FlushStrategy => {
  * ```
  */
 export const raf = (run: () => void | (() => void)): FlushStrategy => {
-  if (isServer()) return noopStrategy;
+  if (isServer()) return serverStrategy(run);
 
   let frameId: number | null = null;
   return {
@@ -114,7 +118,7 @@ export const debounce = (
   ms: number,
   run: () => void | (() => void)
 ): FlushStrategy => {
-  if (isServer()) return noopStrategy;
+  if (isServer()) return serverStrategy(run);
 
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   return {

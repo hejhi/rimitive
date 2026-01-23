@@ -1,4 +1,12 @@
-import type { Readable } from '@rimitive/signals';
+import type { Readable, FlushStrategy } from '@rimitive/signals';
+
+/**
+ * A flush strategy factory - takes a callback and returns a FlushStrategy.
+ * Examples: `mt`, `raf`, `debounce(300, ...)`.
+ */
+export type FlushStrategyFactory = (
+  run: () => void | (() => void)
+) => FlushStrategy;
 
 /**
  * Resource state - discriminated union for async data states
@@ -20,6 +28,26 @@ export type ResourceOptions = {
    * @default true
    */
   enabled?: boolean | Readable<boolean>;
+
+  /**
+   * Flush strategy for the internal effect. Controls when re-fetches execute.
+   * Pass a strategy factory like `mt`, `raf`, or `debounce(ms, ...)`.
+   *
+   * On the server, async strategies (mt, raf, etc.) are no-ops, making the
+   * resource effectively client-only - useful for SSR apps.
+   *
+   * @example
+   * ```ts
+   * // Client-only resource (no-ops on server)
+   * resource((s) => fetch('/api', { signal: s }), { flush: mt });
+   *
+   * // Debounced refetch
+   * resource((s) => fetch('/api?q=' + query(), { signal: s }), {
+   *   flush: (run) => debounce(300, run)
+   * });
+   * ```
+   */
+  flush?: FlushStrategyFactory;
 };
 
 /**

@@ -70,6 +70,7 @@ export default defineConfig({
         batch: resolve(__dirname, 'src/batch.ts'),
         subscribe: resolve(__dirname, 'src/subscribe.ts'),
         untrack: resolve(__dirname, 'src/untrack.ts'),
+        strategies: resolve(__dirname, 'src/strategies.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         'devtools/signal': resolve(__dirname, 'src/devtools/signal.ts'),
         'devtools/computed': resolve(__dirname, 'src/devtools/computed.ts'),
