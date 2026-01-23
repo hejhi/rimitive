@@ -1,7 +1,76 @@
 /* Custom styles for Rimitive documentation */
 
+/* Brand colors from logo: #E4E4DA (off-white), #193335 (dark teal), #E75839 (orange) */
+:root {
+  --sl-color-accent-low: #fceee9;
+  --sl-color-accent: #E75839;
+  --sl-color-accent-high: #d14a2c;
+  --sl-color-bg: #E4E4DA;
+  --sl-color-bg-nav: #ddddd3;
+  --sl-color-bg-sidebar: #ddddd3;
+  --sl-color-text: #193335;
+  --sl-color-text-accent: #193335;
+  --sl-color-white: #193335;
+  --sl-color-gray-1: #193335;
+  --sl-color-gray-2: #2a4a4d;
+}
+
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #3d1a12;
+  --sl-color-accent: #E75839;
+  --sl-color-accent-high: #f07a60;
+  --sl-color-bg: #193335;
+  --sl-color-bg-nav: #142a2c;
+  --sl-color-bg-sidebar: #142a2c;
+  --sl-color-text: #E4E4DA;
+  --sl-color-text-accent: #E4E4DA;
+  --sl-color-white: #E4E4DA;
+  --sl-color-gray-1: #E4E4DA;
+  --sl-color-gray-2: #c5c5bb;
+  --sl-color-gray-5: #3a5a5d;
+  --sl-color-gray-6: #2a4547;
+}
+
 .site-title {
   gap: 1rem;
+}
+
+/* Site title text should be dark teal, not accent orange */
+.site-title span {
+  color: #193335 !important;
+}
+
+:root[data-theme='dark'] .site-title span {
+  color: #E4E4DA !important;
+}
+
+/* Ensure headings use brand colors */
+h1, h2, h3, h4, h5, h6 {
+  color: #193335;
+}
+
+:root[data-theme='dark'] h1,
+:root[data-theme='dark'] h2,
+:root[data-theme='dark'] h3,
+:root[data-theme='dark'] h4,
+:root[data-theme='dark'] h5,
+:root[data-theme='dark'] h6 {
+  color: #E4E4DA;
+}
+
+/* Fix pagination and card borders in dark mode */
+:root[data-theme='dark'] .pagination-links a,
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .sl-link-card,
+:root[data-theme='dark'] a.card {
+  border-color: #3a5a5d;
+}
+
+:root[data-theme='dark'] .pagination-links a:hover,
+:root[data-theme='dark'] .card:hover,
+:root[data-theme='dark'] .sl-link-card:hover,
+:root[data-theme='dark'] a.card:hover {
+  border-color: #E75839;
 }
 
 /* Logo sizing */
@@ -70,6 +139,32 @@ table td {
 /* Aside styling */
 aside {
   margin: 1.5rem 0;
+}
+
+/* Override Starlight aside "note" color to use brand teal instead of blue */
+.starlight-aside--note {
+  --sl-color-asides-text-accent: #193335;
+  border-color: #3a5a5d;
+  background-color: #d5d5cb;
+}
+
+:root[data-theme='dark'] .starlight-aside--note {
+  --sl-color-asides-text-accent: #7ab8bc;
+  border-color: #7ab8bc;
+  background-color: #1f4244;
+}
+
+/* Override Starlight aside "tip" color to a softer purple */
+.starlight-aside--tip {
+  --sl-color-asides-text-accent: #6b5b7a;
+  border-color: #8b7b9b;
+  background-color: #e8e4ec;
+}
+
+:root[data-theme='dark'] .starlight-aside--tip {
+  --sl-color-asides-text-accent: #c8b8d8;
+  border-color: #9888a8;
+  background-color: #3d3548;
 }
 
 /* Action buttons */
