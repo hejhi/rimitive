@@ -1,0 +1,104 @@
+---
+title: Intro to SSR
+description: Understand server-side rendering before diving into implementation.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Server-side rendering (SSR) renders your app to HTML on the server before sending it to the browser. Instead of shipping an empty `<div id="app">` and waiting for JavaScript to build the page, users see content immediately.
+
+---
+
+## Why SSR?
+
+**Faster first paint.** Users see content before JavaScript loads. On slow connections or devices, this difference is significant.
+
+**SEO.** Search engines index the HTML you send. Client-rendered apps require crawlers to execute JavaScript, which not all do well.
+
+**Social sharing.** Link previews (OpenGraph, Twitter cards) scrape your HTML. SSR ensures they get real content.
+
+**When to skip SSR:** Internal tools, dashboards, and apps behind auth often don't need SSR. The added complexity isn't worth it if SEO and initial load time aren't priorities.
+
+---
+
+## What is SSR?
+
+Your app runs twice: once on the server, once on the client. The following questions break down what that means.
+
+### _Why_ execute it on the server to begin with?
+
+- Reactive apps generate dynamic, interactive content, but at the end of the day for web apps, the output that the user sees and interacts with is HTML
+- The server can be used to execute your app and generate the _exact HTML_ structure your app would have otherwise output in the browser on load
+- That server-generated HTML can be serialized and sent to the client when a user visits a page, rendering the HTML old-school style—just like a PHP site would render HTML, except that it was _actually_ generated from executing your app on the server
+- When the page loads in the client, the user sees the _identical HTML output_ they would have seen after your app loads in the client, but before the js even loads—_identical_ is the key word here—if it's _not_ identical, then that results in a hydration mismatch (described later)
+- This provides an instantaneous load time for the user
+
+A static HTML page is obviously not what you want. Somehow, your app needs to "catch up" to the rendered HTML, and take back ownership over the markup to make it interactive. That's what we call **hydration**.
+
+### How does it run on the server?
+
+Your app is JavaScript, and JavaScript can run on the server. For view primitives like `el`, Rimitive lets you swap in a server-friendly adapter that generates markup without a real DOM.
+
+The out-of-the-box server adapter is powered by [`linkedom`](https://github.com/WebReflection/linkedom), a lightweight DOM implementation. When `el("div")` runs on the server, it creates a linkedom element instead of a real DOM element. This lets linkedom render your app's HTML structure the same way the browser would.
+
+That generated HTML structure is then serialized into a string and sent to the client.
+
+### What about browser APIs and events?
+
+Browser and DOM events aren't supported on the server, and browser-specific APIs won't work. You'll need to add guards for code that touches these:
+
+```typescript
+el('input').ref((el) => {
+  if (typeof window !== 'undefined') el.focus();
+})()
+```
+
+In an ideal world, imperative DOM work is contained within refs, making it easy to guard.
+
+<Aside type="note">
+Rimitive effects are synchronous by default and _will_ run on the server. However, async flush strategies (like `mt`, `raf`, etc.) are noops on the server—safe to use, but they won't execute.
+</Aside>
+
+### What about fetched data?
+
+Rimitive supports data fetching during SSR with a primitive called `load()`.
+
+<Aside type="caution" title="SSR Data Pitfalls">
+Don't use raw `fetch()` or `resource()` for SSR data:
+- **`fetch()` in a component** starts the request but doesn't block—the server sends HTML before it resolves
+- **`resource()`** auto-fetches via effects but has no hydration support—the client refetches anyway
+- **`resource()` at module level** is especially dangerous—it creates a singleton shared across all server requests, risking data leaks between users
+
+Use `load()` for any data that needs to render on the server.
+</Aside>
+
+### What is Hydration?
+
+When the browser receives SSR HTML, it displays it immediately—but it's static. Buttons don't work, inputs don't respond. The page needs JavaScript to become interactive.
+
+**Hydration** is the process of making that static HTML interactive. Instead of throwing away the HTML and rebuilding the DOM from scratch (which would cause a flash), hydration walks the existing DOM and attaches your app's event listeners and reactive bindings.
+
+Rimitive provides a hydration adapter that you plug into `createElModule()`. During hydration, this adapter walks the existing DOM elements instead of creating new ones, wiring up your signals and event handlers to what's already there.
+
+---
+
+## The Mental Model
+
+1. **Server renders your app** — using a server adapter that creates linkedom elements
+2. **HTML is serialized and sent** — the client receives fully-rendered markup
+3. **Browser displays HTML immediately** — users see content before JS loads
+4. **Client JavaScript loads** — your app code runs again
+5. **Hydration walks the DOM** — attaches reactivity to existing elements
+6. **App is interactive** — future updates use normal DOM operations
+
+The server and client must produce _identical_ HTML. If they don't, you get a hydration mismatch error.
+
+---
+
+## Next Steps
+
+Ready to implement? Continue to the practical guides:
+
+- **[Server Rendering](/guides/server-rendering)** — Set up basic SSR with adapters
+- **[SSR with Data Loading](/guides/ssr-loading)** — Fetch data during SSR with `load()`
+- **[Streaming SSR](/guides/streaming-ssr)** — Send HTML progressively as data loads

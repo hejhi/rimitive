@@ -5,57 +5,50 @@ description: Fetch async data during server rendering with load().
 
 import { Aside } from '@astrojs/starlight/components';
 
-This guide builds on [Server Rendering](/guides/server-rendering). Read that first if you haven't.
+This guide builds on [Server Rendering](/guides/server-rendering) and [Client Hydration](/guides/client-hydration). Read those first.
 
 ---
 
-## Why Async SSR?
+## What's Different?
 
-Basic SSR works great for static content. But most apps need data—user profiles, product listings, blog posts. You could fetch this data client-side after hydration, but then:
+Basic SSR renders static content. But when you need data from an API or database, you need:
 
-- Users see loading spinners instead of content
-- Search engines index empty placeholders
-- The main benefit of SSR (fast first paint with real content) is lost
+1. A way to load data into your app that works both on the client and server (`load()`)
+2. A server render function that also waits for the data when run on the server (`renderToStringAsync`)
+3. A way to pass that data to the client to provide **back** into your app (`hydrationData`), which completes the cycle by providing it back into the respective `load()` primitives (and thus hydrating them) 🔄
 
-**Async SSR solves this.** The server fetches data, waits for it, then sends complete HTML. The client receives a fully-rendered page with data already embedded—no loading spinners or refetching.
+Rimitive provides a primitive called `load()` for this. You wrap the parts of your UI that need async data, Rimitive handles fetching on the server, serializes the results, and hydrates the client without refetching.
 
-Rimitive provides a primitive called `load()` for this. With `load()`, you can mark **boundaries** by wrapping the parts of your UI where async data is needed, and Rimitive handles the rest—fetching on the server, serializing the results, and hydrating on the client, without needing to refetch.
+```
+SERVER
+  │
+  ├─ App runs, hits load() calls
+  ├─ Fetches data, waits for all
+  ├─ Renders HTML with fetched data
+  ├─ Packs fetched data into a <script> tag
+  │
+  ▼
+─────────── HTML + Data ───────────►
+  │
+  ▼
+CLIENT
+  │
+  ├─ Displays HTML (instant)
+  ├─ Loads JS, reads packed data
+  ├─ App runs, load() finds respective cached data
+  └─ Hydrates without refetching or re-rendering ✓
+  │
+  🎉 UI interactive!
+```
 
 <Aside type="tip">
-`load()` boundaries can be nested. The server resolves them iteratively—outer boundaries first, then any inner boundaries that appear after outer data loads.
+You can nest `load()` boundaries! The server resolves them iteratively—outer boundaries first, then any inner boundaries that appear after outer data loads.
 </Aside>
 
 ---
+## 1. Service Setup
 
-## How It Works
-
-Here's the flow:
-
-```
-Server                                          Client
-  │                                               │
-  ├─ Render app                                   │
-  ├─ Encounter load() calls                       │
-  ├─ Fetch data for each                          │
-  ├─ Wait for all fetches                         │
-  ├─ Render complete HTML                         │
-  ├─ Serialize data into <script> tag             │
-  ├─ Send HTML ─────────────────────────────────► │
-  │                                               ├─ Display HTML (instant)
-  │                                               ├─ Load JavaScript
-  │                                               ├─ Hydrate with embedded data
-  │                                               ├─ Interactive (no refetch)
-```
-
-A `load()` call wraps the parts of your component tree where data needs to be fetched. During SSR, the server finds all these spots, fetches the data, and waits for everything to complete before sending HTML.
-
-The data then travels _with_ the HTML. When `load()` runs during hydration, it finds the data already waiting! No network requests needed.
-
----
-
-## Adding the Loader Module
-
-To use `load()`, add `createLoaderModule` to your service:
+The first step is to setup the shared service. Update your shared service to include `createLoaderModule`:
 
 ```typescript
 // service.ts
@@ -68,8 +61,6 @@ import type { Adapter } from '@rimitive/view/types';
 import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 export type ServiceOptions = {
-  // The fetched data the server is sending back from all our load() async
-  // calls on the server, mapped to ids
   hydrationData?: Record<string, unknown>;
 };
 
@@ -83,10 +74,8 @@ export function createService(
     EffectModule,
     createElModule(adapter),
     createMatchModule(adapter),
-    // Add this 👇
+    // 👇 Add this
     createLoaderModule({
-      // Provide the hydrationData map as loader initialData—so, when a given loader runs on
-      // the client, it finds its respective data that was fetched from its run on the server!
       initialData: options?.hydrationData,
     })
   );
@@ -95,38 +84,22 @@ export function createService(
 export type Service = ReturnType<typeof createService>;
 ```
 
-The loader is neatly symmetric:
-- when you wrap a part of the UI in a `load()` call, you provide a unique id for it
-- when that `load()` runs on the server as part of executing the app server-side:
-  - the data returned is associated back to that id provided
-  - all resolved loader data gets mapped back to the respective id, put into a map, and sent back to the client
-  - that map gets passed into `createLoaderModule()` as its `initialData` to be provided to all `load()` calls created from it
-- when any `load()` runs on the client as part of executing the app during hydration, it receives its respective data from `initialData` and knows it can skip that initial fetch
-
-Here's why it matters: when provided _no_ `initialData`, `load()` would behave as if...it had no data yet. But the data has already been rendered by the server and provided to the client as HTML content. So during hydration, the `load()` would fetch, and there would probably be some intermediary loading state as we wiped out the active content there. That's a hydration mismatch!
-
-By passing `initialData`, the client's `load()` calls find its corresponding data immediately, setting up the correct signal states, matching what the server provided. Essentially, syncing the app state to the content that's already rendered!
-
-Not clear yet? The next section might help...
+The `initialData` option receives all the data fetched during SSR as a key/value map. When each `load()` runs on the client, it checks this map first—if it finds data for its ID, it skips it's initial fetch-and-render, and uses the cached value instead. This prevents hydration mismatches and duplicate requests.
 
 ---
 
-## Using load()
+### Using load()
 
-`load()` creates async boundaries—a place where your app waits for data. It takes three arguments:
+`load()` takes three arguments:
 
 | Argument | Purpose |
 |----------|---------|
-| `id` | Unique string identifier. The client uses this to find the matching data from SSR. |
-| `fetcher` | Async function that returns your data. Runs on server during SSR, skipped on client if data exists. |
-| `render` | Function that receives loading state and returns UI for each state. |
-
-Here's an example:
+| `id` | Unique string identifier. The client uses this to find matching data from SSR. |
+| `fetcher` | Async function that returns your data. Runs on server, skipped on client if data exists. |
+| `render` | Function that receives loading state and returns UI. |
 
 ```typescript
-const UserProfile = (svc: Service) => {
-  const { loader, match, el } = svc;
-
+const UserProfile = ({ loader, match, el }: Service) => {
   return loader.load(
     'user-profile',
     () => fetch('/api/user').then(r => r.json()),
@@ -151,48 +124,23 @@ const UserProfile = (svc: Service) => {
 
 ### The State Object
 
-The `state` passed to your render function has three reactive properties:
-
 | Property | Type | Description |
 |----------|------|-------------|
 | `state.status` | `'pending' \| 'ready' \| 'error'` | Current loading state |
-| `state.data()` | `T \| undefined` | Your data (stuffed into a signal) |
-| `state.error()` | `unknown \| undefined` | The error, if any (also stuffed into a signal) |
-
-<Aside type="tip">
-`state.data()` and `state.error()` are signals! This makes them reactive—your UI updates automatically when they change. Rimitive leverages signals wherever possible to make it easier.
-</Aside>
+| `state.data()` | `T \| undefined` | Your data (it's a signal—call it) |
+| `state.error()` | `unknown \| undefined` | The error, if any |
 
 ---
 
-## Rendering on the Server
+## 2. Server Setup
 
-For basic SSR, you call `.create()` and `serialize()` directly. With async data, you need `renderToStringAsync`—it walks your component tree, waits for all `load()` boundaries to resolve, then returns the complete HTML.
-
-### What renderToStringAsync Does
-
-1. Mounts your app spec
-2. Finds all `load()` boundaries
-3. Waits for every fetcher to complete
-4. Renders the final HTML with real data (not loading states)
-
-### The Server Adapter
-
-`createDOMServerAdapter()` returns three things:
-
-| Property | Purpose |
-|----------|---------|
-| `adapter` | Creates elements using linkedom (a lightweight server-side DOM) |
-| `serialize` | Converts a DOM element to an HTML string |
-| `insertFragmentMarkers` | Adds markers around `load()` boundaries so hydration can find them |
-
-### Complete Server Example
+With async, we use `renderToStringAsync` instead of calling `serialize()` directly. It waits for all `load()` calls to resolve before returning HTML.
 
 ```typescript
 // server.ts
 import { createServer } from 'node:http';
 import {
-  createDOMServerAdapter,
+  createLinkedomAdapter,
   renderToStringAsync,
   safeJsonStringify,
 } from '@rimitive/ssr/server';
@@ -200,11 +148,10 @@ import { createService } from './service.js';
 import { App } from './App.js';
 
 const server = createServer(async (req, res) => {
-  // Create fresh adapter and service for each request
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
   const service = createService(adapter);
 
-  // Render and wait for all data
+  // Render and wait for all load() boundaries
   const html = await renderToStringAsync(App(service), {
     svc: service,
     mount: (spec) => spec.create(service),
@@ -212,7 +159,8 @@ const server = createServer(async (req, res) => {
     insertFragmentMarkers,
   });
 
-  // Collect all the data that was fetched
+  // Collect fetched data from all the loader calls that occurred during render
+  // (collected by the loader)
   const loaderData = service.loader.getData();
 
   res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -231,19 +179,18 @@ const server = createServer(async (req, res) => {
 server.listen(3000);
 ```
 
-<Aside type="caution">
-Always use `safeJsonStringify` when embedding data in HTML. Regular `JSON.stringify` is vulnerable to XSS if your data contains `</script>` or similar strings.
-</Aside>
+### What's new:
 
-### Why Fresh State Per Request?
-
-We create a new adapter and service for every request. If you reuse them, data from one user's request could leak into another's.
+1. **`renderToStringAsync`** — Waits for all `load()` fetchers to complete
+2. **`insertFragmentMarkers`** — Adds markers around `load()` boundaries for hydration
+3. **`service.loader.getData()`** — Returns a map of all fetched data (ID → data)
+4. **`safeJsonStringify`** — Safely embeds JSON in HTML (prevents XSS from `</script>` in data)
 
 ---
 
-## Hydrating on the Client
+## 3. Client Setup
 
-Now for the client side. The browser has already received and displayed the HTML—we just need to make it interactive and connect the data.
+Pass the embedded data (`window.__RIMITIVE_DATA__`, or whatever you decide to call it) to your service as `hydrationData`:
 
 ```typescript
 // client.ts
@@ -255,34 +202,25 @@ import {
 import { createService } from './service.js';
 import { App } from './App.js';
 
-// 1. Create hydration adapter (walks existing DOM instead of creating new elements)
 const hydrationAdapter = createHydrationAdapter(
   createDOMHydrationAdapter(document.querySelector('.app')!),
   createDOMAdapter()
 );
 
-// 2. Get the data that was embedded in the HTML
+// 👇 Pass the SSR data to the service
 const ssrData = window.__RIMITIVE_DATA__;
-
-// 3. Create service with SSR data for hydration
+//             Remember from step 1? Here's where we pass the data 👇
 const service = createService(hydrationAdapter, { hydrationData: ssrData });
 
-// 4. Hydrate - this walks the DOM and wires up reactivity
 App(service).create(service);
-
-// 5. Switch to normal mode for future updates
 hydrationAdapter.switchToFallback();
 ```
 
-### What Happens During Hydration
+When `load('user-profile', ...)` runs during hydration, it finds the corresponding `'user-profile'` id in `hydrationData` and uses that data immediately—no fetch, no loading state, no mismatch.
 
-1. The hydration adapter walks the existing DOM instead of creating new elements
-2. When `load('user-profile', ...)` runs, it looks up `'user-profile'` in `initialData`
-3. It finds the data immediately—no fetch needed
-4. The render function runs with `status: 'ready'` and your real data
-5. Event listeners and reactive bindings are attached to existing elements
-
-After hydration completes, the app is fully interactive. Future updates use the normal DOM adapter.
+<Aside type="tip" title="Working Example">
+See [`packages/examples/ssr-router-async`](https://github.com/hejhi/rimitive/tree/main/packages/examples/ssr-router-async) for a complete implementation with routing and `load()` boundaries.
+</Aside>
 
 ---
 
@@ -290,7 +228,7 @@ After hydration completes, the app is fully interactive. Future updates use the 
 
 ### Errors in load() Boundaries
 
-If a fetcher throws, `load()` catches it and renders the error state. This works the same on server and client:
+If a fetcher throws, `load()` catches it and renders the respective error state:
 
 ```typescript
 loader.load(
@@ -314,11 +252,11 @@ loader.load(
 );
 ```
 
-The error is captured and serialized—the client receives the error UI already rendered, and the error is preserved in the SSR data for hydration.
+The error is serialized too—the client receives the error UI already rendered.
 
 ### Server-Level Errors
 
-For errors outside `load()` boundaries (like a crash during rendering), wrap the whole thing:
+For errors outside `load()` boundaries, wrap `renderToStringAsync`:
 
 ```typescript
 try {
@@ -334,10 +272,8 @@ try {
 
 ---
 
-Async loading with SSR is non-trivial, but it's quite powerful and worth experimenting with!
-
 ## Next Steps
 
-With `renderToStringAsync`, the server waits for all data before responding. For pages with slow or independent data sources, you might want to send HTML progressively:
+With `renderToStringAsync`, the server waits for _all_ data before responding. That's great for pages where you want to render everything up-front for good SEO and fast load times. For pages with slow or independent data sources, you might want to send HTML progressively:
 
 - **[Streaming SSR](/guides/streaming-ssr)** — Send the shell immediately, stream data as it loads

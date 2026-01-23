@@ -3,44 +3,58 @@ title: Streaming SSR
 description: Send HTML immediately and stream data as it loads.
 ---
 
+import { Aside } from '@astrojs/starlight/components';
+
 This guide builds on [SSR with Data Loading](/guides/ssr-loading). Make sure you understand `load()` and basic SSR setup first.
 
-With `renderToStringAsync`, the server waits for all data before sending anything. **Streaming SSR** sends the page shell immediately, then streams data chunks as each `load()` boundary resolves. Users see content faster, especially when some data sources are slow.
+---
+
+## Why Streaming?
+
+With `renderToStringAsync`, the server waits for **all** data before sending anything. That's fine when data loads quickly, but if one API takes 3 seconds, users stare at a blank screen for 3 seconds.
+
+**Streaming SSR** sends the page shell immediately, then streams data chunks as each `load()` boundary resolves. Users see content faster, especially when some data sources are slow.
+
+```
+SERVER
+  │
+  ├─ App runs, creates load() boundaries with pending states
+  ├─ Sends initial HTML immediately (loading UI visible)
+  │
+  │   ─────────── HTML Shell ───────────►  Users see loading UI
+  │
+  ├─ load() #1 resolves → stream chunk
+  │   ─────────── <script>data1</script> ──►  UI updates
+  │
+  ├─ load() #2 resolves → stream chunk
+  │   ─────────── <script>data2</script> ──►  UI updates
+  │
+  └─ All done, close response
+```
+
+Signals update the UI. The server streams data, the client pushes it to signals, and Rimitive handles the rest.
 
 ---
 
-## How Streaming Works
+## The Stream Writer
 
-1. Server renders the app with `pending` states for all `load()` boundaries
-2. Initial HTML is sent immediately — users see the loading UI
-3. As each `load()` boundary resolves, data is streamed as a script tag
-4. Client receives data via a streaming receiver and updates signals
-5. UI updates reactively — no DOM manipulation needed
-
-The key insight: signals update the UI. The server streams data, the client pushes it to signals, and Rimitive handles the rest.
-
----
-
-## Setting Up the Stream Writer
-
-The stream writer generates JavaScript code for the streaming protocol:
+Streaming needs a way to send data from server to client as it becomes available. `createStreamWriter` generates the JavaScript for this:
 
 ```typescript
 import { createStreamWriter } from '@rimitive/ssr/server';
 
-// Create writer with a unique key
 const stream = createStreamWriter('__APP_STREAM__');
 
-// Bootstrap code initializes the receiver
+// Bootstrap code goes in <head> - sets up the receiver
 stream.bootstrapCode();
-// Returns: "window.__APP_STREAM__=(function(){...})();"
+// → "window.__APP_STREAM__=(function(){...})();"
 
-// Chunk code pushes data to the receiver
+// Chunk code is sent as data resolves - pushes to the receiver
 stream.chunkCode('stats', { users: 100 });
-// Returns: "__APP_STREAM__.push("stats",{"users":100});"
+// → "__APP_STREAM__.push(\"stats\",{\"users\":100});"
 ```
 
-The receiver queues data chunks until the client connects, then forwards them to the loader.
+The receiver queues data until the client calls `connectStream()`, then forwards chunks to the loader.
 
 ---
 
@@ -52,7 +66,7 @@ Use `renderToStream` instead of `renderToStringAsync`:
 // server.ts
 import { createServer } from 'node:http';
 import {
-  createDOMServerAdapter,
+  createLinkedomAdapter,
   renderToStream,
   createStreamWriter,
 } from '@rimitive/ssr/server';
@@ -64,7 +78,7 @@ const STREAM_KEY = '__APP_STREAM__';
 const stream = createStreamWriter(STREAM_KEY);
 
 const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+  const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
 
   // Create service with streaming callback
   const service = createService(adapter, {
@@ -112,183 +126,108 @@ const server = createServer(async (req, res) => {
 server.listen(3000);
 ```
 
-Key differences from basic SSR:
-- `onResolve` callback streams data as each boundary resolves
-- `renderToStream` returns immediately with pending states
-- `done` promise resolves when all data has streamed
+### What's different from async SSR:
+
+| Async SSR | Streaming SSR |
+|-----------|---------------|
+| `renderToStringAsync` waits for all data | `renderToStream` returns immediately |
+| One HTML response at the end | HTML shell + data chunks over time |
+| No `onResolve` needed | `onResolve` streams each chunk |
+| Simpler setup | More responsive UX |
 
 ---
 
-## Service with Streaming Support
+## Service with Streaming
 
-Your service needs to pass `onResolve` to the loader:
+Add `onResolve` to your service options and pass it through to `createLoaderModule`:
 
 ```typescript
-// service.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
-import type { Adapter } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
-
+// service.ts - add to your existing ServiceOptions
 export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-  onResolve?: (id: string, data: unknown) => void;
+  hydrationData?: Record<string, unknown>;
+  onResolve?: (id: string, data: unknown) => void;  // 👈 Add this
 };
 
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
-  return compose(
-    SignalModule,
-    ComputedModule,
-    EffectModule,
-    createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({
-      initialData: options?.loaderData,
-      onResolve: options?.onResolve,
-    })
-  );
-}
-
-export type Service = ReturnType<typeof createService>;
+// Pass it through to the loader
+createLoaderModule({
+  initialData: options?.hydrationData,
+  onResolve: options?.onResolve,  // 👈 Add this
+})
 ```
+
+See the [SSR with Data Loading](/guides/ssr-loading) service setup for the full example.
 
 ---
 
 ## Client Setup
 
-The client connects to the stream after hydration:
+The client hydrates, then connects to the stream to receive data chunks:
 
 ```typescript
 // client.ts
-import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import {
+  createDOMHydrationAdapter,
+  createHydrationAdapter,
+  connectStream,
+} from '@rimitive/ssr/client';
 import { createService } from './service.js';
 import { App } from './App.js';
 
 const STREAM_KEY = '__APP_STREAM__';
 
-// Create hydration adapter
-const adapter = createClientAdapter(document.querySelector('.app')!);
+// Create hydration adapter (same as basic SSR)
+const hydrationAdapter = createHydrationAdapter(
+  createDOMHydrationAdapter(document.querySelector('.app')!),
+  createDOMAdapter()
+);
 
-// Create service (no loaderData for streaming)
-const service = createService(adapter);
+// Create service (no hydrationData - data comes via stream instead)
+const service = createService(hydrationAdapter);
 
 // Hydrate the app
 App(service).create(service);
 
 // Switch to normal DOM mode
-adapter.activate();
+hydrationAdapter.switchToFallback();
 
-// Connect to the stream - receives queued and future data chunks
+// Connect to the stream to receive data chunks
 connectStream(service, STREAM_KEY);
 ```
 
-`connectStream` does two things:
-1. Flushes any data chunks that arrived before hydration completed
-2. Wires up the loader to receive future chunks
+### What happens:
+
+1. Hydration adapter walks existing DOM, attaches reactivity
+2. `switchToFallback()` switches to normal DOM mode for future updates
+3. `connectStream()` flushes any queued chunks and wires up the loader to receive future chunks
+4. As chunks arrive, signals update and the UI re-renders automatically
 
 ---
 
 ## Using load() with Streaming
 
-Components use `load()` the same way as basic SSR:
+Components use `load()` exactly the same as [basic async SSR](/guides/ssr-loading#using-load). The difference is what happens on the server:
 
-```typescript
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-import type { Service } from './service.js';
+| Basic Async SSR | Streaming SSR |
+|-----------------|---------------|
+| Server waits for `fetchStats` | Server sends `pending` HTML immediately |
+| Full HTML sent after 2s | Skeleton UI visible instantly |
+| — | Data chunk streams when ready |
+| — | Signal updates, UI re-renders |
 
-type Stats = { users: number; views: number };
-
-async function fetchStats(): Promise<Stats> {
-  // Simulate slow API
-  await new Promise(r => setTimeout(r, 2000));
-  return { users: 1234, views: 56789 };
-}
-
-export const StatsWidget = (svc: Service) => {
-  const { loader, match, el } = svc;
-
-  return loader.load(
-    'stats',
-    fetchStats,
-    (state: LoadState<Stats>) =>
-      match(state.status, (status: LoadStatus) => {
-        switch (status) {
-          case 'pending':
-            return el('div').props({ className: 'skeleton' })('Loading stats...');
-          case 'error':
-            return el('div').props({ className: 'error' })(
-              'Failed to load: ',
-              String(state.error())
-            );
-          case 'ready': {
-            const data = state.data()!;
-            return el('div').props({ className: 'stats' })(
-              el('span')(`${data.users} users`),
-              el('span')(`${data.views} views`)
-            );
-          }
-        }
-      })
-  );
-};
-```
-
-What happens with streaming:
-1. Server renders `pending` state immediately
-2. HTML with skeleton UI is sent to browser
-3. 2 seconds later, `fetchStats` resolves
-4. `onResolve` streams the data chunk
-5. Client receives data, updates the signal
-6. `match()` re-renders with `ready` state
+Your component code doesn't change—only the server orchestration differs.
 
 ---
 
 ## Error Handling
 
-Errors in `load()` boundaries are handled gracefully:
+Errors in `load()` boundaries work the same as [basic async SSR](/guides/ssr-loading#error-handling). With streaming:
 
-```typescript
-loader.load(
-  'user-data',
-  async () => {
-    const res = await fetch('/api/user');
-    if (!res.ok) {
-      throw new Error(`Failed: ${res.status}`);
-    }
-    return res.json();
-  },
-  (state) =>
-    match(state.status, (status) => {
-      switch (status) {
-        case 'pending':
-          return el('div')('Loading...');
-        case 'error':
-          return el('div').props({ className: 'error' })(
-            el('p')('Something went wrong'),
-            el('pre')(String(state.error())),
-            el('button').props({
-              onclick: () => window.location.reload()
-            })('Retry')
-          );
-        case 'ready':
-          return UserProfile(state.data()!);
-      }
-    })
-)
-```
+1. If a fetch fails, `onResolve` isn't called for that boundary
+2. The `done` promise still resolves (one error doesn't break other boundaries)
+3. The error state renders on the client via `state.error()`
 
-With streaming, errors still work:
-1. If the fetch fails, `onResolve` isn't called for that boundary
-2. The `done` promise still resolves (errors don't break the stream)
-3. The error state shows in the UI with no data chunk
-
-For server-level errors, wrap the streaming response:
+For server-level errors, wrap the response:
 
 ```typescript
 const server = createServer(async (req, res) => {
@@ -299,13 +238,11 @@ const server = createServer(async (req, res) => {
     res.end();
   } catch (err) {
     console.error('Streaming error:', err);
-    // If headers haven't been sent, send error page
     if (!res.headersSent) {
       res.writeHead(500);
       res.end('Server Error');
     } else {
-      // Headers already sent, try to close gracefully
-      res.end();
+      res.end(); // Headers sent, close gracefully
     }
   }
 });
@@ -313,225 +250,56 @@ const server = createServer(async (req, res) => {
 
 ---
 
-## A Complete Streaming Example
+## Complete Example
 
-### Service
-
-```typescript
-// service.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-import { createElModule } from '@rimitive/view/el';
-import { createMatchModule } from '@rimitive/view/match';
-import { createLoaderModule } from '@rimitive/view/load';
-import type { Adapter } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
-
-export type ServiceOptions = {
-  loaderData?: Record<string, unknown>;
-  onResolve?: (id: string, data: unknown) => void;
-};
-
-export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
-  options?: ServiceOptions
-) {
-  return compose(
-    SignalModule,
-    ComputedModule,
-    EffectModule,
-    createElModule(adapter),
-    createMatchModule(adapter),
-    createLoaderModule({
-      initialData: options?.loaderData,
-      onResolve: options?.onResolve,
-    })
-  );
-}
-
-export type Service = ReturnType<typeof createService>;
-```
-
-### App with Multiple Async Boundaries
+A working streaming example with multiple `load()` boundaries that resolve at different times:
 
 ```typescript
-// App.ts
-import type { LoadState, LoadStatus } from '@rimitive/view/load';
-import type { Service } from './service.js';
-
-type User = { name: string };
-type Stats = { pageViews: number };
-type News = { headlines: string[] };
-
-// Simulate different API speeds
-const fetchUser = async (): Promise<User> => {
-  await new Promise(r => setTimeout(r, 100));
-  return { name: 'Alice' };
-};
-
-const fetchStats = async (): Promise<Stats> => {
-  await new Promise(r => setTimeout(r, 1500));
-  return { pageViews: 12345 };
-};
-
-const fetchNews = async (): Promise<News> => {
-  await new Promise(r => setTimeout(r, 3000));
-  return { headlines: ['Breaking: Rimitive is fast', 'Streaming SSR works'] };
-};
-
+// App.ts - Multiple load() boundaries with different speeds
 export const App = (svc: Service) => {
   const { loader, match, el } = svc;
 
-  return el('div').props({ className: 'app' })(
-    el('h1')('Streaming SSR Demo'),
-
-    // Fast - loads in 100ms
-    loader.load(
-      'user',
-      fetchUser,
-      (state: LoadState<User>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div')('Loading user...');
-            case 'error':
-              return el('div')('Error loading user');
-            case 'ready':
-              return el('div')(`Welcome, ${state.data()!.name}!`);
-          }
-        })
+  return el('div')(
+    // Fast - 100ms
+    loader.load('user', fetchUser, (state) =>
+      match(state.status, (s) => {
+        if (s === 'pending') return el('div')('Loading user...');
+        if (s === 'error') return el('div')('Error');
+        return el('div')(`Welcome, ${state.data()!.name}!`);
+      })
     ),
 
-    // Medium - loads in 1.5s
-    loader.load(
-      'stats',
-      fetchStats,
-      (state: LoadState<Stats>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div').props({ className: 'skeleton' })('Loading stats...');
-            case 'error':
-              return el('div')('Error loading stats');
-            case 'ready':
-              return el('div')(`${state.data()!.pageViews.toLocaleString()} page views`);
-          }
-        })
-    ),
-
-    // Slow - loads in 3s
-    loader.load(
-      'news',
-      fetchNews,
-      (state: LoadState<News>) =>
-        match(state.status, (status: LoadStatus) => {
-          switch (status) {
-            case 'pending':
-              return el('div').props({ className: 'skeleton' })('Loading news...');
-            case 'error':
-              return el('div')('Error loading news');
-            case 'ready':
-              return el('ul')(
-                ...state.data()!.headlines.map(h => el('li')(h))
-              );
-          }
-        })
+    // Slow - 3s
+    loader.load('news', fetchNews, (state) =>
+      match(state.status, (s) => {
+        if (s === 'pending') return el('div')('Loading news...');
+        if (s === 'error') return el('div')('Error');
+        return el('ul')(...state.data()!.headlines.map(h => el('li')(h)));
+      })
     )
   );
 };
 ```
 
-### Server
+With streaming:
+1. User sees "Loading user..." and "Loading news..." immediately
+2. After 100ms, user greeting appears (first chunk streamed)
+3. After 3s, news list appears (second chunk streamed)
 
-```typescript
-// server.ts
-import { createServer } from 'node:http';
-import {
-  createDOMServerAdapter,
-  renderToStream,
-  createStreamWriter,
-} from '@rimitive/ssr/server';
-import type { RefSpec } from '@rimitive/view/types';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-const STREAM_KEY = '__APP_STREAM__';
-const stream = createStreamWriter(STREAM_KEY);
-
-const server = createServer(async (req, res) => {
-  const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
-
-  const service = createService(adapter, {
-    onResolve: (id, data) => {
-      console.log(`Streaming: ${id}`);
-      res.write(`<script>${stream.chunkCode(id, data)}</script>`);
-    },
-  });
-
-  const { initialHtml, done, pendingCount } = renderToStream(
-    App(service),
-    {
-      mount: (spec: RefSpec<unknown>) => spec.create(service),
-      serialize,
-      insertFragmentMarkers,
-    }
-  );
-
-  console.log(`Initial render: ${pendingCount} pending boundaries`);
-
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.write(`<!DOCTYPE html>
-<html>
-<head>
-  <title>Streaming SSR</title>
-  <script>${stream.bootstrapCode()}</script>
-</head>
-<body>
-  <div class="app">${initialHtml}</div>
-  <script src="/client.js"></script>`);
-
-  await done;
-
-  console.log('All boundaries resolved');
-  res.write('</body></html>');
-  res.end();
-});
-
-server.listen(3000);
-```
-
-### Client
-
-```typescript
-// client.ts
-import { createClientAdapter, connectStream } from '@rimitive/ssr/client';
-import { createService } from './service.js';
-import { App } from './App.js';
-
-const STREAM_KEY = '__APP_STREAM__';
-
-const adapter = createClientAdapter(document.querySelector('.app')!);
-const service = createService(adapter);
-
-App(service).create(service);
-adapter.activate();
-connectStream(service, STREAM_KEY);
-
-console.log('Hydration complete, stream connected');
-```
+<Aside type="tip" title="Working Example">
+See [`packages/examples/ssr-router-streaming`](https://github.com/hejhi/rimitive/tree/main/packages/examples/ssr-router-streaming) for a complete streaming implementation with routing.
+</Aside>
 
 ---
 
 ## When to Use Streaming
 
-**Use streaming when:**
-- Some data sources are slow (> 500ms)
-- You want users to see content as fast as possible
-- Different parts of the page have different data needs
+| Use Streaming When | Use Basic Async SSR When |
+|--------------------|--------------------------|
+| Some data sources are slow (> 500ms) | All data loads quickly |
+| Users should see content ASAP | SEO crawlers need complete HTML |
+| Page has independent data regions | Simplicity matters more than speed |
 
-**Use basic SSR when:**
-- All data loads quickly
-- You need the complete page for SEO crawlers
-- Simplicity is more important than speed
-
-Both approaches use the same `load()` API in components—only the server setup differs.
+<Aside type="tip">
+Both approaches use the same `load()` API in components—only the server setup differs. You can switch between them without changing component code.
+</Aside>
