@@ -120,6 +120,21 @@ Sends instrumentation events to the Rimitive DevTools browser extension via `win
 </td></tr>
 <tr><td>
 
+[fork(base, freshModules, options)](../fork/)
+
+
+</td><td>
+
+Create a new composition that shares instances from an existing one, but with fresh instances of specified modules.
+
+Fresh modules are: - Re-instantiated (not shared with the base) - Singleton within the fork (shared by dependents in the forked context) - Disposed when the fork is disposed (base instances are not affected)
+
+Fresh modules can depend on base instances - they receive the base singletons as their dependencies.
+
+
+</td></tr>
+<tr><td>
+
 [getCallerLocation(skipFrames)](../getcallerlocation/)
 
 
@@ -157,12 +172,58 @@ Check if Rimitive DevTools extension is available in the current environment.
 </td></tr>
 <tr><td>
 
+[isLazy(module)](../islazy/)
+
+
+</td><td>
+
+Check if a module is lazy (async)
+
+
+</td></tr>
+<tr><td>
+
 [isModule(value)](../ismodule/)
 
 
 </td><td>
 
 Check if a value is a Module
+
+
+</td></tr>
+<tr><td>
+
+[isOverriddenModule(mod)](../isoverriddenmodule/)
+
+
+</td><td>
+
+Check if a module is an overridden module with replacements.
+
+
+</td></tr>
+<tr><td>
+
+[isTransient(module)](../istransient/)
+
+
+</td><td>
+
+Check if a module is transient scoped
+
+
+</td></tr>
+<tr><td>
+
+[lazy(module)](../lazy/)
+
+
+</td><td>
+
+Mark a module with async create() as lazy.
+
+Lazy modules are awaited during composition. When compose() includes lazy modules, it returns a Promise that resolves after all async modules are initialized.
 
 
 </td></tr>
@@ -176,6 +237,36 @@ Check if a value is a Module
 Merge additional properties into a Use context.
 
 Creates a new `Use` that has all properties from the base plus the additions. The base service instances are preserved (not cloned), so you stay on the same reactive graph.
+
+
+</td></tr>
+<tr><td>
+
+[override(mod, replacements)](../override/)
+
+
+</td><td>
+
+Override dependencies of a module.
+
+Creates a new module with the same implementation but different dependencies. Useful for testing (swapping real services for mocks) or environment-specific configurations.
+
+Replacements are matched by the dependency's name. If a replacement module has a different name, it will be aliased to the original dependency's name.
+
+
+</td></tr>
+<tr><td>
+
+[transient(module)](../transient/)
+
+
+</td><td>
+
+Mark a module as transient - each dependent gets a fresh instance.
+
+By default, modules are singletons: one instance shared by all dependents. Transient modules create a new instance for each module that depends on them.
+
+Transient modules cannot be passed directly to compose() - they are only available as injected dependencies.
 
 
 </td></tr>
@@ -201,7 +292,16 @@ Description
 
 </td><td>
 
-Base module interface for dependency arrays. Uses interface + method syntax for bivariant function parameters. This allows Module<specific> to be assignable to AnyModule.
+
+</td></tr>
+<tr><td>
+
+[LazyModule](../lazymodule/)
+
+
+</td><td>
+
+Marker for lazy (async) modules
 
 
 </td></tr>
@@ -226,6 +326,30 @@ Modules declare their dependencies and provide a create function that receives r
 </td><td>
 
 Input type for defineModule - same as Module but without status and with optional dependencies.
+
+The TModules type parameter captures the dependencies tuple, allowing TypeScript to infer the correct types for the create function's deps parameter.
+
+
+</td></tr>
+<tr><td>
+
+[OverriddenModule](../overriddenmodule/)
+
+
+</td><td>
+
+Marker interface for overridden modules that tracks replacement modules. This allows compose() to include replacement modules in the context type.
+
+
+</td></tr>
+<tr><td>
+
+[TransientModule](../transientmodule/)
+
+
+</td><td>
+
+Marker for transient modules - creates fresh instance per dependent
 
 
 </td></tr>
@@ -272,6 +396,26 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
+[AllReplacementDeps](../allreplacementdeps/)
+
+
+</td><td>
+
+Merge all replacement deps from a tuple of modules into a single object type.
+
+
+</td></tr>
+<tr><td>
+
+[AsyncError](../asyncerror/)
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
 [ComposedContext](../composedcontext/)
 
 
@@ -279,7 +423,7 @@ Description
 
 The composed context type from a tuple of Modules.
 
-Maps module names to their implementations and adds a `dispose()` method.
+Maps module names to their implementations and adds a `dispose()` method. For overridden modules, also includes the replacement modules' dependencies.
 
 
 </td></tr>
@@ -296,12 +440,111 @@ Options for composing modules
 </td></tr>
 <tr><td>
 
+[ComposeReturn](../composereturn/)
+
+
+</td><td>
+
+Return type: Promise if lazy modules present
+
+
+</td></tr>
+<tr><td>
+
+[ContainsLazy](../containslazy/)
+
+
+</td><td>
+
+Check if array contains any lazy modules
+
+
+</td></tr>
+<tr><td>
+
+[DepsFromModules](../depsfrommodules/)
+
+
+</td><td>
+
+Convert a tuple of modules to an object type with module names as keys and implementations as values.
+
+
+</td></tr>
+<tr><td>
+
 [DevtoolsProviderOptions](../devtoolsprovideroptions/)
 
 
 </td><td>
 
 Options for the DevTools instrumentation provider.
+
+
+</td></tr>
+<tr><td>
+
+[ErrorFor](../errorfor/)
+
+
+</td><td>
+
+Get error message for an invalid module type
+
+
+</td></tr>
+<tr><td>
+
+[ExtractDepsFromModule](../extractdepsfrommodule/)
+
+
+</td><td>
+
+Extract the deps object type from a module's deps. The keys are module names, values are their impls.
+
+
+</td></tr>
+<tr><td>
+
+[ExtractReplacementDeps](../extractreplacementdeps/)
+
+
+</td><td>
+
+Extract deps from all replacement modules and merge them.
+
+
+</td></tr>
+<tr><td>
+
+[ExtractReplacements](../extractreplacements/)
+
+
+</td><td>
+
+Extract replacement modules from an overridden module.
+
+
+</td></tr>
+<tr><td>
+
+[FlattenModule](../flattenmodule/)
+
+
+</td><td>
+
+Flatten a module and its replacements into a union of all modules.
+
+
+</td></tr>
+<tr><td>
+
+[ForkOptions](../forkoptions/)
+
+
+</td><td>
+
+Options for forking a context
 
 
 </td></tr>
@@ -355,6 +598,26 @@ Providers are the output targets for instrumentation data. Examples: DevTools, l
 </td></tr>
 <tr><td>
 
+[InvalidModule](../invalidmodule/)
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+[IsInvalid](../isinvalid/)
+
+
+</td><td>
+
+Check if T matches any invalid module type
+
+
+</td></tr>
+<tr><td>
+
 [ModuleDeps](../moduledeps/)
 
 
@@ -383,6 +646,28 @@ Helper type to extract the implementation type from a Module
 </td><td>
 
 Helper type to extract the name from a Module
+
+
+</td></tr>
+<tr><td>
+
+[ModuleScope](../modulescope/)
+
+
+</td><td>
+
+Module scope - controls instance lifetime - 'singleton': One instance shared by all dependents (default) - 'transient': Fresh instance for each dependent
+
+
+</td></tr>
+<tr><td>
+
+[ReplacementsToTuple](../replacementstotuple/)
+
+
+</td><td>
+
+Convert a replacements object to a tuple of its module values.
 
 
 </td></tr>
@@ -434,12 +719,43 @@ Source location info with both display name and full path for editor jumping.
 </td></tr>
 <tr><td>
 
+[Transient](../transient/)
+
+
+</td><td>
+
+Module types that cannot be passed directly to compose()
+
+
+</td></tr>
+<tr><td>
+
+[TransientError](../transienterror/)
+
+
+</td><td>
+
+Error messages
+
+
+</td></tr>
+<tr><td>
+
 [UnionToIntersection](../uniontointersection/)
 
 
 </td><td>
 
 Utility type: Convert a union to an intersection. Used internally to combine types.
+
+
+</td></tr>
+<tr><td>
+
+[UnwrappedAsync](../unwrappedasync/)
+
+
+</td><td>
 
 
 </td></tr>
@@ -455,6 +771,28 @@ A callable returned by `compose()` that provides access to the module context.
 `Use` is both a function AND an object with all service properties: - Call `use(fn)` to invoke a portable/behavior with the service context - Access `use.signal`<!-- -->, `use.el`<!-- -->, etc. directly as properties
 
 When you call `use(fn)`<!-- -->, the callback receives the `Use` object itself, allowing nested portables to call other portables.
+
+
+</td></tr>
+<tr><td>
+
+[Validated](../validated/)
+
+
+</td><td>
+
+Validate a module: return T if valid, error message if not
+
+
+</td></tr>
+<tr><td>
+
+[ValidatedModules](../validatedmodules/)
+
+
+</td><td>
+
+Validate all modules in tuple
 
 
 </td></tr>

@@ -18,7 +18,7 @@ Create the implementation with resolved dependencies
 **Signature:**
 
 ```typescript
-create(deps: TDeps): TImpl;
+create(deps: DepsFromModules<TModules>): TImpl;
 ```
 
 ## Parameters
@@ -46,7 +46,7 @@ deps
 
 </td><td>
 
-TDeps
+[DepsFromModules](../depsfrommodules/)<!-- -->&lt;TModules&gt;
 
 
 </td><td>

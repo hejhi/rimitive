@@ -24,18 +24,3 @@ export type ComposeOptions = {
 ```
 **References:** [InstrumentationContext](../instrumentationcontext/)
 
-## Example
-
-
-```ts
-import { compose, createInstrumentation, devtoolsProvider } from '@rimitive/core';
-import { SignalModule, ComputedModule } from '@rimitive/signals/extend';
-
-const instrumentation = createInstrumentation({
-  enabled: true,
-  providers: [devtoolsProvider()],
-});
-
-const svc = compose(SignalModule, ComputedModule, { instrumentation });
-```
-

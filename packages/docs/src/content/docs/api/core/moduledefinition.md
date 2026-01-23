@@ -15,10 +15,12 @@ sidebar:
 
 Input type for defineModule - same as Module but without status and with optional dependencies.
 
+The TModules type parameter captures the dependencies tuple, allowing TypeScript to infer the correct types for the create function's deps parameter.
+
 **Signature:**
 
 ```typescript
-export interface ModuleDefinition<TName extends string, TImpl, TDeps> 
+export interface ModuleDefinition<TName extends string, TImpl, TModules extends readonly AnyModule[] = readonly []> 
 ```
 
 ## Properties
@@ -54,7 +56,7 @@ Description
 
 </td><td>
 
-[AnyModule](../anymodule/)<!-- -->\[\]
+TModules
 
 
 </td><td>

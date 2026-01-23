@@ -45,6 +45,32 @@ Note: Arguments are captured once when the component mounts (like useRef's initi
 </td></tr>
 <tr><td>
 
+[createReactBridge(effect, Component, getProps)](../createreactbridge/)
+
+
+</td><td>
+
+Creates a ref callback that mounts a React component into a DOM element. The component re-renders whenever reactive dependencies in the props getter change.
+
+This enables embedding React components (like @<!-- -->xyflow/react) inside a Rimitive app.
+
+
+</td></tr>
+<tr><td>
+
+[renderReact(effect, render)](../renderreact/)
+
+
+</td><td>
+
+Creates a ref callback that renders arbitrary React content into a DOM element. The content re-renders whenever reactive dependencies in the render function change.
+
+This is a lower-level alternative to createReactBridge for when you need more control.
+
+
+</td></tr>
+<tr><td>
+
 [SignalProvider({ svc, children, })](../signalprovider/)
 
 
@@ -62,6 +88,8 @@ Provides a signal service to all descendant components. Automatically disposes t
 </td><td>
 
 Create a Rimitive context with modules that is scoped to the component lifecycle. The context will be automatically disposed when the component unmounts.
+
+Note: Lazy modules (async create) are not supported. For async modules, use `compose()` with `await` outside the component and pass the result via props or context.
 
 
 </td></tr>
@@ -125,6 +153,26 @@ Description
 
 </th></tr></thead>
 <tbody><tr><td>
+
+[EffectFn](../effectfn/)
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+[LazyModuleError](../lazymoduleerror/)
+
+
+</td><td>
+
+Type error message for lazy modules in React hooks
+
+
+</td></tr>
+<tr><td>
 
 [ReactiveSvc](../reactivesvc/)
 

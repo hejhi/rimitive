@@ -18,5 +18,5 @@ Modules this module depends on (resolved by compose)
 **Signature:**
 
 ```typescript
-dependencies?: AnyModule[];
+dependencies?: TModules;
 ```

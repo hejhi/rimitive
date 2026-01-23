@@ -20,7 +20,7 @@ Modules declare dependencies on other modules and provide a create function that
 **Signature:**
 
 ```typescript
-export declare function defineModule<TName extends string, TImpl, TDeps>(definition: ModuleDefinition<TName, TImpl, TDeps>): Module<TName, TImpl, TDeps>;
+export declare function defineModule<const TName extends string, TImpl, const TModules extends readonly AnyModule[] = readonly []>(definition: ModuleDefinition<TName, TImpl, TModules>): Module<TName, TImpl, DepsFromModules<TModules>>;
 ```
 
 ## Parameters
@@ -48,7 +48,7 @@ definition
 
 </td><td>
 
-[ModuleDefinition](../moduledefinition/)<!-- -->&lt;TName, TImpl, TDeps&gt;
+[ModuleDefinition](../moduledefinition/)<!-- -->&lt;TName, TImpl, TModules&gt;
 
 
 </td><td>
@@ -59,7 +59,7 @@ definition
 
 **Returns:**
 
-[Module](../module/)<!-- -->&lt;TName, TImpl, TDeps&gt;
+[Module](../module/)<!-- -->&lt;TName, TImpl, [DepsFromModules](../depsfrommodules/)<!-- -->&lt;TModules&gt;&gt;
 
 ## Example 1
 

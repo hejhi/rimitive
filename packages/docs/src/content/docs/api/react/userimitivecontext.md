@@ -15,10 +15,12 @@ sidebar:
 
 Create a Rimitive context with modules that is scoped to the component lifecycle. The context will be automatically disposed when the component unmounts.
 
+Note: Lazy modules (async create) are not supported. For async modules, use `compose()` with `await` outside the component and pass the result via props or context.
+
 **Signature:**
 
 ```typescript
-export declare function useRimitiveContext<M extends Module[]>(...modules: M): Use<ComposedContext<M>>;
+export declare function useRimitiveContext<M extends Module[]>(...modules: ContainsLazy<M> extends true ? [LazyModuleError] : M): Use<ComposedContext<M>>;
 ```
 
 ## Parameters
@@ -46,12 +48,12 @@ modules
 
 </td><td>
 
-M
+[ContainsLazy](../../core/containslazy/)<!-- -->&lt;M&gt; extends true ? \[[LazyModuleError](../lazymoduleerror/)<!-- -->\] : M
 
 
 </td><td>
 
-The Rimitive modules to include in the context
+The Rimitive modules to include in the context (must be sync)
 
 
 </td></tr>

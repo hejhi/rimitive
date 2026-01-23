@@ -20,7 +20,7 @@ Link is inherently DOM-coupled (uses window.history, MouseEvent, href, onclick).
 **Signature:**
 
 ```typescript
-export declare function Link(props: ElementProps<DOMAdapterConfig, 'a'> & {
+export declare function Link(props: ElementProps<DOMTreeConfig, 'a'> & {
     href: string;
 }): (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
 ```
@@ -50,7 +50,7 @@ props
 
 </td><td>
 
-ElementProps&lt;DOMAdapterConfig, 'a'&gt; &amp; { href: string; }
+ElementProps&lt;DOMTreeConfig, 'a'&gt; &amp; { href: string; }
 
 
 </td><td>

@@ -193,7 +193,7 @@ Description
 
 Adapter type - core tree operations
 
-Generic over: - TConfig: The adapter configuration (elements, events, baseElement)
+Generic over: - TConfig: The tree configuration (nodes, attributes, node)
 
 \#\# Lifecycle Hooks
 
@@ -201,26 +201,11 @@ The adapter supports six symmetric lifecycle hooks across three phases:
 
 \| Phase \| Before \| After (on) \| \|\-\-\-\-\-\-\-\-\-\|\-\-\-\-\-\-\-\-\-\-\-\-\-\-\--\|\-\-\-\-\-\-\-\-\-\-\-\-\| \| Create \| beforeCreate \| onCreate \| \| Attach \| beforeAttach \| onAttach \| \| Destroy \| beforeDestroy \| onDestroy \|
 
-Node type (element vs fragment) is determined by `ref.status`<!-- -->: - STATUS\_ELEMENT (1): Element node with actual DOM element - STATUS\_FRAGMENT (2): Fragment node (logical container, no DOM element)
+Node type (element vs fragment) is determined by `ref.status`<!-- -->: - STATUS\_ELEMENT (1): Element node with actual tree node - STATUS\_FRAGMENT (2): Fragment node (logical container, no tree node)
 
 \#\#\# Hydration
 
 For hydration-specific position tracking, use the HydrationAdapter extension which adds `seekToPosition` and `skipContent` methods.
-
-
-</td></tr>
-<tr><td>
-
-[AdapterConfig](../adapterconfig/)
-
-
-</td><td>
-
-AdapterConfig defines the type-level contract for a tree adapter: - props: Maps tag names to their prop types for el() autocomplete - elements: Maps tag names to their node types for RefSpec<!-- -->&lt;<!-- -->T<!-- -->&gt; (e.g., 'div' -<!-- -->&gt; HTMLDivElement) - events: Maps event names to their event object types (e.g., 'click' -<!-- -->&gt; MouseEvent) - baseElement: Base node type for this adapter (e.g., Node for DOM)
-
-Separating `props` from `elements` allows adapters to have clean prop autocomplete without exposing internal node properties (like canvas's bounds, dirty, etc).
-
-Note: Text is just another node type created via createNode('text', { value: '...' }<!-- -->)
 
 
 </td></tr>
@@ -419,12 +404,34 @@ Load status values
 </td></tr>
 <tr><td>
 
+[NodeOf](../nodeof/)
+
+
+</td><td>
+
+Union of all node types in the config. Used for adapter method parameters where any node type is accepted.
+
+
+</td></tr>
+<tr><td>
+
 [NodeRef](../noderef/)
 
 
 </td><td>
 
 Ref node - union of element/fragment tracking nodes
+
+
+</td></tr>
+<tr><td>
+
+[NodeType](../nodetype/)
+
+
+</td><td>
+
+Get a specific node type from the config's nodes map.
 
 
 </td></tr>
@@ -480,6 +487,23 @@ Ref spec - a specification/blueprint for a ref that can be instantiated multiple
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+[TreeConfig](../treeconfig/)
+
+
+</td><td>
+
+TreeConfig defines the type-level contract for a tree adapter: - attributes: Maps tag names to their attribute types for el() autocomplete - nodes: Maps tag names to their node types for RefSpec<!-- -->&lt;<!-- -->T<!-- -->&gt; (e.g., 'div' -<!-- -->&gt; HTMLDivElement)
+
+The base node type is derived automatically as the union of all node types in `nodes`<!-- -->. Use `NodeOf<TConfig>` to access it.
+
+Separating `attributes` from `nodes` allows adapters to have clean attribute autocomplete without exposing internal node properties (like canvas's bounds, dirty, etc).
+
+Note: Text is just another node type created via createNode('text', { value: '...' }<!-- -->)
 
 
 </td></tr>

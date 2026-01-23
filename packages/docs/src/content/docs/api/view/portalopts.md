@@ -18,12 +18,12 @@ Options passed to Portal factory
 **Signature:**
 
 ```typescript
-export type PortalOpts<TConfig extends AdapterConfig> = {
+export type PortalOpts<TConfig extends TreeConfig> = {
     disposeScope: CreateScopes['disposeScope'];
     getElementScope: CreateScopes['getElementScope'];
     scopedEffect: CreateScopes['scopedEffect'];
     adapter: Adapter<TConfig>;
 };
 ```
-**References:** [AdapterConfig](../adapterconfig/)<!-- -->, [CreateScopes](../createscopes/)<!-- -->, [Adapter](../adapter/)
+**References:** [TreeConfig](../treeconfig/)<!-- -->, [CreateScopes](../createscopes/)<!-- -->, [Adapter](../adapter/)
 

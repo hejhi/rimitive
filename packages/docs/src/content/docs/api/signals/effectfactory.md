@@ -13,10 +13,12 @@ sidebar:
 
 ## EffectFactory type
 
-The effect factory function type
+The effect factory function type. Accepts either a plain function or a FlushStrategy for deferred execution.
 
 **Signature:**
 
 ```typescript
-export type EffectFactory = (fn: () => void | (() => void)) => () => void;
+export type EffectFactory = (run: EffectRun) => () => void;
 ```
+**References:** [EffectRun](../effectrun/)
+

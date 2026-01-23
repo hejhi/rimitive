@@ -68,7 +68,38 @@ Computeds are lazy: they only recompute when read and their dependencies have ch
 
 </td><td>
 
-The effect factory function type
+The effect factory function type. Accepts either a plain function or a FlushStrategy for deferred execution.
+
+
+</td></tr>
+<tr><td>
+
+[EffectNode](../effectnode/)
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+[EffectRun](../effectrun/)
+
+
+</td><td>
+
+Input type for effect - either a plain function or a flush strategy
+
+
+</td></tr>
+<tr><td>
+
+[FlushStrategy](../flushstrategy/)
+
+
+</td><td>
+
+A flush strategy controls when effect re-runs execute.
 
 
 </td></tr>

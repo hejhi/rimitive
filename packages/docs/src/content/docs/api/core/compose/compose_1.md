@@ -17,7 +17,7 @@ sidebar:
 **Signature:**
 
 ```typescript
-export declare function compose<TModules extends AnyModule[]>(...args: [...TModules, ComposeOptions]): Use<ComposedContext<TModules>>;
+export declare function compose<TModules extends AnyModule[]>(...args: [...ValidatedModules<TModules>, ComposeOptions]): ComposeReturn<TModules>;
 ```
 
 ## Parameters
@@ -45,7 +45,7 @@ args
 
 </td><td>
 
-\[...TModules, [ComposeOptions](../composeoptions/)<!-- -->\]
+\[...[ValidatedModules](../validatedmodules/)<!-- -->&lt;TModules&gt;, [ComposeOptions](../composeoptions/)<!-- -->\]
 
 
 </td><td>
@@ -56,5 +56,5 @@ args
 
 **Returns:**
 
-[Use](../use/)<!-- -->&lt;[ComposedContext](../composedcontext/)<!-- -->&lt;TModules&gt;&gt;
+[ComposeReturn](../composereturn/)<!-- -->&lt;TModules&gt;
 

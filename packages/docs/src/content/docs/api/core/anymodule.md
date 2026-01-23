@@ -13,8 +13,6 @@ sidebar:
 
 ## AnyModule interface
 
-Base module interface for dependency arrays. Uses interface + method syntax for bivariant function parameters. This allows Module<specific> to be assignable to AnyModule.
-
 **Signature:**
 
 ```typescript

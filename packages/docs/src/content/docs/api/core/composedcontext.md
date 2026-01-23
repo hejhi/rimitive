@@ -15,20 +15,20 @@ sidebar:
 
 The composed context type from a tuple of Modules.
 
-Maps module names to their implementations and adds a `dispose()` method.
+Maps module names to their implementations and adds a `dispose()` method. For overridden modules, also includes the replacement modules' dependencies.
 
 **Signature:**
 
 ```typescript
 export type ComposedContext<TModules extends readonly Module[]> = {
-    [M in TModules[number] as ModuleName<M>]: ModuleImpl<M>;
-} & {
+    [M in FlattenModule<TModules[number]> as ModuleName<M>]: ModuleImpl<M>;
+} & AllReplacementDeps<TModules> & {
     dispose(): void;
 };
 ```
-**References:** [Module](../module/)<!-- -->, [ModuleName](../servicename/)<!-- -->, [ModuleImpl](../serviceimpl/)
+**References:** [Module](../module/)<!-- -->, [FlattenModule](../flattenmodule/)<!-- -->, [ModuleName](../servicename/)<!-- -->, [ModuleImpl](../serviceimpl/)<!-- -->, [AllReplacementDeps](../allreplacementdeps/)
 
-## Example
+## Example 1
 
 
 ```ts
@@ -37,5 +37,15 @@ type ComputedModule = Module<'computed', ComputedImpl, ComputedDeps>;
 
 type Ctx = ComposedContext<[SignalModule, ComputedModule]>;
 // Ctx = { signal: SignalImpl; computed: ComputedImpl; dispose(): void }
+```
+
+## Example 2
+
+With override
+
+```ts
+const OverriddenService = override(Service, { logger: ConfigurableLogger });
+type Ctx = ComposedContext<[typeof OverriddenService]>;
+// Ctx includes 'service', 'logger', AND 'config' (from ConfigurableLogger's deps)
 ```
 

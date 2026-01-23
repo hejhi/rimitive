@@ -18,10 +18,10 @@ Route-specific metadata
 **Signature:**
 
 ```typescript
-export type RouteMetadata<TConfig extends AdapterConfig> = {
+export type RouteMetadata<TConfig extends TreeConfig> = {
     relativePath: string;
-    rebuild: (parentPath: string) => Route<TConfig['baseElement']>;
+    rebuild: (parentPath: string) => Route<NodeOf<TConfig>>;
 };
 ```
-**References:** [AdapterConfig](../../view/adapterconfig/)<!-- -->, [Route](../route/)
+**References:** [TreeConfig](../../view/treeconfig/)<!-- -->, [Route](../route/)<!-- -->, [NodeOf](../../view/nodeof/)
 

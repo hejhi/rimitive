@@ -20,7 +20,7 @@ Link is DOM-only - no need for generic adapter abstraction
 **Signature:**
 
 ```typescript
-export type LinkFunction = (props: ElementProps<DOMAdapterConfig, 'a'> & {
+export type LinkFunction = (props: ElementProps<DOMTreeConfig, 'a'> & {
     href: string;
 }) => (...children: ElRefSpecChild[]) => RefSpec<HTMLAnchorElement>;
 ```

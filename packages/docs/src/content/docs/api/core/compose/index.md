@@ -23,7 +23,7 @@ Returns a `use()` function that provides access to the composed context: - `use(
 **Signature:**
 
 ```typescript
-export declare function compose<TModules extends AnyModule[]>(...modules: TModules): Use<ComposedContext<TModules>>;
+export declare function compose<TModules extends AnyModule[]>(...modules: ValidatedModules<TModules>): ComposeReturn<TModules>;
 ```
 
 ## Parameters
@@ -51,7 +51,7 @@ modules
 
 </td><td>
 
-TModules
+[ValidatedModules](../validatedmodules/)<!-- -->&lt;TModules&gt;
 
 
 </td><td>
@@ -62,7 +62,7 @@ TModules
 
 **Returns:**
 
-[Use](../use/)<!-- -->&lt;[ComposedContext](../composedcontext/)<!-- -->&lt;TModules&gt;&gt;
+[ComposeReturn](../composereturn/)<!-- -->&lt;TModules&gt;
 
 ## Example 1
 

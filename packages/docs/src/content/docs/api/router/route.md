@@ -19,10 +19,10 @@ Route wraps a RefSpec with routing metadata for path composition. Delegates to i
 
 ```typescript
 export type Route<TElement> = {
-    routeMetadata: RouteMetadata<AdapterConfig>;
+    routeMetadata: RouteMetadata<TreeConfig>;
     unwrap(): RefSpec<TElement>;
     create<TExt = Record<string, unknown>>(svc?: unknown, extensions?: TExt): import('@rimitive/view/types').NodeRef<TElement> & TExt;
 };
 ```
-**References:** [RouteMetadata](../routemetadata/)<!-- -->, [AdapterConfig](../../view/adapterconfig/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [NodeRef](../../view/noderef/)
+**References:** [RouteMetadata](../routemetadata/)<!-- -->, [TreeConfig](../../view/treeconfig/)<!-- -->, [RefSpec](../../view/refspec/)<!-- -->, [NodeRef](../../view/noderef/)
 
