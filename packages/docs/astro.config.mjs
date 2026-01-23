@@ -38,7 +38,9 @@ export default defineConfig({
             { label: 'Event Handling', slug: 'guides/event-handling' },
             { label: 'Loading Data', slug: 'guides/loading-data' },
             { label: 'Adding Routing', slug: 'guides/adding-routing' },
+            { label: 'Intro to SSR', slug: 'guides/intro-to-ssr' },
             { label: 'Server Rendering', slug: 'guides/server-rendering' },
+            { label: 'Client Hydration', slug: 'guides/client-hydration' },
             { label: 'SSR with Data Loading', slug: 'guides/ssr-loading' },
             { label: 'Streaming SSR', slug: 'guides/streaming-ssr' },
             { label: 'Custom Modules', slug: 'guides/custom-modules' },
@@ -71,6 +73,60 @@ export default defineConfig({
         {
           label: 'FAQ',
           slug: 'faq',
+        },
+        {
+          label: 'Examples',
+          collapsed: true,
+          items: [
+            {
+              label: 'View Basics',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/view',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'Router',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/router',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'SSR',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/ssr-router',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'SSR + Async Data',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/ssr-router-async',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'SSR + Streaming',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/ssr-router-streaming',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'Headless Components',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/headless',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'React Integration',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/react',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+            {
+              label: 'Custom Adapter (Canvas)',
+              link: 'https://github.com/hejhi/rimitive/tree/main/packages/examples/canvas',
+              attrs: { target: '_blank' },
+              badge: { text: '↗', variant: 'note' },
+            },
+          ],
         },
         {
           label: 'API Reference',

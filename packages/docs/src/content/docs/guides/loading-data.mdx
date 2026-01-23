@@ -3,6 +3,7 @@ title: Loading Data
 description: Fetch async data with automatic tracking and cancellation.
 ---
 
+import { Aside } from '@astrojs/starlight/components';
 import SearchTags from '../../../components/SearchTags.astro';
 
 <SearchTags tags={["resource", "fetch", "async", "data-loading", "api", "http", "loading-state", "error-state"]} />
@@ -251,4 +252,8 @@ Rimitive has two primitives for async data:
 In an SSR app, you might use both: `load()` for the initial page data that should be server-rendered, and `resource()` for dynamic data that loads after user interaction.
 
 See the [Server Rendering guide](/guides/server-rendering) for `load()` usage.
+
+<Aside type="tip" title="Working Example">
+See [`packages/examples/resource`](https://github.com/hejhi/rimitive/tree/main/packages/examples/resource) for a complete data fetching example with reactive dependencies and automatic cancellation.
+</Aside>
 
