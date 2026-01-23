@@ -18,16 +18,38 @@ import type { Adapter, AdapterConfig } from '@rimitive/view/adapter';
 
 type Adapter<TConfig extends AdapterConfig> = {
   // Core tree operations (required)
-  createNode: (type: string, props?: Record<string, unknown>, parentContext?: ParentContext) => TConfig['baseElement'];
-  setProperty: (node: TConfig['baseElement'], key: string, value: unknown) => void;
-  appendChild: (parent: TConfig['baseElement'], child: TConfig['baseElement']) => void;
-  removeChild: (parent: TConfig['baseElement'], child: TConfig['baseElement']) => void;
-  insertBefore: (parent: TConfig['baseElement'], child: TConfig['baseElement'], reference: TConfig['baseElement'] | null) => void;
+  createNode: (
+    type: string,
+    props?: Record<string, unknown>,
+    parentContext?: ParentContext
+  ) => TConfig['baseElement'];
+  setAttribute: (
+    node: TConfig['baseElement'],
+    key: string,
+    value: unknown
+  ) => void;
+  appendChild: (
+    parent: TConfig['baseElement'],
+    child: TConfig['baseElement']
+  ) => void;
+  removeChild: (
+    parent: TConfig['baseElement'],
+    child: TConfig['baseElement']
+  ) => void;
+  insertBefore: (
+    parent: TConfig['baseElement'],
+    child: TConfig['baseElement'],
+    reference: TConfig['baseElement'] | null
+  ) => void;
 
   // Lifecycle hooks (optional)
   beforeCreate?: (type: string, props?: Record<string, unknown>) => void;
   onCreate?: (ref: NodeRef, parent: TConfig['baseElement']) => void;
-  beforeAttach?: (ref: NodeRef, parent: TConfig['baseElement'], nextSibling: TConfig['baseElement'] | null) => void;
+  beforeAttach?: (
+    ref: NodeRef,
+    parent: TConfig['baseElement'],
+    nextSibling: TConfig['baseElement'] | null
+  ) => void;
   onAttach?: (ref: NodeRef, parent: TConfig['baseElement']) => void;
   beforeDestroy?: (ref: NodeRef, parent: TConfig['baseElement']) => void;
   onDestroy?: (ref: NodeRef, parent: TConfig['baseElement']) => void;
@@ -42,9 +64,9 @@ Define types for your adapter to get autocomplete in `el()`:
 
 ```typescript
 type AdapterConfig = {
-  props: object;       // Maps tag names to prop types
-  elements: object;    // Maps tag names to node types
-  events: object;      // Maps event names to event types
+  props: object; // Maps tag names to prop types
+  elements: object; // Maps tag names to node types
+  events: object; // Maps event names to event types
   baseElement: object; // Base node type for this adapter
 };
 ```
@@ -79,7 +101,7 @@ function createSimpleAdapter(): Adapter<SimpleAdapterConfig> {
       children: [],
     }),
 
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       node.props[key] = value;
     },
 
@@ -133,7 +155,13 @@ type CanvasNode = {
 
 type CanvasAdapterConfig = AdapterConfig & {
   props: {
-    rect: { x?: number; y?: number; width?: number; height?: number; fill?: string };
+    rect: {
+      x?: number;
+      y?: number;
+      width?: number;
+      height?: number;
+      fill?: string;
+    };
     circle: { x?: number; y?: number; radius?: number; fill?: string };
     text: { x?: number; y?: number; value?: string; fill?: string };
     group: { x?: number; y?: number };
@@ -148,7 +176,9 @@ type CanvasAdapterConfig = AdapterConfig & {
   baseElement: CanvasNode;
 };
 
-function createCanvasAdapter(ctx: CanvasRenderingContext2D): Adapter<CanvasAdapterConfig> {
+function createCanvasAdapter(
+  ctx: CanvasRenderingContext2D
+): Adapter<CanvasAdapterConfig> {
   let needsRedraw = false;
   let root: CanvasNode | null = null;
 
@@ -204,7 +234,7 @@ function createCanvasAdapter(ctx: CanvasRenderingContext2D): Adapter<CanvasAdapt
       return node;
     },
 
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       (node as Record<string, unknown>)[key] = value;
       scheduleRedraw();
     },
@@ -231,7 +261,11 @@ function createCanvasAdapter(ctx: CanvasRenderingContext2D): Adapter<CanvasAdapt
         parent.children.push(child);
       } else {
         const idx = parent.children.indexOf(reference);
-        parent.children.splice(idx !== -1 ? idx : parent.children.length, 0, child);
+        parent.children.splice(
+          idx !== -1 ? idx : parent.children.length,
+          0,
+          child
+        );
       }
       if (!root) root = parent;
       scheduleRedraw();
@@ -248,7 +282,11 @@ Pass your adapter to view module factories:
 
 ```typescript
 import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import {
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+} from '@rimitive/signals/extend';
 import { createElModule } from '@rimitive/view/el';
 import { createMapModule } from '@rimitive/view/map';
 import { createMatchModule } from '@rimitive/view/match';
@@ -283,14 +321,14 @@ const scene = el('group')(
 
 Use lifecycle hooks for advanced use cases:
 
-| Hook | When | Use Cases |
-|------|------|-----------|
-| `beforeCreate` | Before node creation | Hydration position setup |
-| `onCreate` | After node ref created | SSR markers, position sync |
-| `beforeAttach` | Before content attached | Hydration positioning |
-| `onAttach` | After content attached | SSR fragments, lifecycle callbacks |
-| `beforeDestroy` | Before removal | Exit animations |
-| `onDestroy` | After removal | Final cleanup |
+| Hook            | When                    | Use Cases                          |
+| --------------- | ----------------------- | ---------------------------------- |
+| `beforeCreate`  | Before node creation    | Hydration position setup           |
+| `onCreate`      | After node ref created  | SSR markers, position sync         |
+| `beforeAttach`  | Before content attached | Hydration positioning              |
+| `onAttach`      | After content attached  | SSR fragments, lifecycle callbacks |
+| `beforeDestroy` | Before removal          | Exit animations                    |
+| `onDestroy`     | After removal           | Final cleanup                      |
 
 ### Animation Example
 
@@ -329,7 +367,7 @@ createNode: (type, props, parentContext) => {
   }
 
   return createCanvasNode(type, props);
-}
+};
 ```
 
 ---
@@ -338,12 +376,12 @@ createNode: (type, props, parentContext) => {
 
 Rimitive provides these adapters:
 
-| Adapter | Import | Purpose |
-|---------|--------|---------|
-| DOM | `@rimitive/view/adapters/dom` | Browser rendering |
-| Test | `@rimitive/view/adapters/test` | Unit testing (no DOM) |
-| Server | `@rimitive/ssr` | Server-side rendering |
-| Hydration | `@rimitive/ssr` | Rehydrating server HTML |
+| Adapter   | Import                         | Purpose                 |
+| --------- | ------------------------------ | ----------------------- |
+| DOM       | `@rimitive/view/adapters/dom`  | Browser rendering       |
+| Test      | `@rimitive/view/adapters/test` | Unit testing (no DOM)   |
+| Server    | `@rimitive/ssr`                | Server-side rendering   |
+| Hydration | `@rimitive/ssr`                | Rehydrating server HTML |
 
 ---
 
@@ -404,7 +442,9 @@ class HydrationMismatch extends Error {
   }
 }
 
-function createHydrationAdapter(containerEl: HTMLElement): Adapter<DOMAdapterConfig> {
+function createHydrationAdapter(
+  containerEl: HTMLElement
+): Adapter<DOMAdapterConfig> {
   // Mutable position - path[i] is child index at depth i
   const path: number[] = [];
 
@@ -435,15 +475,20 @@ function createHydrationAdapter(containerEl: HTMLElement): Adapter<DOMAdapterCon
 
       // Element nodes - validate and reuse
       const node = getNodeAtPath(containerEl, path);
-      if (node.nodeType !== 1 || (node as Element).tagName.toLowerCase() !== type) {
-        throw new HydrationMismatch(`Expected <${type}>, got <${(node as Element).tagName}>`);
+      if (
+        node.nodeType !== 1 ||
+        (node as Element).tagName.toLowerCase() !== type
+      ) {
+        throw new HydrationMismatch(
+          `Expected <${type}>, got <${(node as Element).tagName}>`
+        );
       }
       // Enter element's children
       path.push(0);
       return node;
     },
 
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       // Attach event handlers and update dynamic props
       if (node.nodeType === 3 && key === 'value') {
         node.textContent = String(value);
@@ -486,10 +531,11 @@ function createSwitchableAdapter(
 
   return {
     createNode: (type, props) => current.createNode(type, props),
-    setProperty: (node, key, value) => current.setProperty(node, key, value),
+    setAttribute: (node, key, value) => current.setAttribute(node, key, value),
     appendChild: (parent, child) => current.appendChild(parent, child),
     removeChild: (parent, child) => current.removeChild(parent, child),
-    insertBefore: (parent, child, ref) => current.insertBefore(parent, child, ref),
+    insertBefore: (parent, child, ref) =>
+      current.insertBefore(parent, child, ref),
 
     switchToFallback: () => {
       current = fallbackAdapter;
@@ -512,6 +558,7 @@ adapter.switchToFallback();
 ## When to Create a Custom Adapter
 
 **Good candidates:**
+
 - Canvas/WebGL rendering
 - Terminal/CLI interfaces
 - Native mobile (React Native-style)
@@ -521,6 +568,7 @@ adapter.switchToFallback();
 - Hydration for custom SSR solutions
 
 **Not necessary for:**
+
 - Standard web apps (use DOM adapter)
 - Server rendering (use SSR adapter)
 - Testing (use test adapter)
