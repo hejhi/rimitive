@@ -46,16 +46,15 @@ const App = () => {
     fetch('/api/users', { signal: abortSignal }).then((r) => r.json())
   );
 
-  // Fetch posts for selected user - automatically refetches when selectedUserId changes
-  const posts = resource<Post[]>((abortSignal) => {
-    const userId = selectedUserId();
-    if (userId === null) {
-      return Promise.resolve([]);
-    }
-    return fetch(`/api/posts?userId=${userId}`, { signal: abortSignal }).then(
-      (r) => r.json()
-    );
-  });
+  // Fetch posts for selected user - uses `enabled` option to only fetch when user selected
+  // The resource stays idle until a user is selected, then refetches when selection changes
+  const posts = resource<Post[]>(
+    (abortSignal) =>
+      fetch(`/api/posts?userId=${selectedUserId()}`, { signal: abortSignal }).then(
+        (r) => r.json()
+      ),
+    { enabled: () => selectedUserId() !== null }
+  );
 
   // Cleanup function to dispose resources when component unmounts
   const cleanup = () => {
@@ -71,6 +70,8 @@ const App = () => {
       el('h2')('Users'),
       match(users, (state) => {
         switch (state.status) {
+          case 'idle':
+            return null; // Users resource is always enabled
           case 'pending':
             return Loading('Loading users...');
           case 'error':
@@ -85,25 +86,23 @@ const App = () => {
       })
     ),
 
-    // Posts section
+    // Posts section - uses resource state directly (idle when no user selected)
     el('div').props({ className: 'card' })(
       el('h2')('Posts'),
-      match(selectedUserId, (userId) =>
-        userId === null
-          ? el('p')('Select a user to see their posts')
-          : match(posts, (state) => {
-              switch (state.status) {
-                case 'pending':
-                  return Loading('Loading posts...');
-                case 'error':
-                  return ErrorDisplay(state.error);
-                case 'ready':
-                  return state.value.length === 0
-                    ? el('p')('No posts found')
-                    : el('div')(map(state.value, (p) => p.id, PostItem));
-              }
-            })
-      )
+      match(posts, (state) => {
+        switch (state.status) {
+          case 'idle':
+            return el('p')('Select a user to see their posts');
+          case 'pending':
+            return Loading('Loading posts...');
+          case 'error':
+            return ErrorDisplay(state.error);
+          case 'ready':
+            return state.value.length === 0
+              ? el('p')('No posts found')
+              : el('div')(map(state.value, (p) => p.id, PostItem));
+        }
+      })
     )
   );
 };
