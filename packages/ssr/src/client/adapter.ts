@@ -4,7 +4,12 @@
  * Provides adapters for rehydrating server-rendered content.
  */
 
-import type { Adapter, TreeConfig, NodeRef, NodeOf } from '@rimitive/view/types';
+import type {
+  Adapter,
+  TreeConfig,
+  NodeRef,
+  NodeOf,
+} from '@rimitive/view/types';
 import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
 import { STATUS_FRAGMENT } from '@rimitive/view/types';
 import {
@@ -179,7 +184,7 @@ export function createDOMHydrationAdapter(
       return node;
     },
 
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       const n = node as Node;
       if (n.nodeType === 3 && key === 'value') {
         n.textContent = String(value);
@@ -262,7 +267,7 @@ export function createHydrationAdapter(
   let a = hydrateAdapter;
   return {
     createNode: (type, props) => a.createNode(type, props),
-    setProperty: (node, key, value) => a.setProperty(node, key, value),
+    setAttribute: (node, key, value) => a.setAttribute(node, key, value),
     appendChild: (parent, child) => a.appendChild(parent, child),
     removeChild: (parent, child) => a.removeChild(parent, child),
     insertBefore: (parent, newNode, refNode) =>

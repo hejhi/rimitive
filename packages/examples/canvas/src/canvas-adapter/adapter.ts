@@ -564,7 +564,7 @@ export function createCanvasAdapter(options: CanvasAdapterOptions = {}): {
       return createSceneNode(type, props ?? {});
     },
 
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       // Handle bridge element properties
       if (isBridgeElement(node)) {
         // Canvas-specific rendering options

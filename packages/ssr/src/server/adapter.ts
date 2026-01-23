@@ -82,7 +82,7 @@ function getLastDOMNode(nodeRef: NodeRef<unknown>): Node | null {
 export type Serialize = (element: unknown) => string;
 
 /**
- * Result from createDOMServerAdapter
+ * Result from createLinkedomAdapter
  */
 export type ServerAdapterResult = {
   /** The adapter for mounting components */
@@ -101,13 +101,13 @@ export type ServerAdapterResult = {
  *
  * @example
  * ```typescript
- * import { createDOMServerAdapter } from '@rimitive/ssr/server';
+ * import { createLinkedomAdapter } from '@rimitive/ssr/server';
  *
- * const { adapter, serialize } = createDOMServerAdapter();
+ * const { adapter, serialize } = createLinkedomAdapter();
  * // Use adapter for mounting, serialize for renderToString
  * ```
  */
-export function createDOMServerAdapter(): ServerAdapterResult {
+export function createLinkedomAdapter(): ServerAdapterResult {
   // Create a document context for element creation
   const { document } = parseHTML('<!DOCTYPE html><html></html>');
 
@@ -175,7 +175,7 @@ export function createDOMServerAdapter(): ServerAdapterResult {
 
       return document.createElement(type);
     },
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       const n = node as Node;
       // Handle text nodes
       if (n.nodeType === 3 && key === 'value') {
@@ -202,10 +202,8 @@ export function createDOMServerAdapter(): ServerAdapterResult {
         }
       }
     },
-    appendChild: (parent, child) =>
-      (parent as Node).appendChild(child as Node),
-    removeChild: (parent, child) =>
-      (parent as Node).removeChild(child as Node),
+    appendChild: (parent, child) => (parent as Node).appendChild(child as Node),
+    removeChild: (parent, child) => (parent as Node).removeChild(child as Node),
     insertBefore: (parent, child, reference) =>
       (parent as Node).insertBefore(child as Node, reference as Node | null),
 

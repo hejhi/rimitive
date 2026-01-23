@@ -28,7 +28,7 @@ import { createMatchModule } from '@rimitive/view/match';
 import { createLoader } from '@rimitive/view/load';
 import type { LoadState, LoadStatus } from '@rimitive/view/load';
 import type { RefSpec } from '@rimitive/view/types';
-import { createDOMServerAdapter, renderToStringAsync } from './server/index';
+import { createLinkedomAdapter, renderToStringAsync } from './server/index';
 
 /**
  * Create a service composition for SSR testing
@@ -36,7 +36,7 @@ import { createDOMServerAdapter, renderToStringAsync } from './server/index';
  */
 function createTestService() {
   const { adapter, serialize, insertFragmentMarkers } =
-    createDOMServerAdapter();
+    createLinkedomAdapter();
 
   const baseSvc = compose(
     SignalModule,

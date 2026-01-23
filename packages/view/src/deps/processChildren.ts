@@ -128,7 +128,7 @@ export function createProcessChildren<TConfig extends TreeConfig>(opts: {
     (child: () => string | number, textNode: TNode) => () => {
       const value = child();
       const stringValue = value == null ? '' : String(value);
-      adapter.setProperty(textNode, 'value', stringValue);
+      adapter.setAttribute(textNode, 'value', stringValue);
     };
 
   const handleChild = (

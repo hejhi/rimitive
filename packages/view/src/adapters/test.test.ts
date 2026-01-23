@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createTestAdapter,
-  createTestRoot,
-  type TestNode,
-} from './test';
+import { createTestAdapter, createTestRoot, type TestNode } from './test';
 
 describe('test adapter', () => {
   describe('createNode', () => {
@@ -51,12 +47,12 @@ describe('test adapter', () => {
     });
   });
 
-  describe('setProperty', () => {
+  describe('setAttribute', () => {
     it('sets property on node', () => {
       const adapter = createTestAdapter();
       const node = adapter.createNode('div');
 
-      adapter.setProperty(node, 'className', 'active');
+      adapter.setAttribute(node, 'className', 'active');
 
       expect(node.props.className).toBe('active');
     });
@@ -65,7 +61,7 @@ describe('test adapter', () => {
       const adapter = createTestAdapter();
       const node = adapter.createNode('div', { className: 'initial' });
 
-      adapter.setProperty(node, 'className', 'updated');
+      adapter.setAttribute(node, 'className', 'updated');
 
       expect(node.props.className).toBe('updated');
     });
@@ -74,11 +70,11 @@ describe('test adapter', () => {
       const adapter = createTestAdapter();
       const node = adapter.createNode('div');
 
-      adapter.setProperty(node, 'text', 'string');
-      adapter.setProperty(node, 'count', 42);
-      adapter.setProperty(node, 'active', true);
-      adapter.setProperty(node, 'data', { foo: 'bar' });
-      adapter.setProperty(node, 'empty', null);
+      adapter.setAttribute(node, 'text', 'string');
+      adapter.setAttribute(node, 'count', 42);
+      adapter.setAttribute(node, 'active', true);
+      adapter.setAttribute(node, 'data', { foo: 'bar' });
+      adapter.setAttribute(node, 'empty', null);
 
       expect(node.props.text).toBe('string');
       expect(node.props.count).toBe(42);
@@ -87,16 +83,16 @@ describe('test adapter', () => {
       expect(node.props.empty).toBeNull();
     });
 
-    it('logs setProperty operations', () => {
+    it('logs setAttribute operations', () => {
       const adapter = createTestAdapter();
       const node = adapter.createNode('div');
 
       adapter.clearOperations();
-      adapter.setProperty(node, 'className', 'test');
+      adapter.setAttribute(node, 'className', 'test');
 
       expect(adapter.operations).toHaveLength(1);
       expect(adapter.operations[0]).toEqual({
-        type: 'setProperty',
+        type: 'setAttribute',
         node,
         key: 'className',
         value: 'test',
@@ -377,7 +373,9 @@ describe('test adapter', () => {
 
       const result = adapter.serialize(root);
 
-      expect(result).toMatch(/<div>\n\s+<span>\n\s+"Nested"\n\s+<\/span>\n<\/div>/);
+      expect(result).toMatch(
+        /<div>\n\s+<span>\n\s+"Nested"\n\s+<\/span>\n<\/div>/
+      );
     });
 
     it('excludes value prop from element serialization', () => {
@@ -646,7 +644,9 @@ describe('test adapter', () => {
 
       expect(adapter.operations).toHaveLength(1);
       expect(adapter.operations[0]?.type).toBe('createNode');
-      expect((adapter.operations[0] as { nodeType: string }).nodeType).toBe('span');
+      expect((adapter.operations[0] as { nodeType: string }).nodeType).toBe(
+        'span'
+      );
     });
   });
 
@@ -658,15 +658,15 @@ describe('test adapter', () => {
 
       adapter.clearOperations();
 
-      adapter.setProperty(parent, 'className', 'container');
+      adapter.setAttribute(parent, 'className', 'container');
       adapter.appendChild(parent, child);
-      adapter.setProperty(child, 'textContent', 'Hello');
+      adapter.setAttribute(child, 'textContent', 'Hello');
       adapter.removeChild(parent, child);
 
       expect(adapter.operations).toHaveLength(4);
-      expect(adapter.operations[0]?.type).toBe('setProperty');
+      expect(adapter.operations[0]?.type).toBe('setAttribute');
       expect(adapter.operations[1]?.type).toBe('appendChild');
-      expect(adapter.operations[2]?.type).toBe('setProperty');
+      expect(adapter.operations[2]?.type).toBe('setAttribute');
       expect(adapter.operations[3]?.type).toBe('removeChild');
     });
 
@@ -675,10 +675,10 @@ describe('test adapter', () => {
       const node = adapter.createNode('div');
 
       adapter.clearOperations();
-      adapter.setProperty(node, 'id', 'test');
+      adapter.setAttribute(node, 'id', 'test');
 
       const operation = adapter.operations[0];
-      expect(operation?.type).toBe('setProperty');
+      expect(operation?.type).toBe('setAttribute');
       expect((operation as { node: TestNode }).node).toBe(node);
     });
   });
@@ -746,7 +746,7 @@ describe('test adapter', () => {
 
       expect(adapter.getTextContent(root)).toBe('Initial');
 
-      adapter.setProperty(text, 'value', 'Updated');
+      adapter.setAttribute(text, 'value', 'Updated');
 
       expect(adapter.getTextContent(root)).toBe('Updated');
     });

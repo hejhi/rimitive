@@ -398,7 +398,7 @@ import { ASYNC_FRAGMENT } from '../shared/async-fragments';
 import type { LoadState } from '@rimitive/view/load';
 import { STATUS_REF_SPEC } from '@rimitive/view/types';
 import type { RefSpec } from '@rimitive/view/types';
-import { createDOMServerAdapter } from './adapter';
+import { createLinkedomAdapter } from './adapter';
 
 /**
  * Create an async fragment for testing.
@@ -572,7 +572,7 @@ function mockMount(spec: RefSpec<unknown>): NodeRef<unknown> {
  */
 function createMockService() {
   const { adapter, serialize, insertFragmentMarkers } =
-    createDOMServerAdapter();
+    createLinkedomAdapter();
   const svc = {
     el: (tag: string) => (content: string) =>
       createMockRefSpec(`<${tag}>${content}</${tag}>`),

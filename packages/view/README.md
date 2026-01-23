@@ -133,9 +133,7 @@ import { createPortalModule } from '@rimitive/view/portal';
 const { portal } = compose(...modules, createPortalModule(adapter));
 
 // Portal to document.body (default)
-portal()(
-  el('div').props({ className: 'modal' })('Content')
-);
+portal()(el('div').props({ className: 'modal' })('Content'));
 
 // Portal to specific element
 portal(() => document.getElementById('tooltips'))(Tooltip());
@@ -198,7 +196,7 @@ import type { Adapter } from '@rimitive/view/adapter';
 
 const myAdapter: Adapter<MyConfig> = {
   createNode: (tag, props) => { ... },
-  setProperty: (element, key, value) => { ... },
+  setAttribute: (element, key, value) => { ... },
   insertBefore: (parent, node, anchor) => { ... },
   removeChild: (parent, node) => { ... },
   createTextNode: (text) => { ... },

@@ -236,7 +236,7 @@ export function createElFactory<TConfig extends TreeConfig>({
     scopedEffect,
     adapter,
   });
-  const { setProperty, createNode } = adapter;
+  const { setAttribute, createNode } = adapter;
 
   /**
    * Helper to create a RefSpec
@@ -312,12 +312,12 @@ export function createElFactory<TConfig extends TreeConfig>({
             const isEventHandler = key.startsWith('on');
 
             if (typeof val !== 'function' || isEventHandler) {
-              setProperty(element, key, val);
+              setAttribute(element, key, val);
               continue;
             }
             // Reactive value - wrap in effect for updates
             scopedEffect(() =>
-              setProperty(element, key, (val as () => unknown)())
+              setAttribute(element, key, (val as () => unknown)())
             );
           }
           processChildren(elRef, children, svc, childContext);

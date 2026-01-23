@@ -126,7 +126,7 @@ export type NodeOf<TConfig extends TreeConfig> =
  *     if (type === 'text') return document.createTextNode(props?.value as string || '');
  *     return document.createElement(type);
  *   },
- *   setProperty: (node, key, value) => {
+ *   setAttribute: (node, key, value) => {
  *     if (key === 'textContent') node.textContent = value as string;
  *     else (node as HTMLElement).setAttribute(key, String(value));
  *   },
@@ -167,27 +167,17 @@ export type Adapter<TConfig extends TreeConfig> = {
    *
    * For text nodes, setting 'value' updates the text content
    */
-  setProperty: (
-    node: NodeOf<TConfig>,
-    key: string,
-    value: unknown
-  ) => void;
+  setAttribute: (node: NodeOf<TConfig>, key: string, value: unknown) => void;
 
   /**
    * Append a child to a parent node
    */
-  appendChild: (
-    parent: NodeOf<TConfig>,
-    child: NodeOf<TConfig>
-  ) => void;
+  appendChild: (parent: NodeOf<TConfig>, child: NodeOf<TConfig>) => void;
 
   /**
    * Remove a child from a parent node
    */
-  removeChild: (
-    parent: NodeOf<TConfig>,
-    child: NodeOf<TConfig>
-  ) => void;
+  removeChild: (parent: NodeOf<TConfig>, child: NodeOf<TConfig>) => void;
 
   /**
    * Insert a child before a reference node
@@ -226,10 +216,7 @@ export type Adapter<TConfig extends TreeConfig> = {
    * @param ref - The node reference (element or fragment, check ref.status)
    * @param parent - The parent element
    */
-  onCreate?: (
-    ref: NodeRef<NodeOf<TConfig>>,
-    parent: NodeOf<TConfig>
-  ) => void;
+  onCreate?: (ref: NodeRef<NodeOf<TConfig>>, parent: NodeOf<TConfig>) => void;
 
   /**
    * Called before a node's content is attached to the tree
@@ -263,10 +250,7 @@ export type Adapter<TConfig extends TreeConfig> = {
    * @param ref - The node reference
    * @param parent - The parent element
    */
-  onAttach?: (
-    ref: NodeRef<NodeOf<TConfig>>,
-    parent: NodeOf<TConfig>
-  ) => void;
+  onAttach?: (ref: NodeRef<NodeOf<TConfig>>, parent: NodeOf<TConfig>) => void;
 
   /**
    * Called before a node is removed from the tree
@@ -293,8 +277,5 @@ export type Adapter<TConfig extends TreeConfig> = {
    * @param ref - The node reference
    * @param parent - The parent element (may no longer contain node)
    */
-  onDestroy?: (
-    ref: NodeRef<NodeOf<TConfig>>,
-    parent: NodeOf<TConfig>
-  ) => void;
+  onDestroy?: (ref: NodeRef<NodeOf<TConfig>>, parent: NodeOf<TConfig>) => void;
 };

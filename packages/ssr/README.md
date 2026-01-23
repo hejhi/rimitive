@@ -9,7 +9,7 @@ Server-side rendering and hydration. Effects are synchronous and run on the serv
 ```typescript
 import { createServer } from 'node:http';
 import {
-  createDOMServerAdapter,
+  createLinkedomAdapter,
   renderToStringAsync,
 } from '@rimitive/ssr/server';
 import { createService } from './service.js';
@@ -17,7 +17,7 @@ import { App } from './App.js';
 
 const server = createServer(async (req, res) => {
   const { adapter, serialize, insertFragmentMarkers } =
-    createDOMServerAdapter();
+    createLinkedomAdapter();
   const service = createService(adapter);
 
   const html = await renderToStringAsync(App(service), {
@@ -55,8 +55,8 @@ import { createService } from './service.js';
 import { App } from './App.js';
 
 const adapter = createClientAdapter(document.querySelector('.app')!);
-const loaderData = window.__LOADER_DATA__;
-const service = createService(adapter, { loaderData });
+const ssrData = window.__LOADER_DATA__;
+const service = createService(adapter, { hydrationData: ssrData });
 
 App(service).create(service);
 adapter.activate(); // Switch to normal DOM mode
@@ -80,7 +80,7 @@ import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
 
 export function createService(
   adapter: Adapter<DOMAdapterConfig>,
-  options?: { loaderData?: Record<string, unknown>; onResolve?: (id: string, data: unknown) => void }
+  options?: { hydrationData?: Record<string, unknown>; onResolve?: (id: string, data: unknown) => void }
 ) {
   return compose(
     SignalModule,
@@ -89,7 +89,7 @@ export function createService(
     createElModule(adapter),
     createMatchModule(adapter),
     createLoaderModule({
-      initialData: options?.loaderData,
+      initialData: options?.hydrationData,
       onResolve: options?.onResolve,
     })
   );
@@ -137,7 +137,7 @@ Send HTML immediately, stream data as it loads:
 
 ```typescript
 import {
-  createDOMServerAdapter,
+  createLinkedomAdapter,
   renderToStream,
   createStreamWriter,
 } from '@rimitive/ssr/server';
@@ -146,7 +146,7 @@ const stream = createStreamWriter('__APP_STREAM__');
 
 const server = createServer(async (req, res) => {
   const { adapter, serialize, insertFragmentMarkers } =
-    createDOMServerAdapter();
+    createLinkedomAdapter();
 
   const service = createService(adapter, {
     onResolve: (id, data) => {

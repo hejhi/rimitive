@@ -46,7 +46,9 @@ describe('DOM adapter SVG support', () => {
     it('creates SVG children in SVG namespace', () => {
       const adapter = createDOMAdapter();
       const svg = adapter.createNode('svg', {});
-      const g = asElement(adapter.createNode('g', {}, { adapter, element: svg }));
+      const g = asElement(
+        adapter.createNode('g', {}, { adapter, element: svg })
+      );
 
       expect(g.namespaceURI).toBe(SVG_NS);
     });
@@ -54,8 +56,12 @@ describe('DOM adapter SVG support', () => {
     it('creates nested SVG elements (svg > g > path)', () => {
       const adapter = createDOMAdapter();
       const svg = asElement(adapter.createNode('svg', {}));
-      const g = asElement(adapter.createNode('g', {}, { adapter, element: svg }));
-      const path = asElement(adapter.createNode('path', {}, { adapter, element: g }));
+      const g = asElement(
+        adapter.createNode('g', {}, { adapter, element: svg })
+      );
+      const path = asElement(
+        adapter.createNode('path', {}, { adapter, element: g })
+      );
 
       expect(svg.namespaceURI).toBe(SVG_NS);
       expect(g.namespaceURI).toBe(SVG_NS);
@@ -65,7 +71,9 @@ describe('DOM adapter SVG support', () => {
     it('creates SVG rect element', () => {
       const adapter = createDOMAdapter();
       const svg = adapter.createNode('svg', {});
-      const rect = asElement(adapter.createNode('rect', {}, { adapter, element: svg }));
+      const rect = asElement(
+        adapter.createNode('rect', {}, { adapter, element: svg })
+      );
 
       expect(rect.namespaceURI).toBe(SVG_NS);
     });
@@ -73,7 +81,9 @@ describe('DOM adapter SVG support', () => {
     it('creates SVG circle element', () => {
       const adapter = createDOMAdapter();
       const svg = adapter.createNode('svg', {});
-      const circle = asElement(adapter.createNode('circle', {}, { adapter, element: svg }));
+      const circle = asElement(
+        adapter.createNode('circle', {}, { adapter, element: svg })
+      );
 
       expect(circle.namespaceURI).toBe(SVG_NS);
     });
@@ -83,14 +93,26 @@ describe('DOM adapter SVG support', () => {
     it('creates HTML div inside foreignObject', () => {
       const adapter = createDOMAdapter();
       const svg = asElement(adapter.createNode('svg', {}));
-      const foreignObject = asElement(adapter.createNode('foreignObject', {}, {
-        adapter,
-        element: svg,
-      }));
-      const div = asElement(adapter.createNode('div', {}, {
-        adapter,
-        element: foreignObject,
-      }));
+      const foreignObject = asElement(
+        adapter.createNode(
+          'foreignObject',
+          {},
+          {
+            adapter,
+            element: svg,
+          }
+        )
+      );
+      const div = asElement(
+        adapter.createNode(
+          'div',
+          {},
+          {
+            adapter,
+            element: foreignObject,
+          }
+        )
+      );
 
       expect(svg.namespaceURI).toBe(SVG_NS);
       expect(foreignObject.namespaceURI).toBe(SVG_NS);
@@ -100,14 +122,24 @@ describe('DOM adapter SVG support', () => {
     it('creates HTML span inside foreignObject', () => {
       const adapter = createDOMAdapter();
       const svg = adapter.createNode('svg', {});
-      const foreignObject = adapter.createNode('foreignObject', {}, {
-        adapter,
-        element: svg,
-      });
-      const span = asElement(adapter.createNode('span', {}, {
-        adapter,
-        element: foreignObject,
-      }));
+      const foreignObject = adapter.createNode(
+        'foreignObject',
+        {},
+        {
+          adapter,
+          element: svg,
+        }
+      );
+      const span = asElement(
+        adapter.createNode(
+          'span',
+          {},
+          {
+            adapter,
+            element: foreignObject,
+          }
+        )
+      );
 
       expect(span.namespaceURI).toBe(HTML_NS);
     });
@@ -115,15 +147,27 @@ describe('DOM adapter SVG support', () => {
     it('creates nested HTML elements inside foreignObject', () => {
       const adapter = createDOMAdapter();
       const svg = adapter.createNode('svg', {});
-      const foreignObject = adapter.createNode('foreignObject', {}, {
-        adapter,
-        element: svg,
-      });
-      const div = asElement(adapter.createNode('div', {}, {
-        adapter,
-        element: foreignObject,
-      }));
-      const p = asElement(adapter.createNode('p', {}, { adapter, element: div }));
+      const foreignObject = adapter.createNode(
+        'foreignObject',
+        {},
+        {
+          adapter,
+          element: svg,
+        }
+      );
+      const div = asElement(
+        adapter.createNode(
+          'div',
+          {},
+          {
+            adapter,
+            element: foreignObject,
+          }
+        )
+      );
+      const p = asElement(
+        adapter.createNode('p', {}, { adapter, element: div })
+      );
 
       expect(div.namespaceURI).toBe(HTML_NS);
       expect(p.namespaceURI).toBe(HTML_NS);
@@ -134,22 +178,46 @@ describe('DOM adapter SVG support', () => {
     it('creates SVG inside HTML div inside foreignObject', () => {
       const adapter = createDOMAdapter();
       const outerSvg = asElement(adapter.createNode('svg', {}));
-      const foreignObject = asElement(adapter.createNode('foreignObject', {}, {
-        adapter,
-        element: outerSvg,
-      }));
-      const div = asElement(adapter.createNode('div', {}, {
-        adapter,
-        element: foreignObject,
-      }));
-      const innerSvg = asElement(adapter.createNode('svg', {}, {
-        adapter,
-        element: div,
-      }));
-      const path = asElement(adapter.createNode('path', {}, {
-        adapter,
-        element: innerSvg,
-      }));
+      const foreignObject = asElement(
+        adapter.createNode(
+          'foreignObject',
+          {},
+          {
+            adapter,
+            element: outerSvg,
+          }
+        )
+      );
+      const div = asElement(
+        adapter.createNode(
+          'div',
+          {},
+          {
+            adapter,
+            element: foreignObject,
+          }
+        )
+      );
+      const innerSvg = asElement(
+        adapter.createNode(
+          'svg',
+          {},
+          {
+            adapter,
+            element: div,
+          }
+        )
+      );
+      const path = asElement(
+        adapter.createNode(
+          'path',
+          {},
+          {
+            adapter,
+            element: innerSvg,
+          }
+        )
+      );
 
       expect(outerSvg.namespaceURI).toBe(SVG_NS);
       expect(foreignObject.namespaceURI).toBe(SVG_NS);
@@ -161,23 +229,49 @@ describe('DOM adapter SVG support', () => {
     it('handles complex SVG/HTML nesting', () => {
       const adapter = createDOMAdapter();
       const svg1 = asElement(adapter.createNode('svg', {}));
-      const g = asElement(adapter.createNode('g', {}, { adapter, element: svg1 }));
-      const foreignObject = asElement(adapter.createNode('foreignObject', {}, {
-        adapter,
-        element: g,
-      }));
-      const div = asElement(adapter.createNode('div', {}, {
-        adapter,
-        element: foreignObject,
-      }));
-      const svg2 = asElement(adapter.createNode('svg', {}, {
-        adapter,
-        element: div,
-      }));
-      const circle = asElement(adapter.createNode('circle', {}, {
-        adapter,
-        element: svg2,
-      }));
+      const g = asElement(
+        adapter.createNode('g', {}, { adapter, element: svg1 })
+      );
+      const foreignObject = asElement(
+        adapter.createNode(
+          'foreignObject',
+          {},
+          {
+            adapter,
+            element: g,
+          }
+        )
+      );
+      const div = asElement(
+        adapter.createNode(
+          'div',
+          {},
+          {
+            adapter,
+            element: foreignObject,
+          }
+        )
+      );
+      const svg2 = asElement(
+        adapter.createNode(
+          'svg',
+          {},
+          {
+            adapter,
+            element: div,
+          }
+        )
+      );
+      const circle = asElement(
+        adapter.createNode(
+          'circle',
+          {},
+          {
+            adapter,
+            element: svg2,
+          }
+        )
+      );
 
       expect(svg1.namespaceURI).toBe(SVG_NS);
       expect(g.namespaceURI).toBe(SVG_NS);
@@ -188,13 +282,13 @@ describe('DOM adapter SVG support', () => {
     });
   });
 
-  describe('setProperty', () => {
+  describe('setAttribute', () => {
     describe('SVG attribute setting', () => {
       it('preserves viewBox case', () => {
         const adapter = createDOMAdapter();
         const svg = asElement(adapter.createNode('svg', {}));
 
-        adapter.setProperty(svg, 'viewBox', '0 0 100 100');
+        adapter.setAttribute(svg, 'viewBox', '0 0 100 100');
 
         expect(svg.getAttribute('viewBox')).toBe('0 0 100 100');
       });
@@ -203,7 +297,7 @@ describe('DOM adapter SVG support', () => {
         const adapter = createDOMAdapter();
         const svg = asElement(adapter.createNode('svg', {}));
 
-        adapter.setProperty(svg, 'preserveAspectRatio', 'xMidYMid meet');
+        adapter.setAttribute(svg, 'preserveAspectRatio', 'xMidYMid meet');
 
         expect(svg.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');
       });
@@ -211,9 +305,11 @@ describe('DOM adapter SVG support', () => {
       it('sets fill attribute', () => {
         const adapter = createDOMAdapter();
         const svg = adapter.createNode('svg', {});
-        const path = asElement(adapter.createNode('path', {}, { adapter, element: svg }));
+        const path = asElement(
+          adapter.createNode('path', {}, { adapter, element: svg })
+        );
 
-        adapter.setProperty(path, 'fill', 'red');
+        adapter.setAttribute(path, 'fill', 'red');
 
         expect(path.getAttribute('fill')).toBe('red');
       });
@@ -221,9 +317,11 @@ describe('DOM adapter SVG support', () => {
       it('sets stroke attribute', () => {
         const adapter = createDOMAdapter();
         const svg = adapter.createNode('svg', {});
-        const path = asElement(adapter.createNode('path', {}, { adapter, element: svg }));
+        const path = asElement(
+          adapter.createNode('path', {}, { adapter, element: svg })
+        );
 
-        adapter.setProperty(path, 'stroke', 'blue');
+        adapter.setAttribute(path, 'stroke', 'blue');
 
         expect(path.getAttribute('stroke')).toBe('blue');
       });
@@ -231,9 +329,11 @@ describe('DOM adapter SVG support', () => {
       it('sets d attribute on path', () => {
         const adapter = createDOMAdapter();
         const svg = adapter.createNode('svg', {});
-        const path = asElement(adapter.createNode('path', {}, { adapter, element: svg }));
+        const path = asElement(
+          adapter.createNode('path', {}, { adapter, element: svg })
+        );
 
-        adapter.setProperty(path, 'd', 'M 10 10 L 90 90');
+        adapter.setAttribute(path, 'd', 'M 10 10 L 90 90');
 
         expect(path.getAttribute('d')).toBe('M 10 10 L 90 90');
       });
@@ -241,9 +341,11 @@ describe('DOM adapter SVG support', () => {
       it('sets stroke-width attribute (hyphenated)', () => {
         const adapter = createDOMAdapter();
         const svg = adapter.createNode('svg', {});
-        const path = asElement(adapter.createNode('path', {}, { adapter, element: svg }));
+        const path = asElement(
+          adapter.createNode('path', {}, { adapter, element: svg })
+        );
 
-        adapter.setProperty(path, 'stroke-width', '2');
+        adapter.setAttribute(path, 'stroke-width', '2');
 
         expect(path.getAttribute('stroke-width')).toBe('2');
       });
@@ -251,9 +353,9 @@ describe('DOM adapter SVG support', () => {
       it('removes SVG attribute when value is null', () => {
         const adapter = createDOMAdapter();
         const svg = asElement(adapter.createNode('svg', {}));
-        adapter.setProperty(svg, 'viewBox', '0 0 100 100');
+        adapter.setAttribute(svg, 'viewBox', '0 0 100 100');
 
-        adapter.setProperty(svg, 'viewBox', null);
+        adapter.setAttribute(svg, 'viewBox', null);
 
         expect(svg.hasAttribute('viewBox')).toBe(false);
       });
@@ -261,9 +363,9 @@ describe('DOM adapter SVG support', () => {
       it('removes SVG attribute when value is undefined', () => {
         const adapter = createDOMAdapter();
         const svg = asElement(adapter.createNode('svg', {}));
-        adapter.setProperty(svg, 'fill', 'red');
+        adapter.setAttribute(svg, 'fill', 'red');
 
-        adapter.setProperty(svg, 'fill', undefined);
+        adapter.setAttribute(svg, 'fill', undefined);
 
         expect(svg.hasAttribute('fill')).toBe(false);
       });
@@ -275,7 +377,7 @@ describe('DOM adapter SVG support', () => {
         const svg = asElement(adapter.createNode('svg', {}));
         const handler = () => {};
 
-        adapter.setProperty(svg, 'onclick', handler);
+        adapter.setAttribute(svg, 'onclick', handler);
 
         expect((svg as Element & { onclick: unknown }).onclick).toBe(handler);
         expect(svg.hasAttribute('onclick')).toBe(false);
@@ -284,10 +386,12 @@ describe('DOM adapter SVG support', () => {
       it('uses property assignment for onmouseenter', () => {
         const adapter = createDOMAdapter();
         const svg = adapter.createNode('svg', {});
-        const path = asElement(adapter.createNode('path', {}, { adapter, element: svg }));
+        const path = asElement(
+          adapter.createNode('path', {}, { adapter, element: svg })
+        );
         const handler = () => {};
 
-        adapter.setProperty(path, 'onmouseenter', handler);
+        adapter.setAttribute(path, 'onmouseenter', handler);
 
         expect((path as Element & { onmouseenter: unknown }).onmouseenter).toBe(
           handler
@@ -298,13 +402,19 @@ describe('DOM adapter SVG support', () => {
       it('uses property assignment for onmouseleave', () => {
         const adapter = createDOMAdapter();
         const svg = adapter.createNode('svg', {});
-        const circle = asElement(adapter.createNode('circle', {}, {
-          adapter,
-          element: svg,
-        }));
+        const circle = asElement(
+          adapter.createNode(
+            'circle',
+            {},
+            {
+              adapter,
+              element: svg,
+            }
+          )
+        );
         const handler = () => {};
 
-        adapter.setProperty(circle, 'onmouseleave', handler);
+        adapter.setAttribute(circle, 'onmouseleave', handler);
 
         expect(
           (circle as Element & { onmouseleave: unknown }).onmouseleave
@@ -318,7 +428,7 @@ describe('DOM adapter SVG support', () => {
         const adapter = createDOMAdapter();
         const div = adapter.createNode('div', {});
 
-        adapter.setProperty(div, 'className', 'test');
+        adapter.setAttribute(div, 'className', 'test');
 
         expect((div as HTMLElement).className).toBe('test');
       });
@@ -327,7 +437,7 @@ describe('DOM adapter SVG support', () => {
         const adapter = createDOMAdapter();
         const div = asElement(adapter.createNode('div', {}));
 
-        adapter.setProperty(div, 'data-test', 'value');
+        adapter.setAttribute(div, 'data-test', 'value');
 
         expect(div.getAttribute('data-test')).toBe('value');
       });
@@ -336,7 +446,7 @@ describe('DOM adapter SVG support', () => {
         const adapter = createDOMAdapter();
         const button = asElement(adapter.createNode('button', {}));
 
-        adapter.setProperty(button, 'aria-label', 'Close');
+        adapter.setAttribute(button, 'aria-label', 'Close');
 
         expect(button.getAttribute('aria-label')).toBe('Close');
       });
@@ -347,7 +457,7 @@ describe('DOM adapter SVG support', () => {
         const adapter = createDOMAdapter();
         const text = adapter.createNode('text', { value: 'Initial' });
 
-        adapter.setProperty(text, 'value', 'Updated');
+        adapter.setAttribute(text, 'value', 'Updated');
 
         expect(text.textContent).toBe('Updated');
       });
@@ -356,7 +466,7 @@ describe('DOM adapter SVG support', () => {
         const adapter = createDOMAdapter();
         const text = adapter.createNode('text', { value: 'Hello' });
 
-        adapter.setProperty(text, 'value', null);
+        adapter.setAttribute(text, 'value', null);
 
         expect(text.textContent).toBe('');
       });
@@ -365,7 +475,7 @@ describe('DOM adapter SVG support', () => {
         const adapter = createDOMAdapter();
         const text = adapter.createNode('text', { value: 'Hello' });
 
-        adapter.setProperty(text, 'className', 'test');
+        adapter.setAttribute(text, 'className', 'test');
 
         expect(text.textContent).toBe('Hello');
       });
@@ -377,15 +487,17 @@ describe('DOM adapter SVG support', () => {
       const adapter = createDOMAdapter();
       const svg = asElement(adapter.createNode('svg', {}));
 
-      adapter.setProperty(svg, 'viewBox', '0 0 100 100');
-      adapter.setProperty(svg, 'width', '100');
-      adapter.setProperty(svg, 'height', '100');
+      adapter.setAttribute(svg, 'viewBox', '0 0 100 100');
+      adapter.setAttribute(svg, 'width', '100');
+      adapter.setAttribute(svg, 'height', '100');
 
-      const path = asElement(adapter.createNode('path', {}, { adapter, element: svg }));
-      adapter.setProperty(path, 'd', 'M 10 10 L 90 90');
-      adapter.setProperty(path, 'fill', 'none');
-      adapter.setProperty(path, 'stroke', 'black');
-      adapter.setProperty(path, 'stroke-width', '2');
+      const path = asElement(
+        adapter.createNode('path', {}, { adapter, element: svg })
+      );
+      adapter.setAttribute(path, 'd', 'M 10 10 L 90 90');
+      adapter.setAttribute(path, 'fill', 'none');
+      adapter.setAttribute(path, 'stroke', 'black');
+      adapter.setAttribute(path, 'stroke-width', '2');
 
       adapter.appendChild(svg, path);
 
@@ -400,21 +512,33 @@ describe('DOM adapter SVG support', () => {
     it('creates SVG with foreignObject containing HTML', () => {
       const adapter = createDOMAdapter();
       const svg = asElement(adapter.createNode('svg', {}));
-      const foreignObject = asElement(adapter.createNode('foreignObject', {}, {
-        adapter,
-        element: svg,
-      }));
-      const div = asElement(adapter.createNode('div', {}, {
-        adapter,
-        element: foreignObject,
-      }));
+      const foreignObject = asElement(
+        adapter.createNode(
+          'foreignObject',
+          {},
+          {
+            adapter,
+            element: svg,
+          }
+        )
+      );
+      const div = asElement(
+        adapter.createNode(
+          'div',
+          {},
+          {
+            adapter,
+            element: foreignObject,
+          }
+        )
+      );
 
-      adapter.setProperty(svg, 'viewBox', '0 0 200 200');
-      adapter.setProperty(foreignObject, 'x', '10');
-      adapter.setProperty(foreignObject, 'y', '10');
-      adapter.setProperty(foreignObject, 'width', '180');
-      adapter.setProperty(foreignObject, 'height', '180');
-      adapter.setProperty(div, 'className', 'content');
+      adapter.setAttribute(svg, 'viewBox', '0 0 200 200');
+      adapter.setAttribute(foreignObject, 'x', '10');
+      adapter.setAttribute(foreignObject, 'y', '10');
+      adapter.setAttribute(foreignObject, 'width', '180');
+      adapter.setAttribute(foreignObject, 'height', '180');
+      adapter.setAttribute(div, 'className', 'content');
 
       adapter.appendChild(foreignObject, div);
       adapter.appendChild(svg, foreignObject);
@@ -430,45 +554,73 @@ describe('DOM adapter SVG support', () => {
       const adapter = createDOMAdapter();
 
       const outerSvg = asElement(adapter.createNode('svg', {}));
-      adapter.setProperty(outerSvg, 'viewBox', '0 0 300 300');
+      adapter.setAttribute(outerSvg, 'viewBox', '0 0 300 300');
 
-      const g = asElement(adapter.createNode('g', {}, { adapter, element: outerSvg }));
-      adapter.setProperty(g, 'transform', 'translate(50, 50)');
+      const g = asElement(
+        adapter.createNode('g', {}, { adapter, element: outerSvg })
+      );
+      adapter.setAttribute(g, 'transform', 'translate(50, 50)');
 
-      const rect = asElement(adapter.createNode('rect', {}, { adapter, element: g }));
-      adapter.setProperty(rect, 'width', '200');
-      adapter.setProperty(rect, 'height', '200');
-      adapter.setProperty(rect, 'fill', 'lightgray');
+      const rect = asElement(
+        adapter.createNode('rect', {}, { adapter, element: g })
+      );
+      adapter.setAttribute(rect, 'width', '200');
+      adapter.setAttribute(rect, 'height', '200');
+      adapter.setAttribute(rect, 'fill', 'lightgray');
 
-      const foreignObject = asElement(adapter.createNode('foreignObject', {}, {
-        adapter,
-        element: g,
-      }));
-      adapter.setProperty(foreignObject, 'x', '10');
-      adapter.setProperty(foreignObject, 'y', '10');
-      adapter.setProperty(foreignObject, 'width', '180');
-      adapter.setProperty(foreignObject, 'height', '180');
+      const foreignObject = asElement(
+        adapter.createNode(
+          'foreignObject',
+          {},
+          {
+            adapter,
+            element: g,
+          }
+        )
+      );
+      adapter.setAttribute(foreignObject, 'x', '10');
+      adapter.setAttribute(foreignObject, 'y', '10');
+      adapter.setAttribute(foreignObject, 'width', '180');
+      adapter.setAttribute(foreignObject, 'height', '180');
 
-      const div = asElement(adapter.createNode('div', {}, {
-        adapter,
-        element: foreignObject,
-      }));
-      adapter.setProperty(div, 'className', 'html-content');
+      const div = asElement(
+        adapter.createNode(
+          'div',
+          {},
+          {
+            adapter,
+            element: foreignObject,
+          }
+        )
+      );
+      adapter.setAttribute(div, 'className', 'html-content');
 
-      const innerSvg = asElement(adapter.createNode('svg', {}, {
-        adapter,
-        element: div,
-      }));
-      adapter.setProperty(innerSvg, 'viewBox', '0 0 50 50');
+      const innerSvg = asElement(
+        adapter.createNode(
+          'svg',
+          {},
+          {
+            adapter,
+            element: div,
+          }
+        )
+      );
+      adapter.setAttribute(innerSvg, 'viewBox', '0 0 50 50');
 
-      const circle = asElement(adapter.createNode('circle', {}, {
-        adapter,
-        element: innerSvg,
-      }));
-      adapter.setProperty(circle, 'cx', '25');
-      adapter.setProperty(circle, 'cy', '25');
-      adapter.setProperty(circle, 'r', '20');
-      adapter.setProperty(circle, 'fill', 'blue');
+      const circle = asElement(
+        adapter.createNode(
+          'circle',
+          {},
+          {
+            adapter,
+            element: innerSvg,
+          }
+        )
+      );
+      adapter.setAttribute(circle, 'cx', '25');
+      adapter.setAttribute(circle, 'cy', '25');
+      adapter.setAttribute(circle, 'r', '20');
+      adapter.setAttribute(circle, 'fill', 'blue');
 
       adapter.appendChild(innerSvg, circle);
       adapter.appendChild(div, innerSvg);

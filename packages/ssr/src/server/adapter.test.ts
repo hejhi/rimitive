@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDOMServerAdapter } from './adapter';
+import { createLinkedomAdapter } from './adapter';
 import {
   STATUS_ELEMENT,
   STATUS_FRAGMENT,
@@ -33,7 +33,7 @@ import { renderToString } from './render';
  * Create SSR service for tests using compose pattern
  */
 function createTestSSRService() {
-  const { adapter, serialize } = createDOMServerAdapter();
+  const { adapter, serialize } = createLinkedomAdapter();
   const ElModule = createElModule(adapter);
   const MapModule = createMapModule(adapter);
   const MatchModule = createMatchModule(adapter);
@@ -63,7 +63,7 @@ function createTestSSRService() {
 
 describe('Basic DOM Operations', () => {
   it('should create elements with correct tag names', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -73,7 +73,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should create text nodes with correct content', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const text = renderer.createNode('text', { value: 'Hello' });
 
@@ -81,7 +81,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should append children to parent', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const span = renderer.createNode('span') as HTMLElement;
@@ -93,7 +93,7 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should insert child before reference node', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div');
     const first = renderer.createNode('text', { value: 'first' });
@@ -107,10 +107,10 @@ describe('Basic DOM Operations', () => {
   });
 
   it('should update text node content', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const text = renderer.createNode('text', { value: 'before' });
-    renderer.setProperty(text, 'value', 'after');
+    renderer.setAttribute(text, 'value', 'after');
 
     expect(text.textContent).toBe('after');
   });
@@ -122,60 +122,60 @@ describe('Basic DOM Operations', () => {
 
 describe('Attribute Handling', () => {
   it('should skip event handler attributes', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const button = renderer.createNode('button') as HTMLElement;
-    renderer.setProperty(button, 'onClick', () => {});
+    renderer.setAttribute(button, 'onClick', () => {});
 
     expect(button.hasAttribute('onClick')).toBe(false);
     expect(button.hasAttribute('onclick')).toBe(false);
   });
 
   it('should map className to class attribute', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
-    renderer.setProperty(div, 'className', 'container');
+    renderer.setAttribute(div, 'className', 'container');
 
     expect(div.getAttribute('class')).toBe('container');
     expect(div.hasAttribute('className')).toBe(false);
   });
 
   it('should stringify primitive values', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
-    renderer.setProperty(div, 'data-count', 42);
-    renderer.setProperty(div, 'data-active', true);
+    renderer.setAttribute(div, 'data-count', 42);
+    renderer.setAttribute(div, 'data-active', true);
 
     expect(div.getAttribute('data-count')).toBe('42');
     expect(div.getAttribute('data-active')).toBe('true');
   });
 
   it('should skip object values', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
-    renderer.setProperty(div, 'data-config', { foo: 'bar' });
+    renderer.setAttribute(div, 'data-config', { foo: 'bar' });
 
     expect(div.hasAttribute('data-config')).toBe(false);
   });
 
   it('should skip function values', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
-    renderer.setProperty(div, 'ref', () => {});
+    renderer.setAttribute(div, 'ref', () => {});
 
     expect(div.hasAttribute('ref')).toBe(false);
   });
 
   it('should skip null and false values', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
-    renderer.setProperty(div, 'disabled', null);
-    renderer.setProperty(div, 'hidden', false);
+    renderer.setAttribute(div, 'disabled', null);
+    renderer.setAttribute(div, 'hidden', false);
 
     expect(div.hasAttribute('disabled')).toBe(false);
     expect(div.hasAttribute('hidden')).toBe(false);
@@ -188,7 +188,7 @@ describe('Attribute Handling', () => {
 
 describe('Fragment Decoration', () => {
   it('should add fragment-start and fragment-end comments', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
     const child1 = renderer.createNode('span') as HTMLElement;
@@ -236,7 +236,7 @@ describe('Fragment Decoration', () => {
   });
 
   it('should place comments around fragment children', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
     const span1 = renderer.createNode('span') as HTMLElement;
@@ -288,7 +288,7 @@ describe('Fragment Decoration', () => {
   });
 
   it('should skip empty fragments', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const container = renderer.createNode('div') as HTMLElement;
 
@@ -317,7 +317,7 @@ describe('Fragment Decoration', () => {
 
 describe('SSR-Specific Behaviors', () => {
   it('should generate valid HTML from DOM tree', () => {
-    const { adapter: renderer } = createDOMServerAdapter();
+    const { adapter: renderer } = createLinkedomAdapter();
 
     const div = renderer.createNode('div') as HTMLElement;
     const h1 = renderer.createNode('h1') as HTMLElement;

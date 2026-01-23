@@ -53,7 +53,11 @@ describe('reconcileWithKeys', () => {
         // Update text content if needed
         const li = (node as ElementRef<MockElement>).element;
         if (li.children[0]) {
-          env.adapter.setProperty(li.children[0] as MockText, 'value', item.text);
+          env.adapter.setAttribute(
+            li.children[0] as MockText,
+            'value',
+            item.text
+          );
         }
       },
       onMove: (node, nextSibling) => {

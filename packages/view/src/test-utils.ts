@@ -205,7 +205,7 @@ export function createMockAdapter() {
       }
       return new MockElement(type) as MockElement;
     }),
-    setProperty: vi.fn(
+    setAttribute: vi.fn(
       (node: MockElement | MockText, key: string, value: unknown) => {
         if (node instanceof MockText) {
           if (key === 'value') {

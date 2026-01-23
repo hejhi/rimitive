@@ -370,7 +370,7 @@ describe('Attribute and Event Handling', () => {
     const renderer = createDOMHydrationAdapter(container);
 
     const div = renderer.createNode('div') as HTMLElement;
-    renderer.setProperty(div, 'className', 'hydrated');
+    renderer.setAttribute(div, 'className', 'hydrated');
 
     expect(div.className).toBe('hydrated');
   });

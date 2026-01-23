@@ -36,7 +36,7 @@ export type DOMPropsMap = {
   [K in keyof HTMLElementTagNameMap]: WithStyleString<HTMLElementTagNameMap[K]>;
 } & {
   [K in SVGOnlyTags]: SVGAttributesFor<K>;
-} & { text: Text };
+};
 
 /**
  * DOM tree configuration type
@@ -107,12 +107,15 @@ export function createDOMAdapter(): Adapter<DOMTreeConfig> {
         type === 'svg' || (parentIsSvg && !parentIsForeignObject);
 
       if (useSvgNs)
-        return document.createElementNS(SVG_NS, type) as DOMTreeConfig['nodes'][K];
+        return document.createElementNS(
+          SVG_NS,
+          type
+        ) as DOMTreeConfig['nodes'][K];
 
       return document.createElement(type) as DOMTreeConfig['nodes'][K];
     },
 
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       const n = node as Node;
       // Text nodes only support 'value' -> textContent
       // Use nodeType check instead of instanceof for test environment compatibility
@@ -146,10 +149,8 @@ export function createDOMAdapter(): Adapter<DOMTreeConfig> {
       }
     },
 
-    appendChild: (parent, child) =>
-      (parent as Node).appendChild(child as Node),
-    removeChild: (parent, child) =>
-      (parent as Node).removeChild(child as Node),
+    appendChild: (parent, child) => (parent as Node).appendChild(child as Node),
+    removeChild: (parent, child) => (parent as Node).removeChild(child as Node),
     insertBefore: (parent, child, reference) =>
       (parent as Node).insertBefore(child as Node, reference as Node | null),
   };

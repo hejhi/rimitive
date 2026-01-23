@@ -41,7 +41,7 @@ export type TestAdapterOperation =
       props?: Record<string, unknown>;
       node: TestNode;
     }
-  | { type: 'setProperty'; node: TestNode; key: string; value: unknown }
+  | { type: 'setAttribute'; node: TestNode; key: string; value: unknown }
   | { type: 'appendChild'; parent: TestNode; child: TestNode }
   | { type: 'removeChild'; parent: TestNode; child: TestNode }
   | {
@@ -104,9 +104,9 @@ export function createTestAdapter(): TestAdapter {
       return node;
     },
 
-    setProperty: (node, key, value) => {
+    setAttribute: (node, key, value) => {
       node.props[key] = value;
-      operations.push({ type: 'setProperty', node, key, value });
+      operations.push({ type: 'setAttribute', node, key, value });
     },
 
     appendChild: (parent, child) => {

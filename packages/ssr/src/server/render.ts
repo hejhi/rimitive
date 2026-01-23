@@ -26,7 +26,7 @@ import type { Serialize } from './adapter';
  * Render a node tree to HTML string
  *
  * @param nodeRef - The node tree to render
- * @param serialize - Function to serialize elements to HTML (from createDOMServerAdapter)
+ * @param serialize - Function to serialize elements to HTML (from createLinkedomAdapter)
  */
 export function renderToString(
   nodeRef: NodeRef<unknown>,
@@ -101,7 +101,7 @@ function isNodeRef(value: unknown): value is NodeRef<unknown> {
  *
  * @example
  * ```ts
- * const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+ * const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
  * const service = createService(adapter);
  * const html = await renderToStringAsync(appSpec, {
  *   svc: service,
@@ -185,12 +185,12 @@ export type RenderToStreamOptions = {
   mount: (spec: RefSpec<unknown>) => NodeRef<unknown>;
 
   /**
-   * Function to serialize elements to HTML (from createDOMServerAdapter)
+   * Function to serialize elements to HTML (from createLinkedomAdapter)
    */
   serialize: Serialize;
 
   /**
-   * Function to insert fragment markers (from createDOMServerAdapter)
+   * Function to insert fragment markers (from createLinkedomAdapter)
    */
   insertFragmentMarkers: (fragment: FragmentRef<unknown>) => void;
 };
@@ -219,9 +219,9 @@ export type StreamResult = {
  *
  * @example
  * ```ts
- * import { createDOMServerAdapter, renderToStream, createStreamWriter } from '@rimitive/ssr/server';
+ * import { createLinkedomAdapter, renderToStream, createStreamWriter } from '@rimitive/ssr/server';
  *
- * const { adapter, serialize, insertFragmentMarkers } = createDOMServerAdapter();
+ * const { adapter, serialize, insertFragmentMarkers } = createLinkedomAdapter();
  * const stream = createStreamWriter('__APP_STREAM__');
  *
  * // Create service with streaming callback
@@ -259,7 +259,7 @@ export function renderToStream(
   const asyncFragments = collectAsyncFragments(nodeRef);
 
   // Insert fragment markers for async fragments BEFORE serializing.
-  // This is needed because createDOMServerAdapter.onAttach skips async fragments
+  // This is needed because createLinkedomAdapter.onAttach skips async fragments
   // (they're normally handled by renderToStringAsync after resolution).
   // For streaming, we need markers around the PENDING state content so
   // the hydration adapter can locate these boundaries.

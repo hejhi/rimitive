@@ -6,7 +6,7 @@
  * @example
  * ```ts
  * import {
- *   createDOMServerAdapter,
+ *   createLinkedomAdapter,
  *   renderToString,
  *   renderToStringAsync,
  *   renderToStream,
@@ -25,7 +25,7 @@ export type {
 } from './render';
 
 // Server adapter
-export { createDOMServerAdapter } from './adapter';
+export { createLinkedomAdapter } from './adapter';
 export type { Serialize, ServerAdapterResult } from './adapter';
 
 // Streaming
