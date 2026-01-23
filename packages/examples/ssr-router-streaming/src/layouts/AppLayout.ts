@@ -12,6 +12,7 @@ import { About } from '../pages/About.js';
 import { Products } from '../pages/Products.js';
 import { ProductDetail } from '../pages/ProductDetail.js';
 import { Stats } from '../pages/Stats.js';
+import { UserProfile } from '../pages/UserProfile.js';
 import { NotFound } from '../pages/NotFound.js';
 
 /**
@@ -32,6 +33,8 @@ const componentMap: Record<
   'product-detail': ProductDetail,
   // Stats uses load() internally for async data - same pattern as other routes
   stats: Stats,
+  // UserProfile demonstrates nested load() calls
+  'user-profile': UserProfile,
 };
 
 export const AppLayout = (svc: Service) => {

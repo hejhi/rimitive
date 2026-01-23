@@ -25,6 +25,7 @@ export const Navigation =
       navLink('/', 'Home'),
       navLink('/about', 'About'),
       navLink('/products', 'Products'),
-      navLink('/stats', 'Stats')
+      navLink('/stats', 'Stats'),
+      navLink('/user', 'User')
     );
   };

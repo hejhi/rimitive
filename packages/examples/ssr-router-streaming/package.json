@@ -1,5 +1,5 @@
 {
-  "name": "@rimitive/example-ssr-streaming",
+  "name": "@rimitive/example-ssr-router-streaming",
   "version": "0.0.7",
   "private": true,
   "type": "module",

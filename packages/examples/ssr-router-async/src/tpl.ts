@@ -1,8 +1,11 @@
-/**
- * CSS styles for the streaming SSR example.
- */
-export function getStyles(): string {
-  return `
+export const tpl = (content: string, hydrationScript = '') => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rimitive SSR + Router Example</title>
+  <style>
     * {
       margin: 0;
       padding: 0;
@@ -343,68 +346,91 @@ export function getStyles(): string {
       border-top: 1px solid #eee;
       color: #999;
     }
-    /* Streaming indicator */
-    .streaming-indicator {
-      position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      background: #28a745;
+    /* User profile page styles */
+    .user-profile-page .user-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+      border-radius: 12px;
       color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
+      margin-bottom: 2rem;
+    }
+    .user-profile-page .user-header h3 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+    .user-profile-page .user-email {
+      opacity: 0.9;
+      margin-bottom: 0.5rem;
+    }
+    .user-profile-page .user-bio {
+      margin: 1rem 0;
+      line-height: 1.5;
+    }
+    .user-profile-page .user-joined {
       font-size: 0.85rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      opacity: 0.8;
     }
-    /* Activity section */
-    .activity-section {
-      margin: 2rem 0;
+    .user-profile-page .posts-list {
+      margin: 1.5rem 0;
     }
-    .activity-section h3 {
-      margin-bottom: 1rem;
-    }
-    .activity-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .activity-item {
-      display: flex;
-      gap: 1rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #eee;
-    }
-    .activity-item:last-child {
-      border-bottom: none;
-    }
-    .activity-type {
-      background: #e0e0e0;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      text-transform: capitalize;
-      min-width: 70px;
-      text-align: center;
-    }
-    .activity-user {
-      flex: 1;
+    .user-profile-page .posts-list h3 {
       color: #333;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
     }
-    .activity-time {
+    .user-profile-page .post-card {
+      background: #fafafa;
+      padding: 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border-left: 4px solid #667eea;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .user-profile-page .post-card:hover {
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .user-profile-page .post-card h4 {
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    .user-profile-page .post-card p {
+      color: #666;
+      margin-bottom: 0.5rem;
+    }
+    .user-profile-page .post-card time {
+      font-size: 0.85rem;
       color: #999;
-      font-size: 0.9rem;
     }
-    /* Loading states */
-    .loading {
-      opacity: 0.6;
+    .user-profile-page .user-loading,
+    .user-profile-page .posts-loading {
+      padding: 2rem;
+      text-align: center;
+      color: #666;
+      background: #f5f5f5;
+      border-radius: 8px;
     }
-    .section-error {
+    .user-profile-page .skeleton {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .user-profile-page .error-message {
+      background: #fff5f5;
+      border: 1px solid #feb2b2;
+      color: #c53030;
       padding: 1rem;
-      background: #fee;
-      border: 1px solid #fcc;
-      border-radius: 4px;
+      border-radius: 8px;
     }
-    .error-text {
-      color: #c00;
-    }
-  `;
-}
+  </style>
+</head>
+<body>
+  ${content}
+  <script type="module" src="/client.js"></script>
+  ${hydrationScript}
+</body>
+</html>
+`;

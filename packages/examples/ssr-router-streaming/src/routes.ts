@@ -9,7 +9,8 @@ import type { RouteConfig } from '@rimitive/router';
 export const routes: RouteConfig[] = [
   { id: 'home', path: '' },
   { id: 'about', path: 'about' },
-  { id: 'services', path: 'services' },
-  { id: 'service-detail', path: 'services/:id' },
-  { id: 'contact', path: 'contact' },
+  { id: 'products', path: 'products' },
+  { id: 'product-detail', path: 'products/:id' },
+  { id: 'stats', path: 'stats' },
+  { id: 'user-profile', path: 'user' },
 ];

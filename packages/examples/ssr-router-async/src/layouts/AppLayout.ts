@@ -9,13 +9,17 @@ import type { Service } from '../service.js';
 import { Navigation } from '../components/Navigation.js';
 import { Home } from '../pages/Home.js';
 import { About } from '../pages/About.js';
-import { Services } from '../pages/Services.js';
-import { ServiceDetail } from '../pages/ServiceDetail.js';
-import { Contact } from '../pages/Contact.js';
+import { Products } from '../pages/Products.js';
+import { ProductDetail } from '../pages/ProductDetail.js';
+import { Stats } from '../pages/Stats.js';
+import { UserProfile } from '../pages/UserProfile.js';
 import { NotFound } from '../pages/NotFound.js';
 
 /**
  * Map route IDs to portable component functions
+ *
+ * All pages follow the portable style: (svc) => () => RefSpec
+ * We wrap them to fit the (svc) => (props) => RefSpec signature.
  */
 const componentMap: Record<
   string,
@@ -25,12 +29,15 @@ const componentMap: Record<
 > = {
   home: Home,
   about: About,
-  services: Services,
-  'service-detail':
+  products: Products,
+  'product-detail':
     (svc) =>
     ({ params }) =>
-      ServiceDetail(svc, { params: params as { id: string } }),
-  contact: Contact,
+      ProductDetail(svc, { params: params as { id: string } }),
+  // Stats uses load() internally for async data - same pattern as other routes
+  stats: Stats,
+  // UserProfile demonstrates nested load() calls
+  'user-profile': UserProfile,
 };
 
 export const AppLayout = (svc: Service) => {
@@ -40,7 +47,7 @@ export const AppLayout = (svc: Service) => {
     // Navbar with navigation
     el('nav').props({ className: 'navbar' })(
       el('div').props({ className: 'nav-brand' })(
-        el('h1')('🧩 Rimitive Marketing')
+        el('h1')('🧩 Rimitive SSR + Router')
       ),
       svc(Navigation)()
     ),
@@ -56,11 +63,6 @@ export const AppLayout = (svc: Service) => {
 
         return svc(Component)({ params: route.params });
       })
-    ),
-
-    // Footer
-    el('footer').props({ className: 'footer' })(
-      el('p')('© 2024 Rimitive. Built with basic sync SSR.')
     )
   );
 };

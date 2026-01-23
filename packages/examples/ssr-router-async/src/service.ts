@@ -1,8 +1,8 @@
 /**
- * SSR Router Service (Basic Sync)
+ * SSR Router Service
  *
- * Service composition for basic SSR without async data loading.
- * Both server and client use this with their respective adapters.
+ * Service composition for the app. Both server and client
+ * use this with their respective adapters.
  */
 import { compose } from '@rimitive/core';
 import {
@@ -15,6 +15,7 @@ import { createElModule } from '@rimitive/view/el';
 import { createMapModule } from '@rimitive/view/map';
 import { createMatchModule } from '@rimitive/view/match';
 import { OnModule } from '@rimitive/view/deps/addEventListener';
+import { createLoaderModule } from '@rimitive/view/load';
 import { createRouterModule, type RouterOptions } from '@rimitive/router';
 import type { Adapter, RefSpec } from '@rimitive/view/types';
 import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
@@ -30,13 +31,16 @@ export type Portable<TProps = Record<string, never>> = (
 /**
  * Service options
  */
-export type ServiceOptions = RouterOptions;
+export type ServiceOptions = RouterOptions & {
+  /** Data from SSR for hydration - passed to loader as initialData */
+  hydrationData?: Record<string, unknown>;
+};
 
 /**
- * Create a full service with router (no async data loading)
+ * Create a full service with router
  *
  * @param adapter - DOM adapter (regular, server, or hydrating)
- * @param options - Optional config (initialPath for SSR)
+ * @param options - Optional config (initialPath for SSR, hydrationData for hydration)
  */
 export function createService(
   adapter: Adapter<DOMTreeConfig>,
@@ -51,6 +55,9 @@ export function createService(
     createMapModule(adapter),
     createMatchModule(adapter),
     OnModule,
+    createLoaderModule({
+      initialData: options?.hydrationData,
+    }),
     createRouterModule(routes, options)
   );
 }

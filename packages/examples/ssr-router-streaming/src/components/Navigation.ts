@@ -15,8 +15,7 @@ export const Navigation =
         href,
         className: computed(() => {
           const path = router.currentPath();
-          // Check for exact match or prefix match for nested routes
-          const isActive = path === href || (href !== '/' && path.startsWith(href));
+          const isActive = path === href;
           return isActive ? 'nav-link active' : 'nav-link';
         }),
       })(label);
@@ -24,8 +23,9 @@ export const Navigation =
 
     return el('div').props({ className: 'nav-links' })(
       navLink('/', 'Home'),
-      navLink('/services', 'Services'),
       navLink('/about', 'About'),
-      navLink('/contact', 'Contact')
+      navLink('/products', 'Products'),
+      navLink('/stats', 'Stats'),
+      navLink('/user', 'User')
     );
   };

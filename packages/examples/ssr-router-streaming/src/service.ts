@@ -20,7 +20,7 @@ import { OnModule } from '@rimitive/view/deps/addEventListener';
 import { createLoaderModule } from '@rimitive/view/load';
 import { createRouterModule, type RouterOptions } from '@rimitive/router';
 import type { Adapter, RefSpec } from '@rimitive/view/types';
-import type { DOMAdapterConfig } from '@rimitive/view/adapters/dom';
+import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
 import { routes } from './routes.js';
 
 /**
@@ -34,8 +34,8 @@ export type Portable<TProps = Record<string, never>> = (
  * Service options
  */
 export type ServiceOptions = RouterOptions & {
-  /** Initial data for async boundaries (from SSR) */
-  loaderData?: Record<string, unknown>;
+  /** Data from SSR for hydration - passed to loader as initialData */
+  hydrationData?: Record<string, unknown>;
   /** Callback when a load() boundary resolves (for streaming SSR) */
   onResolve?: (id: string, data: unknown) => void;
 };
@@ -44,10 +44,10 @@ export type ServiceOptions = RouterOptions & {
  * Create a full service with router
  *
  * @param adapter - DOM adapter (regular, server, or hydrating)
- * @param options - Optional config (initialPath for SSR, loaderData for hydration, onResolve for streaming)
+ * @param options - Optional config (initialPath for SSR, hydrationData for hydration, onResolve for streaming)
  */
 export function createService(
-  adapter: Adapter<DOMAdapterConfig>,
+  adapter: Adapter<DOMTreeConfig>,
   options?: ServiceOptions
 ) {
   return compose(
@@ -59,7 +59,7 @@ export function createService(
     createMapModule(adapter),
     createMatchModule(adapter),
     createLoaderModule({
-      initialData: options?.loaderData,
+      initialData: options?.hydrationData,
       onResolve: options?.onResolve,
     }),
     createRouterModule(routes, options),

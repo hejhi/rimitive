@@ -15,7 +15,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  createDOMServerAdapter,
+  createLinkedomAdapter,
   renderToStream,
   createStreamWriter,
 } from '@rimitive/ssr/server';
@@ -60,7 +60,7 @@ const server = createServer(async (req, res) => {
   // Create per-request service with streaming callback
   // onResolve writes data chunks to the streaming proxy
   const { adapter, serialize, insertFragmentMarkers } =
-    createDOMServerAdapter();
+    createLinkedomAdapter();
   const service = createService(adapter, {
     initialPath: url.pathname,
     onResolve: (id, data) => {

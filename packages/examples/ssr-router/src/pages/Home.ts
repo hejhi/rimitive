@@ -4,27 +4,38 @@ export const Home =
   ({ el, router }: Service) =>
   () =>
     el('div').props({ className: 'page home-page' })(
-      el('h2')('Welcome to SSR + Router'),
-      el('p').props({ className: 'lead' })(
-        'This example demonstrates server-side rendering with routing using the universal API.'
-      ),
-
-      el('section').props({ className: 'features' })(
-        el('h3')('Features Demonstrated:'),
-        el('ul')(
-          el('li')('✓ Server-side rendering with router context'),
-          el('li')('✓ Universal API - same code on server and client'),
-          el('li')('✓ Multiple routes with different rendering modes'),
-          el('li')('✓ Static pages (no JS)'),
-          el('li')('✓ Client-side navigation after hydration')
+      el('section').props({ className: 'hero' })(
+        el('h1')('Build Faster with Rimitive'),
+        el('p').props({ className: 'lead' })(
+          'A reactive primitives library for building performant web applications.'
+        ),
+        el('div').props({ className: 'hero-cta' })(
+          el('button').props({
+            className: 'primary-btn',
+            onclick: () => router.navigate('/services'),
+          })('Our Services'),
+          el('button').props({
+            className: 'secondary-btn',
+            onclick: () => router.navigate('/contact'),
+          })('Get in Touch')
         )
       ),
 
-      el('section').props({ className: 'cta' })(
-        el('p')('Try navigating between pages to see SSR in action!'),
-        el('button').props({
-          className: 'primary-btn',
-          onclick: () => router.navigate('/about'),
-        })('Learn More →')
+      el('section').props({ className: 'features' })(
+        el('h2')('Why Choose Us'),
+        el('div').props({ className: 'feature-grid' })(
+          el('div').props({ className: 'feature' })(
+            el('h3')('⚡ Fast'),
+            el('p')('Server-rendered HTML with zero JavaScript by default.')
+          ),
+          el('div').props({ className: 'feature' })(
+            el('h3')('🎯 Simple'),
+            el('p')('Same code runs on server and client. No framework lock-in.')
+          ),
+          el('div').props({ className: 'feature' })(
+            el('h3')('🔧 Flexible'),
+            el('p')('Add interactivity where you need it, keep static where you don\'t.')
+          )
+        )
       )
     );

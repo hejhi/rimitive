@@ -9,9 +9,10 @@ Example applications demonstrating Rimitive features.
 | **view**          | Core view primitives (`el`, `map`, `match`) | `pnpm --filter @rimitive/example-view dev`          |
 | **react**         | React integration with `@rimitive/react`    | `pnpm --filter @rimitive/example-react dev`         |
 | **router**        | Client-side routing                         | `pnpm --filter @rimitive/example-router dev`        |
-| **resource**      | Async data fetching with `resource()`       | `pnpm --filter @rimitive/example-resource dev`      |
-| **ssr-router**    | SSR with routing and data loading           | `pnpm --filter @rimitive/example-ssr-router dev`    |
-| **ssr-streaming** | Streaming SSR                               | `pnpm --filter @rimitive/example-ssr-streaming dev` |
+| **resource**              | Async data fetching with `resource()`          | `pnpm --filter @rimitive/example-resource dev`              |
+| **ssr-router**            | Basic SSR with `renderToString`                | `pnpm --filter @rimitive/example-ssr-router dev`            |
+| **ssr-router-async**      | SSR with async data loading (`load()`)         | `pnpm --filter @rimitive/example-ssr-router-async dev`      |
+| **ssr-router-streaming**  | Streaming SSR with `renderToStream`            | `pnpm --filter @rimitive/example-ssr-router-streaming dev`  |
 | **headless**      | Portable headless behaviors                 | `pnpm --filter @rimitive/example-headless dev`      |
 | **canvas**        | Custom canvas adapter                       | `pnpm --filter @rimitive/example-canvas dev`        |
 | **devtools**      | DevTools integration                        | `pnpm --filter @rimitive/example-devtools dev`      |
@@ -55,11 +56,15 @@ Async data fetching with `resource()`. Shows reactive dependencies, automatic re
 
 ### ssr-router
 
-Full SSR example with routing and `load()` boundaries. Demonstrates server rendering, hydration, and data serialization.
+Basic SSR example with routing using `renderToString`. The simplest SSR setup with no async data loading. Good starting point for understanding SSR.
 
-### ssr-streaming
+### ssr-router-async
 
-Streaming SSR that sends HTML immediately and streams data as it loads. Shows `renderToStream` and `connectStream`.
+Full SSR example with routing and `load()` boundaries using `renderToStringAsync`. Demonstrates server rendering, hydration, and data serialization.
+
+### ssr-router-streaming
+
+Streaming SSR that sends HTML immediately and streams data as it loads. Shows `renderToStream`, `createStreamWriter`, and `connectStream`.
 
 ### headless
 

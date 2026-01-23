@@ -12,4 +12,5 @@ export const routes: RouteConfig[] = [
   { id: 'products', path: 'products' },
   { id: 'product-detail', path: 'products/:id' },
   { id: 'stats', path: 'stats' },
+  { id: 'user-profile', path: 'user' },
 ];
