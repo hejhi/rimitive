@@ -59,6 +59,7 @@ export type { ResourceDeps } from './resource';
 export type {
   Resource,
   ResourceState,
+  ResourceOptions,
   Fetcher,
   ResourceFactory,
 } from './types';

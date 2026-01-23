@@ -358,4 +358,180 @@ describe('resource', () => {
       expect(fetchCount).toBe(1);
     });
   });
+
+  describe('enabled option', () => {
+    it('should start in idle state when enabled is false', () => {
+      const { resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const res = resource(
+        () => {
+          fetchCount++;
+          return Promise.resolve('data');
+        },
+        { enabled: false }
+      );
+
+      expect(res()).toEqual({ status: 'idle' });
+      expect(res.idle()).toBe(true);
+      expect(res.loading()).toBe(false);
+      expect(res.data()).toBe(undefined);
+      expect(fetchCount).toBe(0);
+    });
+
+    it('should fetch when enabled is true', async () => {
+      const { resource } = createTestEnv();
+
+      const res = resource(() => Promise.resolve('data'), { enabled: true });
+
+      expect(res().status).toBe('pending');
+
+      await flushMicrotasks();
+      expect(res.data()).toBe('data');
+    });
+
+    it('should fetch when enabled signal becomes true', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const enabled = signal(false);
+
+      const res = resource(
+        () => {
+          fetchCount++;
+          return Promise.resolve('data');
+        },
+        { enabled }
+      );
+
+      // Initially disabled
+      expect(res().status).toBe('idle');
+      expect(fetchCount).toBe(0);
+
+      // Enable - should trigger fetch
+      enabled(true);
+      expect(res().status).toBe('pending');
+      expect(fetchCount).toBe(1);
+
+      await flushMicrotasks();
+      expect(res.data()).toBe('data');
+    });
+
+    it('should abort and go idle when enabled becomes false', async () => {
+      const { signal, resource } = createTestEnv();
+      let abortedSignal: AbortSignal | undefined;
+
+      const enabled = signal(true);
+
+      const res = resource(
+        (abortSignal) => {
+          abortedSignal = abortSignal;
+          return new Promise(() => {}); // never resolves
+        },
+        { enabled }
+      );
+
+      expect(res().status).toBe('pending');
+      expect(abortedSignal?.aborted).toBe(false);
+
+      // Disable - should abort and go idle
+      enabled(false);
+      expect(res().status).toBe('idle');
+      expect(abortedSignal?.aborted).toBe(true);
+    });
+
+    it('should refetch when re-enabled', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const enabled = signal(true);
+
+      const res = resource(
+        () => {
+          fetchCount++;
+          return Promise.resolve(`fetch-${fetchCount}`);
+        },
+        { enabled }
+      );
+
+      await flushMicrotasks();
+      expect(res.data()).toBe('fetch-1');
+
+      // Disable
+      enabled(false);
+      expect(res().status).toBe('idle');
+
+      // Re-enable - should fetch again
+      enabled(true);
+      await flushMicrotasks();
+      expect(res.data()).toBe('fetch-2');
+    });
+
+    it('should still track fetcher dependencies when enabled', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const enabled = signal(true);
+      const id = signal(1);
+
+      const res = resource(
+        () => {
+          const currentId = id();
+          fetchCount++;
+          return Promise.resolve(`data-${currentId}`);
+        },
+        { enabled }
+      );
+
+      await flushMicrotasks();
+      expect(res.data()).toBe('data-1');
+      expect(fetchCount).toBe(1);
+
+      // Change dependency - should refetch
+      id(2);
+      await flushMicrotasks();
+      expect(res.data()).toBe('data-2');
+      expect(fetchCount).toBe(2);
+    });
+
+    it('should not fetch on dependency change when disabled', async () => {
+      const { signal, resource } = createTestEnv();
+      let fetchCount = 0;
+
+      const enabled = signal(false);
+      const id = signal(1);
+
+      const res = resource(
+        () => {
+          const currentId = id();
+          fetchCount++;
+          return Promise.resolve(`data-${currentId}`);
+        },
+        { enabled }
+      );
+
+      expect(fetchCount).toBe(0);
+
+      // Change dependency while disabled - should not fetch
+      id(2);
+      expect(fetchCount).toBe(0);
+      expect(res().status).toBe('idle');
+
+      // Now enable - should fetch with current id value
+      enabled(true);
+      await flushMicrotasks();
+      expect(res.data()).toBe('data-2');
+      expect(fetchCount).toBe(1);
+    });
+
+    it('should default to enabled when option not provided', async () => {
+      const { resource } = createTestEnv();
+
+      const res = resource(() => Promise.resolve('data'));
+
+      expect(res().status).toBe('pending');
+      await flushMicrotasks();
+      expect(res.data()).toBe('data');
+    });
+  });
 });

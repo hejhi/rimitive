@@ -8,6 +8,7 @@ import {
 import type {
   Resource,
   ResourceState,
+  ResourceOptions,
   Fetcher,
   ResourceFactory,
 } from './types';
@@ -84,9 +85,23 @@ function isAbortError(error: unknown): boolean {
 export function createResourceFactory(deps: ResourceDeps): ResourceFactory {
   const { signal, computed, effect } = deps;
 
-  return function resource<T>(fetcher: Fetcher<T>): Resource<T> {
-    // Core state signal
-    const state = signal<ResourceState<T>>({ status: 'pending' });
+  return function resource<T>(
+    fetcher: Fetcher<T>,
+    options?: ResourceOptions
+  ): Resource<T> {
+    // Normalize enabled option to a function
+    const enabledOpt = options?.enabled;
+    const isEnabled: () => boolean =
+      enabledOpt === undefined
+        ? () => true
+        : typeof enabledOpt === 'function'
+          ? enabledOpt
+          : () => enabledOpt;
+
+    // Core state signal - start as 'idle' if disabled
+    const state = signal<ResourceState<T>>(
+      isEnabled() ? { status: 'pending' } : { status: 'idle' }
+    );
 
     // Current AbortController for in-flight request
     let controller: AbortController | undefined;
@@ -152,8 +167,15 @@ export function createResourceFactory(deps: ResourceDeps): ResourceFactory {
     };
 
     // Effect tracks reactive deps in fetcher and re-runs on change
-    // The effect runs synchronously on creation, triggering first fetch
+    // Also tracks enabled option for reactive enabling/disabling
     const disposeEffect = effect(() => {
+      // Check enabled - this is reactive if enabled is a Readable
+      if (!isEnabled()) {
+        // Abort any in-flight request when disabled
+        abortCurrent();
+        state({ status: 'idle' });
+        return;
+      }
       doFetch();
     });
 
@@ -164,6 +186,7 @@ export function createResourceFactory(deps: ResourceDeps): ResourceFactory {
     };
 
     // Convenience computed accessors
+    const idle = computed(() => state().status === 'idle');
     const loading = computed(() => state().status === 'pending');
 
     const data = computed(() => {
@@ -178,6 +201,7 @@ export function createResourceFactory(deps: ResourceDeps): ResourceFactory {
 
     // Build resource object using Object.assign to satisfy readonly properties
     const resourceFn = Object.assign(() => state(), {
+      idle,
       loading,
       data,
       error,

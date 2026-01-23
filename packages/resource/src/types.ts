@@ -1,10 +1,26 @@
+import type { Readable } from '@rimitive/signals';
+
 /**
  * Resource state - discriminated union for async data states
  */
 export type ResourceState<T> =
+  | { status: 'idle' }
   | { status: 'pending' }
   | { status: 'ready'; value: T }
   | { status: 'error'; error: unknown };
+
+/**
+ * Options for resource creation
+ */
+export type ResourceOptions = {
+  /**
+   * Whether the resource is enabled. When false, the resource stays in 'idle'
+   * status and doesn't fetch. When it becomes true, triggers fetch.
+   * Accepts a boolean or a Readable<boolean> for reactive enabling/disabling.
+   * @default true
+   */
+  enabled?: boolean | Readable<boolean>;
+};
 
 /**
  * Resource API - reactive async data fetching
@@ -16,13 +32,16 @@ export type Resource<T> = {
   /** Read current state (trackable as a reactive dependency) */
   (): ResourceState<T>;
 
+  /** Whether the resource is idle (enabled=false, hasn't fetched) */
+  readonly idle: () => boolean;
+
   /** Current loading state */
   readonly loading: () => boolean;
 
-  /** Current data (undefined if pending or error) */
+  /** Current data (undefined if idle, pending, or error) */
   readonly data: () => T | undefined;
 
-  /** Current error (undefined if pending or ready) */
+  /** Current error (undefined if idle, pending, or ready) */
   readonly error: () => unknown;
 
   /** Manually trigger a refetch */
@@ -51,4 +70,7 @@ export type Fetcher<T> = (signal: AbortSignal) => Promise<T>;
 /**
  * Resource factory function type
  */
-export type ResourceFactory = <T>(fetcher: Fetcher<T>) => Resource<T>;
+export type ResourceFactory = <T>(
+  fetcher: Fetcher<T>,
+  options?: ResourceOptions
+) => Resource<T>;
