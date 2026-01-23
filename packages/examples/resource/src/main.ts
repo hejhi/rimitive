@@ -5,35 +5,18 @@ import type { Reactive } from '@rimitive/signals';
 type User = { id: number; name: string; email: string };
 type Post = { id: number; userId: number; title: string; body: string };
 
-// Selected user ID - when this changes, posts will refetch
-const selectedUserId = signal<number | null>(null);
-
-// Fetch all users
-const users = resource<User[]>((abortSignal) =>
-  fetch('/api/users', { signal: abortSignal }).then((r) => r.json())
-);
-
-// Fetch posts for selected user - automatically refetches when selectedUserId changes
-const posts = resource<Post[]>((abortSignal) => {
-  const userId = selectedUserId();
-  if (userId === null) {
-    return Promise.resolve([]);
-  }
-  return fetch(`/api/posts?userId=${userId}`, { signal: abortSignal }).then(
-    (r) => r.json()
-  );
-});
-
 // User button component - receives a signal wrapping the user
-const UserButton = (userSignal: Reactive<User>) => {
-  // Use computed to derive values from the signal
-  const user = userSignal;
-  const isActive = computed(() => selectedUserId() === user().id);
+const UserButton = (
+  userSignal: Reactive<User>,
+  selectedUserId: Reactive<number | null>,
+  onSelect: (id: number) => void
+) => {
+  const isActive = computed(() => selectedUserId() === userSignal().id);
 
   return el('button').props({
     className: computed(() => `user-btn ${isActive() ? 'active' : ''}`),
-    onclick: () => selectedUserId(user().id),
-  })(computed(() => user().name));
+    onclick: () => onSelect(userSignal().id),
+  })(computed(() => userSignal().name));
 };
 
 // Post item component - receives a signal wrapping the post
@@ -53,9 +36,34 @@ const ErrorDisplay = (error: unknown) =>
     `Error: ${error instanceof Error ? error.message : String(error)}`
   );
 
-// Main app
-const App = () =>
-  el('div')(
+// Main app - resources are created inside the component and disposed on cleanup
+const App = () => {
+  // Selected user ID - when this changes, posts will refetch
+  const selectedUserId = signal<number | null>(null);
+
+  // Fetch all users - created inside component, disposed on cleanup
+  const users = resource<User[]>((abortSignal) =>
+    fetch('/api/users', { signal: abortSignal }).then((r) => r.json())
+  );
+
+  // Fetch posts for selected user - automatically refetches when selectedUserId changes
+  const posts = resource<Post[]>((abortSignal) => {
+    const userId = selectedUserId();
+    if (userId === null) {
+      return Promise.resolve([]);
+    }
+    return fetch(`/api/posts?userId=${userId}`, { signal: abortSignal }).then(
+      (r) => r.json()
+    );
+  });
+
+  // Cleanup function to dispose resources when component unmounts
+  const cleanup = () => {
+    users.dispose();
+    posts.dispose();
+  };
+
+  return el('div').ref(() => cleanup)(
     el('h1')('Rimitive Resource Example'),
 
     // Users section
@@ -69,7 +77,9 @@ const App = () =>
             return ErrorDisplay(state.error);
           case 'ready':
             return el('div').props({ className: 'user-list' })(
-              map(state.value, (u) => u.id, UserButton)
+              map(state.value, (u) => u.id, (userSignal) =>
+                UserButton(userSignal, selectedUserId, (id) => selectedUserId(id))
+              )
             );
         }
       })
@@ -96,6 +106,7 @@ const App = () =>
       )
     )
   );
+};
 
 // Mount the app
 const app = mount(App());

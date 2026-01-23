@@ -17,30 +17,31 @@ Data loading in Rimitive is reactive. When dependencies change, data refetches. 
 You _could_ manage async state yourself with signals and effects:
 
 ```typescript
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+const ProductList = (svc: Service) => {
+  const { signal, effect, el } = svc;
 
-const { signal, effect } = compose(SignalModule, ComputedModule, EffectModule);
+  return () => {
+    const loading = signal(true);
+    const data = signal<Product[]>([]);
+    const error = signal<Error | null>(null);
 
-// State
-const loading = signal(true);
-const data = signal<string[]>([]);
-const error = signal<Error | null>(null);
-
-// Fetch on mount
-effect(() => {
-  loading(true);
-  fetch('/api/items')
-    .then(r => r.json())
-    .then(items => {
-      data(items);
-      loading(false);
-    })
-    .catch(err => {
-      error(err);
-      loading(false);
+    effect(() => {
+      loading(true);
+      fetch('/api/products')
+        .then(r => r.json())
+        .then(items => {
+          data(items);
+          loading(false);
+        })
+        .catch(err => {
+          error(err);
+          loading(false);
+        });
     });
-});
+
+    return el('div')(/* render based on loading/data/error */);
+  };
+};
 ```
 
 This works, but you're managing three signals, handling errors, and there's no cancellation. When dependencies change mid-flight, you get race conditions.
@@ -49,35 +50,68 @@ This works, but you're managing three signals, handling errors, and there's no c
 
 ## The resource() Primitive
 
-`resource()` handles all of that. Add the resource module:
+`resource()` handles all of that. Add the resource module to your service:
 
 ```typescript
+// service.ts
 import { compose } from '@rimitive/core';
 import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
 import { ResourceModule } from '@rimitive/resource';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 
-const svc = compose(
+const adapter = createDOMAdapter();
+
+export const svc = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  // Add this 👇
-  ResourceModule
+  ResourceModule,
+  createElModule(adapter),
+  createMatchModule(adapter)
 );
 
-const { signal, resource } = svc;
+export type Service = typeof svc;
 ```
 
-### Basic Usage
+---
 
-Create a resource with a fetcher function:
+## Basic Usage
+
+Create a resource inside your component with a fetcher function:
 
 ```typescript
-const items = resource((signal) =>
-  fetch('/api/items', { signal }).then(r => r.json())
-);
+const ProductList = (svc: Service) => {
+  const { resource, el, match } = svc;
+
+  return () => {
+    const products = resource<Product[]>((signal) =>
+      fetch('/api/products', { signal }).then(r => r.json())
+    );
+
+    return el('div').ref(() => () => products.dispose())(
+      match(products, (state) => {
+        switch (state.status) {
+          case 'pending':
+            return el('div')('Loading...');
+          case 'error':
+            return el('div')(`Error: ${state.error}`);
+          case 'ready':
+            return el('ul')(
+              ...state.value.map(p => el('li')(p.name))
+            );
+        }
+      })
+    );
+  };
+};
 ```
 
-The fetcher receives an `AbortSignal`. Pass it to `fetch()` for automatic cancellation.
+Key points:
+- The fetcher receives an `AbortSignal` - pass it to `fetch()` for automatic cancellation
+- Create resources **inside the factory function**, not at module level
+- Call `dispose()` when the component unmounts to abort in-flight requests
 
 ### Reading State
 
@@ -85,15 +119,15 @@ A resource has multiple ways to read its state:
 
 ```typescript
 // Full state object
-items();
+products();
 // { status: 'pending' }
 // { status: 'ready', value: [...] }
 // { status: 'error', error: Error }
 
 // Convenience accessors
-items.loading();  // true | false
-items.data();     // T | undefined
-items.error();    // unknown | undefined
+products.loading();  // true | false
+products.data();     // T | undefined
+products.error();    // unknown | undefined
 ```
 
 All are reactive—use them in computeds or effects.
@@ -107,42 +141,65 @@ All are reactive—use them in computeds or effects.
 Here's where resources shine. Read signals inside the fetcher, and the resource refetches when they change:
 
 ```typescript
-const categoryId = signal(1);
+const ProductList = (svc: Service) => {
+  const { signal, resource, el, match } = svc;
 
-const products = resource((signal) =>
-  fetch(`/api/products?category=${categoryId()}`, { signal })
-    .then(r => r.json())
-);
+  return (initialCategory: string) => {
+    const category = signal(initialCategory);
 
-// Initial fetch: /api/products?category=1
+    const products = resource<Product[]>((signal) =>
+      fetch(`/api/products?category=${category()}`, { signal })
+        .then(r => r.json())
+    );
 
-categoryId(2);
-// Aborts previous request
-// New fetch: /api/products?category=2
+    return el('div').ref(() => () => products.dispose())(
+      el('div')(
+        el('button').props({ onclick: () => category('electronics') })('Electronics'),
+        el('button').props({ onclick: () => category('books') })('Books')
+      ),
+      match(products, (state) => {
+        // ... render based on state
+      })
+    );
+  };
+};
 ```
 
-The previous request is automatically aborted. No race conditions, no stale data.
+When `category` changes:
+1. The previous request is automatically aborted
+2. A new fetch starts with the updated category
+3. No race conditions, no stale data
 
 ### Multiple Dependencies
 
 Track as many signals as you need:
 
 ```typescript
-const category = signal('electronics');
-const sortBy = signal('price');
-const page = signal(1);
+const ProductList = (svc: Service) => {
+  const { signal, resource } = svc;
 
-const products = resource((signal) =>
-  fetch(
-    `/api/products?category=${category()}&sort=${sortBy()}&page=${page()}`,
-    { signal }
-  ).then(r => r.json())
-);
+  return () => {
+    const category = signal('electronics');
+    const sortBy = signal('price');
+    const page = signal(1);
 
-// Any change triggers a refetch
-category('books');   // refetch
-sortBy('rating');    // refetch
-page(2);             // refetch
+    const products = resource<Product[]>((signal) =>
+      fetch(
+        `/api/products?category=${category()}&sort=${sortBy()}&page=${page()}`,
+        { signal }
+      ).then(r => r.json())
+    );
+
+    // Any change triggers a refetch with automatic cancellation
+    // category('books');   // refetch
+    // sortBy('rating');    // refetch
+    // page(2);             // refetch
+
+    return el('div').ref(() => () => products.dispose())(
+      // ... render with filters and pagination controls
+    );
+  };
+};
 ```
 
 ---
@@ -154,27 +211,33 @@ page(2);             // refetch
 Use `match()` to render based on resource state:
 
 ```typescript
-type Product = { id: number; name: string; price: number };
+const UserProfile = (svc: Service) => {
+  const { resource, el, match, computed } = svc;
 
-const products = resource<Product[]>((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
-);
+  return (userId: string) => {
+    const user = resource<User>((signal) =>
+      fetch(`/api/users/${userId}`, { signal }).then(r => r.json())
+    );
 
-const ProductList = () =>
-  match(products, (state) => {
-    switch (state.status) {
-      case 'pending':
-        return el('div')('Loading...');
-      case 'error':
-        return el('div')(`Error: ${state.error}`);
-      case 'ready':
-        return el('ul')(
-          map(state.value, (p) => p.id, (product) =>
-            el('li')(computed(() => product().name))
-          )
-        );
-    }
-  });
+    return el('div').ref(() => () => user.dispose())(
+      match(user, (state) => {
+        switch (state.status) {
+          case 'pending':
+            return el('div').props({ className: 'skeleton' })('Loading profile...');
+          case 'error':
+            return el('div').props({ className: 'error' })(
+              `Failed to load: ${state.error}`
+            );
+          case 'ready':
+            return el('div')(
+              el('h1')(state.value.name),
+              el('p')(state.value.email)
+            );
+        }
+      })
+    );
+  };
+};
 ```
 
 ---
@@ -183,48 +246,41 @@ const ProductList = () =>
 
 ### Manual Refetch
 
-Trigger a refetch programmatically:
+Trigger a refetch programmatically (useful for "refresh" buttons or after mutations):
 
 ```typescript
-const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
-);
+const ProductList = (svc: Service) => {
+  const { resource, el, match } = svc;
 
-// Later...
-products.refetch();
+  return () => {
+    const products = resource<Product[]>((signal) =>
+      fetch('/api/products', { signal }).then(r => r.json())
+    );
+
+    return el('div').ref(() => () => products.dispose())(
+      el('button').props({ onclick: () => products.refetch() })('Refresh'),
+      match(products, (state) => {
+        // ... render
+      })
+    );
+  };
+};
 ```
-
-Useful for "refresh" buttons or after mutations.
 
 ### Cleanup
 
-When a resource is no longer needed, dispose it to abort any in-flight request and stop tracking:
+Always dispose resources when the component unmounts. The `.ref()` callback pattern works well:
 
 ```typescript
-const products = resource((signal) =>
-  fetch('/api/products', { signal }).then(r => r.json())
+return el('div').ref(() => {
+  // Return cleanup function
+  return () => products.dispose();
+})(
+  // ... children
 );
-
-// When done
-products.dispose();
 ```
 
-In components, clean up when the element is removed:
-
-```typescript
-const ProductList = () => {
-  const products = resource((signal) =>
-    fetch('/api/products', { signal }).then(r => r.json())
-  );
-
-  return el('div').ref(() => {
-    // Cleanup callback runs when element is removed
-    return () => products.dispose();
-  })(
-    // ... render products
-  );
-};
-```
+This aborts any in-flight request and stops dependency tracking.
 
 ---
 
@@ -249,11 +305,24 @@ Rimitive has two primitives for async data:
 - The data should be fetched on the server and reused on the client
 - SEO or first-paint performance matters for this data
 
+<Aside type="caution" title="SSR Note">
+`resource()` starts fetching immediately when created—it doesn't wait for hydration or know about server vs client. In SSR apps:
+
+- Use `load()` for data that should be server-rendered
+- Use `resource()` only for client-side dynamic data (filters, search, user interactions)
+- If you need a resource that only runs on the client, guard its creation:
+
+```typescript
+const data = typeof window !== 'undefined'
+  ? resource((s) => fetch('/api/data', { signal: s }).then(r => r.json()))
+  : null;
+```
+</Aside>
+
 In an SSR app, you might use both: `load()` for the initial page data that should be server-rendered, and `resource()` for dynamic data that loads after user interaction.
 
-See the [Server Rendering guide](/guides/server-rendering) for `load()` usage.
+See [SSR with Data Loading](/guides/ssr-loading) for `load()` usage.
 
 <Aside type="tip" title="Working Example">
 See [`packages/examples/resource`](https://github.com/hejhi/rimitive/tree/main/packages/examples/resource) for a complete data fetching example with reactive dependencies and automatic cancellation.
 </Aside>
-
