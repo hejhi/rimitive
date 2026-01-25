@@ -60,7 +60,7 @@ const counter = (svc: SignalsSvc) => (initial = 0) => {
 Usage with `use()`:
 
 ```typescript
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, use, computed } = svc;
   const { count, increment, decrement } = use(counter)(0);
 
@@ -533,8 +533,9 @@ const dropdown = (svc: SignalsSvc) => () => {
 };
 
 // Component uses the behavior
-const Dropdown = (svc: Service) => {
-  const disc = svc.use(dropdown)();
+const Dropdown = (svc: Service) => () => {
+  const { el, match, use } = svc;
+  const disc = use(dropdown)();
   return el('div')(
     el('button').props({ ...disc.triggerProps(), onclick: disc.toggle })('Toggle'),
     match(disc.isOpen, (open) => open ? el('div').props(disc.contentProps())('Content') : null)

@@ -82,7 +82,7 @@ emailField.valid();   // true
 Bind the field to an input element:
 
 ```typescript
-const EmailInput = (svc: Service) => {
+const EmailInput = (svc: Service) => () => {
   const { el, on, signal, computed } = svc;
 
   const email = svc(field)({
@@ -169,7 +169,7 @@ const form = <T extends Record<string, { value: Readable<unknown>; valid: Readab
 ## Full Form Example
 
 ```typescript
-const SignupForm = (svc: Service) => {
+const SignupForm = (svc: Service) => () => {
   const { el, on, computed, match } = svc;
 
   // Create fields

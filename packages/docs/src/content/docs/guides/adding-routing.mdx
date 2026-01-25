@@ -60,39 +60,46 @@ Use `match()` to render based on the matched route:
 
 ```typescript
 // Page components
-const Home = () => el('div')(
+const Home = ({ el }: Service) => () => el('div')(
   el('h1')('Home'),
   el('p')('Welcome!')
 );
 
-const About = () => el('div')(
+const About = ({ el }: Service) => () => el('div')(
   el('h1')('About'),
   el('p')('Learn more about us.')
 );
 
-const NotFound = () => el('div')(
+const NotFound = ({ el }: Service) => () => el('div')(
   el('h1')('404'),
   el('p')('Page not found.')
 );
 
-// Route → component mapping
-const pages = {
-  home: Home,
-  about: About,
+// App with routing
+const App = (svc: Service) => () => {
+  const { el, match, router } = svc;
+  const HomePage = svc(Home);
+  const AboutPage = svc(About);
+  const NotFoundPage = svc(NotFound);
+
+  const pages: Record<string, () => ReturnType<typeof el>> = {
+    home: HomePage,
+    about: AboutPage,
+  };
+
+  return el('div')(
+    match(router.matches, (matches) => {
+      const route = matches[0];
+      if (!route) return NotFoundPage();
+
+      const Page = pages[route.id];
+      return Page ? Page() : NotFoundPage();
+    })
+  );
 };
 
-// App with routing
-const App = () => el('div')(
-  match(router.matches, (matches) => {
-    const route = matches[0];
-    if (!route) return NotFound();
-
-    const Page = pages[route.id];
-    return Page ? Page() : NotFound();
-  })
-);
-
-const app = mount(App());
+const AppComponent = svc(App);
+const app = mount(AppComponent());
 document.body.appendChild(app.element!);
 ```
 
@@ -105,24 +112,38 @@ When `router.matches` changes, `match()` swaps the rendered component.
 Use `Link` for declarative navigation that works with the router:
 
 ```typescript
-import { Link } from '@rimitive/router/link';
+import { createLinkModule } from '@rimitive/router/link';
 
-const Nav = () => el('nav')(
+// Add to service composition
+const svc = compose(
+  // ... other modules
+  createLinkModule()
+);
+
+const Nav = ({ el, Link }: Service) => () => el('nav')(
   Link({ href: '/' })('Home'),
   Link({ href: '/about' })('About')
 );
 
-const App = () => el('div')(
-  Nav(),
-  el('main')(
-    match(router.matches, (matches) => {
-      const route = matches[0];
-      if (!route) return NotFound();
-      const Page = pages[route.id];
-      return Page ? Page() : NotFound();
-    })
-  )
-);
+const App = (svc: Service) => () => {
+  const { el, match, router } = svc;
+  const NavComponent = svc(Nav);
+  const NotFoundPage = svc(NotFound);
+
+  // ... page setup from earlier
+
+  return el('div')(
+    NavComponent(),
+    el('main')(
+      match(router.matches, (matches) => {
+        const route = matches[0];
+        if (!route) return NotFoundPage();
+        const Page = pages[route.id];
+        return Page ? Page() : NotFoundPage();
+      })
+    )
+  );
+};
 ```
 
 `Link` renders an `<a>` tag that intercepts clicks and calls `router.navigate()` instead of doing a full page reload.
@@ -130,7 +151,7 @@ const App = () => el('div')(
 For programmatic navigation, use `router.navigate()` directly:
 
 ```typescript
-const Home = () => el('div')(
+const Home = ({ el, router }: Service) => () => el('div')(
   el('h1')('Home'),
   el('button').props({
     onclick: () => router.navigate('/about')
@@ -163,22 +184,24 @@ router.matches();
 Use the params in your component:
 
 ```typescript
-const ProductDetail = (params: { id: string }) => el('div')(
+const ProductDetail = ({ el }: Service) => (params: { id: string }) => el('div')(
   el('h1')(`Product ${params.id}`),
   el('p')('Product details here...')
 );
 
-// In the router match
+// In the App component's router match
+const ProductDetailPage = svc(ProductDetail);
+
 match(router.matches, (matches) => {
   const route = matches[0];
-  if (!route) return NotFound();
+  if (!route) return NotFoundPage();
 
   if (route.id === 'product-detail') {
-    return ProductDetail(route.params as { id: string });
+    return ProductDetailPage(route.params as { id: string });
   }
 
   const Page = pages[route.id];
-  return Page ? Page() : NotFound();
+  return Page ? Page() : NotFoundPage();
 });
 ```
 
@@ -198,7 +221,7 @@ router.query();   // { sort: 'price', category: 'electronics' }
 React to query changes:
 
 ```typescript
-const Products = () => {
+const Products = ({ el, computed, router }: Service) => () => {
   const sortOrder = computed(() => router.query().sort || 'name');
 
   return el('div')(
@@ -218,7 +241,7 @@ const Products = () => {
 Use `router.currentPath` to style the active link:
 
 ```typescript
-const NavLink = (href: string, label: string) => {
+const NavLink = ({ computed, router, Link }: Service) => (href: string, label: string) => {
   const isActive = computed(() => router.currentPath() === href);
 
   return Link({
@@ -227,11 +250,16 @@ const NavLink = (href: string, label: string) => {
   })(label);
 };
 
-const Nav = () => el('nav')(
-  NavLink('/', 'Home'),
-  NavLink('/about', 'About'),
-  NavLink('/products', 'Products')
-);
+const Nav = (svc: Service) => () => {
+  const { el } = svc;
+  const navLink = svc(NavLink);
+
+  return el('nav')(
+    navLink('/', 'Home'),
+    navLink('/about', 'About'),
+    navLink('/products', 'Products')
+  );
+};
 ```
 
 Routes are data, and matching is reactive. Rendering is just `match()` on `router.matches`, and everything composes with the same patterns you've already learned!

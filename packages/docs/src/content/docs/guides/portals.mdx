@@ -41,30 +41,32 @@ const { el, match, portal, signal, mount } = svc;
 Render to `document.body` (the default):
 
 ```typescript
-const showModal = signal(false);
+const App = ({ el, signal, match, portal }: Service) => () => {
+  const showModal = signal(false);
 
-const modal = match(showModal, (show) =>
-  show
-    ? portal()(
-        el('div').props({ className: 'modal-backdrop' })(
-          el('div').props({ className: 'modal' })(
-            el('h2')('Modal Title'),
-            el('p')('Modal content here...'),
-            el('button').props({
-              onclick: () => showModal(false)
-            })('Close')
+  return el('div')(
+    el('button').props({
+      onclick: () => showModal(true)
+    })('Open Modal'),
+
+    // Modal rendered to body, not inside this div
+    match(showModal, (show) =>
+      show
+        ? portal()(
+            el('div').props({ className: 'modal-backdrop' })(
+              el('div').props({ className: 'modal' })(
+                el('h2')('Modal Title'),
+                el('p')('Modal content here...'),
+                el('button').props({
+                  onclick: () => showModal(false)
+                })('Close')
+              )
+            )
           )
-        )
-      )
-    : null
-);
-
-const app = el('div')(
-  el('button').props({
-    onclick: () => showModal(true)
-  })('Open Modal'),
-  modal  // Rendered to body, not inside this div
-);
+        : null
+    )
+  );
+};
 ```
 
 ---
@@ -83,12 +85,17 @@ portal(() => document.getElementById('tooltip-root'))(
 Or use a signal ref:
 
 ```typescript
-const targetRef = signal<HTMLElement | null>(null);
+const TooltipContainer = ({ el, signal, portal }: Service) => () => {
+  const targetRef = signal<HTMLElement | null>(null);
 
-el('div').ref((el) => {
-  targetRef(el);
-  return () => targetRef(null);
-})();
-
-portal(targetRef)(tooltipContent)
+  return el('div')(
+    el('div').ref((node) => {
+      targetRef(node);
+      return () => targetRef(null);
+    })(),
+    portal(targetRef)(
+      el('div').props({ className: 'tooltip' })('Tooltip content')
+    )
+  );
+};
 ```

@@ -256,7 +256,7 @@ A working streaming example with multiple `load()` boundaries that resolve at di
 
 ```typescript
 // App.ts - Multiple load() boundaries with different speeds
-export const App = (svc: Service) => {
+export const App = (svc: Service) => () => {
   const { loader, match, el } = svc;
 
   return el('div')(

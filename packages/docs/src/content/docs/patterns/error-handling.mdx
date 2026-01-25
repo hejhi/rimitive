@@ -21,7 +21,7 @@ In React and Solid, components are reactive functions that re-run during a rende
 In Rimitive, components are just functions that return specs. They run once, produce a data structure, and that's it. Errors are plain JavaScript errors that propagate normally.
 
 ```typescript
-const RiskyComponent = (svc: Service) => {
+const RiskyComponent = (svc: Service) => () => {
   const { el } = svc;
 
   // If this throws, it's a normal JS error
@@ -34,11 +34,12 @@ const RiskyComponent = (svc: Service) => {
 You handle it with... try/catch:
 
 ```typescript
-const SafeWrapper = (svc: Service) => {
+const SafeWrapper = (svc: Service) => () => {
   const { el } = svc;
+  const useRiskyComponent = svc(RiskyComponent);
 
   try {
-    return RiskyComponent(svc);
+    return useRiskyComponent();
   } catch (e) {
     return el('div').props({ className: 'error' })(
       'Something went wrong'
@@ -54,7 +55,7 @@ const SafeWrapper = (svc: Service) => {
 For async operations, use the `resource` primitive. It tracks error state explicitly:
 
 ```typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match } = svc;
 
   const products = resource((signal) =>
@@ -145,13 +146,14 @@ const errorBoundary = (svc: Service) =>
   };
 
 // Usage
-const App = (svc: Service) => {
-  const { el, use } = svc;
-  const withErrorBoundary = use(errorBoundary);
+const App = (svc: Service) => () => {
+  const { el } = svc;
+  const withErrorBoundary = svc(errorBoundary);
+  const useRiskyComponent = svc(RiskyComponent);
 
   return el('div')(
     withErrorBoundary(
-      () => RiskyComponent(svc),
+      () => useRiskyComponent(),
       (e) => el('div')(`Error: ${e}`)
     )
   );
@@ -170,7 +172,7 @@ Catching errors without logging or re-throwing hides bugs:
 
 ```typescript
 // ❌ WRONG - error silently disappears
-const LoadData = (svc: Service) => {
+const LoadData = (svc: Service) => () => {
   const { el, signal, effect } = svc;
   const data = signal<Data | null>(null);
 
@@ -188,7 +190,7 @@ const LoadData = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - track error state, show it to users, log it
-const LoadData = (svc: Service) => {
+const LoadData = (svc: Service) => () => {
   const { el, signal, effect, match } = svc;
   const data = signal<Data | null>(null);
   const error = signal<Error | null>(null);
@@ -252,7 +254,7 @@ Resources track errors automatically. Ignoring them causes crashes:
 
 ```typescript
 // ❌ WRONG - assumes data is always available
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, map } = svc;
   const products = resource((s) => fetchProducts(s));
 
@@ -265,7 +267,7 @@ const ProductList = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - handle error state explicitly
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match, map } = svc;
   const products = resource((s) => fetchProducts(s));
 
@@ -290,7 +292,7 @@ Catching an error but continuing as if nothing happened leads to inconsistent st
 
 ```typescript
 // ❌ WRONG - catches error but leaves state in limbo
-const SaveForm = (svc: Service) => {
+const SaveForm = (svc: Service) => () => {
   const { el, signal } = svc;
   const saving = signal(false);
 
@@ -305,13 +307,15 @@ const SaveForm = (svc: Service) => {
     // Only resets if no error - state is inconsistent
     saving(false);
   };
+
+  return el('form')(/* ... */);
 };
 ```
 
 ```typescript
 // ✅ CORRECT - always reset state in finally, track error separately
-const SaveForm = (svc: Service) => {
-  const { el, signal } = svc;
+const SaveForm = (svc: Service) => () => {
+  const { el, signal, match } = svc;
   const saving = signal(false);
   const saveError = signal<Error | null>(null);
 

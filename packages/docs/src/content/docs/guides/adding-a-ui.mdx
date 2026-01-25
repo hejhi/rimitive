@@ -32,7 +32,6 @@ export const svc = compose(
   createElModule(createDOMAdapter()),
   MountModule
 );
-export const { signal, computed, effect, el, mount } = svc;
 export type Service = typeof svc;
 ```
 
@@ -42,17 +41,17 @@ Notice it's the same compose/service pattern as before, just now with more modul
 
 ## Creating Elements
 
-`el()` is curried: `el(tag)(children)`. Don't be scurred, it'll make sense, it's all just factories:
+`el()` is curried: `el(tag)(children)`. It's all just factories:
 
 ```typescript
-// Just a div tag
-const div = el('div')();
+// A div tag
+el('div')();
 
 // An h1 with text ("Hello, World" are children)
-const heading = el('h1')('Hello, World');
+el('h1')('Hello, World');
 
-// a div with other `el` children
-const container = el('div')(
+// A div with `el` children
+el('div')(
   el('h1')('Title'),
   el('p')('Some text')
 );
@@ -63,9 +62,9 @@ If you provided a different adapter, then you'd pass different (strongly typed!)
 <Aside type="note">
 `el` itself also **never re-renders**. You can pass it reactive children, reactive props, etc and those will all update when needed, but the underlying element is stable. The element is created a single time. There is no VDOM here, only fine-grained updates.
 
-There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself is dumb. It doesn't reconcile or re-render. 
+There _are_ other primitives (like `match` and `map`) that can dynamically render `el`. But `el` itself doesn't reconcile or re-render. 
 
-This is **great for performance**, creates a **much simpler mental model**, and means that if you don't need reconciliation, don't use it, and **save some kBs 📦**.
+This is **great for performance**, creates a **much simpler mental model**, and if you don't need reconciliation, don't use it! You can still write reactive apps.**.
 </Aside>
 
 ---
@@ -117,7 +116,7 @@ const Greeting = (name: string) =>
     el('p')('Welcome to Rimitive.')
   );
 
-const app = el('div')(
+const DoubleGreeting = () => el('div')(
   Greeting('Ada'),
   Greeting('Grace')
 );
@@ -151,14 +150,9 @@ const Counter = (initial: number) => {
     )
   );
 };
-
-const app = el('div')(
-  Counter(0),
-  Counter(100)
-);
 ```
 
-Again, `Counter` itself is not a reactive closure. It's not going to re-render. But it's quite nice in a way, isn't it? all your reactive behavior and logic contained in behavior functions, then using the api returned to drive UI specific logic?
+Again, `Counter` itself is not a reactive closure, so it's not going to re-render!
 
 But wait, there's more!
 
@@ -191,48 +185,24 @@ const Counter = (svc: Service) => {
     );
   };
 };
+
+// Components can compose both behaviors AND components in the service layer
+const Counters = (svc: Service) => {
+  const { el, computed } = svc;
+  const CounterComponent = svc(Counter);
+
+  return (initial: number) => {
+    const { count, doubled, increment, decrement, reset } = useCounter(initial);
+
+    return el('div')(
+      CounterComponent(0),
+      CounterComponent(100)
+    );
+  };
+};
 ```
 
 Same shape as portable behaviors: `(svc) => (args) => result`. The outer function is the service layer, the inner function is the component factory.
-
-```typescript
-import { svc } from './service';
-
-const CounterComponent = svc(Counter);
-
-const app = el('div')(
-  CounterComponent(0),
-  CounterComponent(100)
-);
-```
-
-Can you see what's coming? Components compose other components (or behaviors) in the service layer, just like we saw before:
-
-```typescript
-import type { Service } from './service';
-import { counter } from './behaviors/counter';
-import { Counter } from './Counter';
-
-const Dashboard = (svc: Service) => {
-  const { el } = svc;
-
-  // Compose the Counter component in the service layer
-  const CounterComponent = svc(Counter);
-
-  return () =>
-    el('div')(
-      el('h1')('Dashboard'),
-      el('div')(
-        el('label')('Users: '),
-        CounterComponent(0)
-      ),
-      el('div')(
-        el('label')('Sessions: '),
-        CounterComponent(100)
-      )
-    );
-};
-```
 
 The service layer is where you wire up your dependencies—behaviors, other components, whatever you need. Then the inner function just uses them.
 

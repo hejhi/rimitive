@@ -29,6 +29,7 @@ export default defineConfig({
               slug: 'guides/creating-a-behavior',
             },
             { label: 'Adding a UI', slug: 'guides/adding-a-ui' },
+            { label: 'Refs & DOM Access', slug: 'guides/refs' },
             { label: 'Rendering Lists', slug: 'guides/rendering-lists' },
             {
               label: 'Conditional Rendering',
@@ -59,7 +60,6 @@ export default defineConfig({
               label: 'Composition Over Stores',
               slug: 'patterns/composition-over-stores',
             },
-            { label: 'Refs & DOM Access', slug: 'patterns/refs' },
           ],
         },
         {

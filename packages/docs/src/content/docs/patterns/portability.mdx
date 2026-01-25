@@ -21,7 +21,7 @@ A portable component depends on a **service contract**—a set of primitives it 
 ```typescript
 // This component depends on { el, signal, computed }
 // It doesn't know or care where those come from
-const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: ComputedFactory }) => {
+const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: ComputedFactory }) => () => {
   const { el, signal, computed } = svc;
   const count = signal(0);
 
@@ -55,7 +55,7 @@ This shape lets you:
 - Pass the component to `use()` for ergonomic instantiation
 
 ```typescript
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, use } = svc;
 
   return el('div')(
@@ -192,7 +192,7 @@ const MyComponent = () => {
 
 ```typescript
 // ✅ CORRECT - depend on the service contract
-const MyComponent = (svc: Service) => {
+const MyComponent = (svc: Service) => () => {
   const { signal } = svc;
   const count = signal(0);  // Works with any compatible service
 };
@@ -204,14 +204,14 @@ Hardcoding URLs, API calls, or other external dependencies makes code untestable
 
 ```typescript
 // ❌ WRONG - hardcoded URL, can't test without network
-const DataList = (svc: Service) => {
+const DataList = (svc: Service) => () => {
   const items = svc.resource(() => fetch('/api/items'));
 };
 ```
 
 ```typescript
 // ✅ CORRECT - accept dependencies via service or props
-const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => {
+const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => () => {
   const items = svc.resource(svc.fetchItems);
 };
 

@@ -19,7 +19,7 @@ Rimitive handles async state explicitly through two primitives: `resource` for r
 The `resource` primitive wraps async operations and exposes their state reactively:
 
 ```typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match } = svc;
 
   const products = resource((signal) =>
@@ -103,7 +103,7 @@ But this is just a function—nothing special about it.
 When loading multiple resources, handle them together:
 
 ```typescript
-const Dashboard = (svc: Service) => {
+const Dashboard = (svc: Service) => () => {
   const { el, resource, computed, match } = svc;
 
   const user = resource((s) => fetchUser(s));
@@ -120,15 +120,15 @@ const Dashboard = (svc: Service) => {
   );
 
   return match(allLoading, (loading) => {
-    if (loading) return Spinner(svc);
+    if (loading) return Spinner(svc)();
 
     const error = anyError();
-    if (error) return ErrorMessage(svc, error);
+    if (error) return ErrorMessage(svc)(error);
 
     return el('div')(
-      UserHeader(svc, user.data()!),
-      StatsPanel(svc, stats.data()!),
-      NotificationList(svc, notifications.data()!)
+      UserHeader(svc)(user.data()!),
+      StatsPanel(svc)(stats.data()!),
+      NotificationList(svc)(notifications.data()!)
     );
   });
 };
@@ -141,7 +141,7 @@ const Dashboard = (svc: Service) => {
 When one resource depends on another:
 
 ```typescript
-const ProductDetail = (svc: Service) => {
+const ProductDetail = (svc: Service) => () => {
   const { el, resource, computed, match } = svc;
 
   const productId = svc.params.id; // from router
@@ -161,17 +161,17 @@ const ProductDetail = (svc: Service) => {
 
   return match(product, (state) => {
     if (state.status !== 'ready') {
-      return state.status === 'pending' ? Spinner(svc) : ErrorMessage(svc, state.error);
+      return state.status === 'pending' ? Spinner(svc)() : ErrorMessage(svc)(state.error);
     }
 
     return el('div')(
-      ProductInfo(svc, state.value),
+      ProductInfo(svc)(state.value),
       match(reviews, (reviewState) =>
         reviewState.status === 'pending'
           ? el('div')('Loading reviews...')
           : reviewState.status === 'error'
             ? el('div')('Failed to load reviews')
-            : ReviewList(svc, reviewState.value)
+            : ReviewList(svc)(reviewState.value)
       )
     );
   });
@@ -211,7 +211,7 @@ el('button').props({
 For simpler async boundaries—especially in SSR scenarios—use `load()`:
 
 ```typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, load, match } = svc;
 
   return load(
@@ -219,11 +219,11 @@ const ProductList = (svc: Service) => {
     (state) => match(state.status, (status) => {
       switch (status) {
         case 'pending':
-          return Spinner(svc);
+          return Spinner(svc)();
         case 'error':
-          return ErrorMessage(svc, state.error());
+          return ErrorMessage(svc)(state.error());
         case 'ready':
-          return ProductGrid(svc, state.data()!);
+          return ProductGrid(svc)(state.data()!);
       }
     })
   );
@@ -246,7 +246,7 @@ The key difference: `load()` takes a fetcher and a renderer. The renderer receiv
 
 ```typescript
 // load() is ideal for SSR - data and UI are co-located
-const Page = (svc: Service) => {
+const Page = (svc: Service) => () => {
   const { el, load, match } = svc;
 
   return el('main')(
@@ -254,10 +254,10 @@ const Page = (svc: Service) => {
       () => fetchPageData(),
       (state) => match(state.status, (status) =>
         status === 'ready'
-          ? PageContent(svc, state.data()!)
+          ? PageContent(svc)(state.data()!)
           : status === 'error'
-            ? ErrorFallback(svc)
-            : LoadingSkeleton(svc)
+            ? ErrorFallback(svc)()
+            : LoadingSkeleton(svc)()
       )
     )
   );
@@ -271,7 +271,7 @@ const Page = (svc: Service) => {
 Resources should be disposed when no longer needed:
 
 ```typescript
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const { el, resource } = svc;
 
   const products = resource((s) => fetchProducts(s));
@@ -297,21 +297,21 @@ Only rendering the "ready" case leads to a broken UI during loading or when erro
 
 ```typescript
 // ❌ WRONG - crashes when data isn't ready, no error handling
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, map } = svc;
 
   const products = resource((s) => fetchProducts(s));
 
   // products.data() is undefined while loading!
   return el('div')(
-    map(products.data()!, (p) => ProductCard(svc, p))
+    map(products.data()!, (p) => ProductCard(svc)(p))
   );
 };
 ```
 
 ```typescript
 // ✅ CORRECT - handle all states explicitly
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match, map } = svc;
 
   const products = resource((s) => fetchProducts(s));
@@ -319,12 +319,12 @@ const ProductList = (svc: Service) => {
   return match(products, (state) => {
     switch (state.status) {
       case 'pending':
-        return Spinner(svc);
+        return Spinner(svc)();
       case 'error':
-        return ErrorMessage(svc, state.error);
+        return ErrorMessage(svc)(state.error);
       case 'ready':
         return el('div')(
-          map(state.value, (p) => ProductCard(svc, p))
+          map(state.value, (p) => ProductCard(svc)(p))
         );
     }
   });
@@ -337,7 +337,7 @@ Resources keep fetching and updating until disposed. Without cleanup, they leak 
 
 ```typescript
 // ❌ WRONG - resource lives forever, even after component unmounts
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const products = svc.resource((s) => fetchProducts(s));
 
   return svc.el('div')(/* ... */);
@@ -347,7 +347,7 @@ const ProductPanel = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - dispose when element unmounts
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const products = svc.resource((s) => fetchProducts(s));
 
   return svc.el('div').ref(() => products.dispose)(/* ... */);
@@ -360,7 +360,7 @@ Resources pass an AbortSignal to cancel in-flight requests. Ignoring it causes r
 
 ```typescript
 // ❌ WRONG - ignores signal, old requests may resolve after new ones
-const Search = (svc: Service) => {
+const Search = (svc: Service) => () => {
   const query = svc.signal('');
 
   const results = svc.resource(() =>  // No signal parameter!
@@ -371,7 +371,7 @@ const Search = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - pass signal to fetch for automatic cancellation
-const Search = (svc: Service) => {
+const Search = (svc: Service) => () => {
   const query = svc.signal('');
 
   const results = svc.resource((signal) =>
@@ -388,7 +388,7 @@ Resources are for reactive data fetching (GET). For mutations (POST, PUT, DELETE
 
 ```typescript
 // ❌ WRONG - resource for a mutation doesn't make sense
-const DeleteButton = (svc: Service) => {
+const DeleteButton = (svc: Service) => () => {
   const deletion = svc.resource((s) =>
     fetch('/api/item', { method: 'DELETE', signal: s })
   );  // This fetches immediately on mount!
@@ -399,7 +399,7 @@ const DeleteButton = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - use asyncAction for imperative mutations
-const DeleteButton = (svc: Service) => {
+const DeleteButton = (svc: Service) => () => {
   const { el, signal } = svc;
 
   const pending = signal(false);
@@ -430,7 +430,7 @@ The `data()` accessor returns `undefined` until the resource is ready. Using it 
 
 ```typescript
 // ❌ WRONG - data() is undefined until ready
-const UserProfile = (svc: Service) => {
+const UserProfile = (svc: Service) => () => {
   const user = svc.resource((s) => fetchUser(s));
 
   // This crashes during loading!
@@ -440,7 +440,7 @@ const UserProfile = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - use match to ensure data exists
-const UserProfile = (svc: Service) => {
+const UserProfile = (svc: Service) => () => {
   const { el, resource, match } = svc;
   const user = resource((s) => fetchUser(s));
 

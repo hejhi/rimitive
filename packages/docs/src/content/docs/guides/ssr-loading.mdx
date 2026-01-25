@@ -99,7 +99,7 @@ The `initialData` option receives all the data fetched during SSR as a key/value
 | `render` | Function that receives loading state and returns UI. |
 
 ```typescript
-const UserProfile = ({ loader, match, el }: Service) => {
+const UserProfile = ({ loader, match, el }: Service) => () => {
   return loader.load(
     'user-profile',
     () => fetch('/api/user').then(r => r.json()),

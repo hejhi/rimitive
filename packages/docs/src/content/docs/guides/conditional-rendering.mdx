@@ -33,7 +33,7 @@ const svc = compose(
   MountModule
 );
 
-const { el, match, signal, mount } = svc;
+export type Service = typeof svc;
 ```
 
 ---
@@ -43,18 +43,18 @@ const { el, match, signal, mount } = svc;
 Toggle visibility by returning `null`:
 
 ```typescript
-const showMessage = signal(true);
+const ToggleMessage = ({ el, signal, match }: Service) => () => {
+  const showMessage = signal(true);
 
-const message = match(showMessage, (show) =>
-  show ? el('div')('Hello!') : null
-);
-
-const app = el('div')(
-  el('button').props({
-    onclick: () => showMessage(!showMessage())
-  })('Toggle'),
-  message
-);
+  return el('div')(
+    el('button').props({
+      onclick: () => showMessage(!showMessage())
+    })('Toggle'),
+    match(showMessage, (show) =>
+      show ? el('div')('Hello!') : null
+    )
+  );
+};
 ```
 
 ---
@@ -64,23 +64,23 @@ const app = el('div')(
 Switch between different element types:
 
 ```typescript
-const isEditMode = signal(false);
-const text = signal('Click edit to change');
+const EditableText = ({ el, signal, computed, match }: Service) => () => {
+  const isEditMode = signal(false);
+  const text = signal('Click edit to change');
 
-const content = match(isEditMode, (editing) =>
-  editing
-    ? el('input').props({ value: text })()
-    : el('span')(text)
-);
-
-const app = el('div')(
-  content,
-  el('button').props({
-    onclick: () => isEditMode(!isEditMode())
-  })(
-    computed(() => isEditMode() ? 'Save' : 'Edit')
-  )
-);
+  return el('div')(
+    match(isEditMode, (editing) =>
+      editing
+        ? el('input').props({ value: text })()
+        : el('span')(text)
+    ),
+    el('button').props({
+      onclick: () => isEditMode(!isEditMode())
+    })(
+      computed(() => isEditMode() ? 'Save' : 'Edit')
+    )
+  );
+};
 ```
 
 ---
@@ -91,13 +91,16 @@ Use a discriminated value for multiple branches:
 
 ```typescript
 type Tab = 'home' | 'settings' | 'profile';
-const currentTab = signal<Tab>('home');
 
-const tabContent = match(currentTab, (tab) => {
-  switch (tab) {
-    case 'home': return el('div')('Welcome home');
-    case 'settings': return el('div')('Settings panel');
-    case 'profile': return el('div')('Your profile');
-  }
-});
+const TabPanel = ({ el, signal, match }: Service) => () => {
+  const currentTab = signal<Tab>('home');
+
+  return match(currentTab, (tab) => {
+    switch (tab) {
+      case 'home': return el('div')('Welcome home');
+      case 'settings': return el('div')('Settings panel');
+      case 'profile': return el('div')('Your profile');
+    }
+  });
+};
 ```

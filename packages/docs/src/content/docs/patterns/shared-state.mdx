@@ -25,7 +25,7 @@ type AppService = Service & {
   user: Readable<User | null>;
 };
 
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, signal } = svc;
 
   // Create shared state
@@ -36,9 +36,9 @@ const App = (svc: Service) => {
   const appSvc: AppService = { ...svc, theme, user };
 
   return el('div')(
-    Header(appSvc),
-    Main(appSvc),
-    Footer(appSvc)
+    Header(appSvc)(),
+    Main(appSvc)(),
+    Footer(appSvc)()
   );
 };
 ```
@@ -46,7 +46,7 @@ const App = (svc: Service) => {
 Child components receive the extended service and can access the shared state directly:
 
 ```typescript
-const Header = (svc: AppService) => {
+const Header = (svc: AppService) => () => {
   const { el, computed, theme, user } = svc;
 
   return el('header').props({
@@ -66,7 +66,7 @@ No magic or implicit tree traversal. You can see exactly what's being passed whe
 Need to override a value for a subtree? Extend the service again:
 
 ```typescript
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   const { el, signal } = svc;
 
   // Override theme for this subtree
@@ -74,8 +74,8 @@ const DarkSection = (svc: AppService) => {
 
   return el('section')(
     // Everything in here sees theme = 'dark'
-    ThemedCard(darkSvc),
-    ThemedButton(darkSvc)
+    ThemedCard(darkSvc)(),
+    ThemedButton(darkSvc)()
   );
 };
 ```
@@ -95,7 +95,7 @@ const ThemedButton = ({ el, computed, theme }: AppService) => (props: { label: s
 };
 
 // Usage with `use`
-const App = ({ el, use }: AppService) => {
+const App = ({ el, use }: AppService) => () => {
   return el('div')(
     use(ThemedButton)({ label: 'Click me' })
   );
@@ -131,10 +131,10 @@ Components declare what they need:
 
 ```typescript
 // This component works with any service that has `theme`
-const ThemedCard = (svc: ThemedService) => { ... };
+const ThemedCard = (svc: ThemedService) => () => { ... };
 
 // This one needs the full app service
-const UserProfile = (svc: AppService) => { ... };
+const UserProfile = (svc: AppService) => () => { ... };
 ```
 
 ---
@@ -167,7 +167,7 @@ Creating signals at module scope seems convenient, but it causes state to leak a
 const theme = signal<'light' | 'dark'>('light');
 const user = signal<User | null>(null);
 
-const Header = (svc: Service) => {
+const Header = (svc: Service) => () => {
   // Reads global state - can't test in isolation
   return svc.el('header')(theme());
 };
@@ -175,13 +175,13 @@ const Header = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - state lives in the service, threaded explicitly
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   const user = svc.signal<User | null>(null);
 
   const appSvc = { ...svc, theme, user };
 
-  return svc.el('div')(Header(appSvc));
+  return svc.el('div')(Header(appSvc)());
 };
 ```
 
@@ -193,7 +193,7 @@ Mutating the service directly instead of creating a new one causes subtle bugs�
 
 ```typescript
 // ❌ WRONG - mutates shared service object
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   svc.theme = svc.signal('dark');  // Mutates the original!
   return svc.el('section')(/* ... */);
 };
@@ -201,9 +201,9 @@ const DarkSection = (svc: AppService) => {
 
 ```typescript
 // ✅ CORRECT - create a new extended service
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   const darkSvc = { ...svc, theme: svc.signal('dark') };
-  return svc.el('section')(Child(darkSvc));
+  return svc.el('section')(Child(darkSvc)());
 };
 ```
 
@@ -213,12 +213,12 @@ Without proper types, you lose the main benefit of explicit service threading—
 
 ```typescript
 // ❌ WRONG - untyped extension loses type safety
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal('light');
   const appSvc = { ...svc, theme };  // Type is just Service & { theme: ... }
 
   // Later components have no idea what's in the service
-  return svc.el('div')(Header(appSvc));  // Header type is unclear
+  return svc.el('div')(Header(appSvc)());  // Header type is unclear
 };
 ```
 
@@ -228,15 +228,15 @@ type AppService = Service & {
   theme: Readable<'light' | 'dark'>;
 };
 
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   const appSvc: AppService = { ...svc, theme };
 
   // Header explicitly declares what it needs
-  return svc.el('div')(Header(appSvc));
+  return svc.el('div')(Header(appSvc)());
 };
 
-const Header = (svc: AppService) => {
+const Header = (svc: AppService) => () => {
   // TypeScript knows exactly what's available
   const { el, theme } = svc;
   return el('header')(/* ... */);
@@ -260,7 +260,7 @@ const ThemedSection = (svc: Service) => (props: { children: RefSpec }) => {
 
 ```typescript
 // ✅ CORRECT - shared state created at app level, threaded down
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   // Created once at the app level
   const theme = svc.signal<'light' | 'dark'>('light');
   const appSvc: AppService = { ...svc, theme };

@@ -9,25 +9,9 @@ Once you've [created a service](/guides/creating-a-service), there are a few way
 
 ---
 
-## Top-Level
+## Exporting a Service
 
-You can safely destructure anything in Rimitive from a service, so it's common to see this:
-
-```typescript
-// myService.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-
-const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
-const count = signal(0);
-const doubled = computed(() => count() * 2);
-
-effect(() => {
-  console.log(count(), doubled());
-});
-```
-
-Great for simple scripts or when you only need a single service. In Rimitive, it's also common to export the service as well as the service type directly, which comes in handy _a lot_:
+You can safely destructure anything in Rimitive from a service, so it's idiomatic to export the service as well as the service type directly, which comes in handy _a lot_:
 
 ```typescript
 // myService.ts

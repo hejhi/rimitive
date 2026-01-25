@@ -13,7 +13,7 @@
 
 _"Primitive" was taken so I dropped the "P"_
 
-Composable reactive primitives for TypeScript, with an awkward name but a lot of personality 🌝
+Reactive primitives and composable libraries that work with them for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity. An awkward name but a lot of personality 🌝
 
 Start with signals, add what you need as you go, and swap out anything you want.
 

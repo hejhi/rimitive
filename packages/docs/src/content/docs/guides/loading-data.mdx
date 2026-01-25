@@ -17,10 +17,8 @@ Data loading in Rimitive is reactive. When dependencies change, data refetches. 
 You _could_ manage async state yourself with signals and effects:
 
 ```typescript
-const ProductList = (svc: Service) => {
-  const { signal, effect, el } = svc;
-
-  return () => {
+const ProductList = ({ signal, effect, el }: Service) => 
+  () => {
     const loading = signal(true);
     const data = signal<Product[]>([]);
     const error = signal<Error | null>(null);
@@ -41,7 +39,6 @@ const ProductList = (svc: Service) => {
 
     return el('div')(/* render based on loading/data/error */);
   };
-};
 ```
 
 This works, but you're managing three signals, handling errors, and there's no cancellation. When dependencies change mid-flight, you get race conditions.
@@ -82,9 +79,7 @@ export type Service = typeof svc;
 Create a resource inside your component with a fetcher function:
 
 ```typescript
-const ProductList = (svc: Service) => {
-  const { resource, el, match } = svc;
-
+const ProductList = ({ resource, el, match }: Service) => {
   return () => {
     const products = resource<Product[]>((signal) =>
       fetch('/api/products', { signal }).then(r => r.json())

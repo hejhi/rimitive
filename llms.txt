@@ -1,47 +1,524 @@
 # Rimitive
 
-> A set of composable libraries for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
+Reactive primitives and composable libraries that work with them for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity.
 
-Rimitive uses `compose()` to wire modules together. Modules declare dependencies; compose resolves them automatically. The result is a service with reactive primitives.
+Start with signals, add what you need as you go, and swap out anything you want.
 
-## Core Concepts
-
-- [llms-full.txt](llms-full.txt): Complete LLM documentation (recommended for full context)
-
-## Quick Reference
-
-Signal primitives: `signal(value)` creates state; `sig()` reads; `sig(newValue)` writes; `sig.peek()` reads without tracking.
-
-Effects are synchronous - they run immediately when dependencies change.
-
-View elements: `el(tag).props({...})(...children)` - curried pattern. Specs are inert; call `.create(svc)` or `mount()` to instantiate.
-
-Behaviors: `(svc) => (options) => { return api }` - portable reactive logic.
-
-## Import Patterns
-
-```typescript
-// Modules for composition
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-
-// Types only
-import type { Readable, Writable, SignalFunction } from '@rimitive/signals';
-
-// View factories
-import { createElModule } from '@rimitive/view/el';
-import { createDOMAdapter } from '@rimitive/view/adapters/dom';
-
-// Compose into a service
-import { compose } from '@rimitive/core';
-const svc = compose(SignalModule, ComputedModule, EffectModule);
+```bash
+npm install @rimitive/core @rimitive/signals
 ```
 
-## Packages
+Every Rimitive app begins with a [reactive service](https://rimitive.dev/guides/creating-a-service/) composed of modules. Services and modules are constructs of our lightweight dependency injection (DI) system in [`core`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
 
-- [@rimitive/core](https://github.com/hejhi/rimitive/tree/main/packages/rimitive): Core composition (`compose`, `defineModule`, `merge`)
-- [@rimitive/signals](https://github.com/hejhi/rimitive/tree/main/packages/signals): Reactive primitives (`signal`, `computed`, `effect`, `batch`)
-- [@rimitive/view](https://github.com/hejhi/rimitive/tree/main/packages/view): UI primitives (`el`, `map`, `match`, `portal`, `load`)
-- [@rimitive/router](https://github.com/hejhi/rimitive/tree/main/packages/router): Reactive routing (`matches`, `navigate()`, `query`)
-- [@rimitive/resource](https://github.com/hejhi/rimitive/tree/main/packages/resource): Async data fetching with `resource()`
-- [@rimitive/ssr](https://github.com/hejhi/rimitive/tree/main/packages/ssr): Server-side rendering and streaming
-- [@rimitive/react](https://github.com/hejhi/rimitive/tree/main/packages/react): React bindings
+A simple example:
+
+```typescript
+import { compose } from '@rimitive/core';
+import { SignalModule } from '@rimitive/signals/extend';
+
+const svc = compose(SignalModule);
+const { signal } = svc;
+```
+
+- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context.
+- A **module** is what you provide to `compose()`. Each module provides one or more primitives or tooling—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
+
+Using `svc` to represent a service is a convention you'll see used throughout these docs.
+
+You can safely destructure anything in Rimitive from a service, so it's idiomatic to export the following:
+
+```typescript
+// service.ts
+
+export const svc = compose(SignalModule, ComputedModule, EffectModule);
+export type Service = typeof svc;
+```
+
+## Signal Primitives
+
+- `signal(value)` - reactive state. `sig()` reads, `sig(newValue)` writes, `sig.peek()` reads without tracking
+- `computed(() => ...)` - derived value that auto-tracks dependencies and caches until they change
+- `effect(() => ...)` - side effect that runs when dependencies change
+
+**Effects are synchronous** - they run immediately when dependencies change, not deferred like React's useEffect. This is intentional.
+
+```typescript
+const counter = ({ signal, computed, effect }: Service) => () => {
+  const count = signal(0);
+  const doubled = computed(() => count() * 2);
+
+  effect(() => {
+    console.log('Count changed:', count()); // Runs immediately when count changes
+  });
+
+  count(5); // Effect runs synchronously here
+
+  return { count, doubled };
+};
+```
+
+---
+
+Rimitive uses factory function patterns that resemble components or hooks from other frameworks. The most idiomatic is the [portable behavior pattern](http://rimitive.dev/guides/creating-a-behavior/#the-portable-pattern) to create "headless" components:
+
+```ts
+import type { Service } from './service';
+
+const disclosure = ({ signal }: Service) => (initialOpen = false) => {
+  const isOpen = signal(initialOpen);
+
+  return {
+    isOpen,
+    open: () => isOpen(true),
+    close: () => isOpen(false),
+    toggle: () => isOpen(!isOpen()),
+  };
+};
+```
+
+Composing behaviors:
+
+```ts
+const dropdown = (svc: Service) => {
+  // This outer function is the _service layer_
+  const useDisclosure = svc(disclosure);
+
+  return (options?: { initialOpen?: boolean }) => {
+    const disc = useDisclosure(options?.initialOpen ?? false);
+
+    // No memoization required as this won't ever "re-render"
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      disc.toggle();
+    };
+
+    return {
+      ...disc,
+      onKeyDown,
+    };
+  };
+};
+```
+
+Testing:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { svc } from './service';
+
+describe('counter', () => {
+  it('increments', () => {
+    const c = svc(counter)(0);
+
+    c.increment();
+    c.increment();
+
+    expect(c.count()).toBe(2);
+  });
+});
+```
+
+Rimitive provides the [view package](https://github.com/hejhi/rimitive/tree/main/packages/view) that contains view-specific primitives, with `el()` being the foundation: `el()` is a function:
+- for creating elements
+- is renderer-agnostic (DOM, native, canvas, etc)
+- is provided an adapter which determines its types
+
+The most important primitives are:
+- el
+- map
+- match
+
+Add to service:
+
+```ts
+export const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  MountModule,
+  // 👇
+  createElModule(createDOMAdapter())
+);
+```
+
+Use, with behaviors as well:
+
+```ts
+import type { Service } from './service';
+import { counter } from './behaviors/counter';
+
+const Counter = (svc: Service) => {
+  const { el, computed } = svc
+
+  // idiomatic to prefix with "use"
+  const useCounter = svc(counter);
+
+  return (initial: number) => {
+    const { count, doubled, increment, decrement, reset } = useCounter(initial);
+
+    return el('div')(
+      el('div')(computed(() => `Count: ${count()} (doubled: ${doubled()})`)),
+      el('div')(
+        el('button').props({ onclick: decrement })('-'),
+        el('button').props({ onclick: increment })('+'),
+        el('button').props({ onclick: reset })('Reset')
+      )
+    );
+  };
+};
+```
+
+Or other components:
+
+```
+import type { Service } from './service';
+
+
+const App = (svc: Service) => {
+  const { el } = svc;
+  const CounterComponent = svc(Counter);
+
+  return () => el('div')(
+    CounterComponent(0),
+    CounterComponent(100)
+  )
+}
+
+const app = mount(svc(App)());
+document.body.appendChild(app.element!);
+```
+
+Lists use `map()`, which has internal reconciliation:
+
+```ts
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMapModule } from '@rimitive/view/map';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+export const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  // 👇 map takes an adapter as well
+  createMapModule(adapter),
+  MountModule
+);
+```
+
+Can be used like:
+
+```ts
+const FruitList = ({ el, signal, map }: Service) => () => {
+  const items = signal(['Apple', 'Banana', 'Cherry']);
+
+  return el('ul')(
+    map(items, (item) => el('li')(item))
+  );
+};
+```
+
+The render function receives a reactive signal wrapping each item. You can pass it directly as a child.
+
+Keyed Lists:
+
+For object arrays, provide a key function so map() can track identity.
+
+```ts
+type Todo = { id: number; text: string; done: boolean };
+
+const TodoList = ({ el, signal, computed, map }: Service) => () => {
+  const todos = signal<Todo[]>([
+    { id: 1, text: 'Learn Rimitive', done: false },
+    { id: 2, text: 'Build something', done: false },
+  ]);
+
+  return el('ul')(
+    map(
+      todos,
+      (todo) => todo.id,  // 👈 key function
+      (todo) => el('li')(
+        el('span')(computed(() => todo().text)),
+        el('input').props({
+          type: 'checkbox',
+          checked: computed(() => todo().done),
+        })()
+      )
+    )
+  );
+};
+```
+
+Conditional Rendering:
+
+`match()` swaps elements based on a reactive value. When the value changes, the old element is disposed and a new one takes its place.
+
+```ts
+import { compose } from '@rimitive/core';
+import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
+import { createDOMAdapter } from '@rimitive/view/adapters/dom';
+import { createElModule } from '@rimitive/view/el';
+import { createMatchModule } from '@rimitive/view/match';
+import { MountModule } from '@rimitive/view/deps/mount';
+
+const adapter = createDOMAdapter();
+
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  createElModule(adapter),
+  // 👇 match takes an adapter
+  createMatchModule(adapter),
+  MountModule
+);
+```
+
+Example:
+
+```ts
+const Greeting = ({ el, signal, match }: Service) => () => {
+  const showMessage = signal(true);
+
+  return el('div')(
+    match(showMessage, (show) =>
+      show ? el('div')('Hello!') : null
+    )
+  );
+};
+```
+
+IMPORTANT: you CANNOT do this:
+
+```ts
+// ❌ WRONG - ternary outside match doesn't work
+const BadConditional = ({ el, signal }: Service) => () => {
+  const show = signal(true);
+  return el('div')(
+    show() ? el('div')('Hello!') : null  // Won't update reactively!
+  );
+};
+
+// ✅ CORRECT - use match for conditional rendering
+const GoodConditional = ({ el, signal, match }: Service) => () => {
+  const show = signal(true);
+  return el('div')(
+    match(show, (s) => s ? el('div')('Hello!') : null)
+  );
+};
+```
+
+Match is required for conditional rendering.
+
+## Event Handling and Props
+
+For simple handlers, use props directly:
+
+```typescript
+const ClickCounter = ({ el, signal }: Service) => () => {
+  const count = signal(0);
+
+  return el('button').props({
+    onclick: () => count(count() + 1)
+  })('Click me');
+};
+```
+
+For automatic cleanup and batching, use `on()` with `.ref()`:
+
+```typescript
+import { OnModule } from '@rimitive/view/deps/addEventListener';
+
+// Add OnModule to your service composition
+const svc = compose(
+  SignalModule,
+  ComputedModule,
+  EffectModule,
+  BatchModule,
+  createElModule(adapter),
+  OnModule,  // 👈
+  MountModule
+);
+
+// on() returns a lifecycle callback for .ref()
+const ClickCounter = ({ el, on, signal }: Service) => () => {
+  const count = signal(0);
+
+  return el('button').ref(
+    on('click', () => count(count() + 1))
+  )('Click me');
+};
+
+// Multiple listeners
+const SearchInput = ({ el, on }: Service) => (props: { onInput: (e: Event) => void }) => {
+  return el('input')
+    .ref(
+      on('focus', () => console.log('focused')),
+      on('blur', () => console.log('blurred')),
+      on('input', props.onInput)
+    )();
+};
+```
+
+Input handling pattern:
+
+```typescript
+const TextInput = ({ el, signal, on }: Service) => () => {
+  const text = signal('');
+
+  return el('input')
+    .props({
+      type: 'text',
+      value: text,  // Bind value to signal
+    })
+    .ref(
+      on('input', (e) => text((e.target as HTMLInputElement).value))
+    )();
+};
+```
+
+`on()` automatically batches multiple signal updates into one:
+
+```typescript
+const SubmitButton = ({ el, signal, on }: Service) => () => {
+  const firstName = signal('');
+  const lastName = signal('');
+  const loading = signal(false);
+
+  return el('button').ref(
+    on('click', () => {
+      firstName('Jane');  // All three updates
+      lastName('Smith');  // batched into
+      loading(true);      // one render
+    })
+  )('Submit');
+};
+```
+
+Event options (capture, once, passive):
+
+```typescript
+on('click', handler, { capture: true })
+on('scroll', handler, { passive: true })
+```
+
+---
+
+## Refs and DOM Access
+
+The `.ref()` method takes a callback that runs when the element mounts:
+
+```typescript
+const AutofocusInput = ({ el }: Service) => () => {
+  return el('input').ref((node) => {
+    node.focus();
+  })();
+};
+```
+
+Return a cleanup function for observers/subscriptions:
+
+```typescript
+const ResizeTracker = ({ el, signal }: Service) => () => {
+  const dimensions = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      dimensions({ width, height });
+    });
+    observer.observe(node);
+
+    return () => observer.disconnect(); // Cleanup when unmounted
+  })();
+};
+```
+
+**Element-scoped state** - create signals inside `.ref()` for state tied to element lifecycle:
+
+```typescript
+const HoverBox = ({ el, signal, effect }: Service) => () => {
+  return el('div').ref((element) => {
+    // Local state - created when element mounts
+    const hovered = signal(false);
+
+    element.onmouseenter = () => hovered(true);
+    element.onmouseleave = () => hovered(false);
+
+    // Effect tied to element - disposed when element unmounts
+    return effect(() => {
+      element.style.backgroundColor = hovered() ? 'lightblue' : 'white';
+    });
+  })();
+};
+```
+
+When the element is removed, the effect is disposed and the signal gets garbage collected.
+
+**Effects with refs** - return the effect from the ref callback:
+
+```typescript
+const Chart = ({ el, effect }: Service) => (props: { data: Readable<ChartData> }) => {
+  return el('canvas').ref((canvas) => {
+    const chart = new ChartLibrary(canvas, { data: props.data() });
+
+    // Return effect - disposed when element unmounts
+    return effect(() => {
+      chart.update(props.data());
+    });
+  })();
+};
+```
+
+**Anti-patterns:**
+
+```typescript
+// ❌ WRONG - observer never cleaned up
+const BadTracker = ({ el }: Service) => () => {
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver(...);
+    observer.observe(node);
+    // Missing cleanup!
+  })();
+};
+
+// ✅ CORRECT - return cleanup function
+const GoodTracker = ({ el }: Service) => () => {
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver(...);
+    observer.observe(node);
+    return () => observer.disconnect();
+  })();
+};
+
+// ❌ WRONG - using refs for declarative updates
+const BadCounter = ({ el, signal, effect }: Service) => () => {
+  const count = signal(0);
+  return el('span').ref((node) => {
+    return effect(() => { node.textContent = `Count: ${count()}`; });
+  })();
+};
+
+// ✅ CORRECT - let reactivity handle it
+const GoodCounter = ({ el, signal, computed }: Service) => () => {
+  const count = signal(0);
+  return el('span')(computed(() => `Count: ${count()}`));
+};
+```
+
+Use refs for things that *can't* be declarative: focus, scroll position, canvas, third-party libraries. For everything else, use reactive props and children.
+
+---
+
+More primitives:
+- [Resource](https://rimitive.dev/guides/loading-data/#the-resource-primitive)
+- [Portals](https://rimitive.dev/guides/portals/)
+- [Routing](https://rimitive.dev/guides/adding-routing/)
+- [SSR](https://rimitive.dev/guides/intro-to-ssr/)
+- [Patterns](https://rimitive.dev/patterns/)

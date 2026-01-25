@@ -375,13 +375,13 @@ Consumers can read whichever view they need:
 
 ```typescript
 // Only re-renders when active items change
-const ActiveList = (svc: Service, todos: ReturnType<typeof todoList>) => {
+const ActiveList = (svc: Service) => (todos: ReturnType<typeof todoList>) => {
   const { el, map } = svc;
   return map(todos.active, t => t.id, TodoItem);
 };
 
 // Only re-renders when counts change
-const Stats = (svc: Service, todos: ReturnType<typeof todoList>) => {
+const Stats = (svc: Service) => (todos: ReturnType<typeof todoList>) => {
   const { el, computed } = svc;
   return el('div')(
     computed(() => `${todos.counts().active} items left`)

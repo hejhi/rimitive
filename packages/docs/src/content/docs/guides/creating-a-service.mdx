@@ -8,13 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 <SearchTags tags={["service", "compose", "setup", "configuration", "modules", "dependency-injection"]} />
 
-In Rimitive:
-- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context.
-- A **module** is what you provide to `compose()`. Each module provides one or more primitives—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
-
-<Aside type="note">
-Services and modules are constructs of our lightweight dependency injection (DI) system in `core`, which is its own standalone package, if you want to learn more about it. It's the backbone of Rimitive.
-</Aside>
+Every Rimitive app begins with a reactive service composed of modules. Services and modules are constructs of our lightweight dependency injection (DI) system in [`core`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
 
 A simple example:
 
@@ -26,11 +20,10 @@ const svc = compose(SignalModule);
 const { signal } = svc;
 ```
 
-This example demonstrates `compose()`, which:
-- takes modules (usually primitive modules in Rimitive)
-- returns a fully reactive service with only the modules you provided (in this case, the signal primitive)
+- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context.
+- A **module** is what you provide to `compose()`. Each module provides one or more primitives or tooling—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
 
-Each service has an encapsulated reactive graph inside of it. Using `svc` to represent a service is a convention you'll see used throughout these docs.
+Using `svc` to represent a service is a convention you'll see used throughout these docs.
 
 This service wouldn't do much on its own—nothing is connected to react to signal changes yet.
 
@@ -49,7 +42,7 @@ const { signal, computed, effect } = compose(SignalModule, ComputedModule, Effec
 
 Then use them:
 
-```typescript
+```ts
 const count = signal(0);
 const doubled = computed(() => count() * 2);
 

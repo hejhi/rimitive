@@ -68,6 +68,7 @@ const DOCS_ORDER = [
   'guides/creating-a-service.mdx',
   'guides/using-a-service.mdx',
   'guides/adding-a-ui.mdx',
+  'guides/refs.mdx',
   'guides/conditional-rendering.mdx',
   'guides/rendering-lists.mdx',
   'guides/portals.mdx',
@@ -85,7 +86,6 @@ const DOCS_ORDER = [
   'patterns/shared-state.mdx',
   'patterns/error-handling.mdx',
   'patterns/forms.mdx',
-  'patterns/refs.mdx',
   'patterns/composition-over-stores.mdx',
   'patterns/async-loading.mdx',
 ];
