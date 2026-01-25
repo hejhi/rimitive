@@ -8,7 +8,7 @@ This document contains the complete Rimitive documentation for LLM consumption.
 
 ## Project Overview (README)
 
-Composable reactive primitives for TypeScript, with an awkward name but a lot of personality 🌝
+Reactive primitives and composable libraries that work with them for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity. An awkward name but a lot of personality 🌝
 
 Start with signals, add what you need as you go, and swap out anything you want.
 
@@ -246,9 +246,7 @@ Rimitive is as much about patterns as it is about reactive primitives and toolin
 
 <!-- @tags: service, compose, setup, configuration, modules, dependency-injection -->
 
-In Rimitive:
-- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context.
-- A **module** is what you provide to `compose()`. Each module provides one or more primitives—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
+Every Rimitive app begins with a reactive service composed of modules. Services and modules are constructs of our lightweight dependency injection (DI) system in [`core`](https://github.com/hejhi/rimitive/packages/core) (the DI system, which can be used outside of Rimitive as well).
 
 A simple example:
 
@@ -260,11 +258,10 @@ const svc = compose(SignalModule);
 const { signal } = svc;
 ```
 
-This example demonstrates `compose()`, which:
-- takes modules (usually primitive modules in Rimitive)
-- returns a fully reactive service with only the modules you provided (in this case, the signal primitive)
+- A **service** is the result of calling `compose()`. It bundles your chosen primitives into an isolated reactive context.
+- A **module** is what you provide to `compose()`. Each module provides one or more primitives or tooling—`SignalModule` provides `signal`, `ComputedModule` provides `computed`, and so on. Modules can depend on other modules, and `compose()` bundles everything up into a service where they all share the same underlying reactive graph.
 
-Each service has an encapsulated reactive graph inside of it. Using `svc` to represent a service is a convention you'll see used throughout these docs.
+Using `svc` to represent a service is a convention you'll see used throughout these docs.
 
 This service wouldn't do much on its own—nothing is connected to react to signal changes yet.
 
@@ -283,7 +280,7 @@ const { signal, computed, effect } = compose(SignalModule, ComputedModule, Effec
 
 Then use them:
 
-```typescript
+```ts
 const count = signal(0);
 const doubled = computed(() => count() * 2);
 
@@ -317,25 +314,9 @@ Once you've [created a service](/guides/creating-a-service), there are a few way
 
 ---
 
-## Top-Level
+## Exporting a Service
 
-You can safely destructure anything in Rimitive from a service, so it's common to see this:
-
-```typescript
-// myService.ts
-import { compose } from '@rimitive/core';
-import { SignalModule, ComputedModule, EffectModule } from '@rimitive/signals/extend';
-
-const { signal, computed, effect } = compose(SignalModule, ComputedModule, EffectModule);
-const count = signal(0);
-const doubled = computed(() => count() * 2);
-
-effect(() => {
-  console.log(count(), doubled());
-});
-```
-
-Great for simple scripts or when you only need a single service. In Rimitive, it's also common to export the service as well as the service type directly, which comes in handy _a lot_:
+You can safely destructure anything in Rimitive from a service, so it's idiomatic to export the service as well as the service type directly, which comes in handy _a lot_:
 
 ```typescript
 // myService.ts
@@ -405,7 +386,6 @@ export const svc = compose(
   createElModule(createDOMAdapter()),
   MountModule
 );
-export const { signal, computed, effect, el, mount } = svc;
 export type Service = typeof svc;
 ```
 
@@ -415,17 +395,17 @@ Notice it's the same compose/service pattern as before, just now with more modul
 
 ## Creating Elements
 
-`el()` is curried: `el(tag)(children)`. Don't be scurred, it'll make sense, it's all just factories:
+`el()` is curried: `el(tag)(children)`. It's all just factories:
 
 ```typescript
-// Just a div tag
-const div = el('div')();
+// A div tag
+el('div')();
 
 // An h1 with text ("Hello, World" are children)
-const heading = el('h1')('Hello, World');
+el('h1')('Hello, World');
 
-// a div with other `el` children
-const container = el('div')(
+// A div with `el` children
+el('div')(
   el('h1')('Title'),
   el('p')('Some text')
 );
@@ -482,7 +462,7 @@ const Greeting = (name: string) =>
     el('p')('Welcome to Rimitive.')
   );
 
-const app = el('div')(
+const DoubleGreeting = () => el('div')(
   Greeting('Ada'),
   Greeting('Grace')
 );
@@ -512,14 +492,9 @@ const Counter = (initial: number) => {
     )
   );
 };
-
-const app = el('div')(
-  Counter(0),
-  Counter(100)
-);
 ```
 
-Again, `Counter` itself is not a reactive closure. It's not going to re-render. But it's quite nice in a way, isn't it? all your reactive behavior and logic contained in behavior functions, then using the api returned to drive UI specific logic?
+Again, `Counter` itself is not a reactive closure, so it's not going to re-render!
 
 But wait, there's more!
 
@@ -552,48 +527,24 @@ const Counter = (svc: Service) => {
     );
   };
 };
+
+// Components can compose both behaviors AND components in the service layer
+const Counters = (svc: Service) => {
+  const { el, computed } = svc;
+  const CounterComponent = svc(Counter);
+
+  return (initial: number) => {
+    const { count, doubled, increment, decrement, reset } = useCounter(initial);
+
+    return el('div')(
+      CounterComponent(0),
+      CounterComponent(100)
+    );
+  };
+};
 ```
 
 Same shape as portable behaviors: `(svc) => (args) => result`. The outer function is the service layer, the inner function is the component factory.
-
-```typescript
-import { svc } from './service';
-
-const CounterComponent = svc(Counter);
-
-const app = el('div')(
-  CounterComponent(0),
-  CounterComponent(100)
-);
-```
-
-Can you see what's coming? Components compose other components (or behaviors) in the service layer, just like we saw before:
-
-```typescript
-import type { Service } from './service';
-import { counter } from './behaviors/counter';
-import { Counter } from './Counter';
-
-const Dashboard = (svc: Service) => {
-  const { el } = svc;
-
-  // Compose the Counter component in the service layer
-  const CounterComponent = svc(Counter);
-
-  return () =>
-    el('div')(
-      el('h1')('Dashboard'),
-      el('div')(
-        el('label')('Users: '),
-        CounterComponent(0)
-      ),
-      el('div')(
-        el('label')('Sessions: '),
-        CounterComponent(100)
-      )
-    );
-};
-```
 
 The service layer is where you wire up your dependencies—behaviors, other components, whatever you need. Then the inner function just uses them.
 
@@ -612,6 +563,204 @@ const App = () => el('div')(
 
 const app = mount(App());
 document.body.appendChild(app.element!);
+```
+
+---
+
+## Refs and DOM Access
+
+<!-- @tags: ref, dom-access, focus, imperative, third-party, canvas, resize-observer, cleanup -->
+
+Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the `.ref()` method on elements.
+
+---
+
+## Basic Ref Usage
+
+The `.ref()` method takes a callback that runs when the element is mounted:
+
+```typescript
+const AutofocusInput = ({ el }: Service) => () => {
+  return el('input').ref((node) => {
+    node.focus();
+  })();
+};
+```
+
+---
+
+## Cleanup
+
+Return a cleanup function from the callback:
+
+```typescript
+const ResizeObserved = ({ el, signal }: Service) => () => {
+  const dimensions = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      dimensions({ width, height });
+    });
+
+    observer.observe(node);
+
+    // Return cleanup function
+    return () => observer.disconnect();
+  })(
+    // ... children
+  );
+};
+```
+
+The cleanup runs when the element is removed from the DOM.
+
+---
+
+## Passing Refs to Children
+
+If a parent needs access to a child's DOM node, pass a callback:
+
+```typescript
+const Input = ({ el }: Service) => (props: { onRef?: (node: HTMLInputElement) => void }) => {
+  return el('input').ref((node) => {
+    props.onRef?.(node);
+  })();
+};
+
+const Form = (svc: Service) => () => {
+  const { el } = svc;
+  const useInput = svc(Input);
+  let inputNode: HTMLInputElement | null = null;
+
+  return el('form')(
+    useInput({ onRef: (node) => { inputNode = node; } }),
+    el('button').props({
+      onclick: () => inputNode?.focus()
+    })('Focus Input')
+  );
+};
+```
+
+Or with signals for reactive access:
+
+```typescript
+const Form = (svc: Service) => () => {
+  const { el, signal } = svc;
+  const useInput = svc(Input);
+  const inputRef = signal<HTMLInputElement | null>(null);
+
+  return el('form')(
+    useInput({ onRef: (node) => inputRef(node) }),
+    el('button').props({
+      onclick: () => inputRef()?.focus()
+    })('Focus Input')
+  );
+};
+```
+
+---
+
+## Third-Party Library Integration
+
+Use refs to integrate non-reactive libraries:
+
+```typescript
+const Chart = ({ el, effect }: Service) => (props: { data: Readable<ChartData> }) => {
+  return el('canvas').ref((canvas) => {
+    // Initialize chart library
+    const chart = new ChartLibrary(canvas, {
+      data: props.data()
+    });
+
+    // Update chart when data changes
+    const disposeEffect = effect(() => {
+      chart.update(props.data());
+    });
+
+    // Return cleanup
+    return () => {
+      disposeEffect();
+      chart.destroy();
+    };
+  })();
+};
+```
+
+---
+
+## Multiple Refs
+
+For collections, store refs in a map:
+
+```typescript
+const ScrollableList = ({ el, signal, map }: Service) => () => {
+  const items = signal(['a', 'b', 'c', 'd', 'e']);
+  const itemRefs = new Map<string, HTMLElement>();
+
+  const scrollToItem = (id: string) => {
+    itemRefs.get(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return el('div')(
+    el('div')(
+      ...['a', 'b', 'c', 'd', 'e'].map(id =>
+        el('button').props({ onclick: () => scrollToItem(id) })(`Go to ${id}`)
+      )
+    ),
+    el('div').props({ style: 'height: 200px; overflow: auto' })(
+      map(items, (item) =>
+        el('div').props({ style: 'height: 100px' }).ref((node) => {
+          itemRefs.set(item(), node);
+          return () => itemRefs.delete(item());
+        })(item)
+      )
+    )
+  );
+};
+```
+
+---
+
+## Anti-patterns
+
+### Don't Forget Cleanup
+
+Refs that set up observers, listeners, or other subscriptions need cleanup to avoid memory leaks:
+
+```typescript
+// ❌ WRONG - observer never disconnected
+const Measured = (svc: Service) => () => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+    // Missing cleanup! Observer lives forever
+  })();
+};
+```
+
+```typescript
+// ✅ CORRECT - return cleanup function
+const Measured = (svc: Service) => () => {
+  const { el, signal } = svc;
+  const size = signal({ width: 0, height: 0 });
+
+  return el('div').ref((node) => {
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      size({ width, height });
+    });
+    observer.observe(node);
+
+    return () => observer.disconnect();  // Cleanup when unmounted
+  })();
+};
 ```
 
 ---
@@ -646,7 +795,7 @@ const svc = compose(
   MountModule
 );
 
-const { el, match, signal, mount } = svc;
+export type Service = typeof svc;
 ```
 
 ---
@@ -656,18 +805,18 @@ const { el, match, signal, mount } = svc;
 Toggle visibility by returning `null`:
 
 ```typescript
-const showMessage = signal(true);
+const ToggleMessage = ({ el, signal, match }: Service) => () => {
+  const showMessage = signal(true);
 
-const message = match(showMessage, (show) =>
-  show ? el('div')('Hello!') : null
-);
-
-const app = el('div')(
-  el('button').props({
-    onclick: () => showMessage(!showMessage())
-  })('Toggle'),
-  message
-);
+  return el('div')(
+    el('button').props({
+      onclick: () => showMessage(!showMessage())
+    })('Toggle'),
+    match(showMessage, (show) =>
+      show ? el('div')('Hello!') : null
+    )
+  );
+};
 ```
 
 ---
@@ -677,23 +826,23 @@ const app = el('div')(
 Switch between different element types:
 
 ```typescript
-const isEditMode = signal(false);
-const text = signal('Click edit to change');
+const EditableText = ({ el, signal, computed, match }: Service) => () => {
+  const isEditMode = signal(false);
+  const text = signal('Click edit to change');
 
-const content = match(isEditMode, (editing) =>
-  editing
-    ? el('input').props({ value: text })()
-    : el('span')(text)
-);
-
-const app = el('div')(
-  content,
-  el('button').props({
-    onclick: () => isEditMode(!isEditMode())
-  })(
-    computed(() => isEditMode() ? 'Save' : 'Edit')
-  )
-);
+  return el('div')(
+    match(isEditMode, (editing) =>
+      editing
+        ? el('input').props({ value: text })()
+        : el('span')(text)
+    ),
+    el('button').props({
+      onclick: () => isEditMode(!isEditMode())
+    })(
+      computed(() => isEditMode() ? 'Save' : 'Edit')
+    )
+  );
+};
 ```
 
 ---
@@ -704,15 +853,18 @@ Use a discriminated value for multiple branches:
 
 ```typescript
 type Tab = 'home' | 'settings' | 'profile';
-const currentTab = signal<Tab>('home');
 
-const tabContent = match(currentTab, (tab) => {
-  switch (tab) {
-    case 'home': return el('div')('Welcome home');
-    case 'settings': return el('div')('Settings panel');
-    case 'profile': return el('div')('Your profile');
-  }
-});
+const TabPanel = ({ el, signal, match }: Service) => () => {
+  const currentTab = signal<Tab>('home');
+
+  return match(currentTab, (tab) => {
+    switch (tab) {
+      case 'home': return el('div')('Welcome home');
+      case 'settings': return el('div')('Settings panel');
+      case 'profile': return el('div')('Your profile');
+    }
+  });
+};
 ```
 
 ---
@@ -859,30 +1011,32 @@ const { el, match, portal, signal, mount } = svc;
 Render to `document.body` (the default):
 
 ```typescript
-const showModal = signal(false);
+const App = ({ el, signal, match, portal }: Service) => () => {
+  const showModal = signal(false);
 
-const modal = match(showModal, (show) =>
-  show
-    ? portal()(
-        el('div').props({ className: 'modal-backdrop' })(
-          el('div').props({ className: 'modal' })(
-            el('h2')('Modal Title'),
-            el('p')('Modal content here...'),
-            el('button').props({
-              onclick: () => showModal(false)
-            })('Close')
+  return el('div')(
+    el('button').props({
+      onclick: () => showModal(true)
+    })('Open Modal'),
+
+    // Modal rendered to body, not inside this div
+    match(showModal, (show) =>
+      show
+        ? portal()(
+            el('div').props({ className: 'modal-backdrop' })(
+              el('div').props({ className: 'modal' })(
+                el('h2')('Modal Title'),
+                el('p')('Modal content here...'),
+                el('button').props({
+                  onclick: () => showModal(false)
+                })('Close')
+              )
+            )
           )
-        )
-      )
-    : null
-);
-
-const app = el('div')(
-  el('button').props({
-    onclick: () => showModal(true)
-  })('Open Modal'),
-  modal  // Rendered to body, not inside this div
-);
+        : null
+    )
+  );
+};
 ```
 
 ---
@@ -901,14 +1055,19 @@ portal(() => document.getElementById('tooltip-root'))(
 Or use a signal ref:
 
 ```typescript
-const targetRef = signal<HTMLElement | null>(null);
+const TooltipContainer = ({ el, signal, portal }: Service) => () => {
+  const targetRef = signal<HTMLElement | null>(null);
 
-el('div').ref((el) => {
-  targetRef(el);
-  return () => targetRef(null);
-})();
-
-portal(targetRef)(tooltipContent)
+  return el('div')(
+    el('div').ref((node) => {
+      targetRef(node);
+      return () => targetRef(null);
+    })(),
+    portal(targetRef)(
+      el('div').props({ className: 'tooltip' })('Tooltip content')
+    )
+  );
+};
 ```
 
 ---
@@ -1351,39 +1510,46 @@ Use `match()` to render based on the matched route:
 
 ```typescript
 // Page components
-const Home = () => el('div')(
+const Home = ({ el }: Service) => () => el('div')(
   el('h1')('Home'),
   el('p')('Welcome!')
 );
 
-const About = () => el('div')(
+const About = ({ el }: Service) => () => el('div')(
   el('h1')('About'),
   el('p')('Learn more about us.')
 );
 
-const NotFound = () => el('div')(
+const NotFound = ({ el }: Service) => () => el('div')(
   el('h1')('404'),
   el('p')('Page not found.')
 );
 
-// Route → component mapping
-const pages = {
-  home: Home,
-  about: About,
+// App with routing
+const App = (svc: Service) => () => {
+  const { el, match, router } = svc;
+  const HomePage = svc(Home);
+  const AboutPage = svc(About);
+  const NotFoundPage = svc(NotFound);
+
+  const pages: Record<string, () => ReturnType<typeof el>> = {
+    home: HomePage,
+    about: AboutPage,
+  };
+
+  return el('div')(
+    match(router.matches, (matches) => {
+      const route = matches[0];
+      if (!route) return NotFoundPage();
+
+      const Page = pages[route.id];
+      return Page ? Page() : NotFoundPage();
+    })
+  );
 };
 
-// App with routing
-const App = () => el('div')(
-  match(router.matches, (matches) => {
-    const route = matches[0];
-    if (!route) return NotFound();
-
-    const Page = pages[route.id];
-    return Page ? Page() : NotFound();
-  })
-);
-
-const app = mount(App());
+const AppComponent = svc(App);
+const app = mount(AppComponent());
 document.body.appendChild(app.element!);
 ```
 
@@ -1396,24 +1562,38 @@ When `router.matches` changes, `match()` swaps the rendered component.
 Use `Link` for declarative navigation that works with the router:
 
 ```typescript
-import { Link } from '@rimitive/router/link';
+import { createLinkModule } from '@rimitive/router/link';
 
-const Nav = () => el('nav')(
+// Add to service composition
+const svc = compose(
+  // ... other modules
+  createLinkModule()
+);
+
+const Nav = ({ el, Link }: Service) => () => el('nav')(
   Link({ href: '/' })('Home'),
   Link({ href: '/about' })('About')
 );
 
-const App = () => el('div')(
-  Nav(),
-  el('main')(
-    match(router.matches, (matches) => {
-      const route = matches[0];
-      if (!route) return NotFound();
-      const Page = pages[route.id];
-      return Page ? Page() : NotFound();
-    })
-  )
-);
+const App = (svc: Service) => () => {
+  const { el, match, router } = svc;
+  const NavComponent = svc(Nav);
+  const NotFoundPage = svc(NotFound);
+
+  // ... page setup from earlier
+
+  return el('div')(
+    NavComponent(),
+    el('main')(
+      match(router.matches, (matches) => {
+        const route = matches[0];
+        if (!route) return NotFoundPage();
+        const Page = pages[route.id];
+        return Page ? Page() : NotFoundPage();
+      })
+    )
+  );
+};
 ```
 
 `Link` renders an `<a>` tag that intercepts clicks and calls `router.navigate()` instead of doing a full page reload.
@@ -1421,7 +1601,7 @@ const App = () => el('div')(
 For programmatic navigation, use `router.navigate()` directly:
 
 ```typescript
-const Home = () => el('div')(
+const Home = ({ el, router }: Service) => () => el('div')(
   el('h1')('Home'),
   el('button').props({
     onclick: () => router.navigate('/about')
@@ -1454,22 +1634,24 @@ router.matches();
 Use the params in your component:
 
 ```typescript
-const ProductDetail = (params: { id: string }) => el('div')(
+const ProductDetail = ({ el }: Service) => (params: { id: string }) => el('div')(
   el('h1')(`Product ${params.id}`),
   el('p')('Product details here...')
 );
 
-// In the router match
+// In the App component's router match
+const ProductDetailPage = svc(ProductDetail);
+
 match(router.matches, (matches) => {
   const route = matches[0];
-  if (!route) return NotFound();
+  if (!route) return NotFoundPage();
 
   if (route.id === 'product-detail') {
-    return ProductDetail(route.params as { id: string });
+    return ProductDetailPage(route.params as { id: string });
   }
 
   const Page = pages[route.id];
-  return Page ? Page() : NotFound();
+  return Page ? Page() : NotFoundPage();
 });
 ```
 
@@ -1489,7 +1671,7 @@ router.query();   // { sort: 'price', category: 'electronics' }
 React to query changes:
 
 ```typescript
-const Products = () => {
+const Products = ({ el, computed, router }: Service) => () => {
   const sortOrder = computed(() => router.query().sort || 'name');
 
   return el('div')(
@@ -1509,7 +1691,7 @@ const Products = () => {
 Use `router.currentPath` to style the active link:
 
 ```typescript
-const NavLink = (href: string, label: string) => {
+const NavLink = ({ computed, router, Link }: Service) => (href: string, label: string) => {
   const isActive = computed(() => router.currentPath() === href);
 
   return Link({
@@ -1518,11 +1700,16 @@ const NavLink = (href: string, label: string) => {
   })(label);
 };
 
-const Nav = () => el('nav')(
-  NavLink('/', 'Home'),
-  NavLink('/about', 'About'),
-  NavLink('/products', 'Products')
-);
+const Nav = (svc: Service) => () => {
+  const { el } = svc;
+  const navLink = svc(NavLink);
+
+  return el('nav')(
+    navLink('/', 'Home'),
+    navLink('/about', 'About'),
+    navLink('/products', 'Products')
+  );
+};
 ```
 
 Routes are data, and matching is reactive. Rendering is just `match()` on `router.matches`, and everything composes with the same patterns you've already learned!
@@ -1542,10 +1729,8 @@ Data loading in Rimitive is reactive. When dependencies change, data refetches. 
 You _could_ manage async state yourself with signals and effects:
 
 ```typescript
-const ProductList = (svc: Service) => {
-  const { signal, effect, el } = svc;
-
-  return () => {
+const ProductList = ({ signal, effect, el }: Service) => 
+  () => {
     const loading = signal(true);
     const data = signal<Product[]>([]);
     const error = signal<Error | null>(null);
@@ -1566,7 +1751,6 @@ const ProductList = (svc: Service) => {
 
     return el('div')(/* render based on loading/data/error */);
   };
-};
 ```
 
 This works, but you're managing three signals, handling errors, and there's no cancellation. When dependencies change mid-flight, you get race conditions.
@@ -1607,9 +1791,7 @@ export type Service = typeof svc;
 Create a resource inside your component with a fetcher function:
 
 ```typescript
-const ProductList = (svc: Service) => {
-  const { resource, el, match } = svc;
-
+const ProductList = ({ resource, el, match }: Service) => {
   return () => {
     const products = resource<Product[]>((signal) =>
       fetch('/api/products', { signal }).then(r => r.json())
@@ -2308,7 +2490,7 @@ A working streaming example with multiple `load()` boundaries that resolve at di
 
 ```typescript
 // App.ts - Multiple load() boundaries with different speeds
-export const App = (svc: Service) => {
+export const App = (svc: Service) => () => {
   const { loader, match, el } = svc;
 
   return el('div')(
@@ -2881,13 +3063,13 @@ Consumers can read whichever view they need:
 
 ```typescript
 // Only re-renders when active items change
-const ActiveList = (svc: Service, todos: ReturnType<typeof todoList>) => {
+const ActiveList = (svc: Service) => (todos: ReturnType<typeof todoList>) => {
   const { el, map } = svc;
   return map(todos.active, t => t.id, TodoItem);
 };
 
 // Only re-renders when counts change
-const Stats = (svc: Service, todos: ReturnType<typeof todoList>) => {
+const Stats = (svc: Service) => (todos: ReturnType<typeof todoList>) => {
   const { el, computed } = svc;
   return el('div')(
     computed(() => `${todos.counts().active} items left`)
@@ -3150,7 +3332,7 @@ const counter = (svc: SignalsSvc) => (initial = 0) => {
 Usage with `use()`:
 
 ```typescript
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, use, computed } = svc;
   const { count, increment, decrement } = use(counter)(0);
 
@@ -3615,8 +3797,9 @@ const dropdown = (svc: SignalsSvc) => () => {
 };
 
 // Component uses the behavior
-const Dropdown = (svc: Service) => {
-  const disc = svc.use(dropdown)();
+const Dropdown = (svc: Service) => () => {
+  const { el, match, use } = svc;
+  const disc = use(dropdown)();
   return el('div')(
     el('button').props({ ...disc.triggerProps(), onclick: disc.toggle })('Toggle'),
     match(disc.isOpen, (open) => open ? el('div').props(disc.contentProps())('Content') : null)
@@ -3738,7 +3921,7 @@ A portable component depends on a **service contract**—a set of primitives it 
 ```typescript
 // This component depends on { el, signal, computed }
 // It doesn't know or care where those come from
-const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: ComputedFactory }) => {
+const Counter = (svc: { el: ElFactory; signal: SignalFactory; computed: ComputedFactory }) => () => {
   const { el, signal, computed } = svc;
   const count = signal(0);
 
@@ -3772,7 +3955,7 @@ This shape lets you:
 - Pass the component to `use()` for ergonomic instantiation
 
 ```typescript
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, use } = svc;
 
   return el('div')(
@@ -3905,7 +4088,7 @@ const MyComponent = () => {
 
 ```typescript
 // ✅ CORRECT - depend on the service contract
-const MyComponent = (svc: Service) => {
+const MyComponent = (svc: Service) => () => {
   const { signal } = svc;
   const count = signal(0);  // Works with any compatible service
 };
@@ -3917,14 +4100,14 @@ Hardcoding URLs, API calls, or other external dependencies makes code untestable
 
 ```typescript
 // ❌ WRONG - hardcoded URL, can't test without network
-const DataList = (svc: Service) => {
+const DataList = (svc: Service) => () => {
   const items = svc.resource(() => fetch('/api/items'));
 };
 ```
 
 ```typescript
 // ✅ CORRECT - accept dependencies via service or props
-const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => {
+const DataList = (svc: Service & { fetchItems: () => Promise<Item[]> }) => () => {
   const items = svc.resource(svc.fetchItems);
 };
 
@@ -4048,7 +4231,7 @@ type AppService = Service & {
   user: Readable<User | null>;
 };
 
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const { el, signal } = svc;
 
   // Create shared state
@@ -4059,9 +4242,9 @@ const App = (svc: Service) => {
   const appSvc: AppService = { ...svc, theme, user };
 
   return el('div')(
-    Header(appSvc),
-    Main(appSvc),
-    Footer(appSvc)
+    Header(appSvc)(),
+    Main(appSvc)(),
+    Footer(appSvc)()
   );
 };
 ```
@@ -4069,7 +4252,7 @@ const App = (svc: Service) => {
 Child components receive the extended service and can access the shared state directly:
 
 ```typescript
-const Header = (svc: AppService) => {
+const Header = (svc: AppService) => () => {
   const { el, computed, theme, user } = svc;
 
   return el('header').props({
@@ -4089,7 +4272,7 @@ No magic or implicit tree traversal. You can see exactly what's being passed whe
 Need to override a value for a subtree? Extend the service again:
 
 ```typescript
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   const { el, signal } = svc;
 
   // Override theme for this subtree
@@ -4097,8 +4280,8 @@ const DarkSection = (svc: AppService) => {
 
   return el('section')(
     // Everything in here sees theme = 'dark'
-    ThemedCard(darkSvc),
-    ThemedButton(darkSvc)
+    ThemedCard(darkSvc)(),
+    ThemedButton(darkSvc)()
   );
 };
 ```
@@ -4118,7 +4301,7 @@ const ThemedButton = ({ el, computed, theme }: AppService) => (props: { label: s
 };
 
 // Usage with `use`
-const App = ({ el, use }: AppService) => {
+const App = ({ el, use }: AppService) => () => {
   return el('div')(
     use(ThemedButton)({ label: 'Click me' })
   );
@@ -4154,10 +4337,10 @@ Components declare what they need:
 
 ```typescript
 // This component works with any service that has `theme`
-const ThemedCard = (svc: ThemedService) => { ... };
+const ThemedCard = (svc: ThemedService) => () => { ... };
 
 // This one needs the full app service
-const UserProfile = (svc: AppService) => { ... };
+const UserProfile = (svc: AppService) => () => { ... };
 ```
 
 ---
@@ -4186,7 +4369,7 @@ Creating signals at module scope seems convenient, but it causes state to leak a
 const theme = signal<'light' | 'dark'>('light');
 const user = signal<User | null>(null);
 
-const Header = (svc: Service) => {
+const Header = (svc: Service) => () => {
   // Reads global state - can't test in isolation
   return svc.el('header')(theme());
 };
@@ -4194,13 +4377,13 @@ const Header = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - state lives in the service, threaded explicitly
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   const user = svc.signal<User | null>(null);
 
   const appSvc = { ...svc, theme, user };
 
-  return svc.el('div')(Header(appSvc));
+  return svc.el('div')(Header(appSvc)());
 };
 ```
 
@@ -4212,7 +4395,7 @@ Mutating the service directly instead of creating a new one causes subtle bugs�
 
 ```typescript
 // ❌ WRONG - mutates shared service object
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   svc.theme = svc.signal('dark');  // Mutates the original!
   return svc.el('section')(/* ... */);
 };
@@ -4220,9 +4403,9 @@ const DarkSection = (svc: AppService) => {
 
 ```typescript
 // ✅ CORRECT - create a new extended service
-const DarkSection = (svc: AppService) => {
+const DarkSection = (svc: AppService) => () => {
   const darkSvc = { ...svc, theme: svc.signal('dark') };
-  return svc.el('section')(Child(darkSvc));
+  return svc.el('section')(Child(darkSvc)());
 };
 ```
 
@@ -4232,12 +4415,12 @@ Without proper types, you lose the main benefit of explicit service threading—
 
 ```typescript
 // ❌ WRONG - untyped extension loses type safety
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal('light');
   const appSvc = { ...svc, theme };  // Type is just Service & { theme: ... }
 
   // Later components have no idea what's in the service
-  return svc.el('div')(Header(appSvc));  // Header type is unclear
+  return svc.el('div')(Header(appSvc)());  // Header type is unclear
 };
 ```
 
@@ -4247,15 +4430,15 @@ type AppService = Service & {
   theme: Readable<'light' | 'dark'>;
 };
 
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   const theme = svc.signal<'light' | 'dark'>('light');
   const appSvc: AppService = { ...svc, theme };
 
   // Header explicitly declares what it needs
-  return svc.el('div')(Header(appSvc));
+  return svc.el('div')(Header(appSvc)());
 };
 
-const Header = (svc: AppService) => {
+const Header = (svc: AppService) => () => {
   // TypeScript knows exactly what's available
   const { el, theme } = svc;
   return el('header')(/* ... */);
@@ -4279,7 +4462,7 @@ const ThemedSection = (svc: Service) => (props: { children: RefSpec }) => {
 
 ```typescript
 // ✅ CORRECT - shared state created at app level, threaded down
-const App = (svc: Service) => {
+const App = (svc: Service) => () => {
   // Created once at the app level
   const theme = svc.signal<'light' | 'dark'>('light');
   const appSvc: AppService = { ...svc, theme };
@@ -4314,7 +4497,7 @@ In React and Solid, components are reactive functions that re-run during a rende
 In Rimitive, components are just functions that return specs. They run once, produce a data structure, and that's it. Errors are plain JavaScript errors that propagate normally.
 
 ```typescript
-const RiskyComponent = (svc: Service) => {
+const RiskyComponent = (svc: Service) => () => {
   const { el } = svc;
 
   // If this throws, it's a normal JS error
@@ -4327,11 +4510,12 @@ const RiskyComponent = (svc: Service) => {
 You handle it with... try/catch:
 
 ```typescript
-const SafeWrapper = (svc: Service) => {
+const SafeWrapper = (svc: Service) => () => {
   const { el } = svc;
+  const useRiskyComponent = svc(RiskyComponent);
 
   try {
-    return RiskyComponent(svc);
+    return useRiskyComponent();
   } catch (e) {
     return el('div').props({ className: 'error' })(
       'Something went wrong'
@@ -4347,7 +4531,7 @@ const SafeWrapper = (svc: Service) => {
 For async operations, use the `resource` primitive. It tracks error state explicitly:
 
 ```typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match } = svc;
 
   const products = resource((signal) =>
@@ -4438,13 +4622,14 @@ const errorBoundary = (svc: Service) =>
   };
 
 // Usage
-const App = (svc: Service) => {
-  const { el, use } = svc;
-  const withErrorBoundary = use(errorBoundary);
+const App = (svc: Service) => () => {
+  const { el } = svc;
+  const withErrorBoundary = svc(errorBoundary);
+  const useRiskyComponent = svc(RiskyComponent);
 
   return el('div')(
     withErrorBoundary(
-      () => RiskyComponent(svc),
+      () => useRiskyComponent(),
       (e) => el('div')(`Error: ${e}`)
     )
   );
@@ -4463,7 +4648,7 @@ Catching errors without logging or re-throwing hides bugs:
 
 ```typescript
 // ❌ WRONG - error silently disappears
-const LoadData = (svc: Service) => {
+const LoadData = (svc: Service) => () => {
   const { el, signal, effect } = svc;
   const data = signal<Data | null>(null);
 
@@ -4481,7 +4666,7 @@ const LoadData = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - track error state, show it to users, log it
-const LoadData = (svc: Service) => {
+const LoadData = (svc: Service) => () => {
   const { el, signal, effect, match } = svc;
   const data = signal<Data | null>(null);
   const error = signal<Error | null>(null);
@@ -4545,7 +4730,7 @@ Resources track errors automatically. Ignoring them causes crashes:
 
 ```typescript
 // ❌ WRONG - assumes data is always available
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, map } = svc;
   const products = resource((s) => fetchProducts(s));
 
@@ -4558,7 +4743,7 @@ const ProductList = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - handle error state explicitly
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match, map } = svc;
   const products = resource((s) => fetchProducts(s));
 
@@ -4583,7 +4768,7 @@ Catching an error but continuing as if nothing happened leads to inconsistent st
 
 ```typescript
 // ❌ WRONG - catches error but leaves state in limbo
-const SaveForm = (svc: Service) => {
+const SaveForm = (svc: Service) => () => {
   const { el, signal } = svc;
   const saving = signal(false);
 
@@ -4598,13 +4783,15 @@ const SaveForm = (svc: Service) => {
     // Only resets if no error - state is inconsistent
     saving(false);
   };
+
+  return el('form')(/* ... */);
 };
 ```
 
 ```typescript
 // ✅ CORRECT - always reset state in finally, track error separately
-const SaveForm = (svc: Service) => {
-  const { el, signal } = svc;
+const SaveForm = (svc: Service) => () => {
+  const { el, signal, match } = svc;
   const saving = signal(false);
   const saveError = signal<Error | null>(null);
 
@@ -4709,7 +4896,7 @@ emailField.valid();   // true
 Bind the field to an input element:
 
 ```typescript
-const EmailInput = (svc: Service) => {
+const EmailInput = (svc: Service) => () => {
   const { el, on, signal, computed } = svc;
 
   const email = svc(field)({
@@ -4796,7 +4983,7 @@ const form = <T extends Record<string, { value: Readable<unknown>; valid: Readab
 ## Full Form Example
 
 ```typescript
-const SignupForm = (svc: Service) => {
+const SignupForm = (svc: Service) => () => {
   const { el, on, computed, match } = svc;
 
   // Create fields
@@ -5125,432 +5312,6 @@ tags.remove(0);    // Proper reactive update
 
 // Or if you need custom operations, create a new array:
 tags.items(items => items.filter(f => f.valid()));
-```
-
----
-
-## Refs and DOM Access
-
-<!-- @tags: ref, dom-access, focus, imperative, third-party, canvas, resize-observer, cleanup -->
-
-Sometimes you need direct DOM access—for focus management, measurements, third-party library integration, or canvas drawing. Rimitive handles this with the `.ref()` method on elements.
-
----
-
-## Basic Ref Usage
-
-The `.ref()` method takes a callback that runs when the element is mounted:
-
-```typescript
-const AutofocusInput = ({ el }: Service) => {
-  return el('input').ref((node) => {
-    node.focus();
-  })();
-};
-```
-
----
-
-## Cleanup
-
-Return a cleanup function from the callback:
-
-```typescript
-const ResizeObserved = (svc: Service) => {
-  const { el, signal } = svc;
-  const dimensions = signal({ width: 0, height: 0 });
-
-  return el('div').ref((node) => {
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      dimensions({ width, height });
-    });
-
-    observer.observe(node);
-
-    // Return cleanup function
-    return () => observer.disconnect();
-  })(
-    // ... children
-  );
-};
-```
-
-The cleanup runs when the element is removed from the DOM.
-
----
-
-## Using Refs in Effects
-
-If you need to access a DOM node from an effect, store it in a signal:
-
-```typescript
-const FocusOnCondition = ({ el, signal, effect }: Service) => {
-  const inputRef = signal<HTMLInputElement | null>(null);
-  const shouldFocus = signal(false);
-
-  effect(() => {
-    const node = inputRef();
-    if (shouldFocus() && node) {
-      node.focus();
-    }
-  });
-
-  return el('div')(
-    el('input').ref((node) => inputRef(node))(),
-    el('button').props({
-      onclick: () => shouldFocus(true)
-    })('Focus Input')
-  );
-};
-```
-
-The signal-as-ref pattern works because:
-- The signal holds the node reference
-- Effects track the signal
-- When the condition changes, the effect runs and has access to the node
-
----
-
-## Passing Refs to Children
-
-If a parent needs access to a child's DOM node, pass a callback:
-
-```typescript
-const Input = ({ el }: Service, props: { onRef?: (node: HTMLInputElement) => void }) => {
-  return el('input').ref((node) => {
-    props.onRef?.(node);
-  })();
-};
-
-const Form = ({ el, use }: Service) => {
-  let inputNode: HTMLInputElement | null = null;
-
-  return el('form')(
-    use(Input)({ onRef: (node) => { inputNode = node; } }),
-    el('button').props({
-      onclick: () => inputNode?.focus()
-    })('Focus Input')
-  );
-};
-```
-
-Or with signals for reactive access:
-
-```typescript
-const Form = (svc: Service) => {
-  const { el, signal, use } = svc;
-  const inputRef = signal<HTMLInputElement | null>(null);
-
-  return el('form')(
-    use(Input)({ onRef: (node) => inputRef(node) }),
-    el('button').props({
-      onclick: () => inputRef()?.focus()
-    })('Focus Input')
-  );
-};
-```
-
----
-
-## Third-Party Library Integration
-
-Use refs to integrate non-reactive libraries:
-
-```typescript
-const Chart = (svc: Service, props: { data: Readable<ChartData> }) => {
-  const { el, effect } = svc;
-
-  return el('canvas').ref((canvas) => {
-    // Initialize chart library
-    const chart = new ChartLibrary(canvas, {
-      data: props.data()
-    });
-
-    // Update chart when data changes
-    const disposeEffect = effect(() => {
-      chart.update(props.data());
-    });
-
-    // Return cleanup
-    return () => {
-      disposeEffect();
-      chart.destroy();
-    };
-  })();
-};
-```
-
----
-
-## Multiple Refs
-
-For collections, store refs in a map:
-
-```typescript
-const ScrollableList = (svc: Service) => {
-  const { el, signal, map } = svc;
-
-  const items = signal(['a', 'b', 'c', 'd', 'e']);
-  const itemRefs = new Map<string, HTMLElement>();
-
-  const scrollToItem = (id: string) => {
-    itemRefs.get(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  return el('div')(
-    el('div')(
-      ...['a', 'b', 'c', 'd', 'e'].map(id =>
-        el('button').props({ onclick: () => scrollToItem(id) })(`Go to ${id}`)
-      )
-    ),
-    el('div').props({ style: 'height: 200px; overflow: auto' })(
-      map(items, (item) =>
-        el('div').props({ style: 'height: 100px' }).ref((node) => {
-          itemRefs.set(item(), node);
-          return () => itemRefs.delete(item());
-        })(item)
-      )
-    )
-  );
-};
-```
-
----
-
-## Why Not `createRef()`?
-
-Some frameworks have a standalone `createRef()` that returns an object with a `.current` property. Rimitive doesn't have this because:
-
-1. The callback pattern is more explicit about timing
-2. A signal holding the node serves the same purpose and integrates with reactivity
-3. It's one less API to learn
-
-If you want the `.current` pattern, it's trivial to create:
-
-```typescript
-const createRef = <T>() => {
-  let current: T | null = null;
-  return {
-    get current() { return current; },
-    set current(v: T | null) { current = v; },
-    callback: (node: T) => { current = node; }
-  };
-};
-
-// Usage
-const ref = createRef<HTMLInputElement>();
-el('input').ref(ref.callback)();
-// later: ref.current?.focus()
-```
-
-But the signal pattern is usually better because it's reactive.
-
----
-
-<!-- @tags: react, useRef, migration, local-state, element-scoped -->
-
-## Coming from React
-
-If you're used to React's `useRef`, here's how patterns translate:
-
-### DOM Element Access
-
-```tsx
-// React
-const inputRef = useRef<HTMLInputElement>(null);
-<input ref={inputRef} />
-inputRef.current?.focus();  // Might be null
-
-// Rimitive - callback receives element directly
-el('input').ref((input) => input.focus())()  // Element guaranteed to exist
-```
-
-No wrapper object, no null checking. The callback only runs when the element exists.
-
-### Accessing Element Later
-
-```tsx
-// React
-const inputRef = useRef<HTMLInputElement>(null);
-const handleClick = () => inputRef.current?.focus();
-
-// Rimitive - capture in closure
-let inputEl: HTMLInputElement;
-el('input').ref((el) => { inputEl = el })()
-const handleClick = () => inputEl.focus();  // No null check needed
-```
-
-### Mutable Values (Non-Reactive State)
-
-React's `useRef` is often used for values that shouldn't trigger re-renders. In Rimitive, there's no re-rendering to worry about—just use variables:
-
-```tsx
-// React
-const renderCount = useRef(0);
-useEffect(() => { renderCount.current++; });
-
-// Rimitive - just a variable
-let callCount = 0;
-effect(() => { callCount++; });
-```
-
-### Forwarding Refs
-
-```tsx
-// React
-const Input = forwardRef<HTMLInputElement>((props, ref) => (
-  <input ref={ref} {...props} />
-));
-
-// Rimitive - pass a callback
-const Input = (svc: Service, onRef?: (el: HTMLInputElement) => void) =>
-  svc.el('input').ref((el) => onRef?.(el))();
-```
-
-### Element-Scoped State
-
-A powerful pattern: create signals inside `.ref()` and return an effect. The state is scoped to the element's lifecycle:
-
-```typescript
-el('div').ref((element) => {
-  // Local state - created when element mounts
-  const hovered = signal(false);
-
-  element.onmouseenter = () => hovered(true);
-  element.onmouseleave = () => hovered(false);
-
-  // Effect tied to element - disposed when element unmounts
-  return effect(() => {
-    element.style.backgroundColor = hovered() ? 'lightblue' : 'white';
-  });
-})()
-```
-
-When the element is removed:
-1. The effect is disposed (stops running)
-2. The signal has no readers (gets garbage collected)
-3. Event handlers are cleaned up with the element
-
-This is useful for self-contained interactive elements that manage their own state.
-
----
-
-## Anti-patterns
-
-### Don't Access Refs Before Mount
-
-Ref callbacks run at mount time. If you try to access the node synchronously or in an effect's first run, it won't exist yet:
-
-```typescript
-// ❌ WRONG - ref is null on first effect run
-const FocusInput = (svc: Service) => {
-  const { el, signal, effect } = svc;
-  const inputRef = signal<HTMLInputElement | null>(null);
-
-  // This runs immediately, before the ref callback
-  effect(() => {
-    inputRef()!.focus();  // Error! inputRef() is null
-  });
-
-  return el('input').ref((node) => inputRef(node))();
-};
-```
-
-```typescript
-// ✅ CORRECT - guard against null, or trigger focus differently
-const FocusInput = (svc: Service) => {
-  const { el, signal, effect } = svc;
-  const inputRef = signal<HTMLInputElement | null>(null);
-
-  effect(() => {
-    const node = inputRef();
-    if (node) {  // Guard against null
-      node.focus();
-    }
-  });
-
-  return el('input').ref((node) => inputRef(node))();
-};
-
-// Or focus directly in the ref callback
-const FocusInput = (svc: Service) => {
-  return svc.el('input').ref((node) => node.focus())();
-};
-```
-
-### Don't Forget Cleanup
-
-Refs that set up observers, listeners, or other subscriptions need cleanup to avoid memory leaks:
-
-```typescript
-// ❌ WRONG - observer never disconnected
-const Measured = (svc: Service) => {
-  const { el, signal } = svc;
-  const size = signal({ width: 0, height: 0 });
-
-  return el('div').ref((node) => {
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      size({ width, height });
-    });
-    observer.observe(node);
-    // Missing cleanup! Observer lives forever
-  })();
-};
-```
-
-```typescript
-// ✅ CORRECT - return cleanup function
-const Measured = (svc: Service) => {
-  const { el, signal } = svc;
-  const size = signal({ width: 0, height: 0 });
-
-  return el('div').ref((node) => {
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      size({ width, height });
-    });
-    observer.observe(node);
-
-    return () => observer.disconnect();  // Cleanup when unmounted
-  })();
-};
-```
-
-### Don't Use Refs for Declarative Updates
-
-Refs are for imperative DOM access. If you're using refs to update content that could be reactive, you're fighting the framework:
-
-```typescript
-// ❌ WRONG - imperatively updating text content via ref
-const Counter = (svc: Service) => {
-  const { el, signal } = svc;
-  const count = signal(0);
-
-  return el('div')(
-    el('span').ref((node) => {
-      // Don't do this! Manually syncing signal to DOM
-      svc.effect(() => {
-        node.textContent = `Count: ${count()}`;
-      });
-    })(),
-    el('button').props({ onclick: () => count(count() + 1) })('+')
-  );
-};
-```
-
-```typescript
-// ✅ CORRECT - let reactivity handle it
-const Counter = (svc: Service) => {
-  const { el, signal, computed } = svc;
-  const count = signal(0);
-
-  return el('div')(
-    el('span')(computed(() => `Count: ${count()}`)),  // Reactive!
-    el('button').props({ onclick: () => count(count() + 1) })('+')
-  );
-};
 ```
 
 ---
@@ -5935,7 +5696,7 @@ Rimitive handles async state explicitly through two primitives: `resource` for r
 The `resource` primitive wraps async operations and exposes their state reactively:
 
 ```typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match } = svc;
 
   const products = resource((signal) =>
@@ -6019,7 +5780,7 @@ But this is just a function—nothing special about it.
 When loading multiple resources, handle them together:
 
 ```typescript
-const Dashboard = (svc: Service) => {
+const Dashboard = (svc: Service) => () => {
   const { el, resource, computed, match } = svc;
 
   const user = resource((s) => fetchUser(s));
@@ -6036,15 +5797,15 @@ const Dashboard = (svc: Service) => {
   );
 
   return match(allLoading, (loading) => {
-    if (loading) return Spinner(svc);
+    if (loading) return Spinner(svc)();
 
     const error = anyError();
-    if (error) return ErrorMessage(svc, error);
+    if (error) return ErrorMessage(svc)(error);
 
     return el('div')(
-      UserHeader(svc, user.data()!),
-      StatsPanel(svc, stats.data()!),
-      NotificationList(svc, notifications.data()!)
+      UserHeader(svc)(user.data()!),
+      StatsPanel(svc)(stats.data()!),
+      NotificationList(svc)(notifications.data()!)
     );
   });
 };
@@ -6057,7 +5818,7 @@ const Dashboard = (svc: Service) => {
 When one resource depends on another:
 
 ```typescript
-const ProductDetail = (svc: Service) => {
+const ProductDetail = (svc: Service) => () => {
   const { el, resource, computed, match } = svc;
 
   const productId = svc.params.id; // from router
@@ -6077,17 +5838,17 @@ const ProductDetail = (svc: Service) => {
 
   return match(product, (state) => {
     if (state.status !== 'ready') {
-      return state.status === 'pending' ? Spinner(svc) : ErrorMessage(svc, state.error);
+      return state.status === 'pending' ? Spinner(svc)() : ErrorMessage(svc)(state.error);
     }
 
     return el('div')(
-      ProductInfo(svc, state.value),
+      ProductInfo(svc)(state.value),
       match(reviews, (reviewState) =>
         reviewState.status === 'pending'
           ? el('div')('Loading reviews...')
           : reviewState.status === 'error'
             ? el('div')('Failed to load reviews')
-            : ReviewList(svc, reviewState.value)
+            : ReviewList(svc)(reviewState.value)
       )
     );
   });
@@ -6127,7 +5888,7 @@ el('button').props({
 For simpler async boundaries—especially in SSR scenarios—use `load()`:
 
 ```typescript
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, load, match } = svc;
 
   return load(
@@ -6135,11 +5896,11 @@ const ProductList = (svc: Service) => {
     (state) => match(state.status, (status) => {
       switch (status) {
         case 'pending':
-          return Spinner(svc);
+          return Spinner(svc)();
         case 'error':
-          return ErrorMessage(svc, state.error());
+          return ErrorMessage(svc)(state.error());
         case 'ready':
-          return ProductGrid(svc, state.data()!);
+          return ProductGrid(svc)(state.data()!);
       }
     })
   );
@@ -6162,7 +5923,7 @@ The key difference: `load()` takes a fetcher and a renderer. The renderer receiv
 
 ```typescript
 // load() is ideal for SSR - data and UI are co-located
-const Page = (svc: Service) => {
+const Page = (svc: Service) => () => {
   const { el, load, match } = svc;
 
   return el('main')(
@@ -6170,10 +5931,10 @@ const Page = (svc: Service) => {
       () => fetchPageData(),
       (state) => match(state.status, (status) =>
         status === 'ready'
-          ? PageContent(svc, state.data()!)
+          ? PageContent(svc)(state.data()!)
           : status === 'error'
-            ? ErrorFallback(svc)
-            : LoadingSkeleton(svc)
+            ? ErrorFallback(svc)()
+            : LoadingSkeleton(svc)()
       )
     )
   );
@@ -6187,7 +5948,7 @@ const Page = (svc: Service) => {
 Resources should be disposed when no longer needed:
 
 ```typescript
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const { el, resource } = svc;
 
   const products = resource((s) => fetchProducts(s));
@@ -6209,21 +5970,21 @@ Only rendering the "ready" case leads to a broken UI during loading or when erro
 
 ```typescript
 // ❌ WRONG - crashes when data isn't ready, no error handling
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, map } = svc;
 
   const products = resource((s) => fetchProducts(s));
 
   // products.data() is undefined while loading!
   return el('div')(
-    map(products.data()!, (p) => ProductCard(svc, p))
+    map(products.data()!, (p) => ProductCard(svc)(p))
   );
 };
 ```
 
 ```typescript
 // ✅ CORRECT - handle all states explicitly
-const ProductList = (svc: Service) => {
+const ProductList = (svc: Service) => () => {
   const { el, resource, match, map } = svc;
 
   const products = resource((s) => fetchProducts(s));
@@ -6231,12 +5992,12 @@ const ProductList = (svc: Service) => {
   return match(products, (state) => {
     switch (state.status) {
       case 'pending':
-        return Spinner(svc);
+        return Spinner(svc)();
       case 'error':
-        return ErrorMessage(svc, state.error);
+        return ErrorMessage(svc)(state.error);
       case 'ready':
         return el('div')(
-          map(state.value, (p) => ProductCard(svc, p))
+          map(state.value, (p) => ProductCard(svc)(p))
         );
     }
   });
@@ -6249,7 +6010,7 @@ Resources keep fetching and updating until disposed. Without cleanup, they leak 
 
 ```typescript
 // ❌ WRONG - resource lives forever, even after component unmounts
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const products = svc.resource((s) => fetchProducts(s));
 
   return svc.el('div')(/* ... */);
@@ -6259,7 +6020,7 @@ const ProductPanel = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - dispose when element unmounts
-const ProductPanel = (svc: Service) => {
+const ProductPanel = (svc: Service) => () => {
   const products = svc.resource((s) => fetchProducts(s));
 
   return svc.el('div').ref(() => products.dispose)(/* ... */);
@@ -6272,7 +6033,7 @@ Resources pass an AbortSignal to cancel in-flight requests. Ignoring it causes r
 
 ```typescript
 // ❌ WRONG - ignores signal, old requests may resolve after new ones
-const Search = (svc: Service) => {
+const Search = (svc: Service) => () => {
   const query = svc.signal('');
 
   const results = svc.resource(() =>  // No signal parameter!
@@ -6283,7 +6044,7 @@ const Search = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - pass signal to fetch for automatic cancellation
-const Search = (svc: Service) => {
+const Search = (svc: Service) => () => {
   const query = svc.signal('');
 
   const results = svc.resource((signal) =>
@@ -6300,7 +6061,7 @@ Resources are for reactive data fetching (GET). For mutations (POST, PUT, DELETE
 
 ```typescript
 // ❌ WRONG - resource for a mutation doesn't make sense
-const DeleteButton = (svc: Service) => {
+const DeleteButton = (svc: Service) => () => {
   const deletion = svc.resource((s) =>
     fetch('/api/item', { method: 'DELETE', signal: s })
   );  // This fetches immediately on mount!
@@ -6311,7 +6072,7 @@ const DeleteButton = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - use asyncAction for imperative mutations
-const DeleteButton = (svc: Service) => {
+const DeleteButton = (svc: Service) => () => {
   const { el, signal } = svc;
 
   const pending = signal(false);
@@ -6342,7 +6103,7 @@ The `data()` accessor returns `undefined` until the resource is ready. Using it 
 
 ```typescript
 // ❌ WRONG - data() is undefined until ready
-const UserProfile = (svc: Service) => {
+const UserProfile = (svc: Service) => () => {
   const user = svc.resource((s) => fetchUser(s));
 
   // This crashes during loading!
@@ -6352,7 +6113,7 @@ const UserProfile = (svc: Service) => {
 
 ```typescript
 // ✅ CORRECT - use match to ensure data exists
-const UserProfile = (svc: Service) => {
+const UserProfile = (svc: Service) => () => {
   const { el, resource, match } = svc;
   const user = resource((s) => fetchUser(s));
 
