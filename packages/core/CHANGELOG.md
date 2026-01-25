@@ -1,5 +1,11 @@
 # @rimitive/core
 
+## 0.3.0
+
+### Minor Changes
+
+- 1d03817: New composition APIs, flush strategies for effects/resources, and improved SSR support
+
 ## 0.2.1
 
 ### Patch Changes
