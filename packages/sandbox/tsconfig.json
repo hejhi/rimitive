@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "emitDeclarationOnly": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "node_modules", "dist"],
+  "references": [
+    { "path": "../core" },
+    { "path": "../signals" },
+    { "path": "../view" },
+    { "path": "../router" },
+    { "path": "../resource" }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "name": "@rimitive/sandbox",
+  "version": "0.1.0",
+  "description": "Live code playground for Rimitive examples",
+  "author": "Rimitive Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hejhi/rimitive.git",
+    "directory": "packages/sandbox"
+  },
+  "keywords": [
+    "rimitive",
+    "sandbox",
+    "playground",
+    "code-editor",
+    "interactive"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "!dist/**/*.test.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "bundle-types": "tsx scripts/bundle-types.ts",
+    "prebuild": "pnpm bundle-types",
+    "build": "pnpm typecheck && vite build && tsc -b",
+    "dev": "vite build --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@rimitive/core": "workspace:*",
+    "@rimitive/resource": "workspace:*",
+    "@rimitive/router": "workspace:*",
+    "@rimitive/signals": "workspace:*",
+    "@rimitive/view": "workspace:*",
+    "esbuild-wasm": "0.27.2"
+  },
+  "devDependencies": {
+    "rimraf": "6.1.2",
+    "tsx": "4.20.3",
+    "typescript": "5.9.3",
+    "vite": "7.3.1",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "4.0.17"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}
