@@ -64,6 +64,11 @@ function formatSuiteName(name: string): string {
 function getMaxTime(benchmarks: Benchmark[]): number {
   return Math.max(...benchmarks.map(b => b.time));
 }
+
+// Get a display label for a benchmark - just use the name
+function getLabel(bench: Benchmark): string {
+  return bench.name;
+}
 ---
 
 {!hasData ? (
@@ -89,13 +94,12 @@ function getMaxTime(benchmarks: Benchmark[]): number {
 
           <div class="chart">
             {suite.benchmarks.map((bench) => {
-              const argValue = Object.values(bench.args || {})[0];
               const barWidth = (bench.time / maxTime) * 100;
 
               return (
                 <div class="bar-row">
-                  <div class="label">{argValue ?? 'default'}</div>
-                  <div class="bar-container">
+                  <div class="label">{getLabel(bench)}</div>
+                  <div class="bar-line">
                     <div class="bar" style={`width: ${barWidth}%`}></div>
                     <span class="time">{formatTime(bench.time)}</span>
                   </div>
@@ -162,24 +166,23 @@ function getMaxTime(benchmarks: Benchmark[]): number {
 
   .bar-row {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--sl-color-gray-6);
+    border-radius: 0.375rem;
   }
 
   .label {
-    min-width: 80px;
     font-size: 0.85rem;
-    text-align: right;
-    font-family: monospace;
     color: var(--sl-color-gray-2);
   }
 
-  .bar-container {
-    flex: 1;
+  .bar-line {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    height: 28px;
+    height: 24px;
   }
 
   .bar {
@@ -187,7 +190,6 @@ function getMaxTime(benchmarks: Benchmark[]): number {
     background: linear-gradient(90deg, var(--sl-color-accent) 0%, var(--sl-color-accent-high) 100%);
     border-radius: 0.25rem;
     min-width: 4px;
-    transition: width 0.3s ease;
   }
 
   .time {
