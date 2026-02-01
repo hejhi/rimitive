@@ -14,6 +14,7 @@
 export { SignalModule, createSignalFactory } from './signal';
 export { ComputedModule } from './computed';
 export { EffectModule } from './effect';
+export { IterModule, createIterFactory } from './iter';
 export { mt, raf, debounce } from './strategies';
 export { BatchModule } from './batch';
 export { SubscribeModule, createSubscribeFactory } from './subscribe';
@@ -43,6 +44,8 @@ export type { ComputedFactory, ComputedDeps } from './computed';
 export type { EffectFactory, EffectDeps, FlushStrategy } from './effect';
 export type { BatchFactory } from './batch';
 export type { SubscribeFunction, SubscribeDeps } from './subscribe';
+export type { IterFactory, IterDeps, Iter, IterNode } from './iter';
+export { reconcile, type ReconcileCallbacks } from './reconcile';
 
 // =============================================================================
 // Helper Types - For custom helper implementations

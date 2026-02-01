@@ -55,6 +55,18 @@
       "import": "./dist/untrack.js",
       "types": "./dist/untrack.d.ts"
     },
+    "./iter": {
+      "import": "./dist/iter.js",
+      "types": "./dist/iter.d.ts"
+    },
+    "./reconcile": {
+      "import": "./dist/reconcile.js",
+      "types": "./dist/reconcile.d.ts"
+    },
+    "./lis": {
+      "import": "./dist/lis.js",
+      "types": "./dist/lis.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
