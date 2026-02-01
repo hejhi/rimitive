@@ -5,7 +5,7 @@
     "email": "hello@rimitive.dev"
   },
   "metadata": {
-    "description": "Claude Code plugins for developing with Rimitive - composable reactive primitives",
+    "description": "Claude Code plugins for developing with Rimitive - composable reactive modules",
     "version": "1.0.0"
   },
   "plugins": [
@@ -24,7 +24,7 @@
     {
       "name": "rimitive-view",
       "source": "./plugins/rimitive-view",
-      "description": "Build views with el, map, match, and other view primitives",
+      "description": "Build views with el, map, match, and other view modules",
       "version": "1.0.0"
     },
     {

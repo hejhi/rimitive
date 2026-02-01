@@ -10,6 +10,9 @@ build
 out
 *.tsbuildinfo
 
+# Generated files
+packages/sandbox/src/ui/bundled-types.ts
+
 # API Extractor
 temp
 api-reports

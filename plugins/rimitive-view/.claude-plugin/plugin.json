@@ -1,7 +1,7 @@
 {
   "name": "rimitive-view",
   "version": "1.0.0",
-  "description": "Build views with el, map, match, and other view primitives",
+  "description": "Build views with el, map, match, and other view modules",
   "author": { "name": "Rimitive" },
   "skills": ["./skills/"]
 }

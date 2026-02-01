@@ -1,11 +1,11 @@
 ---
 name: rimitive-adapter
-description: Create custom adapters for Rimitive view primitives. Use when building renderers for Canvas, WebGL, terminal, native platforms, or any tree-based target.
+description: Create custom adapters for Rimitive view modules. Use when building renderers for Canvas, WebGL, terminal, native platforms, or any tree-based target.
 ---
 
 # Creating Rimitive Adapters
 
-An **adapter** abstracts tree operations for any node-based rendering target. It decouples view primitives (`el()`, `map()`, `match()`) from specific platforms, allowing the same view code to work with DOM, server rendering, Canvas, WebGL, terminals, or custom renderers.
+An **adapter** abstracts tree operations for any node-based rendering target. It decouples view modules (`el()`, `map()`, `match()`) from specific platforms, allowing the same view code to work with DOM, server rendering, Canvas, WebGL, terminals, or custom renderers.
 
 Adapters are minimal by design—just 5 core tree operations plus optional lifecycle hooks.
 

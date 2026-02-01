@@ -59,7 +59,7 @@ The `@rimitive/core` package provides these composition utilities:
 | `transient(module)` | Mark module to create fresh instance per `fork()` |
 | `lazy(module)` | Defer module creation until first access |
 
-### Signal Primitives
+### Signal Modules
 
 Import modules from `@rimitive/signals/extend`:
 
@@ -76,7 +76,7 @@ Effects are **synchronous** - they run immediately when dependencies change. Thi
 
 **Flush strategies** for effects: `mt` (microtask), `raf` (requestAnimationFrame), `timeout`, or custom. These are no-ops on the server for SSR compatibility.
 
-### View Primitives
+### View Modules
 
 View modules are factory functions that take an adapter:
 
@@ -92,7 +92,7 @@ const svc = compose(
 );
 ```
 
-Primitives:
+View tools:
 
 - `el(tag).props({...})(...children)` - element specs
 - `map(items, keyFn, render)` - reactive lists
@@ -127,8 +127,8 @@ Behaviors can compose other behaviors by passing the service through.
 ```
 packages/
 ├── core/              # Composition: compose, defineModule, merge, override, fork
-├── signals/           # Reactive primitives
-├── view/              # UI primitives (el, map, match, portal, load)
+├── signals/           # Reactive core (signal, computed, effect)
+├── view/              # View layer (el, map, match, portal, load)
 ├── router/            # Client-side routing
 ├── resource/          # Async data fetching with resource()
 ├── ssr/               # Server-side rendering and hydration
@@ -146,7 +146,7 @@ packages/
 - **Types**: `import type { Readable, SignalFunction } from '@rimitive/signals'`
 - **View factories**: `import { createElModule } from '@rimitive/view/el'`
 - **Adapters**: `import { createDOMAdapter } from '@rimitive/view/adapters/dom'`
-- **SSR**: `import { createLinkedomAdapter, renderToStringAsync } from '@rimitive/ssr/server'`
+- **SSR**: `import { createParse5Adapter, renderToStringAsync } from '@rimitive/ssr/server'`
 
 The `/extend` path exports modules and factory functions for composition. The base path exports types.
 

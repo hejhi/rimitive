@@ -11,54 +11,63 @@
 
 # Rimitive
 
-_"Primitive" was taken so I dropped the "P"_
+Type-safe reactive primitives, atomic tooling, and compositional patterns you can use anywhere:
 
-Reactive primitives and composable libraries that work with them for TypeScript. Compose signals, views, and behaviors into applications with fine-grained reactivity. An awkward name but a lot of personality 🌝
+- Add signals to your no-build vanilla js project
+- Build a headless design system with portable, reactive UI logic
+- Write UI components for any javascript environment or platform
+- Create a full stack SSR-with-streaming app
 
-Start with signals, add what you need as you go, and swap out anything you want.
+All constructed on a foundation of reactive primitives. Rimitive is built for low commitment and no framework lock-in. Take as much or as little of it as you want, and easily customize, extend, or replace along the way.
+
+## Quickstart
+
+### Install and Create a Service
 
 ```bash
 npm install @rimitive/core @rimitive/signals
 ```
 
-Rimitive grows with you starting from your most simple reactive use cases:
+Rimitive allows you to create isolated reactive services (with no leakage or pollution of global state) through composition:
 
 ```ts
 import { compose } from '@rimitive/core';
+
+// 1. Import the modules you want to use
 import {
   SignalModule,
   ComputedModule,
   EffectModule,
 } from '@rimitive/signals/extend';
 
+// 2. Create a reactive service for your app or portable component
 const { signal, computed, effect } = compose(
   SignalModule,
   ComputedModule,
   EffectModule
 );
 
-const you = signal('🫸');
-const rimitive = signal('🫷');
-const highFive = computed(() => `${you()}💥${rimitive()}`);
+// 3. Use it wherever you want, no build or transpilation required
+const count = signal(0);
+const doubled = computed(() => count() * 2);
 
-effect(() => console.log(highFive())); // 🫸💥🫷
+effect(() => console.log(doubled())); // logs: 0
+
+count(1); // logs: 2
+count(2); // logs: 4
 ```
 
-`compose()` wires modules together into a tiny, encapsulated, reactive service, with only what you asked for. But Rimitive takes primitives to another level, so hold onto your butts!
+If that's what you came for, you can stop here and use this in your vanilla js app or use/write bindings to bring Rimitive signals to other frameworks!
 
----
+### Add Some UI
 
-## Add a view layer
+If you don't want to opt-in to a reactive framework like React, you can use Rimitive to tack on only the UI you need, complete with **fine-grained reactivity**:
 
-If you want to add a UI, sprinkle in some UI primitives:
+```bash
+npm install @rimitive/view
+```
 
 ```ts
-import { compose } from '@rimitive/core';
-import {
-  SignalModule,
-  ComputedModule,
-  EffectModule,
-} from '@rimitive/signals/extend';
 import { createElModule } from '@rimitive/view/el';
 import { createDOMAdapter } from '@rimitive/view/adapters/dom';
 import { MountModule } from '@rimitive/view/deps/mount';
@@ -67,62 +76,171 @@ const { signal, computed, el, mount } = compose(
   SignalModule,
   ComputedModule,
   EffectModule,
-  // Add these 👇
+  // 👇 As easy as adding some new modules or module factories to your service
   createElModule(createDOMAdapter()),
   MountModule
 );
 
-const App = () => {
-  const together = signal(false);
+const Counter = () => {
+  const count = signal(0);
 
   return el('div')(
-    el('p').props({
-      textContent: computed(() => (together() ? '🫸💥🫷' : '🫸   🫷')),
-    }),
-    el('button').props({ onclick: () => together(!together()) })('High five!')
+    el('span')(computed(() => `Count: ${count()}`)),
+    el('button').props({ onclick: () => count(count() + 1) })('Increment')
   );
 };
 
-document.body.appendChild(mount(App()).element!);
+document.body.appendChild(mount(Counter()).element!);
 ```
 
-Rimitive does things _a little differently_:
+Fun fact: UI "components" in Rimitive are just a function—they never re-render. They return a **spec** of a UI that can be mounted and unmounted...that's it. No build or transpilation required!
 
-1. The component function runs once
-2. The DOM structure is created once
-3. When `together` changes, only that one text node updates (no diffing, reconciliation, or component re-renders)
+### Create Some Behaviors
 
-Reactivity lives in the primitives, not in components. No component re-renders! Just mounting and unmounting.
+A **behavior** is a pattern for encapsulating reactive state and actions into a reusable function (inspired by [SAM](https://sam.js.org/) and [downshift](https://www.downshift-js.com/)):
 
-Rimitive primitives (yes it sounds absurd) are environment-agnostic, which is where adapters come into play—which is why `createElModule` takes an adapter.
+```ts
+const useDisclosure = (initialOpen = false) => {
+  const isOpen = signal(initialOpen);
 
-Rimitive ships DOM, SSR, and hydration adapters, but you can write your own for whatever you want (Canvas, WebGL, or anything tree-shaped).
+  return {
+    isOpen,
+    open: () => isOpen(true),
+    close: () => isOpen(false),
+    toggle: () => isOpen(!isOpen()),
+  };
+};
 
-But that's just the beginning. Rimitive provides common tooling that utilizes these primitives, including routing, async loading, SSR, and streaming—all on-demand, swappable, extensible, and completely optional.
+// Use it anywhere
+const disc = useDisclosure();
+disc.open();
+```
 
-For the full picture, check out the [docs](https://rimitive.dev/guides/getting-started)!
+`use*` is just a naming convention; it doesn't confer any reactive superpowers like other frameworks, and there's no rules. This is just a pattern.
+
+### Composition and Portability
+
+Instead of directly importing from a shared service, you can wrap functions for service injection:
+
+```ts
+// Instead of importing directly...
+const useDisclosure = (initialOpen = false) => {
+  const isOpen = signal(initialOpen); // signal comes from somewhere
+  // ...
+};
+
+// ...receive what you need
+const disclosure =
+  ({ signal }: Service) =>
+  (initialOpen = false) => {
+    const isOpen = signal(initialOpen);
+    // ...
+  };
+
+// Then wire it up
+const useDisclosure = svc(counter); // svc provides signal, computed, etc.
+```
+
+The same pattern works for components and ergonomic composition:
+
+```ts
+const dropdown = (svc: Service) => {
+  // Compose other components or behaviors in the service closure
+  // Runs a single time (not on every mount/unmount)
+  const useDisclosure = svc(disclosure);
+
+  return (options?: { initialOpen?: boolean }) => {
+    const disc = useDisclosure(options?.initialOpen ?? false);
+
+    // Add keyboard handling
+    // Look ma, no memoization required! Remember? No re-rendering?
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      disc.toggle();
+    };
+
+    return {
+      ...disc,
+      onKeyDown,
+    };
+  };
+};
+
+// Wire it up
+const Dropdown = svc(dropdown);
+const app = svc.mount(Dropdown());
+```
+
+Typing is a breeze:
+
+```ts
+export const svc = compose(SignalModule, ComputedModule);
+export type Service = typeof svc;
+
+const myComponent = ({ signal, computed }: Service) => {
+  return () => // ...
+};
+```
+
+Now you're a Rimitive expert! Everything else simply builds on top of this. Routing, data fetching, even SSR (with or without streaming)—they all work the same way. This just demonstrates the beginnings of what's possible with Rimitive.
+
+---
+
+## The stack
+
+Rimitive is intentionally layered, allowing you to opt-in only as needed.
+
+```
+┌─────────────────────────────────────────┐
+│  Domain Tooling                         │
+│  view (el, map), router, resource, etc  │
+├─────────────────────────────────────────┤
+│  Adapters                               │
+│  DOM, SSR, canvas, your own             │
+├─────────────────────────────────────────┤
+│  Reactive Core                          │
+│  signal, computed, effect, etc          │
+└─────────────────────────────────────────┘
+```
+
+- **Reactive core** — `signal`, `computed`, `effect`, etc. The foundation everything else is built with.
+- **Domain tooling** — `el`, `map`, etc for views, `matches` for routing, `resource` for data. Each domain provides (but does not prescribe) tools built on the reactive core. Create your own!
+- **Adapters** — Plug in where you want it to run, and the types flow through. DOM, SSR, logic-only (for hydration or testing), or roll your own. Any UI that can be modeled as a tree can have an adapter.
+
+Each layer is tiny, opt-in, swappable, and extensible. Use just the signals, plug in only the views you need later, or bring behaviors to other frameworks like React.
 
 ---
 
 ## Packages
 
-| Package                                                       | Description                                                                                                           |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| [`@rimitive/core`](packages/core)                             | Composition engine — `compose()`, `defineModule()`                                                                    |
-| [`@rimitive/signals`](packages/signals)                       | Reactive primitives — `signal`, `computed`, `effect`, `batch`                                                         |
-| [`@rimitive/view`](packages/view)                             | UI primitives — `el`, `map`, `match`, `portal`, `load`                                                                |
-| [`@rimitive/router`](packages/router)                         | Reactive routing — `matches`, `navigate()`, `query`                                                                   |
-| [`@rimitive/resource`](packages/resource)                     | Async data fetching with `resource()`                                                                                 |
-| [`@rimitive/ssr`](packages/ssr)                               | Server-side rendering and streaming                                                                                   |
-| [`@rimitive/react`](packages/react)                           | React bindings                                                                                                        |
-| [`@rimitive/mcp`](packages/mcp)                               | MCP server exposing Rimitive docs to LLMs                                                                             |
-| [`@rimitive/devtools-extension`](packages/devtools-extension) | Chrome DevTools extension ([download](https://github.com/hejhi/rimitive/releases?q=devtools-extension&expanded=true)) |
+| Package                                   | Layer          | What it does                         |
+| ----------------------------------------- | -------------- | ------------------------------------ |
+| [`@rimitive/core`](packages/core)         | Core           | Wires modules together — `compose()` |
+| [`@rimitive/signals`](packages/signals)   | Reactive core  | `signal`, `computed`, `effect`       |
+| [`@rimitive/view`](packages/view)         | Domain tooling | View layer — `el`, `map`, `match`    |
+| [`@rimitive/router`](packages/router)     | Domain tooling | Routing — `matches`, `navigate()`    |
+| [`@rimitive/resource`](packages/resource) | Domain tooling | Async data fetching                  |
+| [`@rimitive/ssr`](packages/ssr)           | Adapters       | Server-side rendering and streaming  |
+| [`@rimitive/react`](packages/react)       | Bindings       | Use Rimitive behaviors in React      |
 
----
+Start with `@rimitive/core` and `@rimitive/signals`. Add the rest as you need them.
 
-## Extending
+## Advanced
 
-The modules that ship with Rimitive are built with the same `defineModule()` that's available to you:
+### Adapters
+
+Same code, different targets:
+
+```ts
+createElModule(createDOMAdapter()); // Browser
+createElModule(createParse5Adapter()); // Server (SSR)
+createElModule(myCanvasAdapter()); // Your own
+```
+
+### Extending
+
+Create your own modules with `defineModule()`:
 
 ```ts
 import { defineModule } from '@rimitive/core';
@@ -135,33 +253,7 @@ const LoggerModule = defineModule({
 const { signal, log } = compose(SignalModule, LoggerModule);
 ```
 
-Create your own primitives! Swap out the entire reactive system if you want, or build adapters for new renderers. See the [Custom Modules](https://rimitive.dev/guides/custom-modules/) guide.
-
----
-
-## AI
-
-Just because Rimitive is brand new shouldn't mean an AI stumbles while trying to write idiomatic Rimitive code. [`@rimitive/mcp`](packages/mcp) provides an MCP server that exposes the entire Rimitive docs as meticulously tagged, searchable tools.
-
-If you use [Claude Code](https://claude.ai/code), there are on-demand plugins too:
-
-| Plugin                                           | Purpose                                      |
-| ------------------------------------------------ | -------------------------------------------- |
-| [`rimitive-behavior`](plugins/rimitive-behavior) | Headless behaviors — portable reactive logic |
-| [`rimitive-module`](plugins/rimitive-module)     | Custom modules with `defineModule()`         |
-| [`rimitive-view`](plugins/rimitive-view)         | Views with `el`, `map`, `match`              |
-
----
-
-## Inspirations
-
-Rimitive builds on ideas from _brilliant_ people who've thought deeply about reactivity and composition:
-
-- [alien-signals](https://github.com/stackblitz/alien-signals), [reactively](https://github.com/milomg/reactively): push-pull reactivity, graph coloring, primitives in general
-- [solidjs](https://www.solidjs.com), [radix](https://www.radix-ui.com): beautiful implementations of primitives in their respective domains
-- [downshift](https://www.downshift-js.com/use-select): headless, portable UI patterns
-- [jotai](https://jotai.org/docs/core/atom): treating atoms as configs rather than values
-- [ProseMirror](https://prosemirror.net): extensibility and determinism
+See [Custom Modules](https://rimitive.dev/guides/custom-modules/) for the full picture.
 
 ---
 
@@ -170,3 +262,5 @@ Rimitive builds on ideas from _brilliant_ people who've thought deeply about rea
 Alpha. Tested, benchmarked, used in personal projects. Not yet battle-tested in production.
 
 [Why Rimitive?](https://rimitive.dev/why/) — the story behind the project.
+
+[Get started →](https://rimitive.dev/guides/getting-started)

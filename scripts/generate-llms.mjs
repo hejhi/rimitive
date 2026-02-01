@@ -22,12 +22,12 @@ const PACKAGES = [
     name: '@rimitive/signals',
     folder: 'signals',
     description:
-      'Reactive primitives (`signal`, `computed`, `effect`, `batch`)',
+      'Reactive core (`signal`, `computed`, `effect`, `batch`)',
   },
   {
     name: '@rimitive/view',
     folder: 'view',
-    description: 'UI primitives (`el`, `map`, `match`, `portal`, `load`)',
+    description: 'View layer (`el`, `map`, `match`, `portal`, `load`)',
   },
   {
     name: '@rimitive/router',
