@@ -1,7 +1,7 @@
 {
   "name": "@rimitive/view",
   "version": "0.2.2",
-  "description": "Reactive DOM primitives for Rimitive",
+  "description": "View layer tooling for Rimitive",
   "author": "Rimitive Team",
   "license": "MIT",
   "repository": {
@@ -90,6 +90,10 @@
     "./portal": {
       "import": "./dist/portal.js",
       "types": "./dist/portal.d.ts"
+    },
+    "./shadow": {
+      "import": "./dist/shadow.js",
+      "types": "./dist/shadow.d.ts"
     },
     "./devtools": {
       "import": "./dist/devtools/index.js",

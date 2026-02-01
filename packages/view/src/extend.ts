@@ -25,6 +25,7 @@ export { createElFactory } from './el';
 export { createMapFactory } from './map';
 export { createMatchFactory } from './match';
 export { createPortalFactory } from './portal';
+export { createShadowFactory } from './shadow';
 
 // =============================================================================
 // Adapters
@@ -38,9 +39,10 @@ export type { DOMTreeConfig } from './adapters/dom';
 // Helpers - For building custom compositions
 // =============================================================================
 
-export { createScopes } from './deps/scope';
+export { createScopes, ScopesModule } from './deps/scope';
 export { createAddEventListener } from './deps/addEventListener';
 export { createUse } from './deps/use';
+export { mount } from './deps/mount';
 
 // =============================================================================
 // Factory Types - For typing custom services
@@ -50,6 +52,7 @@ export type { ElFactory, ElOpts, TagFactory, ElementProps } from './el';
 export type { MapFactory, MapOpts } from './map';
 export type { MatchFactory, MatchOpts } from './match';
 export type { PortalFactory, PortalOpts, PortalTarget } from './portal';
+export type { ShadowFactory, ShadowOpts, ShadowOptions, ShadowService, ShadowMode, ShadowLifecycleCallback } from './shadow';
 
 // =============================================================================
 // Helper Types

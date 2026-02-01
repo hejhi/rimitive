@@ -794,4 +794,136 @@ describe('reconcileWithKeys', () => {
       expect(getTextContent(parent.children[2] as MockElement)).toBe('Item 10');
     });
   });
+
+  describe('Append optimization', () => {
+    it('should not call onMove for appended items', () => {
+      const env = createTestEnv();
+      const parent = env.adapter.createNode('ul') as MockElement;
+      let moveCount = 0;
+      let createCount = 0;
+
+      type Item = { id: string; text: string };
+
+      const reconciler = createReconciler<
+        Item,
+        MockElement,
+        ElementRef<MockElement> & ReconcileNode
+      >({
+        parentElement: parent,
+        onCreate: (item: Item) => {
+          createCount++;
+          const li = env.adapter.createNode('li') as MockElement;
+          const textNode = env.adapter.createNode('text', { value: item.text });
+          env.adapter.appendChild(li, textNode);
+          env.adapter.insertBefore(parent, li, null);
+
+          return {
+            status: 1,
+            element: li,
+            prev: null,
+            next: null,
+          } as ElementRef<MockElement> & ReconcileNode;
+        },
+        onUpdate: () => {},
+        onMove: () => {
+          moveCount++;
+        },
+        onRemove: (node) => {
+          const li = (node as ElementRef<MockElement>).element;
+          env.adapter.removeChild(parent, li);
+        },
+      });
+
+      // Create initial list
+      const initial = Array.from({ length: 100 }, (_, i) => ({
+        id: `key${i}`,
+        text: `Item ${i}`,
+      }));
+      reconciler.reconcile(initial, (item) => item.id);
+
+      expect(createCount).toBe(100);
+      expect(moveCount).toBe(0);
+
+      // Reset counters
+      createCount = 0;
+      moveCount = 0;
+
+      // Append new items
+      const appended = Array.from({ length: 50 }, (_, i) => ({
+        id: `key${100 + i}`,
+        text: `Item ${100 + i}`,
+      }));
+      reconciler.reconcile([...initial, ...appended], (item) => item.id);
+
+      // Should create 50 new items but NOT move any
+      expect(createCount).toBe(50);
+      expect(moveCount).toBe(0);
+      expect(parent.children.length).toBe(150);
+    });
+
+    it('should call onMove for prepended items', () => {
+      const env = createTestEnv();
+      const parent = env.adapter.createNode('ul') as MockElement;
+      let moveCount = 0;
+      let createCount = 0;
+
+      type Item = { id: string; text: string };
+
+      const reconciler = createReconciler<
+        Item,
+        MockElement,
+        ElementRef<MockElement> & ReconcileNode
+      >({
+        parentElement: parent,
+        onCreate: (item: Item) => {
+          createCount++;
+          const li = env.adapter.createNode('li') as MockElement;
+          const textNode = env.adapter.createNode('text', { value: item.text });
+          env.adapter.appendChild(li, textNode);
+          env.adapter.insertBefore(parent, li, null);
+
+          return {
+            status: 1,
+            element: li,
+            prev: null,
+            next: null,
+          } as ElementRef<MockElement> & ReconcileNode;
+        },
+        onUpdate: () => {},
+        onMove: () => {
+          moveCount++;
+        },
+        onRemove: (node) => {
+          const li = (node as ElementRef<MockElement>).element;
+          env.adapter.removeChild(parent, li);
+        },
+      });
+
+      // Create initial list
+      const initial = Array.from({ length: 100 }, (_, i) => ({
+        id: `key${i}`,
+        text: `Item ${i}`,
+      }));
+      reconciler.reconcile(initial, (item) => item.id);
+
+      expect(createCount).toBe(100);
+      expect(moveCount).toBe(0);
+
+      // Reset counters
+      createCount = 0;
+      moveCount = 0;
+
+      // Prepend new items (they need to be moved)
+      const prepended = Array.from({ length: 50 }, (_, i) => ({
+        id: `newkey${i}`,
+        text: `New Item ${i}`,
+      }));
+      reconciler.reconcile([...prepended, ...initial], (item) => item.id);
+
+      // Should create 50 new items and move them to correct positions
+      expect(createCount).toBe(50);
+      expect(moveCount).toBe(50); // Prepended items need to be moved
+      expect(parent.children.length).toBe(150);
+    });
+  });
 });

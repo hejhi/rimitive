@@ -51,6 +51,7 @@ export default defineConfig({
         match: resolve(__dirname, 'src/match.ts'),
         load: resolve(__dirname, 'src/load.ts'),
         portal: resolve(__dirname, 'src/portal.ts'),
+        shadow: resolve(__dirname, 'src/shadow.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         map: resolve(__dirname, 'src/map.ts'),
         'adapters/dom': resolve(__dirname, 'src/adapters/dom.ts'),

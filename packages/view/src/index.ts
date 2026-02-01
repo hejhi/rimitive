@@ -1,5 +1,5 @@
 /**
- * @rimitive/view - Declarative view primitives for Rimitive
+ * @rimitive/view - View layer tooling for Rimitive
  *
  * ## Quick Start
  * ```typescript
@@ -49,6 +49,20 @@ export type {
   PortalOpts,
 } from './types';
 
+// =============================================================================
+// Shadow - Shadow DOM encapsulation
+// =============================================================================
+
+export type {
+  ShadowOptions,
+  ShadowMode,
+  ShadowFactory,
+  ShadowService,
+  ShadowLifecycleCallback,
+} from './shadow';
+
+export { createShadowFactory, createShadowModule } from './shadow';
+
 export {
   STATUS_ELEMENT,
   STATUS_FRAGMENT,
@@ -83,3 +97,9 @@ export {
   createLoader,
   LoadModule,
 } from './load';
+
+// =============================================================================
+// Mount - Entry point for rendering with automatic effect scoping
+// =============================================================================
+
+export { mount } from './deps/mount';

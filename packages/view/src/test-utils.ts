@@ -10,6 +10,8 @@ import { createSignalFactory } from '@rimitive/signals/signal';
 import { createComputedFactory } from '@rimitive/signals/computed';
 import { createEffectFactory } from '@rimitive/signals/effect';
 import { createPullPropagator } from '@rimitive/signals/deps/pull-propagator';
+import { createIterFactory } from '@rimitive/signals/iter';
+import { createUntracked } from '@rimitive/signals/untrack';
 
 // Re-export types for convenience
 export type { Reactive };
@@ -396,12 +398,21 @@ export function createTestEnv() {
     dispose: scheduler.dispose,
   });
 
+  // Create iter factory
+  const iter = createIterFactory({ signal });
+
+  // Create untrack factory
+  const untrack = createUntracked({ consumer: graphEdges.consumer });
+
   const {
     disposeScope,
     createElementScope,
     scopedEffect,
     onCleanup,
     getElementScope,
+    withScope,
+    createRootScope,
+    createChildScope,
   } = createScopes({
     baseEffect: effect,
   });
@@ -412,10 +423,15 @@ export function createTestEnv() {
     signal,
     computed,
     effect,
+    iter,
+    untrack,
     disposeScope,
     scopedEffect,
     createElementScope,
     onCleanup,
     getElementScope,
+    withScope,
+    createRootScope,
+    createChildScope,
   };
 }

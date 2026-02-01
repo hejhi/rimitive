@@ -34,10 +34,14 @@ describe('List reconciliation - Complex reorderings', () => {
     const map = createMapFactory<MockTreeConfig>({
       signal: env.signal,
       computed: env.computed,
+      iter: env.iter,
+      untrack: env.untrack,
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       disposeScope: env.disposeScope,
       getElementScope: env.getElementScope,
+      withScope: env.withScope,
+      createChildScope: env.createChildScope,
     });
 
     return { ...env, el, map };
@@ -465,10 +469,14 @@ describe('List reconciliation - Edge cases', () => {
     const map = createMapFactory<MockTreeConfig>({
       signal: env.signal,
       computed: env.computed,
+      iter: env.iter,
+      untrack: env.untrack,
       scopedEffect: env.scopedEffect,
       adapter: env.adapter,
       disposeScope: env.disposeScope,
       getElementScope: env.getElementScope,
+      withScope: env.withScope,
+      createChildScope: env.createChildScope,
     });
 
     return { ...env, el, map };

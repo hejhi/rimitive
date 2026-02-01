@@ -7,17 +7,22 @@
  */
 
 import type { ElementRef } from '../types';
+import { findLIS } from '@rimitive/signals/lis';
+
+// Re-export for tests that import from here
+export { findLIS };
 
 // Status bits for reconciliation (separate from STATUS_ELEMENT/STATUS_FRAGMENT)
 const UNVISITED = 0;
 const VISITED = 1;
+const CREATED = 2; // Marks nodes created in current reconcile pass
 
 /**
  * Node state for reconciliation - extends NodeRef with reconciliation metadata
  */
 export type ReconcileNode<TData = unknown> = {
   position: number;
-  reconcileStatus: typeof UNVISITED | typeof VISITED; // Separate from status field
+  reconcileStatus: typeof UNVISITED | typeof VISITED | typeof CREATED; // Separate from status field
   data: TData;
 };
 
@@ -86,64 +91,6 @@ export type Reconciler<T, TNode extends ReconcileNode> = {
 };
 
 /**
- * Binary search for LIS algorithm
- */
-function binarySearch(
-  arr: number[],
-  tails: number[],
-  len: number,
-  value: number
-): number {
-  let lo = 0;
-  let hi = len - 1;
-
-  while (lo <= hi) {
-    const mid = (lo + hi) >>> 1;
-    if (arr[tails[mid]!]! < value) {
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-
-  return lo;
-}
-
-/**
- * Find Longest Increasing Subsequence (LIS) using patience sorting
- * O(n log n) algorithm
- *
- * Exported for testing purposes
- */
-export function findLIS(arr: number[], n: number, lisBuf: number[]): number {
-  if (n <= 0) return 0;
-  if (n === 1) {
-    lisBuf[0] = 0;
-    return 1;
-  }
-
-  const tailsBuf: number[] = [];
-  const parentBuf: number[] = [];
-  let len = 0;
-
-  // Forward phase: build tails and parent pointers
-  for (let i = 0; i < n; i++) {
-    const pos = binarySearch(arr, tailsBuf, len, arr[i]!);
-    parentBuf[i] = pos > 0 ? tailsBuf[pos - 1]! : -1;
-    tailsBuf[pos] = i;
-    if (pos === len) len++;
-  }
-
-  // Backtrack phase: reconstruct LIS
-  for (let i = len - 1, current = tailsBuf[i]!; i >= 0; i--) {
-    lisBuf[i] = current;
-    current = parentBuf[current]!;
-  }
-
-  return len;
-}
-
-/**
  * Create a reconciler that manages itemsByKey internally
  *
  * This encapsulates reconciliation state and provides a clean API
@@ -161,6 +108,8 @@ export function createReconciler<
   const oldIndicesBuf: number[] = [];
   const newPosBuf: number[] = [];
   const lisBuf: number[] = [];
+  const tailsBuf: number[] = [];
+  const parentBuf: number[] = [];
 
   // Extract hooks from options
   const { onCreate, onUpdate, onMove, onRemove }: ReconcileHooks<T, TNode> =
@@ -213,7 +162,7 @@ export function createReconciler<
         // New node - create via hook
         const nodeRef = onCreate(item, key);
         nodeRef.position = i;
-        nodeRef.reconcileStatus = VISITED;
+        nodeRef.reconcileStatus = CREATED;
 
         node = nodeRef;
         itemsByKey.set(key, node);
@@ -223,19 +172,32 @@ export function createReconciler<
     }
 
     // Prune phase - remove unvisited nodes
+    // Note: We don't reset CREATED/VISITED here - that happens after the position phase
     for (const [key, node] of itemsByKey) {
       if (node.reconcileStatus === UNVISITED) {
         // Call removal hook
         onRemove(node);
         itemsByKey.delete(key);
-      } else node.reconcileStatus = UNVISITED; // Reset for next reconciliation
+      }
     }
 
-    // Skip LIS calculation if no count
-    if (count === 0) return nodes;
+    // Skip LIS calculation if no existing nodes to reorder
+    if (count === 0) {
+      // Reset all statuses for next reconciliation
+      for (const node of itemsByKey.values()) {
+        node.reconcileStatus = UNVISITED;
+      }
+      return nodes;
+    }
+
+    // Ensure LIS buffers are large enough
+    if (tailsBuf.length < count) {
+      tailsBuf.length = count;
+      parentBuf.length = count;
+    }
 
     // Calculate LIS for minimal moves
-    const lisLen = findLIS(oldIndicesBuf, count, lisBuf);
+    const lisLen = findLIS(oldIndicesBuf, count, lisBuf, tailsBuf, parentBuf);
 
     const nodeLen = nodes.length;
 
@@ -243,12 +205,28 @@ export function createReconciler<
     // Process in REVERSE order so each element can insert before the already-positioned next element
     // Use incremental index tracking instead of Set for zero-allocation LIS checking
     let lisIdx = lisLen - 1; // Start from end since we're processing in reverse
+    // Track if the "tail" consists only of CREATED nodes (appended items don't need moves)
+    let tailIsCreated = true;
     for (i = nodeLen - 1; i >= 0; i--) {
       const node = nodes[i]!;
+      const isCreated = node.reconcileStatus === CREATED;
+
+      // Skip CREATED nodes that are part of the contiguous appended tail
+      // These were appended by onCreate and are already in correct position
+      if (isCreated && tailIsCreated) {
+        continue;
+      }
+
+      // Once we hit a non-created node, the tail property no longer applies
+      if (!isCreated) {
+        tailIsCreated = false;
+      }
 
       // Check if current position matches LIS position (incremental, zero-allocation)
       const isInLIS =
-        lisIdx >= 0 && node.position === newPosBuf[lisBuf[lisIdx]!]!;
+        !isCreated &&
+        lisIdx >= 0 &&
+        node.position === newPosBuf[lisBuf[lisIdx]!]!;
 
       if (isInLIS) {
         // In LIS - already in correct position, decrement LIS index
@@ -260,6 +238,11 @@ export function createReconciler<
         onMove(node, nextSibling);
       }
       // Elements in LIS don't need to move - they're already in correct relative positions
+    }
+
+    // Reset all statuses for next reconciliation
+    for (const node of itemsByKey.values()) {
+      node.reconcileStatus = UNVISITED;
     }
 
     return nodes;

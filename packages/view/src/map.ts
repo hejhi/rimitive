@@ -1,5 +1,7 @@
 /**
- * User-space map() helper using stable signal pattern
+ * map() - Reactive list rendering
+ *
+ * Uses reconcile() for minimal DOM operations when arrays change.
  */
 
 import type {
@@ -9,64 +11,51 @@ import type {
   ElementRef,
   Writable,
 } from './types';
-import { STATUS_ELEMENT, STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
+import { STATUS_FRAGMENT, STATUS_REF_SPEC } from './types';
 import type { Adapter, TreeConfig, NodeOf } from './adapter';
 import type { CreateScopes } from './deps/scope';
 import { ScopesModule } from './deps/scope';
-import { createReconciler, ReconcileNode } from './deps/reconcile';
 import { createNodeHelpers } from './deps/node-deps';
-import { removeFromFragment } from './deps/fragment-boundaries';
+import {
+  removeFromFragment,
+  updateBoundariesAfterInsert,
+} from './deps/fragment-boundaries';
 import { defineModule, type Module } from '@rimitive/core';
-import { SignalModule, type SignalFactory } from '@rimitive/signals/signal';
+import {
+  SignalModule,
+  type SignalFactory,
+  type SignalFunction,
+} from '@rimitive/signals/signal';
 import {
   ComputedModule,
   type ComputedFactory,
 } from '@rimitive/signals/computed';
+import {
+  IterModule,
+  type IterFactory,
+  type Iter,
+} from '@rimitive/signals/iter';
+import { reconcile } from '@rimitive/signals/reconcile';
+import { UntrackModule } from '@rimitive/signals/untrack';
 
-/**
- * Map factory type
- *
- * Items can be a static array or a reactive signal of array.
- * The render callback receives a signal wrapping each item, enabling
- * reactive updates without recreating elements.
- *
- * When the source array updates, map pushes new values into the item
- * signals, triggering reactive updates in computeds that read them.
- *
- * Note: Uses function overloads with Writable first to ensure proper
- * type inference when passing signals directly.
- *
- * @example
- * ```ts
- * // Without key function (for primitives)
- * map(['a', 'b', 'c'], (item) => el('li')(item))
- *
- * // With key function (for objects)
- * map(users, (u) => u.id, (user) => el('li')(user().name))
- * ```
- */
 export type MapFactory<TBaseElement> = {
-  // 3-arg overloads (with key function) - must come first
-  // Overload 1a: Writable items (signal-like) - for proper inference
+  // Array input with key function
   <T, TEl>(
     items: Writable<T[]>,
     keyFn: (item: T) => string | number,
     render: (itemSignal: Reactive<T>) => RefSpec<TEl>
   ): RefSpec<TBaseElement>;
-  // Overload 1b: Plain getter or static array
   <T, TEl>(
     items: T[] | (() => T[]),
     keyFn: (item: T) => string | number,
     render: (itemSignal: Reactive<T>) => RefSpec<TEl>
   ): RefSpec<TBaseElement>;
 
-  // 2-arg overloads (without key function) - for primitives
-  // Overload 2a: Writable items (signal-like) - for proper inference
+  // Array input without key function (primitives only)
   <T, TEl>(
     items: Writable<T[]>,
     render: (itemSignal: Reactive<T>) => RefSpec<TEl>
   ): RefSpec<TBaseElement>;
-  // Overload 2b: Plain getter or static array
   <T, TEl>(
     items: T[] | (() => T[]),
     render: (itemSignal: Reactive<T>) => RefSpec<TEl>
@@ -74,64 +63,41 @@ export type MapFactory<TBaseElement> = {
 };
 
 export type MapOpts<TConfig extends TreeConfig> = {
-  signal: <T>(value: T) => Reactive<T> & ((value: T) => void);
+  signal: SignalFactory;
   computed: <T>(fn: () => T) => Reactive<T>;
+  iter: IterFactory;
+  untrack: <T>(fn: () => T) => T;
   scopedEffect: (fn: () => void | (() => void)) => () => void;
   adapter: Adapter<TConfig>;
   disposeScope: CreateScopes['disposeScope'];
   getElementScope: CreateScopes['getElementScope'];
+  withScope: CreateScopes['withScope'];
+  createChildScope: CreateScopes['createChildScope'];
 };
 
-// RecNode stores the item signal (not the item value) for reactive updates
-type ItemSignal<T> = Reactive<T> & ((value: T) => void);
-type RecNode<T, TElement> = ElementRef<TElement> & ReconcileNode<ItemSignal<T>>;
+type ItemData<T, TElement> = {
+  itemSignal: SignalFunction<T>;
+  elRef: ElementRef<TElement>;
+  scope: ReturnType<CreateScopes['createChildScope']>;
+};
 
-/**
- * The map service type - the factory function returned by createMapFactory.
- *
- * Use this type when building custom view service compositions:
- * @example
- * ```ts
- * import { createMapFactory, type MapService } from '@rimitive/view/map';
- *
- * const mapFactory: MapService<DOMTreeConfig> = createMapFactory<DOMTreeConfig>(opts);
- * ```
- */
 export type MapService<TConfig extends TreeConfig> = MapFactory<
   NodeOf<TConfig>
 >;
 
-/**
- * Create a map factory with the given dependencies.
- *
- * @example
- * ```ts
- * import { createMapFactory } from '@rimitive/view/map';
- * import type { DOMTreeConfig } from '@rimitive/view/adapters/dom';
- *
- * const mapFactory = createMapFactory<DOMTreeConfig>({
- *   signal,
- *   computed,
- *   scopedEffect,
- *   adapter,
- *   disposeScope,
- *   getElementScope,
- * });
- *
- * // Use it
- * const list = mapFactory(items, (item) => el('li')(item()));
- * ```
- */
 export function createMapFactory<TConfig extends TreeConfig>({
   signal,
   computed,
+  iter,
+  untrack,
   scopedEffect,
   adapter,
   disposeScope,
   getElementScope,
+  withScope,
+  createChildScope,
 }: MapOpts<TConfig>): MapFactory<NodeOf<TConfig>> {
   type TBaseElement = NodeOf<TConfig>;
-  type TFragRef = FragmentRef<TBaseElement>;
 
   const { insertNodeBefore, removeNode } = createNodeHelpers({
     adapter,
@@ -139,29 +105,7 @@ export function createMapFactory<TConfig extends TreeConfig>({
     getElementScope,
   });
 
-  /**
-   * Helper to create a RefSpec for fragments
-   */
-  const createRefSpec = (
-    createFragmentRef: (svc?: unknown) => TFragRef
-  ): RefSpec<TBaseElement> => {
-    const refSpec = (() => refSpec) as unknown as RefSpec<TBaseElement>;
-
-    refSpec.status = STATUS_REF_SPEC;
-    refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
-      const fragRef = createFragmentRef(svc);
-      if (!extensions || Object.keys(extensions).length === 0) return fragRef;
-
-      return {
-        ...fragRef,
-        ...extensions,
-      };
-    };
-
-    return refSpec;
-  };
-
-  // Overload signatures for proper type inference
+  // Overloads
   function map<T, TEl>(
     items: Writable<T[]>,
     keyFn: (item: T) => string | number,
@@ -180,7 +124,6 @@ export function createMapFactory<TConfig extends TreeConfig>({
     items: T[] | (() => T[]),
     render: (itemSignal: Reactive<T>) => RefSpec<TEl>
   ): RefSpec<TBaseElement>;
-  // Implementation handles all overloads
   function map<T, TEl>(
     items: T[] | Writable<T[]> | (() => T[]),
     keyFnOrRender:
@@ -188,7 +131,6 @@ export function createMapFactory<TConfig extends TreeConfig>({
       | ((itemSignal: Reactive<T>) => RefSpec<TEl>),
     maybeRender?: (itemSignal: Reactive<T>) => RefSpec<TEl>
   ): RefSpec<TBaseElement> {
-    // Determine which overload was used
     const keyFn = maybeRender
       ? (keyFnOrRender as (item: T) => string | number)
       : undefined;
@@ -196,9 +138,12 @@ export function createMapFactory<TConfig extends TreeConfig>({
       ? maybeRender
       : (keyFnOrRender as (itemSignal: Reactive<T>) => RefSpec<TEl>);
 
-    type TRecNode = RecNode<T, TBaseElement>;
+    const iterKeyFn =
+      keyFn ?? ((item: T) => item as unknown as string | number);
 
-    return createRefSpec((svc) => {
+    const refSpec = (() => refSpec) as unknown as RefSpec<TBaseElement>;
+    refSpec.status = STATUS_REF_SPEC;
+    refSpec.create = <TExt>(svc?: unknown, extensions?: TExt) => {
       const fragment: FragmentRef<TBaseElement> = {
         status: STATUS_FRAGMENT,
         element: null,
@@ -208,189 +153,187 @@ export function createMapFactory<TConfig extends TreeConfig>({
         firstChild: null,
         lastChild: null,
         attach(parent, nextSibling) {
-          // Don't capture parent.element - always dereference it at call time
-          // This allows the parent element to be updated (e.g., after unwrapping fragment containers)
-          // and have the reconciler pick up the new value
+          type TData = ItemData<T, TBaseElement>;
 
-          // nextSibling from fragment can be NodeRef (element/comment/fragment), but map only uses elements
-          // Filter to element refs only for reconciliation
-          const nextElementSibling =
-            nextSibling && nextSibling.status === STATUS_ELEMENT
-              ? (nextSibling as TRecNode)
-              : undefined;
+          // Internal iter to track items
+          const list: Iter<TData> = iter<TData>((d) =>
+            iterKeyFn(d.itemSignal.peek())
+          );
 
-          // Create reconciler with internal state management and hooks
-          const { reconcile, dispose } = createReconciler<
-            T,
-            TBaseElement,
-            TRecNode
-          >({
-            parentElement: parent.element,
-            parentRef: parent,
-            nextSibling: nextElementSibling,
-
-            onCreate: (item) => {
-              // Create internal signal for reactive updates
-              const itemSignal = signal<T>(
-                typeof item === 'function'
-                  ? item() // Unwrap if item is already a signal
-                  : item // Otherwise return directly
+          const createItem = (item: T): TData => {
+            const itemSignal: SignalFunction<T> = signal<T>(
+              typeof item === 'function' ? item() : item
+            );
+            const readOnlyItem = computed(() => itemSignal());
+            const itemScope = createChildScope();
+            let elRef: ElementRef<TBaseElement>;
+            const isolate = scopedEffect(() => {
+              elRef = withScope(itemScope, () =>
+                render(readOnlyItem).create<ElementRef<TBaseElement>>(svc)
               );
+            });
+            isolate();
 
-              // Wrap in computed for read-only access to user
-              const readOnlyItem = computed(() => itemSignal());
+            return { itemSignal, elRef: elRef!, scope: itemScope };
+          };
 
-              let elRef: TRecNode;
+          const insertData = (
+            data: TData,
+            beforeRef: ElementRef<TBaseElement> | null
+          ) => {
+            // Link into fragment's doubly-linked list
+            data.elRef.next = beforeRef;
+            if (beforeRef) {
+              data.elRef.prev = beforeRef.prev;
+              if (beforeRef.prev) beforeRef.prev.next = data.elRef;
+              beforeRef.prev = data.elRef;
+            } else {
+              data.elRef.prev = fragment.lastChild;
+              if (fragment.lastChild) fragment.lastChild.next = data.elRef;
+            }
+            updateBoundariesAfterInsert(
+              fragment,
+              data.elRef,
+              beforeRef ?? undefined
+            );
+            insertNodeBefore(
+              svc,
+              parent.element,
+              data.elRef,
+              beforeRef,
+              nextSibling
+            );
+          };
 
-              // This is a reactive ("hot") closure because reconcile() runs inside a scopedEffect below.
-              // We isolate the render() call in an inner, temporary effect to protect it from getting
-              // caught in the parent effect.
-              const isolate = scopedEffect(() => {
-                // Pass read-only computed to render
-                elRef = render(readOnlyItem).create<TRecNode>(svc);
+          const removeData = (data: TData) => {
+            // Unlink from doubly-linked list
+            if (data.elRef.prev) data.elRef.prev.next = data.elRef.next;
+            if (data.elRef.next) data.elRef.next.prev = data.elRef.prev;
+            disposeScope(data.scope);
+            removeFromFragment(fragment, data.elRef);
+            removeNode(parent.element, data.elRef);
+          };
 
-                // Insert into DOM
-                insertNodeBefore(
-                  svc,
-                  parent.element,
-                  elRef,
-                  undefined,
-                  nextSibling
-                );
+          const moveData = (
+            data: TData,
+            beforeRef: ElementRef<TBaseElement> | null
+          ) => {
+            // Unlink from current position
+            if (data.elRef.prev) data.elRef.prev.next = data.elRef.next;
+            if (data.elRef.next) data.elRef.next.prev = data.elRef.prev;
+            removeFromFragment(fragment, data.elRef);
 
-                // Update fragment boundaries and link items
-                if (!fragment.firstChild) {
-                  fragment.firstChild = elRef;
-                  fragment.lastChild = elRef;
-                  elRef.prev = null;
-                  elRef.next = null;
-                } else {
-                  const prevLast = fragment.lastChild;
-                  if (prevLast) {
-                    prevLast.next = elRef;
-                    elRef.prev = prevLast;
-                  }
-                  elRef.next = null;
-                  fragment.lastChild = elRef;
-                }
+            // Link at new position
+            data.elRef.next = beforeRef;
+            if (beforeRef) {
+              data.elRef.prev = beforeRef.prev;
+              if (beforeRef.prev) beforeRef.prev.next = data.elRef;
+              beforeRef.prev = data.elRef;
+            } else {
+              data.elRef.prev = fragment.lastChild;
+              if (fragment.lastChild) fragment.lastChild.next = data.elRef;
+            }
+            updateBoundariesAfterInsert(
+              fragment,
+              data.elRef,
+              beforeRef ?? undefined
+            );
 
-                // Store the signal (not the item) for updates
-                elRef.data = itemSignal;
-              });
+            adapter.removeChild(parent.element, data.elRef.element);
+            adapter.insertBefore(
+              parent.element,
+              data.elRef.element,
+              beforeRef?.element ?? null
+            );
+          };
 
-              isolate(); // Dispose immediately after it runs
-              return elRef!;
-            },
-
-            // onUpdate: push new value into the item signal
-            // No recreation needed - computeds will react to signal change
-            onUpdate(item, node) {
-              // Push into our internal signal
-              node.data(typeof item === 'function' ? item() : item);
-            },
-
-            // onMove: called when item needs repositioning
-            onMove(node, nextSiblingNode) {
-              if (node.status !== STATUS_ELEMENT) return;
-              insertNodeBefore(
-                svc,
-                parent.element,
-                node,
-                nextSiblingNode,
-                nextSibling
-              );
-            },
-
-            // onRemove: called when item is being removed
-            onRemove(node) {
-              if (node.status !== STATUS_ELEMENT) return;
-
-              // Update fragment boundaries if removing a boundary node
-              removeFromFragment(fragment, node);
-              removeNode(parent.element, node);
-            },
-          });
-
-          // Create effect within parent's scope - auto-tracked!
           const effectDispose = scopedEffect(() => {
-            // Get items - handle both array and function
+            // Track only the items source - this is the reactivity trigger
             const itemsArray = typeof items === 'function' ? items() : items;
 
-            // Validate: require key function when mapping over objects
-            if (!keyFn && itemsArray.length > 0) {
-              const firstItem = itemsArray[0];
-              // Check if it's an object (not null, not array, not primitive)
-              if (
-                firstItem !== null &&
-                typeof firstItem === 'object' &&
-                !Array.isArray(firstItem)
-              ) {
-                throw new Error(
-                  'map() requires a key function when mapping over objects. ' +
-                    'Without a key function, all objects become "[object Object]" which breaks reconciliation. ' +
-                    'Example: map(items, (item) => item.id, (item) => ...)'
-                );
+            // Untrack everything else to prevent accidental dependencies
+            // on internal iter signals during reconciliation
+            untrack(() => {
+              // Validate: require key function when mapping over objects
+              if (!keyFn && itemsArray.length > 0) {
+                const first = itemsArray[0];
+                if (
+                  first !== null &&
+                  typeof first === 'object' &&
+                  !Array.isArray(first)
+                ) {
+                  throw new Error(
+                    'map() requires a key function when mapping over objects. ' +
+                      'Without a key function, all objects become "[object Object]" which breaks reconciliation. ' +
+                      'Example: map(items, (item) => item.id, (item) => ...)'
+                  );
+                }
               }
-            }
 
-            // Reconcile with just items and key function
-            reconcile(itemsArray, (item) =>
-              keyFn ? keyFn(item) : (item as string | number)
-            );
+              // Build new data array, reusing existing items where possible
+              const newDataArray: TData[] = itemsArray.map((item) => {
+                const key = iterKeyFn(item);
+                const existing = list.get(key);
+                if (existing) {
+                  // Update signal with new value
+                  existing.itemSignal(typeof item === 'function' ? item() : item);
+                  return existing;
+                }
+                return createItem(item);
+              });
+
+              // Reconcile - iter is mutated directly, callbacks handle DOM only
+              reconcile(list, newDataArray, {
+                onInsert: (node, beforeNode) => {
+                  insertData(node.value, beforeNode?.value.elRef ?? null);
+                },
+                onRemove: (node) => {
+                  removeData(node.value);
+                },
+                onMove: (node, beforeNode) => {
+                  moveData(node.value, beforeNode?.value.elRef ?? null);
+                },
+                // Updates handled above when building newDataArray
+              });
+            });
           });
 
-          // Return cleanup function
           return () => {
             effectDispose();
-            dispose();
+            for (const data of list.peek()) {
+              disposeScope(data.scope);
+              removeNode(parent.element, data.elRef);
+            }
+            list.clear();
           };
         },
       };
-      return fragment;
-    });
+
+      if (!extensions || Object.keys(extensions).length === 0) return fragment;
+      return { ...fragment, ...extensions };
+    };
+    return refSpec;
   }
 
   return map;
 }
 
-/**
- * Create a Map module for a given adapter.
- *
- * @example
- * ```ts
- * import { compose } from '@rimitive/core';
- * import { createMapModule } from '@rimitive/view/map';
- * import { createDOMAdapter } from '@rimitive/view/adapters/dom';
- *
- * const adapter = createDOMAdapter();
- * const MapModule = createMapModule(adapter);
- *
- * const { map, signal, computed } = compose(MapModule);
- * ```
- */
 export const createMapModule = <TConfig extends TreeConfig>(
   adapter: Adapter<TConfig>
 ): Module<
   'map',
   MapFactory<NodeOf<TConfig>>,
-  { signal: SignalFactory; computed: ComputedFactory; scopes: CreateScopes }
+  {
+    signal: SignalFactory;
+    computed: ComputedFactory;
+    iter: IterFactory;
+    untrack: <T>(fn: () => T) => T;
+    scopes: CreateScopes;
+  }
 > =>
   defineModule({
     name: 'map',
-    dependencies: [SignalModule, ComputedModule, ScopesModule],
-    create: ({
-      signal,
-      computed,
-      scopes,
-    }: {
-      signal: SignalFactory;
-      computed: ComputedFactory;
-      scopes: CreateScopes;
-    }) =>
-      createMapFactory({
-        adapter,
-        signal,
-        computed,
-        ...scopes, // flatten all of it in
-      }),
+    dependencies: [SignalModule, ComputedModule, IterModule, UntrackModule, ScopesModule],
+    create: ({ signal, computed, iter, untrack, scopes }) =>
+      createMapFactory({ adapter, signal, computed, iter, untrack, ...scopes }),
   });
