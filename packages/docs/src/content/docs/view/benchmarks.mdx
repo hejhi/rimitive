@@ -5,19 +5,9 @@ description: Performance benchmarks showing how Rimitive view operations scale w
 
 import ViewBenchmarks from '../../../components/ViewBenchmarks.astro';
 
-The view layer is designed for optimal performance at any scale. These benchmarks demonstrate that operations maintain efficient time complexity as data grows.
-
-## Scaling Characteristics
-
-These benchmarks measure how view operations scale with increasing data sizes. The goal is to maintain linear or better time complexity.
+The view layer is designed for optimal performance at any scale. These benchmarks measure how view operations scale with increasing data sizes.
 
 <ViewBenchmarks />
-
-## What to Look For
-
-- **O(1) - Constant Time**: Operations that take the same time regardless of list size. This is ideal for operations like append/prepend that only touch a few elements.
-- **O(n) - Linear Time**: Operations where time grows proportionally with input size. Expected for operations that must process each item (like initial render or full replacement).
-- **O(n²) - Quadratic Time**: Red flag! Time grows with the square of input size. We avoid this through careful algorithm design.
 
 ## Key Optimizations
 

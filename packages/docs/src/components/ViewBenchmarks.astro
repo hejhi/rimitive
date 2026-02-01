@@ -60,38 +60,6 @@ function formatSuiteName(name: string): string {
     .replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// Check if times scale linearly (within tolerance)
-function checkLinearScaling(benchmarks: Benchmark[]): { isLinear: boolean; ratio: number; complexity: string } {
-  if (benchmarks.length < 2) return { isLinear: true, ratio: 1, complexity: 'O(1)' };
-
-  // Compare first and last benchmark times
-  const first = benchmarks[0];
-  const last = benchmarks[benchmarks.length - 1];
-
-  // Get the scaling factor from args
-  const firstArg = Object.values(first?.args || {})[0] as number || 1;
-  const lastArg = Object.values(last?.args || {})[0] as number || 1;
-  const argRatio = lastArg / firstArg;
-
-  const timeRatio = last!.time / first!.time;
-
-  // Linear if time ratio is close to or less than arg ratio
-  // Allow some overhead for small sizes
-  const isLinear = timeRatio <= argRatio * 1.5 || timeRatio < 2;
-  const normalizedRatio = timeRatio / argRatio;
-
-  let complexity = 'O(1)';
-  if (normalizedRatio > 1.2 && normalizedRatio <= 2) {
-    complexity = 'O(n)';
-  } else if (normalizedRatio > 2 && normalizedRatio <= 3) {
-    complexity = '~O(n)';
-  } else if (normalizedRatio > 3) {
-    complexity = '~O(n^2)';
-  }
-
-  return { isLinear, ratio: normalizedRatio, complexity };
-}
-
 // Get the max time for scaling the bar chart
 function getMaxTime(benchmarks: Benchmark[]): number {
   return Math.max(...benchmarks.map(b => b.time));
@@ -112,26 +80,12 @@ function getMaxTime(benchmarks: Benchmark[]): number {
       <p><strong>Node:</strong> {data.system.node} on {data.system.platform}/{data.system.arch}</p>
     </div>
 
-    <div class="note">
-      <p>
-        These benchmarks measure how view operations scale with data size.
-        <span class="linear">Linear scaling (O(n))</span> means time grows proportionally with input size.
-        <span class="constant">Constant time (O(1))</span> means time stays the same regardless of size.
-      </p>
-    </div>
-
     {data.suites.map((suite) => {
-      const { isLinear, complexity } = checkLinearScaling(suite.benchmarks);
       const maxTime = getMaxTime(suite.benchmarks);
 
       return (
         <div class="suite">
-          <h3>
-            {formatSuiteName(suite.name)}
-            <span class={`complexity ${isLinear ? 'good' : 'warn'}`}>
-              {complexity}
-            </span>
-          </h3>
+          <h3>{formatSuiteName(suite.name)}</h3>
 
           <div class="chart">
             {suite.benchmarks.map((bench) => {
@@ -192,56 +146,12 @@ function getMaxTime(benchmarks: Benchmark[]): number {
     font-size: 0.85em;
   }
 
-  .note {
-    background: var(--sl-color-gray-6);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
-    font-size: 0.9rem;
-    border-left: 3px solid var(--sl-color-accent);
-  }
-
-  .note p {
-    margin: 0;
-  }
-
-  .linear {
-    color: #4ade80;
-    font-weight: 500;
-  }
-
-  .constant {
-    color: #60a5fa;
-    font-weight: 500;
-  }
-
   .suite {
     margin-bottom: 2.5rem;
   }
 
   .suite h3 {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
     margin-bottom: 1rem;
-  }
-
-  .complexity {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 0.25rem;
-    font-weight: 600;
-    font-family: monospace;
-  }
-
-  .complexity.good {
-    background: rgba(74, 222, 128, 0.2);
-    color: #4ade80;
-  }
-
-  .complexity.warn {
-    background: rgba(251, 191, 36, 0.2);
-    color: #fbbf24;
   }
 
   .chart {
