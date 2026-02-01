@@ -65,20 +65,22 @@ group('Map Prepend - Fixed Count to Varying Size', () => {
         const ref = app.create(sharedSvc);
         sharedAdapter.appendChild(root, ref.element as CountingNode);
 
-        // Setup: create existing rows
+        // Setup: create existing rows (IDs will be 1..existingCount)
+        resetIdCounter();
         let currentData = buildRowData(existingCount, signal);
         data(currentData);
 
-        // Pre-build prepend data (with lower IDs to ensure they're "new")
-        resetIdCounter();
+        // Pre-build prepend data (IDs will be existingCount+1..existingCount+PREPEND_COUNT)
+        // These must be DIFFERENT IDs from currentData
         const prependData = buildRowData(PREPEND_COUNT, signal);
 
         // Warmup: perform one prepend cycle
         data(prependData.concat(currentData));
+
+        // Reset: rebuild with fresh IDs
         resetIdCounter();
         currentData = buildRowData(existingCount, signal);
         data(currentData);
-        resetIdCounter();
         const prependData2 = buildRowData(PREPEND_COUNT, signal);
 
         yield () => {
@@ -86,7 +88,7 @@ group('Map Prepend - Fixed Count to Varying Size', () => {
           data(prependData2.concat(currentData));
         };
 
-        // Reset for next iteration
+        // Reset for next iteration - clear the iter state
         resetIdCounter();
         currentData = buildRowData(existingCount, signal);
         data(currentData);
@@ -127,24 +129,28 @@ group('Map Prepend vs Append - Same Operation', () => {
         const ref = app.create(sharedSvc);
         sharedAdapter.appendChild(root, ref.element as CountingNode);
 
+        // Setup with fresh IDs
+        resetIdCounter();
         let currentData = buildRowData(existingCount, signal);
         data(currentData);
 
-        resetIdCounter();
+        // Prepend data gets different IDs (continues from counter)
         const prependData = buildRowData(100, signal);
 
         // Warmup: perform one prepend cycle
         data(prependData.concat(currentData));
+
+        // Reset: rebuild with fresh IDs
         resetIdCounter();
         currentData = buildRowData(existingCount, signal);
         data(currentData);
-        resetIdCounter();
         const prependData2 = buildRowData(100, signal);
 
         yield () => {
           data(prependData2.concat(currentData));
         };
 
+        // Reset for next iteration
         resetIdCounter();
         currentData = buildRowData(existingCount, signal);
         data(currentData);
